@@ -5,8 +5,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 public class UniversalRenderPipelineHotloader : MonoBehaviour {
-    [SerializeField]
-    private UniversalRenderPipelineAsset defaultAsset;
+    // [SerializeField]
+    // private UniversalRenderPipelineAsset defaultAsset;
     [CanBeNull] public UniversalRenderPipelineAsset activeAsset;
     
     private void Start() {

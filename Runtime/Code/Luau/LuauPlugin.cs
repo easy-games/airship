@@ -194,10 +194,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern int CreateRenderPass(LuauContext context, IntPtr thread, int featureId);
-	public static int LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId) {
+	private static extern int CreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId);
+	public static int LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId) {
 		ThreadSafetyCheck();
-		return CreateRenderPass(context, thread, featureId);
+		return CreateRenderPass(context, thread, featureId, passId);
 	}
 	
 #if UNITY_IPHONE
