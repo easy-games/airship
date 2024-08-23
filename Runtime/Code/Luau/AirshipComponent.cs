@@ -259,14 +259,17 @@ public class AirshipComponent : MonoBehaviour {
         
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
+        var seenProperties = new HashSet<string>();
         foreach (var serializedProperty in m_metadata.properties) {
             var property = scriptFile.m_metadata.FindProperty<object>(serializedProperty.name);
-            if (property == null) {
+            // If it doesn't exist on script or if it is a duplicate property
+            if (property == null || seenProperties.Contains(serializedProperty.name)) {
                 if (propertiesToRemove == null) {
                     propertiesToRemove = new List<LuauMetadataProperty>();
                 }
                 propertiesToRemove.Add(serializedProperty);
             }
+            seenProperties.Add(serializedProperty.name);
         }
         if (propertiesToRemove != null) {
             foreach (var serializedProperty in propertiesToRemove) {
