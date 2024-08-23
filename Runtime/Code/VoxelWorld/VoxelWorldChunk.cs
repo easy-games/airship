@@ -198,6 +198,11 @@ namespace VoxelWorldStuff {
                                 prefab.transform.localPosition = origin + pos;
                                 prefab.transform.localRotation = Quaternion.identity;
                                 prefab.transform.localScale = Vector3.one;
+
+                                if (blockDefinition.definition.randomRotation) {
+                                    float angle = VoxelWorld.HashCoordinates(x,y,z) % 4;
+                                    prefab.transform.localRotation = Quaternion.Euler(0, angle * 90, 0);
+                                }
                                 prefabObjects.Add(pos, prefab);
                             }
                         }
