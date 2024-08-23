@@ -87,7 +87,6 @@ namespace Code.Player.Character {
 		private bool _sprint;
 		private bool _crouch;
 		private bool _flying;
-		private bool _allowFlight;
 
 		// State
 		// private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
@@ -157,7 +156,6 @@ namespace Code.Player.Character {
 		private void OnEnable() {
 			this.physics = new CharacterPhysics(this);
 			this.disableInput = false;
-			this._allowFlight = false;
 			this._flying = false;
 			this.mainCollider.enabled = true;
 		}
@@ -477,10 +475,27 @@ namespace Code.Player.Character {
 			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
 #endregion
 
+#region FLYING
+	
+			//Flying movement
+			if (_flying) {
+				if (md.jump) {
+					newVelocity.y += moveData.verticalFlySpeed;
+				}
+
+				if (md.crouch) {
+					newVelocity.y -= moveData.verticalFlySpeed;
+				}
+
+				newVelocity.y *= Mathf.Clamp(.98f - deltaTime, 0, 1);
+			}
+
+#endregion
+
 #region FRICTION_DRAG
 			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
-			var dragForce = physics.CalculateDrag(currentVelocity * (inAir ? moveData.airDragMultiplier : 1));
+			var dragForce = physics.CalculateDrag(currentVelocity * (inAir ? moveData.airDragMultiplier : 1), _flying ? .5f: moveData.drag);
 			if(!_flying){
 				//Ignore vertical drag so we have full control over jump and fall speeds
 				dragForce.y = 0;
@@ -552,17 +567,6 @@ namespace Code.Player.Character {
 
 			//Apply speed
 			characterMoveVelocity *= currentSpeed;
-
-			//Flying movement
-			if (_flying) {
-				if (md.jump) {
-					newVelocity.y += moveData.verticalFlySpeed;
-				}
-
-				if (md.crouch) {
-					newVelocity.y -= moveData.verticalFlySpeed;
-				}
-			}
 
 #region SLOPE			
 			if (moveData.detectSlopes && detectedGround){
@@ -934,10 +938,6 @@ namespace Code.Player.Character {
 			return this._flying;
 		}
 
-		public bool IsAllowFlight() {
-			return this._allowFlight;
-		}
-
 		public Vector3 GetVelocity() {
 			return trackedVelocity;
 		}
@@ -981,26 +981,17 @@ namespace Code.Player.Character {
 			this._flying = flyModeEnabled;
 		}
 
+		public void SetDebugFlying(bool flying){
+			if (!this.moveData.allowDebugFlying) {
+				Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
+				return;
+			}
+			SetFlying(flying);
+		}
+
 		public void SetFlying(bool flying) {
-			// if (flying && !this._allowFlight) {
-			// 	Debug.LogError("Unable to fly when allow flight is false. Call entity.SetAllowFlight(true) first.");
-			// 	return;
-			// }
-			// this._flying = flying;
-			// RpcSetFlying(flying);
-		}
-
-		[Server]
-		public void SetAllowFlight(bool allowFlight) {
-			// TargetAllowFlight(base.Owner, allowFlight);
-		}
-
-		[TargetRpc]
-		private void TargetAllowFlight(NetworkConnectionToClient conn, bool allowFlight) {
-			// this._allowFlight = allowFlight;
-			// if (this._flying && !this._allowFlight) {
-			// 	this._flying = false;
-			// }
+			this._flying = flying;
+			RpcSetFlying(flying);
 		}
 
 		private void TrySetState(CharacterStateData newStateData) {

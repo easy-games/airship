@@ -57,6 +57,8 @@ namespace Code.Player.Character.API {
 
 
 		[Header("Fly")]
+		[Tooltip("Let console commands toggle flying (/fly from chat)")]
+		public bool allowDebugFlying = true;
 		[Tooltip("Flying speed is determined by multiplying the speed against this number")]
 		public float flySpeedMultiplier = 3.5f;
 		
