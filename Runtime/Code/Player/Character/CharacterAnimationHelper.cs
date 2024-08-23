@@ -209,23 +209,12 @@ namespace Code.Player.Character {
             var layerName = "Override" + (int)layer;
             animator.SetLayerWeight(animator.GetLayerIndex(layerName), weight);
 
-            // print("Setting override layer: " + (int)layerLayer);
             int index = (int)layer;
 
-            if (index <= 4) {
+            if (index <= 6) {
                 animatorOverride[layerName] = clip;
                 animator.SetBool(layerName + "Looping", clip.isLooping);
                 animator.SetTrigger(layerName);
-                return;
-            }
-
-            // Upper body
-            if (index <= 8) {
-                index -= 4;
-                animatorOverride["UpperBody" + index] = clip;
-                animator.SetBool("UpperBody" + index + "Looping", clip.isLooping);
-                animator.SetTrigger("UpperBody" + index);
-                return;
             }
         }
 
