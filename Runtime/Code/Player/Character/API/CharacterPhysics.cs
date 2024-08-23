@@ -27,8 +27,8 @@ namespace Code.Player.Character.API {
 			);
 		}
 
-		public Vector3 CalculateDrag(Vector3 velocity) {
-			var drag = 1 * movement.moveData.drag + velocity.magnitude / movement.moveData.terminalVelocity * movement.moveData.drag;
+		public Vector3 CalculateDrag(Vector3 velocity, float dragConstant) {
+			var drag = 1 * dragConstant + velocity.magnitude / movement.moveData.terminalVelocity * dragConstant;
 			return -velocity.normalized * drag;
 		}
 
