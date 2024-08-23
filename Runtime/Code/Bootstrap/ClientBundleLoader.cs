@@ -73,7 +73,9 @@ namespace Code.Bootstrap {
         private LuauScriptsDto clientLuauScriptsDto;
 
         private void Awake() {
-            DevConsole.ClearConsole();
+            if (DevConsole.clearConsoleOnServerConnect) {
+                DevConsole.ClearConsole();
+            }
             if (RunCore.IsClient()) {
                 this._airshipScriptTemplate = ScriptableObject.CreateInstance<AirshipScript>();
             }
