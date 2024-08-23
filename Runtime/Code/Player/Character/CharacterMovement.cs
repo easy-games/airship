@@ -379,7 +379,7 @@ namespace Code.Player.Character {
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
 			var inAir = didJump || (!detectedGround && !prevStepUp);
 			var tryingToSprint = moveData.onlySprintForward ? 
-				md.sprint && md.moveDir.y > 0.1f : //Only sprint if you are moving forward
+				md.sprint && this.graphicTransform.InverseTransformVector(md.moveDir).z > 0.1f : //Only sprint if you are moving forward
 				md.sprint && md.moveDir.magnitude > 0.1f; //Only sprint if you are moving
 			
 			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
