@@ -7,7 +7,10 @@ using UnityEngine;
 
 public static class PhysicsSetup
 {
-    private static List<int> layers;
+    private const int NumberOfCoreLayers= 12;
+    private const int GameLayerStartIndex= 17;
+    private static List<int> corelayers;
+    private static List<int> gameLayers;
 
     public static void Setup(GameConfig config) {
 #if UNITY_EDITOR
@@ -27,59 +30,75 @@ public static class PhysicsSetup
         Physics.simulationMode = SimulationMode.FixedUpdate;
 
         //Reserved for future use
-        for (int i = 12; i <= 16; i++) {
+        for (int i = NumberOfCoreLayers; i < GameLayerStartIndex; i++) {
             PhysicsLayerEditor.SetLayer(i, "");
+        }
+        
+        //Compile all of the layer indexes we use
+        corelayers = new List<int>();
+        gameLayers = new List<int>();
+        for (int i = 0; i < NumberOfCoreLayers; i++) {
+            corelayers.Add(i);
+        }
+        for (int i = GameLayerStartIndex; i <= 31; i++) {
+            gameLayers.Add(i);
         }
 
         //Airship Game Layers
-        // int gameId = 0;
-        // for (int i = 17; i <= 31; i++) {
-        //     if (PhysicsLayerEditor.LayerExists(LayerMask.LayerToName(i))) {
-        //         gameId++;
-        //         continue;
-        //     }
-        //
-        //     string name = "GameLayer"+gameId;
-        //     PhysicsLayerEditor.SetLayer(i, name);
-        //     gameId++;
-        // }
-        
-        //Compile all of the layer indexes we use
-        layers = new List<int>();
-        for (int i = 0; i <= 10; i++) {
-            layers.Add(i);
+        int gameId = 0;
+        for (int i = GameLayerStartIndex; i <= 31; i++) {        
+            CollideWithAllLayers(i, true);
+            string name = "GameLayer"+gameId;
+            gameId++;
         }
-        for (int i = 17; i <= 31; i++) {
-            layers.Add(i);
-        }
-
         
         //Create the Physics Matrix
             //Non colliding layers
-        IgnoreAllLayers(LayerMask.NameToLayer("Viewmodel"));
-        IgnoreAllLayers(LayerMask.NameToLayer("IgnoreCollision"));
-        IgnoreAllLayers(LayerMask.NameToLayer("AvatarEditor"));
-        IgnoreAllLayers(LayerMask.NameToLayer("TransparentFX"));
-        IgnoreAllLayers(LayerMask.NameToLayer("Ignore Raycast"));
-        IgnoreAllLayers(LayerMask.NameToLayer("Water"));
-        IgnoreAllLayers(LayerMask.NameToLayer("UI"));
-        IgnoreAllLayers(LayerMask.NameToLayer("WorldUI"));
+        IgnoreAllLayers(LayerMask.NameToLayer("Viewmodel"), true);
+        IgnoreAllLayers(LayerMask.NameToLayer("IgnoreCollision"), true);
+        IgnoreAllLayers(LayerMask.NameToLayer("AvatarEditor"), true);
+        IgnoreAllLayers(LayerMask.NameToLayer("TransparentFX"), true);
+        IgnoreAllLayers(LayerMask.NameToLayer("Ignore Raycast"), true);
+        IgnoreAllLayers(LayerMask.NameToLayer("Water"), true);
+        IgnoreAllLayers(LayerMask.NameToLayer("UI"), true);
+        IgnoreAllLayers(LayerMask.NameToLayer("WorldUI"), true);
+            //Only collide with game layers
+        IgnoreAllLayers(LayerMask.NameToLayer("Character"), false);
+        IgnoreAllLayers(LayerMask.NameToLayer("VoxelWorld"), false);
 
-            //Character
-        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Character"), true);
-
-            //Voxel World
-        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("VoxelWorld"), LayerMask.NameToLayer("VoxelWorld"), true);
+        //Character
+            //Collides with
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Default"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VisuallyHidden"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VoxelWorld"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Water"), false);
+        
+        //VoxelWorld
+            //Collides with
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("VoxelWorld"), LayerMask.NameToLayer("Default"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("VoxelWorld"), LayerMask.NameToLayer("VisuallyHidden"), false);
 #endif
     }
 
-    public static void IgnoreAllLayers(int layer)
-    {
-        foreach (var otherLayer in layers)
-        {
+    public static void IgnoreAllLayers(int layer, bool ignoreGameLayers) {
 #if UNITY_EDITOR
+        foreach (var otherLayer in corelayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, true);
-#endif
         }
+        foreach (var otherLayer in gameLayers) {
+            Physics.IgnoreLayerCollision(layer, otherLayer, ignoreGameLayers);
+        }
+#endif
+    }
+
+    public static void CollideWithAllLayers(int layer, bool collideWithGameLayers) {
+#if UNITY_EDITOR
+        foreach (var otherLayer in corelayers) {
+            Physics.IgnoreLayerCollision(layer, otherLayer, false);
+        }
+        foreach (var otherLayer in gameLayers) {
+            Physics.IgnoreLayerCollision(layer, otherLayer, !collideWithGameLayers);
+        }
+#endif
     }
 }
