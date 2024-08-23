@@ -10,6 +10,7 @@ namespace Code.Player.Character {
             OVERRIDE_3 = 3,
             OVERRIDE_4 = 4,
             UPPER_BODY_1 = 5,
+            UPPER_BODY_2 = 6,
         }
 
         [Header("References")]
