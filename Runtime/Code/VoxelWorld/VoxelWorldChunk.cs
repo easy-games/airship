@@ -26,6 +26,7 @@ namespace VoxelWorldStuff {
     // 000000000000     000         0
 
     public class Chunk {
+        
         private static readonly Vector3Int[] searchOffsets =
         {
             new Vector3Int(1, 1, 1),
@@ -47,6 +48,9 @@ namespace VoxelWorldStuff {
 
         //Permanent data
         public UInt16[] readWriteVoxel = new UInt16[chunkSize * chunkSize * chunkSize];
+
+        //Currently instantiated prefabs
+        private Dictionary<Vector3Int,GameObject> prefabObjects;
 
         public bool materialPropertiesDirty = true;
 
@@ -138,6 +142,71 @@ namespace VoxelWorldStuff {
             return count;
         }
 
+        private void ClearPrefabsMainThread() {
+            //If its the editor detroy
+
+            if (prefabObjects == null) {
+                return; 
+            }
+#if UNITY_EDITOR
+            if (Application.isPlaying == false) {
+                foreach (var obj in prefabObjects) {
+               
+                    GameObject.DestroyImmediate(obj.Value);
+                }
+            }
+            else {
+                foreach (var obj in prefabObjects) {
+                    GameObject.Destroy(obj.Value);
+                }
+            }
+#else
+            foreach (var obj in prefabObjects) {
+                GameObject.Destroy(obj.Value);
+            }
+#endif
+            
+            prefabObjects = null;
+        }
+
+        private void FullInstatiatePrefabsMainThread() {
+
+            ClearPrefabsMainThread();
+
+            if (prefabObjects == null) {
+                prefabObjects = new Dictionary<Vector3Int, GameObject>();
+            }
+
+            if (obj == null) {
+                Debug.LogWarning("Chunk obj is null, can't instantiate prefabs.");
+                return;
+            }
+            Vector3 origin = (chunkKey * chunkSize) + new Vector3(0.5f,0.5f,0.5f);
+            for (int x = 0; x < chunkSize; x++) {
+                for (int y = 0; y < chunkSize; y++) {
+                    for (int z = 0; z < chunkSize; z++) {
+                        
+                        BlockId blockId = VoxelWorld.VoxelDataToBlockId(GetLocalVoxelAt(x, y, z));
+                        
+                        if (blockId > 0) {
+                            var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
+                            if (blockDefinition.definition.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
+                                GameObject prefabDef = blockDefinition.definition.prefab;
+                                GameObject prefab = GameObject.Instantiate(prefabDef);
+                                Vector3Int pos = new Vector3Int(x, y, z);
+                                prefab.transform.parent = obj.transform;
+                                prefab.transform.localPosition = origin + pos;
+                                prefab.transform.localRotation = Quaternion.identity;
+                                prefab.transform.localScale = Vector3.one;
+                                prefabObjects.Add(pos, prefab);
+                            }
+                        }
+                      
+                    }
+                }
+            }
+        }
+
         private (Vector3, bool) FindFirstEmpty(Vector3 pos) {
             //Check a 3x3x3 grid around pos, return the one with the fewest full voxels nearby
 
@@ -162,7 +231,6 @@ namespace VoxelWorldStuff {
                         }
                     }
                 }
-
             }
 
             if (bestCount == 0) {
@@ -179,17 +247,14 @@ namespace VoxelWorldStuff {
             for (int x2 = x - 4; x2 <= x + 8; x2++) {
                 for (int y2 = y - 4; y2 <= y + 8; y2++) {
                     for (int z2 = z - 4; z2 <= z + 8; z2++) {
-
                         if (world.ReadVoxelAtInternal(new Vector3Int(x2, y2, z2)) != 0) {
                             return true;
-
                         }
                     }
                 }
             }
             return false;
         }
-
 
         public bool HasVoxels() {
             foreach (UInt16 vox in readWriteVoxel) {
@@ -199,19 +264,13 @@ namespace VoxelWorldStuff {
             }
             return false;
         }
-
-
-
         public bool Busy() {
             if (meshProcessor != null) {
                 return true;
             }
             return false;
         }
-
-
         
-
         ~Chunk() {
 
             Free();
@@ -223,17 +282,7 @@ namespace VoxelWorldStuff {
                 //  voxel.Dispose();
             }
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int WorldPosToProbeIndex(Vector3Int globalCoord) {
-            Vector3Int chunkCoordinate = VoxelWorld.WorldPosToChunkKey(globalCoord);
-            int localX = (globalCoord.x - chunkCoordinate.x * chunkSize) / 4;
-            int localY = (globalCoord.y - chunkCoordinate.y * chunkSize) / 4;
-            int localZ = (globalCoord.z - chunkCoordinate.z * chunkSize) / 4;
-
-            return localX + (localY * 4) + (localZ * 4 * 4);
-        }
-
+ 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int WorldPosToVoxelIndex(Vector3Int globalCoord) {
             Vector3Int chunkCoordinate = VoxelWorld.WorldPosToChunkKey(globalCoord);
@@ -287,9 +336,7 @@ namespace VoxelWorldStuff {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt16 GetLocalVoxelAt(int localX, int localY, int localZ) {
             int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
-
             return readWriteVoxel[key];
-
         }
 
         public void Clear() {
@@ -320,7 +367,7 @@ namespace VoxelWorldStuff {
             else {
                 return DoVisualUpdate(world);
             }
-#pragma warning restore CS0162            
+#pragma warning restore CS0162
         }
 
         private bool DoHeadlessUpdate(VoxelWorld world) {
@@ -435,7 +482,14 @@ namespace VoxelWorldStuff {
                     }
                     
                     Profiler.EndSample();
+
+                    Profiler.BeginSample("SpawnPrefabs");
+                    FullInstatiatePrefabsMainThread();
+                    Profiler.EndSample();
+
                     Profiler.BeginSample("RebuildCollision");
+
+                    
 
                     //Fill the collision out
                     //Greedy mesh time!

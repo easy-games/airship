@@ -27,10 +27,11 @@ public class VoxelBlocks : MonoBehaviour {
 
     public enum ContextStyle : int {
         Block,
+        Prefab,
         GreedyMeshingTiles,
         PipeBlocks,
-        QuarterTiles,
-        Mesh,
+        QuarterBlocks,
+        StaticMesh,
     }
 
     //Greedy meshing 
@@ -293,7 +294,7 @@ public class VoxelBlocks : MonoBehaviour {
         return this.loadedBlocks[0];
     }
 
-    public BlockDefinition GetBlockDefinitionFromIndex(int index) {
+    public BlockDefinition GetBlockDefinitionFromBlockId(int index) {
         return GetBlock((ushort)index);
     }
 
@@ -365,7 +366,7 @@ public class VoxelBlocks : MonoBehaviour {
 
     private void ParseQuarterBlock(BlockDefinition block) {
 
-        if (block.definition.quarterBlockMesh == null || block.definition.contextStyle != ContextStyle.QuarterTiles) {
+        if (block.definition.quarterBlockMesh == null || block.definition.contextStyle != ContextStyle.QuarterBlocks) {
             return;
         }
 

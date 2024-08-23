@@ -887,6 +887,11 @@ namespace VoxelWorldStuff {
                             continue;
                         }
 
+                        //Dont spawn these here, it has to be done on the main thread
+                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
+                            continue;
+                        }
+
                         // Prefab blocks use "fake" blocks that are just invisible (like air!)
                         //@@if (block.definition.prefab) {
                             // no visual
@@ -900,7 +905,7 @@ namespace VoxelWorldStuff {
                             }
                         }
 
-                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterTiles) {
+                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
                             if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true) {
                                 continue;
                             }

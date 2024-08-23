@@ -461,8 +461,20 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         
         if (faceHandle) {
             faceHandle.transform.position = world.TransformPointToWorldSpace(lastPos + new Vector3(0.5f, 0.5f, 0.5f) + lastNormal * 0.51f);
-            faceHandle.transform.rotation = Quaternion.LookRotation(world.TransformVectorToWorldSpace(lastNormal));
 
+            Matrix4x4 mat = new Matrix4x4();
+            
+            Vector3 forward = world.transform.forward;
+            Vector3 up = world.transform.up;
+            Vector3 normal = world.TransformVectorToWorldSpace(lastNormal);
+
+            if (Mathf.Abs(Vector3.Dot(normal, up)) > 0.7f) {
+                faceHandle.transform.rotation = Quaternion.LookRotation(normal, forward);
+            }
+            else {
+                faceHandle.transform.rotation = Quaternion.LookRotation(normal, up);
+            }
+            
             MeshRenderer ren = faceHandle.GetComponent<MeshRenderer>();
             if (leftControlDown == true) {
                 ren.sharedMaterial.SetColor("_Color", new Color(0, 1, 0, 0.25f));

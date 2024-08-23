@@ -32,6 +32,8 @@ public class VoxelBlockDefinition : ScriptableObject {
     public VoxelQuarterBlockMeshDefinition quarterBlockMesh;
     public string meshPathLod;
 
+    public GameObject prefab;
+
     public float metallic = 0;
     public float smoothness = 0;
     public float normalScale = 1;
@@ -220,21 +222,28 @@ public class VoxelBlockDefinitionEditor : Editor {
             else {
                 EditorGUILayout.HelpBox("Assign a texture or material for the top face.", MessageType.Info);
             }
+
+            block.metallic = EditorGUILayout.FloatField("Metallic", block.metallic);
+            block.smoothness = EditorGUILayout.FloatField("Smoothness", block.smoothness);
+            block.normalScale = EditorGUILayout.FloatField("Normal Scale", block.normalScale);
+            block.emissive = EditorGUILayout.FloatField("Emissive", block.emissive);
+            block.brightness = EditorGUILayout.FloatField("Brightness", block.brightness);
+
         }
-        else {
+        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
             block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
             block.quarterBlockMesh = (VoxelQuarterBlockMeshDefinition)EditorGUILayout.ObjectField("QuarterBlock Mesh", block.quarterBlockMesh, typeof(VoxelQuarterBlockMeshDefinition), false);
 
             block.meshPathLod = EditorGUILayout.TextField("Mesh Path LOD", block.meshPathLod);
         }
- 
-        block.metallic = EditorGUILayout.FloatField("Metallic", block.metallic);
-        block.smoothness = EditorGUILayout.FloatField("Smoothness", block.smoothness);
-        block.normalScale = EditorGUILayout.FloatField("Normal Scale", block.normalScale);
-        block.emissive = EditorGUILayout.FloatField("Emissive", block.emissive);
-        block.brightness = EditorGUILayout.FloatField("Brightness", block.brightness);
+        if (block.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
+            block.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab", block.prefab, typeof(GameObject), false);
+        }
 
-        block.solid = EditorGUILayout.Toggle("Solid", block.solid);
+
+        //Small gap
+        EditorGUILayout.Space();
+        block.solid = EditorGUILayout.Toggle("Solid Visibility", block.solid);
         block.collisionType = (VoxelBlocks.CollisionType)EditorGUILayout.EnumPopup("Collision Type", block.collisionType);
 
         block.randomRotation = EditorGUILayout.Toggle("Random Rotation", block.randomRotation);
