@@ -176,6 +176,9 @@ namespace Code.Player.Character {
 		private void LateUpdate(){
 			if (isClient && isOwned) {
 				var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
+				if(lookTarget == Vector3.zero){
+					lookTarget = new Vector3(0,0,.01f);
+				}
 				//Instantly rotate for owner
 				networkTransform.rotation = Quaternion.LookRotation(lookTarget);
 				//Notify the server of the new rotation periodically
@@ -186,12 +189,13 @@ namespace Code.Player.Character {
 			} else {
 				//Tween to rotation
 				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
-				if(lookTarget != Vector3.zero){
-					networkTransform.rotation = Quaternion.Lerp(
-						graphicTransform.rotation,
-						Quaternion.LookRotation(lookTarget),
-						observerRotationLerpMod * Time.deltaTime);
+				if(lookTarget == Vector3.zero){
+					lookTarget = new Vector3(0,0,.01f);
 				}
+				networkTransform.rotation = Quaternion.Lerp(
+					graphicTransform.rotation,
+					Quaternion.LookRotation(lookTarget),
+					observerRotationLerpMod * Time.deltaTime);
 			}
 		}
 
