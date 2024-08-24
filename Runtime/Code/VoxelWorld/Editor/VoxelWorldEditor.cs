@@ -8,6 +8,7 @@ using UnityEngine;
 using System;
 using static UnityEditor.PlayerSettings;
 using static VoxelEditAction;
+using UnityEditor.SceneManagement;
 
 public class VoxelEditAction {
     
@@ -96,8 +97,9 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
     //Constructor
     public VoxelEditManager() {
         Undo.undoRedoEvent += UndoRedoEvent;
+       
     }
-
+    
     public void UndoRedoEvent(in UndoRedoInfo info) {
 
         if (info.isRedo == false) {
@@ -619,6 +621,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         //Add a handler for the gizmo refresh event
         SceneView.duringSceneGui += GizmoRefreshEvent;
+
+        //Save handler
+        EditorSceneManager.sceneSaving += OnSavingScene;
     }
 
     private void OnDestroy() {
@@ -627,6 +632,20 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         //Remove the gizmo refresh event handler
         SceneView.duringSceneGui -= GizmoRefreshEvent;
+
+        //Save handler
+        EditorSceneManager.sceneSaving -= OnSavingScene;
+    }
+    private void OnSavingScene(UnityEngine.SceneManagement.Scene scene, string path) {
+        VoxelWorld world = (VoxelWorld)target;
+        if (world == null) {
+            return;
+        }
+        if (world.hasUnsavedChanges == true) {
+            Debug.Log("Saving voxels because scene is saving.");
+           
+            world.SaveToFile();
+        }
     }
 
     void OnSelectionChanged() { 
