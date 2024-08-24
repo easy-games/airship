@@ -526,6 +526,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 DoMouseMoveEvent(Event.current.mousePosition, world);
             }
             UpdateHandlePosition(world);
+            SceneView.RepaintAll();
         }
 
         //Leftclick up
@@ -578,6 +579,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
 
             UpdateHandlePosition(world);
+            //Repaint
+            SceneView.RepaintAll();
         }
 
         if (Event.current.GetTypeForControl(controlID) == EventType.KeyDown) {
