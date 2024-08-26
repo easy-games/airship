@@ -224,12 +224,12 @@ namespace Code.Player.Character {
             animator.CrossFadeInFixedTime(layerName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(layerName));
         }
 
-        public void StopAnimation(CharacterAnimationLayer layer, float normalizedTransitionDuration) {
+        public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration) {
             if (!enabled) {
                 return;
             }
 
-            animator.CrossFade("EarlyExit", normalizedTransitionDuration, 4 + (int)layer);
+            animator.CrossFadeInFixedTime("EarlyExit", fixedTransitionDuration, 4 + (int)layer);
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
     }
