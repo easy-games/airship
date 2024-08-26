@@ -157,10 +157,8 @@ namespace Editor
             if (HasScriptBinding(target, path)) return;
             
             var scriptBinding = target.AddComponent<AirshipComponent>();
-            // scriptBinding.m_fileFullPath = path;
-            // scriptBinding.m_assetPath = path;
-            // scriptBinding.m_script = binaryFile;
             scriptBinding.SetScript(airshipScript);
+            EditorUtility.SetDirty(scriptBinding);
         }
 
         private static bool HasScriptBinding(GameObject target, string path)
