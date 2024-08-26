@@ -232,6 +232,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(NetworkConnectionToClient),
             typeof(NetworkConnectionToServer),
             typeof(NetworkTime),
+            typeof(PredictedRigidbody),
+            typeof(PredictedState),
 
             // Tweens
             typeof(NativeTween),

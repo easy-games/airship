@@ -226,10 +226,11 @@ namespace Code.Player.Character {
             this.PlayAnimationWithWeight(clip, layer, 1);
         }
 
-        public void StopAnimation(CharacterAnimationLayer layer) {
+        public void StopAnimation(CharacterAnimationLayer layer, float normalizedTransitionDuration) {
             if(!enabled){
                 return;
             }
+            animator.CrossFade("EarlyExit", normalizedTransitionDuration, 5 + (int)layer);
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
     }

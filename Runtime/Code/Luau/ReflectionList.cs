@@ -79,6 +79,10 @@ namespace Luau {
             [typeof(NetworkConnection)] = LuauContextAll,
             [typeof(NetworkTime)] = LuauContextAll,
             [typeof(LagCompensator)] = LuauContextAll,
+            [typeof(PredictedRigidbody)] = LuauContextAll,
+            [typeof(PredictedState)] = LuauContextAll,
+            [typeof(PredictedSyncData)] = LuauContextAll,
+            [typeof(PredictedSyncDataReadWrite)] = LuauContextAll,
 
             // Physics
             [typeof(Physics)] = LuauContextAll,
