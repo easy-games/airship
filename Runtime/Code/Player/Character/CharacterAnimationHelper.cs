@@ -206,31 +206,30 @@ namespace Code.Player.Character {
             animator.SetTrigger("Jump");
         }
 
-        public void PlayAnimationWithWeight(AnimationClip clip, CharacterAnimationLayer layer, float weight) {
+        public void SetLayerWeight(CharacterAnimationLayer layer, float weight) {
             var layerName = "Override" + (int)layer;
             animator.SetLayerWeight(animator.GetLayerIndex(layerName), weight);
-
-            int index = (int)layer;
-
-            if (index <= 6) {
-                animatorOverride[layerName] = clip;
-                animator.SetBool(layerName + "Looping", clip.isLooping);
-                animator.SetTrigger(layerName);
-            }
         }
 
-        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer) {
+        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer, float fixedTransitionDuration) {
             if (!enabled) {
                 return;
             }
-            this.PlayAnimationWithWeight(clip, layer, 1);
+
+            var layerName = "Override" + (int)layer;
+
+            animatorOverride[layerName] = clip;
+
+            animator.SetBool(layerName + "Looping", clip.isLooping);
+            animator.CrossFadeInFixedTime(layerName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(layerName));
         }
 
         public void StopAnimation(CharacterAnimationLayer layer, float normalizedTransitionDuration) {
-            if(!enabled){
+            if (!enabled) {
                 return;
             }
-            animator.CrossFade("EarlyExit", normalizedTransitionDuration, 5 + (int)layer);
+
+            animator.CrossFade("EarlyExit", normalizedTransitionDuration, 4 + (int)layer);
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
     }
