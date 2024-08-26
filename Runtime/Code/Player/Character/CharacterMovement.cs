@@ -739,10 +739,10 @@ namespace Code.Player.Character {
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
-			if(!airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing
-				&& normalizedMoveDir.sqrMagnitude < .1f 
-				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
-				){
+			var canStopVel = !airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing;
+			var notTryingToMove = normalizedMoveDir.sqrMagnitude < .1f;
+			var underMin = physics.GetFlatDistance(Vector3.zero, newVelocity) <= moveData.minimumVelocity;
+			if(canStopVel && notTryingToMove && underMin){
 				//Not intending to move so snap to zero (Fake Dynamic Friction)
 				newVelocity.x = 0;
 				newVelocity.z = 0;
