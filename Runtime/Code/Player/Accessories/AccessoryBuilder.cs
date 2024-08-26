@@ -36,7 +36,7 @@ public class AccessoryBuilder : MonoBehaviour
             var pendingOutfit = currentOutfit;
             //Apply outfit skin if provided
             RemoveClothingAccessories(false);
-            AddAccessoryOutfit(pendingOutfit, true);
+            EquipAccessoryOutfit(pendingOutfit, true);
         }
     }
 
@@ -147,7 +147,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     [HideInInspector]
     public AccessoryOutfit currentOutfit;
-    public ActiveAccessory[] AddAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
+    public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
         this.currentOutfit = outfit;
         if (outfit.forceSkinColor) SetSkinColor(outfit.skinColor, false);
         if(outfit.faceDecal?.decalTexture) SetFaceTexture(outfit.faceDecal.decalTexture);
@@ -161,7 +161,9 @@ public class AccessoryBuilder : MonoBehaviour
 #if UNITY_EDITOR
     [HideInInspector]
     public bool cancelPendingDownload = false;
-    public async Task<ActiveAccessory[]> AddOutfirFromUsername(string username){
+
+    [HideFromTS]
+    public async Task<ActiveAccessory[]> EquipOutfitFromUsername(string username){
         var res = await UsersServiceBackend.GetUserByUsername(username);
 		if (res.success && res.data != "") {
             var data = JsonUtility.FromJson<UserData>(res.data);
@@ -174,6 +176,7 @@ public class AccessoryBuilder : MonoBehaviour
         return new ActiveAccessory[0];
     }
 
+    [HideFromTS]
     public async Task<ActiveAccessory[]> AddOutfitFromUserId(string userId) {
         this.currentUserId = userId;
         this.cancelPendingDownload = false;
