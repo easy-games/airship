@@ -266,7 +266,8 @@ namespace Code.Player.Character {
 			}
 			this.grounded = grounded;
 			this.groundedRaycastHit = groundHit;
-			if(grounded && airborneFromImpulse){
+
+			if(grounded){
 				//Reset airborne impulse
 				airborneFromImpulse = false;
 			}
@@ -275,6 +276,7 @@ namespace Code.Player.Character {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
 				airborneFromImpulse = false;
+				this.OnImpactWithGround?.Invoke(currentVelocity);
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -293,11 +295,6 @@ namespace Code.Player.Character {
 				md.sprint = false;
 			}
 #endregion
-
-			// Fall impact
-			if (grounded && !prevGrounded) {
-				this.OnImpactWithGround?.Invoke(currentVelocity);
-			}
 
 			#region GRAVITY
 			if(moveData.useGravity){
@@ -674,7 +671,7 @@ namespace Code.Player.Character {
 					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				if(velMagnitude < currentSpeed && !airborneFromImpulse!){
+				if(velMagnitude < currentSpeed && !airborneFromImpulse){
 					// if(clampedIncrease.x < 0){
 					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }else{
@@ -690,7 +687,7 @@ namespace Code.Player.Character {
 				}else{
 					//dirDot = dirDot - 1 / 2;
 					//clampedIncrease *= -Mathf.Min(0, dirDot-1);
-					newVelocity += characterMoveVelocity * dirDot * deltaTime * currentSpeed * 2;
+					newVelocity += clampedIncrease * dirDot;
 				}
 				characterMoveVelocity = clampedIncrease;
 				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
