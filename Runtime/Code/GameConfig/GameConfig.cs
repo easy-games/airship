@@ -24,6 +24,7 @@ public class GameConfig : ScriptableObject
 
     [HideInInspector] public List<string> tags = new();
     [HideInInspector] public string[] gameLayers;
+    [HideInInspector] public string[] gameTags;
     
     public static GameConfig Load() {
 #if UNITY_EDITOR

@@ -14,6 +14,40 @@ public class GameObjectAPI : BaseLuaAPIClass {
         return typeof(UnityEngine.GameObject);
     }
 
+    public override int OverrideMemberGetter(LuauContext context, IntPtr thread, object targetObject, string getterName) {
+        if (getterName == "tag") {
+            // TODO: Handle tags
+        }
+        
+        return -1;
+    }
+
+    public override int OverrideMemberSetter(LuauContext context, IntPtr thread, object targetObject, string setterName, LuauCore.PODTYPE dataType, IntPtr dataPtr,
+        int dataPtrSize) {
+        
+        if (setterName == "tag") {
+            var gameObject = (GameObject)targetObject;
+            var value = LuauCore.GetPropertyAsString(dataType, dataPtr);
+            Debug.Log($"set {setterName} = '{value}'");
+            
+            var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+            if (gameConfig) {
+                var tagList = UnityEditorInternal.InternalEditorUtility.tags;
+                Debug.Log($"Unity tags: [ {string.Join(", ", tagList)} ]; user tags: [ {string.Join(", ", gameConfig.gameTags)} ]");
+                var index = Array.IndexOf(gameConfig.gameTags, value);
+                if (index > -1) {
+                    Debug.Log($"Translate tag {value} -> {tagList[index]}");
+                    value = tagList[index]; // Translate user tag to the runtime tag
+                }
+            }
+            
+            gameObject.tag = value;
+            return 0;
+        }
+        
+        return -1;
+    }
+
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
         if (methodName == "Create") {
             string name = "lua_created_gameobject";

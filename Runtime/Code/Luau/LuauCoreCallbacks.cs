@@ -233,6 +233,8 @@ public partial class LuauCore : MonoBehaviour {
                 }
             }
 
+            _coreInstance.unityAPIClassesByType.TryGetValue(sourceType, out var valueTypeAPI);
+
             Type t = null;
             PropertyInfo property = null;
             FieldInfo field = null;
@@ -265,6 +267,14 @@ public partial class LuauCore : MonoBehaviour {
                 referencedAssemblies.Add(sourceType.Assembly.FullName);
             }
 
+            if (valueTypeAPI != null) {
+                var retValue = valueTypeAPI.OverrideMemberSetter(context, thread, objectReference, propName, type, propertyData,
+                    propertyDataSize);
+                if (retValue >= 0) {
+                    return retValue;
+                }
+            }
+
             switch (type) {
                 case PODTYPE.POD_OBJECT: {
                     int[] intData = new int[1];
@@ -290,7 +300,7 @@ public partial class LuauCore : MonoBehaviour {
                                 return LuauError(thread, "[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
                             }
                         }
-
+                        
                         if (field != null) {
                             field.SetValue(objectReference, propertyObjectRef);
                         } else {
