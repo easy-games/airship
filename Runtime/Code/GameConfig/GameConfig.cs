@@ -4,6 +4,7 @@ using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditorInternal;
 #endif
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -29,7 +30,7 @@ public class GameConfig : ScriptableObject
     private const string TagPrefix = "AirshipTag";
     private const int TagMax = 64;
 
-    internal bool TryGetRuntimeTag(string userTag, out string runtimeTag) {
+    public bool TryGetRuntimeTag(string userTag, out string runtimeTag) {
         var index = Array.IndexOf(gameTags, userTag);
         if (index != -1 && index < TagMax) {
             runtimeTag = TagPrefix + index;
@@ -40,7 +41,12 @@ public class GameConfig : ScriptableObject
         return false;
     }
 
-    internal bool TryGetUserTag(string runtimeTag, out string userTag) {
+    public bool TryGetUserTag(string runtimeTag, out string userTag) {
+        if (!runtimeTag.StartsWith(TagPrefix)) {
+            userTag = null;
+            return false;
+        }
+        
         var offset = int.Parse(runtimeTag[TagPrefix.Length..]);
         userTag = gameTags[offset];
         return userTag != null;

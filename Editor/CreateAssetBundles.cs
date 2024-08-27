@@ -249,7 +249,7 @@ public static class CreateAssetBundles {
 		}
 
 		// Update tags
-		var tagList = UnityEditorInternal.InternalEditorUtility.tags;
+		var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
 
 		gameConfig.gameLayers = layers.ToArray();
 		gameConfig.gameTags = tagList.ToArray();
