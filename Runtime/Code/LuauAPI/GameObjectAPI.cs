@@ -35,6 +35,28 @@ public class GameObjectAPI : BaseLuaAPIClass {
 
     }
 
+    private static int FindWithTag(LuauContext context, IntPtr thread, string tag) {
+        var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+        if (gameConfig && gameConfig.TryGetRuntimeTag(tag, out var runtimeTag)) {
+            var go = GameObject.FindWithTag(runtimeTag);
+            LuauCore.WritePropertyToThread(thread, go, typeof(GameObject));
+            return 1;
+        }
+
+        return -1;
+    }
+    
+    private static int FindGameObjectsWithTag(LuauContext context, IntPtr thread, string tag) {
+        var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+        if (gameConfig && gameConfig.TryGetRuntimeTag(tag, out var runtimeTag)) {
+            var go = GameObject.FindGameObjectsWithTag(runtimeTag);
+            LuauCore.WritePropertyToThread(thread, go, typeof(GameObject[]));
+            return 1;
+        }
+
+        return -1;
+    }
+
     public override int OverrideMemberGetter(LuauContext context, IntPtr thread, object targetObject, string getterName) {
 #if AIRSHIP_PLAYER
         if (getterName == "tag") {
@@ -94,6 +116,23 @@ public class GameObjectAPI : BaseLuaAPIClass {
             return 0;
         }
 
+        // Runtime tags
+#if AIRSHIP_PLAYER
+        if (methodName == "FindWithTag" || methodName == "FindGameObjectWithTag") {
+            var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                paramaterDataSizes);
+            var result = FindWithTag(context, thread, tag);
+            if (result != -1) return result;
+        }
+
+        if (methodName == "FindGameObjectsWithTag") {
+            var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                paramaterDataSizes);
+            var result = FindGameObjectsWithTag(context, thread, tag);
+            if (result != -1) return result;
+        }
+#endif
+        
         if (methodName == "FindObjectsByType") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (typeName == null) {
