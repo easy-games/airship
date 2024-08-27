@@ -248,7 +248,11 @@ public static class CreateAssetBundles {
 			layers.Add(layerName);
 		}
 
+		// Update tags
+		var tagList = UnityEditorInternal.InternalEditorUtility.tags;
+
 		gameConfig.gameLayers = layers.ToArray();
+		gameConfig.gameTags = tagList.ToArray();
 		EditorUtility.SetDirty(gameConfig);
 		AssetDatabase.SaveAssetIfDirty(gameConfig);
 

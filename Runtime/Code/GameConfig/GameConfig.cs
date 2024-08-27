@@ -25,6 +25,26 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public List<string> tags = new();
     [HideInInspector] public string[] gameLayers;
     [HideInInspector] public string[] gameTags;
+
+    private const string TagPrefix = "AirshipTag";
+    private const int TagMax = 64;
+
+    internal bool TryGetRuntimeTag(string userTag, out string runtimeTag) {
+        var index = Array.IndexOf(gameTags, userTag);
+        if (index != -1 && index < TagMax) {
+            runtimeTag = TagPrefix + index;
+            return true;
+        }
+
+        runtimeTag = null;
+        return false;
+    }
+
+    internal bool TryGetUserTag(string runtimeTag, out string userTag) {
+        var offset = int.Parse(runtimeTag[TagPrefix.Length..]);
+        userTag = gameTags[offset];
+        return userTag != null;
+    }
     
     public static GameConfig Load() {
 #if UNITY_EDITOR

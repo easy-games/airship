@@ -14,9 +14,43 @@ public class GameObjectAPI : BaseLuaAPIClass {
         return typeof(UnityEngine.GameObject);
     }
 
+    private static int GetTagProperty(LuauContext context, IntPtr thread, GameObject gameObject) {
+        //if (Application.isEditor) return -1;
+        
+        var tag = gameObject.tag;
+        var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+        
+        if (gameConfig && gameConfig.TryGetUserTag(tag, out var userTag)) {
+            // push user tag
+            LuauCore.WritePropertyToThread(thread, userTag, typeof(string));
+            return 1;
+        }
+
+        return -1;
+    }
+
+    private static int SetTagProperty(LuauContext context, IntPtr thread, GameObject gameObject, string value) {
+        //if (Application.isEditor) return -1;
+        
+        var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+        if (gameConfig) {
+            var tagList = UnityEditorInternal.InternalEditorUtility.tags;
+            Debug.Log($"Unity tags: [ {string.Join(", ", tagList)} ]; user tags: [ {string.Join(", ", gameConfig.gameTags)} ]");
+
+            if (gameConfig.TryGetRuntimeTag(value, out var runtimeTag)) {
+                Debug.Log($"Translate Tag '{value}' -> '{runtimeTag}'");
+                value = runtimeTag;
+                gameObject.tag = value;
+                return 0;
+            }
+        }
+
+        return -1;
+    }
+
     public override int OverrideMemberGetter(LuauContext context, IntPtr thread, object targetObject, string getterName) {
         if (getterName == "tag") {
-            // TODO: Handle tags
+            return GetTagProperty(context, thread, (GameObject)targetObject);
         }
         
         return -1;
@@ -28,21 +62,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         if (setterName == "tag") {
             var gameObject = (GameObject)targetObject;
             var value = LuauCore.GetPropertyAsString(dataType, dataPtr);
-            Debug.Log($"set {setterName} = '{value}'");
-            
-            var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
-            if (gameConfig) {
-                var tagList = UnityEditorInternal.InternalEditorUtility.tags;
-                Debug.Log($"Unity tags: [ {string.Join(", ", tagList)} ]; user tags: [ {string.Join(", ", gameConfig.gameTags)} ]");
-                var index = Array.IndexOf(gameConfig.gameTags, value);
-                if (index > -1) {
-                    Debug.Log($"Translate tag {value} -> {tagList[index]}");
-                    value = tagList[index]; // Translate user tag to the runtime tag
-                }
-            }
-            
-            gameObject.tag = value;
-            return 0;
+            return SetTagProperty(context, thread, gameObject, value);
         }
         
         return -1;
