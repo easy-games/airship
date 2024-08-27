@@ -4,6 +4,7 @@ using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditorInternal;
 #endif
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -24,6 +25,32 @@ public class GameConfig : ScriptableObject
 
     [HideInInspector] public List<string> tags = new();
     [HideInInspector] public string[] gameLayers;
+    [HideInInspector] public string[] gameTags;
+
+    private const string TagPrefix = "AirshipTag";
+    private const int TagMax = 64;
+
+    public bool TryGetRuntimeTag(string userTag, out string runtimeTag) {
+        var index = Array.IndexOf(gameTags, userTag);
+        if (index != -1 && index < TagMax) {
+            runtimeTag = TagPrefix + index;
+            return true;
+        }
+
+        runtimeTag = null;
+        return false;
+    }
+
+    public bool TryGetUserTag(string runtimeTag, out string userTag) {
+        if (!runtimeTag.StartsWith(TagPrefix)) {
+            userTag = null;
+            return false;
+        }
+        
+        var offset = int.Parse(runtimeTag[TagPrefix.Length..]);
+        userTag = gameTags[offset];
+        return userTag != null;
+    }
     
     public static GameConfig Load() {
 #if UNITY_EDITOR

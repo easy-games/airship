@@ -14,6 +14,50 @@ public class GameObjectAPI : BaseLuaAPIClass {
         return typeof(UnityEngine.GameObject);
     }
 
+    private static int GetTagProperty(LuauContext context, IntPtr thread, GameObject gameObject) {
+        var runtimeTag = gameObject.tag;
+        var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+        if (!gameConfig || !gameConfig.TryGetUserTag(runtimeTag, out var userTag)) return -1;
+        
+        Debug.Log($"Translating runtime tag '{runtimeTag}' to user tag '{userTag}'");
+        LuauCore.WritePropertyToThread(thread, userTag, typeof(string));
+        return 1;
+
+    }
+
+    private static int SetTagProperty(LuauContext context, IntPtr thread, GameObject gameObject, string value) {
+        var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+        if (!gameConfig || !gameConfig.TryGetRuntimeTag(value, out var runtimeTag)) return -1;
+        
+        Debug.Log($"Translating user tag '{value}' to runtime tag '{runtimeTag}'");
+        gameObject.tag = runtimeTag;
+        return 0;
+
+    }
+
+    public override int OverrideMemberGetter(LuauContext context, IntPtr thread, object targetObject, string getterName) {
+#if AIRSHIP_PLAYER
+        if (getterName == "tag") {
+            return GetTagProperty(context, thread, (GameObject)targetObject);
+        }
+#endif
+        
+        return -1;
+    }
+
+    public override int OverrideMemberSetter(LuauContext context, IntPtr thread, object targetObject, string setterName, LuauCore.PODTYPE dataType, IntPtr dataPtr,
+        int dataPtrSize) {
+#if AIRSHIP_PLAYER
+        if (setterName == "tag") {
+            var gameObject = (GameObject)targetObject;
+            var value = LuauCore.GetPropertyAsString(dataType, dataPtr);
+            return SetTagProperty(context, thread, gameObject, value);
+        }
+#endif
+        
+        return -1;
+    }
+
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
         if (methodName == "Create") {
             string name = "lua_created_gameobject";
