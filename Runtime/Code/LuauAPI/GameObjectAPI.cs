@@ -15,8 +15,6 @@ public class GameObjectAPI : BaseLuaAPIClass {
     }
 
     private static int GetTagProperty(LuauContext context, IntPtr thread, GameObject gameObject) {
-        if (Application.isEditor) return -1;
-        
         var runtimeTag = gameObject.tag;
         var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
         if (!gameConfig || !gameConfig.TryGetUserTag(runtimeTag, out var userTag)) return -1;
@@ -28,8 +26,6 @@ public class GameObjectAPI : BaseLuaAPIClass {
     }
 
     private static int SetTagProperty(LuauContext context, IntPtr thread, GameObject gameObject, string value) {
-        if (Application.isEditor) return -1;
-
         var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
         if (!gameConfig || !gameConfig.TryGetRuntimeTag(value, out var runtimeTag)) return -1;
         
@@ -40,20 +36,24 @@ public class GameObjectAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberGetter(LuauContext context, IntPtr thread, object targetObject, string getterName) {
+#if AIRSHIP_PLAYER
         if (getterName == "tag") {
             return GetTagProperty(context, thread, (GameObject)targetObject);
         }
+#endif
         
         return -1;
     }
 
     public override int OverrideMemberSetter(LuauContext context, IntPtr thread, object targetObject, string setterName, LuauCore.PODTYPE dataType, IntPtr dataPtr,
         int dataPtrSize) {
+#if AIRSHIP_PLAYER
         if (setterName == "tag") {
             var gameObject = (GameObject)targetObject;
             var value = LuauCore.GetPropertyAsString(dataType, dataPtr);
             return SetTagProperty(context, thread, gameObject, value);
         }
+#endif
         
         return -1;
     }

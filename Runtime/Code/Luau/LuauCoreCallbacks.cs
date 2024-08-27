@@ -628,6 +628,14 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
             }
+            
+            _coreInstance.unityAPIClassesByType.TryGetValue(sourceType, out var valueTypeAPI);
+            if (valueTypeAPI != null) {
+                var retValue = valueTypeAPI.OverrideMemberGetter(context, thread, objectReference, propName);
+                if (retValue >= 0) {
+                    return retValue;
+                }
+            }
 
             // Get property info from cache if possible, otherwise set it
             PropertyGetReflectionCache? cacheData;
