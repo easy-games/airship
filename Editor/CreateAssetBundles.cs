@@ -250,7 +250,11 @@ public static class CreateAssetBundles {
 
 		// Update tags
 		var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
-
+		if (tagList.Length > GameConfig.MaximumTags) {
+			Debug.LogError($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
+			return false;
+		}
+		
 		gameConfig.gameLayers = layers.ToArray();
 		gameConfig.gameTags = tagList.ToArray();
 		EditorUtility.SetDirty(gameConfig);

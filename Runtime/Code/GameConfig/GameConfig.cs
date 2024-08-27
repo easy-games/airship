@@ -28,11 +28,11 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public string[] gameTags;
 
     private const string TagPrefix = "AirshipTag";
-    private const int TagMax = 64;
+    public const int MaximumTags = 64;
 
     public bool TryGetRuntimeTag(string userTag, out string runtimeTag) {
         var index = Array.IndexOf(gameTags, userTag);
-        if (index != -1 && index < TagMax) {
+        if (index != -1 && index < MaximumTags) {
             runtimeTag = TagPrefix + index;
             return true;
         }
