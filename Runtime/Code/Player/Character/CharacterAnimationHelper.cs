@@ -107,7 +107,7 @@ namespace Code.Player.Character {
         }
 
         private void UpdateAnimationState() {
-            if(!enabled){
+            if(!enabled || !this.gameObject.activeInHierarchy){
                 return;
             }
             var modifiedTargetPlaybackSpeed = targetPlaybackSpeed;
@@ -173,7 +173,7 @@ namespace Code.Player.Character {
         }
 
         public void SetState(CharacterStateData syncedState) {
-            if (!enabled) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
 
@@ -212,7 +212,7 @@ namespace Code.Player.Character {
         }
 
         public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer, float fixedTransitionDuration) {
-            if (!enabled) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
 
@@ -225,7 +225,7 @@ namespace Code.Player.Character {
         }
 
         public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration) {
-            if (!enabled) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
 
