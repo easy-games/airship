@@ -661,7 +661,7 @@ namespace Code.Player.Character {
 				
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-				var dirDot = Mathf.Clamp01(1-Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed));// / currentSpeed;
+				var dirDot = Mathf.Clamp01(1-Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed));
 				
 				if(useExtraLogging){
 					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
@@ -671,7 +671,7 @@ namespace Code.Player.Character {
 					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				if(velMagnitude < currentSpeed && !airborneFromImpulse){
+				if(_flying || (velMagnitude < currentSpeed && !airborneFromImpulse)){
 					// if(clampedIncrease.x < 0){
 					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }else{
@@ -689,7 +689,7 @@ namespace Code.Player.Character {
 					//clampedIncrease *= -Mathf.Min(0, dirDot-1);
 					newVelocity += clampedIncrease * dirDot;
 				}
-				characterMoveVelocity = clampedIncrease;
+				//characterMoveVelocity = clampedIncrease;
 				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
 				// 	newVelocity.x = characterMoveVelocity.x;
 				// }
