@@ -45,6 +45,16 @@ public class GameObjectAPI : BaseLuaAPIClass {
 
         return -1;
     }
+
+    private static int CompareTag(LuauContext context, IntPtr thread, GameObject gameObject, string tag) {
+        var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+        if (gameConfig && gameConfig.TryGetRuntimeTag(tag, out var runtimeTag)) {
+            LuauCore.WritePropertyToThread(thread, gameObject.CompareTag(runtimeTag), typeof(bool));
+            return 1;
+        }
+        
+        return -1;
+    }
     
     private static int FindGameObjectsWithTag(LuauContext context, IntPtr thread, string tag) {
         var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
@@ -172,6 +182,14 @@ public class GameObjectAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+#if AIRSHIP_PLAYER
+        if (methodName == "CompareTag") {
+            var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var compareTagResult = CompareTag(context, thread, (GameObject)targetObject, tag);
+            if (compareTagResult != -1) return compareTagResult;
+        }
+#endif
+        
         if (methodName == "GetAirshipComponent") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
