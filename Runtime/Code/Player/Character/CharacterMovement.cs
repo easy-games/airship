@@ -848,21 +848,12 @@ namespace Code.Player.Character {
 			this.replicatedLookVector = lookVector;
 		}
 
-		[Server]
 		public void SetVelocity(Vector3 velocity) {
-			SetVelocityInternal(velocity);
-			// if (Owner.ClientId != -1) {
-			// 	RpcSetVelocity(Owner, velocity);
-			// }
-		}
-
-		public void DisableMovement() {
-			SetVelocity(Vector3.zero);
-			disableInput = true;
-		}
-
-		public void EnableMovement() {
-			disableInput = false;
+			if(isServer){
+			 	RpcSetVelocity(base.connectionToClient, velocity);
+			}else{
+				SetVelocityInternal(velocity);
+			}
 		}
 
 		private void SetVelocityInternal(Vector3 velocity) {
@@ -877,6 +868,15 @@ namespace Code.Player.Character {
 		[TargetRpc]
 		private void RpcSetVelocity(NetworkConnection conn, Vector3 velocity) {
 			SetVelocityInternal(velocity);
+		}
+
+		public void DisableMovement() {
+			SetVelocity(Vector3.zero);
+			disableInput = true;
+		}
+
+		public void EnableMovement() {
+			disableInput = false;
 		}
 
 #region TS_ACCESS
