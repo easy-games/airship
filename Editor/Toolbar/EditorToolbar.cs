@@ -15,7 +15,6 @@ namespace Airship.Editor
     class PostProcessHook : AssetPostprocessor {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths) {
-            EditorIcons.Setup();
             AirshipToolbar.RepaintToolbar();
         }
     }
@@ -154,6 +153,7 @@ namespace Airship.Editor
         private static Material profilePicRounded;
         private static Texture signedOutIcon;
         private static Texture2D signedInIcon;
+        public static byte[] signedInIconBytes = new byte[]{};
         /** True when fetching game info for publish (publish shouldn't be clickable during this) */
         private static bool fetchingPublishInfo;
         
@@ -176,11 +176,8 @@ namespace Airship.Editor
             }
             EditorAuthManager.localUserChanged += (user) => {
                 if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
-                    if (EditorIcons.Instance == null) {
-                        Debug.LogError("Editor icons is null.");
-                        return;
-                    }
-                    EditorIcons.Instance.signedInIcon = new byte[] {};
+                    signedInIconBytes = new byte[]{};
+                    // EditorIcons.Instance.signedInIcon = new byte[] {};
                     // EditorUtility.SetDirty(EditorIcons.Instance);
                     // AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                     RepaintToolbar();
@@ -188,6 +185,11 @@ namespace Airship.Editor
                 }
                 FetchAndUpdateSignedInIcon();
             };
+
+            // Delete "Assets/EditorIcons.asset"
+            if (AssetDatabase.AssetPathExists("Assets/EditorIcons.asset")) {
+                AssetDatabase.DeleteAsset("Assets/EditorIcons.asset");
+            }
         }
         
         private static void FetchAndUpdateSignedInIcon() {
@@ -195,7 +197,8 @@ namespace Airship.Editor
                 if (t.Result == null) return;
 
                 signedInIcon = ResizeTexture(t.Result, 128, 128);
-                EditorIcons.Instance.signedInIcon = signedInIcon.EncodeToPNG();
+                AirshipToolbar.signedInIconBytes = signedInIcon.EncodeToPNG();
+                // EditorIcons.Instance.signedInIcon = signedInIcon.EncodeToPNG();
                 // EditorUtility.SetDirty(EditorIcons.Instance);
                 // AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                 RepaintToolbar();
@@ -270,10 +273,10 @@ namespace Airship.Editor
                 gameSettings = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSettings);
             if (signedOutIcon == null)
                 signedOutIcon = ResizeTexture(AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon), 128, 128);
-            if (signedInIcon == null && EditorIcons.Instance != null && EditorIcons.Instance.signedInIcon != null && EditorIcons.Instance.signedInIcon.Length > 0) {
+            if (signedInIcon == null && AirshipToolbar.signedInIconBytes != null && AirshipToolbar.signedInIconBytes.Length > 0) {
                 Texture2D result = new Texture2D(128, 128);
                 result.filterMode = FilterMode.Bilinear;
-                result.LoadImage(EditorIcons.Instance.signedInIcon);
+                result.LoadImage(AirshipToolbar.signedInIconBytes);
                 result.Apply();
                 signedInIcon = result;
             }
