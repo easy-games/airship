@@ -144,17 +144,6 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 #endif
-        /*
-        var binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(m_assetPath);
-        if (binaryFile == null)
-        {
-            // Debug.LogWarning("BinaryFile null");
-            return;
-        }
-        // Debug.Log("Got BinaryFile");
-        m_binaryFile = binaryFile;
-        */
-        
         // Clear out script if file path doesn't match script path
         if (scriptFile != null) {
             if (scriptFile.m_path != m_fileFullPath) {
@@ -438,11 +427,9 @@ public class AirshipComponent : MonoBehaviour {
         
         if (isActiveAndEnabled && _scriptBindingStarted) {
             _airshipScheduledToStart = true;
-            if (IsReadyToStart()) {
-                StartAirshipComponentImmediately();
-            } else {
-                StartCoroutine(StartAirshipComponentAtEndOfFrame());
-            }
+            
+            // Defer to end of frame
+            StartCoroutine(StartAirshipComponentAtEndOfFrame());
         } else {
             _airshipScheduledToStart = false;
         }
@@ -484,7 +471,6 @@ public class AirshipComponent : MonoBehaviour {
 
     public void InitEarly() {
         if (_hasInitEarly) {
-            // print($"Already called InitEarly on object {name}");
             if (!started && IsReadyToStart()) {
                 Init();
             }
@@ -503,13 +489,8 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
         
-        // _isAirshipComponent = luauFile != null && luauFile.m_metadata != null &&
-        //                       luauFile.m_metadata.name != "";
         _isAirshipComponent = this.scriptFile != null && this.scriptFile.airshipBehaviour;
-
-        // if (_isAirshipComponent) {
-            InitWhenCoreReady();
-        // }
+        InitWhenCoreReady();
     }
 
     private void Awake() {
@@ -716,7 +697,6 @@ public class AirshipComponent : MonoBehaviour {
         var gch = GCHandle.Alloc(this.scriptFile.m_bytes, GCHandleType.Pinned); //Ok
 
         m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
-        //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 
         Marshal.FreeCoTaskMem(filenameStr);
         //Marshal.FreeCoTaskMem(dataStr);
@@ -738,7 +718,6 @@ public class AirshipComponent : MonoBehaviour {
 
         if (m_canResume) {
             var retValue = LuauCore.CoreInstance.ResumeScript(context, this);
-            //Debug.Log("Thread result:" + retValue);
             if (retValue == 1) {
                 //We yielded
                 m_canResume = true;
@@ -803,7 +782,6 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         // double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
-        //Debug.Log("execution: " + elapsed  + "ms");
     }
 
  
@@ -846,7 +824,6 @@ public class AirshipComponent : MonoBehaviour {
 
     private void OnLuauReset(LuauContext ctx) {
         if (ctx == context) {
-            // Debug.Log($"CLEARING THREAD POINTER SINCE CONTEXT HAS BEEN RESET {m_script.m_metadata?.name ?? name}");
             m_thread = IntPtr.Zero;
         }
     }
@@ -857,7 +834,6 @@ public class AirshipComponent : MonoBehaviour {
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipBehaviourRoot != null) {
-                    // Debug.Log($"DESTROYING AIRSHIP COMPONENT {m_script.m_metadata?.name ?? name}");
                     var unityInstanceId = _airshipBehaviourRoot.Id;
                     if (_airshipComponentEnabled) {
                         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
