@@ -233,7 +233,10 @@ public class AirshipComponent : MonoBehaviour {
                         serializedProperty.items.type = property.items.type;
                         serializedProperty.items.objectType = property.items.objectType;
                         serializedProperty.items.serializedItems = new string[property.items.serializedItems.Length];
-                        property.items.serializedItems.CopyTo(serializedProperty.items.serializedItems, 0);
+                        serializedProperty.items.serializedItems =
+                            property.items.serializedItems.Select(a => a).ToArray();
+                        serializedProperty.items.objectRefs =
+                            property.items.objectRefs.Select(a => a).ToArray();
                     }
 
                     serializedProperty.items.fileRef = property.fileRef;
