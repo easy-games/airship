@@ -103,7 +103,7 @@ namespace Code.Player.Character {
         }
 
         public bool IsInParticleDistance() {
-            return (this.transform.position - Camera.main.transform.position).magnitude <= particleMaxDistance;
+            return true;
         }
 
         private void UpdateAnimationState() {
