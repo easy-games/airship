@@ -26,7 +26,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
     public const int maxActiveThreads = 8;
@@ -98,6 +98,12 @@ public partial class VoxelWorld : MonoBehaviour {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static BlockId VoxelDataToBlockId(VoxelData block) {
         return (byte)(block & 0xFFF);    //Lower 12 bits
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ushort VoxelDataToExtraBits(VoxelData block) {
+        //mask off everything except the upper 4 bits
+        return (byte)(block & 0xF000);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

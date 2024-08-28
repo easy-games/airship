@@ -663,21 +663,39 @@ namespace VoxelWorldStuff {
                 return;
             }
 
-            Material meshMaterial = block.meshMaterial;
-           
-            foreach (VoxelMeshCopy.Surface surface in mesh.surfaces) {
+            //Material meshMaterial = block.meshMaterial;
+            if (block.meshMaterial) {
                 SubMesh targetSubMesh;
-            
-                target.subMeshes.TryGetValue(meshMaterial, out SubMesh subMesh);
+                target.subMeshes.TryGetValue(block.meshMaterial, out SubMesh subMesh);
+                
                 if (subMesh == null) {
-                    subMesh = new SubMesh(meshMaterial);
-                    target.subMeshes[meshMaterial] = subMesh;
+                    subMesh = new SubMesh(block.meshMaterial);
+                    target.subMeshes[block.meshMaterial] = subMesh;
                 }
                 targetSubMesh = subMesh;
-           
                 // Add triangles
-                for (int i = 0; i < surface.triangles.Length; i++) {
-                    targetSubMesh.triangles.Add(surface.triangles[i] + target.verticesCount);
+                foreach (VoxelMeshCopy.Surface surface in mesh.surfaces) {
+                    for (int i = 0; i < surface.triangles.Length; i++) {
+                        targetSubMesh.triangles.Add(surface.triangles[i] + target.verticesCount);
+                    }
+                }
+            }
+            else {
+                foreach (VoxelMeshCopy.Surface surface in mesh.surfaces) {
+                    SubMesh targetSubMesh;
+                    if (surface.meshMaterial == null) {
+                        continue;
+                    }               
+                    target.subMeshes.TryGetValue(surface.meshMaterial, out SubMesh subMesh);
+                    if (subMesh == null) {
+                        subMesh = new SubMesh(surface.meshMaterial);
+                        target.subMeshes[surface.meshMaterial] = subMesh;
+                    }
+                    targetSubMesh = subMesh;
+                    // Add triangles
+                    for (int i = 0; i < surface.triangles.Length; i++) {
+                        targetSubMesh.triangles.Add(surface.triangles[i] + target.verticesCount);
+                    }
                 }
             }
 
@@ -695,9 +713,7 @@ namespace VoxelWorldStuff {
                 Vector3 transformedPosition = sourceRotation.vertices[i] + offset;
                 //write the transformed position (well, translated)
                 target.vertices[target.verticesCount++] = transformedPosition;
-
             }
-
 
             // Copy other arrays directly
             Array.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
@@ -900,7 +916,7 @@ namespace VoxelWorldStuff {
 
                         //Is this block contextual?
                         if (block.definition.contextStyle == VoxelBlocks.ContextStyle.PipeBlocks) {
-                            if (ContextPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true) {
+                            if (ContextPlacePipeBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true) {
                                 continue;
                             }
                         }
@@ -963,21 +979,27 @@ namespace VoxelWorldStuff {
 
                         //where we put this mesh is variable!
                         if (block.mesh != null) {
+
+                            int rotation = 0;
+                            if (block.definition.randomRotation) {
+                                rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
+                            }
+                            
                             //Grass etc                           
-                            if (block.detail == true) {
+                            if (block.definition.staticMeshLOD1 != null) {
                                 //Init the detail meshes now
                                 InitDetailMeshes();
 
                                 if (block.mesh != null) {
-                                    EmitMesh(block, block.mesh, detailMeshData[0], world, origin, true);
+                                    EmitMesh(block, block.mesh, detailMeshData[0], world, origin, true, rotation);
                                 }
                                 if (block.meshLod != null) {
-                                    EmitMesh(block, block.mesh, detailMeshData[1], world, origin, true);
+                                    EmitMesh(block, block.mesh, detailMeshData[1], world, origin, true, rotation);
                                 }
                             }
                             else {
                                 //same mesh that the voxels use (think stairs etc)
-                                EmitMesh(block, block.mesh, temporaryMeshData, world, origin, true);
+                                EmitMesh(block, block.mesh, temporaryMeshData, world, origin, true, rotation);
                             }
                             //No code past here
                             continue;
@@ -1315,7 +1337,7 @@ namespace VoxelWorldStuff {
             return obj;
         }
  
-        private static bool ContextPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin) {
+        private static bool ContextPlacePipeBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin) {
             //get surrounding data
             VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];
             VoxelData voxDown = readOnlyVoxel[localVoxelKey - paddedChunkSize];
@@ -1464,8 +1486,7 @@ namespace VoxelWorldStuff {
                     EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, true, 2);
                     return true;
                 }
-
-
+                
                 //Assume we a flat top with no surrounding air spaces
                 EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B], temporaryMeshData, world, origin, true, 0);
 
