@@ -93,10 +93,24 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             
             newDisplayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
 
+            newDisplayInfo.reorderableList.onRemoveCallback = (ReorderableList list) => {
+                if (list.selectedIndices.Count == 1) {
+                    var deletedIndex = list.selectedIndices[0];
+                    list.Deselect(deletedIndex);
+                    objectRefs.DeleteArrayElementAtIndex(deletedIndex);
+                }
+                
+                list.serializedProperty.DeleteArrayElementAtIndex(list.serializedProperty.arraySize - 1);
+            };
+
             newDisplayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
                 modified.boolValue = true;
                 // Match number of elements in inspector reorderable list to serialized objectRefs. This is to reconcile objectRefs
                 MatchReferenceArraySize(objectRefs, serializedArray);
+            };
+
+            newDisplayInfo.reorderableList.onReorderCallbackWithDetails = (ReorderableList list, int oldIndex, int newIndex) => {
+                objectRefs.MoveArrayElement(oldIndex, newIndex);
             };
             
             newDisplayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
