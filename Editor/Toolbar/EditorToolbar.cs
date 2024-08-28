@@ -5,6 +5,7 @@ using Editor.Auth;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.UIElements;
 using UnityToolbarExtender;
 using Debug = UnityEngine.Debug;
@@ -15,7 +16,9 @@ namespace Airship.Editor
     class PostProcessHook : AssetPostprocessor {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths) {
+            Profiler.BeginSample("RepaintEditorToolbar");
             AirshipToolbar.RepaintToolbar();
+            Profiler.EndSample();
         }
     }
     
