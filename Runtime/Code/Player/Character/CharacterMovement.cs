@@ -267,10 +267,16 @@ namespace Code.Player.Character {
 			this.grounded = grounded;
 			this.groundedRaycastHit = groundHit;
 
+			if(grounded){
+				//Reset airborne impulse
+				airborneFromImpulse = false;
+			}
+
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
 				airborneFromImpulse = false;
+				this.OnImpactWithGround?.Invoke(currentVelocity);
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -289,11 +295,6 @@ namespace Code.Player.Character {
 				md.sprint = false;
 			}
 #endregion
-
-			// Fall impact
-			if (grounded && !prevGrounded) {
-				this.OnImpactWithGround?.Invoke(currentVelocity);
-			}
 
 			#region GRAVITY
 			if(moveData.useGravity){
@@ -660,7 +661,8 @@ namespace Code.Player.Character {
 				
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-				var dirDot = Vector3.Dot(flatVelocity/ currentSpeed, clampedIncrease/ currentSpeed);// / currentSpeed;
+				var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
+				var dirDot = Mathf.Clamp01(1-rawDot);
 				
 				if(useExtraLogging){
 					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
@@ -670,7 +672,7 @@ namespace Code.Player.Character {
 					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				if(velMagnitude < currentSpeed){
+				if(_flying || (velMagnitude < currentSpeed && !airborneFromImpulse)){
 					// if(clampedIncrease.x < 0){
 					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }else{
@@ -685,10 +687,10 @@ namespace Code.Player.Character {
 					newVelocity.z = characterMoveVelocity.z;
 				}else{
 					//dirDot = dirDot - 1 / 2;
-					clampedIncrease *= -Mathf.Min(0, dirDot-1);
-					newVelocity += clampedIncrease;
+					//clampedIncrease *= -Mathf.Min(0, dirDot-1);
+					newVelocity += characterMoveVelocity * dirDot * deltaTime * 2;
 				}
-				characterMoveVelocity = clampedIncrease;
+				//characterMoveVelocity = clampedIncrease;
 				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
 				// 	newVelocity.x = characterMoveVelocity.x;
 				// }
@@ -739,10 +741,10 @@ namespace Code.Player.Character {
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
-			if(!airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing
-				&& normalizedMoveDir.sqrMagnitude < .1f 
-				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
-				){
+			var canStopVel = !airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing;
+			var notTryingToMove = normalizedMoveDir.sqrMagnitude < .1f;
+			var underMin = physics.GetFlatDistance(Vector3.zero, newVelocity) <= moveData.minimumVelocity;
+			if(canStopVel && notTryingToMove && underMin){
 				//Not intending to move so snap to zero (Fake Dynamic Friction)
 				newVelocity.x = 0;
 				newVelocity.z = 0;
@@ -847,21 +849,12 @@ namespace Code.Player.Character {
 			this.replicatedLookVector = lookVector;
 		}
 
-		[Server]
 		public void SetVelocity(Vector3 velocity) {
-			SetVelocityInternal(velocity);
-			// if (Owner.ClientId != -1) {
-			// 	RpcSetVelocity(Owner, velocity);
-			// }
-		}
-
-		public void DisableMovement() {
-			SetVelocity(Vector3.zero);
-			disableInput = true;
-		}
-
-		public void EnableMovement() {
-			disableInput = false;
+			if(isServer){
+			 	RpcSetVelocity(base.connectionToClient, velocity);
+			}else{
+				SetVelocityInternal(velocity);
+			}
 		}
 
 		private void SetVelocityInternal(Vector3 velocity) {
@@ -876,6 +869,15 @@ namespace Code.Player.Character {
 		[TargetRpc]
 		private void RpcSetVelocity(NetworkConnection conn, Vector3 velocity) {
 			SetVelocityInternal(velocity);
+		}
+
+		public void DisableMovement() {
+			SetVelocity(Vector3.zero);
+			disableInput = true;
+		}
+
+		public void EnableMovement() {
+			disableInput = false;
 		}
 
 #region TS_ACCESS

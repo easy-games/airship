@@ -23,7 +23,7 @@ public class RunCore {
         launchInDedicatedServerMode = EditorPrefs.GetBool("AirshipDedicatedServerMode", false);
 #endif
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
-        isClone = CurrentPlayer.ReadOnlyTags().Length > 0 || ClonesManager.IsClone();
+        isClone = ClonesManager.IsClone();
         if (launchInDedicatedServerMode || isClone) {
             isServer = CurrentPlayer.ReadOnlyTags().Contains("Server") || ClonesManager.GetArgument() == "server";
             isClient = !isServer;

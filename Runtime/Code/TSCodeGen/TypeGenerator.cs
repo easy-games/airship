@@ -96,6 +96,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(PhysicsExt),
             typeof(SphereCastReturnData),
             typeof(Rigidbody),
+            typeof(CharacterJoint),
             typeof(ServerConsole),
             typeof(Image),
             typeof(RawImage),
@@ -232,6 +233,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(NetworkConnectionToClient),
             typeof(NetworkConnectionToServer),
             typeof(NetworkTime),
+            typeof(PredictedRigidbody),
+            typeof(PredictedState),
 
             // Tweens
             typeof(NativeTween),

@@ -103,11 +103,11 @@ namespace Code.Player.Character {
         }
 
         public bool IsInParticleDistance() {
-            return (this.transform.position - Camera.main.transform.position).magnitude <= particleMaxDistance;
+            return true;
         }
 
         private void UpdateAnimationState() {
-            if(!enabled){
+            if(!enabled || !this.gameObject.activeInHierarchy){
                 return;
             }
             var modifiedTargetPlaybackSpeed = targetPlaybackSpeed;
@@ -173,7 +173,7 @@ namespace Code.Player.Character {
         }
 
         public void SetState(CharacterStateData syncedState) {
-            if (!enabled) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
 
@@ -206,30 +206,30 @@ namespace Code.Player.Character {
             animator.SetTrigger("Jump");
         }
 
-        public void PlayAnimationWithWeight(AnimationClip clip, CharacterAnimationLayer layer, float weight) {
+        public void SetLayerWeight(CharacterAnimationLayer layer, float weight) {
             var layerName = "Override" + (int)layer;
             animator.SetLayerWeight(animator.GetLayerIndex(layerName), weight);
-
-            int index = (int)layer;
-
-            if (index <= 6) {
-                animatorOverride[layerName] = clip;
-                animator.SetBool(layerName + "Looping", clip.isLooping);
-                animator.SetTrigger(layerName);
-            }
         }
 
-        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer) {
-            if (!enabled) {
+        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer, float fixedTransitionDuration) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
-            this.PlayAnimationWithWeight(clip, layer, 1);
+
+            var layerName = "Override" + (int)layer;
+
+            animatorOverride[layerName] = clip;
+
+            animator.SetBool(layerName + "Looping", clip.isLooping);
+            animator.CrossFadeInFixedTime(layerName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(layerName));
         }
 
-        public void StopAnimation(CharacterAnimationLayer layer) {
-            if(!enabled){
+        public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
+
+            animator.CrossFadeInFixedTime("EarlyExit", fixedTransitionDuration, 4 + (int)layer);
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
     }

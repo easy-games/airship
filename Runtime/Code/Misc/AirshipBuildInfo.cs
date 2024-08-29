@@ -168,6 +168,8 @@ namespace Luau {
             childPath = StripAssetPrefix(childPath).ToLower();
             parentPath = StripAssetPrefix(parentPath).ToLower();
             
+            if (childPath == parentPath) return true;
+            
             var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.ToLower() == parentPath);
             if (extendsMeta == null) {
                 return false;
