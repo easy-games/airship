@@ -206,9 +206,19 @@ namespace Code.Player.Character {
 			return this.replicatedLookVector;
 		}
 
-		private void FixedUpdate() {
-			//Update the movement state of the character		
-			StartMove(BuildMoveData());
+		private void FixedUpdate() {	
+			// Observers don't calculate moves
+			if (!isOwned){
+				return;
+			}
+
+			//Update the movement state of the character	
+			MoveInputData md = BuildMoveData();
+
+			this.currentMoveInputData = md;
+			OnBeginMove?.Invoke(md);
+			Move(md);
+			OnEndMove?.Invoke(md);
 		}
 
 		private void Update(){
@@ -223,18 +233,6 @@ namespace Code.Player.Character {
 					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 				}
 			}
-		}
-
-		private void StartMove(MoveInputData md) {
-			// Observers don't calculate moves
-			if (!isOwned){
-				return;
-			}
-
-			this.currentMoveInputData = md;
-			OnBeginMove?.Invoke(md);
-			Move(md);
-			OnEndMove?.Invoke(md);
 		}
 
 		[ClientRpc]
@@ -256,7 +254,7 @@ namespace Code.Player.Character {
 			var currentVelocity = this.rigidbody.velocity;// trackedVelocity;
 			var newVelocity = currentVelocity;
 			var isIntersecting = IsIntersectingWithBlock();
-			var deltaTime = Time.deltaTime;
+			var deltaTime = Time.fixedDeltaTime;
 
 #region GROUNDED
 			//Ground checks
@@ -656,12 +654,13 @@ namespace Code.Player.Character {
 				//Instantly move at the desired speed
 				var moveMagnitude = characterMoveVelocity.magnitude;
 				var velMagnitude = flatVelocity.magnitude;
-				var clampedIncrease = characterMoveVelocity.normalized * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
+				var clampedIncrease = normalizedMoveDir * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
 
 				
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-				var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
+				//var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
+				var rawDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
 				var dirDot = Mathf.Clamp01(1-rawDot);
 				
 				if(useExtraLogging){
@@ -672,7 +671,7 @@ namespace Code.Player.Character {
 					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				if(_flying || (velMagnitude < currentSpeed && !airborneFromImpulse)){
+				if(_flying || (velMagnitude < currentSpeed+1 && !isImpulsing)){
 					// if(clampedIncrease.x < 0){
 					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }else{
@@ -688,7 +687,8 @@ namespace Code.Player.Character {
 				}else{
 					//dirDot = dirDot - 1 / 2;
 					//clampedIncrease *= -Mathf.Min(0, dirDot-1);
-					newVelocity += characterMoveVelocity * dirDot * deltaTime * 2;
+					newVelocity += normalizedMoveDir * dirDot * 
+						(groundedState == CharacterState.Sprinting ? this.moveData.sprintAccelerationForce : moveData.accelerationForce);
 				}
 				//characterMoveVelocity = clampedIncrease;
 				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
