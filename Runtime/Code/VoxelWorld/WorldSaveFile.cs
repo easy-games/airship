@@ -32,6 +32,7 @@ public class WorldSaveFile : ScriptableObject
      
     private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world)
     {
+        blockIdToScopeName.Clear();
         var blockMap = world.voxelBlocks.loadedBlocks;
         foreach (var block in blockMap)
         {
@@ -113,10 +114,27 @@ public class WorldSaveFile : ScriptableObject
         Profiler.BeginSample("CreateVoxelWorld");
         
         //Todo: Load lighting settings
-        
-
         world.chunks.Clear();
         int counter = 0;
+
+        Dictionary<BlockId, BlockId> blockRemapping = new();
+
+        foreach (var blockIdToScopeName in this.blockIdToScopeName) {
+
+            //see if this block exists in the world blockfiles
+            var definition = world.voxelBlocks.GetBlockDefinitionByStringId(blockIdToScopeName.name);
+            if (definition == null) {
+                Debug.LogWarning($"Warning: Block {blockIdToScopeName.name} not found in world block definitions - Creating a placeholder. You can still safely save this file.");
+                
+                definition = world.voxelBlocks.CreateTemporaryBlockDefinition(blockIdToScopeName.name);
+                blockRemapping[blockIdToScopeName.id] = definition.blockId;
+            }
+            else {
+                blockRemapping[blockIdToScopeName.id] = definition.blockId;
+            }
+        }
+
+
         foreach (var chunk in chunks)
         {
             counter += 1;
@@ -128,27 +146,18 @@ public class WorldSaveFile : ScriptableObject
              
             for (int i = 0; i < data.Length;i++)
             {
-                var blockId = VoxelWorld.VoxelDataToBlockId(data[i]);
-                var blockTypeId = this.GetFileScopedBlockTypeId(blockId); // e.g. @Easy/Core:grass - if that's what's in the dict at blockId 1 (as an example)
+                BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
+                ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
+
+                BlockId updatedBlockId = blockRemapping[fileBlockId];
+                writeChunk.readWriteVoxel[i] = ((ushort)(updatedBlockId | extraBits));
                 
-                var worldBlockDefinition = world.voxelBlocks.GetBlockDefinitionByStringId(blockTypeId);
-
-                if (worldBlockDefinition == null) {
-                    Debug.LogError("Failed to find block with blockId " + blockId);
-                    writeChunk.readWriteVoxel[i] = world.voxelBlocks.AddSolidMaskToVoxelValue(1);
-                    continue;
-                }
-
-                var worldBlockId = worldBlockDefinition.blockId;
-                var updatedVoxelData = world.voxelBlocks.UpdateVoxelBlockId(data[i], worldBlockId);
-                updatedVoxelData = world.voxelBlocks.AddSolidMaskToVoxelValue(updatedVoxelData);
-
-                writeChunk.readWriteVoxel[i] = updatedVoxelData;
             }
             world.chunks[key] = writeChunk;
         }
         Debug.Log("[Voxel World]: Loaded " + counter + " chunks.");
  
+
         Profiler.EndSample();
     }
 

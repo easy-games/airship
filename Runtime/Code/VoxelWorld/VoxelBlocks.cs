@@ -213,8 +213,7 @@ public class VoxelBlocks : MonoBehaviour {
         public bool detail = false;
         public bool doOcclusion = true;
 
-        public VoxelMeshCopy mesh = null;
-        public VoxelMeshCopy meshLod = null;
+        public LodSet mesh = null;
 
         public Dictionary<int, LodSet> meshTiles = new();
 
@@ -291,7 +290,7 @@ public class VoxelBlocks : MonoBehaviour {
                 return block.Value;
         }
 
-        return this.loadedBlocks[0];
+        return null;
     }
 
     public BlockDefinition GetBlockDefinitionFromBlockId(int index) {
@@ -362,6 +361,36 @@ public class VoxelBlocks : MonoBehaviour {
 
         blockIdLookup = new();
         loadedBlocks = new();
+    }
+
+    private void ParseStaticMeshBlock(BlockDefinition block) {
+        if (block.definition.contextStyle != ContextStyle.StaticMesh) {
+            return;
+        }
+        
+        if (block.definition.staticMeshLOD0 == null) {
+            return;
+        }
+
+        block.mesh = new();
+        
+        block.mesh.lod0 = new VoxelMeshCopy(block.definition.staticMeshLOD0);
+        
+        if (block.definition.staticMeshLOD1 != null){
+            block.mesh.lod1 = new VoxelMeshCopy(block.definition.staticMeshLOD1);
+        }
+        
+        if (block.definition.staticMeshLOD2 != null){
+            block.mesh.lod2 = new VoxelMeshCopy(block.definition.staticMeshLOD2);
+        }
+        
+        //Apply the material to this
+        if (block.meshMaterial != null) {
+            block.mesh.lod0.ApplyMaterial(block.meshMaterial);
+            block.mesh.lod1.ApplyMaterial(block.meshMaterial);
+            block.mesh.lod2.ApplyMaterial(block.meshMaterial);
+        }
+                
     }
 
     private void ParseQuarterBlock(BlockDefinition block) {
@@ -462,7 +491,6 @@ public class VoxelBlocks : MonoBehaviour {
                 block.blockId = blockIdCounter++;
                 block.definition = voxelBlockDefinition;
                 block.blockTypeId = scopedId;
-
                 
 
                 if (blockIdLookup.ContainsKey(scopedId)) {
@@ -494,6 +522,9 @@ public class VoxelBlocks : MonoBehaviour {
                 }
 
                 ParseQuarterBlock(block);
+
+                ParseStaticMeshBlock(block);
+
                 loadedBlocks.Add(block.blockId, block);
             }
         }
@@ -1038,8 +1069,28 @@ public class VoxelBlocks : MonoBehaviour {
         //this.blocks = new VoxelBlocks();
         //this.blocks.Load(this.GetBlockDefinesContents());
     }
-    
 
+    //When the game doesnt have this block definiton, we want to create a temporary one just so we dont wreck their data just for loading this file
+    internal BlockDefinition CreateTemporaryBlockDefinition(string name) {
+       
+        BlockDefinition blockDef = new BlockDefinition();
+
+        blockDef.definition = (VoxelBlockDefinition)ScriptableObject.CreateInstance("VoxelBlockDefinition");
+        blockDef.definition.blockName = name;
+        blockDef.definition.solid = true;
+        blockDef.definition.collisionType = CollisionType.Solid;
+        blockDef.blockTypeId = name;
+        blockDef.blockId = blockIdCounter++;
+
+        loadedBlocks.Add(blockDef.blockId, blockDef);
+        blockIdLookup.Add(name, blockDef.blockId);
+
+        for (int i = 0; i < 6; i++) {
+            blockDef.materials[i] = atlasMaterial;
+        }
+
+        return blockDef;
+    }
 }
 
 #if UNITY_EDITOR
