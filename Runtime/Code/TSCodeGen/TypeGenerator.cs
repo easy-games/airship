@@ -96,6 +96,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(PhysicsExt),
             typeof(SphereCastReturnData),
             typeof(Rigidbody),
+            typeof(CharacterJoint),
             typeof(ServerConsole),
             typeof(Image),
             typeof(RawImage),
