@@ -5,6 +5,7 @@ using UnityEditor;
 using System.Globalization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Code.Luau;
 using JetBrains.Annotations;
@@ -92,7 +93,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var newDisplayInfo = new ArrayDisplayInfo { listType = listType, objType = objType, reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true)};
             
             newDisplayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
-
             newDisplayInfo.reorderableList.onRemoveCallback = (ReorderableList list) => {
                 if (list.selectedIndices.Count == 1) {
                     var deletedIndex = list.selectedIndices[0];
@@ -457,7 +457,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         var foldoutStyle = EditorStyles.foldout;
         foldoutStyle.fontStyle = FontStyle.Bold;
+
         var newState = EditorGUILayout.Foldout(open, guiContent, foldoutStyle);
+        
         if (open) {
             var itemInfo = property.FindPropertyRelative("items");
             var listInfo = GetOrCreateArrayDisplayInfo(componentInstanceId, property, propName, arrayElementType, itemInfo);
@@ -468,7 +470,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             
             // Handle drag and drop for this element
             // TODO Support for drag dropping AirshipComponent list
-            if (listInfo.listType is /* AirshipComponentPropertyType.AirshipComponent or */ AirshipComponentPropertyType.AirshipObject) {
+            if (listInfo.listType is AirshipComponentPropertyType.AirshipComponent or AirshipComponentPropertyType.AirshipObject) {
                 Event currentEvent = Event.current;
                 if (currentEvent.type == EventType.DragUpdated || currentEvent.type == EventType.DragPerform) {
                     if (rect.Contains(currentEvent.mousePosition)) {
@@ -477,28 +479,53 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                         if (currentEvent.type == EventType.DragPerform) {
                             DragAndDrop.AcceptDrag();
 
-                            Type objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
+
+
+                            var typeName = itemInfo.FindPropertyRelative("objectType").stringValue;
+                            Type objType = TypeReflection.GetTypeFromString(typeName);
+                            
                             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
                             var serializedItems = itemInfo.FindPropertyRelative("serializedItems");
                             // Loop over all dragged items
                             foreach (var draggedObject in DragAndDrop.objectReferences) {
                                 var objRef = draggedObject;
 
-                                // If objType is not game object we need to parse the correct component
-                                var targetNotGameObject = objType != typeof(GameObject);
-                                if (targetNotGameObject) {
-                                    if (draggedObject is GameObject draggedGo) {
-                                        if (typeof(Component).IsAssignableFrom(objType)) {
-                                            var comp = draggedGo.GetComponent(objType);
-                                            if (!comp) continue;
+                                if (listInfo.listType == AirshipComponentPropertyType.AirshipObject) {
+                                    // If objType is not game object we need to parse the correct component
+                                    var targetNotGameObject = objType != typeof(GameObject);
+                                    if (targetNotGameObject) {
+                                        if (draggedObject is GameObject draggedGo) {
+                                            if (typeof(Component).IsAssignableFrom(objType)) {
+                                                var comp = draggedGo.GetComponent(objType);
+                                                if (!comp) continue;
 
-                                            objRef = comp;
+                                                objRef = comp;
+                                            }
                                         }
                                     }
-                                }
 
-                                if (!objType.IsInstanceOfType(draggedObject)) {
-                                    continue;
+                                    if (!objType.IsInstanceOfType(draggedObject)) {
+                                        continue;
+                                    }
+                                }
+                                else if (listInfo.listType == AirshipComponentPropertyType.AirshipComponent) {
+                                    var buildInfo = AirshipBuildInfo.Instance;
+                                    var scriptPath = buildInfo.GetScriptPathByTypeName(typeName);
+                                    
+                                    switch (draggedObject) {
+                                        case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.scriptFile, scriptPath):
+                                            objRef = component;
+                                            break;
+                                        case GameObject go: {
+                                            var firstMatchingComponent = go.GetComponents<AirshipComponent>().FirstOrDefault(f => buildInfo.Inherits(f.scriptFile, scriptPath));
+                                            if (firstMatchingComponent != null) {
+                                                objRef = firstMatchingComponent;
+                                            }
+                                            else continue;
+
+                                            break;
+                                        }
+                                    }
                                 }
                                 
                                 // Insert object to list
