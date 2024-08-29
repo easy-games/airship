@@ -977,7 +977,7 @@ public partial class LuauCore : MonoBehaviour {
 
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
-    static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
+    static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
         CurrentContext = context;
         
         // if (s_shutdown) return 0;
@@ -999,6 +999,8 @@ public partial class LuauCore : MonoBehaviour {
         Marshal.Copy(firstParameterSize, paramaterDataSizes, 0, numParameters);
         int[] parameterDataPODTypes = new int[numParameters];
         Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
+        int[] parameterIsTable = new int[numParameters];
+        Marshal.Copy(firstParameterIsTable, parameterIsTable, 0, numParameters);
         
         //This detects STATIC classobjects only - live objects do not report the className
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
@@ -1134,7 +1136,7 @@ public partial class LuauCore : MonoBehaviour {
         object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
 
         Profiler.BeginSample("LuauCore.FindMethod");
-        FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext);
+        FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, parameterIsTable, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext);
         Profiler.EndSample();
 
         if (finalMethod == null) {
@@ -1156,7 +1158,7 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
+        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, parameterIsTable, podObjects, out parsedData);
         if (success == false) {
             return LuauError(thread, $"Error: Unable to parse parameters for {type.Name} {finalMethod.Name}");
         }
@@ -1238,6 +1240,8 @@ public partial class LuauCore : MonoBehaviour {
 
         try {
             returnValue = finalMethod.Invoke(invokeObj, parsedData);
+        } catch (TargetInvocationException e) {
+            return LuauError(thread, "Error: Exception thrown in " + type.Name + " " + finalMethod.Name + " " + e.InnerException.Message);
         } catch (Exception e) {
             return LuauError(thread, "Error: Exception thrown in " + type.Name + " " + finalMethod.Name + " " + e.Message);
         }
@@ -1267,7 +1271,7 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
-    static unsafe int constructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize) {
+    static unsafe int constructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable) {
         CurrentContext = context;
         
         if (!IsReady) return 0;
@@ -1286,6 +1290,8 @@ public partial class LuauCore : MonoBehaviour {
         Marshal.Copy(firstParameterSize, paramaterDataSizes, 0, numParameters);
         int[] parameterDataPODTypes = new int[numParameters];
         Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
+        int[] parameterIsTable = new int[numParameters];
+        Marshal.Copy(firstParameterIsTable, parameterIsTable, 0, numParameters);
         
         //This detects STATIC classobjects only - live objects do not report the className
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
@@ -1299,12 +1305,11 @@ public partial class LuauCore : MonoBehaviour {
         // !!! This could be broken
         //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
         int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-        if (retValue >= 0)
-        {
+        if (retValue >= 0) {
             return retValue;
         }
         
-        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, parameterIsTable);
     }
 
     private static int InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters, out bool shouldYield) {

@@ -330,7 +330,7 @@ public partial class LuauCore : MonoBehaviour
         return podObjects;
     }
 
-    static private int RunConstructor(IntPtr thread, Type type, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    static private int RunConstructor(IntPtr thread, Type type, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes, int[] parameterIsTable)
     {
 
         ConstructorInfo[] constructors = type.GetConstructors();
@@ -345,7 +345,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
-        FindConstructor(type, constructors, numParameters, parameterDataPODTypes, podObjects, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor);
+        FindConstructor(type, constructors, numParameters, parameterDataPODTypes, podObjects, parameterIsTable, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor);
 
         if (finalConstructor == null)
         {
@@ -364,7 +364,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
+        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, parameterIsTable, podObjects, out parsedData);
         if (success == false)
         {
             ThreadDataManager.Error(thread);
@@ -642,14 +642,146 @@ public partial class LuauCore : MonoBehaviour
         return false;
     }
 
-    private static bool ParseParameterData(IntPtr thread, int numParameters, IntPtr[] intPtrs, int[] podTypes, ParameterInfo[] methodParameters, int[] sizes, object[] podObjects, out object[] parsedData)
-    {
+    private static bool ParseTableParameter(IntPtr thread, PODTYPE podType, Type sourceParamType, int size, int idx, out object value) {
+        switch (podType) {
+            case PODTYPE.POD_DOUBLE: {
+                if (sourceParamType.IsAssignableFrom(doubleType)) {
+                    LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+                if (sourceParamType.IsAssignableFrom(floatType)) {
+                    LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_FLOAT, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+                if (sourceParamType.IsAssignableFrom(byteType)) {
+                    LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+                if (sourceParamType.BaseType == enumType) {
+                    if (Enum.GetUnderlyingType(sourceParamType) == byteType) {
+                        LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    } else {
+                        LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
+                }
+                if (sourceParamType.IsAssignableFrom(intType)) {
+                    LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+                if (sourceParamType.IsAssignableFrom(uIntType)) {
+                    LuauPlugin.LuauCopyTableToArray<uint>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+                if (sourceParamType.IsAssignableFrom(ushortType)) {
+                    LuauPlugin.LuauCopyTableToArray<ushort>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+                if (sourceParamType.IsAssignableFrom(longType)) {
+                    LuauPlugin.LuauCopyTableToArray<long>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+                if (sourceParamType.IsAssignableFrom(uLongType)) {
+                    LuauPlugin.LuauCopyTableToArray<ulong>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                    value = arr;
+                    return true;
+                }
+
+                break;
+            }
+            case PODTYPE.POD_COLOR: {
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_COLOR, size * 4, idx, out var arr);
+                
+                var colors = new Color[size];
+                for (var i = 0; i < size; i++) {
+                    var j = i * 4;
+                    colors[i] = new Color(arr[j], arr[j + 1], arr[j + 2]);
+                }
+                value = colors;
+                
+                return true;
+            }
+            case PODTYPE.POD_VECTOR2: {
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR2, size * 2, idx, out var arr);
+                
+                var vectors = new Vector2[size];
+                for (var i = 0; i < size; i++) {
+                    var j = i * 2;
+                    vectors[i] = new Vector2(arr[j], arr[j + 1]);
+                }
+                value = vectors;
+                
+                return true;
+            }
+            case PODTYPE.POD_VECTOR3: {
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR3, size * 3, idx, out var arr);
+                
+                var vectors = new Vector3[size];
+                for (var i = 0; i < size; i++) {
+                    var j = i * 3;
+                    vectors[i] = new Vector3(arr[j], arr[j + 1], arr[j + 2]);
+                }
+                value = vectors;
+                
+                return true;
+            }
+            case PODTYPE.POD_VECTOR4: {
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR4, size * 4, idx, out var arr);
+                
+                var vectors = new Vector2[size];
+                for (var i = 0; i < size; i++) {
+                    var j = i * 4;
+                    vectors[i] = new Vector2(arr[j], arr[j + 1]);
+                }
+                value = vectors;
+                
+                return true;
+            }
+            case PODTYPE.POD_BOOL: {
+                LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_BOOL, size, idx, out var arr);
+                
+                var booleans = new bool[size];
+                for (var i = 0; i < size; i++) {
+                    booleans[i] = arr[i] != 0;
+                }
+                value = booleans;
+                
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
+    }
+
+    private static bool ParseParameterData(IntPtr thread, int numParameters, IntPtr[] intPtrs, int[] podTypes, ParameterInfo[] methodParameters, int[] sizes, int[] isTable, object[] podObjects, out object[] parsedData) {
         parsedData = new object[numParameters];
 
-        for (int paramIndex = 0; paramIndex < numParameters; paramIndex++)
-        {
+        for (int paramIndex = 0; paramIndex < numParameters; paramIndex++) {
             PODTYPE paramType = (PODTYPE)podTypes[paramIndex];
             Type sourceParamType = methodParameters[paramIndex].ParameterType;
+            
+            // Handle Luau tables:
+            if (isTable[paramIndex] != 0) {
+                var success = ParseTableParameter(thread, paramType, sourceParamType, sizes[paramIndex], paramIndex - numParameters, out var value);
+                if (!success) {
+                    Debug.LogError("Param " + paramIndex + " " + podTypes[paramIndex] + " not valid table type for this parameter/unhandled so far.");
+                    return false;
+                }
+                parsedData[paramIndex] = value;
+                continue;
+            }
+            
             switch (paramType)
             {
                 case PODTYPE.POD_OBJECT:
@@ -912,7 +1044,7 @@ public partial class LuauCore : MonoBehaviour
 
 
     private static HashSet<MethodInfo> _methodsUsedTest = new();
-    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext)
+    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, int[] podIsTable, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext)
     {
         nameFound = false;
         countFound = false;
@@ -936,7 +1068,7 @@ public partial class LuauCore : MonoBehaviour
                 }
                 countFound = true;
 
-                bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
+                bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable);
                 if (match)
                 {
                     if (!type.IsArray) {
@@ -984,7 +1116,7 @@ public partial class LuauCore : MonoBehaviour
             parameters = parameters.Skip(1).ToArray();
             countFound = true;
 
-            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
+            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable);
 
             if (match)
             {
@@ -1001,7 +1133,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, int[] podTypes, object[] podObjects, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor)
+    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, int[] podTypes, object[] podObjects, int[] podIsTable, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor)
     {
         countFound = false;
         finalParameters = null;
@@ -1018,7 +1150,7 @@ public partial class LuauCore : MonoBehaviour
             }
             countFound = true;
 
-            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
+            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable);
             if (match == true)
             {
                 finalConstructor = info;
@@ -1028,7 +1160,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, int[] podTypes, object[] podObjects)
+    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, int[] podTypes, object[] podObjects, int[] podIsTable)
     {
         for (int paramIndex = 0; paramIndex < numParameters; paramIndex++)
         {
@@ -1036,6 +1168,11 @@ public partial class LuauCore : MonoBehaviour
             Type sourceParamType = parameters[paramIndex].ParameterType;
             if (parameters[paramIndex].IsOut == true || parameters[paramIndex].IsIn == true)
             {
+                sourceParamType = sourceParamType.GetElementType();
+            }
+
+            // Adjust source type to handle arrays:
+            if (sourceParamType != null && sourceParamType.IsArray && podIsTable[paramIndex] != 0) {
                 sourceParamType = sourceParamType.GetElementType();
             }
             
