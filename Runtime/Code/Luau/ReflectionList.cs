@@ -110,6 +110,7 @@ namespace Luau {
             [typeof(ConstantForce)] = LuauContextAll,
             [typeof(ConstantForce2D)] = LuauContextAll,
             [typeof(FixedJoint)] = LuauContextAll,
+            [typeof(CharacterJoint)] = LuauContextAll,
             [typeof(Bounds)] = LuauContextAll,
             [typeof(TerrainCollider)] = LuauContextAll,
             [typeof(Terrain)] = LuauContextAll,
