@@ -516,13 +516,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                                         case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.scriptFile, scriptPath):
                                             objRef = component;
                                             break;
+                                        case AirshipComponent:
+                                            continue;
                                         case GameObject go: {
                                             var firstMatchingComponent = go.GetComponents<AirshipComponent>().FirstOrDefault(f => buildInfo.Inherits(f.scriptFile, scriptPath));
                                             if (firstMatchingComponent != null) {
                                                 objRef = firstMatchingComponent;
                                             }
                                             else continue;
-
                                             break;
                                         }
                                     }
