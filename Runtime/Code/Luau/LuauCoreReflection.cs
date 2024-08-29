@@ -1170,6 +1170,10 @@ public partial class LuauCore : MonoBehaviour
         return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], paramaterDataSizes[paramIndex]);
     }
 
+    public static string GetPropertyAsString(PODTYPE dataPodType, IntPtr dataPtr) {
+        return dataPodType == PODTYPE.POD_STRING ? PtrToStringUTF8NullTerminated(dataPtr) : null;
+    }
+
     static public bool GetParameterAsBool(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] parameterDataSizes, out bool exists) {
         if (paramIndex >= numParameters) {
             exists = false;

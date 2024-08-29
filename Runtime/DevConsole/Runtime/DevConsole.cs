@@ -33,6 +33,8 @@ namespace Airship.DevConsole
 
         public static DevConsoleMono console;
 
+        public static bool clearConsoleOnServerConnect = true;
+
         #endregion
 
         #region Static properties

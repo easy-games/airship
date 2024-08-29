@@ -10,6 +10,7 @@ namespace Code.Player.Character {
             OVERRIDE_3 = 3,
             OVERRIDE_4 = 4,
             UPPER_BODY_1 = 5,
+            UPPER_BODY_2 = 6,
         }
 
         [Header("References")]
@@ -102,11 +103,11 @@ namespace Code.Player.Character {
         }
 
         public bool IsInParticleDistance() {
-            return (this.transform.position - Camera.main.transform.position).magnitude <= particleMaxDistance;
+            return true;
         }
 
         private void UpdateAnimationState() {
-            if(!enabled){
+            if(!enabled || !this.gameObject.activeInHierarchy){
                 return;
             }
             var modifiedTargetPlaybackSpeed = targetPlaybackSpeed;
@@ -114,7 +115,7 @@ namespace Code.Player.Character {
             if (currentState == CharacterState.Idle) {
                 targetVelNormalized = Vector2.zero;
                 modifiedTargetPlaybackSpeed = 1;
-            } else if (currentState == CharacterState.Jumping){
+            } else if (currentState == CharacterState.Airborne){
                 modifiedTargetPlaybackSpeed = 1;
             }
 
@@ -172,7 +173,7 @@ namespace Code.Player.Character {
         }
 
         public void SetState(CharacterStateData syncedState) {
-            if (!enabled) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
 
@@ -205,41 +206,30 @@ namespace Code.Player.Character {
             animator.SetTrigger("Jump");
         }
 
-        public void PlayAnimationWithWeight(AnimationClip clip, CharacterAnimationLayer layer, float weight) {
+        public void SetLayerWeight(CharacterAnimationLayer layer, float weight) {
             var layerName = "Override" + (int)layer;
             animator.SetLayerWeight(animator.GetLayerIndex(layerName), weight);
-
-            // print("Setting override layer: " + (int)layerLayer);
-            int index = (int)layer;
-
-            if (index <= 4) {
-                animatorOverride[layerName] = clip;
-                animator.SetBool(layerName + "Looping", clip.isLooping);
-                animator.SetTrigger(layerName);
-                return;
-            }
-
-            // Upper body
-            if (index <= 8) {
-                index -= 4;
-                animatorOverride["UpperBody" + index] = clip;
-                animator.SetBool("UpperBody" + index + "Looping", clip.isLooping);
-                animator.SetTrigger("UpperBody" + index);
-                return;
-            }
         }
 
-        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer) {
-            if (!enabled) {
+        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer, float fixedTransitionDuration) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
-            this.PlayAnimationWithWeight(clip, layer, 1);
+
+            var layerName = "Override" + (int)layer;
+
+            animatorOverride[layerName] = clip;
+
+            animator.SetBool(layerName + "Looping", clip.isLooping);
+            animator.CrossFadeInFixedTime(layerName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(layerName));
         }
 
-        public void StopAnimation(CharacterAnimationLayer layer) {
-            if(!enabled){
+        public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration) {
+            if (!enabled || !this.gameObject.activeInHierarchy) {
                 return;
             }
+
+            animator.CrossFadeInFixedTime("EarlyExit", fixedTransitionDuration, 4 + (int)layer);
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
     }

@@ -18,6 +18,6 @@ public class PreventCodeStripping : MonoBehaviour
         // dict.ContainsKey("test");
 
         CharacterAnimationHelper animationHelper = null;
-        animationHelper.PlayAnimationWithWeight(null, CharacterAnimationHelper.CharacterAnimationLayer.OVERRIDE_1, 1f);
+        animationHelper.PlayAnimation(null, CharacterAnimationHelper.CharacterAnimationLayer.OVERRIDE_1, 1f);
     }
 }

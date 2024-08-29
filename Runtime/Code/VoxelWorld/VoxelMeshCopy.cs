@@ -371,5 +371,16 @@ namespace Assets.Airship.VoxelRenderer
                 rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value));
             }
         }
+
+        public void ApplyMaterial(Material meshMaterial) {
+            if (surfaces == null) {
+                return;
+            }
+
+            foreach (Surface surf in surfaces) {
+                surf.meshMaterial = meshMaterial;
+                surf.meshMaterialName = meshMaterial.name;
+            }
+        }
     }
 }

@@ -7,6 +7,7 @@ using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 namespace Editor {
@@ -14,6 +15,7 @@ namespace Editor {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths) {
 
+            Profiler.BeginSample("TypescriptPostProcessor");
             for (int i = 0; i < movedAssets.Length; i++) {
                 var targetPath = movedAssets[i];
                 var fromPath = movedFromAssetPaths[i];
@@ -23,6 +25,7 @@ namespace Editor {
                     TypescriptProjectsService.HandleRenameEvent(fromPath, targetPath);
                 }
             }
+            Profiler.EndSample();
         }
     }
     

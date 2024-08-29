@@ -4,6 +4,8 @@ using UnityEngine.Serialization;
 namespace Code.Player.Character.API {
 	[LuauAPI]
 	public class CharacterMovementData : MonoBehaviour {
+
+
 		[Header("Size")]
 		[Tooltip("How tall is the character")] [Min(.01f)]
 		public float characterHeight = 1.8f;
@@ -11,8 +13,6 @@ namespace Code.Player.Character.API {
 		[Tooltip("Radius of the character")] [Min(.01f)]
 		public float characterRadius = .2f;
 
-		/*[Tooltip("Default movement speed (units per second)")] [Min(0f)]
-		public float colliderHeightOffset = .15f;*/
 
 		[Header("Movement")]
 		[Tooltip("Should movement be applied over time as a force? Or a constant speed.")]
@@ -21,25 +21,29 @@ namespace Code.Player.Character.API {
 		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
 		public float speed = 4.666667f;
 
-
 		[Tooltip("Sprint movement speed (units per second)")] [Min(0f)]
 		public float sprintSpeed = 6.666667f;
-
-		[Tooltip("How much to multiply speed while you are in the air")] [Range(0,2f)]
-		public float airSpeedMultiplier = 1;
 
 		[Tooltip("Only allow sprinting forward.")]
 		public bool onlySprintForward = false;
 
+
 		[Header("Crouch")]
 		[Tooltip("Auto crouch will make the character crouch if they walk into a small area")]
 		public bool autoCrouch = true;
+
+		[Tooltip("While crouching, prevent falling of ledges")]
+		public bool preventFallingWhileCrouching = true;
+
+		[Tooltip("While crouching dont step up onto ledges")]
+		public bool preventStepUpWhileCrouching = true;
 
 		[Tooltip("Crouching speed is determined by multiplying the speed against this number")] [Range(0f, 1f)]
 		public float crouchSpeedMultiplier = 0.455f;
 
 		[Tooltip("Character height multiplier when crouching (e.g. 0.75 would be 75% of normal character height)")] [Range(0.15f, 1f)]
 		public float crouchHeightMultiplier = 0.75f;
+
 
 		[Header("Jump")]
 		[Tooltip("How many jumps you can make before hitting the ground again")] [Min(0f)]
@@ -51,7 +55,10 @@ namespace Code.Player.Character.API {
 		[Tooltip("The time after falling that the player can still jump")] [Min(0f)]
 		public float jumpCoyoteTime = 0.14f;
 
+
 		[Header("Fly")]
+		[Tooltip("Let console commands toggle flying (/fly from chat)")]
+		public bool allowDebugFlying = true;
 		[Tooltip("Flying speed is determined by multiplying the speed against this number")]
 		public float flySpeedMultiplier = 3.5f;
 		
@@ -67,6 +74,7 @@ namespace Code.Player.Character.API {
 		[Tooltip("Minimum interval (in seconds) between jumps, measured from the time the player became grounded")] [Min(0f)]
 		public float jumpUpBlockCooldown = 0.4f;
 
+
 		[Header("Gravity")]
 		[Tooltip("Apply Physics.gravity force every tick")]
 		public bool useGravity = true;
@@ -78,7 +86,11 @@ namespace Code.Player.Character.API {
 		[Tooltip("Use this to adjust gravity while moving in the +Y. So you can have floaty jumps upwards but still have hard drops downward")]
 		public float upwardsGravityMultiplier = 1;
 
+
 		[Header("Physics")]
+		[Tooltip("Push the character away from walls to prevent rigibody friction")]
+		public bool preventWallClipping = true;
+
 		[Tooltip("What layers will count as walkable ground")]
 		public LayerMask groundCollisionLayerMask = 1 << 0 | 1 << 8 | 1 << 11; // Layers Default, VisuallyHidden and VoxelWorld
 
@@ -88,16 +100,6 @@ namespace Code.Player.Character.API {
 		public float minimumVelocity = 1;
 		[Tooltip("Also stop momentum when in the air")]
 		public bool useMinimumVelocityInAir = false;
-		
-		[Tooltip("The maximum force that pushes against the character when on a slope")] [Min(0f)]
-		public float slopeForce = 45;
-
-		[Tooltip("Slopes below this threshold will be ignored. O is flat ground, 1 is a vertical wall")]
-		[Range(0,1)]
-		public float minSlopeDelta = .1f;
-		[Tooltip("Slopes above this threshold will be treated as walls")]
-		[Range(0,1)]
-		public float maxSlopeDelta = .3f;
 
 		[Tooltip("How high in units can you auto step up")] 
 		[Range(.05f, 1)]
@@ -114,12 +116,11 @@ namespace Code.Player.Character.API {
 		[Tooltip("How much to multiply drag resistance while you are in the air")] [Range(0,2f)]
 		public float airDragMultiplier = 1;
 
+		[Tooltip("How much to multiply speed while you are in the air")] [Range(0,2f)]
+		public float airSpeedMultiplier = 1;
 
-		[Header("Movement Modes")]
 
-		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
-		public bool detectSlopes = false;
-
+		[Header("Step Ups")]
 		[Tooltip("Push the character up when they stop over a set threshold")]
 		public bool detectStepUps = true;
 		[Tooltip("Step the character up every frame if it theres nothing to push up to")]
@@ -128,10 +129,19 @@ namespace Code.Player.Character.API {
 		[Tooltip("While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
 		public bool assistedLedgeJump = true;
 
-		[Tooltip("Push the character away from walls to prevent rigibody friction")]
-		public bool preventWallClipping = true;
 
-		[Tooltip("While crouching, prevent falling of ledges")]
-		public bool preventFallingWhileCrouching = true;
+		[Header("Slopes")]
+		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
+		public bool detectSlopes = false;
+
+		[Tooltip("The maximum force that pushes against the character when on a slope")] [Min(0f)]
+		public float slopeForce = 45;
+
+		[Tooltip("Slopes below this threshold will be ignored. O is flat ground, 1 is a vertical wall")]
+		[Range(0,1)]
+		public float minSlopeDelta = .1f;
+		[Tooltip("Slopes above this threshold will be treated as walls")]
+		[Range(0,1)]
+		public float maxSlopeDelta = .3f;
 	}
 }

@@ -42,10 +42,13 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     
         byteCounter = 0;
         AssetDatabase.StartAssetEditing();
-        foreach (var file in Directory.EnumerateFiles("Assets", "*.lua", SearchOption.AllDirectories)) {
-            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+        try {
+            foreach (var file in Directory.EnumerateFiles("Assets", "*.lua", SearchOption.AllDirectories)) {
+                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+            }
+        } finally {
+            AssetDatabase.StopAssetEditing();   
         }
-        AssetDatabase.StopAssetEditing();
         Debug.Log("Byte count: " + byteCounter);
     }
 

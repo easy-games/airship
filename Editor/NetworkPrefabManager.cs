@@ -10,6 +10,7 @@ using Mirror;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
+using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 internal class AssetData {
@@ -91,7 +92,7 @@ public class NetworkPrefabManager : AssetPostprocessor {
         string[] movedFromAssetPaths, bool didDomainReload) {
         if (!didDomainReload) return;
         
-        // Register existing prefabs in session cache   
+        // Register existing prefabs in session cache
         RefreshSessionCollectionCache();
         
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
@@ -109,6 +110,7 @@ public class NetworkPrefabManager : AssetPostprocessor {
     }
 
     private static void RefreshSessionCollectionCache() {
+        Profiler.BeginSample("RefreshSessionCollectionCache");
         SessionCollectionCache.Clear();
         foreach (var collection in GetCollections()) {
             foreach (var prefab in collection.networkPrefabs) {
@@ -116,6 +118,7 @@ public class NetworkPrefabManager : AssetPostprocessor {
                 SessionCollectionCache.Add(guid);
             }
         }
+        Profiler.EndSample();
     }
     
     private static List<NetworkPrefabCollection> GetCollections() {

@@ -8,6 +8,7 @@ using UnityEngine;
 using System;
 using static UnityEditor.PlayerSettings;
 using static VoxelEditAction;
+using UnityEditor.SceneManagement;
 
 public class VoxelEditAction {
     
@@ -96,8 +97,9 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
     //Constructor
     public VoxelEditManager() {
         Undo.undoRedoEvent += UndoRedoEvent;
+       
     }
-
+    
     public void UndoRedoEvent(in UndoRedoInfo info) {
 
         if (info.isRedo == false) {
@@ -461,8 +463,20 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         
         if (faceHandle) {
             faceHandle.transform.position = world.TransformPointToWorldSpace(lastPos + new Vector3(0.5f, 0.5f, 0.5f) + lastNormal * 0.51f);
-            faceHandle.transform.rotation = Quaternion.LookRotation(world.TransformVectorToWorldSpace(lastNormal));
 
+            Matrix4x4 mat = new Matrix4x4();
+            
+            Vector3 forward = world.transform.forward;
+            Vector3 up = world.transform.up;
+            Vector3 normal = world.TransformVectorToWorldSpace(lastNormal);
+
+            if (Mathf.Abs(Vector3.Dot(normal, up)) > 0.7f) {
+                faceHandle.transform.rotation = Quaternion.LookRotation(normal, forward);
+            }
+            else {
+                faceHandle.transform.rotation = Quaternion.LookRotation(normal, up);
+            }
+            
             MeshRenderer ren = faceHandle.GetComponent<MeshRenderer>();
             if (leftControlDown == true) {
                 ren.sharedMaterial.SetColor("_Color", new Color(0, 1, 0, 0.25f));
@@ -514,6 +528,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 DoMouseMoveEvent(Event.current.mousePosition, world);
             }
             UpdateHandlePosition(world);
+            SceneView.RepaintAll();
         }
 
         //Leftclick up
@@ -566,6 +581,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
 
             UpdateHandlePosition(world);
+            //Repaint
+            SceneView.RepaintAll();
         }
 
         if (Event.current.GetTypeForControl(controlID) == EventType.KeyDown) {
@@ -604,6 +621,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         //Add a handler for the gizmo refresh event
         SceneView.duringSceneGui += GizmoRefreshEvent;
+
+        //Save handler
+        EditorSceneManager.sceneSaving += OnSavingScene;
     }
 
     private void OnDestroy() {
@@ -612,6 +632,20 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         //Remove the gizmo refresh event handler
         SceneView.duringSceneGui -= GizmoRefreshEvent;
+
+        //Save handler
+        EditorSceneManager.sceneSaving -= OnSavingScene;
+    }
+    private void OnSavingScene(UnityEngine.SceneManagement.Scene scene, string path) {
+        VoxelWorld world = (VoxelWorld)target;
+        if (world == null) {
+            return;
+        }
+        if (world.hasUnsavedChanges == true) {
+            Debug.Log("Saving voxels because scene is saving.");
+           
+            world.SaveToFile();
+        }
     }
 
     void OnSelectionChanged() { 

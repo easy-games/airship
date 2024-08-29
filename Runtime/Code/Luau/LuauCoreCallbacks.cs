@@ -322,6 +322,8 @@ public partial class LuauCore : MonoBehaviour {
                 }
             }
 
+            _coreInstance.unityAPIClassesByType.TryGetValue(sourceType, out var valueTypeAPI);
+
             Type t = null;
             PropertyInfo property = null;
             FieldInfo field = null;
@@ -354,6 +356,14 @@ public partial class LuauCore : MonoBehaviour {
                 referencedAssemblies.Add(sourceType.Assembly.FullName);
             }
 
+            if (valueTypeAPI != null) {
+                var retValue = valueTypeAPI.OverrideMemberSetter(context, thread, objectReference, propName, type, propertyData,
+                    propertyDataSize);
+                if (retValue >= 0) {
+                    return retValue;
+                }
+            }
+
             switch (type) {
                 case PODTYPE.POD_OBJECT: {
                     int[] intData = new int[1];
@@ -379,7 +389,7 @@ public partial class LuauCore : MonoBehaviour {
                                 return LuauError(thread, "[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
                             }
                         }
-
+                        
                         if (field != null) {
                             field.SetValue(objectReference, propertyObjectRef);
                         } else {
@@ -707,6 +717,14 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
             }
+            
+            _coreInstance.unityAPIClassesByType.TryGetValue(sourceType, out var valueTypeAPI);
+            if (valueTypeAPI != null) {
+                var retValue = valueTypeAPI.OverrideMemberGetter(context, thread, objectReference, propName);
+                if (retValue >= 0) {
+                    return retValue;
+                }
+            }
 
             // Get property info from cache if possible, otherwise set it
             PropertyGetReflectionCache? cacheData;
@@ -1001,10 +1019,7 @@ public partial class LuauCore : MonoBehaviour {
 
             if (reflectionObject == null)
             {
-                ThreadDataManager.Error(thread);
-                Debug.LogError("Error: InstanceId not currently available for " + instanceId + " " + methodName + " " + staticClassName + " (" + LuaThreadToString(thread) + ")");
-                GetLuauDebugTrace(thread);
-                return 0;
+                return LuauError(thread, $"Error: InstanceId not currently available for {instanceId} {methodName} {staticClassName} ({LuaThreadToString(thread)})");
             }
             
             type = reflectionObject.GetType();
@@ -1019,18 +1034,12 @@ public partial class LuauCore : MonoBehaviour {
                     if (type == typeof(GameObject)) {
                         var target = (GameObject) reflectionObject;
                         if (IsAccessBlocked(context, target)) {
-                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
-                            ThreadDataManager.Error(thread);
-                            GetLuauDebugTrace(thread);
-                            return 0;
+                            return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
                         if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
-                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
-                            ThreadDataManager.Error(thread);
-                            GetLuauDebugTrace(thread);
-                            return 0;
+                            return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     }
                 }
@@ -1050,9 +1059,7 @@ public partial class LuauCore : MonoBehaviour {
             var t = ReflectionList.AttemptGetTypeFromString(typeName);
 
             if (t == null) {
-                ThreadDataManager.Error(thread);
-                Debug.LogError($"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
-                return 0;
+                return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
             }
 
             var isA = t.IsAssignableFrom(type);
@@ -1076,33 +1083,21 @@ public partial class LuauCore : MonoBehaviour {
                 eventInfo = type.GetRuntimeEvent(name);
             }
 
-            if (eventInfo != null)
-            {
+            if (eventInfo != null) {
                 //There is an event
-                if (numParameters != 1)
-                {
-                    ThreadDataManager.Error(thread);
-                    Debug.LogError("Error: " + methodName + " takes 1 parameter (a function!)");
-                    GetLuauDebugTrace(thread);
-                    return 0;
+                if (numParameters != 1) {
+                    return LuauError(thread, $"Error: {methodName} takes 1 parameter (a function!)");
                 }
-                if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION)
-                {
-                    ThreadDataManager.Error(thread);
-                    Debug.LogError("Error: " + methodName + " parameter must be a function");
-                    GetLuauDebugTrace(thread);
-                    return 0;
+                if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
+                    return LuauError(thread, $"Error: {methodName} parameter must be a function");
                 }
 
                 int handle = GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
                 ParameterInfo[] eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
 
-                foreach (ParameterInfo param in eventInfoParams)
-                {
-                    if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false)
-                    {
-                        Debug.LogError("Warning: " + methodName + " parameter " + param.Name + " is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
-                        return 0;
+                foreach (ParameterInfo param in eventInfoParams) {
+                    if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false) {
+                        return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                     }
                 }
 
@@ -1144,37 +1139,26 @@ public partial class LuauCore : MonoBehaviour {
 
         if (finalMethod == null) {
             if (insufficientContext) {
-                ThreadDataManager.Error(thread);
 #if AIRSHIP_INTERNAL
-                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
+                return LuauError(thread, $"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
 #else
-                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Full type name: {type.FullName}");
+                return LuauError(thread, $"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Full type name: {type.FullName}");
 #endif
-                GetLuauDebugTrace(thread);
             } else if (!nameFound) {
-                ThreadDataManager.Error(thread);
-                Debug.LogError("Error: Method " + methodName + " not found on " + type.Name + "(" + instanceId + ")");
-                GetLuauDebugTrace(thread);
+                return LuauError(thread, "Error: Method " + methodName + " not found on " + type.Name + "(" + instanceId + ")");
             } else if (nameFound && !countFound) {
-                ThreadDataManager.Error(thread);
-                Debug.LogError("Error: No version of " + methodName + " on " + type.Name + "(" + instanceId + ") takes " + numParameters + " parameters.");
-                GetLuauDebugTrace(thread);
+                return LuauError(thread, "Error: No version of " + methodName + " on " + type.Name + "(" + instanceId + ") takes " + numParameters + " parameters.");
             } else if (nameFound && countFound) {
-                ThreadDataManager.Error(thread);
-                Debug.LogError("Error: Method " + methodName + " could not match parameter types on " + type.Name + "(" + instanceId + ")");
-                GetLuauDebugTrace(thread);
+                return LuauError(thread, "Error: Method " + methodName + " could not match parameter types on " + type.Name + "(" + instanceId + ")");
             }
 
-            return 0;
+            return LuauError(thread, "Error: Failed to get method");
         }
 
         object[] parsedData = null;
         bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
         if (success == false) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error: Unable to parse parameters for " + type.Name + " " + finalMethod.Name);
-            GetLuauDebugTrace(thread);
-            return 0;
+            return LuauError(thread, $"Error: Unable to parse parameters for {type.Name} {finalMethod.Name}");
         }
 
         // Luau Context Security
@@ -1191,49 +1175,34 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
 
-                if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {
-                    Debug.LogError("[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
-                    ThreadDataManager.Error(thread);
-                    GetLuauDebugTrace(thread);
-                    return 0;
+                if (targetTransform != null && IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                 }
             } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
                 if (finalParameters.Length >= 1 && parsedData[0] != null) {
                     var paramType = parsedData[0].GetType();
                     if (paramType == typeof(GameObject)) {
                         var param = parsedData[0] as GameObject;
-                        if (IsProtectedScene(param.scene.name)) {
-                            Debug.LogError("[Airship] Access denied when trying to destroy a protected GameObject \"" + param.name + "\"");
-                            ThreadDataManager.Error(thread);
-                            GetLuauDebugTrace(thread);
-                            return 0;
+                        if (param != null && IsProtectedScene(param.scene.name)) {
+                            return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected GameObject \"{param.name}\"");
                         }
                     } else if (paramType == typeof(Component)) {
                         var param = parsedData[0] as Component;
-                        if (IsProtectedScene(param.gameObject.scene.name)) {
-                            Debug.LogError("[Airship] Access denied when trying to destroy a protected Component \"" + param.gameObject.name + "\"");
-                            ThreadDataManager.Error(thread);
-                            GetLuauDebugTrace(thread);
-                            return 0;
+                        if (param != null && IsProtectedScene(param.gameObject.scene.name)) {
+                            return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected Component \"{param.gameObject.name}\"");
                         }
                     }
                 }
             } else if (methodName == "SetParent" && type == typeof(Transform)) {
                 var callingTransform = reflectionObject as Transform;
-                if (IsAccessBlocked(context, callingTransform.gameObject)) {
-                    Debug.LogError("[Airship] Access denied when trying set parent of a transform inside a protected scene \"" + callingTransform.gameObject.scene.name + "\"");
-                    ThreadDataManager.Error(thread);
-                    GetLuauDebugTrace(thread);
-                    return 0;
+                if (callingTransform != null && IsAccessBlocked(context, callingTransform.gameObject)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying set parent of a transform inside a protected scene \"{callingTransform.gameObject.scene.name}\"");
                 }
 
                 if (parsedData[0] != null && parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
-                    if (targetTransform && IsAccessBlocked(context, targetTransform.gameObject)) {
-                        Debug.LogError("[Airship] Access denied when trying set parent to a transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
-                        ThreadDataManager.Error(thread);
-                        GetLuauDebugTrace(thread);
-                        return 0;
+                    if (targetTransform != null && IsAccessBlocked(context, targetTransform.gameObject)) {
+                        return LuauError(thread, $"[Airship] Access denied when trying set parent to a transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                     }
                 }
             }
@@ -1244,16 +1213,13 @@ public partial class LuauCore : MonoBehaviour {
         object invokeObj = reflectionObject;
 
         var returnCount = 1;
-        for (var j = 0; j < finalParameters.Length; j++)
-        {
-            if (finalParameters[j].IsOut)
-            {
+        for (var j = 0; j < finalParameters.Length; j++) {
+            if (finalParameters[j].IsOut) {
                 returnCount += 1;
             }
         }
 
-        if (finalExtensionMethod)
-        {
+        if (finalExtensionMethod) {
             invokeObj = null;
             parsedData = parsedData.Prepend(reflectionObject).ToArray();
         }
@@ -1261,24 +1227,19 @@ public partial class LuauCore : MonoBehaviour {
         // Async method
         if (finalMethod.ReturnType == typeof(Task) || (finalMethod.ReturnType.IsGenericType &&
                                                        finalMethod.ReturnType.GetGenericTypeDefinition() ==
-                                                       typeof(Task<>)))
-        {
-            var shouldYieldBool = InvokeMethodAsync(context, thread, type, finalMethod, invokeObj, parsedData);
+                                                       typeof(Task<>))) {
+            var ret = InvokeMethodAsync(context, thread, type, finalMethod, invokeObj, parsedData, out var shouldYieldBool);
+            if (ret == -1) {
+                return ret;
+            }
             Marshal.WriteInt32(shouldYield, shouldYieldBool ? 1 : 0);
             return returnCount;
         }
 
-        try
-        {
+        try {
             returnValue = finalMethod.Invoke(invokeObj, parsedData);
-        }
-        catch (Exception e)
-        {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error: Exception thrown in " + type.Name + " " + finalMethod.Name + " " + e.Message);
-            Debug.LogError(e);
-            GetLuauDebugTrace(thread);
-            return 0;
+        } catch (Exception e) {
+            return LuauError(thread, "Error: Exception thrown in " + type.Name + " " + finalMethod.Name + " " + e.Message);
         }
 
         WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData);
@@ -1346,7 +1307,7 @@ public partial class LuauCore : MonoBehaviour {
         return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
     }
 
-    private static bool InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters) {
+    private static int InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters, out bool shouldYield) {
         try {
             var task = (Task)method.Invoke(obj, parameters);
             var awaitingTask = new AwaitingTask {
@@ -1358,7 +1319,8 @@ public partial class LuauCore : MonoBehaviour {
 
             if (task.IsCompleted) {
                 ResumeAsyncTask(awaitingTask, true);
-                return false;
+                shouldYield = false;
+                return 0;
             }
 
             _awaitingTasks.Add(awaitingTask);
@@ -1372,13 +1334,11 @@ public partial class LuauCore : MonoBehaviour {
 
             ThreadDataManager.SetThreadYielded(thread, true);
 
-            return true;
+            shouldYield = true;
+            return 0;
         } catch (Exception e) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error: Exception thrown in " + type.Name + " " + method.Name + " " + e.Message);
-            Debug.LogError(e);
-            GetLuauDebugTrace(thread);
-            return false;
+            shouldYield = false;
+            return LuauError(thread, $"Error: Exception thrown in {type.Name} {method.Name}: {e.Message}");
         }
     }
 
