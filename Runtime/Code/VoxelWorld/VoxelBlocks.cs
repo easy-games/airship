@@ -213,8 +213,7 @@ public class VoxelBlocks : MonoBehaviour {
         public bool detail = false;
         public bool doOcclusion = true;
 
-        public VoxelMeshCopy mesh = null;
-        public VoxelMeshCopy meshLod = null;
+        public LodSet mesh = null;
 
         public Dictionary<int, LodSet> meshTiles = new();
 
@@ -368,22 +367,28 @@ public class VoxelBlocks : MonoBehaviour {
         if (block.definition.contextStyle != ContextStyle.StaticMesh) {
             return;
         }
-
-        var meshSrc = block.definition.staticMeshLOD0;
-        if (meshSrc == null) {
+        
+        if (block.definition.staticMeshLOD0 == null) {
             return;
         }
-        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshSrc);
-        block.mesh = meshCopy;
 
+        block.mesh = new();
+        
+        block.mesh.lod0 = new VoxelMeshCopy(block.definition.staticMeshLOD0);
+        
+        if (block.definition.staticMeshLOD1 != null){
+            block.mesh.lod1 = new VoxelMeshCopy(block.definition.staticMeshLOD1);
+        }
+        
+        if (block.definition.staticMeshLOD2 != null){
+            block.mesh.lod2 = new VoxelMeshCopy(block.definition.staticMeshLOD2);
+        }
+        
         //Apply the material to this
         if (block.meshMaterial != null) {
-            if (block.mesh.surfaces != null) {
-                foreach (VoxelMeshCopy.Surface surf in block.mesh.surfaces) {
-                    surf.meshMaterial = block.meshMaterial;
-                    surf.meshMaterialName = block.meshMaterial.name;
-                }
-            }
+            block.mesh.lod0.ApplyMaterial(block.meshMaterial);
+            block.mesh.lod1.ApplyMaterial(block.meshMaterial);
+            block.mesh.lod2.ApplyMaterial(block.meshMaterial);
         }
                 
     }

@@ -708,8 +708,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         RegenerateAllMeshes();
-
-        UpdatePropertiesForAllChunksForRendering();
+         
 
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
@@ -731,8 +730,7 @@ public partial class VoxelWorld : MonoBehaviour {
  
         DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
-
-        UpdatePropertiesForAllChunksForRendering();
+ 
     }
 
 
@@ -824,15 +822,9 @@ public partial class VoxelWorld : MonoBehaviour {
         this.voxelBlocks.Reload();
 
         RegenerateAllMeshes();
-
-        UpdatePropertiesForAllChunksForRendering();
+ 
     }
-
-    public void UpdatePropertiesForAllChunksForRendering() {
-        foreach (var chunkRec in chunks) {
-            chunkRec.Value.UpdateMaterialPropertiesForChunk();
-        }
-    } 
+ 
 
     private void Awake() {
         this.finishedLoading = false;
@@ -1017,11 +1009,6 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.BeginSample("RegenerateMissingChunkGeometry");
         RegenerateMissingChunkGeometry();
         Profiler.EndSample();
-
-        Profiler.BeginSample("UpdatePropertiesForAllChunksForRendering");
-        UpdatePropertiesForAllChunksForRendering();
-        Profiler.EndSample();
- 
     }
 
     public void OnRenderObject() {

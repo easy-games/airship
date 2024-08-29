@@ -990,16 +990,21 @@ namespace VoxelWorldStuff {
                                 //Init the detail meshes now
                                 InitDetailMeshes();
 
-                                if (block.mesh != null) {
-                                    EmitMesh(block, block.mesh, detailMeshData[0], world, origin, true, rotation);
+                                if (block.mesh != null && block.mesh.lod0 != null) {
+                                    EmitMesh(block, block.mesh.lod0, detailMeshData[0], world, origin, true, rotation);
+
+                                    if (block.mesh.lod1 != null) {
+                                        EmitMesh(block, block.mesh.lod1, detailMeshData[1], world, origin, true, rotation);
+                                    }
+                                    if (block.mesh.lod2 != null) {
+                                        EmitMesh(block, block.mesh.lod2, detailMeshData[2], world, origin, true, rotation);
+                                    }
                                 }
-                                if (block.meshLod != null) {
-                                    EmitMesh(block, block.mesh, detailMeshData[1], world, origin, true, rotation);
-                                }
+                                
                             }
                             else {
                                 //same mesh that the voxels use (think stairs etc)
-                                EmitMesh(block, block.mesh, temporaryMeshData, world, origin, true, rotation);
+                                EmitMesh(block, block.mesh.lod0, temporaryMeshData, world, origin, true, rotation);
                             }
                             //No code past here
                             continue;
@@ -1285,8 +1290,8 @@ namespace VoxelWorldStuff {
             //Center around 0,0,0
             Vector3 origin = new Vector3(-0.5f, -0.5f, -0.5f);
 
-            if (block.mesh != null) {
-                EmitMesh(block, block.mesh, meshData, world, origin, false);
+            if (block.mesh != null && block.mesh.lod0 != null) {
+                EmitMesh(block, block.mesh.lod0, meshData, world, origin, false);
             }
             else {
                 //Add regular cube Faces
