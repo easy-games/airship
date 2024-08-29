@@ -708,7 +708,8 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)){
+		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)
+			&& prevGrounded && timeSinceBecameGrounded > .1){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
@@ -717,14 +718,16 @@ namespace Code.Player.Character {
 					SnapToY(pointOnRamp.y, true);
 					//networkTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
 				}
+				//print("STEPPED UP. Vel before: " + newVelocity);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
 				var debugPoint = transform.position;
 				debugPoint.y = pointOnRamp.y;
 				debugPoint += newVelocity * deltaTime;
-				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " velY: " + newVelocity.y);
+				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " vel: " + newVelocity);
 				
 				if(drawDebugGizmos_STEPUP){
-					GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(oldPos, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(transform.position, .03f, Color.red, 4, 4);
 				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
