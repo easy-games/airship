@@ -544,7 +544,10 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void InitWhenCoreReady() {
-        if (IsDestroyed()) return;
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
         
         if (IsReadyToStart()) {
             Init();
@@ -565,7 +568,10 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void OnCoreInitialized() {
-        if (IsDestroyed()) return;
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
         
         LuauCore.OnInitialized -= OnCoreInitialized;
         if (IsReadyToStart()) {
@@ -585,7 +591,11 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     public void Init() {
-        if (IsDestroyed()) return; // can't init a dead object
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
+        
         if (started) return;
         started = true;
         
@@ -841,12 +851,15 @@ public class AirshipComponent : MonoBehaviour {
         }
     }
 
+    private void DisconnectUnityEvents() {
+        LuauCore.onResetInstance -= OnLuauReset;
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+    }
+    
     private bool _isDestroyed;
     private void OnDestroy() {
         _isDestroyed = true;
-        
-        LuauCore.onResetInstance -= OnLuauReset;
-        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        DisconnectUnityEvents();
         
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
