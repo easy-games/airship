@@ -46,7 +46,7 @@ namespace Agones
         /// <summary>
         /// Debug Logging Enabled. Debug logging for development of this Plugin.
         /// </summary>
-        public bool logEnabled = true;
+        public bool logEnable = true;
 
         private string sidecarAddress;
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -323,7 +323,7 @@ namespace Agones
 
         private void Log(object message)
         {
-            if (!logEnabled)
+            if (!logEnable)
             {
                 return;
             }
