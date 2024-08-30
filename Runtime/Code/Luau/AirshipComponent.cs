@@ -678,7 +678,12 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         if (!this.scriptFile.m_compiled) {
-            throw new Exception($"Cannot start script at {this.scriptFile.assetPath} with compilation errors: {this.scriptFile.m_compilationError}"); // ????
+            if (string.IsNullOrEmpty(scriptFile.m_compilationError)) {
+                throw new Exception($"{scriptFile.assetPath} cannot be executed due to not being compiled");
+            }
+            else {
+                throw new Exception($"Cannot start script at {this.scriptFile.assetPath} with compilation errors: {this.scriptFile.m_compilationError}");
+            }
         }
 
         var cleanPath = CleanupFilePath(this.scriptFile.m_path);
