@@ -20,8 +20,6 @@ public class LuauCompiler {
 
     public static void RuntimeCompile(string path, string data, AirshipScript airshipScript, bool airshipBehaviour) {
         // Read Lua source
-        data += "\r\n" + "\r\n";
-
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(path); //Ok
         IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
 
