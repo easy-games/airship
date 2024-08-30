@@ -479,7 +479,7 @@ namespace Editor.Packages {
 
             packageUploadProgress[packageDoc.id] = "Starting upload...";
             Repaint();
-            if (Deploy.DEBUG_DONT_UPLOAD) {
+            if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
                 packageUploadProgress.Remove(packageDoc.id);
                 Repaint();
                 yield break;
