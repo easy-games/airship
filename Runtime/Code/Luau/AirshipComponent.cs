@@ -565,7 +565,7 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void OnActiveSceneChanged(Scene current, Scene next) {
-        if (IsReadyToStart()) {
+        if (IsReadyToStart() && !_isDestroyed) {
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             _airshipWaitingForLuauCoreReady = false;
             Init();
@@ -831,9 +831,13 @@ public class AirshipComponent : MonoBehaviour {
         }
     }
 
+    private bool _isDestroyed;
     private void OnDestroy() {
+        _isDestroyed = true;
+        
         LuauCore.onResetInstance -= OnLuauReset;
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipBehaviourRoot != null) {
