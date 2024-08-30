@@ -23,6 +23,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool autoUpdatePackages = true;
 
     [SerializeField] public bool enableMainMenu = false;
+
+    [SerializeField] public bool buildWithoutUpload = false;
     
     [SerializeField] 
     public bool manageTypescriptProject = false;

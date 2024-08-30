@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Assets.Luau;
 using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using Mirror;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character {
 	[LuauAPI]
@@ -29,6 +32,8 @@ namespace Code.Player.Character {
 
 		[Header("Variables")]
 		public float observerRotationLerpMod = 1;
+		[Tooltip("If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
+		public bool playAnimationOnServer = true;
 
 
 		//Events
@@ -150,10 +155,15 @@ namespace Code.Player.Character {
 		private int moveModifierIdCounter = 0;
 		private Vector3 lastPos = Vector3.zero;
 		private CharacterPhysics physics;
+		private NetworkAnimator _networkAnimator;
 
 #region INIT
 
-		private void OnEnable() {
+		private void Awake() {
+			_networkAnimator = transform.GetComponent<NetworkAnimator>();
+		}
+
+private void OnEnable() {
 			this.physics = new CharacterPhysics(this);
 			this.disableInput = false;
 			this._flying = false;
@@ -221,17 +231,21 @@ namespace Code.Player.Character {
 			OnEndMove?.Invoke(md);
 		}
 
-		private void Update(){
-			if (isClient) {
-				//Update visual state of client character
-				var currentPos = rootTransform.position;
-				var worldVel = (currentPos - trackedPosition) * (1 / (float)Time.deltaTime);
-				trackedPosition = currentPos;
-				if (worldVel != lastWorldVel) {
-					lastWorldVel = worldVel;
-					//Debug.Log("VEL: " + worldVel);
-					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
-				}
+		private void Update() {
+			if (isLocalPlayer || _networkAnimator == null) {
+				UpdateAnimationVelocity();
+			}
+		}
+
+		private void UpdateAnimationVelocity() {
+			//Update visual state of client character
+			var currentPos = rootTransform.position;
+			var worldVel = (currentPos - trackedPosition) * (1 / (float)Time.deltaTime);
+			trackedPosition = currentPos;
+			if (worldVel != lastWorldVel) {
+				lastWorldVel = worldVel;
+				//Debug.Log("VEL: " + worldVel);
+				animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 			}
 		}
 
@@ -708,7 +722,8 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)){
+		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)
+			&& prevGrounded && timeSinceBecameGrounded > .1){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
@@ -717,14 +732,16 @@ namespace Code.Player.Character {
 					SnapToY(pointOnRamp.y, true);
 					//networkTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
 				}
+				//print("STEPPED UP. Vel before: " + newVelocity);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
 				var debugPoint = transform.position;
 				debugPoint.y = pointOnRamp.y;
 				debugPoint += newVelocity * deltaTime;
-				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " velY: " + newVelocity.y);
+				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " vel: " + newVelocity);
 				
 				if(drawDebugGizmos_STEPUP){
-					GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(oldPos, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(transform.position, .03f, Color.red, 4, 4);
 				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
@@ -770,7 +787,7 @@ namespace Code.Player.Character {
 				crouching = isCrouching,
 			});
 
-			if(didJump){
+			if (didJump){
 				CommandTriggerJump();
 				//Fire locally immediately
 				this.animationHelper.TriggerJump();
@@ -1024,11 +1041,18 @@ namespace Code.Player.Character {
 		// Called by owner to update the state data. This is then sent to all observers
 		[Command] private void CommandSetStateData(CharacterStateData data){
 			this.stateData = data;
+			if (playAnimationOnServer) {
+				ApplyNonLocalStateData(data);
+			}
 			this.RpcSetStateData(data);
 		}
 
 		[ClientRpc(includeOwner = false)]
 		private void RpcSetStateData(CharacterStateData data) {
+			ApplyNonLocalStateData(data);
+		}
+
+		private void ApplyNonLocalStateData(CharacterStateData data) {
 			var oldState = this.stateData;
 			this.stateData = data;
 
@@ -1045,6 +1069,7 @@ namespace Code.Player.Character {
 
 		[Command]
 		private void CommandTriggerJump(){
+			if (playAnimationOnServer) animationHelper.TriggerJump();
 			RpcTriggerJump();
 		}
 		

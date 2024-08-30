@@ -33,8 +33,6 @@ public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 	private static GameDto activeDeployTarget;
 
-	public static bool DEBUG_DONT_UPLOAD = false;
-	
 	public static void DeployToStaging()
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
@@ -240,8 +238,8 @@ public class Deploy {
 			}
 		}
 
-		if (DEBUG_DONT_UPLOAD) {
-			Debug.Log("DEBUG_DONT_UPLOAD is true. Ending early.");
+		if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
+			Debug.Log("Build without upload is enabled. Ending early. You can now view bundles using AssetBundle browser.");
 			yield break;
 		}
 

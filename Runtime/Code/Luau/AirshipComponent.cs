@@ -186,6 +186,8 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void Validate() {
+        if (IsDestroyed()) return;
+        
         if (scriptFile != null && string.IsNullOrEmpty(m_fileFullPath)) {
             m_fileFullPath = scriptFile.m_path;
         }
@@ -341,7 +343,13 @@ public class AirshipComponent : MonoBehaviour {
         _airshipStarted = true;
     }
 
+    private bool IsDestroyed() {
+        return _isDestroyed || this == null;
+    }
+    
     private IEnumerator StartAirshipComponentAtEndOfFrame() {
+        if (IsDestroyed()) yield return null; // Can't start a dead object
+        
         if (RunCore.IsClone()) {
             yield return null; // WaitForEndOfFrame() wasn't firing on the server using MPPM. But this works...
         } else {
@@ -536,6 +544,11 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void InitWhenCoreReady() {
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
+        
         if (IsReadyToStart()) {
             Init();
         } else {
@@ -555,6 +568,11 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void OnCoreInitialized() {
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
+        
         LuauCore.OnInitialized -= OnCoreInitialized;
         if (IsReadyToStart()) {
             _airshipWaitingForLuauCoreReady = false;
@@ -573,8 +591,10 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     public void Init() {
-        // todo: this might be a bad check. it was a temp fix.
-        if (gameObject == null) return;
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
         
         if (started) return;
         started = true;
@@ -831,9 +851,16 @@ public class AirshipComponent : MonoBehaviour {
         }
     }
 
-    private void OnDestroy() {
+    private void DisconnectUnityEvents() {
         LuauCore.onResetInstance -= OnLuauReset;
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+    }
+    
+    private bool _isDestroyed;
+    private void OnDestroy() {
+        _isDestroyed = true;
+        DisconnectUnityEvents();
+        
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipBehaviourRoot != null) {
