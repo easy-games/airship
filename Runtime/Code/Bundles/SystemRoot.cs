@@ -174,6 +174,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// 		i++;
 		// 	}
 		// }
+		var sw = Stopwatch.StartNew();
 
 		// Find packages we should UNLOAD
 		List<string> unloadList = new();
@@ -323,9 +324,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			yield return this.WaitAll(loadLists[0].ToArray());
 		} else {
-			var st = Stopwatch.StartNew();
 			if (NetworkClient.isConnected) {
 #if UNITY_EDITOR
+				var st = Stopwatch.StartNew();
 				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 				Array.Sort(guids);
 				foreach (var guid in guids) {
@@ -338,12 +339,13 @@ public class SystemRoot : Singleton<SystemRoot> {
 						}
 					}
 				}
+				Debug.Log($"[Airship]: Registered network prefabs in {st.ElapsedMilliseconds} ms.");
 #endif
 			}
 		}
 
-#if AIRSHIP_DEBUG
-		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
+#if AIRSHIP_PLAYER || true
+		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + " ms.");
 #endif
 	}
 

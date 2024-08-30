@@ -100,6 +100,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
             // Check if app update is required
             if (isUsingBundles) {
+                var versionCheckSw = Stopwatch.StartNew();
                 if (
                     this.cachedCoreCodeVersion != corePackageCodeVersion ||
                     this.cachedCoreAssetVersion != corePackageAssetVersion
@@ -112,6 +113,7 @@ public class MainMenuSceneManager : MonoBehaviour {
                 }
                 this.cachedCoreAssetVersion = corePackageAssetVersion;
                 this.cachedCoreCodeVersion = corePackageCodeVersion;
+                Debug.Log("Checked latest airship version in " + versionCheckSw.ElapsedMilliseconds + " ms.");
             }
 
             Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
