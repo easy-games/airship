@@ -1,4 +1,5 @@
 ﻿using Code.Player.Character.API;
+using Mirror;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -16,6 +17,8 @@ namespace Code.Player.Character {
         [Header("References")]
         [SerializeField]
         public Animator animator;
+        [SerializeField]
+        public NetworkAnimator networkAnimator;
 
         public EntityAnimationEvents events;
         public ParticleSystem sprintVfx;
@@ -105,7 +108,7 @@ namespace Code.Player.Character {
         public bool IsInParticleDistance() {
             return true;
         }
-
+        
         private void UpdateAnimationState() {
             if(!enabled || !this.gameObject.activeInHierarchy){
                 return;
@@ -147,7 +150,8 @@ namespace Code.Player.Character {
                 //Idle reaction
                 GetRandomReactionLength();
                 animator.SetFloat("ReactIndex", (float)UnityEngine.Random.Range(0,3));
-                animator.SetTrigger("React");
+                SetTrigger("React");
+
                 lastStateTime= Time.time+idleRectionLength;//Add time so it doesn't trigger a reaction while a reaction is still playing
             }
         }
@@ -158,9 +162,9 @@ namespace Code.Player.Character {
 
         public void SetVelocity(Vector3 localVel) {
             var targetSpeed = 4.4444445f;
-            if(currentState == CharacterState.Sprinting){
+            if (currentState == CharacterState.Sprinting) {
                 targetSpeed = 6.6666667f;
-            } else if(currentState == CharacterState.Crouching){
+            } else if (currentState == CharacterState.Crouching) {
                 targetSpeed = 2.1233335f;
             }
             
@@ -203,7 +207,16 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump(){
-            animator.SetTrigger("Jump");
+            SetTrigger("Jump");
+        }
+
+        private void SetTrigger(string trigger) {
+            if (networkAnimator != null) {
+                networkAnimator.SetTrigger(trigger);
+                return;
+            }
+            
+            animator.SetTrigger(trigger);
         }
 
         public void SetLayerWeight(CharacterAnimationLayer layer, float weight) {
