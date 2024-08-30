@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Code.Player.Character.API {
 	public class CharacterPhysics {
 		private const float offsetMargin = .02f;
-		private const float gizmoDuration = 1f;
+		private const float gizmoDuration = 4f;
 
 		private CharacterMovement movement;
 		private Vector3 uniformHalfExtents;
@@ -72,7 +72,7 @@ namespace Code.Player.Character.API {
 			return currentNormal;
 		}
 		
-	#region RAYCASTS
+	#region GROUNDED
 		public (bool isGrounded, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 currentPos, Vector3 vel, Vector3 moveDir) {
 			var intersectionMargin = .075f;
 			var castDistance = .2f;
@@ -139,7 +139,9 @@ namespace Code.Player.Character.API {
 
 			return (isGrounded: false, default, false);
 		}
+#endregion
 
+#region FORWARD
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 rootPos, Vector3 forwardVector, bool ignoreStepUp = false){
 			//Not moving
 			if(forwardVector.sqrMagnitude < .1f){
@@ -179,7 +181,9 @@ namespace Code.Player.Character.API {
 			//Hit nothing
 			return (false, hitInfo);
 		}
+#endregion
 
+#region STEP UP
 		public (bool didHit, bool onRamp, Vector3 pointOnRamp, Vector3 newVel) StepUp(Vector3 startPos, Vector3 vel, float deltaTime, Vector3 currentUpNormal){
 			
 			//Early outs
@@ -269,10 +273,9 @@ namespace Code.Player.Character.API {
 						}
 
 						//Manipulate velocity so that it moves up a ramp instead of hitting the step
-						return (true, rawDelta >= 0 && rawDelta <= 1, pointOnRamp, Vector3.ProjectOnPlane(vel, rampNormal));
+						return (true, rawDelta >= 0 && rawDelta <= 1, pointOnRamp, vel);//Vector3.ProjectOnPlane(vel, rampNormal));
 					}else if(movement.useExtraLogging){
 						Debug.Log("Can't step up here. hitPoint: " + stepUpRayHitInfo.point + " startPos: " + startPos + " isWalkable: "+ IsWalkableSurface(stepUpRayHitInfo.normal));
-						
 					}
 
 				}
@@ -301,6 +304,7 @@ namespace Code.Player.Character.API {
 						&& IsWalkableSurface(quickStepHitInfo.normal)){
 						var hitPoint = quickStepHitInfo.point + new Vector3(0,offsetMargin, 0);
 						if(movement.drawDebugGizmos_STEPUP){
+							GizmoUtils.DrawSphere(hitPoint, .1f, Color.white, 4, gizmoDuration);
 							GizmoUtils.DrawSphere(hitPoint, .05f, Color.white, 4, gizmoDuration);
 						}
 						return (true, false, hitPoint, vel);
@@ -309,7 +313,9 @@ namespace Code.Player.Character.API {
 			}
 			return (false, false, vel, vel);
 		}
+#endregion
 
+#region CAN STAND
 		public bool CanStand(){
 			if(Physics.BoxCast(
 				movement.rootTransform.position + new Vector3(0,movement.characterRadius,0), 

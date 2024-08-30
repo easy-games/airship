@@ -22,17 +22,23 @@ public class VoxelBlockDefinition : ScriptableObject {
     }
 
     public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.Block;
- 
+    public Material meshMaterial; //Used by quarterBlocks, Pipes, StaticMesh and regular blocks
 
     public TextureSet topTexture = new();
     public TextureSet sideTexture = new();
     public TextureSet bottomTexture = new();
-
-    public Material meshMaterial;
+    
     public VoxelQuarterBlockMeshDefinition quarterBlockMesh;
-    public string meshPathLod;
 
+    //ContextStyle.Prefab
     public GameObject prefab;
+    
+    //For use with ContextStyle.StaticMesh
+    public GameObject staticMeshLOD0;
+    public GameObject staticMeshLOD1;
+    public GameObject staticMeshLOD2;
+
+    ///////////////////////////
 
     public float metallic = 0;
     public float smoothness = 0;
@@ -233,14 +239,18 @@ public class VoxelBlockDefinitionEditor : Editor {
         if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
             block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
             block.quarterBlockMesh = (VoxelQuarterBlockMeshDefinition)EditorGUILayout.ObjectField("QuarterBlock Mesh", block.quarterBlockMesh, typeof(VoxelQuarterBlockMeshDefinition), false);
-
-            block.meshPathLod = EditorGUILayout.TextField("Mesh Path LOD", block.meshPathLod);
         }
         if (block.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
             block.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab", block.prefab, typeof(GameObject), false);
         }
-
-
+        if (block.contextStyle == VoxelBlocks.ContextStyle.StaticMesh) {
+            block.meshMaterial = (Material)EditorGUILayout.ObjectField("Static Mesh Material", block.meshMaterial, typeof(Material), false);
+            block.staticMeshLOD0 = (GameObject)EditorGUILayout.ObjectField("LOD0", block.staticMeshLOD0, typeof(GameObject), false);
+            block.staticMeshLOD1 = (GameObject)EditorGUILayout.ObjectField("LOD1", block.staticMeshLOD1, typeof(GameObject), false);
+            block.staticMeshLOD2 = (GameObject)EditorGUILayout.ObjectField("LOD2", block.staticMeshLOD2, typeof(GameObject), false);
+            EditorGUILayout.HelpBox("LOD1 and LOD2 are optional.", MessageType.Info);
+        }
+        
         //Small gap
         EditorGUILayout.Space();
         block.solid = EditorGUILayout.Toggle("Solid Visibility", block.solid);

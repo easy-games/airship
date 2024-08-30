@@ -83,6 +83,37 @@ namespace Airship
 #endif
 		}
 
+		public async Task<bool> SetAnnotation(string key, string value)
+		{
+			if (!RunCore.IsServer()) return false;
+			return await _sdk.SetAnnotation(key, value);
+		}
+		
+		public async Task<bool> SetLabel(string key, string value)
+		{
+			if (!RunCore.IsServer()) return false;
+			return await _sdk.SetLabel(key, value);
+		}
+		
+		public async Task<bool> AppendListValue(string list, string value)
+		{
+			if (!RunCore.IsServer()) return false;
+			return await _sdk.AppendListValue(list, value);
+		}
+		
+		public async Task<bool> DeleteListValue(string list, string value)
+		{
+			if (!RunCore.IsServer()) return false;
+			return await _sdk.DeleteListValue(list, value);
+		}
+		
+		public async Task<string[]> GetListValues(string list)
+		{
+			if (!RunCore.IsServer()) return new string[]{};
+			var values = await _sdk.GetListValues(list);
+			return values.ToArray();
+		}
+
 		private async void SignalConnect()
 		{
 			var connectSuccess = await _sdk.Connect();

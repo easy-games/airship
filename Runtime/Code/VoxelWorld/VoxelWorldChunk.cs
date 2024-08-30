@@ -93,11 +93,7 @@ namespace VoxelWorldStuff {
         private Mesh[] detailMeshes;
         private MeshFilter[] detailFilters;
         private MeshRenderer[] detailRenderers;
-
-        private float[] detailMeshAlpha = new float[3];
-        private bool[] wantsToBeVisible = new bool[3];
-        private float[] detailMeshPrevAlpha = new float[3];
-        private bool skipLodAnimation = true;
+        
 
         private GameObject parent;
         public List<BoxCollider> colliders = new();
@@ -451,9 +447,7 @@ namespace VoxelWorldStuff {
 
                         //See if this mesh has detail meshes
                         if (meshProcessor.GetHasDetailMeshes() == true) {
-                            //Debug.Log("Got a mesh");
-                            skipLodAnimation = true;
-
+                            
                             if (detailGameObjects == null) {
                                 detailGameObjects = new GameObject[3];
 
@@ -474,7 +468,7 @@ namespace VoxelWorldStuff {
                                 if (i == 2) {
                                     detailGameObjects[i].name = "DetailMeshVeryFar";
                                 }
-                                detailGameObjects[i].layer = 6;
+                                
                                 detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
                                 detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
 
@@ -483,6 +477,23 @@ namespace VoxelWorldStuff {
 
                                 detailFilters[i].mesh = detailMeshes[i];
                             }
+
+                            LODGroup lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
+
+                            // Enable crossfade
+                            lodSystem.fadeMode = LODFadeMode.CrossFade;
+                            lodSystem.animateCrossFading = true;
+
+                            // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
+                            LOD[] lods = new LOD[3] {
+                                new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
+                                new LOD(0.0f, new Renderer[] { detailRenderers[2] })  
+                            };
+                       
+                            lodSystem.SetLODs(lods);
+
+
                         }
                     }
                     
@@ -522,7 +533,7 @@ namespace VoxelWorldStuff {
 
                 Profiler.BeginSample("UpdatePropertiesForChunk");
                 materialPropertiesDirty = true;
-                UpdateMaterialPropertiesForChunk();
+         
                 Profiler.EndSample();
 
                 //Print out the total time taken
@@ -564,215 +575,7 @@ namespace VoxelWorldStuff {
             Array.Clear(lightColors, 0, lightColors.Length);
             Array.Clear(lightRadius, 0, lightRadius.Length);
         }
-        public void UpdateMaterialPropertiesForChunk() {
-            if (renderer == null) return;
-            if (mesh == null) return;
-
-            //Update the detail meshes if they're there
-            if (detailRenderers != null && currentCamera != null) {
-                Vector3 pos = currentCamera.transform.position;
-                Vector3 chunkPos = (chunkKey * chunkSize) + new Vector3(chunkSize / 2, chunkSize / 2, chunkSize / 2);
-                float distance = Vector3.Distance(pos, chunkPos);
-                wantsToBeVisible[0] = false;
-                wantsToBeVisible[1] = false;
-                wantsToBeVisible[2] = false;
-                bool somethingChanged = false;
-                float speed = world.lodTransitionSpeed * Time.deltaTime;
-
-
-                //mark what we saw
-                for (int i = 0; i < 3; i++) {
-                    detailMeshPrevAlpha[i] = detailMeshAlpha[i];
-                }
-
-                //If the near one should be visible
-                if (distance < world.lodNearDistance) {
-                    //Blend it in
-                    if (detailMeshAlpha[0] < 1.0f) {
-                        detailMeshAlpha[0] += speed;
-                    }
-                    else {
-                        //Once the near one is fully visible, we can fade 1 and 2 out
-                        detailMeshAlpha[1] -= speed;
-                        detailMeshAlpha[2] -= speed;
-                    }
-                }
-                else
-                if (distance < world.lodFarDistance) {
-                    //If the far one should be visible
-                    //Blend it in
-                    if (detailMeshAlpha[1] < 1.0f) {
-                        detailMeshAlpha[1] += speed;
-                    }
-                    else {
-                        //Once the far one is fully visible, we can fade 0+2 out
-                        detailMeshAlpha[0] -= speed;
-                        detailMeshAlpha[2] -= speed;
-                    }
-                }
-                else {
-                    if (detailMeshAlpha[2] < 1.0f) {
-                        detailMeshAlpha[2] += speed;
-                    }
-                    else {
-                        detailMeshAlpha[0] -= speed;
-                        detailMeshAlpha[1] -= speed;
-                    }
-                }
-
-                /*
-                for (int i = 0; i < 2; i++)
-                {
-                    //Becoming more visible?
-                    if (wantsToBeVisible[i] == true)
-                    {
-                        detailRenderers[i].enabled = true;
-                        
-                        if (detailMeshAlpha[i] < 1)
-                        {
-                            detailMeshAlpha[i] += speed;
-                            somethingChanged = true;
-                            if (detailMeshAlpha[i] >= 1)
-                            {
-                                detailMeshAlpha[i] = 1;
-                            }
-                        }
-                    }
-                    //And backwards
-                    if (wantsToBeVisible[i] == false && detailMeshAlpha[i] > 0)
-                    {
-                        detailMeshAlpha[i] -= speed;
-                        somethingChanged = true;
-                        if (detailMeshAlpha[i] <= 0)
-                        {
-                            detailMeshAlpha[i] = 0;
-                            detailRenderers[i].enabled = false;
-                        }
-                    }
-                }*/
-
-                for (int i = 0; i < 3; i++) {
-                    //Did we hit zero from a higher value?
-                    if (detailMeshPrevAlpha[i] > 0 && detailMeshAlpha[i] <= 0) {
-                        detailRenderers[i].enabled = false;
-
-                    }
-                    //Did we move away from zero?
-                    if (detailMeshPrevAlpha[i] <= 0 && detailMeshAlpha[i] > 0) {
-                        detailRenderers[i].enabled = true;
-                    }
-                    //clamp it to 0, 1
-                    detailMeshAlpha[i] = Mathf.Clamp01(detailMeshAlpha[i]);
-
-                    //mark the change
-                    if (detailMeshPrevAlpha[i] - detailMeshAlpha[i] != 0) {
-                        somethingChanged = true;
-                    }
-                }
-                
-                //On initial creation we want lod stuff to be in its correct state, so this skips the animation and just sets things directly
-                //Note this block of code doesn't run every frame!
-                if (skipLodAnimation == true) {
-                    //Hot start! This isnt the moment to moment logic
-                    skipLodAnimation = false;
-                    somethingChanged = true;
-                    if (distance < world.lodNearDistance) {
-                        detailRenderers[0].enabled = true;
-                        detailMeshAlpha[0] = 1;
-                        detailRenderers[1].enabled = false;
-                        detailMeshAlpha[1] = 0;
-                        detailRenderers[2].enabled = false;
-                        detailMeshAlpha[2] = 0;
-                    }
-                    else
-                    if (distance < world.lodFarDistance) {
-                        detailRenderers[0].enabled = false;
-                        detailMeshAlpha[0] = 0;
-                        detailRenderers[1].enabled = true;
-                        detailMeshAlpha[1] = 1;
-                        detailRenderers[2].enabled = false;
-                        detailMeshAlpha[2] = 0;
-                    }
-                    else {
-                        detailRenderers[0].enabled = false;
-                        detailMeshAlpha[0] = 0;
-                        detailRenderers[1].enabled = false;
-                        detailMeshAlpha[1] = 0;
-                        detailRenderers[2].enabled = true;
-                        detailMeshAlpha[2] = 1;
-                    }
-                }
-
-
-                //Set the alpha of the detail meshes
-                if (somethingChanged == true) {
-
-                    //Create the material property blocks and store them 
-                    /*if (detailPropertyBlocks == null)
-                    {
-                        detailPropertyBlocks = new List<MaterialPropertyBlock>[3];
-                        for (int i = 0; i < 3; i++)
-                        {
-                            detailPropertyBlocks[i] = new List<MaterialPropertyBlock>();
-                            for (int materialIndex = 0; materialIndex < detailRenderers[i].sharedMaterials.Length; materialIndex++)
-                            {
-                                detailPropertyBlocks[i].Add(new MaterialPropertyBlock());
-                            }
-                        }
-                    }*/
-
-                    //Adjust the alpha in the property block
-                    for (int i = 0; i < 3; i++) {
-                        for (int materialIndex = 0; materialIndex < detailRenderers[i].sharedMaterials.Length; materialIndex++) {
-                            Material mat = detailRenderers[i].sharedMaterials[materialIndex];
-                            if (mat == null) {
-                                continue;
-                            }
-
-                            /*
-                            var rendererRef = AirshipRendererManager.Instance.GetRendererReference(detailRenderers[i]);
-
-                            if (rendererRef != null) {
-                                MaterialPropertyBlock propertyBlock = rendererRef.GetPropertyBlock(mat, materialIndex);
-                                propertyBlock.SetFloat("_Alpha", detailMeshAlpha[i]);
-                            }
-                            */
-
-                        }
-                    }
-                }
-            }
-
-            if (materialPropertiesDirty == true) {
-                //get all the point lights in the scene
-                /*
-                int numHighQualityLights = 0;
-                
-                foreach (var lightRec in lights)
-                {
-                    lightRec.Value.lightRef.TryGetTarget(out AirshipPointLight light);
-                    if (light == null)
-                    {
-                        continue;
-                    }
-
-                    lightsPositions[numHighQualityLights] = light.transform.position;
-                    lightColors[numHighQualityLights] = light.color * light.intensity;
-                    lightRadius[numHighQualityLights] = light.range;
-                    numHighQualityLights++;
-                    if (numHighQualityLights == 2)
-                    {
-                        break;
-                    }
-                }
-                if (numHighQualityLights > 0)
-                {
-                    usingLocallyClonedMaterials = true;
-                }*/
-
-
-            }
-        }
+      
 
         public GameObject GetGameObject() {
             return obj;

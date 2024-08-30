@@ -18,11 +18,16 @@ namespace Code.Player.Character.API {
 		[Tooltip("Should movement be applied over time as a force? Or a constant speed.")]
 		public bool useAccelerationMovement = false;
 
-		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
+		[Tooltip("Default movement speed (units per second) when not using accesleration movement")] [Min(0f)]
 		public float speed = 4.666667f;
 
-		[Tooltip("Sprint movement speed (units per second)")] [Min(0f)]
+		[Tooltip("Sprint movement speed (units per second) when not using accesleration movement")] [Min(0f)]
 		public float sprintSpeed = 6.666667f;
+
+		[Tooltip("How much to accelerate (units per second) when using acceleration movement or when going faster than the target speed")] [Min(0f)]
+		public float accelerationForce = 1;
+		[Tooltip("How much to accelerate sprinting (units per second) when using acceleration movement or when going faster than the target speed")] [Min(0f)]
+		public float sprintAccelerationForce = 1.4f;
 
 		[Tooltip("Only allow sprinting forward.")]
 		public bool onlySprintForward = false;

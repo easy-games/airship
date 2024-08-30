@@ -206,9 +206,19 @@ namespace Code.Player.Character {
 			return this.replicatedLookVector;
 		}
 
-		private void FixedUpdate() {
-			//Update the movement state of the character		
-			StartMove(BuildMoveData());
+		private void FixedUpdate() {	
+			// Observers don't calculate moves
+			if (!isOwned){
+				return;
+			}
+
+			//Update the movement state of the character	
+			MoveInputData md = BuildMoveData();
+
+			this.currentMoveInputData = md;
+			OnBeginMove?.Invoke(md);
+			Move(md);
+			OnEndMove?.Invoke(md);
 		}
 
 		private void Update(){
@@ -223,18 +233,6 @@ namespace Code.Player.Character {
 					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 				}
 			}
-		}
-
-		private void StartMove(MoveInputData md) {
-			// Observers don't calculate moves
-			if (!isOwned){
-				return;
-			}
-
-			this.currentMoveInputData = md;
-			OnBeginMove?.Invoke(md);
-			Move(md);
-			OnEndMove?.Invoke(md);
 		}
 
 		[ClientRpc]
@@ -256,7 +254,7 @@ namespace Code.Player.Character {
 			var currentVelocity = this.rigidbody.velocity;// trackedVelocity;
 			var newVelocity = currentVelocity;
 			var isIntersecting = IsIntersectingWithBlock();
-			var deltaTime = Time.deltaTime;
+			var deltaTime = Time.fixedDeltaTime;
 
 #region GROUNDED
 			//Ground checks
@@ -656,12 +654,13 @@ namespace Code.Player.Character {
 				//Instantly move at the desired speed
 				var moveMagnitude = characterMoveVelocity.magnitude;
 				var velMagnitude = flatVelocity.magnitude;
-				var clampedIncrease = characterMoveVelocity.normalized * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
+				var clampedIncrease = normalizedMoveDir * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
 
 				
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-				var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
+				//var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
+				var rawDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
 				var dirDot = Mathf.Clamp01(1-rawDot);
 				
 				if(useExtraLogging){
@@ -672,7 +671,7 @@ namespace Code.Player.Character {
 					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				if(_flying || (velMagnitude < currentSpeed && !airborneFromImpulse)){
+				if(_flying || (velMagnitude < currentSpeed+1 && !isImpulsing)){
 					// if(clampedIncrease.x < 0){
 					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }else{
@@ -688,7 +687,8 @@ namespace Code.Player.Character {
 				}else{
 					//dirDot = dirDot - 1 / 2;
 					//clampedIncrease *= -Mathf.Min(0, dirDot-1);
-					newVelocity += characterMoveVelocity * dirDot * deltaTime * 2;
+					newVelocity += normalizedMoveDir * dirDot * 
+						(groundedState == CharacterState.Sprinting ? this.moveData.sprintAccelerationForce : moveData.accelerationForce);
 				}
 				//characterMoveVelocity = clampedIncrease;
 				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
@@ -708,7 +708,8 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)){
+		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)
+			&& prevGrounded && timeSinceBecameGrounded > .1){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
@@ -717,14 +718,16 @@ namespace Code.Player.Character {
 					SnapToY(pointOnRamp.y, true);
 					//networkTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
 				}
+				//print("STEPPED UP. Vel before: " + newVelocity);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
 				var debugPoint = transform.position;
 				debugPoint.y = pointOnRamp.y;
 				debugPoint += newVelocity * deltaTime;
-				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " velY: " + newVelocity.y);
+				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " vel: " + newVelocity);
 				
 				if(drawDebugGizmos_STEPUP){
-					GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(oldPos, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(transform.position, .03f, Color.red, 4, 4);
 				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
