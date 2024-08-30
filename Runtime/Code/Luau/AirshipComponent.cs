@@ -186,6 +186,8 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void Validate() {
+        if (IsDestroyed()) return;
+        
         if (scriptFile != null && string.IsNullOrEmpty(m_fileFullPath)) {
             m_fileFullPath = scriptFile.m_path;
         }
@@ -341,7 +343,13 @@ public class AirshipComponent : MonoBehaviour {
         _airshipStarted = true;
     }
 
+    private bool IsDestroyed() {
+        return _isDestroyed || this == null;
+    }
+    
     private IEnumerator StartAirshipComponentAtEndOfFrame() {
+        if (IsDestroyed()) yield return null; // Can't start a dead object
+        
         if (RunCore.IsClone()) {
             yield return null; // WaitForEndOfFrame() wasn't firing on the server using MPPM. But this works...
         } else {
@@ -536,6 +544,8 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void InitWhenCoreReady() {
+        if (IsDestroyed()) return;
+        
         if (IsReadyToStart()) {
             Init();
         } else {
@@ -555,6 +565,8 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void OnCoreInitialized() {
+        if (IsDestroyed()) return;
+        
         LuauCore.OnInitialized -= OnCoreInitialized;
         if (IsReadyToStart()) {
             _airshipWaitingForLuauCoreReady = false;
@@ -565,7 +577,7 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void OnActiveSceneChanged(Scene current, Scene next) {
-        if (IsReadyToStart() && !_isDestroyed) {
+        if (IsReadyToStart()) {
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             _airshipWaitingForLuauCoreReady = false;
             Init();
@@ -573,9 +585,7 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     public void Init() {
-        // todo: this might be a bad check. it was a temp fix.
-        if (gameObject == null) return;
-        
+        if (IsDestroyed()) return; // can't init a dead object
         if (started) return;
         started = true;
         
