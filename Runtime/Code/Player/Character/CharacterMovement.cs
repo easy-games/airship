@@ -685,7 +685,7 @@ private void OnEnable() {
 					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				if(_flying || (velMagnitude < currentSpeed+1 && !isImpulsing)){
+				if(_flying || (velMagnitude < Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1 && !isImpulsing)){
 					// if(clampedIncrease.x < 0){
 					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }else{
