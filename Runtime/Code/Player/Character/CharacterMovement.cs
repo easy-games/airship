@@ -846,7 +846,7 @@ private void OnEnable() {
 			if (useExtraLogging) {
 				print("Teleporting to: " + position);
 			}
-			if (!this.isServer) {
+			if (this.isClient) {
 				//Teleport Locally
 				TeleportInternal(position, lookVector);
 			} else {
@@ -867,10 +867,10 @@ private void OnEnable() {
 		}
 
 		public void SetVelocity(Vector3 velocity) {
-			if(isServer){
-			 	RpcSetVelocity(base.connectionToClient, velocity);
-			}else{
+			if(isClient){
 				SetVelocityInternal(velocity);
+			}else{
+			 	RpcSetVelocity(base.connectionToClient, velocity);
 			}
 		}
 
@@ -917,10 +917,7 @@ private void OnEnable() {
 		}
 
 		public void SetImpulse(Vector3 impulse){
-			if(useExtraLogging){
-				print("Setting impulse: " + impulse);
-			}
-			if (!this.isServer) {
+			if (this.isClient) {
 				//Locally
 				SetImpulseInternal(impulse);
 			} else {
