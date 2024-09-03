@@ -350,7 +350,7 @@ namespace Airship.Editor
                 menu.DropDown(profileButtonRect);
             }
             GUILayout.EndHorizontal();
-            
+
             if (AirshipPackageAutoUpdater.isCoreUpdateAvailable) {
                 GUILayout.Space(20);
                 GUIStyle coreUpdateStyle = new GUIStyle(EditorStyles.toolbarButton);
@@ -364,6 +364,7 @@ namespace Airship.Editor
                         tooltip = "A new version of core is available. It's recommended to update immediately.",
                     }, coreUpdateStyle)
                 ) {
+                    AirshipPackageAutoUpdater.isCoreUpdateAvailable = false;
                     EditorCoroutines.Execute(AirshipPackageAutoUpdater.CheckAllPackages(GameConfig.Load(), false, true));
                 }
                 GUILayout.EndHorizontal();
