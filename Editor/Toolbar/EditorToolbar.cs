@@ -361,7 +361,7 @@ namespace Airship.Editor
                     GUILayout.Button(new GUIContent() {
                         image = coreUpdateTexture,
                         text = " Core Update Available!",
-                        tooltip = "A new version of core is available. It's recommended to update immediately.",
+                        tooltip = "A new version of Airship Core is available. It's recommended to update immediately.",
                     }, coreUpdateStyle)
                 ) {
                     AirshipPackageAutoUpdater.isCoreUpdateAvailable = false;
