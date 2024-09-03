@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using Code;
 using Code.Bootstrap;
@@ -57,6 +58,12 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     public void Retry() {
+        // Delete existing @Easy folder. This will force redownload of core.
+        var easyDir = Path.Combine(AssetBridge.PackagesPath, "@Easy");
+        if (Directory.Exists(easyDir)) {
+            Directory.Delete(easyDir, true);
+        }
+
         StartCoroutine(this.StartLoadingCoroutine(0));
     }
 
