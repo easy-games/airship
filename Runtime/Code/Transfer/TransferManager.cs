@@ -13,6 +13,7 @@ public class TransferManager : Singleton<TransferManager> {
         DontDestroyOnLoad(this);
     }
 
+    // Called by TS
     public bool ConnectToServer(string address, ushort port) {
         StartCoroutine(this.StartTransfer(address, port));
         return true;
@@ -47,17 +48,31 @@ public class TransferManager : Singleton<TransferManager> {
         conn.Disconnect();
     }
 
-    public void Disconnect(bool kicked, string kickMessage) {
-        this.Disconnect(kicked, kickMessage);
+    public void NetworkClient_OnDisconnected() {
+        var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
+        if (clientNetworkConnector != null && clientNetworkConnector.expectingDisconnect) {
+            return;
+        }
+
+        LuauCore.ResetContext(LuauContext.Game);
+        LuauCore.ResetContext(LuauContext.Protected);
+
+        ResetClientUnityState();
     }
 
-    public void Disconnect() {
+    // ************** //
+
+    public void Disconnect(bool kicked, string kickMessage) {
         var clientNetworkConnector = FindObjectOfType<ClientNetworkConnector>();
         if (clientNetworkConnector) {
             clientNetworkConnector.expectingDisconnect = true;
         }
 
         StartCoroutine(this.StartDisconnect());
+    }
+
+    public void Disconnect() {
+        this.Disconnect(false, "");
     }
 
     private IEnumerator StartDisconnect(bool kicked = false, string kickMessage = "") {
@@ -77,6 +92,8 @@ public class TransferManager : Singleton<TransferManager> {
             SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
         }
     }
+
+    // ************** //
 
     /// <summary>
     /// Reset global client properties back to the Unity defaults
