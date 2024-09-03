@@ -41,8 +41,13 @@ public class Deploy {
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new() {
 			AirshipPlatform.iOS,
+		#if UNITY_EDITOR_OSX // Run Mac build last if on OSX
+			AirshipPlatform.Windows,
+			AirshipPlatform.Mac,
+		#else
 			AirshipPlatform.Mac,
 			AirshipPlatform.Windows,
+		#endif
 		};
 		// List<AirshipPlatform> platforms = new();
 		// var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
