@@ -368,9 +368,18 @@ public class ServerBootstrap : MonoBehaviour
 		}
 
 		// Download bundles over network
-		var forceDownloadPackages = false;
-		if (!RunCore.IsEditor() || forceDownloadPackages) {
-			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl);
+		bool downloadComplete = false;
+		if (!RunCore.IsEditor()) {
+			BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl, false,
+				(res) => {
+					downloadComplete = true;
+				});
+		} else {
+			downloadComplete = true;
+		}
+
+		while (!downloadComplete) {
+			yield return null;
 		}
 
 		// print("[Airship]: Loading packages...");
