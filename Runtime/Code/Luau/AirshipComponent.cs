@@ -170,18 +170,6 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     private void OnValidate() {
-        // We have to delay the first validate call. This is because it happens before
-        // AirshipComponentPreprocessor is able to mark dependencies. Dependencies need
-        // to be marked or else we might startup without the proper lua script existing
-        // (and then clear properties and mark as no longer an AirshipBehaviour)
-        #if UNITY_EDITOR
-        if (!hasDelayedValidateCall) {
-            hasDelayedValidateCall = true;
-            EditorApplication.delayCall += Validate;
-            return;
-        }
-        #endif
-        
         Validate();
     }
 
