@@ -147,7 +147,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				var gcKbGame = LuauPlugin.LuauCountGC(LuauContext.Game);
 				var gcKbProtected = LuauPlugin.LuauCountGC(LuauContext.Protected);
 				var gcKb = gcKbGame + gcKbProtected;
-				Debug.Log($"Luau GC: [Game: {gcKbGame}KB] [Protected: {gcKbProtected}KB] [Total: {gcKb}KB]");
+				Debug.Log($"Luau GC: [Game: {gcKbGame} KB] [Protected: {gcKbProtected} KB] [Total: {gcKb} KB]");
 			}
 		));
 	}
