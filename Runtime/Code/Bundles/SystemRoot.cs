@@ -27,6 +27,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	[FormerlySerializedAs("cacheCodeZip")] public bool codeZipCacheEnabled = false;
 
+	public string currentCoreVersion = "";
+	public string currentCoreMaterialsVersion = "";
+
 	private void Awake() {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
@@ -376,6 +379,14 @@ public class SystemRoot : Singleton<SystemRoot> {
 				}
 				Debug.Log($"[Airship]: Registered network prefabs in {st.ElapsedMilliseconds} ms.");
 #endif
+			}
+		}
+
+		foreach (var package in packages) {
+			if (package.id.ToLower() == "@easy/core") {
+				this.currentCoreVersion = package.codeVersion;
+			} else if (package.id.ToLower() == "@easy/corematerials") {
+				this.currentCoreMaterialsVersion = package.codeVersion;
 			}
 		}
 
