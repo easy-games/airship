@@ -715,7 +715,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
   m_AnchoredPosition: {x: 69.920044, y: -24.899982}
-  m_SizeDelta: {x: 350.8457, y: 38.3995}
+  m_SizeDelta: {x: 597.4799, y: 38.3995}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &4779218537312054112
 CanvasRenderer:
@@ -1147,7 +1147,7 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 0.16037738, g: 0.16037738, b: 0.16037738, a: 0}
-    m_HighlightedColor: {r: 0.16078432, g: 0.16078432, b: 0.16078432, a: 1}
+    m_HighlightedColor: {r: 0.1764706, g: 0.1764706, b: 0.1764706, a: 1}
     m_PressedColor: {r: 0.103773594, g: 0.103773594, b: 0.103773594, a: 1}
     m_SelectedColor: {r: 0.101960786, g: 0.101960786, b: 0.101960786, a: 1}
     m_DisabledColor: {r: 0.101960786, g: 0.101960786, b: 0.101960786, a: 1}

@@ -342,7 +342,8 @@ namespace Code.Bootstrap {
             } else {
                 var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
                 BundleDownloader.Instance.downloadAccepted = false;
-                yield return BundleDownloader.Instance.DownloadBundles(
+                bool finishedDownload = false;
+                BundleDownloader.Instance.DownloadBundles(
                     startupConfig.CdnUrl,
                     packages.ToArray(),
                     null,
@@ -350,11 +351,16 @@ namespace Code.Bootstrap {
                     null,
                     false,
                     result => {
+                        finishedDownload = true;
                         if (!result) {
                             loadingScreen.SetError("Failed to download game content. An error has occurred.");
                         }
                     }
                 );
+
+                while (!finishedDownload) {
+                    yield return null;
+                }
                 
                 yield return new WaitUntil(() => this.scriptsReady);
             }
