@@ -117,6 +117,39 @@ public class SystemRoot : Singleton<SystemRoot> {
 				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
 			}
 		));
+
+		DevConsole.AddCommand(Command.Create<string>(
+			"gc",
+			"",
+			"Luau GC",
+			Parameter.Create("state", "Options: full, step, off"),
+			(val) => {
+				val = val.ToLower();
+				switch (val) {
+					case "full":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Full);
+						Debug.Log("Luau per-frame GC set to FULL");
+						break;
+					case "step":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Step);
+						Debug.Log("Luau per-frame GC set to STEP");
+						break;
+					case "off":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Off);
+						Debug.Log("Luau per-frame GC set to OFF");
+						break;
+					default:
+						Debug.Log($"Invalid Luau GC state: \"{val}\"");
+						break;
+				}
+			},
+			() => {
+				var gcKbGame = LuauPlugin.LuauCountGC(LuauContext.Game);
+				var gcKbProtected = LuauPlugin.LuauCountGC(LuauContext.Protected);
+				var gcKb = gcKbGame + gcKbProtected;
+				Debug.Log($"Luau GC: [Game: {gcKbGame}KB] [Protected: {gcKbProtected}KB] [Total: {gcKb}KB]");
+			}
+		));
 	}
 
 	private void Start() {

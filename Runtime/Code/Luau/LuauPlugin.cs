@@ -627,4 +627,29 @@ public static class LuauPlugin
 		PushCsError(bytesPtr, bytes.Length);
 		handle.Free();
 	}
+
+	public enum LuauGCState {
+		Off = 0,
+		Step = 1,
+		Full = 2,
+	}
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void SetGCState(int state);
+	public static void LuauSetGCState(LuauGCState state) {
+		SetGCState((int)state);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int CountGC(int context);
+	public static int LuauCountGC(LuauContext context) {
+		return CountGC((int)context);
+	}
 }
