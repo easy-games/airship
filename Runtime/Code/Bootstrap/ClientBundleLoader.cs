@@ -336,11 +336,12 @@ namespace Code.Bootstrap {
                 packages.Add(new AirshipPackage(packageDoc.id, packageDoc.assetVersion, packageDoc.codeVersion, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
             }
 
+            var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
+
             if (CrossSceneState.IsLocalServer() || CrossSceneState.UseLocalBundles)
             {
                 // Debug.Log("Skipping bundle download.");
             } else {
-                var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
                 BundleDownloader.Instance.downloadAccepted = false;
                 bool finishedDownload = false;
                 BundleDownloader.Instance.DownloadBundles(
@@ -368,7 +369,10 @@ namespace Code.Bootstrap {
             // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
             if (!RunCore.IsServer()) {
                 // This right here. Third parameter, `useUnityAssetBundles`.
-                yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(), false);
+                yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(), false, false,
+                    step => {
+                        loadingScreen.SetProgress(step, 40);
+                    });
             }
 
             EasyFileService.ClearCache();
