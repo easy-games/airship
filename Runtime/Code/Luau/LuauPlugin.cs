@@ -194,10 +194,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern int CreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId);
-	public static int LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId) {
-		ThreadSafetyCheck();
-		return CreateRenderPass(context, thread, featureId, passId);
+	private static extern IntPtr CreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId);
+	public static void LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId) {
+		//ThreadSafetyCheck();
+		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, passId));
 	}
 	
 #if UNITY_IPHONE
@@ -205,10 +205,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern int ExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId);
-	public static int LuauExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId) {
-		ThreadSafetyCheck();
-		return ExecuteRenderPass(context, thread, featureId, passId, commandObjectId);
+	private static extern IntPtr ExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId);
+	public static void LuauExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId) {
+		//ThreadSafetyCheck();
+		ThrowIfNotNullPtr(ExecuteRenderPass(context, thread, featureId, passId, commandObjectId));
 	}
 	
 #if UNITY_IPHONE

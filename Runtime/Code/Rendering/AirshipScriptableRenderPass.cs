@@ -21,13 +21,9 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
 
     public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
         var cmd = CommandBufferPool.Get(name: Name);
-
-        
-        Debug.Log("Run 'Execute'");
         
         // Execute the render pass
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
-        Debug.Log($"Execute 'Execute' with CommandBuffer({cmd})");
         LuauPlugin.LuauExecuteRenderPass(LuauContext.Game, Thread, FeatureId, PassId, cmdId); 
         
         CommandBufferPool.Release(cmd);

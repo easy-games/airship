@@ -42,11 +42,11 @@ namespace Airship.Editor {
         }
 
         public override void OnInspectorGUI() {
-            importer.ScriptType = (ScriptType) EditorGUILayout.EnumPopup("Script Type", importer.ScriptType);
+            importer.scriptType = (ScriptType) EditorGUILayout.EnumPopup("Script Type", importer.scriptType);
             if (GUI.changed) {
-                var value = this.serializedObject.FindProperty("ScriptType");
+                var value = this.serializedObject.FindProperty("scriptType");
                 if (value != null) {
-                    value.enumValueIndex = (int) importer.ScriptType;
+                    value.enumValueIndex = (int) importer.scriptType;
                 }
             }
             // base.OnInspectorGUI();

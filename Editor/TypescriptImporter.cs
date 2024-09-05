@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Editor {
@@ -66,7 +67,7 @@ namespace Editor {
             }
         }
 
-        public ScriptType ScriptType = ScriptType.GameScript;
+        [FormerlySerializedAs("ScriptType")] public ScriptType scriptType = ScriptType.GameScript;
         
         [MenuItem("Airship/TypeScript/Reimport Scripts")]
         public static void ReimportAllTypescript() {
@@ -103,7 +104,7 @@ namespace Editor {
                 var hasCompiled = false;
 
                 AirshipScriptable scriptableAsset;
-                switch (ScriptType) {
+                switch (scriptType) {
                     case ScriptType.GameScript: {
                         var script = ScriptableObject.CreateInstance<Luau.AirshipScript>();
                         script.scriptLanguage = AirshipScriptLanguage.Typescript;

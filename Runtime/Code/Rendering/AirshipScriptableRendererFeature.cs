@@ -16,6 +16,64 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
 
     private int InstanceId { get; set; }
 
+    private bool CreateThread() {
+        if (_thread != IntPtr.Zero) {
+            return false;
+        }
+
+        if (!script || !script.m_compiled) {
+            Debug.LogError("[RenderFeature] Could not load RenderFeature without script or non-compiled script");
+            return false;
+        }
+
+        var cleanPath = AirshipScriptUtils.CleanupFilePath(script.m_path);
+        LuauCore.CoreInstance.CheckSetup();
+
+        // Try fetching the cached module
+        var thread = LuauPlugin.LuauCreateThreadWithCachedModule(LuauContext.Game, cleanPath, 0);
+        if (thread != IntPtr.Zero) {
+            _thread = thread;
+            var featureObjectId = ThreadDataManager.AddObjectReference(_thread, this);
+            InstanceId = featureObjectId;
+            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, featureObjectId, 0);
+            Debug.Log("[RenderFeature] Create cached thread for feature");
+            return true;
+        }
+        
+        // Else we'll try creating the thread
+        var filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath);
+        var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned);
+        _thread = LuauPlugin.LuauCreateThread(LuauContext.Game, gch.AddrOfPinnedObject(), script.m_bytes.Length,
+            filenameStr, cleanPath.Length, 0, true);
+        
+        Marshal.FreeCoTaskMem(filenameStr);
+        gch.Free();
+        if (_thread == IntPtr.Zero) {
+            Debug.Log("[RenderFeature] Null ptr");
+            return false;
+        }
+        
+        // Resume thread
+        int ret = LuauPlugin.LuauRunThread(_thread);
+        if (ret == 1) { // yielded
+            Debug.Log("[RenderFeature] Thread yielded");
+            return false;
+        } else if (ret == -1) {
+            // errored
+            Debug.Log("[RenderFeature] Thread errored");
+            return false;
+        }
+        else {
+            // Create & cache render pass
+            LuauPlugin.LuauCacheModuleOnThread(_thread, cleanPath);
+            var featureObjectId = ThreadDataManager.AddObjectReference(_thread, this);
+            InstanceId = featureObjectId;
+            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, featureObjectId, 0);
+            Debug.Log("[RenderFeature] Create non-cached thread for feature");
+            return true;
+        }
+    }
+    
     public override void Create() {
         if (!Application.isPlaying) return;
         if (script == null) return;
@@ -23,25 +81,11 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
         
         var path = script.m_path;
         if (_init || LuauCore.CoreInstance == null) return;
-        
-        Debug.Log("Creating renderer", this);
         LuauCore.CoreInstance.CheckSetup();
-
-        var featureObjectId = ThreadDataManager.AddObjectReference(_thread, this);
-        InstanceId = featureObjectId;
+        if (!CreateThread()) return;
         
-        var filenameStr = Marshal.StringToCoTaskMemUTF8(path);
-        var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned);
-        _thread = LuauPlugin.LuauCreateThread(LuauContext.Game, gch.AddrOfPinnedObject(), script.m_bytes.Length,
-            filenameStr, path.Length, 0, true);
-        
-        Marshal.FreeCoTaskMem(filenameStr);
-        gch.Free();
-        
-        // Create the render pass, add it to the registry
-        LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, featureObjectId, 0);
-        _renderPass = new AirshipScriptableRenderPass(_thread, featureObjectId, 0, path);
         _init = true;
+        Debug.Log($"Created RendererFeature with featureId {InstanceId}");
     }
     
     protected override void Dispose(bool disposing) {

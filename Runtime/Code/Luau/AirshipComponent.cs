@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
+using Code.Luau;
 using Luau;
 using Mirror;
 using UnityEngine;
@@ -109,7 +110,7 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     public AirshipScript LoadBinaryFileFromPath(string fullFilePath) {
-        var cleanPath = CleanupFilePath(fullFilePath);
+        var cleanPath = AirshipScriptUtils.CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
         this.m_fileFullPath = fullFilePath;
         return AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
@@ -600,37 +601,6 @@ public class AirshipComponent : MonoBehaviour {
         bool res = CreateThread();
     }
 
-    private static string CleanupFilePath(string path) {
-        
-        string extension = Path.GetExtension(path);
-
-        if (extension == "") {
-            // return path + ".lua";
-            path += ".lua";
-        }
-
-        path = path.ToLower();
-        if (path.StartsWith("assets/", StringComparison.Ordinal)) {
-            path = path.Substring("assets/".Length);
-        }
-
-        /*
-         string noExtension = path.Substring(0, path.Length - extension.Length);
-
-         if (noExtension.StartsWith("Assets/Resources/"))
-         {
-             noExtension = noExtension.Substring(new String("Assets/Resources/").Length);
-         }
-
-         if (noExtension.StartsWith("/"))
-         {
-             noExtension = noExtension.Substring(1);
-         }
-
-         return noExtension;*/
-        return path;
-    }
-
 
     private static string CleanupFilePathForResourceSystem(string path) {
         string extension = Path.GetExtension(path);
@@ -674,7 +644,7 @@ public class AirshipComponent : MonoBehaviour {
             }
         }
 
-        var cleanPath = CleanupFilePath(this.scriptFile.m_path);
+        var cleanPath = AirshipScriptUtils.CleanupFilePath(scriptFile.m_path);
         m_shortFileName = Path.GetFileName(this.scriptFile.m_path);
         m_fileFullPath = this.scriptFile.m_path;
 
