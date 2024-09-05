@@ -379,16 +379,31 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipBoolean: {
+                    // Default to false if not set
+                    if (serializedObjectValue == "") {
+                        obj = false;
+                        break;
+                    }
                     var value = (byte)(serializedObjectValue != "0" ? 1 : 0);
                     obj = value;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipFloat: {
+                    // Default to 0 if not set
+                    if (serializedObjectValue == "") {
+                        obj = 0.0f;
+                        break;
+                    }
                     float.TryParse(serializedObjectValue, out var value);
                     obj = value;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipInt: {
+                    // Default to 0 if not set
+                    if (serializedObjectValue == "") {
+                        obj = 0;
+                        break;
+                    }
                     int.TryParse(serializedObjectValue, out var value);
                     obj = value;
                     break;
