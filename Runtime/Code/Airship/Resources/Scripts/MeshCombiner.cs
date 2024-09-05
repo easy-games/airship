@@ -429,7 +429,13 @@ namespace Airship {
                 //Copy the materials to the renderer
                 Material[] finalMaterials = new Material[finalStaticMesh.subMeshes.Count];
                 for (int i = 0; i < finalStaticMesh.subMeshes.Count; i++) {
-                    finalMaterials[i] = finalStaticMesh.subMeshes[i].material;
+                    var mat = finalStaticMesh.subMeshes[i].material;
+                    if (!mat) {
+                        throw new Exception("[MeshCombiner] Missing material when mesh combining. GameObject: " +
+                                            this.gameObject.name);
+                    }
+
+                    finalMaterials[i] = mat;
                 }
                 combinedStaticMeshRenderer.sharedMaterials = finalMaterials;
 
