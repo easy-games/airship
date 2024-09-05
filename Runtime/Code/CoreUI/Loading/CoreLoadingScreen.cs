@@ -120,13 +120,13 @@ public class CoreLoadingScreen : BundleLoadingScreen
 
     private void Update() {
         this.startTime += Time.deltaTime;
-        if (!this.showedVoiceChatCard && this.startTime > 1f) {
-            #if !AIRSHIP_PLAYER
-            return;
-            #endif
-            this.showedVoiceChatCard = true;
-            this.ShowVoiceChatCard();
-        }
+        // if (!this.showedVoiceChatCard && this.startTime > 1f) {
+        //     #if !AIRSHIP_PLAYER
+        //     return;
+        //     #endif
+        //     this.showedVoiceChatCard = true;
+        //     this.ShowVoiceChatCard();
+        // }
     }
 
     private void ShowVoiceChatCard() {
