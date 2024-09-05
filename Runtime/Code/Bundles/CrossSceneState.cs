@@ -6,6 +6,7 @@ public class ServerTransferData
     public string address;
     public ushort port;
     public string gameId;
+    public string loadingImageUrl;
 }
 
 [LuauAPI(LuauContext.Protected)]
