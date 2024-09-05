@@ -40,10 +40,10 @@ public partial class LuauCore : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns a file path of the format:
-    /// <code>assets/airshippackages/@easy/core/server/protectedservices/airship/platforminventory/platforminventoryservice.lua</code>
+    /// Returns a file path relative to Assets/. Example output:
+    /// <code>airshippackages/@easy/core/server/protectedservices/airship/platforminventory/platforminventoryservice.lua</code>
     ///
-    /// Will add "assets" to the front, ".lua" to the end and lowercase the result. Intention is that two different paths
+    /// Will add ".lua" to the end and lowercase the result. Intention is that two different paths
     /// pointing at the same file will result in the same output.
     /// </summary>
     private static string GetTidyPathNameForLuaFile(string fileNameStr)
