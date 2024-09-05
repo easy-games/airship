@@ -27,6 +27,7 @@ public class LoginApp : MonoBehaviour {
     [SerializeField] public GameObject errorMessage;
     [SerializeField] public TMP_Text errorMessageText;
     [SerializeField] public LoginButton steamLoginButton;
+    [SerializeField] public GameObject quitButton;
 
     [Header("Mobile")]
     [SerializeField] public Canvas mobileCanvas;
@@ -94,6 +95,8 @@ public class LoginApp : MonoBehaviour {
         } else {
             this.showedNoInternet = false;
         }
+
+        this.quitButton.SetActive(Screen.fullScreen);
     }
 
     private void CalcLayout() {
