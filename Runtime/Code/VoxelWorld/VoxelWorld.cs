@@ -26,7 +26,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
     public const int maxActiveThreads = 8;
@@ -101,6 +101,12 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ushort VoxelDataToExtraBits(VoxelData block) {
+        //mask off everything except the upper 4 bits
+        return (byte)(block & 0xF000);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool VoxelIsSolid(VoxelData voxel) {
         return (voxel & 0x8000) != 0; //15th bit 
     }
@@ -137,6 +143,11 @@ public partial class VoxelWorld : MonoBehaviour {
     public Vector3 TransformPointToWorldSpace(Vector3 point) {
         return transform.localToWorldMatrix.MultiplyPoint(point);
     }
+
+    public Vector3 TransformVectorToWorldSpace(Vector3 vec) {
+        return transform.localToWorldMatrix.MultiplyVector(vec);
+    }
+
 
     public void InvokeOnFinishedReplicatingChunksFromServer() {
         this.finishedReplicatingChunksFromServer = true;
@@ -697,8 +708,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         RegenerateAllMeshes();
-
-        UpdatePropertiesForAllChunksForRendering();
+         
 
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
@@ -720,8 +730,7 @@ public partial class VoxelWorld : MonoBehaviour {
  
         DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
-
-        UpdatePropertiesForAllChunksForRendering();
+ 
     }
 
 
@@ -813,15 +822,9 @@ public partial class VoxelWorld : MonoBehaviour {
         this.voxelBlocks.Reload();
 
         RegenerateAllMeshes();
-
-        UpdatePropertiesForAllChunksForRendering();
+ 
     }
-
-    public void UpdatePropertiesForAllChunksForRendering() {
-        foreach (var chunkRec in chunks) {
-            chunkRec.Value.UpdateMaterialPropertiesForChunk();
-        }
-    } 
+ 
 
     private void Awake() {
         this.finishedLoading = false;
@@ -1006,11 +1009,6 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.BeginSample("RegenerateMissingChunkGeometry");
         RegenerateMissingChunkGeometry();
         Profiler.EndSample();
-
-        Profiler.BeginSample("UpdatePropertiesForAllChunksForRendering");
-        UpdatePropertiesForAllChunksForRendering();
-        Profiler.EndSample();
- 
     }
 
     public void OnRenderObject() {

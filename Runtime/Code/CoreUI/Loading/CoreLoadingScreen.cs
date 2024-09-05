@@ -1,12 +1,14 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Numerics;
 using Code.CoreUI.Components;
 using ElRaccoone.Tweens;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.Networking;
+using UnityEngine.UI;
 using Button = UnityEngine.UI.Button;
 using Cursor = UnityEngine.Cursor;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
@@ -22,6 +24,8 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public Button disconnectButton;
     public Button continueButton;
     public GameObject spinner;
+    public RawImage gameImage;
+    public Color editorGameImageColor;
 
     [NonSerialized] private float startTime = 0f;
     [NonSerialized] private bool showedVoiceChatCard = false;
@@ -29,7 +33,9 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public InternalToggle voiceChatToggle;
 
     public bool updatedByGame = false;
-    
+
+    public static Dictionary<string, Texture2D> gameImageCache = new Dictionary<string, Texture2D>();
+
     private void Awake() {
         base.showContinueButton = true;
         _canvas = GetComponent<Canvas>();
@@ -40,6 +46,15 @@ public class CoreLoadingScreen : BundleLoadingScreen
             Close();
             return;
         }
+
+        this.gameImage.color = new Color(1, 1, 1, 0);
+#if AIRSHIP_PLAYER
+        this.UpdateGameImage();
+#else
+        // if (Application.isEditor) {
+        //     this.gameImage.enabled = false;
+        // }
+#endif
 
         this.startTime = 0f;
         this.voiceChatCard.gameObject.SetActive(false);
@@ -65,6 +80,32 @@ public class CoreLoadingScreen : BundleLoadingScreen
         if (Application.isMobilePlatform) {
             this.disconnectButton.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
         }
+    }
+
+    private async void UpdateGameImage() {
+        var gameId = CrossSceneState.ServerTransferData.gameId;
+        if (string.IsNullOrEmpty(gameId)) {
+            Debug.Log("GameID was null. Skipping background image download.");
+            return;
+        }
+
+        if (gameImageCache.TryGetValue(gameId, out var tex)) {
+            this.gameImage.texture = tex;
+            this.gameImage.color = new Color(1, 1, 1, 1);
+            return;
+        }
+
+        var www = UnityWebRequestTexture.GetTexture(
+            "https://cdn.airship.gg/images/4a56b023-cf41-4fd2-93f1-2326eb35ba28");
+        await www.SendWebRequest();
+        if (www.result != UnityWebRequest.Result.Success) {
+            Debug.LogError("Failed to download loading screen image: " + www.error);
+            return;
+        }
+        var texture = DownloadHandlerTexture.GetContent(www);
+        this.gameImage.texture = texture;
+        gameImageCache[gameId] = texture;
+        NativeTween.GraphicAlpha(this.gameImage, 1, 0.7f);
     }
 
     private async void VoiceChatToggle_OnValueChanged(bool val) {

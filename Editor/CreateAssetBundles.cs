@@ -189,14 +189,14 @@ public static class CreateAssetBundles {
 				Debug.Log("asset bundle name: " + assetBundleName);
 				var assetGuids = AssetDatabase.FindAssets("*", new string[] { packageDir }).ToList();
 
-				var addUrpFiles = new Action<string>((string path) => {
-					var urpGuids = AssetDatabase.FindAssets("*",
-						new string[] { path });
-					Debug.Log("Found URP files: " + urpGuids.Length);
-					assetGuids.AddRange(urpGuids);
-				});
-
 				if (assetBundleName == "@easy/corematerials_shared/resources") {
+					var addUrpFiles = new Action<string>((string path) => {
+						var urpGuids = AssetDatabase.FindAssets("*",
+							new string[] { path });
+						Debug.Log("Found URP files: " + urpGuids.Length);
+						assetGuids.AddRange(urpGuids);
+					});
+
 					addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
 					addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
 					addUrpFiles("Packages/com.unity.render-pipelines.universal/Textures");
@@ -209,6 +209,7 @@ public static class CreateAssetBundles {
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.Where((p) => !p.EndsWith(".unity"))
 					.Where((p) => !p.EndsWith(".cs"))
+					.Where((p) => !p.EndsWith(".d.ts"))
 					.Where((p) => !p.Contains("Packages/com.unity.render-pipelines.universal/Editor"))
 					.ToArray();
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
@@ -248,7 +249,15 @@ public static class CreateAssetBundles {
 			layers.Add(layerName);
 		}
 
+		// Update tags
+		var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
+		if (tagList.Length > GameConfig.MaximumTags) {
+			Debug.LogError($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
+			return false;
+		}
+		
 		gameConfig.gameLayers = layers.ToArray();
+		gameConfig.gameTags = tagList.ToArray();
 		EditorUtility.SetDirty(gameConfig);
 		AssetDatabase.SaveAssetIfDirty(gameConfig);
 
@@ -309,7 +318,7 @@ public static class CreateAssetBundles {
 				}
 				var assetPaths = assetGuids
 					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
-					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
 				Debug.Log("Resources:");

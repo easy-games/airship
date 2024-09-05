@@ -13,13 +13,12 @@ using UnityEngine.SceneManagement;
 [LuauAPI]
 public class ClientNetworkConnector : MonoBehaviour {
     public bool expectingDisconnect = false;
-    private ushort reconnectAttempt = 1;
+    public ushort reconnectAttempt = 1;
 
     private Uri uri;
     
     private void Start() {
         if (RunCore.IsClient()) {
-            NetworkClient.OnConnectedEvent += NetworkClient_OnConnected;
             NetworkClient.OnTransportExceptionEvent += NetworkClient_OnTransportException;
 
             var transferData = CrossSceneState.ServerTransferData;
@@ -41,7 +40,6 @@ public class ClientNetworkConnector : MonoBehaviour {
 #endif
 
             if (!RunCore.IsServer()) {
-                NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
                 Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
                 if (Application.isEditor) {
                     StartCoroutine(ConnectAfterSeconds(2));
@@ -50,8 +48,6 @@ public class ClientNetworkConnector : MonoBehaviour {
                     NetworkManager.singleton.StartClient(this.uri);
                 }
             }
-
-            Transport.active.OnClientDisconnected += NetworkClient_OnDisconnected;
         }
     }
 
@@ -62,17 +58,18 @@ public class ClientNetworkConnector : MonoBehaviour {
     
     private void OnDisable() {
         if (RunCore.IsClient()) {
-            NetworkClient.OnConnectedEvent -= NetworkClient_OnConnected;
-            NetworkClient.OnDisconnectedEvent -= NetworkClient_OnDisconnected;
             NetworkClient.OnTransportExceptionEvent -= NetworkClient_OnTransportException;
         }
     }
 
-    private void NetworkClient_OnConnected() {
+    public void NetworkClient_OnConnected() {
         this.reconnectAttempt = 0;
+
+        var loading = FindAnyObjectByType<CoreLoadingScreen>();
+        loading.SetProgress("Receiving Data...", 30);
     }
 
-    private void NetworkClient_OnDisconnected() {
+    public void NetworkClient_OnDisconnected() {
         // print("OnDisconnected");
         if (!this.expectingDisconnect) {
             var scene = SceneManager.GetActiveScene();
@@ -80,7 +77,7 @@ public class ClientNetworkConnector : MonoBehaviour {
                 this.reconnectAttempt++;
                 StartCoroutine(Reconnect());
             } else {
-                TransferManager.Instance.Disconnect();
+                TransferManager.Instance.NetworkClient_OnDisconnected();
             }
         }
     }

@@ -304,6 +304,7 @@ namespace Luau {
                 listOfDestroyedGameObjectIds.Resize(numGameObjectIds);
             }
             int index = 0;
+            Profiler.BeginSample("ListDestroyedObjects");
             foreach (var kvp in s_objectKeys) {
                 listOfGameObjectIds.Array[index] = kvp.Key;
                 if (kvp.Value is UnityEngine.Object unityObj && unityObj == null) {
@@ -314,24 +315,30 @@ namespace Luau {
                 }
                 index++;
             }
+            Profiler.EndSample();
 
             try {
                 IntPtr pointerToObjectsHandle = listOfGameObjectIds.AddrOfPinnedObject();
                 IntPtr pointerToDestroyedObjectsHandle = listOfDestroyedGameObjectIds.AddrOfPinnedObject();
-
+                
+                Profiler.BeginSample("LuauRunEndFrameLogic");
                 LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
             } finally {
                 // No need to free handles here, as they are managed within the PinnedArray class.
+                Profiler.EndSample();
             }
 
+            Profiler.BeginSample("RemoveObjectKeys");
             for (int i = 0; i < numDestroyedGameObjectIds; i++) {
                 var key = listOfDestroyedGameObjectIds.Array[i];
                 s_objectKeys.Remove(key);
             }
+            Profiler.EndSample();
 
             // Temporary removal process:
             s_removalList.Clear();
             
+            Profiler.BeginSample("ClearThreads");
             foreach (var threadDataPair in m_threadData) {
                 ThreadData threadData = threadDataPair.Value;
                 bool zeroHandle = threadData.m_onUpdateHandle <= 0 && threadData.m_onLateUpdateHandle <= 0 && threadData.m_onFixedUpdateHandle <= 0;
@@ -347,8 +354,10 @@ namespace Luau {
                 }
                 s_workingListDirty = true;
             }
+            Profiler.EndSample();
 
             //cleanup object references
+            Profiler.BeginSample("CleanObjectReferences");
             foreach(int key in s_cleanUpKeys) {
                 bool found = s_objectKeys.TryGetValue(key, out object obj);
                 if (obj != null) {
@@ -357,7 +366,7 @@ namespace Luau {
                 s_objectKeys.Remove(key);
             }
             s_cleanUpKeys.Clear();
-           
+            Profiler.EndSample();
         }
 
         public static void SetThreadYielded(IntPtr thread, bool value) {

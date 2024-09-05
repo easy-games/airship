@@ -1,4 +1,5 @@
 
+using System;
 using System.Linq;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -23,7 +24,7 @@ public class RunCore {
         launchInDedicatedServerMode = EditorPrefs.GetBool("AirshipDedicatedServerMode", false);
 #endif
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
-        isClone = CurrentPlayer.ReadOnlyTags().Length > 0 || ClonesManager.IsClone();
+        isClone = ClonesManager.IsClone() || IsMPPMClone();
         if (launchInDedicatedServerMode || isClone) {
             isServer = CurrentPlayer.ReadOnlyTags().Contains("Server") || ClonesManager.GetArgument() == "server";
             isClient = !isServer;
@@ -64,5 +65,9 @@ public class RunCore {
 
     public static bool IsClone() {
         return isClone;
+    }
+
+    private static bool IsMPPMClone() {
+        return Environment.GetCommandLineArgs().Contains("--virtual-project-clone");
     }
 }

@@ -33,9 +33,10 @@ public class AccessoryBuilder : MonoBehaviour
     private void Start() {
         //Have to do it here instead of OnEnable so everything gets initialized
         if(currentOutfit){
+            var pendingOutfit = currentOutfit;
             //Apply outfit skin if provided
-            RemoveAllAccessories(false);
-            AddAccessoryOutfit(currentOutfit, true);
+            RemoveClothingAccessories(false);
+            EquipAccessoryOutfit(pendingOutfit, true);
         }
     }
 
@@ -146,7 +147,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     [HideInInspector]
     public AccessoryOutfit currentOutfit;
-    public ActiveAccessory[] AddAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
+    public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
         this.currentOutfit = outfit;
         if (outfit.forceSkinColor) SetSkinColor(outfit.skinColor, false);
         if(outfit.faceDecal?.decalTexture) SetFaceTexture(outfit.faceDecal.decalTexture);
@@ -160,7 +161,9 @@ public class AccessoryBuilder : MonoBehaviour
 #if UNITY_EDITOR
     [HideInInspector]
     public bool cancelPendingDownload = false;
-    public async Task<ActiveAccessory[]> AddOutfirFromUsername(string username){
+
+    [HideFromTS]
+    public async Task<ActiveAccessory[]> EquipOutfitFromUsername(string username){
         var res = await UsersServiceBackend.GetUserByUsername(username);
 		if (res.success && res.data != "") {
             var data = JsonUtility.FromJson<UserData>(res.data);
@@ -173,6 +176,7 @@ public class AccessoryBuilder : MonoBehaviour
         return new ActiveAccessory[0];
     }
 
+    [HideFromTS]
     public async Task<ActiveAccessory[]> AddOutfitFromUserId(string userId) {
         this.currentUserId = userId;
         this.cancelPendingDownload = false;
@@ -340,16 +344,10 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    public void SetFaceTexture(Texture2D texture, bool rebuildMeshImmediately = true) {
-        if (Application.isPlaying){
-            //Mesh combine doesn't work with material property blocks yet
-            rig.faceMesh.material.SetTexture("_BaseMap", texture);
-            if (rebuildMeshImmediately) TryCombineMeshes();
-        } else {
-            var propertyBlock = new MaterialPropertyBlock();
-            propertyBlock.SetTexture("_BaseMap", texture);
-            rig.faceMesh.SetPropertyBlock(propertyBlock);
-        }
+    public void SetFaceTexture(Texture2D texture) {
+        var propertyBlock = new MaterialPropertyBlock();
+        propertyBlock.SetTexture("_BaseMap", texture);
+        rig.faceMesh.SetPropertyBlock(propertyBlock);
     }
 
     public void TryCombineMeshes() {
@@ -429,7 +427,19 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void MapAccessoriesToRig(){
+        if(_activeAccessories == null){
+            Debug.LogError("No active accessories but trying to map them?");
+            return;
+        }
+        if(rig.armsMesh == null){
+            Debug.LogError("Missing armsMesh on rig. armsMesh is a required reference");
+            return;
+        }
         foreach (var kvp in _activeAccessories) {
+            if(kvp.Value.renderers == null){
+                Debug.LogError("Missing renderers on active accessory: " + kvp.Key);
+                continue;
+            }
             foreach (var ren in kvp.Value.renderers) {
                 if (ren == null) {
                     Debug.LogError("null renderer in renderers array");
@@ -438,8 +448,8 @@ public class AccessoryBuilder : MonoBehaviour
 
                 var skinnedRen = ren as SkinnedMeshRenderer;
                 if (skinnedRen) {
-                    skinnedRen.rootBone = rig.bodyMesh.rootBone;
-                    skinnedRen.bones = rig.bodyMesh.bones;
+                    skinnedRen.rootBone = rig.armsMesh.rootBone;
+                    skinnedRen.bones = rig.armsMesh.bones;
                 }
             }
         }

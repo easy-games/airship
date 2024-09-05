@@ -27,11 +27,22 @@ public class AirshipNetworkManager : NetworkManager {
     public override void OnClientConnect() {
         base.OnClientConnect();
         this.serverConsole.OnClientConnectedToServer();
+
+        var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
+        if (clientNetworkConnector != null) {
+            clientNetworkConnector.reconnectAttempt = 0;
+            clientNetworkConnector.NetworkClient_OnConnected();
+        }
     }
 
     public override void OnStopClient() {
         base.OnStopClient();
         this.clientBundleLoader.CleanupClient();
+
+        var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
+        if (clientNetworkConnector != null) {
+            clientNetworkConnector.NetworkClient_OnDisconnected();
+        }
     }
 
     public override void OnStopServer() {

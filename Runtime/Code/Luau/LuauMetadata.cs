@@ -40,6 +40,15 @@ namespace Luau {
         // Misc
         // This is inserted to in ScriptBindingEditor (can't have default object references)
         public UnityEngine.Object[] objectRefs = {};
+
+        public LuauMetadataArrayProperty Clone() {
+            return new LuauMetadataArrayProperty() {
+                type = type,
+                objectType = objectType,
+                serializedItems = (string[])serializedItems.Clone(),
+                objectRefs = (UnityEngine.Object[])objectRefs.Clone(),
+            };
+        }
     }
     
     // This must match up with the C++ version of the struct
@@ -264,7 +273,7 @@ namespace Luau {
             clone.fileRef = fileRef;
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
-            clone.items = items;
+            clone.items = items.Clone();
             return clone;
         }
 

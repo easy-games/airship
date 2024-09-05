@@ -5,6 +5,7 @@ using UnityEditor;
 using System.Globalization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Code.Luau;
 using JetBrains.Annotations;
@@ -60,6 +61,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (binding.scriptFile != null && binding.scriptFile.m_metadata != null) {
             if (ShouldReconcile(binding)) {
                 binding.ReconcileMetadata();
+                serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();
             }
 
@@ -88,39 +90,55 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (!_reorderableLists.TryGetValue((componentInstanceId, propName), out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
-            displayInfo = new ArrayDisplayInfo();
-            displayInfo.reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true);
-            displayInfo.listType = listType;
-            displayInfo.objType = objType;
+            var newDisplayInfo = new ArrayDisplayInfo { listType = listType, objType = objType, reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true)};
             
-            displayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
+            newDisplayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
+            newDisplayInfo.reorderableList.onRemoveCallback = (ReorderableList list) => {
+                if (list.selectedIndices.Count == 1) {
+                    var deletedIndex = list.selectedIndices[0];
+                    list.Deselect(deletedIndex);
+                    objectRefs.DeleteArrayElementAtIndex(deletedIndex);
+                }
+                
+                list.serializedProperty.DeleteArrayElementAtIndex(list.serializedProperty.arraySize - 1);
+            };
 
-            displayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
+            newDisplayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
                 modified.boolValue = true;
                 // Match number of elements in inspector reorderable list to serialized objectRefs. This is to reconcile objectRefs
-                int additionalElementsInInspector = serializedArray.arraySize - objectRefs.arraySize;
-                for (var i = 0; i < Math.Abs(additionalElementsInInspector); i++) {
-                    if (additionalElementsInInspector > 0) {
-                        objectRefs.InsertArrayElementAtIndex(objectRefs.arraySize);
-                    }
-                    else {
-                        objectRefs.DeleteArrayElementAtIndex(objectRefs.arraySize - 1);
-                    }
-                }
+                MatchReferenceArraySize(objectRefs, serializedArray);
+            };
+
+            newDisplayInfo.reorderableList.onReorderCallbackWithDetails = (ReorderableList list, int oldIndex, int newIndex) => {
+                objectRefs.MoveArrayElement(oldIndex, newIndex);
             };
             
-            displayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+            newDisplayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
                 RenderArrayElement(rect, arraySerializedProperty, itemInfo, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
                 if (errReason.Length > 0) {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
             };
-            _reorderableLists[(componentInstanceId, propName)] = displayInfo;
-            return displayInfo;
+            _reorderableLists[(componentInstanceId, propName)] = newDisplayInfo;
+            return newDisplayInfo;
         }
         return displayInfo;
     }
-    
+
+    /// <summary>
+    /// Adds or removes elements from targetArray so it matches the size of referenceArray.
+    /// </summary>
+    private void MatchReferenceArraySize(SerializedProperty targetArray, SerializedProperty referenceArray) {
+        int additionalElementsInRefArray = referenceArray.arraySize - targetArray.arraySize;
+        for (var i = 0; i < Math.Abs(additionalElementsInRefArray); i++) {
+            if (additionalElementsInRefArray > 0) {
+                targetArray.InsertArrayElementAtIndex(targetArray.arraySize);
+            }
+            else {
+                targetArray.DeleteArrayElementAtIndex(targetArray.arraySize - 1);
+            }
+        }
+    }
 
     private void CheckDefaults(AirshipComponent binding) {
         var metadata = serializedObject.FindProperty("m_metadata");
@@ -414,7 +432,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 DrawCustomObjectProperty(guiContent, type, decorators, obj, objType, modified);
                 break;
             case "Array":
-                DrawCustomArrayProperty(sourceMetadata.name, componentInstanceId, propName.stringValue, guiContent, type, decorators, arrayElementType, property);
+                DrawCustomArrayProperty(sourceMetadata.name, componentInstanceId, propName.stringValue, guiContent, type, decorators, arrayElementType, property, modified);
                 break;
             case "Color":
                 DrawCustomColorProperty(guiContent, type, decorators, value, modified);
@@ -431,7 +449,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
     }
 
-    private void DrawCustomArrayProperty(string scriptName, int componentInstanceId, string propName, GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, AirshipComponentPropertyType arrayElementType, SerializedProperty property) {
+    private void DrawCustomArrayProperty(string scriptName, int componentInstanceId, string propName, GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, AirshipComponentPropertyType arrayElementType, SerializedProperty property, SerializedProperty modified) {
         if (!_openPropertyFoldouts.TryGetValue((scriptName, propName), out bool open))
         {
             open = true;
@@ -439,12 +457,94 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         var foldoutStyle = EditorStyles.foldout;
         foldoutStyle.fontStyle = FontStyle.Bold;
+
         var newState = EditorGUILayout.Foldout(open, guiContent, foldoutStyle);
+        
         if (open) {
             var itemInfo = property.FindPropertyRelative("items");
-            var reorderableList = GetOrCreateArrayDisplayInfo(componentInstanceId, property, propName, arrayElementType, itemInfo).reorderableList;
-            
+            var listInfo = GetOrCreateArrayDisplayInfo(componentInstanceId, property, propName, arrayElementType, itemInfo);
+            var reorderableList = listInfo.reorderableList;
             reorderableList.DoLayoutList();
+
+            var rect = GUILayoutUtility.GetLastRect();
+            
+            // Handle drag and drop for this element
+            // TODO Support for drag dropping AirshipComponent list
+            if (listInfo.listType is AirshipComponentPropertyType.AirshipComponent or AirshipComponentPropertyType.AirshipObject) {
+                Event currentEvent = Event.current;
+                if (currentEvent.type == EventType.DragUpdated || currentEvent.type == EventType.DragPerform) {
+                    if (rect.Contains(currentEvent.mousePosition)) {
+                        DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+
+                        if (currentEvent.type == EventType.DragPerform) {
+                            DragAndDrop.AcceptDrag();
+
+
+
+                            var typeName = itemInfo.FindPropertyRelative("objectType").stringValue;
+                            Type objType = TypeReflection.GetTypeFromString(typeName);
+                            
+                            var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
+                            var serializedItems = itemInfo.FindPropertyRelative("serializedItems");
+                            // Loop over all dragged items
+                            foreach (var draggedObject in DragAndDrop.objectReferences) {
+                                var objRef = draggedObject;
+
+                                if (listInfo.listType == AirshipComponentPropertyType.AirshipObject) {
+                                    // If objType is not game object we need to parse the correct component
+                                    var targetNotGameObject = objType != typeof(GameObject);
+                                    if (targetNotGameObject) {
+                                        if (draggedObject is GameObject draggedGo) {
+                                            if (typeof(Component).IsAssignableFrom(objType)) {
+                                                var comp = draggedGo.GetComponent(objType);
+                                                if (!comp) continue;
+
+                                                objRef = comp;
+                                            }
+                                        }
+                                    }
+
+                                    if (!objType.IsInstanceOfType(draggedObject)) {
+                                        continue;
+                                    }
+                                }
+                                else if (listInfo.listType == AirshipComponentPropertyType.AirshipComponent) {
+                                    var buildInfo = AirshipBuildInfo.Instance;
+                                    var scriptPath = buildInfo.GetScriptPathByTypeName(typeName);
+                                    
+                                    switch (draggedObject) {
+                                        case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.scriptFile, scriptPath):
+                                            objRef = component;
+                                            break;
+                                        case AirshipComponent:
+                                            continue;
+                                        case GameObject go: {
+                                            var firstMatchingComponent = go.GetComponents<AirshipComponent>().FirstOrDefault(f => buildInfo.Inherits(f.scriptFile, scriptPath));
+                                            if (firstMatchingComponent != null) {
+                                                objRef = firstMatchingComponent;
+                                            }
+                                            else continue;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                // Insert object to list
+                                var index = objectRefs.arraySize;
+                                // Register in actual serialized object
+                                objectRefs.InsertArrayElementAtIndex(index);
+                                objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objRef;
+                                
+                                // Add a slot in visible list
+                                MatchReferenceArraySize(serializedItems, objectRefs);
+                                modified.boolValue = true;
+                            }
+                        }
+
+                        currentEvent.Use();
+                    }
+                }
+            }
         }
         
         // Register new foldout state

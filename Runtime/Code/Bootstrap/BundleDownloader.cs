@@ -17,7 +17,19 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 	private bool isDownloading = false;
 	[NonSerialized] public bool downloadAccepted = false;
 
-	public IEnumerator DownloadBundles(
+	/// <summary>
+	///
+	/// </summary>
+	/// <param name="cdnUrl"></param>
+	/// <param name="packages"></param>
+	/// <param name="privateRemoteFiles"></param>
+	/// <param name="loadingScreen"></param>
+	/// <param name="gameCodeZipUrl"></param>
+	/// <param name="downloadCodeZipOnClient"></param>
+	/// <param name="onComplete">Used to get result when calling from a coroutine instead of async function.</param>
+	/// <returns>Returns true if the download succeeded.</returns>
+	/// <exception cref="Exception"></exception>
+	public async Task<bool> DownloadBundles(
 		string cdnUrl,
 		AirshipPackage[] packages,
 		[CanBeNull] RemoteBundleFile[] privateRemoteFiles = null,
@@ -26,237 +38,253 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		bool downloadCodeZipOnClient = false,
 		Action<bool> onComplete = null
 	) {
-		var totalSt = Stopwatch.StartNew();
-		var platform = AirshipPlatformUtil.GetLocalPlatform();
+		try {
+			var totalSt = Stopwatch.StartNew();
+			var platform = AirshipPlatformUtil.GetLocalPlatform();
 
-		List<RemoteBundleFile> remoteBundleFiles = new();
-		foreach (var package in packages) {
-			remoteBundleFiles.AddRange(package.GetPublicRemoteBundleFiles(cdnUrl, platform));
-		}
-
-		if (privateRemoteFiles != null)
-		{
-			remoteBundleFiles.AddRange(privateRemoteFiles);
-		}
-
-		[CanBeNull]
-		AirshipPackage GetBundleFromId(string bundleId) {
-			foreach (var bundle in packages) {
-				if (bundle.id == bundleId) {
-					return bundle;
-				}
-			}
-
-			return null;
-		}
-
-		// Filter out if cache exists
-		List<RemoteBundleFile> bundleFilesToDownload = new();
-		foreach (var remoteBundleFile in remoteBundleFiles) {
-			var bundle = GetBundleFromId(remoteBundleFile.BundleId);
-			string path = Path.Combine(bundle.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
-			string downloadSuccessPath = path + "_downloadSuccess.txt";
-			if (File.Exists(downloadSuccessPath)) {
-				// Debug.Log($"Skipping cached download: {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}");
-				continue;
-			}
-			bundleFilesToDownload.Add(remoteBundleFile);
-		}
-
-		// Calculate total download size
-		var device = DeviceBridge.GetDeviceType();
-		if (device is AirshipDeviceType.Phone or AirshipDeviceType.Tablet && loadingScreen && loadingScreen.showContinueButton && bundleFilesToDownload.Count > 0) {
-			var preRequests = new List<UnityWebRequestAsyncOperation>(10);
-			foreach (var remoteBundleFile in bundleFilesToDownload) {
-				Debug.Log("Downloading bundle file: " + remoteBundleFile.Url);
-				var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url, "HEAD"));
-				preRequests.Add(request.SendWebRequest());
-			}
-
-			yield return new WaitUntil(() => AllRequestsDone(preRequests));
-
-			long totalBytes = 0;
-			foreach (var request in preRequests) {
-				var contentLength = request.webRequest.GetResponseHeader("content-length");
-				var bytes = long.Parse(contentLength);
-				totalBytes += bytes;
-			}
-
-			loadingScreen.SetTotalDownloadSize(totalBytes);
-			yield return new WaitUntil(() => this.downloadAccepted);
-		}
-
-		var downloadSt = Stopwatch.StartNew();
-		// Download files
-		var bundleIndex = 0;
-		this.totalDownload.Clear();
-		this.downloadProgress.Clear();
-		var requests = new List<UnityWebRequestAsyncOperation>(10);
-		this.isDownloading = true;
-		foreach (var remoteBundleFile in bundleFilesToDownload) {
-			var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url));
-			var package = GetBundleFromId(remoteBundleFile.BundleId);
-			string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
-			// Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
-
-			request.downloadHandler = new DownloadHandlerFile(path);
-
-			if (loadingScreen != null) {
-				StartCoroutine(WatchDownloadStatus(request, bundleIndex));
-				StartCoroutine(UpdateDownloadProgressBar(loadingScreen));
-			}
-
-			requests.Add(request.SendWebRequest());
-			bundleIndex++;
-		}
-		this.bundleDownloadCount = bundleIndex;
-
-		// Download code.zip
-		if (RunCore.IsServer() || downloadCodeZipOnClient) {
+			List<RemoteBundleFile> remoteBundleFiles = new();
 			foreach (var package in packages) {
-				string codeZipUrl;
-				if (package.packageType == AirshipPackageType.Game) {
-					if (string.IsNullOrEmpty(gameCodeZipUrl)) {
-						throw new Exception("Expected gameCodeZipUrl to exist but was null.");
+				remoteBundleFiles.AddRange(package.GetPublicRemoteBundleFiles(cdnUrl, platform));
+			}
+
+			if (privateRemoteFiles != null)
+			{
+				remoteBundleFiles.AddRange(privateRemoteFiles);
+			}
+
+			[CanBeNull]
+			AirshipPackage GetBundleFromId(string bundleId) {
+				foreach (var bundle in packages) {
+					if (bundle.id == bundleId) {
+						return bundle;
 					}
-					codeZipUrl = gameCodeZipUrl;
-				} else {
-					codeZipUrl = $"{cdnUrl}/package/{package.id.ToLower()}/code/{package.codeVersion}/code.zip";
 				}
 
-				if (File.Exists(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"))) {
-					Debug.Log(package.id + " code.zip is cached. skipping.");
+				return null;
+			}
+
+			// Filter out if cache exists
+			List<RemoteBundleFile> bundleFilesToDownload = new();
+			foreach (var remoteBundleFile in remoteBundleFiles) {
+				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
+				string path = Path.Combine(bundle.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
+				string downloadSuccessPath = path + "_downloadSuccess.txt";
+				if (File.Exists(downloadSuccessPath)) {
+					// Debug.Log($"Skipping cached download: {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}");
 					continue;
 				}
+				bundleFilesToDownload.Add(remoteBundleFile);
+			}
 
-				var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(codeZipUrl));
-				string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
-				Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
+			// Calculate total download size
+			var device = DeviceBridge.GetDeviceType();
+			if (device is AirshipDeviceType.Phone or AirshipDeviceType.Tablet && loadingScreen && loadingScreen.showContinueButton && bundleFilesToDownload.Count > 0) {
+				var preRequests = new List<UnityWebRequestAsyncOperation>(10);
+				foreach (var remoteBundleFile in bundleFilesToDownload) {
+					Debug.Log("Downloading bundle file: " + remoteBundleFile.Url);
+					var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url, "HEAD"));
+					preRequests.Add(request.SendWebRequest());
+				}
+
+				while (!AllRequestsDone(preRequests)) {
+					await Awaitable.NextFrameAsync();
+				}
+
+				long totalBytes = 0;
+				foreach (var request in preRequests) {
+					var contentLength = request.webRequest.GetResponseHeader("content-length");
+					var bytes = long.Parse(contentLength);
+					totalBytes += bytes;
+				}
+
+				loadingScreen.SetTotalDownloadSize(totalBytes);
+				while (!this.downloadAccepted) {
+					await Awaitable.NextFrameAsync();
+				}
+			}
+
+			var downloadSt = Stopwatch.StartNew();
+			// Download files
+			var bundleIndex = 0;
+			this.totalDownload.Clear();
+			this.downloadProgress.Clear();
+			var requests = new List<UnityWebRequestAsyncOperation>(10);
+			this.isDownloading = true;
+			foreach (var remoteBundleFile in bundleFilesToDownload) {
+				var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url));
+				var package = GetBundleFromId(remoteBundleFile.BundleId);
+				string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
+				// Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
 
 				request.downloadHandler = new DownloadHandlerFile(path);
+
+				if (loadingScreen != null) {
+					StartCoroutine(WatchDownloadStatus(request, bundleIndex));
+					StartCoroutine(UpdateDownloadProgressBar(loadingScreen));
+				}
+
 				requests.Add(request.SendWebRequest());
+				bundleIndex++;
 			}
-		}
+			this.bundleDownloadCount = bundleIndex;
 
-		yield return new WaitUntil(() => AllRequestsDone(requests));
-		this.isDownloading = false;
-		Debug.Log($"Finished downloading bundle content in {downloadSt.ElapsedMilliseconds} ms.");
-
-		HashSet<AirshipPackage> successfulDownloads = new();
-		int i = 0;
-		foreach (var request in requests) {
-			if (i >= bundleFilesToDownload.Count) break; // code.zip requests
-			var remoteBundleFile = bundleFilesToDownload[i];
-			bool success = false;
-
-			if (request.webRequest.result != UnityWebRequest.Result.Success) {
-				var statusCode = request.webRequest.responseCode;
-				if (statusCode == 404) {
-					// still count this as a success so we don't try to download it again
-					// if (RunCore.IsServer()) {
-					// 	success = true;
-					// }
-					success = true;
-					Debug.Log($"Remote bundle file 404: {remoteBundleFile.fileName}");
-					var bundle = GetBundleFromId(remoteBundleFile.BundleId);
-					if (bundle != null) {
-						string path = Path.Combine(bundle.GetPersistentDataDirectory(platform),
-							remoteBundleFile.fileName);
-						File.Delete(path);
+			// Download code.zip
+			if (RunCore.IsServer() || downloadCodeZipOnClient) {
+				foreach (var package in packages) {
+					string codeZipUrl;
+					if (package.packageType == AirshipPackageType.Game) {
+						if (string.IsNullOrEmpty(gameCodeZipUrl)) {
+							throw new Exception("Expected gameCodeZipUrl to exist but was null.");
+						}
+						codeZipUrl = gameCodeZipUrl;
+					} else {
+						codeZipUrl = $"{cdnUrl}/package/{package.id.ToLower()}/code/{package.codeVersion}/code.zip";
 					}
-				} else {
-					Debug.LogError(
-						$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
-					Debug.LogError(request.webRequest.error);
+
+					if (File.Exists(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"))) {
+						Debug.Log(package.id + " code.zip is cached. skipping.");
+						continue;
+					}
+
+					var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(codeZipUrl));
+					string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
+					Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
+
+					request.downloadHandler = new DownloadHandlerFile(path);
+					requests.Add(request.SendWebRequest());
+				}
+			}
+
+			while (!AllRequestsDone(requests)) {
+				await Awaitable.NextFrameAsync();
+			}
+			this.isDownloading = false;
+			Debug.Log($"Finished downloading bundle content in {downloadSt.ElapsedMilliseconds} ms.");
+
+			HashSet<AirshipPackage> successfulDownloads = new();
+			int i = 0;
+			foreach (var request in requests) {
+				if (i >= bundleFilesToDownload.Count) break; // code.zip requests
+				var remoteBundleFile = bundleFilesToDownload[i];
+				bool success = false;
+
+				if (request.webRequest.result != UnityWebRequest.Result.Success) {
+					var statusCode = request.webRequest.responseCode;
+					if (statusCode == 404) {
+						// still count this as a success so we don't try to download it again
+						// if (RunCore.IsServer()) {
+						// 	success = true;
+						// }
+						success = true;
+						Debug.Log($"Remote bundle file 404: {remoteBundleFile.fileName}");
+						var bundle = GetBundleFromId(remoteBundleFile.BundleId);
+						if (bundle != null) {
+							string path = Path.Combine(bundle.GetPersistentDataDirectory(platform),
+								remoteBundleFile.fileName);
+							File.Delete(path);
+						}
+					} else {
+						Debug.LogError(
+							$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
+						Debug.LogError(request.webRequest.error);
+						onComplete?.Invoke(false);
+						return false;
+					}
+				} else if (!string.IsNullOrEmpty(request.webRequest.downloadHandler.error)) {
+					Debug.LogError($"File download handler failed on bundle file {remoteBundleFile.fileName}. Error: {request.webRequest.downloadHandler.error}");
 					onComplete?.Invoke(false);
+					return false;
+				}  else {
+					var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
+					Debug.Log(
+						$"Downloaded bundle file {remoteBundleFile.BundleId}/{remoteBundleFile.fileName} ({size} MB)");
+					success = true;
 				}
-			} else if (!string.IsNullOrEmpty(request.webRequest.downloadHandler.error)) {
-				Debug.LogError($"File download handler failed on bundle file {remoteBundleFile.fileName}. Error: {request.webRequest.downloadHandler.error}");
-				onComplete?.Invoke(false);
-			}  else {
-				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
-				Debug.Log(
-					$"Downloaded bundle file {remoteBundleFile.BundleId}/{remoteBundleFile.fileName} ({size} MB)");
-				success = true;
-			}
 
-			if (!success && RunCore.IsServer()) {
-				var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
-				if (serverBootstrap.IsAgonesEnvironment()) {
-					Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
-					serverBootstrap.agones.Shutdown().Wait();
-				}
-			}
-
-			if (!success && RunCore.IsClient()) {
-				onComplete?.Invoke(false);
-			}
-
-			if (success) {
-				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
-				if (bundle != null) {
-					string path = Path.Combine(bundle.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
-					var parentFolder = Path.GetDirectoryName(path);
-					if (!Directory.Exists(parentFolder) && parentFolder != null) {
-						Directory.CreateDirectory(parentFolder);
-					}
-
-					string downloadSuccessPath = path + "_downloadSuccess.txt";
-					File.WriteAllText(downloadSuccessPath, "");
-					Debug.Log("wrote download success: " + downloadSuccessPath);
-					successfulDownloads.Add(bundle);
-				}
-			}
-
-			i++;
-		}
-
-		// code.zip: handle request results. Downloads have completed by this point.
-		var unzipCodeSt = Stopwatch.StartNew();
-		int packageI = 0;
-		bool didCodeUnzip = false;
-		for (i = i; i < requests.Count; i++) {
-			var request = requests[i];
-			var package = packages[packageI];
-			if (request.webRequest.result != UnityWebRequest.Result.Success) {
-				var statusCode = request.webRequest.responseCode;
-				Debug.LogError("Failed to download code.zip. StatusCode=" + statusCode + " Error=" + request.webRequest.error + " Url=" + request.webRequest.uri + " Package=" + package.id);
-				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
-				if (File.Exists(codeZipPath)) {
-					File.Delete(codeZipPath);
-				}
-				loadingScreen.SetError("Failed to download Main Menu scripts.");
-				if (RunCore.IsServer()) {
+				if (!success && RunCore.IsServer()) {
 					var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
 					if (serverBootstrap.IsAgonesEnvironment()) {
-						Debug.LogError("[SEVERE] Server failed to download code.zip. Shutting down!");
+						Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
 						serverBootstrap.agones.Shutdown().Wait();
 					}
 				}
-			} else {
-				File.WriteAllText(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"), "success");
+
+				if (!success && RunCore.IsClient()) {
+					onComplete?.Invoke(false);
+					return false;
+				}
+
+				if (success) {
+					var bundle = GetBundleFromId(remoteBundleFile.BundleId);
+					if (bundle != null) {
+						string path = Path.Combine(bundle.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
+						var parentFolder = Path.GetDirectoryName(path);
+						if (!Directory.Exists(parentFolder) && parentFolder != null) {
+							Directory.CreateDirectory(parentFolder);
+						}
+
+						string downloadSuccessPath = path + "_downloadSuccess.txt";
+						File.WriteAllText(downloadSuccessPath, "");
+						Debug.Log("wrote download success: " + downloadSuccessPath);
+						successfulDownloads.Add(bundle);
+					}
+				}
+
+				i++;
 			}
 
-			didCodeUnzip = true;
-			packageI++;
-		}
+			// code.zip: handle request results. Downloads have completed by this point.
+			var unzipCodeSt = Stopwatch.StartNew();
+			int packageI = 0;
+			bool didCodeUnzip = false;
+			for (i = i; i < requests.Count; i++) {
+				var request = requests[i];
+				var package = packages[packageI];
+				if (request.webRequest.result != UnityWebRequest.Result.Success) {
+					var statusCode = request.webRequest.responseCode;
+					Debug.LogError("Failed to download code.zip. StatusCode=" + statusCode + " Error=" + request.webRequest.error + " Url=" + request.webRequest.uri + " Package=" + package.id);
+					var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
+					if (File.Exists(codeZipPath)) {
+						File.Delete(codeZipPath);
+					}
+					loadingScreen.SetError("Failed to download Main Menu scripts.");
+					if (RunCore.IsServer()) {
+						var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
+						if (serverBootstrap.IsAgonesEnvironment()) {
+							Debug.LogError("[SEVERE] Server failed to download code.zip. Shutting down!");
+							serverBootstrap.agones.Shutdown().Wait();
+						}
+					}
+				} else {
+					File.WriteAllText(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"), "success");
+				}
 
-		// Delete old versions
-		var st = Stopwatch.StartNew();
-		foreach (var package in packages) {
-			var oldVersionFolders = package.GetOlderDataDirectories(platform);
-			foreach (var oldVersionPath in oldVersionFolders) {
-				Debug.Log("Deleting old package folder: " + oldVersionPath);
-				Directory.Delete(oldVersionPath, true);
+				didCodeUnzip = true;
+				packageI++;
 			}
-			Debug.Log($"Deleted old {package.id} versions in " + st.ElapsedMilliseconds + " ms.");
-		}
 
-		if (didCodeUnzip) {
-			Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
+			// Delete old versions
+			var st = Stopwatch.StartNew();
+			foreach (var package in packages) {
+				var oldVersionFolders = package.GetOlderDataDirectories(platform);
+				foreach (var oldVersionPath in oldVersionFolders) {
+					Debug.Log("Deleting old package folder: " + oldVersionPath);
+					Directory.Delete(oldVersionPath, true);
+				}
+				Debug.Log($"Deleted old {package.id} versions in " + st.ElapsedMilliseconds + " ms.");
+			}
+
+			if (didCodeUnzip) {
+				Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
+			}
+			Debug.Log($"Completed bundle downloader step in {totalSt.ElapsedMilliseconds} ms.");
+			onComplete?.Invoke(true);
+			return true;
+		} catch (Exception e) {
+			Debug.LogError("Failed to download bundles: " + e);
+			onComplete?.Invoke(false);
+			return false;
 		}
-		Debug.Log($"Completed bundle downloader step in {totalSt.ElapsedMilliseconds} ms.");
-		onComplete?.Invoke(true);
 	}
 
 	private int bundleDownloadCount = 0;

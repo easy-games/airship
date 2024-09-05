@@ -1932,6 +1932,15 @@ namespace Airship.DevConsole
                 }
             ));
 
+            AddCommand(Command.Create<bool>("serverlogclear", "", "Clears the console when connecting to a new server.",
+                Parameter.Create("enabled",
+                    "True if the server console should be cleared when connecting to a new server."),
+                (val) => {
+                    DevConsole.clearConsoleOnServerConnect = val;
+                }, () => {
+                    Debug.Log("serverlogclear: " + DevConsole.clearConsoleOnServerConnect);
+                }));
+
             // AddCommand(Command.Create<int>(
             //     "log_size",
             //     "",

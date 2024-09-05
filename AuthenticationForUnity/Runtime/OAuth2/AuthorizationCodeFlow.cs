@@ -257,7 +257,7 @@ namespace Cdm.Authentication.OAuth2
                 var responseJson = await response.Content.ReadAsStringAsync();
 
 #if UNITY_EDITOR
-                Debug.Log(responseJson);
+                // Debug.Log(responseJson);
 #endif
 
                 var tokenResponse = JsonConvert.DeserializeObject<AccessTokenResponse>(responseJson);

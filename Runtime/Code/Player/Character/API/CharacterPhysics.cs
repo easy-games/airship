@@ -5,8 +5,7 @@ using UnityEngine;
 namespace Code.Player.Character.API {
 	public class CharacterPhysics {
 		private const float offsetMargin = .02f;
-		private const float gizmoDuration = 1f;
-		private const bool renderGroundGizmos = true;
+		private const float gizmoDuration = 4f;
 
 		private CharacterMovement movement;
 		private Vector3 uniformHalfExtents;
@@ -28,8 +27,8 @@ namespace Code.Player.Character.API {
 			);
 		}
 
-		public Vector3 CalculateDrag(Vector3 velocity) {
-			var drag = 1 * movement.moveData.drag + velocity.magnitude / movement.moveData.terminalVelocity * movement.moveData.drag;
+		public Vector3 CalculateDrag(Vector3 velocity, float dragConstant) {
+			var drag = 1 * dragConstant + velocity.magnitude / movement.moveData.terminalVelocity * dragConstant;
 			return -velocity.normalized * drag;
 		}
 
@@ -73,14 +72,13 @@ namespace Code.Player.Character.API {
 			return currentNormal;
 		}
 		
-	#region RAYCASTS
+	#region GROUNDED
 		public (bool isGrounded, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 currentPos, Vector3 vel, Vector3 moveDir) {
-			// Fallthrough - do raycast to check for PrefabBlock object below:
 			var intersectionMargin = .075f;
 			var castDistance = .2f;
 			var castStartPos = currentPos;
 			//Move the start position up
-			castStartPos.y += castDistance-intersectionMargin;
+			castStartPos.y += castDistance-offsetMargin;
 			//Extend the ray further if you are falling faster
 			castDistance += Mathf.Max(0, -vel.y);// Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
 			
@@ -89,9 +87,9 @@ namespace Code.Player.Character.API {
 
 			//Check directly below character as an early out and for comparison information
 			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, castDistance, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
-				if(movement.drawDebugGizmos && renderGroundGizmos){
-					//GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*castDistance, Color.gray, gizmoDuration);
-					//GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
+				if(movement.drawDebugGizmos_GROUND){
+					GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*castDistance, Color.gray, gizmoDuration);
+					GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
 				}
 				
 				if(!this.ignoredColliders.ContainsKey(rayHitInfo.collider.GetInstanceID())){
@@ -101,24 +99,24 @@ namespace Code.Player.Character.API {
 			
 			//Extend the casting for the box
 			var verticalExtents = .05f;
-			var extents = uniformHalfExtents;
+			var extents = uniformHalfExtents*.98f;
 			extents.y = verticalExtents;
 			castStartPos.y += verticalExtents;
 			castDistance += verticalExtents;
 
-			if(movement.drawDebugGizmos && renderGroundGizmos){
-				//GizmoUtils.DrawBox(castStartPos, Quaternion.identity, extents, Color.magenta, gizmoDuration);
-				//GizmoUtils.DrawBox(castStartPos+gravityDir*castDistance, Quaternion.identity, extents, Color.magenta, gizmoDuration);
+			if(movement.drawDebugGizmos_GROUND){
+				GizmoUtils.DrawBox(castStartPos, Quaternion.identity, extents, Color.magenta, gizmoDuration);
+				GizmoUtils.DrawBox(castStartPos+gravityDir*castDistance, Quaternion.identity, extents, Color.magenta, gizmoDuration);
 			}
 
 			//Check down around the entire character
 			if (Physics.BoxCast(castStartPos, extents, gravityDir, out var hitInfo, Quaternion.identity, castDistance, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
-				if(movement.drawDebugGizmos && renderGroundGizmos){
-					//GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
+				if(movement.drawDebugGizmos_GROUND){
+					GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
 				}
 				if(!movement.grounded){
-					if(movement.drawDebugGizmos && renderGroundGizmos){
-						//GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, gizmoDuration);
+					if(movement.drawDebugGizmos_GROUND){
+						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, gizmoDuration);
 						
 					}
 					if(movement.useExtraLogging){
@@ -130,8 +128,8 @@ namespace Code.Player.Character.API {
 					//Physics Casts give you interpolated normals. This uses a ray to find an exact normal
 					hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + gravityDirOffset + moveDir.normalized*.01f, gravityDir, .11f, movement.moveData.groundCollisionLayerMask);
 				
-					if(movement.drawDebugGizmos && renderGroundGizmos){
-						//GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.red, gizmoDuration);
+					if(movement.drawDebugGizmos_GROUND){
+						GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.red, gizmoDuration);
 					}
 
 					//var inCollider = IsPointInCharacter...(hitInfo.point);
@@ -141,7 +139,9 @@ namespace Code.Player.Character.API {
 
 			return (isGrounded: false, default, false);
 		}
+#endregion
 
+#region FORWARD
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 rootPos, Vector3 forwardVector, bool ignoreStepUp = false){
 			//Not moving
 			if(forwardVector.sqrMagnitude < .1f){
@@ -156,7 +156,7 @@ namespace Code.Player.Character.API {
 			//Move from root to center of collider
 			var startPos = rootPos + new Vector3(0,centerHeight,0);
 			var extents = ignoreStepUp ? new Vector3(movement.characterHalfExtents.x, movement.characterHalfExtents.y - movement.moveData.maxStepUpHeight/2f, movement.characterHalfExtents.z) : movement.characterHalfExtents; 
-			if(movement.drawDebugGizmos){
+			if(movement.drawDebugGizmos_FORWARD){
 				// GizmoUtils.DrawBox(startPos, Quaternion.identity, extents, Color.green, gizmoDuration);
 				// GizmoUtils.DrawBox(startPos+normalizedForward * distance, Quaternion.identity, extents, Color.green, gizmoDuration);
 			}
@@ -169,7 +169,7 @@ namespace Code.Player.Character.API {
 					//localHit.y = 0;
 					hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point-forwardVector, forwardVector, forwardVector.magnitude, movement.moveData.groundCollisionLayerMask);
 
-					if(movement.drawDebugGizmos){
+					if(movement.drawDebugGizmos_FORWARD){
 						//GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.black, 4, gizmoDuration);
 						//GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.black, gizmoDuration);
 					}
@@ -181,7 +181,9 @@ namespace Code.Player.Character.API {
 			//Hit nothing
 			return (false, hitInfo);
 		}
+#endregion
 
+#region STEP UP
 		public (bool didHit, bool onRamp, Vector3 pointOnRamp, Vector3 newVel) StepUp(Vector3 startPos, Vector3 vel, float deltaTime, Vector3 currentUpNormal){
 			
 			//Early outs
@@ -202,7 +204,7 @@ namespace Code.Player.Character.API {
 				Debug.Log("currentUpNormal: " + currentUpNormal + " forwardHitInfo: " + forwardHitInfo.normal + " EQUAL: "+ (currentUpNormal == forwardHitInfo.normal));
 			}
 
-			if(didHitForward && movement.drawDebugGizmos){
+			if(didHitForward && movement.drawDebugGizmos_STEPUP){
 				//GizmoUtils.DrawSphere(forwardHitInfo.point, .025f, Color.cyan, 4, gizmoDuration);
 			}
 
@@ -220,7 +222,7 @@ namespace Code.Player.Character.API {
 				var stepUpRayStart = forwardHitInfo.point + velDir * (forwardHitInfo.distance + offsetMargin);
 				stepUpRayStart.y =  startPos.y + movement.moveData.maxStepUpHeight+movement.characterRadius;
 				
-				if(movement.drawDebugGizmos){
+				if(movement.drawDebugGizmos_STEPUP){
 					GizmoUtils.DrawSphere(stepUpRayStart, .05f, Color.yellow, 4, gizmoDuration);
 					GizmoUtils.DrawSphere(startPos, .04f, Color.blue, 4, gizmoDuration);
 				}
@@ -229,7 +231,7 @@ namespace Code.Player.Character.API {
 					//Vector3.down, out RaycastHit stepUpRayHitInfo, Quaternion.identity, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 				if(Physics.Raycast(stepUpRayStart, new Vector3(0,-1,0), out RaycastHit stepUpRayHitInfo, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//Hit a surface that is in range
-					if(movement.drawDebugGizmos){
+					if(movement.drawDebugGizmos_STEPUP){
 						GizmoUtils.DrawLine(stepUpRayStart, stepUpRayHitInfo.point, Color.yellow, gizmoDuration);
 					}
 
@@ -248,7 +250,7 @@ namespace Code.Player.Character.API {
 						
 						var bottompoint = topPoint - flatDir * stepUpRampDistance;
 						bottompoint.y = topPoint.y - movement.moveData.maxStepUpHeight;
-						if(movement.drawDebugGizmos){
+						if(movement.drawDebugGizmos_STEPUP){
 							GizmoUtils.DrawBox(startPos + Vector3.up, Quaternion.identity, Vector3.one * .02f, Color.red, 4);
 							GizmoUtils.DrawBox(startPos + Vector3.up + new Vector3(0,-movement.moveData.maxStepUpHeight-1,0), Quaternion.identity, Vector3.one * .02f, Color.blue, 4);
 						}
@@ -262,7 +264,7 @@ namespace Code.Player.Character.API {
 						var rawDelta = GetFlatDistance(startPos + (vel * deltaTime), bottompoint) / stepUpRampDistance;
 						var pointOnRampDelta = Mathf.Clamp01(rawDelta);
 						var pointOnRamp = Vector3.Lerp(bottompoint, topPoint, pointOnRampDelta);// + new Vector3(0,offsetMargin,0);
-						if(movement.drawDebugGizmos){
+						if(movement.drawDebugGizmos_STEPUP){
 							GizmoUtils.DrawSphere(topPoint, .02f, Color.cyan, 4, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+rampNormal, Color.yellow, gizmoDuration);
 							GizmoUtils.DrawSphere(pointOnRamp, .02f, Color.green, 4, gizmoDuration);
@@ -271,10 +273,9 @@ namespace Code.Player.Character.API {
 						}
 
 						//Manipulate velocity so that it moves up a ramp instead of hitting the step
-						return (true, rawDelta >= 0 && rawDelta <= 1, pointOnRamp, Vector3.ProjectOnPlane(vel, rampNormal));
+						return (true, rawDelta >= 0 && rawDelta <= 1, pointOnRamp, vel);//Vector3.ProjectOnPlane(vel, rampNormal));
 					}else if(movement.useExtraLogging){
 						Debug.Log("Can't step up here. hitPoint: " + stepUpRayHitInfo.point + " startPos: " + startPos + " isWalkable: "+ IsWalkableSurface(stepUpRayHitInfo.normal));
-						
 					}
 
 				}
@@ -302,7 +303,8 @@ namespace Code.Player.Character.API {
 					if(!Physics.Raycast(quickStepHitInfo.point, Vector3.up, movement.standingCharacterHeight+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)
 						&& IsWalkableSurface(quickStepHitInfo.normal)){
 						var hitPoint = quickStepHitInfo.point + new Vector3(0,offsetMargin, 0);
-						if(movement.drawDebugGizmos){
+						if(movement.drawDebugGizmos_STEPUP){
+							GizmoUtils.DrawSphere(hitPoint, .1f, Color.white, 4, gizmoDuration);
 							GizmoUtils.DrawSphere(hitPoint, .05f, Color.white, 4, gizmoDuration);
 						}
 						return (true, false, hitPoint, vel);
@@ -311,7 +313,9 @@ namespace Code.Player.Character.API {
 			}
 			return (false, false, vel, vel);
 		}
+#endregion
 
+#region CAN STAND
 		public bool CanStand(){
 			if(Physics.BoxCast(
 				movement.rootTransform.position + new Vector3(0,movement.characterRadius,0), 

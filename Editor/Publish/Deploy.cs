@@ -15,8 +15,10 @@ using Luau;
 using Proyecto26;
 using Unity.VisualScripting.IonicZip;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
 public class UploadInfo {
@@ -31,8 +33,6 @@ public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 	private static GameDto activeDeployTarget;
 
-	public static bool DEBUG_DONT_UPLOAD = false;
-	
 	public static void DeployToStaging()
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
@@ -41,8 +41,13 @@ public class Deploy {
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new() {
 			AirshipPlatform.iOS,
+		#if UNITY_EDITOR_OSX // Run Mac build last if on OSX
+			AirshipPlatform.Windows,
+			AirshipPlatform.Mac,
+		#else
 			AirshipPlatform.Mac,
 			AirshipPlatform.Windows,
+		#endif
 		};
 		// List<AirshipPlatform> platforms = new();
 		// var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
@@ -88,6 +93,12 @@ public class Deploy {
 		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 		if (gameConfig == null) {
 			Debug.LogError("Missing GameConfig.");
+			yield break;
+		}
+
+		var confirmedSaveState = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+		if (!confirmedSaveState  || SceneManager.GetActiveScene().isDirty) { // User clicked "cancel"
+			Debug.LogError("[Airship]: Cancelling publish: you must save or discard scene changes.");
 			yield break;
 		}
 
@@ -232,8 +243,8 @@ public class Deploy {
 			}
 		}
 
-		if (DEBUG_DONT_UPLOAD) {
-			Debug.Log("DEBUG_DONT_UPLOAD is true. Ending early.");
+		if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
+			Debug.Log("Build without upload is enabled. Ending early. You can now view bundles using AssetBundle browser.");
 			yield break;
 		}
 
@@ -390,6 +401,7 @@ public class Deploy {
 			#else
 			gameLink = $"<a href=\"https://airship.gg/p/{slug}\">airship.gg/p/{slug}</a>";
 			#endif
+			EditorUtility.DisplayDialog("Your game is live!", "Your publish succeeded and your game is live on Airship.", "OK");
 			Debug.Log($"<color=#77f777>Finished publish! Your game is live:</color> {gameLink}");	
 		} else {
 			Debug.Log("<color=#77f777>Finished publish! Your game is live.</color> ");
