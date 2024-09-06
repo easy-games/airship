@@ -197,10 +197,7 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
-        // Need to recompile
-        if (scriptFile.HasFileChanged) {
-            return;
-        }
+ 
 
         m_metadata.name = scriptFile.m_metadata.name;
 
@@ -242,6 +239,11 @@ public class AirshipComponent : MonoBehaviour {
             
             serializedProperty.fileRef = property.fileRef;
             serializedProperty.refPath = property.refPath;
+        }
+        
+        // Need to recompile
+        if (scriptFile.HasFileChanged) {
+            return;
         }
         
         // Remove properties that are no longer used:
