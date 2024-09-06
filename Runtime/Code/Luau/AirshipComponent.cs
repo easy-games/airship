@@ -197,6 +197,11 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
+        // Need to recompile
+        if (scriptFile.HasFileChanged) {
+            return;
+        }
+
         m_metadata.name = scriptFile.m_metadata.name;
 
         // Add missing properties or reconcile existing ones:

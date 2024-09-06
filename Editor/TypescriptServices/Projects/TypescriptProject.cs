@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using CsToTs.TypeScript;
 using Editor.Util;
 using JetBrains.Annotations;
@@ -82,6 +83,13 @@ namespace Airship.Editor {
         internal TypescriptCrashProblemItem CrashProblemItem { get; set; }
         private Dictionary<string, HashSet<TypescriptFileDiagnosticItem>> FileProblemItems { get; set; } = new();
         internal TypescriptProjectCompileState CompilationState = new();
+
+        internal IEnumerable<TypescriptFileDiagnosticItem> GetProblemsForFile(string file) {
+            if (file.StartsWith("Assets/")) {
+                file = file[7..];
+            }
+            return ProblemItems.OfType<TypescriptFileDiagnosticItem>().Where(diagnostic => diagnostic.FileLocation == file);
+        }
 
         internal TypescriptProblemType? HighestProblemType {
             get {
@@ -164,6 +172,18 @@ namespace Airship.Editor {
             }
 
             return TransformOutputPath(inputFilePath, InputFileType.Typescript, outputFileType);
+        }
+
+        public string GetOutputFileHash(string inputFilePath) {
+            var outFile = GetOutputPath(inputFilePath);
+            if (!File.Exists(outFile)) {
+                return null;
+            }
+            
+            using var md5 = MD5.Create();
+            using var stream = File.OpenRead(outFile);
+            var hash = BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+            return hash;
         }
         
         /// <summary>

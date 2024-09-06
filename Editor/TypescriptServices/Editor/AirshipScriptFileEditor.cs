@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Editor;
 using Luau;
 using UnityEditor;
 using UnityEngine;
@@ -221,14 +222,29 @@ namespace Airship.Editor {
 
             if (item != null) {
                 if (item.scriptLanguage == AirshipScriptLanguage.Typescript && item.airshipBehaviour) {
+                    var project = TypescriptProjectsService.Project;
+                    var errors = project.GetProblemsForFile(item.assetPath);
+                    foreach (var error in errors) {
+                        EditorGUILayout.HelpBox(error.ToString(), MessageType.Error);
+                    }
+                    
                     EditorGUILayout.Space(10);
                     GUILayout.Label("Component Details", EditorStyles.boldLabel);
                     
                     EditorGUILayout.LabelField("DisplayName", item.m_metadata!.displayName, EditorStyles.boldLabel);
                     EditorGUILayout.LabelField("ClassName", item.m_metadata.name, scriptTextMono);
 
+
+                    
+#if AIRSHIP_INTERNAL
+                    EditorGUILayout.LabelField("OutFileHash", project.GetOutputFileHash(item.assetPath));
+#endif
+
                     GUI.enabled = false;
                     EditorGUILayout.Toggle("Is Singleton", item.m_metadata.singleton);
+#if AIRSHIP_INTERNAL
+                    EditorGUILayout.Toggle("Requires Reimport", TypescriptImporter.RequiresRecompile(item.assetPath));
+#endif
                     GUI.enabled = true;
 
                     EditorGUILayout.Space(10);
