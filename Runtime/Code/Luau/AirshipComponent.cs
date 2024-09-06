@@ -241,6 +241,8 @@ public class AirshipComponent : MonoBehaviour {
             serializedProperty.refPath = property.refPath;
         }
         
+        _isAirshipComponent = true;
+        
         // Need to recompile
         if (scriptFile.HasFileChanged) {
             return;
@@ -265,8 +267,6 @@ public class AirshipComponent : MonoBehaviour {
                 m_metadata.properties.Remove(serializedProperty);
             }
         }
-
-        _isAirshipComponent = true;
     }
 
     private void WriteChangedComponentProperties() {
