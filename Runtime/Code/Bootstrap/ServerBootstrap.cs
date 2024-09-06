@@ -54,6 +54,8 @@ public class ServerBootstrap : MonoBehaviour
 
     public ServerContext serverContext;
 
+    private GameServer gameServer;
+
     /// <summary>
     /// When set, this will be used as the starting scene.
     /// </summary>
@@ -135,6 +137,11 @@ public class ServerBootstrap : MonoBehaviour
 		return Environment.GetEnvironmentVariable("AGONES_SDK_HTTP_PORT") != null;
 	}
 
+	[HideFromTS][LuauAPI(LuauContext.Protected)]
+	public GameServer GetGameServer() {
+		return this.gameServer;
+	}
+
 	private async void Setup() {
 		if (this.IsAgonesEnvironment() && RunCore.IsServer()) {
 			var success = await agones.Connect();
@@ -166,7 +173,7 @@ public class ServerBootstrap : MonoBehaviour
 			 */
 
 			// Wait for queue configuration to hit agones.
-			var gameServer = await agones.GameServer();
+			this.gameServer = await agones.GameServer();
 			OnGameServerChange(gameServer);
 
 			agones.WatchGameServer(OnGameServerChange);

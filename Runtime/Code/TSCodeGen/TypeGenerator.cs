@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Agones.Model;
 using Airship;
 using Assets.Code.Misc;
 using Code.Bootstrap;
@@ -220,6 +221,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementData),
             typeof(TreeInstance),
             typeof(Terrain),
+            typeof(GameServer),
 
             // Mirror
             typeof(NetworkServer),
