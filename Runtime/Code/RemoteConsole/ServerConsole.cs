@@ -36,6 +36,7 @@ namespace Code.RemoteConsole {
                 Application.logMessageReceived += LogCallback;
             }
             NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
+                Debug.Log($"Sending {this.startupMessages.Count} startup logs to " + conn);
                 foreach (var startupMessage in startupMessages) {
                     conn.Send(startupMessage);
                 }
