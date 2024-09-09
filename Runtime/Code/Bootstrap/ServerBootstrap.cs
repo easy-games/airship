@@ -100,19 +100,19 @@ public class ServerBootstrap : MonoBehaviour
 #if UNITY_EDITOR
 			port = AirshipEditorNetworkConfig.instance.portOverride;
 #endif
-			var transport = NetworkManager.singleton.transport as KcpTransport;
+			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = port;
 
 			if (RunCore.IsClient()) {
-				NetworkManager.singleton.StartHost();
+				AirshipNetworkManager.singleton.StartHost();
 			} else {
 				print("Listening on port " + port);
-				NetworkManager.singleton.StartServer();
+				AirshipNetworkManager.singleton.StartServer();
 			}
 		} else {
-			var transport = NetworkManager.singleton.transport as KcpTransport;
+			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = 7654;
-			NetworkManager.singleton.StartServer();
+			AirshipNetworkManager.singleton.StartServer();
 		}
 
 		this.Setup();
