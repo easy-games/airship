@@ -14,9 +14,19 @@ public class AirshipNetworkManager : NetworkManager {
     public ClientBundleLoader clientBundleLoader;
 
     public override void OnStartServer() {
+        this.LogDedicated("AirshipNetworkManager.OnStartServer.1");
         this.net.OnStartServer();
+        this.LogDedicated("AirshipNetworkManager.OnStartServer.2");
         this.serverConsole.OnStartServer();
+        this.LogDedicated("AirshipNetworkManager.OnStartServer.3");
         this.clientBundleLoader.SetupServer();
+        this.LogDedicated("AirshipNetworkManager.OnStartServer.4");
+    }
+
+    public void LogDedicated(string msg) {
+#if UNITY_SERVER
+        Debug.Log(msg);
+#endif
     }
 
     public override void OnStartClient() {
