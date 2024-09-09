@@ -126,7 +126,7 @@ namespace Adrenak.UniVoice {
             PeerSettings = new Dictionary<short, ChatroomPeerSettings>();
             PeerOutputs = new Dictionary<short, IAudioOutput>();
 
-            this.Log(TAG, "Created");
+            this.Log(TAG, "Created Agent");
             SetupEventListeners();
         }
 
