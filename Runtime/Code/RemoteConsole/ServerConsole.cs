@@ -35,9 +35,7 @@ namespace Code.RemoteConsole {
             if (!RunCore.IsClient()) {
                 Application.logMessageReceived += LogCallback;
             }
-            Debug.Log("Registering startup log");
             NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
-                Debug.Log($"Sending {this.startupMessages.Count} startup logs to " + conn);
                 foreach (var startupMessage in startupMessages) {
                     conn.Send(startupMessage);
                 }
@@ -47,7 +45,6 @@ namespace Code.RemoteConsole {
         public void OnClientConnectedToServer() {
             if (!RunCore.IsServer()) {
                 NetworkClient.RegisterHandler<ServerConsoleBroadcast>(OnServerConsoleBroadcast, false);
-                Debug.Log("Sending request startup logs.");
                 NetworkClient.Send(new RequestServerConsoleStartupLogs());
             }
         }
