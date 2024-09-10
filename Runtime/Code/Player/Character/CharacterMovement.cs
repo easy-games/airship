@@ -391,7 +391,7 @@ private void OnEnable() {
          * md.State MUST be set in all cases below.
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
-			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
+			var isMoving = currentVelocity.sqrMagnitude > .1f;
 			var inAir = didJump || (!detectedGround && !prevStepUp);
 			var tryingToSprint = moveData.onlySprintForward ? 
 				md.sprint && this.graphicTransform.InverseTransformVector(md.moveDir).z > 0.1f : //Only sprint if you are moving forward

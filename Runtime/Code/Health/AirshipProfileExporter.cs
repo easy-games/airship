@@ -125,7 +125,7 @@ namespace Code.Health
             using var www = UnityWebRequest.Post("https://file.io/?expires=1w", form);
             www.SetRequestHeader("Authorization", "Bearer " + fileIOKey);
             MonitorUploadProgress(www);
-            await www.SendWebRequest();
+            await UnityWebRequestProxyHelper.ApplyProxySettings(www).SendWebRequest();
             
             var resp = JsonUtility.FromJson<FileIOCreateResponse>(www.downloadHandler.text);
             Debug.Log($"Profile uploaded: <a href=\"{resp.link}\">{resp.link}</a>");
