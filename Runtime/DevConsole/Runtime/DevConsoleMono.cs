@@ -208,6 +208,7 @@ namespace Airship.DevConsole
         [SerializeField] private GameObject tabClient;
         [SerializeField] private GameObject tabServer;
 
+        [Header("Other")] public GameObject bottom;
 
         /// <summary>
         ///     The colour effect to apply to the hover button when resizing the dev console window.
@@ -1234,6 +1235,8 @@ namespace Airship.DevConsole
 
             this.tabClient.SetActive(context == LogContext.Client);
             this.tabServer.SetActive(context == LogContext.Server);
+
+            this.bottom.SetActive(context == LogContext.Client);
         }
 
         public void OnClientTabClick() {
@@ -3618,6 +3621,10 @@ namespace Airship.DevConsole
             RectTransform rect = obj.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
             logFields[context].Add(logField);
+
+            var logInstance = obj.GetComponent<LogFieldInstance>();
+            logInstance.redirectTarget = context == LogContext.Client ? clientLogScrollView : serverLogScrollView;
+
             obj.SetActive(true);
         }
 
