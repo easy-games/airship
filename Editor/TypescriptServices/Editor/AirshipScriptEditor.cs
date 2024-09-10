@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Luau;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,6 +15,20 @@ namespace Airship.Editor {
         protected IEnumerable<T> items;
         protected GUIContent cachedPreview;
 
+        private string assetGuid;
+        
+        protected void UpdateSelection() {
+            if (targets.Length > 1) {
+                items = targets.Select(target => target as T);
+            }
+            else {
+                item = target as T;
+                var assetPath = AssetDatabase.GetAssetPath(item);
+                assetGuid = AssetDatabase.AssetPathToGUID(assetPath);
+                CachePreview();        
+            }
+        }
+        
         protected virtual void OnEnable() {
             scriptTextMono ??= new GUIStyle("ScriptText") {
                 font = EditorGUIUtility.Load("Fonts/RobotoMono/RobotoMono-Regular.ttf") as Font,

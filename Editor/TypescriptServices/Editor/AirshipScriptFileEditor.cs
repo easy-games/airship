@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Code.Luau;
 using Luau;
 using UnityEditor;
 using UnityEngine;

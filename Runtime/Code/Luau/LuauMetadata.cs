@@ -535,6 +535,11 @@ namespace Luau {
         }
     }
 
+    public enum LuauMetadataType {
+        Game,
+        RenderPass,
+    }
+    
     [Serializable]
     public class LuauMetadata {
         public string name;
@@ -542,6 +547,7 @@ namespace Luau {
         public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
         [CanBeNull] public Texture2D displayIcon;
+        public LuauMetadataType type;
 
         public string displayName;
         

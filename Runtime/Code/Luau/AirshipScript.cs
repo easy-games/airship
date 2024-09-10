@@ -14,6 +14,13 @@ namespace Luau {
     /// An object that compiles to Luau to be executed by the Luau runtime
     /// </summary>
     public abstract class AirshipScriptable : ScriptableObject {
+        /// <summary>
+        /// This is the path of the asset itself - used for the editor
+        /// </summary>
+        public string assetPath;
+        
+        public AirshipScriptLanguage scriptLanguage;
+        
         // [HideInInspector]
         public string m_path;
         
@@ -25,6 +32,17 @@ namespace Luau {
         public string m_compilationError = "";
         #endregion
 
+        [CanBeNull] public LuauMetadata m_metadata;
+    }
+    
+    [Serializable]
+    public class AirshipScript : AirshipScriptable {
+        #region Typescript Properties
+        [FormerlySerializedAs("tsWasCompiled")] public bool typescriptWasCompiled = false;
+        #endregion
+
+        public bool airshipBehaviour;
+        
         public static AirshipScript GetBinaryFileFromPath(string path) {
 #if UNITY_EDITOR
             return AssetDatabase.LoadAssetAtPath<AirshipScript>(path);
@@ -32,22 +50,5 @@ namespace Luau {
             return null;
 #endif
         }
-    }
-    
-    [Serializable]
-    public class AirshipScript : AirshipScriptable {
-        /// <summary>
-        /// This is the path of the asset itself - used for the editor
-        /// </summary>
-        public string assetPath;
-        
-        public AirshipScriptLanguage scriptLanguage;
-        
-        #region Typescript Properties
-        [FormerlySerializedAs("tsWasCompiled")] public bool typescriptWasCompiled = false;
-        #endregion
-        
-        [CanBeNull] public LuauMetadata m_metadata;
-        public bool airshipBehaviour;
     }
 }

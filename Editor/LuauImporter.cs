@@ -91,14 +91,17 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         
         // Get metadata from JSON file (if it's found):
         var metadataFilepath = $"{assetPath}.json~";
-        if (subAsset is AirshipScript gameScriptAsset && File.Exists(metadataFilepath))
+        if (File.Exists(metadataFilepath))
         {
             var json = File.ReadAllText(metadataFilepath);
             var (metadata, err) = LuauMetadata.FromJson(json);
 
             if (metadata != null) {
-                gameScriptAsset.m_metadata = metadata;
-                gameScriptAsset.airshipBehaviour = true;
+                subAsset.m_metadata = metadata;
+
+                if (subAsset is AirshipScript gameScriptAsset) {
+                    gameScriptAsset.airshipBehaviour = true;
+                }
             }
 
             if (err != null) {

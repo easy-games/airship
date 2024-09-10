@@ -104,12 +104,10 @@ namespace Editor {
                 var hasCompiled = false;
 
                 AirshipScriptable scriptableAsset;
+                
                 switch (scriptType) {
                     case ScriptType.GameScript: {
                         var script = ScriptableObject.CreateInstance<Luau.AirshipScript>();
-                        script.scriptLanguage = AirshipScriptLanguage.Typescript;
-                        script.assetPath = ctx.assetPath;
-                    
                         scriptableAsset = script;
                         break;
                     }
@@ -121,8 +119,10 @@ namespace Editor {
                     default:
                         return;
                 }
-               
-
+                
+                scriptableAsset.scriptLanguage = AirshipScriptLanguage.Typescript;
+                scriptableAsset.assetPath = ctx.assetPath;
+                
                 var project = TypescriptProjectsService.Project;
                 var ext = Path.GetExtension(ctx.assetPath);
                 var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length);
