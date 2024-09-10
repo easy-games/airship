@@ -208,10 +208,14 @@ public partial class LuauCore : MonoBehaviour {
 #if UNITY_EDITOR
         EditorApplication.pauseStateChanged -= OnPauseStateChanged;
 #endif
+        Profiler.BeginSample("ShutdownLuauState");
         LuauState.ShutdownAll();
+        Profiler.EndSample();
         if (_coreInstance) {
             initialized = false;
+            Profiler.BeginSample("ShutdownLuauPlugin");
             LuauPlugin.LuauShutdown();
+            Profiler.EndSample();
             _coreInstance = null;
             if (endOfFrameCoroutine != null) {
                 StopCoroutine(endOfFrameCoroutine);
