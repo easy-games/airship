@@ -335,6 +335,7 @@ public class Deploy {
 			foreach (var (_, uploadInfo) in uploadProgress) {
 				if (uploadInfo.failed) {
 					Debug.LogError("Publish failed due to upload error.");
+					EditorUtility.ClearProgressBar();
 					yield break;
 				}
 				if (uploadInfo.uploadProgressPercent < 1) {
@@ -351,7 +352,7 @@ public class Deploy {
 				EditorUtility.ClearProgressBar();
 				yield break;
 			}
-			yield return new WaitForEndOfFrame();
+			yield return null;
 		}
 		EditorUtility.ClearProgressBar();
 

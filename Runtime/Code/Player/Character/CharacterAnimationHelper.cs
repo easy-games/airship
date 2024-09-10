@@ -245,5 +245,9 @@ namespace Code.Player.Character {
             animator.CrossFadeInFixedTime("EarlyExit", fixedTransitionDuration, 4 + (int)layer);
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
+
+        public float GetPlaybackSpeed(){
+            return this.targetPlaybackSpeed;
+        }
     }
 }

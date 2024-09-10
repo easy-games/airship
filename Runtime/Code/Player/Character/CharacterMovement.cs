@@ -701,7 +701,7 @@ private void OnEnable() {
 				}else{
 					//dirDot = dirDot - 1 / 2;
 					//clampedIncrease *= -Mathf.Min(0, dirDot-1);
-					newVelocity += normalizedMoveDir * dirDot * 
+					newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) * 
 						(groundedState == CharacterState.Sprinting ? this.moveData.sprintAccelerationForce : moveData.accelerationForce);
 				}
 				//characterMoveVelocity = clampedIncrease;

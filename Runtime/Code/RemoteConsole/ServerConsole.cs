@@ -20,7 +20,6 @@ namespace Code.RemoteConsole {
 
     [LuauAPI]
     public class ServerConsole : MonoBehaviour {
-        [SerializeField] public bool RemoteLogging = false;
         private List<ServerConsoleBroadcast> startupMessages = new(100);
         private const int maxStartupMessages = 100;
 
@@ -67,8 +66,7 @@ namespace Code.RemoteConsole {
         }
 
         private void SendServerLogMessage(string message, LogType logType = LogType.Log, string stackTrace = "") {
-            if (RunCore.IsServer() && RemoteLogging && NetworkServer.active) {
-
+            if (RunCore.IsServer()) {
                 var time = DateTime.Now.ToString("HH:mm:ss");
                 if (this.startupMessages.Count < maxStartupMessages) {
                     this.startupMessages.Add(new ServerConsoleBroadcast() {
@@ -80,14 +78,16 @@ namespace Code.RemoteConsole {
                     });
                 }
 
-                var packet = new ServerConsoleBroadcast() {
-                    message = message,
-                    logType = logType,
-                    startup = false,
-                    stackTrace = stackTrace,
-                    time = time,
-                };
-                NetworkServer.SendToReady(packet);
+                if (NetworkServer.active) {
+                    var packet = new ServerConsoleBroadcast() {
+                        message = message,
+                        logType = logType,
+                        startup = false,
+                        stackTrace = stackTrace,
+                        time = time,
+                    };
+                    NetworkServer.SendToAll(packet);
+                }
             }
         }
     }

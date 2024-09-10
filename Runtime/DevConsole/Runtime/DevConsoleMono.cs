@@ -1208,6 +1208,7 @@ namespace Airship.DevConsole
                     Log($"({time}) <color={WarningColour}><b>Warning:</b> </color>{logString}", context, prepend);
                     break;
                 default:
+                    Log($"({time}) <b>Log:</b> {logString}", context, prepend);
                     break;
             }
         }

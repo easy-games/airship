@@ -1,4 +1,5 @@
 using System;
+using ElRaccoone.Tweens;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -15,6 +16,9 @@ public class MainMenuLoadingScreen : BundleLoadingScreen {
     public TMP_Text errorText;
     public MainMenuSceneManager sceneManager;
 
+    public RectTransform mainContent;
+    public CanvasGroup mainContentCanvasGroup;
+
     private void Start() {
         base.showContinueButton = true;
         if (!RunCore.IsClient()) {
@@ -27,6 +31,12 @@ public class MainMenuLoadingScreen : BundleLoadingScreen {
         this.spinner.SetActive(true);
         this.progressText.gameObject.SetActive(true);
         this.continueButton.gameObject.SetActive(false);
+
+        var goalY = this.mainContent.anchoredPosition.y;
+        this.mainContent.anchoredPosition -= new Vector2(0, 15f);
+        NativeTween.AnchoredPositionY(this.mainContent, goalY, 1f).SetEaseQuadOut();
+        this.mainContentCanvasGroup.alpha = 0;
+        NativeTween.CanvasGroupAlpha(this.mainContentCanvasGroup, 1, 1f).SetEaseQuadOut();
     }
 
     public override void SetTotalDownloadSize(long sizeBytes) {

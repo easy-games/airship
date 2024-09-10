@@ -142,13 +142,13 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					}
 
 					if (File.Exists(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"))) {
-						Debug.Log(package.id + " code.zip is cached. skipping.");
+						// Debug.Log(package.id + " code.zip is cached. skipping.");
 						continue;
 					}
 
 					var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(codeZipUrl));
 					string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
-					Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
+					// Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
 
 					request.downloadHandler = new DownloadHandlerFile(path);
 					requests.Add(request.SendWebRequest());
@@ -176,7 +176,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 						// 	success = true;
 						// }
 						success = true;
-						Debug.Log($"Remote bundle file 404: {remoteBundleFile.fileName}");
+						// Debug.Log($"Remote bundle file 404: {remoteBundleFile.fileName}");
 						var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 						if (bundle != null) {
 							string path = Path.Combine(bundle.GetPersistentDataDirectory(platform),
@@ -225,7 +225,6 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 						string downloadSuccessPath = path + "_downloadSuccess.txt";
 						File.WriteAllText(downloadSuccessPath, "");
-						Debug.Log("wrote download success: " + downloadSuccessPath);
 						successfulDownloads.Add(bundle);
 					}
 				}
@@ -264,14 +263,15 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			}
 
 			// Delete old versions
-			var st = Stopwatch.StartNew();
-			foreach (var package in packages) {
-				var oldVersionFolders = package.GetOlderDataDirectories(platform);
-				foreach (var oldVersionPath in oldVersionFolders) {
-					Debug.Log("Deleting old package folder: " + oldVersionPath);
-					Directory.Delete(oldVersionPath, true);
-				}
-				Debug.Log($"Deleted old {package.id} versions in " + st.ElapsedMilliseconds + " ms.");
+			if (RunCore.IsClient()) {
+				var st = Stopwatch.StartNew();
+                foreach (var package in packages) {
+                	var oldVersionFolders = package.GetOlderDataDirectories(platform);
+                	foreach (var oldVersionPath in oldVersionFolders) {
+                		Directory.Delete(oldVersionPath, true);
+                	}
+                }
+                Debug.Log($"Deleted old package versions in " + st.ElapsedMilliseconds + " ms.");
 			}
 
 			if (didCodeUnzip) {

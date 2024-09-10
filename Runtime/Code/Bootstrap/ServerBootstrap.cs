@@ -54,6 +54,8 @@ public class ServerBootstrap : MonoBehaviour
 
     public ServerContext serverContext;
 
+    private GameServer gameServer;
+
     /// <summary>
     /// When set, this will be used as the starting scene.
     /// </summary>
@@ -98,19 +100,19 @@ public class ServerBootstrap : MonoBehaviour
 #if UNITY_EDITOR
 			port = AirshipEditorNetworkConfig.instance.portOverride;
 #endif
-			var transport = NetworkManager.singleton.transport as KcpTransport;
+			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = port;
 
 			if (RunCore.IsClient()) {
-				NetworkManager.singleton.StartHost();
+				AirshipNetworkManager.singleton.StartHost();
 			} else {
 				print("Listening on port " + port);
-				NetworkManager.singleton.StartServer();
+				AirshipNetworkManager.singleton.StartServer();
 			}
 		} else {
-			var transport = NetworkManager.singleton.transport as KcpTransport;
+			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = 7654;
-			NetworkManager.singleton.StartServer();
+			AirshipNetworkManager.singleton.StartServer();
 		}
 
 		this.Setup();
@@ -133,6 +135,17 @@ public class ServerBootstrap : MonoBehaviour
 
 	public bool IsAgonesEnvironment() {
 		return Environment.GetEnvironmentVariable("AGONES_SDK_HTTP_PORT") != null;
+	}
+
+	[HideFromTS][LuauAPI(LuauContext.Protected)]
+	public GameServer GetGameServer() {
+		if (this.gameServer.ObjectMeta.Annotations.TryGetValue("GameConfig", out var gc)) {
+			Debug.Log("GetGameServer GameConfig: " + gc);
+		} else {
+			Debug.Log("GetGameServer CameConfig is missing.");
+		}
+
+		return this.gameServer;
 	}
 
 	private async void Setup() {
@@ -166,7 +179,7 @@ public class ServerBootstrap : MonoBehaviour
 			 */
 
 			// Wait for queue configuration to hit agones.
-			var gameServer = await agones.GameServer();
+			this.gameServer = await agones.GameServer();
 			OnGameServerChange(gameServer);
 
 			agones.WatchGameServer(OnGameServerChange);
@@ -199,6 +212,8 @@ public class ServerBootstrap : MonoBehaviour
      */
 	private bool processedMarkedForDeletion = false;
 	public void OnGameServerChange(GameServer server) {
+		this.gameServer = server;
+
 		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;

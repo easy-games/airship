@@ -772,14 +772,7 @@ public partial class LuauCore : MonoBehaviour {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
                 var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
-
-                //Remove just this filename off the end
-                var bits = new List<string>(fname.Split("/"));
-                bits.RemoveAt(bits.Count - 1);
-                var bindingPath = Path.Combine(bits.ToArray());
-
-                // fileNameStr = bindingPath + "/" + fileNameStr;
-                fileNameStr = Path.GetRelativePath(bindingPath, fileNameStr);
+                fileNameStr = fname;
             } else if (fileNameStr.StartsWith("./")) {
                 //Get a stripped name
                 var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
