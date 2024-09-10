@@ -40,6 +40,7 @@ namespace Code.Player.Character {
         private Vector2 targetVelNormalized;
         private float verticalVel = 0;
         private float currentPlaybackSpeed = 0;
+        private float currentSpeed = 0;
         private bool firstPerson = false;
         private float lastStateTime = 0;
         private float targetPlaybackSpeed = 0;
@@ -131,9 +132,9 @@ namespace Code.Player.Character {
             //Blend directional influence
             float blendMod = targetMagnitude > currentMagnitude ? this.directionalBlendLerpMod : this.directionalBlendLerpMod /2f;
             currentVelNormalized = Vector2.MoveTowards(currentVelNormalized, targetVelNormalized, blendMod * Time.deltaTime);
-            animator.SetFloat("VelX",  Mathf.Abs(currentVelNormalized.x) < .01 ? 0 : currentVelNormalized.x);// * Mathf.Clamp01(currentPlaybackSpeed));
+            animator.SetFloat("VelX",  currentSpeed < .01 ? 0 : currentVelNormalized.x);// * Mathf.Clamp01(currentPlaybackSpeed));
             animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime*1.5f));
-            animator.SetFloat("VelZ", Mathf.Abs(currentVelNormalized.y) < .01 ? 0 : currentVelNormalized.y);// * Mathf.Clamp01(currentPlaybackSpeed));
+            animator.SetFloat("VelZ", currentSpeed < .01 ? 0 : currentVelNormalized.y);// * Mathf.Clamp01(currentPlaybackSpeed));
             animator.SetFloat("Speed", targetMagnitude);
 
             
@@ -166,7 +167,7 @@ namespace Code.Player.Character {
             } else if (currentState == CharacterState.Crouching) {
                 targetSpeed = 2.1233335f;
             }
-            var currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
+            currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
             //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed);
             this.targetPlaybackSpeed = Mathf.Max(0, currentSpeed  / targetSpeed);
             targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;

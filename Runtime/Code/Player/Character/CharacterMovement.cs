@@ -287,7 +287,6 @@ private void OnEnable() {
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
-				airborneFromImpulse = false;
 				this.OnImpactWithGround?.Invoke(currentVelocity);
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
@@ -561,7 +560,7 @@ private void OnEnable() {
 			//Apply the impulse to the velocity
 			newVelocity += impulseVelocity;
 			impulseVelocity = Vector3.zero;
-			airborneFromImpulse = true;
+			airborneFromImpulse = !grounded || impulseVelocity.y > .01f;
 		}
 #endregion
 
@@ -679,9 +678,9 @@ private void OnEnable() {
 			
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			//var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
+			//Multipy by 2 so perpendicular movement is still fully applied rather than half applied
 			var rawDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
-			var dirDot = Mathf.Clamp01(1-rawDot);
+			var dirDot = Mathf.Max(moveData.minAccelerationDelta, Mathf.Clamp01((1-rawDot)*2));
 			
 			if(useExtraLogging){
 				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
@@ -690,8 +689,7 @@ private void OnEnable() {
 			if (inAir){
 				//clampedIncrease *= moveData.airSpeedMultiplier;
 			}
-
-			if(_flying || (velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1) && !isImpulsing)){
+			if(!isImpulsing && !airborneFromImpulse && _flying || (velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1))){
 				// if(clampedIncrease.x < 0){
 				// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 				// }else{
@@ -702,7 +700,6 @@ private void OnEnable() {
 				// }else{
 				// 	clampedIncrease.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
 				// }
-				
 				if(moveData.useAccelerationMovement){
 					newVelocity += characterMoveVelocity;
 				}else{
@@ -769,8 +766,10 @@ private void OnEnable() {
 			var canStopVel = !airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing;
 			var notTryingToMove = normalizedMoveDir.sqrMagnitude < .1f;
 			var underMin = physics.GetFlatDistance(Vector3.zero, newVelocity) <= moveData.minimumVelocity;
+			//print("airborneFromImpulse: " + airborneFromImpulse + " unerMin: " +underMin + " notTryingToMove: " + notTryingToMove);
 			if(canStopVel && notTryingToMove && underMin){
 				//Not intending to move so snap to zero (Fake Dynamic Friction)
+				//print("STOPPING VELOCITY");
 				newVelocity.x = 0;
 				newVelocity.z = 0;
 			}

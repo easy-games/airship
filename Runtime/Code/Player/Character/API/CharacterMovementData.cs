@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using UnityEditor.EditorTools;
+using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Code.Player.Character.API {
@@ -28,6 +29,9 @@ namespace Code.Player.Character.API {
 		public float accelerationForce = 1;
 		[Tooltip("How much to accelerate sprinting (units per second) when using acceleration movement or when going faster than the target speed")] [Min(0f)]
 		public float sprintAccelerationForce = 1.4f;
+		[Tooltip("If accelerating in a direction you are already moving, how much force can you still apply?")]
+		[Range(0,1)]
+		public float minAccelerationDelta = 0;
 
 		[Tooltip("Only allow sprinting forward.")]
 		public bool onlySprintForward = false;
