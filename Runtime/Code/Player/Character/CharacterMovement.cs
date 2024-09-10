@@ -560,7 +560,6 @@ private void OnEnable() {
 			//Apply the impulse to the velocity
 			newVelocity += impulseVelocity;
 			airborneFromImpulse = !grounded || impulseVelocity.y > .01f;
-			print("gounded: " + grounded + " impulseVelocity: " + impulseVelocity);
 			impulseVelocity = Vector3.zero;
 		}
 #endregion
@@ -684,7 +683,6 @@ private void OnEnable() {
 			if(useExtraLogging){
 				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 			}
-			print("airborneFromImpulse: " + airborneFromImpulse);
 			if(_flying || //In Fly mode OR
 				(!isImpulsing && !airborneFromImpulse && //Not impulsing AND under our max speed
 						(velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1)))){
