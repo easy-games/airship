@@ -58,10 +58,10 @@ namespace Code.Health
         }
 
         private void Start() {
-            if (NetworkServer.active) {
+            if (RunCore.IsServer()) {
                 NetworkServer.RegisterHandler<StartProfilingMessage>(OnStartProfilingMessage, false);
             }
-            if (NetworkClient.active) {
+            if (RunCore.IsClient()) {
                 NetworkClient.RegisterHandler<ProfileCompleteMessage>(OnProfileCompleteMessage);
             }
 
