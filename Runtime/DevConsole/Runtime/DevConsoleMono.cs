@@ -20,12 +20,14 @@ using UnityEngine.UI;
 using System.Runtime.CompilerServices;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Mono.CSharp;
 using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
 using UnityEngine.Profiling;
+using Debug = UnityEngine.Debug;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
 #endif
@@ -659,8 +661,15 @@ namespace Airship.DevConsole
         }
 
         public void OpenLogsFolder() {
-            print("Console log path: " + Application.consoleLogPath);
-            System.Diagnostics.Process.Start(Application.consoleLogPath);
+            var path = Application.consoleLogPath;
+            print("Opening console log path: " + path);
+            if (Application.platform is RuntimePlatform.WindowsPlayer or RuntimePlatform.WindowsEditor) {
+                Process.Start("explorer.exe", path);
+            } else if (Application.platform is RuntimePlatform.OSXPlayer or RuntimePlatform.OSXEditor) {
+                Process.Start("open", path);
+            } else {
+                Debug.LogError("Unable to open logs folder: unsupported platform.");
+            }
         }
 
         /// <summary>
