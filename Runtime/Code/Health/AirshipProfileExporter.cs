@@ -92,6 +92,7 @@ namespace Code.Health
         }
 
         public void OnProfileCompleteMessage(ProfileCompleteMessage msg) {
+            Debug.Log($"Profile uploaded: <a href=\"{msg.link}\">{msg.link}</a> (copied to your clipboard)");
             GUIUtility.systemCopyBuffer = msg.link;
         }
 
