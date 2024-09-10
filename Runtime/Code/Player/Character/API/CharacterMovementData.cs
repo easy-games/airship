@@ -106,14 +106,6 @@ namespace Code.Player.Character.API {
 		[Tooltip("Also stop momentum when in the air")]
 		public bool useMinimumVelocityInAir = false;
 
-		[Tooltip("How high in units can you auto step up")] 
-		[Range(.05f, 1)]
-		public float maxStepUpHeight = .5f;
-
-		[Tooltip("How far away to check for a step up")]
-		[Range(0.01f, 5)]
-		public float stepUpRampDistance = .75f;
-
 		[Tooltip("Drag coefficient")]
 		[Range(0,1)]
 		public float drag = .1f;
@@ -133,6 +125,14 @@ namespace Code.Player.Character.API {
 
 		[Tooltip("While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
 		public bool assistedLedgeJump = true;
+
+		[Tooltip("How high in units can you auto step up")] 
+		[Range(.05f, 1)]
+		public float maxStepUpHeight = .5f;
+
+		[Tooltip("How far away to check for a step up")]
+		[Range(0.01f, 5)]
+		public float stepUpRampDistance = .75f;
 
 
 		[Header("Slopes")]
