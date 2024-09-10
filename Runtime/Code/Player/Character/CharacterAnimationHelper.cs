@@ -131,9 +131,9 @@ namespace Code.Player.Character {
             //Blend directional influence
             float blendMod = targetMagnitude > currentMagnitude ? this.directionalBlendLerpMod : this.directionalBlendLerpMod /2f;
             currentVelNormalized = Vector2.MoveTowards(currentVelNormalized, targetVelNormalized, blendMod * Time.deltaTime);
-            animator.SetFloat("VelX",  currentVelNormalized.x);// * Mathf.Clamp01(currentPlaybackSpeed));
+            animator.SetFloat("VelX",  Mathf.Abs(currentVelNormalized.x) < .01 ? 0 : currentVelNormalized.x);// * Mathf.Clamp01(currentPlaybackSpeed));
             animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime*1.5f));
-            animator.SetFloat("VelZ", currentVelNormalized.y);// * Mathf.Clamp01(currentPlaybackSpeed));
+            animator.SetFloat("VelZ", Mathf.Abs(currentVelNormalized.y) < .01 ? 0 : currentVelNormalized.y);// * Mathf.Clamp01(currentPlaybackSpeed));
             animator.SetFloat("Speed", targetMagnitude);
 
             
