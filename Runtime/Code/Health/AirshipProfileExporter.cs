@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Airship.DevConsole;
 using Mirror;
-using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
@@ -95,12 +94,10 @@ namespace Code.Health
             var logPath = Path.Combine(Application.persistentDataPath, $"Profile-{date}.raw");
             if (File.Exists(logPath)) File.WriteAllText(logPath, "");
 
-            ProfilerDriver.ClearAllFrames();
             Profiler.logFile = logPath;
             Profiler.enableBinaryLog = true;
             
             Debug.Log($"Starting profiler for {durationSecs} seconds.");
-            ProfilerDriver.enabled = true;
             Profiler.enabled = true;
             StopProfilingAfterDelay(logPath, durationSecs);
         }
