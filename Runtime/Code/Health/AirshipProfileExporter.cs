@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Airship.DevConsole;
+using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -38,6 +39,9 @@ namespace Code.Health
         public int DurationSecs;
     }
 
+    public struct ProfileCompleteMessage : NetworkMessage {
+        public string link;
+    } 
     
     public class AirshipProfileExporter : MonoBehaviour {
         public static string fileIOKey = "LGF5JOI.F0YF0ET-N6PMPS6-NWGVZEW-9984TYP"; // TODO throw out this key (it lives in git).
@@ -57,6 +61,9 @@ namespace Code.Health
             if (NetworkServer.active) {
                 NetworkServer.RegisterHandler<StartProfilingMessage>(OnStartProfilingMessage, false);
             }
+            if (NetworkClient.active) {
+                NetworkClient.RegisterHandler<ProfileCompleteMessage>(OnProfileCompleteMessage);
+            }
 
             DevConsole.AddCommand(Command.Create<AirshipProfileContext, int>(
                 "profile", 
@@ -71,8 +78,9 @@ namespace Code.Health
                     }
 
                     if (context == AirshipProfileContext.Client) {
-                        StartProfiling(d);
+                        StartProfiling(d, null);
                     } else {
+                        Debug.Log("Starting a server profile, view server console to monitor progress.");
                         NetworkClient.Send(new StartProfilingMessage { DurationSecs = d });
                     }
                 }));
@@ -80,10 +88,14 @@ namespace Code.Health
 
         public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartProfilingMessage msg) {
             // TODO Validate sender is dev
-            StartProfiling(msg.DurationSecs);
+            StartProfiling(msg.DurationSecs, sender);
         }
 
-        public void StartProfiling(int durationSecs) {
+        public void OnProfileCompleteMessage(ProfileCompleteMessage msg) {
+            GUIUtility.systemCopyBuffer = msg.link;
+        }
+
+        public void StartProfiling(int durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             // TODO check that sender is game dev
             if (Profiler.enabled) {
                 Debug.LogWarning("Profiler is already running.");
@@ -99,17 +111,17 @@ namespace Code.Health
             
             Debug.Log($"Starting profiler for {durationSecs} seconds.");
             Profiler.enabled = true;
-            StopProfilingAfterDelay(logPath, durationSecs);
+            StopProfilingAfterDelay(logPath, durationSecs, profileInitiator);
         }
 
-        private async void StopProfilingAfterDelay(string logPath, float durationSecs) {
+        private async void StopProfilingAfterDelay(string logPath, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             await Task.Delay((int)(durationSecs * 1000));
             Profiler.enabled = false;
             Debug.Log($"Profiling completed. Uploading file...");
-            Upload(logPath, durationSecs);
+            Upload(logPath, durationSecs, profileInitiator);
         }
 
-        private async void Upload(string logPath, float durationSecs) {
+        private async void Upload(string logPath, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             var uploadFilePath = logPath;
             
             var form = new WWWForm();
@@ -128,7 +140,10 @@ namespace Code.Health
             await UnityWebRequestProxyHelper.ApplyProxySettings(www).SendWebRequest();
             
             var resp = JsonUtility.FromJson<FileIOCreateResponse>(www.downloadHandler.text);
-            Debug.Log($"Profile uploaded: <a href=\"{resp.link}\">{resp.link}</a>");
+            if (profileInitiator != null && profileInitiator.isReady) {
+                profileInitiator.Send(new ProfileCompleteMessage { link = resp.link });
+            }
+            Debug.Log($"Profile uploaded: <a href=\"{resp.link}\">{resp.link}</a> (copied to your clipboard)");
         }
 
         private async void MonitorUploadProgress(UnityWebRequest req) {
