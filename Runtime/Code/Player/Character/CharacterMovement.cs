@@ -568,14 +568,18 @@ private void OnEnable() {
 #region MOVEMENT
 			// Find speed
 			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
+			var currentAcc = 0f;
 			if (tryingToSprint) {
 				currentSpeed = moveData.sprintSpeed;
+				currentAcc = moveData.sprintAccelerationForce;
 			} else {
 				currentSpeed = moveData.speed;
+				currentAcc = moveData.accelerationForce;
 			}
 
 			if (state == CharacterState.Crouching) {
 				currentSpeed *= moveData.crouchSpeedMultiplier;
+				currentAcc *= moveData.crouchSpeedMultiplier;
 			}
 
 			if (_flying) {
@@ -583,7 +587,11 @@ private void OnEnable() {
 			}
 
 			//Apply speed
-			characterMoveVelocity *= currentSpeed;
+			if(moveData.useAccelerationMovement){
+				characterMoveVelocity *= currentAcc;
+			}else{
+				characterMoveVelocity *= currentSpeed;
+			}
 
 #region SLOPE			
 			if (moveData.detectSlopes && detectedGround){
@@ -663,58 +671,61 @@ private void OnEnable() {
 				}*/
 			}
 			
+			//Instantly move at the desired speed
+			var moveMagnitude = characterMoveVelocity.magnitude;
+			var velMagnitude = flatVelocity.magnitude;
+			//var clampedIncrease = normalizedMoveDir * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
 
-			if(!moveData.useAccelerationMovement){
-				//Instantly move at the desired speed
-				var moveMagnitude = characterMoveVelocity.magnitude;
-				var velMagnitude = flatVelocity.magnitude;
-				var clampedIncrease = normalizedMoveDir * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
+			
+			//Don't move character in direction its already moveing
+			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+			//var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
+			var rawDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
+			var dirDot = Mathf.Clamp01(1-rawDot);
+			
+			if(useExtraLogging){
+				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			}
+	
+			if (inAir){
+				//clampedIncrease *= moveData.airSpeedMultiplier;
+			}
 
+			if(_flying || (velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1) && !isImpulsing)){
+				// if(clampedIncrease.x < 0){
+				// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+				// }else{
+				// 	clampedIncrease.x = Mathf.Min(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+				// }
+				// if(clampedIncrease.z < 0){
+				// 	clampedIncrease.z = Mathf.Max(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+				// }else{
+				// 	clampedIncrease.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+				// }
 				
-				//Don't move character in direction its already moveing
-				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-				//var rawDot = Vector3.Dot(flatVelocity/ currentSpeed, characterMoveVelocity/ currentSpeed);
-				var rawDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
-				var dirDot = Mathf.Clamp01(1-rawDot);
-				
-				if(useExtraLogging){
-					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
-				}
-		
-				if (inAir){
-					clampedIncrease *= moveData.airSpeedMultiplier;
-				}
-
-				if(_flying || (velMagnitude < Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1 && !isImpulsing)){
-					// if(clampedIncrease.x < 0){
-					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
-					// }else{
-					// 	clampedIncrease.x = Mathf.Min(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
-					// }
-					// if(clampedIncrease.z < 0){
-					// 	clampedIncrease.z = Mathf.Max(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
-					// }else{
-					// 	clampedIncrease.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
-					// }
+				if(moveData.useAccelerationMovement){
+					newVelocity += characterMoveVelocity;
+				}else{
 					newVelocity.x = characterMoveVelocity.x;
 					newVelocity.z = characterMoveVelocity.z;
-				}else{
-					//dirDot = dirDot - 1 / 2;
-					//clampedIncrease *= -Mathf.Min(0, dirDot-1);
-					newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) * 
-						(groundedState == CharacterState.Sprinting ? this.moveData.sprintAccelerationForce : moveData.accelerationForce);
 				}
-				//characterMoveVelocity = clampedIncrease;
-				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
-				// 	newVelocity.x = characterMoveVelocity.x;
-				// }
-				// if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
-				// 	newVelocity.y = characterMoveVelocity.y;
-				// }
-				// if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
-				// 	newVelocity.z = characterMoveVelocity.z;
-				// }
+			}else{
+				//dirDot = dirDot - 1 / 2;
+				//clampedIncrease *= -Mathf.Min(0, dirDot-1);
+				newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) * 
+					(groundedState == CharacterState.Sprinting ? this.moveData.sprintAccelerationForce : moveData.accelerationForce);
 			}
+			//characterMoveVelocity = clampedIncrease;
+			// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
+			// 	newVelocity.x = characterMoveVelocity.x;
+			// }
+			// if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
+			// 	newVelocity.y = characterMoveVelocity.y;
+			// }
+			// if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
+			// 	newVelocity.z = characterMoveVelocity.z;
+			// }
+
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
 #endregion
@@ -724,7 +735,7 @@ private void OnEnable() {
 		var didStepUp = false;
 		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)
 			&& prevGrounded && timeSinceBecameGrounded > .1){
-			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
+			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
 				var oldPos = transform.position;
@@ -752,9 +763,6 @@ private void OnEnable() {
 #endregion
 			
 #region APPLY FORCES
-			if(moveData.useAccelerationMovement){
-				newVelocity += characterMoveVelocity;
-			}
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
