@@ -559,8 +559,9 @@ private void OnEnable() {
 
 			//Apply the impulse to the velocity
 			newVelocity += impulseVelocity;
-			impulseVelocity = Vector3.zero;
 			airborneFromImpulse = !grounded || impulseVelocity.y > .01f;
+			print("gounded: " + grounded + " impulseVelocity: " + impulseVelocity);
+			impulseVelocity = Vector3.zero;
 		}
 #endregion
 
@@ -673,8 +674,6 @@ private void OnEnable() {
 			//Instantly move at the desired speed
 			var moveMagnitude = characterMoveVelocity.magnitude;
 			var velMagnitude = flatVelocity.magnitude;
-			//var clampedIncrease = normalizedMoveDir * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
-
 			
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
@@ -685,21 +684,10 @@ private void OnEnable() {
 			if(useExtraLogging){
 				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 			}
-	
-			if (inAir){
-				//clampedIncrease *= moveData.airSpeedMultiplier;
-			}
-			if(!isImpulsing && !airborneFromImpulse && _flying || (velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1))){
-				// if(clampedIncrease.x < 0){
-				// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
-				// }else{
-				// 	clampedIncrease.x = Mathf.Min(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
-				// }
-				// if(clampedIncrease.z < 0){
-				// 	clampedIncrease.z = Mathf.Max(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
-				// }else{
-				// 	clampedIncrease.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
-				// }
+			print("airborneFromImpulse: " + airborneFromImpulse);
+			if(_flying || //In Fly mode OR
+				(!isImpulsing && !airborneFromImpulse && //Not impulsing AND under our max speed
+						(velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1)))){
 				if(moveData.useAccelerationMovement){
 					newVelocity += characterMoveVelocity;
 				}else{
@@ -707,21 +695,10 @@ private void OnEnable() {
 					newVelocity.z = characterMoveVelocity.z;
 				}
 			}else{
-				//dirDot = dirDot - 1 / 2;
-				//clampedIncrease *= -Mathf.Min(0, dirDot-1);
+				//Moving faster than max speed or using acceleration mode
 				newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) * 
 					(groundedState == CharacterState.Sprinting ? this.moveData.sprintAccelerationForce : moveData.accelerationForce);
 			}
-			//characterMoveVelocity = clampedIncrease;
-			// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
-			// 	newVelocity.x = characterMoveVelocity.x;
-			// }
-			// if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
-			// 	newVelocity.y = characterMoveVelocity.y;
-			// }
-			// if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
-			// 	newVelocity.z = characterMoveVelocity.z;
-			// }
 
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
