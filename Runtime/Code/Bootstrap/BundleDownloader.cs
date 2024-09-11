@@ -97,7 +97,9 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					totalBytes += bytes;
 				}
 
-				loadingScreen.SetTotalDownloadSize(totalBytes);
+				if (loadingScreen) {
+					loadingScreen.SetTotalDownloadSize(totalBytes);
+				}
 				while (!this.downloadAccepted) {
 					await Awaitable.NextFrameAsync();
 				}
@@ -246,7 +248,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					if (File.Exists(codeZipPath)) {
 						File.Delete(codeZipPath);
 					}
-					loadingScreen.SetError("Failed to download Main Menu scripts.");
+
+					if (loadingScreen) {
+						loadingScreen.SetError("Failed to download Main Menu scripts.");
+					}
 					if (RunCore.IsServer()) {
 						var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
 						if (serverBootstrap.IsAgonesEnvironment()) {
@@ -310,7 +315,9 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				}
 			}
 
-			loadingScreen.SetProgress(String.Format("Downloading Content ({0:0.00}/{1:0.00} MB)", new object[] {downloadedMb, totalMb}), 0);
+			if (loadingScreen) {
+				loadingScreen.SetProgress(String.Format("Downloading Content ({0:0.00}/{1:0.00} MB)", new object[] {downloadedMb, totalMb}), 0);
+			}
 			yield return null;
 		}
 	}
