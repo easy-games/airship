@@ -59,7 +59,7 @@ public class SocketManager : Singleton<SocketManager> {
                     { "token", InternalHttpManager.authToken }
                 },
                 Transport = TransportProtocol.WebSocket,
-                Reconnection = true
+                Reconnection = false
             });
             Instance.socket.JsonSerializer = new NewtonsoftJsonSerializer();
             LuauCore.onResetInstance += LuauCore_OnResetInstance;
