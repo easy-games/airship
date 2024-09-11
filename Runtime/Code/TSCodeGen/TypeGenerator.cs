@@ -121,7 +121,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(VoxelBlocks),
             typeof(CharacterController),
             typeof(TrailRenderer),
-            typeof(EntityAnimationEventKey),
             typeof(WindowCore),
             typeof(CharacterMoveModifier),
             typeof(MaterialColorURP),
