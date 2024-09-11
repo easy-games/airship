@@ -611,5 +611,78 @@ namespace Luau {
 
             return null;
         }
+
+        public static bool ShouldReconcileMetadata(LuauMetadata scriptMetadata, LuauMetadata bindingMetadata) {
+            return false;
+        }
+
+        public static void ReconcileMetadata(LuauMetadata scriptMetadata, LuauMetadata bindingMetadata) {
+#if AIRSHIP_PLAYER
+            return;
+#endif
+            
+            bindingMetadata.name = scriptMetadata.name;
+
+            // Add missing properties or reconcile existing ones:
+            foreach (var property in scriptMetadata.properties) {
+                var serializedProperty = bindingMetadata.FindProperty<object>(property.name);
+                
+                if (serializedProperty == null)
+                {
+                    var element = property.Clone();
+                    bindingMetadata.properties.Add(element);
+                    serializedProperty = element;
+                } else {
+                    if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
+                        serializedProperty.type = property.type;
+                        serializedProperty.objectType = property.objectType;
+                        serializedProperty.serializedValue = property.serializedValue;
+                        serializedProperty.serializedObject = property.serializedObject;
+                        serializedProperty.modified = false;
+                    }
+                    
+                    if (property.items != null) {
+                        if (serializedProperty.items.type != property.items.type ||
+                            serializedProperty.items.objectType != property.items.objectType) {
+                            serializedProperty.items.type = property.items.type;
+                            serializedProperty.items.objectType = property.items.objectType;
+                            serializedProperty.items.serializedItems = new string[property.items.serializedItems.Length];
+                            serializedProperty.items.serializedItems =
+                                property.items.serializedItems.Select(a => a).ToArray();
+                            serializedProperty.items.objectRefs =
+                                property.items.objectRefs.Select(a => a).ToArray();
+                        }
+
+                        serializedProperty.items.fileRef = property.fileRef;
+                        serializedProperty.items.refPath = property.refPath;
+                    }
+                }
+                
+                
+                serializedProperty.fileRef = property.fileRef;
+                serializedProperty.refPath = property.refPath;
+            }
+            
+            // Remove properties that are no longer used:
+            List<LuauMetadataProperty> propertiesToRemove = null;
+            var seenProperties = new HashSet<string>();
+            foreach (var serializedProperty in bindingMetadata.properties) {
+                var property = scriptMetadata.FindProperty<object>(serializedProperty.name);
+                // If it doesn't exist on script or if it is a duplicate property
+                if (property == null || seenProperties.Contains(serializedProperty.name)) {
+                    if (propertiesToRemove == null) {
+                        propertiesToRemove = new List<LuauMetadataProperty>();
+                    }
+                    propertiesToRemove.Add(serializedProperty);
+                }
+                seenProperties.Add(serializedProperty.name);
+            }
+            
+            if (propertiesToRemove != null) {
+                foreach (var serializedProperty in propertiesToRemove) {
+                    bindingMetadata.properties.Remove(serializedProperty);
+                }
+            }
+        }
     }
 }
