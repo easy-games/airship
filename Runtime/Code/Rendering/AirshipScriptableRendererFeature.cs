@@ -9,13 +9,22 @@ using UnityEngine.Rendering.Universal;
 public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
     private IntPtr _thread;
     private bool _init;
-    
-    [SerializeField][CanBeNull]
-    private AirshipRenderPassScript script;
+
+    [CanBeNull][SerializeField] public LuauMetadata m_metadata = new();
+    [CanBeNull] public AirshipRenderPassScript script;
     private AirshipScriptableRenderPass _renderPass;
 
     private int InstanceId { get; set; }
 
+    internal void ReconcileMetadata() {
+        if (script != null) {
+            LuauMetadata.ReconcileMetadata(script.m_metadata, m_metadata);
+        }
+        else {
+            m_metadata = new LuauMetadata();
+        }
+    }
+    
     private bool CreateThread() {
         if (_thread != IntPtr.Zero) {
             return false;

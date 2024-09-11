@@ -28,4 +28,8 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
         
         CommandBufferPool.Release(cmd);
     }
+
+    public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData) {
+        base.OnCameraSetup(cmd, ref renderingData);
+    }
 }
