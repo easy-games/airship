@@ -355,8 +355,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 			Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
 			int i = 1;
 			foreach (var pair in NetworkClient.prefabs) {
-				Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
-				i++;
+				if (pair.Value != null) {
+					Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
+					i++;
+				}
 			}
 			#endif
 
