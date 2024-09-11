@@ -65,8 +65,16 @@ public class SocketManager : Singleton<SocketManager> {
             LuauCore.onResetInstance += LuauCore_OnResetInstance;
 
             Instance.socket.OnAny((eventName, response) => {
-                string data = response.GetValue().ToString();
+                string data;
+                if (response.Count > 0) {
+                    data = response.GetValue().ToString();
+                } else {
+                    data = "{}";
+                }
+                
+                // Uncomment to view all incoming socket events
                 // print("[" + eventName + "]: " + data);
+
                 if (Instance.isScriptListening) {
                     UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(eventName, data));
                 } else {
