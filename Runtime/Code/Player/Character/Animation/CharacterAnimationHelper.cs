@@ -19,8 +19,6 @@ namespace Code.Player.Character {
         public Animator animator;
         [SerializeField]
         public NetworkAnimator networkAnimator;
-
-        public EntityAnimationEvents events;
         public ParticleSystem sprintVfx;
         public ParticleSystem jumpPoofVfx;
         public ParticleSystem slideVfx;
@@ -31,6 +29,9 @@ namespace Code.Player.Character {
         public float directionalBlendLerpMod = 8f;
         [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
         public float idleRectionLength = 3;
+        
+		public event System.Action<object> OnAnimEvent;
+		public event System.Action<object> OnAnimObjEvent;
 
 
         private float nextIdleReactionLength = 0;
@@ -246,6 +247,14 @@ namespace Code.Player.Character {
 
         public float GetPlaybackSpeed(){
             return this.targetPlaybackSpeed;
+        }
+
+        public void TriggerEvent(AnimationTrigger data){
+            OnAnimObjEvent.Invoke(data);
+        }
+
+        public void TriggerEvent(string key){
+            OnAnimEvent.Invoke(key);
         }
     }
 }
