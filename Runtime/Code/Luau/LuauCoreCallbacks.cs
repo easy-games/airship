@@ -120,7 +120,7 @@ public partial class LuauCore : MonoBehaviour {
 #endif
 
         UnityEngine.Object logContext = _coreInstance;
-        if (gameObjectId >= 0) {
+        if (gameObjectId > 0) {
             var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
             if (obj is UnityEngine.Object unityObj) {
                 logContext = unityObj;
