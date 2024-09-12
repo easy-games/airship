@@ -11,6 +11,9 @@ using Debug = UnityEngine.Debug;
 public class LuauCompiler {
     public const string IconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
     public const string IconFail = "Packages/gg.easy.airship/Editor/LuauErrorIcon.png";
+    
+    // Any globals in Luau that have values that change need to be added to this list (e.g. "Time" because "Time.time" changes):
+    public static readonly string[] MutableGlobals = {"Time", "NetworkTime", "Physics", "Screen"};
 
     public struct CompilationResult {
         public IntPtr Data;
@@ -18,9 +21,14 @@ public class LuauCompiler {
         public bool Compiled;
     }
 
+    private static bool _mutableGlobalsSet = false;
+
     public static void RuntimeCompile(string path, string data, AirshipScript airshipScript, bool airshipBehaviour) {
         // Read Lua source
-        data += "\r\n" + "\r\n";
+        if (!_mutableGlobalsSet) {
+            _mutableGlobalsSet = true;
+            LuauPlugin.LuauSetMutableGlobals(MutableGlobals);
+        }
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(path); //Ok
         IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
@@ -63,5 +71,10 @@ public class LuauCompiler {
         }
         // var iconPath = binaryFile.m_compiled ? IconOk : IconFail;
         // var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnSubsystemRegistration() {
+        _mutableGlobalsSet = false;
     }
 }

@@ -30,6 +30,8 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
     public static long byteCounter = 0;
 
+    private static bool _mutableGlobalsSet = false;
+
     protected struct CompilationResult
     {
         public IntPtr Data;
@@ -54,6 +56,11 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
     protected (string fileName, CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, AirshipScript subAsset, string assetPath) {
         ClearStopOfCompilationCoroutine();
+
+        if (!_mutableGlobalsSet) {
+            _mutableGlobalsSet = true;
+            LuauPlugin.LuauSetMutableGlobals(LuauCompiler.MutableGlobals);
+        }
 
         if (!_isCompiling)
         {
@@ -203,5 +210,10 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         }
         
         previouslyCompiledWithErrors = numFailure > 0;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnSubsystemRegistration() {
+        _mutableGlobalsSet = false;
     }
 }
