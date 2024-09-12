@@ -13,10 +13,10 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
     public int PassId { get; }
     public string Name { get; }
 
-    private readonly bool _useLifecycleExecute;
-    private readonly bool _useLifecycleOnCameraSetup;
-    private readonly bool _useLifecycleOnCameraCleanup;
-    private readonly bool _useLifecycleConfigure;
+    private bool _useLifecycleExecute;
+    private bool _useLifecycleOnCameraSetup;
+    private bool _useLifecycleOnCameraCleanup;
+    private bool _useLifecycleConfigure;
 
     public AirshipScriptableRenderPass(IntPtr thread, int featureId, int passId, string name) {
         Thread = thread;
@@ -24,19 +24,23 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
         FeatureId = featureId;
         PassId = passId;
 
-        _useLifecycleExecute = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, featureId,
-            AirshipScriptableRenderPassMethod.AirshipExecute);
-        
-        _useLifecycleOnCameraSetup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, featureId,
-            AirshipScriptableRenderPassMethod.AirshipOnCameraSetup);
-        
-        _useLifecycleOnCameraCleanup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, featureId,
-            AirshipScriptableRenderPassMethod.AirshipOnCameraCleanup);
-        
-        _useLifecycleConfigure = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, featureId,
-            AirshipScriptableRenderPassMethod.AirshipConfigure);
+
 
         Debug.Log($"Created RenderPass, lifecycles {{ execute={_useLifecycleExecute}, configure={_useLifecycleConfigure}, cameraSetup={_useLifecycleOnCameraSetup}, cameraCleanup={_useLifecycleOnCameraCleanup} }}");
+    }
+
+    internal void EnableLifecycleMethods() {
+        _useLifecycleExecute = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, FeatureId,
+            AirshipScriptableRenderPassMethod.AirshipExecute);
+        
+        _useLifecycleOnCameraSetup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, FeatureId,
+            AirshipScriptableRenderPassMethod.AirshipOnCameraSetup);
+        
+        _useLifecycleOnCameraCleanup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, FeatureId,
+            AirshipScriptableRenderPassMethod.AirshipOnCameraCleanup);
+        
+        _useLifecycleConfigure = LuauPlugin.LuauHasRenderPassMethod(LuauContext.RenderPass, Thread, FeatureId,
+            AirshipScriptableRenderPassMethod.AirshipConfigure);
     }
 
     public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor) {
