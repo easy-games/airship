@@ -13,20 +13,43 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
     public int PassId { get; }
     public string Name { get; }
 
+    private readonly bool _useLifecycleExecute;
+    private readonly bool _useLifecycleOnCameraSetup;
+    private readonly bool _useLifecycleOnCameraCleanup;
+    private readonly bool _useLifecycleConfigure;
+
     public AirshipScriptableRenderPass(IntPtr thread, int featureId, int passId, string name) {
         Thread = thread;
         Name = name;
         FeatureId = featureId;
         PassId = passId;
+
+        _useLifecycleExecute = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+            AirshipScriptableRenderPassMethod.AirshipExecute);
+        
+        _useLifecycleOnCameraSetup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+            AirshipScriptableRenderPassMethod.AirshipOnCameraSetup);
+        
+        _useLifecycleOnCameraCleanup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+            AirshipScriptableRenderPassMethod.AirshipOnCameraCleanup);
+        
+        _useLifecycleConfigure = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+            AirshipScriptableRenderPassMethod.AirshipConfigure);
+
+        Debug.Log($"Created RenderPass, lifecycles {{ execute={_useLifecycleExecute}, configure={_useLifecycleConfigure}, cameraSetup={_useLifecycleOnCameraSetup}, cameraCleanup={_useLifecycleOnCameraCleanup} }}");
     }
 
     public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor) {
+        if (!_useLifecycleConfigure) return;
+        
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
         LuauPlugin.LuauRenderPassConfigure(LuauContext.Game, Thread, FeatureId, cmdId);
         ThreadDataManager.DeleteObjectReference(cmdId);
     }
 
     public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
+        if (!_useLifecycleExecute) return;
+        
         // TODO: Add renderingData struct support somehow?
         var cmd = CommandBufferPool.Get(name: Name);
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
@@ -39,12 +62,16 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
     }
 
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData) {
+        if (!_useLifecycleOnCameraSetup) return;
+        
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
         LuauPlugin.LuauRenderPassCameraSetup(LuauContext.Game, Thread, FeatureId, cmdId);
         ThreadDataManager.DeleteObjectReference(cmdId);
     }
 
     public override void OnCameraCleanup(CommandBuffer cmd) {
+        if (!_useLifecycleOnCameraCleanup) return;
+        
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
         LuauPlugin.LuauRenderPassCameraCleanup(LuauContext.Game, Thread, FeatureId, cmdId);
         ThreadDataManager.DeleteObjectReference(cmdId);

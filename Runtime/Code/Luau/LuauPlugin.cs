@@ -200,18 +200,18 @@ public static class LuauPlugin
 		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, 0));
 	}
 	
-// #if UNITY_IPHONE
-//     [DllImport("__Internal")]
-// #else
-// 	[DllImport("LuauPlugin")]
-// #endif
-// 	private static extern IntPtr HasRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipComponentUpdateType method, ref int result);
-// 	public static bool LuauHasRenderPassMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
-// 		ThreadSafetyCheck();
-// 		var result = 0;
-// 		ThrowIfNotNullPtr(HasRenderPassMethod(context, thread, unityInstanceId, componentId, updateType, ref result));
-// 		return result != 0;
-// 	}
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr HasRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipScriptableRenderPassMethod method, ref int result);
+	public static bool LuauHasRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipScriptableRenderPassMethod updateType) {
+		ThreadSafetyCheck();
+		var result = 0;
+		ThrowIfNotNullPtr(HasRenderPassMethod(context, thread, featureId, passId, updateType, ref result));
+		return result != 0;
+	}
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
