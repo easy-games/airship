@@ -2,6 +2,7 @@
 using Code.Luau;
 using Luau;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -21,12 +22,14 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
 
     public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
         var cmd = CommandBufferPool.Get(name: Name);
+        var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
         
         // Execute the render pass
-        var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
-        LuauPlugin.LuauExecuteRenderPass(LuauContext.Game, Thread, FeatureId, PassId, cmdId); 
+        LuauPlugin.LuauRenderPassExecute(LuauContext.Game, Thread, FeatureId, PassId, cmdId); 
+        
         
         CommandBufferPool.Release(cmd);
+        ThreadDataManager.DeleteObjectReference(cmdId);
     }
 
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData) {

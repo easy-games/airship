@@ -142,9 +142,6 @@ namespace Editor {
             serializedObject.Update();
             var feature = (AirshipScriptableRendererFeature)target;
             
-            // if (feature.script != null) {
-            //     GUI.enabled = false;
-            // }
             var content = new GUIContent {
                 text = "Script",
                 // tooltip = scriptPath.stringValue,

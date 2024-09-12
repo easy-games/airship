@@ -15,6 +15,7 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
     private AirshipScriptableRenderPass _renderPass;
 
     private int InstanceId { get; set; }
+    private int PassId { get; } = 32;
 
     internal void ReconcileMetadata() {
         if (script != null) {
@@ -44,7 +45,7 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
             _thread = thread;
             var featureObjectId = ThreadDataManager.AddObjectReference(_thread, this);
             InstanceId = featureObjectId;
-            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, featureObjectId, 0);
+            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, InstanceId);
             Debug.Log("[RenderFeature] Create cached thread for feature");
             return true;
         }
@@ -77,7 +78,7 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
             LuauPlugin.LuauCacheModuleOnThread(_thread, cleanPath);
             var featureObjectId = ThreadDataManager.AddObjectReference(_thread, this);
             InstanceId = featureObjectId;
-            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, featureObjectId, 0);
+            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, InstanceId);
             Debug.Log("[RenderFeature] Create non-cached thread for feature");
             return true;
         }
@@ -92,6 +93,8 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
         if (_init || LuauCore.CoreInstance == null) return;
         LuauCore.CoreInstance.CheckSetup();
         if (!CreateThread()) return;
+
+        _renderPass = new AirshipScriptableRenderPass(_thread, InstanceId, PassId, name);
         
         _init = true;
         Debug.Log($"Created RendererFeature with featureId {InstanceId}");

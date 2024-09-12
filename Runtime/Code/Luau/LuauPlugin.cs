@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using System.Threading;
+using Code.Luau;
 using Luau;
 using Debug = UnityEngine.Debug;
 
@@ -195,9 +196,8 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
 	private static extern IntPtr CreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId);
-	public static void LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId) {
-		//ThreadSafetyCheck();
-		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, passId));
+	public static void LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId) {
+		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, 0));
 	}
 	
 #if UNITY_IPHONE
@@ -205,10 +205,23 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern IntPtr ExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId);
-	public static void LuauExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId) {
-		//ThreadSafetyCheck();
-		ThrowIfNotNullPtr(ExecuteRenderPass(context, thread, featureId, passId, commandObjectId));
+	private static extern IntPtr InvokeRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipScriptableRenderPassMethod method, IntPtr argumentPtr, int argumentPtrSize);
+	public static void LuauRenderPassExecute(LuauContext context, IntPtr thread, int featureId, int commandObjectId) {
+		var handle = GCHandle.Alloc(new [] { commandObjectId }, GCHandleType.Pinned);
+		var ptr = handle.AddrOfPinnedObject();
+		
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipExecute, ptr, 1));
+		
+		handle.Free();
+	}
+
+	public static void LuauRenderPassCameraSetup(LuauContext context, IntPtr thread, int featureId, int commandBufferId) {
+		var handle = GCHandle.Alloc(new [] { commandBufferId }, GCHandleType.Pinned);
+		var ptr = handle.AddrOfPinnedObject();
+		
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipOnCameraSetup, ptr, 1));
+		
+		handle.Free();
 	}
 	
 #if UNITY_IPHONE
