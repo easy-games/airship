@@ -55,7 +55,7 @@ namespace Editor.Packages {
             var shouldUpdate = shouldUseLatestPackages || ignoreUserSetting;
             if (!shouldUpdate && !RequiresPackageDownloads(gameConfig)) return;
             if (AirshipPackagesWindow.buildingAssetBundles || CreateAssetBundles.buildingBundles) return;
-            
+
             EditorCoroutines.Execute(CheckAllPackages(gameConfig, useLocalVersion: !shouldUseLatestPackages, firstUpdateCheck));
             firstUpdateCheck = false;
         }
