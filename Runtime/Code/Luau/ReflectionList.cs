@@ -174,6 +174,7 @@ namespace Luau {
             // Visual Effects
             [typeof(VisualEffect)] = LuauContextAll,
             [typeof(Volume)] = LuauContextAll,
+            [typeof(GraphicRaycaster)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
