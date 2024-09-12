@@ -723,8 +723,8 @@ private void OnEnable() {
 				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " vel: " + newVelocity);
 				
 				if(drawDebugGizmos_STEPUP){
-					GizmoUtils.DrawSphere(oldPos, .03f, Color.red, 4, 4);
-					GizmoUtils.DrawSphere(transform.position, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(oldPos, .01f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(transform.position + newVelocity, .03f, Color.red, 4, 4);
 				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
