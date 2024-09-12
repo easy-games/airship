@@ -218,21 +218,21 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern IntPtr InvokeRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipScriptableRenderPassMethod method, IntPtr argumentPtr, int argumentPtrSize);
-	public static void LuauRenderPassExecute(LuauContext context, IntPtr thread, int featureId, int commandObjectId) {
-		var handle = GCHandle.Alloc(new [] { commandObjectId }, GCHandleType.Pinned);
+	private static extern IntPtr InvokeRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, int method, IntPtr argumentPtr, int argumentPtrSize);
+	public static void LuauRenderPassExecute(LuauContext context, IntPtr thread, int featureId, int commandObjectId, int renderDataId) {
+		var handle = GCHandle.Alloc(new [] { commandObjectId, renderDataId }, GCHandleType.Pinned);
 		var ptr = handle.AddrOfPinnedObject();
 		
-		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipExecute, ptr, 1));
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, (int)AirshipScriptableRenderPassMethod.AirshipExecute, ptr, 2));
 		
 		handle.Free();
 	}
 
-	public static void LuauRenderPassCameraSetup(LuauContext context, IntPtr thread, int featureId, int commandBufferId) {
-		var handle = GCHandle.Alloc(new [] { commandBufferId }, GCHandleType.Pinned);
+	public static void LuauRenderPassCameraSetup(LuauContext context, IntPtr thread, int featureId, int commandBufferId, int renderDataId) {
+		var handle = GCHandle.Alloc(new [] { commandBufferId, renderDataId }, GCHandleType.Pinned);
 		var ptr = handle.AddrOfPinnedObject();
 		
-		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipOnCameraSetup, ptr, 1));
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, (int)AirshipScriptableRenderPassMethod.AirshipOnCameraSetup, ptr, 2));
 		
 		handle.Free();
 	}
@@ -241,16 +241,16 @@ public static class LuauPlugin
 		var handle = GCHandle.Alloc(new [] { commandBufferId }, GCHandleType.Pinned);
 		var ptr = handle.AddrOfPinnedObject();
 		
-		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipOnCameraCleanup, ptr, 1));
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, (int)AirshipScriptableRenderPassMethod.AirshipOnCameraCleanup, ptr, 1));
 		
 		handle.Free();
 	}
 	
-	public static void LuauRenderPassConfigure(LuauContext context, IntPtr thread, int featureId, int commandBufferId) {
-		var handle = GCHandle.Alloc(new [] { commandBufferId }, GCHandleType.Pinned);
+	public static void LuauRenderPassConfigure(LuauContext context, IntPtr thread, int featureId, int commandBufferId, int texDescriptorId) {
+		var handle = GCHandle.Alloc(new [] { commandBufferId, texDescriptorId }, GCHandleType.Pinned);
 		var ptr = handle.AddrOfPinnedObject();
 		
-		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipConfigure, ptr, 1));
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, (int)AirshipScriptableRenderPassMethod.AirshipConfigure, ptr, 2));
 		
 		handle.Free();
 	}

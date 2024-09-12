@@ -43,7 +43,10 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
         if (!_useLifecycleConfigure) return;
         
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
-        LuauPlugin.LuauRenderPassConfigure(LuauContext.Game, Thread, FeatureId, cmdId);
+        var texDescId = ThreadDataManager.AddObjectReference(Thread, cameraTextureDescriptor);
+        LuauPlugin.LuauRenderPassConfigure(LuauContext.Game, Thread, FeatureId, cmdId, texDescId);
+        
+        ThreadDataManager.DeleteObjectReference(texDescId);
         ThreadDataManager.DeleteObjectReference(cmdId);
     }
 
@@ -54,10 +57,14 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
         var cmd = CommandBufferPool.Get(name: Name);
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
         
+        var renderingDataId = ThreadDataManager.AddObjectReference(Thread, renderingData);
+        
         // Execute the render pass
-        LuauPlugin.LuauRenderPassExecute(LuauContext.Game, Thread, FeatureId, cmdId); 
+        LuauPlugin.LuauRenderPassExecute(LuauContext.Game, Thread, FeatureId, cmdId, renderingDataId); 
         
         CommandBufferPool.Release(cmd);
+        
+        ThreadDataManager.DeleteObjectReference(renderingDataId);
         ThreadDataManager.DeleteObjectReference(cmdId);
     }
 
@@ -65,7 +72,11 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
         if (!_useLifecycleOnCameraSetup) return;
         
         var cmdId = ThreadDataManager.AddObjectReference(Thread, cmd);
-        LuauPlugin.LuauRenderPassCameraSetup(LuauContext.Game, Thread, FeatureId, cmdId);
+        var renderingDataId = ThreadDataManager.AddObjectReference(Thread, renderingData);
+        
+        LuauPlugin.LuauRenderPassCameraSetup(LuauContext.Game, Thread, FeatureId, cmdId, renderingDataId);
+        
+        ThreadDataManager.DeleteObjectReference(renderingDataId);
         ThreadDataManager.DeleteObjectReference(cmdId);
     }
 
