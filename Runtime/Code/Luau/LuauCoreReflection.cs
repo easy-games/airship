@@ -645,56 +645,67 @@ public partial class LuauCore : MonoBehaviour
     private static bool ParseTableParameter(IntPtr thread, PODTYPE podType, Type sourceParamType, int size, int idx, out object value) {
         switch (podType) {
             case PODTYPE.POD_DOUBLE: {
-                if (sourceParamType.IsAssignableFrom(doubleType)) {
-                    LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
-                    value = arr;
-                    return true;
-                }
-                if (sourceParamType.IsAssignableFrom(floatType)) {
-                    LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_FLOAT, size, idx, out var arr);
-                    value = arr;
-                    return true;
-                }
-                if (sourceParamType.IsAssignableFrom(byteType)) {
-                    LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
-                    value = arr;
-                    return true;
-                }
-                if (sourceParamType.BaseType == enumType) {
-                    if (Enum.GetUnderlyingType(sourceParamType) == byteType) {
-                        LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
-                        value = arr;
-                        return true;
-                    } else {
+                var elementType = sourceParamType.GetElementType();
+                if (elementType != null) {
+                    if (elementType.IsAssignableFrom(doubleType)) {
                         LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
                         value = arr;
                         return true;
                     }
-                }
-                if (sourceParamType.IsAssignableFrom(intType)) {
-                    LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
-                    value = arr;
-                    return true;
-                }
-                if (sourceParamType.IsAssignableFrom(uIntType)) {
-                    LuauPlugin.LuauCopyTableToArray<uint>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
-                    value = arr;
-                    return true;
-                }
-                if (sourceParamType.IsAssignableFrom(ushortType)) {
-                    LuauPlugin.LuauCopyTableToArray<ushort>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
-                    value = arr;
-                    return true;
-                }
-                if (sourceParamType.IsAssignableFrom(longType)) {
-                    LuauPlugin.LuauCopyTableToArray<long>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
-                    value = arr;
-                    return true;
-                }
-                if (sourceParamType.IsAssignableFrom(uLongType)) {
-                    LuauPlugin.LuauCopyTableToArray<ulong>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
-                    value = arr;
-                    return true;
+
+                    if (elementType.IsAssignableFrom(floatType)) {
+                        LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_FLOAT, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
+
+                    if (elementType.IsAssignableFrom(byteType)) {
+                        LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
+
+                    if (elementType.BaseType == enumType) {
+                        if (Enum.GetUnderlyingType(sourceParamType) == byteType) {
+                            LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                            value = arr;
+                            return true;
+                        } else {
+                            LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
+                            value = arr;
+                            return true;
+                        }
+                    }
+
+                    if (elementType.IsAssignableFrom(intType)) {
+                        LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
+
+                    if (elementType.IsAssignableFrom(uIntType)) {
+                        LuauPlugin.LuauCopyTableToArray<uint>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
+
+                    if (elementType.IsAssignableFrom(ushortType)) {
+                        LuauPlugin.LuauCopyTableToArray<ushort>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
+
+                    if (elementType.IsAssignableFrom(longType)) {
+                        LuauPlugin.LuauCopyTableToArray<long>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
+
+                    if (elementType.IsAssignableFrom(uLongType)) {
+                        LuauPlugin.LuauCopyTableToArray<ulong>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        value = arr;
+                        return true;
+                    }
                 }
 
                 break;
