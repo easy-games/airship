@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Code.Luau;
 using JetBrains.Annotations;
@@ -13,7 +14,7 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
     private IntPtr _thread;
     private bool _init;
 
-    [CanBeNull][SerializeField] public LuauMetadata m_metadata = new();
+    [SerializeField] public LuauMetadata m_metadata = new();
     [CanBeNull] public AirshipRenderPassScript script;
     private AirshipScriptableRenderPass _renderPass;
     private int FeatureId { get; set; } = -1;
@@ -42,6 +43,7 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
         var cleanPath = AirshipScriptUtils.CleanupFilePath(script.m_path);
         LuauCore.CoreInstance.CheckSetup();
 
+        
         var featureObjectId = ThreadDataManager.GetOrCreateObjectId(this);
         FeatureId = featureObjectId;
         
@@ -53,7 +55,8 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
             renderPass = new AirshipScriptableRenderPass(_thread, featureObjectId, 0, name);
             var renderPassInstanceId = ThreadDataManager.GetOrCreateObjectId(renderPass);
             
-            LuauPlugin.LuauCreateRenderPass(LuauContext.RenderPass, _thread, featureObjectId, renderPassObjectId: renderPassInstanceId);
+            var properties = m_metadata.PropertiesToMarshalDtoArray(_thread, LuauContext.RenderPass);
+            LuauPlugin.LuauCreateRenderPass(LuauContext.RenderPass, _thread, featureObjectId, renderPassObjectId: renderPassInstanceId, properties);
             return true;
         }
 
@@ -92,7 +95,8 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
             renderPass = new AirshipScriptableRenderPass(_thread, featureObjectId, 0, name);
             var renderPassInstanceId = ThreadDataManager.GetOrCreateObjectId(renderPass);
             
-            LuauPlugin.LuauCreateRenderPass(LuauContext.RenderPass, _thread, FeatureId, renderPassObjectId: renderPassInstanceId);
+            var properties = m_metadata.PropertiesToMarshalDtoArray(_thread, LuauContext.RenderPass);
+            LuauPlugin.LuauCreateRenderPass(LuauContext.RenderPass, _thread, FeatureId, renderPassObjectId: renderPassInstanceId, properties);
             return true;
         }
     }
@@ -111,14 +115,12 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
         _renderPass.EnableLifecycleMethods();
         
         _init = true;
-        Debug.Log($"Created RendererFeature with featureId {FeatureId}");
     }
     
     protected override void Dispose(bool disposing) {
         if (!disposing) return;
         if (_thread == IntPtr.Zero) return;
-        
-        Debug.Log("Disposing renderer");
+
         _init = false;
         
         if (FeatureId != -1) ThreadDataManager.DeleteObjectReference(FeatureId);

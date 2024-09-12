@@ -195,9 +195,9 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern IntPtr CreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int renderPassObjectId);
-	public static void LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId, int renderPassObjectId) {
-		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, 0, renderPassObjectId));
+	private static extern IntPtr CreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int renderPassObjectId, LuauMetadataPropertyMarshalDto[] props, int nProps);
+	public static void LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId, int renderPassObjectId, LuauMetadataPropertyMarshalDto[] props) {
+		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, 0, renderPassObjectId, props, props.Length));
 	}
 	
 #if UNITY_IPHONE

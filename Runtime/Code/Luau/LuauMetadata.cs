@@ -684,5 +684,42 @@ namespace Luau {
                 }
             }
         }
+
+        /// <summary>
+        /// Converts the properties to a LuauMetadataPropertyMarshalDto array representing the properties
+        /// </summary>
+        /// <param name="thread">The thread the properties will be written to</param>
+        /// <param name="context">The context the thread will be written to</param>
+        /// <returns></returns>
+        public LuauMetadataPropertyMarshalDto[] PropertiesToMarshalDtoArray(IntPtr thread, LuauContext context) {
+            var propertyList = new List<LuauMetadataProperty>(this.properties);
+            
+            // Ensure allowed objects
+            for (var i = this.properties.Count - 1; i >= 0; i--) {
+                var property = this.properties[i];
+        
+                switch (property.type) {
+                    case "object": {
+                        if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
+                            Debug.LogError($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
+                            propertyList.RemoveAt(i);
+                        }
+
+                        break;
+                    }
+                }
+            }
+            
+            var propertyDtos = new LuauMetadataPropertyMarshalDto[propertyList.Count];
+            var gcHandles = new List<GCHandle>();
+            var stringPtrs = new List<IntPtr>();
+            for (var i = 0; i < propertyList.Count; i++) {
+                var property = propertyList[i];
+                property.AsStructDto(thread, gcHandles, stringPtrs, out var dto);
+                propertyDtos[i] = dto;
+            }
+
+            return propertyDtos;
+        }
     }
 }
