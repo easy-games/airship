@@ -23,10 +23,6 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
         Name = name;
         FeatureId = featureId;
         PassId = passId;
-
-
-
-        Debug.Log($"Created RenderPass, lifecycles {{ execute={_useLifecycleExecute}, configure={_useLifecycleConfigure}, cameraSetup={_useLifecycleOnCameraSetup}, cameraCleanup={_useLifecycleOnCameraCleanup} }}");
     }
 
     internal void EnableLifecycleMethods() {
