@@ -24,16 +24,16 @@ public class AirshipScriptableRenderPass : ScriptableRenderPass {
         FeatureId = featureId;
         PassId = passId;
 
-        _useLifecycleExecute = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+        _useLifecycleExecute = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId,
             AirshipScriptableRenderPassMethod.AirshipExecute);
         
-        _useLifecycleOnCameraSetup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+        _useLifecycleOnCameraSetup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId,
             AirshipScriptableRenderPassMethod.AirshipOnCameraSetup);
         
-        _useLifecycleOnCameraCleanup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+        _useLifecycleOnCameraCleanup = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId,
             AirshipScriptableRenderPassMethod.AirshipOnCameraCleanup);
         
-        _useLifecycleConfigure = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId, passId,
+        _useLifecycleConfigure = LuauPlugin.LuauHasRenderPassMethod(LuauContext.Game, Thread, featureId,
             AirshipScriptableRenderPassMethod.AirshipConfigure);
 
         Debug.Log($"Created RenderPass, lifecycles {{ execute={_useLifecycleExecute}, configure={_useLifecycleConfigure}, cameraSetup={_useLifecycleOnCameraSetup}, cameraCleanup={_useLifecycleOnCameraCleanup} }}");

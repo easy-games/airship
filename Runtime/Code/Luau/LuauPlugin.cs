@@ -206,10 +206,10 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr HasRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipScriptableRenderPassMethod method, ref int result);
-	public static bool LuauHasRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipScriptableRenderPassMethod updateType) {
+	public static bool LuauHasRenderPassMethod(LuauContext context, IntPtr thread, int featureId, AirshipScriptableRenderPassMethod updateType) {
 		ThreadSafetyCheck();
 		var result = 0;
-		ThrowIfNotNullPtr(HasRenderPassMethod(context, thread, featureId, passId, updateType, ref result));
+		ThrowIfNotNullPtr(HasRenderPassMethod(context, thread, featureId, 0, updateType, ref result));
 		return result != 0;
 	}
 	
