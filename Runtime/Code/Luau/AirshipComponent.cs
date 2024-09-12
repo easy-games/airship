@@ -170,18 +170,6 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     private void OnValidate() {
-        // We have to delay the first validate call. This is because it happens before
-        // AirshipComponentPreprocessor is able to mark dependencies. Dependencies need
-        // to be marked or else we might startup without the proper lua script existing
-        // (and then clear properties and mark as no longer an AirshipBehaviour)
-        #if UNITY_EDITOR
-        if (!hasDelayedValidateCall) {
-            hasDelayedValidateCall = true;
-            EditorApplication.delayCall += Validate;
-            return;
-        }
-        #endif
-        
         Validate();
     }
 
@@ -678,7 +666,12 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         if (!this.scriptFile.m_compiled) {
-            throw new Exception($"Cannot start script at {this.scriptFile.assetPath} with compilation errors: {this.scriptFile.m_compilationError}"); // ????
+            if (string.IsNullOrEmpty(scriptFile.m_compilationError)) {
+                throw new Exception($"{scriptFile.assetPath} cannot be executed due to not being compiled");
+            }
+            else {
+                throw new Exception($"Cannot start script at {this.scriptFile.assetPath} with compilation errors: {this.scriptFile.m_compilationError}");
+            }
         }
 
         var cleanPath = CleanupFilePath(this.scriptFile.m_path);
@@ -722,7 +715,6 @@ public class AirshipComponent : MonoBehaviour {
         m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
 
         Marshal.FreeCoTaskMem(filenameStr);
-        //Marshal.FreeCoTaskMem(dataStr);
         gch.Free();
 
         if (m_thread == IntPtr.Zero) {
@@ -732,7 +724,6 @@ public class AirshipComponent : MonoBehaviour {
 
             return false;
         } else {
-            ThreadDataManager.AddObjectReference(m_thread, gameObject);
             LuauState.FromContext(context).AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
             m_canResume = true;
         }
@@ -873,10 +864,12 @@ public class AirshipComponent : MonoBehaviour {
                     InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
                     LuauPlugin.LuauRemoveAirshipComponent(context, m_thread, unityInstanceId, _scriptBindingId);
                 }
+                LuauState.FromContext(context).RemoveThread(m_thread);
                 LuauPlugin.LuauSetThreadDestroyed(m_thread);
+                LuauPlugin.LuauDestroyThread(m_thread);
+                LuauPlugin.LuauUnpinThread(m_thread);
             }
 
-            //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
             m_thread = IntPtr.Zero;
         }
 

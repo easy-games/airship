@@ -467,7 +467,6 @@ public static class LuauPlugin
 #endif
 	private static extern IntPtr DestroyThread(IntPtr thread);
 	public static void LuauDestroyThread(IntPtr thread) {
-		Debug.Log("Destroying thread " + thread);
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(DestroyThread(thread));
 	}
@@ -479,7 +478,6 @@ public static class LuauPlugin
 #endif
 	private static extern IntPtr PinThread(IntPtr thread);
 	public static void LuauPinThread(IntPtr thread) {
-		// Debug.Log("Unpinning thread " + thread);
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(PinThread(thread));
 	}
@@ -642,5 +640,30 @@ public static class LuauPlugin
 		var bytesPtr = handle.AddrOfPinnedObject();
 		PushCsError(bytesPtr, bytes.Length);
 		handle.Free();
+	}
+
+	public enum LuauGCState {
+		Off = 0,
+		Step = 1,
+		Full = 2,
+	}
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void SetGCState(int state);
+	public static void LuauSetGCState(LuauGCState state) {
+		SetGCState((int)state);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int CountGC(int context);
+	public static int LuauCountGC(LuauContext context) {
+		return CountGC((int)context);
 	}
 }

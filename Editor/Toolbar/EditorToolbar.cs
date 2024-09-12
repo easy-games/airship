@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Code.Http.Internal;
 using Editor.Auth;
+using Editor.Packages;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
@@ -152,6 +153,7 @@ namespace Airship.Editor
         public static Texture2D typescriptIconOff;
         public static Texture2D gamePublish;
         public static Texture2D gameSettings;
+        public static Texture2D coreUpdateTexture;
         
         private static Material profilePicRounded;
         private static Texture signedOutIcon;
@@ -167,6 +169,7 @@ namespace Airship.Editor
         private const string IconSettings = "Packages/gg.easy.airship/Editor/gear-outline.png";
         private const string IconPublish = "Packages/gg.easy.airship/Editor/upload-solid.png";
         private const string SignedOutIcon = "Packages/gg.easy.airship/Editor/GrayProfilePicture.png";
+        private const string coreUpdateIcon = "Packages/gg.easy.airship/Editor/CoreUpdate.png";
         
         static AirshipToolbar()
         {
@@ -283,6 +286,10 @@ namespace Airship.Editor
                 result.Apply();
                 signedInIcon = result;
             }
+
+            if (coreUpdateTexture == null) {
+                coreUpdateTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(coreUpdateIcon);
+            }
             
             GUIStyle buttonStyle = new GUIStyle(EditorStyles.toolbarButton);
 
@@ -316,7 +323,7 @@ namespace Airship.Editor
                 Deploy.PromptPublish();
             }
             GUI.enabled = true;
-            
+
             EditorGUIUtility.SetIconSize(new Vector2(16, 16));
             Texture profileIcon = signedInIcon;
             if (profileIcon == null || EditorAuthManager.signInStatus == EditorAuthSignInStatus.SIGNED_OUT) {
@@ -343,7 +350,26 @@ namespace Airship.Editor
                 menu.DropDown(profileButtonRect);
             }
             GUILayout.EndHorizontal();
-            
+
+            if (AirshipPackageAutoUpdater.isCoreUpdateAvailable) {
+                GUILayout.Space(20);
+                GUIStyle coreUpdateStyle = new GUIStyle(EditorStyles.toolbarButton);
+                EditorGUIUtility.SetIconSize(new Vector2(14, 14));
+                GUILayout.BeginHorizontal(EditorStyles.toolbar);
+                EditorGUIUtility.SetIconSize(new Vector2(14, 14));
+                if (
+                    GUILayout.Button(new GUIContent() {
+                        image = coreUpdateTexture,
+                        text = " Core Update Available!",
+                        tooltip = "A new version of Airship Core is available. It's recommended to update immediately.",
+                    }, coreUpdateStyle)
+                ) {
+                    AirshipPackageAutoUpdater.isCoreUpdateAvailable = false;
+                    EditorCoroutines.Execute(AirshipPackageAutoUpdater.CheckAllPackages(GameConfig.Load(), false, true));
+                }
+                GUILayout.EndHorizontal();
+            }
+
             GUILayout.FlexibleSpace();
             
             if (typescriptIcon == null)

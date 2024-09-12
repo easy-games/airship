@@ -20,12 +20,14 @@ using UnityEngine.UI;
 using System.Runtime.CompilerServices;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Mono.CSharp;
 using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
 using UnityEngine.Profiling;
+using Debug = UnityEngine.Debug;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
 #endif
@@ -206,6 +208,7 @@ namespace Airship.DevConsole
         [SerializeField] private GameObject tabClient;
         [SerializeField] private GameObject tabServer;
 
+        [Header("Other")] public GameObject bottom;
 
         /// <summary>
         ///     The colour effect to apply to the hover button when resizing the dev console window.
@@ -659,8 +662,15 @@ namespace Airship.DevConsole
         }
 
         public void OpenLogsFolder() {
-            print("Console log path: " + Application.consoleLogPath);
-            System.Diagnostics.Process.Start(Application.consoleLogPath);
+            var path = Application.consoleLogPath;
+            print("Opening console log path: " + path);
+            if (Application.platform is RuntimePlatform.WindowsPlayer or RuntimePlatform.WindowsEditor) {
+                Process.Start("explorer.exe", path);
+            } else if (Application.platform is RuntimePlatform.OSXPlayer or RuntimePlatform.OSXEditor) {
+                Process.Start("open", path);
+            } else {
+                Debug.LogError("Unable to open logs folder: unsupported platform.");
+            }
         }
 
         /// <summary>
@@ -1208,6 +1218,7 @@ namespace Airship.DevConsole
                     Log($"({time}) <color={WarningColour}><b>Warning:</b> </color>{logString}", context, prepend);
                     break;
                 default:
+                    Log($"({time}) <b>Log:</b> {logString}", context, prepend);
                     break;
             }
         }
@@ -1224,6 +1235,8 @@ namespace Airship.DevConsole
 
             this.tabClient.SetActive(context == LogContext.Client);
             this.tabServer.SetActive(context == LogContext.Server);
+
+            this.bottom.SetActive(context == LogContext.Client);
         }
 
         public void OnClientTabClick() {
@@ -3608,6 +3621,10 @@ namespace Airship.DevConsole
             RectTransform rect = obj.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
             logFields[context].Add(logField);
+
+            var logInstance = obj.GetComponent<LogFieldInstance>();
+            logInstance.redirectTarget = context == LogContext.Client ? clientLogScrollView : serverLogScrollView;
+
             obj.SetActive(true);
         }
 

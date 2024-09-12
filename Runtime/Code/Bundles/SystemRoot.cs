@@ -27,6 +27,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	[FormerlySerializedAs("cacheCodeZip")] public bool codeZipCacheEnabled = false;
 
+	public string currentCoreVersion = "";
+	public string currentCoreMaterialsVersion = "";
+
 	private void Awake() {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
@@ -117,6 +120,39 @@ public class SystemRoot : Singleton<SystemRoot> {
 				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
 			}
 		));
+
+		DevConsole.AddCommand(Command.Create<string>(
+			"gc",
+			"",
+			"Luau GC",
+			Parameter.Create("state", "Options: full, step, off"),
+			(val) => {
+				val = val.ToLower();
+				switch (val) {
+					case "full":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Full);
+						Debug.Log("Luau per-frame GC set to FULL");
+						break;
+					case "step":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Step);
+						Debug.Log("Luau per-frame GC set to STEP");
+						break;
+					case "off":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Off);
+						Debug.Log("Luau per-frame GC set to OFF");
+						break;
+					default:
+						Debug.Log($"Invalid Luau GC state: \"{val}\"");
+						break;
+				}
+			},
+			() => {
+				var gcKbGame = LuauPlugin.LuauCountGC(LuauContext.Game);
+				var gcKbProtected = LuauPlugin.LuauCountGC(LuauContext.Protected);
+				var gcKb = gcKbGame + gcKbProtected;
+				Debug.Log($"Luau GC: [Game: {gcKbGame} KB] [Protected: {gcKbProtected} KB] [Total: {gcKb} KB]");
+			}
+		));
 	}
 
 	private void Start() {
@@ -158,7 +194,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	/// <param name="useUnityAssetBundles"></param>
 	/// <param name="forceUnloadAll">If false, we attempt to keep packages that are already loaded in place (instead of unloading and re-loading them)</param>
 	/// <returns></returns>
-	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true, bool compileLuaOnClient = false) {
+	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true, bool compileLuaOnClient = false, Action<string> onLoadingScreenStep = null) {
 #if AIRSHIP_PLAYER
 		print("Packages to load:");
 		for (int i = 0; i < packages.Count; i++) {
@@ -174,6 +210,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// 		i++;
 		// 	}
 		// }
+		var sw = Stopwatch.StartNew();
 
 		// Find packages we should UNLOAD
 		List<string> unloadList = new();
@@ -279,6 +316,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Find packages to load
 		AssetBridge.useBundles = useUnityAssetBundles;
 		if (useUnityAssetBundles) {
+			onLoadingScreenStep?.Invoke("Loading Bundles");
+
 			// Resources
 			foreach (var package in packages) {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
@@ -316,16 +355,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 			Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
 			int i = 1;
 			foreach (var pair in NetworkClient.prefabs) {
-				Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
-				i++;
+				if (pair.Value != null) {
+					Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
+					i++;
+				}
 			}
 			#endif
 
 			yield return this.WaitAll(loadLists[0].ToArray());
 		} else {
-			var st = Stopwatch.StartNew();
 			if (NetworkClient.isConnected) {
 #if UNITY_EDITOR
+				var st = Stopwatch.StartNew();
 				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 				Array.Sort(guids);
 				foreach (var guid in guids) {
@@ -338,12 +379,21 @@ public class SystemRoot : Singleton<SystemRoot> {
 						}
 					}
 				}
+				Debug.Log($"[Airship]: Registered network prefabs in {st.ElapsedMilliseconds} ms.");
 #endif
 			}
 		}
 
-#if AIRSHIP_DEBUG
-		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
+		foreach (var package in packages) {
+			if (package.id.ToLower() == "@easy/core") {
+				this.currentCoreVersion = package.codeVersion;
+			} else if (package.id.ToLower() == "@easy/corematerials") {
+				this.currentCoreMaterialsVersion = package.codeVersion;
+			}
+		}
+
+#if AIRSHIP_PLAYER || true
+		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + " ms.");
 #endif
 	}
 

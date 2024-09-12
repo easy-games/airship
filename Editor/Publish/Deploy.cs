@@ -41,8 +41,13 @@ public class Deploy {
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new() {
 			AirshipPlatform.iOS,
+		#if UNITY_EDITOR_OSX // Run Mac build last if on OSX
+			AirshipPlatform.Windows,
+			AirshipPlatform.Mac,
+		#else
 			AirshipPlatform.Mac,
 			AirshipPlatform.Windows,
+		#endif
 		};
 		// List<AirshipPlatform> platforms = new();
 		// var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
@@ -330,6 +335,7 @@ public class Deploy {
 			foreach (var (_, uploadInfo) in uploadProgress) {
 				if (uploadInfo.failed) {
 					Debug.LogError("Publish failed due to upload error.");
+					EditorUtility.ClearProgressBar();
 					yield break;
 				}
 				if (uploadInfo.uploadProgressPercent < 1) {
@@ -346,7 +352,7 @@ public class Deploy {
 				EditorUtility.ClearProgressBar();
 				yield break;
 			}
-			yield return new WaitForEndOfFrame();
+			yield return null;
 		}
 		EditorUtility.ClearProgressBar();
 

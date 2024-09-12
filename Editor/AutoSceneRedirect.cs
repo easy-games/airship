@@ -6,23 +6,30 @@ using UnityEngine.SceneManagement;
 
 [InitializeOnLoad]
 public class AutoSceneRedirect {
-    private static string prevStartingScene;
-
     static AutoSceneRedirect() {
         EditorSceneManager.activeSceneChangedInEditMode += EditorSceneManager_ActiveSceneChangedInEditMode;
         EditorApplication.playModeStateChanged += PlayModeStateChanged;
     }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void OnReload() {
+        HandleRedirectBasedOnActiveScene(SceneManager.GetActiveScene());
+    }
+
     private static void EditorSceneManager_ActiveSceneChangedInEditMode(Scene oldScene, Scene newScene) {
+        HandleRedirectBasedOnActiveScene(newScene);
+    }
+
+    private static void HandleRedirectBasedOnActiveScene(Scene scene) {
         var gameConfig = GameConfig.Load();
         if (gameConfig == null) return;
 
-        var foundScene = Array.Find(gameConfig.gameScenes, (s) => {
+        bool sceneExistsInGameConfig = Array.Find(gameConfig.gameScenes, (s) => {
             string pathToScene = AssetDatabase.GetAssetPath(s);
-            return pathToScene == newScene.path;
+            return pathToScene == scene.path;
         });
 
-        if (foundScene || (gameConfig.startingScene != null && gameConfig.startingScene.name == newScene.name)) {
+        if (sceneExistsInGameConfig || (gameConfig.startingScene != null && gameConfig.startingScene.name == scene.name)) {
             EditorSceneManager.playModeStartScene =
                 AssetDatabase.LoadAssetAtPath<SceneAsset>("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity");
         } else {

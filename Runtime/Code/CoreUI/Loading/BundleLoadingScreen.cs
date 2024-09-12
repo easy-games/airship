@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 public abstract class BundleLoadingScreen : MonoBehaviour {
     [NonSerialized] public bool showContinueButton = false;

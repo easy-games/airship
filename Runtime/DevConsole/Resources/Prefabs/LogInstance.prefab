@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3170466140887093182}
   - component: {fileID: 5901443441669391894}
   - component: {fileID: 6945350098497969374}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -59,7 +59,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 0
+  m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -86,7 +86,7 @@ MonoBehaviour:
   m_fontColorGradientPreset: {fileID: 0}
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
-  m_StyleSheet: {fileID: 11400000, guid: d2700f30260a14d38b6a5d3f5692bf57, type: 2}
+  m_StyleSheet: {fileID: 0}
   m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
@@ -150,7 +150,8 @@ GameObject:
   - component: {fileID: 97973453866908033}
   - component: {fileID: 2460993803629676301}
   - component: {fileID: 6684652534931944950}
-  m_Layer: 0
+  - component: {fileID: 4195818942442354331}
+  m_Layer: 5
   m_Name: LogInstance
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -306,7 +307,7 @@ MonoBehaviour:
   m_CaretWidth: 1
   m_ReadOnly: 1
   m_RichText: 1
-  m_GlobalFontAsset: {fileID: 11400000, guid: 39fc97816df3344858585cf3cbaec56e, type: 2}
+  m_GlobalFontAsset: {fileID: 11400000, guid: d04b2314d743e4cc5829d840e66cf5bb, type: 2}
   m_OnFocusSelectAll: 0
   m_ResetOnDeActivation: 1
   m_KeepTextSelectionVisible: 0
@@ -342,6 +343,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!114 &4195818942442354331
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 922122731342770246}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da4a9c662d9443bdb1d6cc66c6179573, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  redirectTarget: {fileID: 0}
 --- !u!1 &7307277244357059459
 GameObject:
   m_ObjectHideFlags: 0
@@ -352,7 +366,7 @@ GameObject:
   m_Component:
   - component: {fileID: 9153345965355322742}
   - component: {fileID: 2657027292543125139}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Text Area
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using Code;
 using Code.Bootstrap;
@@ -57,6 +58,12 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     public void Retry() {
+        // Delete existing @Easy folder. This will force redownload of core.
+        var easyDir = Path.Combine(AssetBridge.PackagesPath, "@Easy");
+        if (Directory.Exists(easyDir)) {
+            Directory.Delete(easyDir, true);
+        }
+
         StartCoroutine(this.StartLoadingCoroutine(0));
     }
 
@@ -100,6 +107,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
             // Check if app update is required
             if (isUsingBundles) {
+                var versionCheckSw = Stopwatch.StartNew();
                 if (
                     this.cachedCoreCodeVersion != corePackageCodeVersion ||
                     this.cachedCoreAssetVersion != corePackageAssetVersion
@@ -112,6 +120,7 @@ public class MainMenuSceneManager : MonoBehaviour {
                 }
                 this.cachedCoreAssetVersion = corePackageAssetVersion;
                 this.cachedCoreCodeVersion = corePackageCodeVersion;
+                Debug.Log("Checked latest airship version in " + versionCheckSw.ElapsedMilliseconds + " ms.");
             }
 
             Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
@@ -119,7 +128,7 @@ public class MainMenuSceneManager : MonoBehaviour {
             packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
             packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
-                StartCoroutine(this.StartPackageDownload(packages));
+                await this.StartPackageDownload(packages);
             } else {
                 StartCoroutine(this.StartPackageLoad(packages, isUsingBundles));
             }
@@ -147,10 +156,11 @@ public class MainMenuSceneManager : MonoBehaviour {
         return AirshipConst.playerVersion < res.MinPlayerVersion;
     }
 
-    private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
+    private async Task StartPackageDownload(List<AirshipPackage> packages) {
         BundleDownloader.Instance.downloadAccepted = false;
         var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
-        yield return BundleDownloader.Instance.DownloadBundles(
+
+        var downloadSuccess = await BundleDownloader.Instance.DownloadBundles(
             AirshipPlatformUrl.gameCdn,
             packages.ToArray(),
             null,
@@ -165,6 +175,9 @@ public class MainMenuSceneManager : MonoBehaviour {
                 StartCoroutine(StartPackageLoad(packages, true));
             }
         );
+        if (!downloadSuccess) {
+            this.loadingScreen.SetError("<b>Failed to download content.</b> Would you like to try again?");
+        }
     }
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {

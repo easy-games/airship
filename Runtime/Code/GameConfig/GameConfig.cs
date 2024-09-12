@@ -55,6 +55,9 @@ public class GameConfig : ScriptableObject
     public static GameConfig Load() {
 #if UNITY_EDITOR
         var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+        // I believe AssetDatabase might not have loaded GameConfig sometimes (like during a publish)
+        // TODO if file doesn't exist we could generate GameConfig here
+        if (gameConfig == null) return null;
 
 #if !AIRSHIP_PLAYER && !AIRSHIP_INTERNAL
         if (gameConfig.packages.Find((p) => p.id == "@Easy/Core") == null) {

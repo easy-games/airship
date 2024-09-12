@@ -861,14 +861,7 @@ public partial class LuauCore : MonoBehaviour {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
                 var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
-
-                //Remove just this filename off the end
-                var bits = new List<string>(fname.Split("/"));
-                bits.RemoveAt(bits.Count - 1);
-                var bindingPath = Path.Combine(bits.ToArray());
-
-                // fileNameStr = bindingPath + "/" + fileNameStr;
-                fileNameStr = Path.GetRelativePath(bindingPath, fileNameStr);
+                fileNameStr = fname;
             } else if (fileNameStr.StartsWith("./")) {
                 //Get a stripped name
                 var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
@@ -1241,9 +1234,9 @@ public partial class LuauCore : MonoBehaviour {
         try {
             returnValue = finalMethod.Invoke(invokeObj, parsedData);
         } catch (TargetInvocationException e) {
-            return LuauError(thread, "Error: Exception thrown in " + type.Name + " " + finalMethod.Name + " " + e.InnerException.Message);
+            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException.Message);
         } catch (Exception e) {
-            return LuauError(thread, "Error: Exception thrown in " + type.Name + " " + finalMethod.Name + " " + e.Message);
+            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.Message);
         }
 
         WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData);

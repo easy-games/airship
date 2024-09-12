@@ -14,6 +14,7 @@ namespace Editor.Packages {
     public class AirshipPackageAutoUpdater : AssetPostprocessor {
         private static double lastChecked = -40;
         private const double checkInterval = 30;
+        public static bool isCoreUpdateAvailable = false;
         
         static AirshipPackageAutoUpdater() {
 
@@ -56,20 +57,18 @@ namespace Editor.Packages {
             EditorCoroutines.Execute(CheckAllPackages(gameConfig, useLocalVersion: !shouldUseLatestPackages));
         }
 
-        public static IEnumerator CheckAllPackages(GameConfig gameConfig, bool useLocalVersion = false) {
+        public static IEnumerator CheckAllPackages(GameConfig gameConfig, bool useLocalVersion = false, bool immediatelyUpdateCore = false) {
             try {
                 AssetDatabase.StartAssetEditing();
                 foreach (var package in gameConfig.packages) {
-                    yield return CheckPackage(package, useLocalVersion);
+                    yield return CheckPackage(package, useLocalVersion, immediatelyUpdateCore);
                 }
             } finally {
                 AssetDatabase.StopAssetEditing();
             }
         }
 
-
-
-        public static IEnumerator CheckPackage(AirshipPackageDocument package, bool useLocalVersion = false) {
+        public static IEnumerator CheckPackage(AirshipPackageDocument package, bool useLocalVersion = false, bool immediatelyUpdateCore = false) {
             if (package.forceLatestVersion && !package.localSource) {
                 var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{package.id}";
                 var request = UnityWebRequest.Get(url);
@@ -99,11 +98,19 @@ namespace Editor.Packages {
                 var targetCodeVersion = useLocalVersion ? package.codeVersion : res.package.codeVersionNumber.ToString();
                 var targetAssetVersion =
                     useLocalVersion ? package.assetVersion : res.package.assetVersionNumber.ToString();
-                
-                if (res.package.codeVersionNumber.ToString() != package.codeVersion || !package.IsDownloaded()) {
+
+                if (!package.IsDownloaded()) {
                     Debug.Log($"[Airship]: Updating default package {package.id} from v{package.codeVersion} to v{res.package.codeVersionNumber}");
                     yield return AirshipPackagesWindow.DownloadPackage(package.id, targetCodeVersion, targetAssetVersion);
                     yield break;
+                }
+                if (res.package.codeVersionNumber.ToString() != package.codeVersion) {
+                    if (!immediatelyUpdateCore && (package.id.ToLower() == "@easy/core" || package.id.ToLower() == "@easy/corematerials")) {
+                        isCoreUpdateAvailable = true;
+                    } else {
+                        yield return AirshipPackagesWindow.DownloadPackage(package.id, targetCodeVersion, targetAssetVersion);
+                        yield break;
+                    }
                 }
             }
 

@@ -19,6 +19,12 @@ public class AirshipNetworkManager : NetworkManager {
         this.clientBundleLoader.SetupServer();
     }
 
+    public void LogDedicated(string msg) {
+#if UNITY_SERVER
+        Debug.Log(msg);
+#endif
+    }
+
     public override void OnStartClient() {
         this.net.OnStartClient();
         this.clientBundleLoader.SetupClient();
@@ -27,11 +33,22 @@ public class AirshipNetworkManager : NetworkManager {
     public override void OnClientConnect() {
         base.OnClientConnect();
         this.serverConsole.OnClientConnectedToServer();
+
+        var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
+        if (clientNetworkConnector != null) {
+            clientNetworkConnector.reconnectAttempt = 0;
+            clientNetworkConnector.NetworkClient_OnConnected();
+        }
     }
 
     public override void OnStopClient() {
         base.OnStopClient();
         this.clientBundleLoader.CleanupClient();
+
+        var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
+        if (clientNetworkConnector != null) {
+            clientNetworkConnector.NetworkClient_OnDisconnected();
+        }
     }
 
     public override void OnStopServer() {

@@ -516,7 +516,13 @@ namespace Mirror
                 if (!duplicate)
                 {
                     sceneId = randomId;
-                    //Debug.Log($"{name} in scene {gameObject.scene.name} sceneId assigned to:{sceneId:X}");
+                    
+                    // AIRSHIP
+                    // Seems like when scene is opened without other changes validate marking as dirty comes too
+                    // soon... so delay mark scene dirty.
+                    EditorApplication.delayCall += () => EditorSceneManager.MarkSceneDirty(gameObject.scene);
+                    // END AIRSHIP
+                    // Debug.Log($"{name} in scene {gameObject.scene.name} sceneId assigned to:{sceneId:X}");
                 }
             }
 

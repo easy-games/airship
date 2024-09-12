@@ -1,14 +1,21 @@
 using UnityEngine;
 
+[LuauAPI(LuauContext.Protected)]
 public class ServerTransferData
 {
     public string address;
     public ushort port;
+    public string gameId;
+    public string loadingImageUrl;
 }
 
-[LuauAPI]
+[LuauAPI(LuauContext.Protected)]
 public static class CrossSceneState
 {
+    /// <summary>
+    /// Individual properties are updated within this by TS.
+    /// Do not reassign the object reference to something new.
+    /// </summary>
     public static ServerTransferData ServerTransferData;
     public static bool UseLocalBundles = false;
     public static string kickMessage = "";
