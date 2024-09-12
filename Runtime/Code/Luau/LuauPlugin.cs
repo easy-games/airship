@@ -200,6 +200,19 @@ public static class LuauPlugin
 		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, 0));
 	}
 	
+// #if UNITY_IPHONE
+//     [DllImport("__Internal")]
+// #else
+// 	[DllImport("LuauPlugin")]
+// #endif
+// 	private static extern IntPtr HasRenderPassMethod(LuauContext context, IntPtr thread, int featureId, int passId, AirshipComponentUpdateType method, ref int result);
+// 	public static bool LuauHasRenderPassMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
+// 		ThreadSafetyCheck();
+// 		var result = 0;
+// 		ThrowIfNotNullPtr(HasRenderPassMethod(context, thread, unityInstanceId, componentId, updateType, ref result));
+// 		return result != 0;
+// 	}
+	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
@@ -220,6 +233,24 @@ public static class LuauPlugin
 		var ptr = handle.AddrOfPinnedObject();
 		
 		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipOnCameraSetup, ptr, 1));
+		
+		handle.Free();
+	}
+	
+	public static void LuauRenderPassCameraCleanup(LuauContext context, IntPtr thread, int featureId, int commandBufferId) {
+		var handle = GCHandle.Alloc(new [] { commandBufferId }, GCHandleType.Pinned);
+		var ptr = handle.AddrOfPinnedObject();
+		
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipOnCameraCleanup, ptr, 1));
+		
+		handle.Free();
+	}
+	
+	public static void LuauRenderPassConfigure(LuauContext context, IntPtr thread, int featureId, int commandBufferId) {
+		var handle = GCHandle.Alloc(new [] { commandBufferId }, GCHandleType.Pinned);
+		var ptr = handle.AddrOfPinnedObject();
+		
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, AirshipScriptableRenderPassMethod.AirshipConfigure, ptr, 1));
 		
 		handle.Free();
 	}
