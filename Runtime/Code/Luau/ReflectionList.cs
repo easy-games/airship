@@ -25,7 +25,7 @@ namespace Luau {
     public static class ReflectionList {
         private const bool IsReflectionListEnabled = true;
         
-        private const LuauContext LuauContextAll = LuauContext.Game | LuauContext.Protected;
+        private const LuauContext LuauContextAll = LuauContext.Game | LuauContext.Protected | LuauContext.RenderPass;
 
         // Add types here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
@@ -174,6 +174,9 @@ namespace Luau {
             // Visual Effects
             [typeof(VisualEffect)] = LuauContextAll,
             [typeof(Volume)] = LuauContextAll,
+            
+            // RenderPass
+            [typeof(CommandBuffer)] = LuauContext.RenderPass,
         };
         
         // Add types (as strings) here that should be allowed.

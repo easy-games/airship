@@ -6,4 +6,9 @@ public enum LuauContext {
     
     /// Protected context always exists and runs the duration of the main application.
     Protected = 1 << 1,
+    
+    /// <summary>
+    /// Rendering-based context per-game. 
+    /// </summary>
+    RenderPass = 1 << 2,
 }

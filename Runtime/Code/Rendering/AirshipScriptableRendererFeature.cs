@@ -40,12 +40,12 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
         LuauCore.CoreInstance.CheckSetup();
 
         // Try fetching the cached module
-        var thread = LuauPlugin.LuauCreateThreadWithCachedModule(LuauContext.Game, cleanPath, 0);
+        var thread = LuauPlugin.LuauCreateThreadWithCachedModule(LuauContext.RenderPass, cleanPath, 0);
         if (thread != IntPtr.Zero) {
             _thread = thread;
             var featureObjectId = ThreadDataManager.AddObjectReference(_thread, this);
             InstanceId = featureObjectId;
-            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, InstanceId);
+            LuauPlugin.LuauCreateRenderPass(LuauContext.RenderPass, _thread, InstanceId);
             Debug.Log("[RenderFeature] Create cached thread for feature");
             return true;
         }
@@ -53,7 +53,7 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
         // Else we'll try creating the thread
         var filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath);
         var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned);
-        _thread = LuauPlugin.LuauCreateThread(LuauContext.Game, gch.AddrOfPinnedObject(), script.m_bytes.Length,
+        _thread = LuauPlugin.LuauCreateThread(LuauContext.RenderPass, gch.AddrOfPinnedObject(), script.m_bytes.Length,
             filenameStr, cleanPath.Length, 0, true);
         
         Marshal.FreeCoTaskMem(filenameStr);
@@ -78,7 +78,7 @@ public class AirshipScriptableRendererFeature : ScriptableRendererFeature {
             LuauPlugin.LuauCacheModuleOnThread(_thread, cleanPath);
             var featureObjectId = ThreadDataManager.AddObjectReference(_thread, this);
             InstanceId = featureObjectId;
-            LuauPlugin.LuauCreateRenderPass(LuauContext.Game, _thread, InstanceId);
+            LuauPlugin.LuauCreateRenderPass(LuauContext.RenderPass, _thread, InstanceId);
             Debug.Log("[RenderFeature] Create non-cached thread for feature");
             return true;
         }
