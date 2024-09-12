@@ -715,7 +715,6 @@ public class AirshipComponent : MonoBehaviour {
         m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
 
         Marshal.FreeCoTaskMem(filenameStr);
-        //Marshal.FreeCoTaskMem(dataStr);
         gch.Free();
 
         if (m_thread == IntPtr.Zero) {
@@ -725,7 +724,6 @@ public class AirshipComponent : MonoBehaviour {
 
             return false;
         } else {
-            ThreadDataManager.AddObjectReference(m_thread, gameObject);
             LuauState.FromContext(context).AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
             m_canResume = true;
         }
@@ -866,10 +864,12 @@ public class AirshipComponent : MonoBehaviour {
                     InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
                     LuauPlugin.LuauRemoveAirshipComponent(context, m_thread, unityInstanceId, _scriptBindingId);
                 }
+                LuauState.FromContext(context).RemoveThread(m_thread);
                 LuauPlugin.LuauSetThreadDestroyed(m_thread);
+                LuauPlugin.LuauDestroyThread(m_thread);
+                LuauPlugin.LuauUnpinThread(m_thread);
             }
 
-            //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
             m_thread = IntPtr.Zero;
         }
 

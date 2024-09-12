@@ -466,7 +466,6 @@ public static class LuauPlugin
 #endif
 	private static extern IntPtr DestroyThread(IntPtr thread);
 	public static void LuauDestroyThread(IntPtr thread) {
-		Debug.Log("Destroying thread " + thread);
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(DestroyThread(thread));
 	}
@@ -478,7 +477,6 @@ public static class LuauPlugin
 #endif
 	private static extern IntPtr PinThread(IntPtr thread);
 	public static void LuauPinThread(IntPtr thread) {
-		// Debug.Log("Unpinning thread " + thread);
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(PinThread(thread));
 	}
