@@ -99,8 +99,8 @@ namespace Editor.AirshipPropertyEditor {
             int newValue;
             if (modifiers.TryGetValue("Range", out var rangeProps))
             {
-                var min = (float) rangeProps[0].value;
-                var max = (float) rangeProps[0].value;
+                var min = Convert.ToSingle(rangeProps[0].value);
+                var max = Convert.ToSingle(rangeProps[1].value);
                 newValue = EditorGUILayout.IntSlider(guiContent, currentValue, (int) min, (int) max);
             }
             else

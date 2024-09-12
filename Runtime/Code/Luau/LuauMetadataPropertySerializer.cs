@@ -135,6 +135,8 @@ namespace Luau {
                     return AirshipComponentPropertyType.AirshipString;
                 case "bool" or "boolean":
                     return AirshipComponentPropertyType.AirshipBoolean;
+                case "integer":
+                    return AirshipComponentPropertyType.AirshipInt;
                 case "number": {
                     if (useIntForNumber) {
                         return AirshipComponentPropertyType.AirshipInt;

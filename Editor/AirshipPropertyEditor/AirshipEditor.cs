@@ -148,6 +148,10 @@ namespace Editor.AirshipPropertyEditor {
 
                     break;
                 }
+                case "integer": {
+                    AirshipPropertyGUI.DrawIntProperty(guiContent, type, decoratorDictionary, value, modified);
+                    break;
+                }
                 case "string":
                     AirshipPropertyGUI.DrawStringProperty(guiContent, type, decoratorDictionary, value, modified);
                     break;

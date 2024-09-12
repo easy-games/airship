@@ -89,7 +89,7 @@ namespace Editor {
         }
 
         protected override void CheckDefaults(AirshipScriptableRendererFeature binding) {
-            var metadata = serializedObject.FindProperty("metadata");
+            var metadata = serializedObject.FindProperty("m_metadata");
         
             var metadataProperties = metadata.FindPropertyRelative("properties");
             var originalMetadataProperties = binding.script.m_metadata.properties;
