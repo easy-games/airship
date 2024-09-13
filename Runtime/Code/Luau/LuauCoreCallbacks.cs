@@ -276,7 +276,7 @@ public partial class LuauCore : MonoBehaviour {
 
     //When a lua object wants to set a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
-    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize) {
+    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
         CurrentContext = context;
         
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
@@ -362,6 +362,19 @@ public partial class LuauCore : MonoBehaviour {
                 if (retValue >= 0) {
                     return retValue;
                 }
+            }
+
+            if (isTable != 0 && t.IsArray) {
+                var success = ParseTableParameter(thread, type, t, propertyDataSize, -1, out var value);
+                if (!success) {
+                    return LuauError(thread, $"Value of type {type} not valid table type");
+                }
+                if (field != null) {
+                    field.SetValue(objectReference, value);
+                } else {
+                    property.SetValue(objectReference, value);
+                }
+                return 0;
             }
 
             switch (type) {
