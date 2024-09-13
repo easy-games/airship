@@ -203,7 +203,6 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump(){
-            Debug.Log("TRIGGERING JUMP");
             SetTrigger("Jump");
         }
 
