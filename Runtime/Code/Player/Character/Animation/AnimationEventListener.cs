@@ -1,36 +1,33 @@
 using System.Collections.Generic;
-using Code.Player.Character;
 using UnityEngine;
 
-public class CharacterAnimationEvents : MonoBehaviour {
-    public CharacterAnimationHelper anim;
+public class AnimationEventListener : MonoBehaviour {
     
+    [Tooltip("If identical events come in within this threshold only 1 will fire. In seconds.")]
     public float minRepeatMessageTime = .075f;
+        
+    public event System.Action<object> OnAnimEvent;
+    public event System.Action<object> OnAnimObjEvent;
+    
     private Dictionary<string, float> lastMessageTime = new Dictionary<string, float>();
     
     /// <summary>
     /// Animation events triggering function to be passed into TS
     /// </summary>
     public void TriggerEventObj(Object obj){
-        if(!anim){
-            return;
-        }
         //print("Animation object trigger");
-        var data = (AnimationTrigger)obj;
+        var data = (AnimationEventData)obj;
         if(data){
             //print("found data object: " + data.key + ", " + data.stringValue + ", " + data.intValue + ", " + data.floatValue);
             if(CanMessage(data.key))
-                anim.TriggerEvent(data);
+                OnAnimObjEvent?.Invoke(data);
         }
     }
 
     public void TriggerEvent(string key){
-        if(!anim){
-            return;
-        }
         //print("Animation key trigger: " + key);
         if(CanMessage(key))
-            anim.TriggerEvent(key);
+            OnAnimEvent?.Invoke(key);
     }
 
     private bool CanMessage(string key){

@@ -252,6 +252,8 @@ public class TypeGenerator : MonoBehaviour
 
             // Airship
             typeof(CharacterMovementData),
+            typeof(AnimationEventData),
+            
             // Steam
             typeof(AirshipSteamFriendInfo),
         };

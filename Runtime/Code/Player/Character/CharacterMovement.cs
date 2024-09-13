@@ -770,9 +770,12 @@ private void OnEnable() {
 			});
 
 			if (didJump){
+				//Fire on the server
 				CommandTriggerJump();
-				//Fire locally immediately
-				this.animationHelper.TriggerJump();
+				if(isClientOnly){
+					//Fire locally immediately
+					this.animationHelper.TriggerJump();
+				}
 			}
 
 			// Handle OnMoveDirectionChanged event
