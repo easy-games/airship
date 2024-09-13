@@ -58,8 +58,12 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         ClearStopOfCompilationCoroutine();
 
         if (!_mutableGlobalsSet) {
-            _mutableGlobalsSet = true;
-            LuauPlugin.LuauSetMutableGlobals(LuauCompiler.MutableGlobals);
+            try {
+                LuauPlugin.LuauSetMutableGlobals(LuauCompiler.MutableGlobals);
+                _mutableGlobalsSet = true;
+            } catch (LuauException e) {
+                Debug.LogError(e);
+            }
         }
 
         if (!_isCompiling)

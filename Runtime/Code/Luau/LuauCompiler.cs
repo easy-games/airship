@@ -26,8 +26,12 @@ public class LuauCompiler {
     public static void RuntimeCompile(string path, string data, AirshipScript airshipScript, bool airshipBehaviour) {
         // Read Lua source
         if (!_mutableGlobalsSet) {
-            _mutableGlobalsSet = true;
-            LuauPlugin.LuauSetMutableGlobals(MutableGlobals);
+            try {
+                LuauPlugin.LuauSetMutableGlobals(MutableGlobals);
+                _mutableGlobalsSet = true;
+            } catch (LuauException e) {
+                Debug.LogError(e);
+            }
         }
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(path); //Ok

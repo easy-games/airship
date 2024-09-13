@@ -409,7 +409,7 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void SetMutableGlobals(IntPtr[] strings, int[] stringLengths, int numStrings);
+	private static extern IntPtr SetMutableGlobals(IntPtr[] strings, int[] stringLengths, int numStrings);
 	public static void LuauSetMutableGlobals(string[] mutableGlobals) {
 		var strings = new IntPtr[mutableGlobals.Length];
 		var lengths = new int[mutableGlobals.Length];
@@ -425,11 +425,13 @@ public static class LuauPlugin
 			handles[i] = handle;
 		}
 		
-		SetMutableGlobals(strings, lengths, mutableGlobals.Length);
+		var res = SetMutableGlobals(strings, lengths, mutableGlobals.Length);
 
 		foreach (var handle in handles) {
 			handle.Free();
 		}
+		
+		ThrowIfNotNullPtr(res);
 	}
 	
 #if UNITY_IPHONE
