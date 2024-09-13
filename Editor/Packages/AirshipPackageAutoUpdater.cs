@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Code.GameBundle;
 using Code.Platform.Shared;
+using Code.State;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace Editor.Packages {
         private static double lastChecked = -40;
         private const double checkInterval = 30;
         public static bool isCoreUpdateAvailable = false;
+        public static bool firstUpdateCheck = true;
         
         static AirshipPackageAutoUpdater() {
 
@@ -53,8 +55,9 @@ namespace Editor.Packages {
             var shouldUpdate = shouldUseLatestPackages || ignoreUserSetting;
             if (!shouldUpdate && !RequiresPackageDownloads(gameConfig)) return;
             if (AirshipPackagesWindow.buildingAssetBundles || CreateAssetBundles.buildingBundles) return;
-            
-            EditorCoroutines.Execute(CheckAllPackages(gameConfig, useLocalVersion: !shouldUseLatestPackages));
+
+            EditorCoroutines.Execute(CheckAllPackages(gameConfig, useLocalVersion: !shouldUseLatestPackages, firstUpdateCheck));
+            firstUpdateCheck = false;
         }
 
         public static IEnumerator CheckAllPackages(GameConfig gameConfig, bool useLocalVersion = false, bool immediatelyUpdateCore = false) {

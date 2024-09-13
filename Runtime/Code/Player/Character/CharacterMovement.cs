@@ -852,9 +852,10 @@ private void OnEnable() {
 		}
 
 		public void SetVelocity(Vector3 velocity) {
-			if(isClient){
+			if (isClient) {
 				SetVelocityInternal(velocity);
-			}else{
+			} else {
+				if (netId == 0) return;
 			 	RpcSetVelocity(base.connectionToClient, velocity);
 			}
 		}

@@ -408,11 +408,39 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern IntPtr SetMutableGlobals(IntPtr[] strings, int[] stringLengths, int numStrings);
+	public static void LuauSetMutableGlobals(string[] mutableGlobals) {
+		var strings = new IntPtr[mutableGlobals.Length];
+		var lengths = new int[mutableGlobals.Length];
+		var handles = new GCHandle[mutableGlobals.Length];
+        
+		for (var i = 0; i < mutableGlobals.Length; i++) {
+			var str = mutableGlobals[i];
+			var bytes = System.Text.Encoding.UTF8.GetBytes(str);
+			var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+			var bytesPtr = handle.AddrOfPinnedObject();
+			strings[i] = bytesPtr;
+			lengths[i] = bytes.Length;
+			handles[i] = handle;
+		}
+		
+		var res = SetMutableGlobals(strings, lengths, mutableGlobals.Length);
+
+		foreach (var handle in handles) {
+			handle.Free();
+		}
+		
+		ThrowIfNotNullPtr(res);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel);
-	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel)
-	{
-        // ThreadSafteyCheck();
-        IntPtr returnValue = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
+	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel) {
+        var returnValue = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
 		return returnValue;
 	}
 
