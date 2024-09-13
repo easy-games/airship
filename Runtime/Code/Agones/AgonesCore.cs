@@ -8,7 +8,8 @@ namespace Airship
     {
         public static AgonesProxy Agones;
 
-        public static void SetAgonesProxy(AgonesProxy agones)
+        public static void 
+            SetAgonesProxy(AgonesProxy agones)
         {
             Agones = agones;
         }
