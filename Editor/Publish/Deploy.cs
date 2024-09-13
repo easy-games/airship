@@ -40,7 +40,7 @@ public class Deploy {
 		NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new() {
-			AirshipPlatform.iOS,
+			// AirshipPlatform.iOS,
 		#if UNITY_EDITOR_OSX // Run Mac build last if on OSX
 			AirshipPlatform.Windows,
 			AirshipPlatform.Mac,
@@ -281,8 +281,8 @@ public class Deploy {
 
 				// UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
 				// UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
-				UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
-				UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
+				// UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
+				// UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
 			});
 		}
 
@@ -375,12 +375,12 @@ public class Deploy {
 							// "Linux_shared_resources",
 							"Mac_shared_resources",
 							"Windows_shared_resources",
-							"iOS_shared_resources",
+							// "iOS_shared_resources",
 
 							// "Linux_shared_scenes",
 							"Mac_shared_scenes",
 							"Windows_shared_scenes",
-							"iOS_shared_scenes",
+							// "iOS_shared_scenes",
 						},
 					}), "application/json");
 			req.SetRequestHeader("Authorization", "Bearer " + devKey);

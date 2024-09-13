@@ -86,9 +86,9 @@ public class CoreLoadingScreen : BundleLoadingScreen
         var imageUrl = CrossSceneState.ServerTransferData.loadingImageUrl;
         if (string.IsNullOrEmpty(imageUrl)) {
             // fallback
-            imageUrl = "https://cdn.airship.gg/images/4a56b023-cf41-4fd2-93f1-2326eb35ba28";
+            // imageUrl = "https://cdn.airship.gg/images/4a56b023-cf41-4fd2-93f1-2326eb35ba28";
             // Debug.Log("[Loading Screen] Image url was empty. Skipping background image download.");
-            // return;
+            return;
         }
 
         if (gameImageCache.TryGetValue(imageUrl, out var tex)) {

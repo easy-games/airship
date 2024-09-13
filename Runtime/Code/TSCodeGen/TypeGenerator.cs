@@ -221,6 +221,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(TreeInstance),
             typeof(Terrain),
             typeof(GameServer),
+            typeof(GraphicRaycaster),
 
             // Mirror
             typeof(NetworkServer),
