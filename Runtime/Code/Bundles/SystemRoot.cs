@@ -224,10 +224,13 @@ public class SystemRoot : Singleton<SystemRoot> {
 				unloadList.Add(loadedPair.Key);
 			}
 		}
+
+		var enums = new List<IEnumerator>();
 		foreach (var bundleId in unloadList) {
 			var loadedBundle = this.loadedAssetBundles[bundleId];
-			this.UnloadBundle(loadedBundle);
+			enums.Add(this.UnloadBundleAsync(loadedBundle));
 		}
+		yield return this.WaitAll(enums.ToArray());
 
 		// code.zip
 		bool openCodeZips = RunCore.IsServer() || compileLuaOnClient;
@@ -397,14 +400,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 	}
 
-	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
+	public IEnumerator UnloadBundleAsync(LoadedAssetBundle loadedBundle) {
 		Debug.Log($"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}");
 		// this.ClearLuauFiles(loadedBundle.airshipPackage.id);
-		loadedBundle.assetBundle.Unload(true);
+		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
+
+		var ao = loadedBundle.assetBundle.UnloadAsync(true);
+		while (!ao.isDone) {
+			yield return null;
+		}
+
 		loadedBundle.assetBundle = null;
 		var key = SystemRoot.GetLoadedAssetBundleKey(loadedBundle.airshipPackage, loadedBundle.assetBundleFile);
 		loadedAssetBundles.Remove(key);
-		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
 	}
 
 	public void AddLuauFile(string packageKey, AirshipScript br) {
