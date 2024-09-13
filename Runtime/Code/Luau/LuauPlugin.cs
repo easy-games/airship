@@ -196,8 +196,18 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
 	private static extern IntPtr CreateRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int renderPassObjectId, LuauMetadataPropertyMarshalDto[] props, int nProps);
-	public static void LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId, int renderPassObjectId, LuauMetadataPropertyMarshalDto[] props) {
+	public static void LuauNewRenderPass(LuauContext context, IntPtr thread, int featureId, int renderPassObjectId, LuauMetadataPropertyMarshalDto[] props) {
 		ThrowIfNotNullPtr(CreateRenderPass(context, thread, featureId, 0, renderPassObjectId, props, props.Length));
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern IntPtr DestroyRenderPass(LuauContext context, IntPtr thread, int featureId, int passId);
+	public static void LuauDisposeRenderPass(LuauContext context, IntPtr thread, int featureId) {
+		ThrowIfNotNullPtr(DestroyRenderPass(context, thread, featureId, 0));
 	}
 	
 #if UNITY_IPHONE
@@ -253,6 +263,10 @@ public static class LuauPlugin
 		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, (int)AirshipScriptableRenderPassMethod.AirshipConfigure, ptr, 2));
 		
 		handle.Free();
+	}
+
+	public static void LuauRenderPassCreate(LuauContext context, IntPtr thread, int featureId) {
+		ThrowIfNotNullPtr(InvokeRenderPassMethod(context, thread, featureId, 0, (int)AirshipScriptableRenderPassMethod.AirshipCreate, IntPtr.Zero, 0));
 	}
 	
 #if UNITY_IPHONE

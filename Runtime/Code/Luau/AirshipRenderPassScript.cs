@@ -8,6 +8,7 @@ namespace Code.Luau {
         AirshipExecute,
         AirshipOnCameraSetup,
         AirshipOnCameraCleanup,
+        AirshipCreate,
     }
 
     public class AirshipRenderPassScript : AirshipScriptable {
