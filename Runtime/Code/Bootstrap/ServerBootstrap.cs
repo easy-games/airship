@@ -212,9 +212,13 @@ public class ServerBootstrap : MonoBehaviour
      */
 	private bool processedMarkedForDeletion = false;
 	public void OnGameServerChange(GameServer server) {
+		if (server == null) {
+			Debug.Log("Agones GameServer is null. Ignoring.");
+			return;
+		}
 		this.gameServer = server;
 
-		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
+		if (!processedMarkedForDeletion && server.ObjectMeta != null && server.ObjectMeta.Labels != null && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
 			this.InvokeOnProcessExit();
