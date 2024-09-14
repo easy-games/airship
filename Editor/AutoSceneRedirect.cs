@@ -1,4 +1,5 @@
 using System;
+using Editor.Packages;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -38,6 +39,12 @@ public class AutoSceneRedirect {
     }
 
     private static void PlayModeStateChanged(PlayModeStateChange state) {
+        if (state == PlayModeStateChange.EnteredPlayMode) {
+            if (AirshipPackageAutoUpdater.isCoreUpdateAvailable) {
+                Debug.Log("An Airship Core update is available. Not updating may result in unexpected behaviour.");
+            }
+        }
+
         if (state != PlayModeStateChange.ExitingEditMode) return;
         
         var sceneName = SceneManager.GetActiveScene().name;
