@@ -495,5 +495,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		if (doNetworkPrefabLoading) { // InstanceFinder.IsOffline && RunCore.IsClient()
 			yield return networkNetworkPrefabLoader.RegisterNetworkObjects(assetBundle, netCollectionId);
 		}
+		Debug.Log($"Done loading asset bundled {airshipPackage.id}/{assetBundleFile}");
 	}
 }
