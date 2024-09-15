@@ -137,7 +137,7 @@ namespace Editor.Packages {
                         if (GUILayout.Button("Publish All")) {
                             // Make sure we generate and write all `NetworkPrefabCollection`s before we
                             // build the package.
-                            NetworkPrefabManager.WriteAllCollections();
+                            // NetworkPrefabManager.WriteAllCollections();
                             EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
                         }
                         GUILayout.EndVertical();

@@ -37,7 +37,7 @@ public class Deploy {
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
 		// build the game.
-		NetworkPrefabManager.WriteAllCollections();
+		// NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new() {
 			// AirshipPlatform.iOS,
@@ -72,7 +72,7 @@ public class Deploy {
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
 		// build the game.
-		NetworkPrefabManager.WriteAllCollections();
+		// NetworkPrefabManager.WriteAllCollections();
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
