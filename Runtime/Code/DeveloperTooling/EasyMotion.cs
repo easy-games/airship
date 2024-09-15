@@ -1,5 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
+using Unity.Mathematics;
 using UnityEngine;
 
 [LuauAPI]
@@ -13,15 +13,26 @@ public class EasyMotion : MonoBehaviour {
     [Header("Translation")]
     public bool translate = false;
     public Vector3 translationSpeed;
+
     [Header("Rotation")]
     public bool rotate = false;
     public Vector3 angularRotationSpeed;
+
     [Header("Scale")]
     public bool scale = false;
     public Vector3 scaleSpeed;
+
+    [Header("Sine Motion")]
     public bool sineMotion = false;
     public float sineMod = 1;
     public float sineOffset = 0;
+    public bool randomizeOffset = false;
+
+    private void Start(){
+        if(randomizeOffset){
+            sineOffset += UnityEngine.Random.Range(0f, 1f);
+        }
+    }
 
     // Update is called once per frame
     void Update() {
