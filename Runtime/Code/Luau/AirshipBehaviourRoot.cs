@@ -1,9 +1,38 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 namespace Luau {
+    public static class AirshipBehaviourRootV2 {
+        private static int _idGen;
+        private static readonly Dictionary<GameObject, int> Ids = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnLoad() {
+            _idGen = 0;
+            Ids.Clear();
+        }
+
+        public static int GetId(GameObject gameObject) {
+            if (Ids.TryGetValue(gameObject, out var id)) return id;
+
+            id = ++_idGen;
+            Ids.Add(gameObject, id);
+
+            return id;
+        }
+
+        public static int GetId(Component component) {
+            return GetId(component.gameObject);
+        }
+
+        public static bool HasId(GameObject gameObject) {
+            return Ids.ContainsKey(gameObject);
+        }
+    }
+
     [DisallowMultipleComponent]
     public class AirshipBehaviourRoot : MonoBehaviour {
         private static int _idGen = 0;

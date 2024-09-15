@@ -73,7 +73,7 @@ public class AirshipComponent : MonoBehaviour {
 
     private bool _isAirshipComponent;
 
-    private AirshipBehaviourRoot _airshipBehaviourRoot;
+    // private AirshipBehaviourRoot _airshipBehaviourRoot;
     private bool _airshipComponentEnabled = false;
     private bool _airshipReadyToStart = false;
     private bool _airshipScheduledToStart = false;
@@ -263,8 +263,7 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void WriteChangedComponentProperties() {
-        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-        if (airshipComponent == null || m_thread == IntPtr.Zero) return;
+        if (!AirshipBehaviourRootV2.HasId(gameObject) || m_thread == IntPtr.Zero) return;
         
         foreach (var property in m_metadata.properties) {
             // If all value data is unchanged skip this write
@@ -275,7 +274,7 @@ public class AirshipComponent : MonoBehaviour {
                 itemObjectRefs = (UnityEngine.Object[]) property.items.objectRefs.Clone(),
                 itemSerializedObjects = (string[]) property.items.serializedItems.Clone()
             };
-            property.WriteToComponent(m_thread, airshipComponent.Id, _scriptBindingId);
+            property.WriteToComponent(m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId);
         }
     }
 
@@ -306,7 +305,7 @@ public class AirshipComponent : MonoBehaviour {
         }
         
         // Fetch from Luau plugin & cache the result:
-        var hasMethod = LuauPlugin.LuauHasAirshipMethod(context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType);
+        var hasMethod = LuauPlugin.LuauHasAirshipMethod(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, updateType);
         _hasAirshipUpdateMethods.Add(updateType, hasMethod);
         
         return hasMethod;
@@ -353,11 +352,9 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void InitializeAirshipReference(IntPtr thread) {
-        _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
-        
         // Warmup the component first, creating a reference table
         var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(transform);
-        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, transformInstanceId);
+        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, transformInstanceId);
     }
 
     private void InitializeAndAwakeAirshipComponent(IntPtr thread, bool usingExistingThread) {
@@ -410,7 +407,7 @@ public class AirshipComponent : MonoBehaviour {
         }
 
 
-        LuauPlugin.LuauInitializeAirshipComponent(context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos);
+        LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, propertyDtos);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
@@ -854,8 +851,8 @@ public class AirshipComponent : MonoBehaviour {
         
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
-                if (_isAirshipComponent && _airshipBehaviourRoot != null) {
-                    var unityInstanceId = _airshipBehaviourRoot.Id;
+                if (_isAirshipComponent && AirshipBehaviourRootV2.HasId(gameObject)) {
+                    var unityInstanceId = AirshipBehaviourRootV2.GetId(gameObject);
                     if (_airshipComponentEnabled) {
                         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
                         _airshipComponentEnabled = false;
@@ -956,7 +953,7 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, 0, true);
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, updateType, 0, true);
     }
 
     private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object collision) {
@@ -965,7 +962,7 @@ public class AirshipComponent : MonoBehaviour {
         }
         
         var collisionObjId = ThreadDataManager.AddObjectReference(m_thread, collision);
-        LuauPlugin.LuauUpdateCollisionAirshipComponent(context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, collisionObjId);
+        LuauPlugin.LuauUpdateCollisionAirshipComponent(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, updateType, collisionObjId);
     }
     
     public void SetScript(AirshipScript script, bool attemptStartup = false) {
