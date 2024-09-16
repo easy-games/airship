@@ -256,8 +256,9 @@ namespace Code.Player.Character.API {
 						if(Physics.Raycast(startPos + Vector3.up, new Vector3(0,-1,0), out var originalFloorHitInfo, 1+movement.moveData.maxStepUpHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 							bottompoint.y = originalFloorHitInfo.point.y;
 						}
-						var rampVec = topPoint - bottompoint;
-						var rampNormal = Vector3.Cross(movement.graphicTransform.right, rampVec.normalized);
+						var rampVec = (topPoint - bottompoint).normalized;
+						var perpendicularRampVec = Vector3.Cross(rampVec, Vector3.up);
+						var rampNormal = Vector3.Cross(perpendicularRampVec, rampVec);
 						
 						//raw delta breaks when the distance is now beyond the top point! Need to calculate this differently
 						var rawDelta = GetFlatDistance(startPos + (vel * deltaTime), bottompoint) / stepUpRampDistance;
@@ -270,6 +271,8 @@ namespace Code.Player.Character.API {
 							//Draw the calculated ramp
 							GizmoUtils.DrawSphere(topPoint, .02f, Color.cyan, 4, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+rampNormal, Color.green, gizmoDuration);
+							GizmoUtils.DrawLine(topPoint, topPoint+rampVec, Color.red, gizmoDuration);
+							GizmoUtils.DrawLine(topPoint, topPoint+perpendicularRampVec, Color.blue, gizmoDuration);
 							GizmoUtils.DrawSphere(pointOnRamp, .02f, Color.green, 4, gizmoDuration);
 							GizmoUtils.DrawSphere(bottompoint, .02f, Color.black, 4, gizmoDuration);
 							GizmoUtils.DrawLine(bottompoint, bottompoint+rampVec, Color.black, gizmoDuration);
