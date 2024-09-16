@@ -165,8 +165,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             world.LoadWorldFromSaveFile(world.voxelWorldFile);
         }
     }
-
-  
     
     [MenuItem("GameObject/Airship/Voxel World", false, 0)]
     static void CreateAirshipVoxelWorld(MenuCommand menuCommand) {
