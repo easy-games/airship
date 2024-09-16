@@ -939,10 +939,11 @@ namespace Editor.Packages {
 
         private static string contentUrl {
             get {
-                if (currentEnvironment == "Staging") {
-                    return "https://content-service-fxy2zritya-uc.a.run.app";
-                }
-                return "https://content-service-hwcvz2epka-uc.a.run.app";
+                return AirshipPlatformUrl.contentService;
+                // if (currentEnvironment == "Staging") {
+                //     return "https://content-service-fxy2zritya-uc.a.run.app";
+                // }
+                // return "https://content-service-hwcvz2epka-uc.a.run.app";
             }
         }
 
