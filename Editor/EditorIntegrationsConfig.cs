@@ -32,6 +32,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] 
     public bool safeguardBundleModification = true;
 
+    [SerializeField] public bool selfCompileAllShaders = false;
+
     #region LUAU OPTIONS
     [SerializeField] public bool promptIfLuauPluginChanged = true;
     

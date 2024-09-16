@@ -193,13 +193,15 @@ public static class CreateAssetBundles {
 					var addUrpFiles = new Action<string>((string path) => {
 						var urpGuids = AssetDatabase.FindAssets("*",
 							new string[] { path });
-						Debug.Log("Found URP files: " + urpGuids.Length);
 						assetGuids.AddRange(urpGuids);
 					});
 
-					addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
-					addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
-					addUrpFiles("Packages/com.unity.render-pipelines.universal/Textures");
+					if (!EditorIntegrationsConfig.instance.selfCompileAllShaders) {
+						Debug.Log("Adding URP assets to CoreMaterials bundle.");
+						addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
+						addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
+						addUrpFiles("Packages/com.unity.render-pipelines.universal/Textures");
+					}
 				}
 
 				var assetPaths = assetGuids.Select((guid) => {
