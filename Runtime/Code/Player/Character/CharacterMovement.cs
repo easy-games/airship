@@ -283,7 +283,6 @@ private void OnEnable() {
 				//Reset airborne impulse
 				airborneFromImpulse = false;
 			}
-
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
@@ -291,7 +290,6 @@ private void OnEnable() {
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
-
 			var groundSlopeDir = detectedGround ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
 			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 
@@ -550,9 +548,6 @@ private void OnEnable() {
 		//Use the reconciled impulse velocity 
 		var isImpulsing = impulseVelocity != Vector3.zero;
 		if (isImpulsing) {
-			if(useExtraLogging){
-				print("Tick: " + md.GetTick() + " isImpulsing: " + isImpulsing + " impulse force: " +impulseVelocity);
-			}
 			//The velocity will create drag in X and Z but ignore Y. 
 			//So we need to manually drag the impulses Y so it doesn't behave differently than the other axis
 			//impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
@@ -561,6 +556,9 @@ private void OnEnable() {
 			newVelocity += impulseVelocity;
 			airborneFromImpulse = !grounded || impulseVelocity.y > .01f;
 			impulseVelocity = Vector3.zero;
+			if(useExtraLogging){
+				print(" isImpulsing: " + isImpulsing + " impulse force: " + impulseVelocity + "New Vel: " + newVelocity);
+			}
 		}
 #endregion
 
@@ -686,7 +684,7 @@ private void OnEnable() {
 			if(_flying || //In Fly mode OR
 				(!isImpulsing && !airborneFromImpulse && //Not impulsing AND under our max speed
 						(velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1)))){
-				if(moveData.useAccelerationMovement){
+				if(!_flying && moveData.useAccelerationMovement){
 					newVelocity += characterMoveVelocity;
 				}else{
 					newVelocity.x = characterMoveVelocity.x;
@@ -705,8 +703,10 @@ private void OnEnable() {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)
-			&& prevGrounded && timeSinceBecameGrounded > .1){
+		if(moveData.detectStepUps && //Want to check step ups
+			(!md.crouch || !moveData.preventStepUpWhileCrouching) && //Not blocked by crouch
+			(moveData.assistedLedgeJump || timeSinceBecameGrounded > .05) && //Grounded
+			(Mathf.Abs(newVelocity.x)+Mathf.Abs(newVelocity.z)) > .05f) { //Moveing
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
@@ -717,20 +717,15 @@ private void OnEnable() {
 				}
 				//print("STEPPED UP. Vel before: " + newVelocity);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
-				var debugPoint = transform.position;
-				debugPoint.y = pointOnRamp.y;
-				debugPoint += newVelocity * deltaTime;
 				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " vel: " + newVelocity);
 				
 				if(drawDebugGizmos_STEPUP){
 					GizmoUtils.DrawSphere(oldPos, .01f, Color.red, 4, 4);
-					GizmoUtils.DrawSphere(transform.position + newVelocity, .03f, Color.red, 4, 4);
+					GizmoUtils.DrawSphere(transform.position + newVelocity, .03f, new Color(1,.5f,.5f), 4, 4);
 				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
+				grounded = true;
 			}
-			// if(!didStepUp){
-			// 	networkTransform.localPosition = Vector3.zero;
-			// }
 		}
 #endregion
 			
@@ -758,6 +753,10 @@ private void OnEnable() {
 
 			
 #region SAVE STATE
+			// if(timeSinceBecameGrounded < .1){
+			// 	print("LANDED! prevVel: " + currentVelocity + " newVel: " + newVelocity);
+			// }
+
 			//Replicate the look vector
 			SetLookVector(md.lookVector);
 

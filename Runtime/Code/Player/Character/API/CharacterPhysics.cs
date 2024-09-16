@@ -78,9 +78,9 @@ namespace Code.Player.Character.API {
 			var castDistance = .2f;
 			var castStartPos = currentPos;
 			//Move the start position up
-			castStartPos.y += castDistance-offsetMargin;
+			castStartPos.y += castDistance;
 			//Extend the ray further if you are falling faster
-			castDistance += Mathf.Max(0, -vel.y);// Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
+			castDistance += Mathf.Max(0, -vel.y) + offsetMargin;// Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
 			
 			var gravityDir = -movement.transform.up;
 			var gravityDirOffset = gravityDir.normalized * .1f;
@@ -102,7 +102,6 @@ namespace Code.Player.Character.API {
 			var extents = uniformHalfExtents*.98f;
 			extents.y = verticalExtents;
 			castStartPos.y += verticalExtents;
-			castDistance += verticalExtents;
 
 			if(movement.drawDebugGizmos_GROUND){
 				GizmoUtils.DrawBox(castStartPos, Quaternion.identity, extents, Color.magenta, gizmoDuration);
@@ -185,20 +184,12 @@ namespace Code.Player.Character.API {
 
 #region STEP UP
 		public (bool didHit, bool onRamp, Vector3 pointOnRamp, Vector3 newVel) StepUp(Vector3 startPos, Vector3 vel, float deltaTime, Vector3 currentUpNormal){
-			
-			//Early outs
-			//Not moving
-			if(math.abs(vel.x)+math.abs(vel.z) < .05f ||
-				//Can't step up because not gorunded
-				!(movement.grounded || movement.moveData.assistedLedgeJump)){
-				return (false, false, vel, vel);
-			}
-
 			//Check if there is an obstruction
 			var velDir = vel.normalized;
+			var flatDir = new Vector3(velDir.x, 0 , velDir.z).normalized;
 			var velFrame = vel/deltaTime;
 			float stepUpRampDistance = movement.moveData.stepUpRampDistance;
-			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos + new Vector3(0,offsetMargin,0) - velDir * offsetMargin, velDir * (stepUpRampDistance+offsetMargin), false, true);
+			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos + new Vector3(0,offsetMargin,0) - velDir * offsetMargin, flatDir * (stepUpRampDistance+offsetMargin), false, true);
 
 			if(didHitForward && movement.useExtraLogging){
 				Debug.Log("currentUpNormal: " + currentUpNormal + " forwardHitInfo: " + forwardHitInfo.normal + " EQUAL: "+ (currentUpNormal == forwardHitInfo.normal));
@@ -223,8 +214,6 @@ namespace Code.Player.Character.API {
 				stepUpRayStart.y =  startPos.y + movement.moveData.maxStepUpHeight+movement.characterRadius;
 				
 				if(movement.drawDebugGizmos_STEPUP){
-					//Where we are detecting a step up point
-					GizmoUtils.DrawSphere(stepUpRayStart, .05f, Color.yellow, 4, gizmoDuration);
 					//Where the character is in this moment
 					GizmoUtils.DrawSphere(startPos, .04f, Color.blue, 4, gizmoDuration);
 				}
@@ -235,6 +224,7 @@ namespace Code.Player.Character.API {
 					//Hit a surface that is in range
 					if(movement.drawDebugGizmos_STEPUP){
 						//A line to where the step up was hit
+						GizmoUtils.DrawSphere(stepUpRayStart, .05f, Color.yellow, 4, gizmoDuration);
 						GizmoUtils.DrawLine(stepUpRayStart, stepUpRayHitInfo.point, Color.yellow, gizmoDuration);
 					}
 
@@ -244,12 +234,8 @@ namespace Code.Player.Character.API {
 						&& !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){						//CAN STEP UP HERE
 						//Find the slope direction that the character needs to walk up to the step
 						var cornerPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z);
-						var topPoint = cornerPoint - velDir * (offsetMargin + movement.characterRadius);
-						//topPoint.y += offsetMargin;
-						
-						var flatDir = vel;
-						flatDir.y = 0;
-						flatDir.Normalize();
+						var topPoint = cornerPoint - flatDir * (offsetMargin + movement.characterRadius);
+						topPoint.y += offsetMargin+offsetMargin;
 						
 						var bottompoint = topPoint - flatDir * stepUpRampDistance;
 						bottompoint.y = topPoint.y - movement.moveData.maxStepUpHeight;
@@ -258,7 +244,7 @@ namespace Code.Player.Character.API {
 						}
 						var rampVec = (topPoint - bottompoint).normalized;
 						var perpendicularRampVec = Vector3.Cross(rampVec, Vector3.up);
-						var rampNormal = Vector3.Cross(perpendicularRampVec, rampVec);
+						var rampNormal = Vector3.Cross(rampVec, perpendicularRampVec);
 						
 						//raw delta breaks when the distance is now beyond the top point! Need to calculate this differently
 						var rawDelta = GetFlatDistance(startPos + (vel * deltaTime), bottompoint) / stepUpRampDistance;
@@ -270,11 +256,11 @@ namespace Code.Player.Character.API {
 
 							//Draw the calculated ramp
 							GizmoUtils.DrawSphere(topPoint, .02f, Color.cyan, 4, gizmoDuration);
+							GizmoUtils.DrawSphere(pointOnRamp, .02f, Color.green, 4, gizmoDuration);
+							GizmoUtils.DrawSphere(bottompoint, .02f, Color.black, 4, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+rampNormal, Color.green, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+rampVec, Color.red, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+perpendicularRampVec, Color.blue, gizmoDuration);
-							GizmoUtils.DrawSphere(pointOnRamp, .02f, Color.green, 4, gizmoDuration);
-							GizmoUtils.DrawSphere(bottompoint, .02f, Color.black, 4, gizmoDuration);
 							GizmoUtils.DrawLine(bottompoint, bottompoint+rampVec, Color.black, gizmoDuration);
 						}
 
@@ -283,7 +269,6 @@ namespace Code.Player.Character.API {
 					}else if(movement.useExtraLogging){
 						Debug.Log("Can't step up here. hitPoint: " + stepUpRayHitInfo.point + " startPos: " + startPos + " isWalkable: "+ IsWalkableSurface(stepUpRayHitInfo.normal));
 					}
-
 				}
 			}
 
@@ -308,7 +293,7 @@ namespace Code.Player.Character.API {
 					//make sure there isn't an obstruction above us
 					if(!Physics.Raycast(quickStepHitInfo.point, Vector3.up, movement.standingCharacterHeight+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)
 						&& IsWalkableSurface(quickStepHitInfo.normal)){
-						var hitPoint = quickStepHitInfo.point + new Vector3(0,offsetMargin, 0);
+						var hitPoint = quickStepHitInfo.point + new Vector3(0,offsetMargin+offsetMargin, 0);
 						if(movement.drawDebugGizmos_STEPUP){
 							GizmoUtils.DrawSphere(hitPoint, .1f, Color.white, 4, gizmoDuration);
 							GizmoUtils.DrawSphere(hitPoint, .05f, Color.white, 4, gizmoDuration);
