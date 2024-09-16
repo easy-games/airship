@@ -58,7 +58,9 @@ public class EasyPrimitiveEditor : MonoBehaviour {
             return obj.ToString();
         }
     }
-
+    
+    // This is defaulted to off
+#if ENABLE_AIRSHIP_3D_OBJECTS
     //Quad
     [MenuItem("GameObject/Airship/3D Object/Quad", false, priorityGroup+1)]
     static void CreateQuad(MenuCommand menuCommand) {
@@ -145,6 +147,7 @@ public class EasyPrimitiveEditor : MonoBehaviour {
     static void CreatePyramid(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Pyramid);
     }
+#endif
 
     private static GameObject CreateMesh(GameObject parent, PrimitiveIndex type) {
         // Create a custom game object
