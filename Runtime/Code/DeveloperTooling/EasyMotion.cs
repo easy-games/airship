@@ -32,9 +32,10 @@ public class EasyMotion : MonoBehaviour {
         }
     }
 
+#if UNITY_EDITOR
     // Update is called once per frame
     void Update() {
-        if(EasyTooling.IsValidRunMode(refreshMode)){
+        if (EasyTooling.IsValidRunMode(refreshMode)) {
             if (translate) {
                 if(sineMotion){
                     transform.localPosition = translationSpeed * Mathf.Sin(Time.time * sineMod + sineOffset);
@@ -60,4 +61,5 @@ public class EasyMotion : MonoBehaviour {
             }
         }
     }
+   #endif
 }
