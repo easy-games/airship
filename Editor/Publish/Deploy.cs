@@ -346,12 +346,15 @@ public class Deploy {
 				totalProgress += uploadInfo.uploadProgressPercent * (uploadInfo.sizeBytes / totalSize);
 			}
 
+			/*
 			bool cancelled = EditorUtility.DisplayCancelableProgressBar("Publishing game", $"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}", totalProgress);
 			if (cancelled) {
 				Debug.Log("Publish cancelled.");
 				EditorUtility.ClearProgressBar();
 				yield break;
 			}
+			*/
+			Debug.Log($"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}");
 			yield return null;
 		}
 		EditorUtility.ClearProgressBar();
