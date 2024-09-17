@@ -31,6 +31,10 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void Start() {
+        if(!enabled){
+            return;
+        }
+        
         //Have to do it here instead of OnEnable so everything gets initialized
         if(currentOutfit){
             var pendingOutfit = currentOutfit;

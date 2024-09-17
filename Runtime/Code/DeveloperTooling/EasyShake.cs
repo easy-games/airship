@@ -2,12 +2,13 @@ using UnityEngine;
 
 [LuauAPI]
 [ExecuteInEditMode]
-public class EasyShake : MonoBehaviour
-{
-    [Header("Timing")]
+public class EasyShake : MonoBehaviour {
+
+    [Header("Lifetime")]
     [Tooltip("How long to shake. Negative number for infinite")]
     public float shakeDuration = 0.1f;
     public bool shakeOnEnable = false;
+    public bool destroyComponentOnEnd = false;
 
     [Space(10)]
     [Header("Movement")]
@@ -23,9 +24,6 @@ public class EasyShake : MonoBehaviour
 
     [Header("Rotation Randomization")]
     public Vector3 maxRotationOffsetAngles = new Vector3(15,15,15);
-
-    [Header("Lifetime")]
-    public bool destroyComponentOnEnd = false;
 
     private float lastMovement = 0;
     private Vector3 originalPosition;
