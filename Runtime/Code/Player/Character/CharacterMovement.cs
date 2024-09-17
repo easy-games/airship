@@ -681,16 +681,19 @@ private void OnEnable() {
 			if(useExtraLogging){
 				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 			}
-			if(_flying || //In Fly mode OR
-				(!isImpulsing && !airborneFromImpulse && //Not impulsing AND under our max speed
-						(velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1)))){
-				if(!_flying && moveData.useAccelerationMovement){
+
+			if(_flying){
+				newVelocity.x = md.moveDir.x * currentSpeed;
+				newVelocity.z = md.moveDir.z * currentSpeed;
+			}else if(!isImpulsing && !airborneFromImpulse && //Not impulsing AND under our max speed
+						(velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1))){
+				if(moveData.useAccelerationMovement){
 					newVelocity += characterMoveVelocity;
 				}else{
 					newVelocity.x = characterMoveVelocity.x;
 					newVelocity.z = characterMoveVelocity.z;
 				}
-			}else{
+			} else {
 				//Moving faster than max speed or using acceleration mode
 				newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) * 
 					(groundedState == CharacterState.Sprinting ? this.moveData.sprintAccelerationForce : moveData.accelerationForce);
