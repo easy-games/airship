@@ -395,6 +395,11 @@ public class Deploy {
 					break;
 				} else {
 					Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
+					if (req.responseCode == 400) {
+						// don't retry on 400
+						yield break;
+					}
+
                     if (attemptNum == 4) {
 	                    // Out of retry attempts so we end it here.
                     	yield break;
