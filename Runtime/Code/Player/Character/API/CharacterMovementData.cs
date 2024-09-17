@@ -96,8 +96,6 @@ namespace Code.Player.Character.API {
 
 
 		[Header("Physics")]
-		[Tooltip("Push the character away from walls to prevent rigibody friction")]
-		public bool preventWallClipping = true;
 
 		[Tooltip("What layers will count as walkable ground")]
 		public LayerMask groundCollisionLayerMask = 1 << 0 | 1 << 8 | 1 << 11; // Layers Default, VisuallyHidden and VoxelWorld
@@ -108,6 +106,8 @@ namespace Code.Player.Character.API {
 		public float minimumVelocity = 1;
 		[Tooltip("Also stop momentum when in the air")]
 		public bool useMinimumVelocityInAir = false;
+		[Tooltip("Push the character away from walls to prevent rigibody friction")]
+		public bool preventWallClipping = true;
 
 		[Tooltip("Drag coefficient")]
 		[Range(0,1)]
