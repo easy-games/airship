@@ -166,7 +166,7 @@ public partial class LuauCore : MonoBehaviour {
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToStringCallback))]
     static void toStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
-        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true);
+        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true, true);
         
         var toString = obj != null ? obj.ToString() : "null";
         

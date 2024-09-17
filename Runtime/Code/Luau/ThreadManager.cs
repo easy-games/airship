@@ -113,15 +113,15 @@ namespace Luau {
             return id;
         }
 
-        public static object GetObjectReference(IntPtr thread, int instanceId, bool preventTrace = false) {
+        public static object GetObjectReference(IntPtr thread, int instanceId, bool preventTrace = false, bool preventLogIfNull = false) {
             if (instanceId == -1) {
                 return null;
             }
             
             bool res = s_objectKeys.TryGetValue(instanceId, out object value);
             if (!res) {
-                if (s_debugging == false) {    
-                    Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " " + LuauCore.LuaThreadToString(thread));
+                if (s_debugging == false && preventLogIfNull == false) {
+                    Debug.LogError("Attempt to reference an object that is missing or destroyed. id=" + instanceId + ", highest=" + s_keyGen + " " + LuauCore.LuaThreadToString(thread));
                 } else if (s_debugging == true) {
                     bool found = s_debuggingKeys.TryGetValue(instanceId, out object debugObject);
                     
