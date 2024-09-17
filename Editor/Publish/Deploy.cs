@@ -401,9 +401,13 @@ public class Deploy {
                     }
 
                     // Wait one second and try again.
-                    Debug.Log("Retrying in 1s...");
+                    int waitTime = 1;
+                    if (attemptNum >= 3) {
+	                    waitTime = 3;
+                    }
+                    Debug.Log($"Retrying in {waitTime}s...");
                     attemptNum++;
-                    yield return new WaitForSeconds(1);
+                    yield return new WaitForSeconds(waitTime);
 				}
 			}
 		}
