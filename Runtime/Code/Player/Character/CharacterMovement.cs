@@ -326,7 +326,7 @@ private void OnEnable() {
 			}
 			var didJump = false;
 			var canJump = false;
-			if (requestJump && !alreadyJumped && (!prevCrouch || canStand)) {
+			if (moveData.numberOfJumps > 0 && requestJump && !alreadyJumped && (!prevCrouch || canStand)) {
 				//On the ground
 				if (grounded || prevStepUp) {
 					canJump = true;
