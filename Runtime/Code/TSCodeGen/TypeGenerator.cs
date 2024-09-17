@@ -156,7 +156,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(DevConsole),
             typeof(EasyShake),
             typeof(EasyMotion),
-            typeof(GroundItemDrop),
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
