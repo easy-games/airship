@@ -365,35 +365,49 @@ public class Deploy {
 
 		// Complete deployment
 		{
-			// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
-			UnityWebRequest req = UnityWebRequest.Post(
-				$"{AirshipPlatformUrl.deploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
-					new CompleteGameDeploymentDto() {
-						gameId = gameConfig.gameId,
-						gameVersionId = deploymentDto.version.gameVersionId,
-						uploadedFileIds = new [] {
-							// "Linux_shared_resources",
-							"Mac_shared_resources",
-							"Windows_shared_resources",
-							// "iOS_shared_resources",
+			int attemptNum = 0;
+			while (attemptNum < 5) {
+				// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
+				UnityWebRequest req = UnityWebRequest.Post(
+					$"{AirshipPlatformUrl.deploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
+						new CompleteGameDeploymentDto() {
+							gameId = gameConfig.gameId,
+							gameVersionId = deploymentDto.version.gameVersionId,
+							uploadedFileIds = new [] {
+								// "Linux_shared_resources",
+								"Mac_shared_resources",
+								"Windows_shared_resources",
+								// "iOS_shared_resources",
 
-							// "Linux_shared_scenes",
-							"Mac_shared_scenes",
-							"Windows_shared_scenes",
-							// "iOS_shared_scenes",
-						},
-					}), "application/json");
-			req.SetRequestHeader("Authorization", "Bearer " + devKey);
-			yield return req.SendWebRequest();
-			while (!req.isDone) {
-				yield return null;
-			}
+								// "Linux_shared_scenes",
+								"Mac_shared_scenes",
+								"Windows_shared_scenes",
+								// "iOS_shared_scenes",
+							},
+						}), "application/json");
+				req.SetRequestHeader("Authorization", "Bearer " + devKey);
+				yield return req.SendWebRequest();
+				while (!req.isDone) {
+					yield return null;
+				}
 
-			if (req.result != UnityWebRequest.Result.Success) {
-				Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
-				yield break;
+				if (req.result == UnityWebRequest.Result.Success) {
+					break;
+				} else {
+					Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
+                    if (attemptNum == 4) {
+	                    // Out of retry attempts so we end it here.
+                    	yield break;
+                    }
+
+                    // Wait one second and try again.
+                    Debug.Log("Retrying in 1s...");
+                    attemptNum++;
+                    yield return new WaitForSeconds(1);
+				}
 			}
 		}
+
 		var slug = activeDeployTarget.slug;
 		if (slug != null) {
 			string gameLink;
