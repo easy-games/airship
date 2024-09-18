@@ -3,9 +3,7 @@ using UnityEngine;
 [LuauAPI]
 [ExecuteInEditMode]
 public class EasyMotion : MonoBehaviour {
-#if UNITY_EDITOR
     public EngineRunMode refreshMode = EngineRunMode.EDITOR;
-#endif
     public Space transformSpace = Space.World;
     
     [Header("Translation")]
@@ -32,7 +30,6 @@ public class EasyMotion : MonoBehaviour {
         }
     }
 
-#if UNITY_EDITOR
     // Update is called once per frame
     void Update() {
         if (EasyTooling.IsValidRunMode(refreshMode)) {
@@ -61,5 +58,4 @@ public class EasyMotion : MonoBehaviour {
             }
         }
     }
-   #endif
 }
