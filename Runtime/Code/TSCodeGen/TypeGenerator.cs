@@ -42,6 +42,8 @@ using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
 using Code.Player.Human.Net;
 using Mirror;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 
 public class TypeGenerator : MonoBehaviour
@@ -221,6 +223,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(Terrain),
             typeof(GameServer),
             typeof(GraphicRaycaster),
+            typeof(DepthOfField),
+            typeof(Volume),
+            typeof(DepthOfFieldMode),
 
             // Mirror
             typeof(NetworkServer),
@@ -252,6 +257,7 @@ public class TypeGenerator : MonoBehaviour
             // Airship
             typeof(CharacterMovementData),
             typeof(AnimationEventData),
+            typeof(VoxelWorld),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
@@ -307,7 +313,6 @@ public class TypeGenerator : MonoBehaviour
             "\\.DynamicVariablesManager$",
             "\\.HttpGetResponse$",
             "\\.Collider$",
-            "\\.VoxelWorld$",
             "\\.NetworkObject$",
             "\\.InputProxy$",
             "\\.NavMesh$",
@@ -321,6 +326,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkTime$",
             "UnityEngine.TextCore.Text.Character",
             "\\.AccessoryComponent$",
+            "\\.VolumeProfile$",
         };
 
         var options = new TypeScriptOptions

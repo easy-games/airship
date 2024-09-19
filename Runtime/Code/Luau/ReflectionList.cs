@@ -10,6 +10,7 @@ using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
@@ -174,6 +175,8 @@ namespace Luau {
             // Visual Effects
             [typeof(VisualEffect)] = LuauContextAll,
             [typeof(Volume)] = LuauContextAll,
+            [typeof(VolumeProfile)] = LuauContextAll,
+            [typeof(DepthOfField)] = LuauContextAll,
             [typeof(GraphicRaycaster)] = LuauContextAll,
         };
         
