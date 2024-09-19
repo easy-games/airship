@@ -26,6 +26,7 @@ public class UploadInfo {
 	public float uploadProgressPercent;
 	public float uploadedBytes;
 	public float sizeBytes;
+	public bool isComplete;
 	public AirshipPlatform? platform;
 }
 
@@ -338,7 +339,7 @@ public class Deploy {
 					EditorUtility.ClearProgressBar();
 					yield break;
 				}
-				if (uploadInfo.uploadProgressPercent < 1) {
+				if (!uploadInfo.isComplete) {
 					finishedUpload = false;
 				}
 
@@ -476,6 +477,7 @@ public class Deploy {
 
 		if (uploadProgress.TryGetValue(url, out var progress)) {
 			progress.uploadProgressPercent = 1;
+			progress.isComplete = true;
 		}
 	}
 
