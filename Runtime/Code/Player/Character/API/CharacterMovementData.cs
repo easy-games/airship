@@ -7,11 +7,13 @@ namespace Code.Player.Character.API {
 
 
 		[Header("Size")]
-		[Tooltip("How tall is the character")] [Min(.01f)]
+		[Tooltip("Height of the character hit box")] [Min(.01f)]
 		public float characterHeight = 1.8f;
 
-		[Tooltip("Radius of the character")] [Min(.01f)]
+		[Tooltip("Half size of the character hit box")] [Min(.01f)]
 		public float characterRadius = .2f;
+		[Tooltip("How high off the ground should the character hit box be")] [Min(0)]
+		public float colliderGroundOffset = .015f;
 
 
 		[Header("Movement")]

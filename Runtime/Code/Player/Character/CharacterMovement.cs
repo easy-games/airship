@@ -287,6 +287,10 @@ private void OnEnable() {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
 				this.OnImpactWithGround?.Invoke(currentVelocity);
+				if(this.moveData.colliderGroundOffset > 0){
+					this.SnapToY(groundHit.point.y, true);
+					newVelocity.y = 0;
+				}
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -483,10 +487,11 @@ private void OnEnable() {
 	#endregion
 
 			// Modify colliders size based on movement state
+			var offsetExtent = this.moveData.colliderGroundOffset / 2;
 			this.currentCharacterHeight = isCrouching ? standingCharacterHeight * moveData.crouchHeightMultiplier : standingCharacterHeight;
-			characterHalfExtents = new Vector3(moveData.characterRadius,  this.currentCharacterHeight/2f,moveData.characterRadius);
+			characterHalfExtents = new Vector3(moveData.characterRadius,  this.currentCharacterHeight/2f - offsetExtent,moveData.characterRadius);
 			mainCollider.transform.localScale = characterHalfExtents*2;
-			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
+			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f+offsetExtent,0);
 #endregion
 
 #region FLYING
