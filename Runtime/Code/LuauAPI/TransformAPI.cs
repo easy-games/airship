@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Codice.Client.Commands.TransformerRule;
 using Luau;
 using UnityEngine;
 
@@ -214,6 +216,21 @@ public class TransformAPI : BaseLuaAPIClass {
             return 0;
         }
         
+        if(methodName == "GetDescendants") {
+            Transform transform = (Transform)targetObject;
+            var children = new List<Transform>();
+            GetAllChildren(ref children, transform);
+            LuauCore.WritePropertyToThread(thread, children.ToArray<Transform>(), typeof(Transform[]));
+            return 1;            
+        }
+        
         return -1;
+    }
+
+    private void GetAllChildren(ref List<Transform> children, Transform transform){
+        children.Add(transform);
+        foreach(Transform child in transform){
+            GetAllChildren(ref children, child);
+        }
     }
 }
