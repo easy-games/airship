@@ -506,8 +506,10 @@ public class AccessoryBuilder : MonoBehaviour
     public Renderer[] GetAccessoryMeshes(AccessorySlot slot) {
         var renderers = new List<Renderer>();
         var activeAccessory = GetActiveAccessoryBySlot(slot);
-        foreach (var ren in activeAccessory.renderers){
-            renderers.Add(ren);
+        if(activeAccessory.renderers != null){
+            foreach (var ren in activeAccessory.renderers){
+                renderers.Add(ren);
+            }
         }
         return renderers.ToArray();
     }
@@ -515,9 +517,11 @@ public class AccessoryBuilder : MonoBehaviour
     public ParticleSystem[] GetAccessoryParticles(AccessorySlot slot) {
         var results = new List<ParticleSystem>();
         var activeAccessory = GetActiveAccessoryBySlot(slot);
-        foreach (var go in activeAccessory.gameObjects) {
-            var particles = go.GetComponentsInChildren<ParticleSystem>();
-            foreach (var particle in particles) results.Add(particle);
+        if(activeAccessory.gameObjects != null){
+            foreach (var go in activeAccessory.gameObjects) {
+                var particles = go.GetComponentsInChildren<ParticleSystem>();
+                foreach (var particle in particles) results.Add(particle);
+            }
         }
 
         return results.ToArray();
