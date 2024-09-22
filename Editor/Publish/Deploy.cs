@@ -458,7 +458,7 @@ public class Deploy {
 		uploadInfo.sizeBytes = bytes.Length;
 
 		var req = UnityWebRequest.Put(url, bytes);
-		req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
+		req.SetRequestHeader("x-goog-content-length-range", "0,500000000");
 		yield return req.SendWebRequest();
 
 		while (!req.isDone) {
