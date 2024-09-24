@@ -108,6 +108,11 @@ public class Deploy {
 				Debug.LogError($"Game scene name not allowed: {scene.name}");
 				yield break;
 			}
+
+			if (scene.name.Contains(" ")) {
+				Debug.LogError("Scenes are not allowed to have spaces in their name. Please fix: \"" + scene.name + "\"");
+				yield break;
+			}
 		}
 
 		if (LuauCore.IsProtectedScene(gameConfig.startingScene.name)) {
