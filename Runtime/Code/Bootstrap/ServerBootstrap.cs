@@ -20,6 +20,7 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [Serializable]
@@ -104,9 +105,11 @@ public class ServerBootstrap : MonoBehaviour
 			transport.port = port;
 
 			if (RunCore.IsClient()) {
+				// use random port in shared mode
+				transport.port = (ushort)Random.Range(7770, 7870);
+				print("Listening on port " + transport.port);
 				AirshipNetworkManager.singleton.StartHost();
 			} else {
-				print("Listening on port " + port);
 				AirshipNetworkManager.singleton.StartServer();
 			}
 		} else {
@@ -129,7 +132,6 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void ProcessExit(object sender, EventArgs args) {
-		Debug.Log("----> Process Exit!");
 		this.onProcessExit?.Invoke();
 	}
 
