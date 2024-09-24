@@ -130,7 +130,8 @@ namespace Code.Player.Character {
 		private float serverUpdateRefreshDelay = .1f;
 		private bool airborneFromImpulse = false;
 		private float currentSpeed;
-
+		private float trackedDeltaTime = 0;
+		
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier() {
 			speedMultiplier = 1,
 		};
@@ -217,6 +218,11 @@ private void OnEnable() {
 		}
 
 		private void FixedUpdate() {	
+			if (isLocalPlayer || _networkAnimator == null) {
+				//Track movement to visually sync animator
+				UpdateAnimationVelocity();
+			}
+
 			// Observers don't calculate moves
 			if (!isOwned){
 				return;
@@ -231,19 +237,19 @@ private void OnEnable() {
 			OnEndMove?.Invoke(md);
 		}
 
-		private void Update() {
-			if (isLocalPlayer || _networkAnimator == null) {
-				UpdateAnimationVelocity();
-			}
-		}
 
 		private void UpdateAnimationVelocity() {
 			//Update visual state of client character
 			var currentPos = rootTransform.position;
-			var worldVel = (currentPos - trackedPosition) * (1 / (float)Time.deltaTime);
-			trackedPosition = currentPos;
-			if (worldVel != lastWorldVel) {
+			trackedDeltaTime += Time.fixedDeltaTime;
+			if (currentPos != trackedPosition) {
+				var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
 				lastWorldVel = worldVel;
+				trackedPosition = currentPos;
+				// if(!this.isOwned){
+				// 	Debug.Log("Pos: " + currentPos + " ve: " + lastWorldVel + " time: " + trackedDeltaTime);
+				// }
+				trackedDeltaTime = 0;
 				//Debug.Log("VEL: " + worldVel);
 				animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 			}
