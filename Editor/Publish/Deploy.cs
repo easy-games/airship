@@ -184,8 +184,8 @@ public class Deploy {
 		}
 		
 		// code.zip
-		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+		AirshipEditorUtil.EnsureDirectory(Path.Join("bundles", "uploads"));
+		var codeZipPath = Path.Join("bundles", "uploads", "code.zip");
 		{
 			var st = Stopwatch.StartNew();
 			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
