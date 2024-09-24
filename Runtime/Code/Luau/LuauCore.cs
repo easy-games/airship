@@ -168,6 +168,7 @@ public partial class LuauCore : MonoBehaviour {
 
         //Debug.Log("Starting Luau DLL");
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
+        LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
         LuauPlugin.LuauStartup(
             getPropertyCallback_holder,
             setPropertyCallback_holder,

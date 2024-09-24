@@ -22,6 +22,8 @@ public static class LuauPlugin
 	public delegate int YieldCallback(LuauContext context, IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 
+	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
+
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
 	public enum CurrentCaller
@@ -93,6 +95,18 @@ public static class LuauPlugin
 	    ThreadSafetyCheck();
 
 	    bool returnValue = InitializePrintCallback(printCallback);
+	    return returnValue;
+    }
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+    private static extern bool InitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback);
+    public static bool LuauInitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback) {
+	    ThreadSafetyCheck();
+
+	    bool returnValue = InitializeComponentCallbacks(setEnabledCallback);
 	    return returnValue;
     }
 
