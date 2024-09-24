@@ -307,6 +307,17 @@ namespace Editor.Packages {
         }
 
         public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
+            var confirmTitle = "Package Publish";
+            var confirmMessage = $"You are about to publish {packageDoc.id}.";
+            #if AIRSHIP_INTERNAL
+                confirmTitle = $"{currentEnvironment} Publish";
+                confirmMessage = $"You are about to publish {packageDoc.id} to {currentEnvironment}.";
+            #endif
+            var okWithPublish = EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Publish", "Cancel");
+            if (!okWithPublish) {
+                yield break;
+            }
+            
             List<string> possibleKeys;
             if (currentEnvironment == "Staging") {
                 possibleKeys = new List<string> { AuthConfig.instance.stagingApiKey, InternalHttpManager.editorAuthToken };
