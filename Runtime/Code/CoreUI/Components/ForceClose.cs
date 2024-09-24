@@ -25,7 +25,7 @@ namespace Code.CoreUI.Components {
                         this.tween = null;
                     }
 
-                    this.tween = NativeTween.AnchoredPositionY(this.container, -10f, 0.3f).SetEaseQuadOut();
+                    this.tween = NativeTween.AnchoredPositionY(this.container, -10f, 0.18f).SetEaseBounceOut();
                 }
                 this.holdTime += Time.deltaTime;
 
@@ -45,7 +45,7 @@ namespace Code.CoreUI.Components {
             if (this.isShown) {
                 this.isShown = false;
                 this.holdTime = 0f;
-                this.tween = NativeTween.AnchoredPositionY(this.container, 71f, 0.3f).SetEaseQuadOut();
+                this.tween = NativeTween.AnchoredPositionY(this.container, 71f, 0.2f).SetEaseQuadOut();
             }
         }
     }

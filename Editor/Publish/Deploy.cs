@@ -33,6 +33,7 @@ public class UploadInfo {
 public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 	private static GameDto activeDeployTarget;
+	public const ulong MAX_UPLOAD_KB = 500_000;
 
 	public static void DeployToStaging()
 	{
