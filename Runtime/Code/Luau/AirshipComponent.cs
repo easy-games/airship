@@ -409,6 +409,9 @@ public class AirshipComponent : MonoBehaviour {
 
         LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, propertyDtos);
         
+        // Set enabled property
+        LuauPlugin.SetComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, enabled);
+        
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
             Marshal.FreeCoTaskMem(ptr);
@@ -811,6 +814,7 @@ public class AirshipComponent : MonoBehaviour {
         }
         
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && IsReadyToStart()) {
+            LuauPlugin.SetComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, true);
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
             if (_airshipReadyToStart && !_airshipStarted) {
@@ -821,6 +825,7 @@ public class AirshipComponent : MonoBehaviour {
 
     private void OnDisable() {
         if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && IsReadyToStart()) {
+            LuauPlugin.SetComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, false);
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
         }

@@ -304,6 +304,30 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern IntPtr GetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, ref int result);
+	public static bool GetComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
+		ThreadSafetyCheck();
+		var result = 0;
+		ThrowIfNotNullPtr(GetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, ref result));
+		return result != 0;
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr SetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int result);
+	public static void SetComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(SetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, enabled ? 1 : 0));
+	}
+    
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern IntPtr HasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, ref int result);
 	public static bool LuauHasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
 		ThreadSafetyCheck();
