@@ -6,7 +6,7 @@ namespace Code.Player.Character.API {
 	public class CharacterMovementData : MonoBehaviour {
 
 
-		[Header("Size")]
+		[Header("Collider Size")]
 		[Tooltip("Height of the character hit box")] [Min(.01f)]
 		public float characterHeight = 1.8f;
 
@@ -17,6 +17,9 @@ namespace Code.Player.Character.API {
 
 
 		[Header("Movement")]
+
+		[Tooltip("Only allow sprinting forward.")]
+		public bool onlySprintForward = false;
 		[Tooltip("Should movement be applied over time as a force? Or a constant speed.")]
 		public bool useAccelerationMovement = false;
 
@@ -34,8 +37,10 @@ namespace Code.Player.Character.API {
 		[Range(0,1)]
 		public float minAccelerationDelta = 0;
 
-		[Tooltip("Only allow sprinting forward.")]
-		public bool onlySprintForward = false;
+
+		[Tooltip("An experimental force that makes changing directions stop your forward momentum as if the character has to plant their feet to turn.")]
+		[Range(0,1)]
+		public float accelerationTurnFriction = 0;
 
 
 		[Header("Crouch")]
@@ -70,7 +75,7 @@ namespace Code.Player.Character.API {
 		[Tooltip("Let console commands toggle flying (/fly from chat)")]
 		public bool allowDebugFlying = true;
 		[Tooltip("Flying speed is determined by multiplying the speed against this number")]
-		public float flySpeedMultiplier = 3.5f;
+		public float flySpeedMultiplier = 3f;
 		
 		[Tooltip("How fast to move up and down")]
 		public float verticalFlySpeed  = 14;
@@ -109,7 +114,10 @@ namespace Code.Player.Character.API {
 		[Tooltip("Also stop momentum when in the air")]
 		public bool useMinimumVelocityInAir = false;
 		[Tooltip("Push the character away from walls to prevent rigibody friction")]
-		public bool preventWallClipping = true;
+		public bool preventWallClipping = false;
+
+		[Tooltip("When grounded force the Y position of the character to the found ground plane")]
+		public bool alwaysSnapToGround = false;
 
 		[Tooltip("Drag coefficient")]
 		[Range(0,1)]
