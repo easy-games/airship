@@ -119,6 +119,11 @@ namespace Editor.Packages {
 #endif
             GUILayout.Space(10);
 
+            if (this.gameConfig == null || this.gameConfig.packages == null) {
+                EditorGUILayout.LabelField("Invalid GameConfig reference.");
+                return;
+            }
+
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
@@ -455,16 +460,12 @@ namespace Editor.Packages {
             var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
             var typesFolder = Path.Join(Path.Join("Assets", "AirshipPackages", "Types~"), packageDoc.id);
 
-            if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
-                Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-            }
+            Directory.CreateDirectory(Path.Join("bundles", "uploads"));
 
             // Create org scope folder (@Easy)
-            string orgScopePath = Path.Join(Application.persistentDataPath, "Uploads",
+            string orgScopePath = Path.Join("bundles", "uploads",
                 packageDoc.id.Split("/")[0]);
-            if (!Directory.Exists(orgScopePath)) {
-                Directory.CreateDirectory(orgScopePath);
-            }
+            Directory.CreateDirectory(orgScopePath);
 
             packageUploadProgress[packageDoc.id] = "Zipping source...";
             Repaint();
@@ -498,8 +499,8 @@ namespace Editor.Packages {
             yield return null; // give time to repaint
 
             // code.zip
-            AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-            var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+            AirshipEditorUtil.EnsureDirectory(Path.Join("bundles", "uploads"));
+            var codeZipPath = Path.Join("bundles", "uploads", "code.zip");
             {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
@@ -765,7 +766,7 @@ namespace Editor.Packages {
             // Source.zip
             var url = $"{gameCdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
-                Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
+                Path.Join("bundles", "temp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
                 File.Delete(sourceZipDownloadPath);
             }
@@ -1035,7 +1036,7 @@ namespace Editor.Packages {
 
             var url = "https://github.com/easy-games/ExamplePackage/zipball/main";
             var request = new UnityWebRequest(url);
-            var zipDownloadPath = Path.Join(Application.persistentDataPath, "EditorTemp", "PackageTemplate.zip");
+            var zipDownloadPath = Path.Join("bundles", "temp", "PackageTemplate.zip");
             request.downloadHandler = new DownloadHandlerFile(zipDownloadPath);
             request.SendWebRequest();
 

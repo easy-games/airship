@@ -288,15 +288,17 @@ private void OnEnable() {
 			if(grounded){
 				//Reset airborne impulse
 				airborneFromImpulse = false;
+				
+				if(groundHit.point.y > transform.position.y && 
+					((!prevGrounded && this.moveData.colliderGroundOffset > 0) || moveData.alwaysSnapToGround)){
+					this.SnapToY(groundHit.point.y, true);
+					newVelocity.y = 0;
+				}
 			}
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
 				this.OnImpactWithGround?.Invoke(currentVelocity);
-				if(this.moveData.colliderGroundOffset > 0){
-					this.SnapToY(groundHit.point.y, true);
-					newVelocity.y = 0;
-				}
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -520,7 +522,8 @@ private void OnEnable() {
 #region FRICTION_DRAG
 			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
-			var dragForce = physics.CalculateDrag(currentVelocity * (inAir ? moveData.airDragMultiplier : 1), _flying ? .5f: moveData.drag);
+			var dragForce = physics.CalculateDrag(currentVelocity,  _flying ? .5f: 
+				(moveData.drag * (inAir ? moveData.airDragMultiplier : 1)));
 			if(!_flying){
 				//Ignore vertical drag so we have full control over jump and fall speeds
 				dragForce.y = 0;
@@ -592,6 +595,8 @@ private void OnEnable() {
 
 			if (_flying) {
 				currentSpeed *= moveData.flySpeedMultiplier;
+			} else if(inAir){
+				currentSpeed *= moveData.airSpeedMultiplier;
 			}
 
 			//Apply speed
@@ -639,11 +644,21 @@ private void OnEnable() {
 			var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
 			var forwardVector = (characterMoveVelocity + newVelocity).normalized * forwardDistance;
 	
-#region CLAMP_MOVE
+#region MOVE_FORCE
 			//Clamp directional movement to not add forces if you are already moving in that direction
 			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
+			var tryingToMove = normalizedMoveDir.sqrMagnitude > .1f;
+			var rawMoveDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
+			//Don't drift if you are turning the character
+			if(moveData.accelerationTurnFriction > 0 && moveData.useAccelerationMovement && !isImpulsing && grounded && tryingToMove){
+				var parallelDot = 1-Mathf.Abs(Mathf.Clamp01(rawMoveDot));
+				//print("DOT: " + parallelDot);
+				newVelocity += -Vector3.ClampMagnitude(flatVelocity, currentSpeed) * parallelDot * moveData.accelerationTurnFriction;
+			}			
+
+			//Stop character from moveing into colliders (Not really needed anymore unless you have friction on your physics mats)
 			if(moveData.preventWallClipping){
 				//Do raycasting after we have claculated our move direction
 				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
@@ -686,8 +701,7 @@ private void OnEnable() {
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			//Multipy by 2 so perpendicular movement is still fully applied rather than half applied
-			var rawDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
-			var dirDot = Mathf.Max(moveData.minAccelerationDelta, Mathf.Clamp01((1-rawDot)*2));
+			var dirDot = Mathf.Max(moveData.minAccelerationDelta, Mathf.Clamp01((1-rawMoveDot)*2));
 			
 			if(useExtraLogging){
 				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
@@ -701,8 +715,16 @@ private void OnEnable() {
 				if(moveData.useAccelerationMovement){
 					newVelocity += characterMoveVelocity;
 				}else{
-					newVelocity.x = characterMoveVelocity.x;
-					newVelocity.z = characterMoveVelocity.z;
+					// if(Mathf.Abs(characterMoveVelocity.x) > Mathf.Abs(newVelocity.x)){
+					// 	newVelocity.x = characterMoveVelocity.x;
+					// }
+					// if(Mathf.Abs(characterMoveVelocity.z) > Mathf.Abs(newVelocity.z)){
+					// 	newVelocity.z = characterMoveVelocity.z;
+					// }
+					if(Mathf.Abs(characterMoveVelocity.x) + Mathf.Abs(characterMoveVelocity.z)> Mathf.Abs(newVelocity.x) + Mathf.Abs(newVelocity.z)){
+						newVelocity.x = characterMoveVelocity.x;
+						newVelocity.z = characterMoveVelocity.z;
+					}
 				}
 			} else {
 				//Moving faster than max speed or using acceleration mode
@@ -747,16 +769,17 @@ private void OnEnable() {
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
+			var magnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			var canStopVel = !airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing;
-			var notTryingToMove = normalizedMoveDir.sqrMagnitude < .1f;
-			var underMin = physics.GetFlatDistance(Vector3.zero, newVelocity) <= moveData.minimumVelocity;
+			var underMin = magnitude <= moveData.minimumVelocity && magnitude > .01f;
 			//print("airborneFromImpulse: " + airborneFromImpulse + " unerMin: " +underMin + " notTryingToMove: " + notTryingToMove);
-			if(canStopVel && notTryingToMove && underMin){
+			if(canStopVel && !tryingToMove && underMin){
 				//Not intending to move so snap to zero (Fake Dynamic Friction)
-				//print("STOPPING VELOCITY");
+				//print("STOPPING VELOCITY. CanStop: " + canStopVel + " tryingtoMove: " + tryingToMove + " underMin: " + underMin);
 				newVelocity.x = 0;
 				newVelocity.z = 0;
 			}
+
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			

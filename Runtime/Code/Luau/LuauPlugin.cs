@@ -22,6 +22,8 @@ public static class LuauPlugin
 	public delegate int YieldCallback(LuauContext context, IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 
+	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
+
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
 	public enum CurrentCaller
@@ -93,6 +95,18 @@ public static class LuauPlugin
 	    ThreadSafetyCheck();
 
 	    bool returnValue = InitializePrintCallback(printCallback);
+	    return returnValue;
+    }
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+    private static extern bool InitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback);
+    public static bool LuauInitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback) {
+	    ThreadSafetyCheck();
+
+	    bool returnValue = InitializeComponentCallbacks(setEnabledCallback);
 	    return returnValue;
     }
 
@@ -299,6 +313,30 @@ public static class LuauPlugin
 		ThrowIfNotNullPtr(UpdateAllAirshipComponents(context, (int)updateType, dt));
 	}
 	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr GetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, ref int result);
+	public static bool GetComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
+		ThreadSafetyCheck();
+		var result = 0;
+		ThrowIfNotNullPtr(GetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, ref result));
+		return result != 0;
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr SetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int result);
+	public static void LuauSetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(SetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, enabled ? 1 : 0));
+	}
+    
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else

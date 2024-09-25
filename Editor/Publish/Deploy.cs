@@ -184,8 +184,8 @@ public class Deploy {
 		}
 		
 		// code.zip
-		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+		AirshipEditorUtil.EnsureDirectory(Path.Join("bundles", "uploads"));
+		var codeZipPath = Path.Join("bundles", "uploads", "code.zip");
 		{
 			var st = Stopwatch.StartNew();
 			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
@@ -257,7 +257,9 @@ public class Deploy {
 
 		// Save gameConfig.json so we can upload it
 		var gameConfigJson = gameConfig.ToJson();
-		var gameConfigPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", "gameConfig.json");
+		var gameConfigParentPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild");
+		Directory.CreateDirectory(gameConfigParentPath);
+		var gameConfigPath = Path.Combine(gameConfigParentPath, "gameConfig.json");
 		File.WriteAllText(gameConfigPath, gameConfigJson);
 
 		var urls = deploymentDto.urls;
@@ -462,6 +464,16 @@ public class Deploy {
 		}
 		var bytes = File.ReadAllBytes(bundleFilePath);
 		uploadInfo.sizeBytes = bytes.Length;
+
+		ulong sizeKb = (ulong)uploadInfo.sizeBytes / 1_000;
+		if (sizeKb > MAX_UPLOAD_KB) {
+			Debug.LogError($"Game bundle {filePath} is greater than max size (500mb). You can reduce file size by lowering max texture size. For more help on reducing file size, visit: https://docs.airship.gg/optimization/reducing-bundle-size");
+			if (uploadProgress.TryGetValue(url, out var p)) {
+				p.failed = true;
+			}
+
+			yield break;
+		}
 
 		var req = UnityWebRequest.Put(url, bytes);
 		req.SetRequestHeader("x-goog-content-length-range", "0,500000000");

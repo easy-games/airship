@@ -57,10 +57,10 @@ namespace Code.Bootstrap {
 
         public string GetPersistentDataDirectory(AirshipPlatform platform) {
             if (this.packageType == AirshipPackageType.Game) {
-                return Path.Combine(AssetBridge.GamesPath, this.id + "_v" + this.assetVersion, platform.ToString());
+                return Path.Combine(Application.persistentDataPath, "Games", this.id + "_v" + this.assetVersion, platform.ToString());
             } else {
                 var split = id.Split("/");
-                return Path.Combine(AssetBridge.PackagesPath, split[0], split[1] + "_v" + this.assetVersion, platform.ToString());
+                return Path.Combine(Application.persistentDataPath, "Packages", split[0], split[1] + "_v" + this.assetVersion, platform.ToString());
             }
         }
 
@@ -68,7 +68,7 @@ namespace Code.Bootstrap {
             var assetVersionInt = Int32.Parse(this.assetVersion);
             if (this.packageType == AirshipPackageType.Game) {
                 // folders to delete
-                var folders = Directory.GetDirectories(AssetBridge.GamesPath)
+                var folders = Directory.GetDirectories(Application.persistentDataPath, "Games")
                     .Where((path) => path.Contains(this.id + "_v"))
                     .Where((path) => {
                         try {
@@ -82,7 +82,7 @@ namespace Code.Bootstrap {
                 return folders.ToArray();
             } else {
                 var split = id.Split("/");
-                var folders = Directory.GetDirectories(Path.Join(AssetBridge.PackagesPath, split[0]))
+                var folders = Directory.GetDirectories(Path.Join(Application.persistentDataPath, "Packages", split[0]))
                     .Where((path) => path.Contains(split[1] + "_v"))
                     .Where((path) => {
                         try {
@@ -99,10 +99,10 @@ namespace Code.Bootstrap {
 
         public string GetPersistentDataDirectory() {
             if (this.packageType == AirshipPackageType.Game) {
-                return Path.Combine(AssetBridge.GamesPath, this.id + "_v" + this.assetVersion);
+                return Path.Combine(Application.persistentDataPath, "Games", this.id + "_v" + this.assetVersion);
             } else {
                 var split = id.Split("/");
-                return Path.Combine(AssetBridge.PackagesPath, split[0], split[1] + "_v" + this.assetVersion);
+                return Path.Combine(Application.persistentDataPath, "Packages", split[0], split[1] + "_v" + this.assetVersion);
             }
         }
     }
