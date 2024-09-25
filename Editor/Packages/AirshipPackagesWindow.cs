@@ -837,12 +837,17 @@ namespace Editor.Packages {
                  if (File.Exists(rootGitIgnore)) {
                      try {
                          var lines = File.ReadLines(rootGitIgnore);
+                         var org = packageId.Split("/")[0];
 
                          var srcIgnore = $"Assets/AirshipPackages/{packageId}/*";
+                         var orgMetaIgnore = $"Assets/AirshipPackages/{org}.meta";
                          var metaIgnore = $"Assets/AirshipPackages/{packageId}.meta";
                          var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
                          if (!lines.Contains(srcIgnore)) {
                              File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
+                         }
+                         if (!lines.Contains(orgMetaIgnore)) {
+                             File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{orgMetaIgnore}" });
                          }
                          if (!lines.Contains(metaIgnore)) {
                              File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
