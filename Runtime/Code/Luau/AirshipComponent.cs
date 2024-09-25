@@ -822,7 +822,12 @@ public class AirshipComponent : MonoBehaviour {
 
     private void OnDisable() {
         if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && IsReadyToStart()) {
-            LuauPlugin.SetComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, false);
+            
+            // Ensure the thread hasn't been destroyed
+            if (m_thread != IntPtr.Zero) {
+                LuauPlugin.SetComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, false);
+            }
+            
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
         }
