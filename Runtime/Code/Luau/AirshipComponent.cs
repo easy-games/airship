@@ -408,7 +408,6 @@ public class AirshipComponent : MonoBehaviour {
 
 
         LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, propertyDtos);
-        
         // Set enabled property
         LuauPlugin.SetComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, enabled);
         
@@ -804,8 +803,6 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void OnEnable() {
-        // LuauCore.onResetInstance += OnLuauReset;
-        
         // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
         if (_airshipRewaitForLuauCoreReady) {
             _airshipRewaitForLuauCoreReady = false;
@@ -859,6 +856,7 @@ public class AirshipComponent : MonoBehaviour {
                 if (_isAirshipComponent && AirshipBehaviourRootV2.HasId(gameObject)) {
                     var unityInstanceId = AirshipBehaviourRootV2.GetId(gameObject);
                     if (_airshipComponentEnabled) {
+                        LuauPlugin.SetComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, false);
                         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
                         _airshipComponentEnabled = false;
                     }
@@ -968,6 +966,21 @@ public class AirshipComponent : MonoBehaviour {
         
         var collisionObjId = ThreadDataManager.AddObjectReference(m_thread, collision);
         LuauPlugin.LuauUpdateCollisionAirshipComponent(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, updateType, collisionObjId);
+    }
+
+    private IEnumerator SetEnabledAtEndOfFrame(bool nextEnabled) {
+        yield return new WaitForEndOfFrame();
+        base.enabled = nextEnabled;
+    }
+
+    /// <summary>
+    /// The enabled state of this AirshipComponent
+    /// </summary>
+    // ReSharper disable once InconsistentNaming
+    public bool enabled {
+        get => base.enabled;
+        // because of Luau, we need to defer it until end of frame
+        set => StartCoroutine(SetEnabledAtEndOfFrame(value));
     }
     
     public void SetScript(AirshipScript script, bool attemptStartup = false) {

@@ -78,7 +78,7 @@ public partial class LuauCore : MonoBehaviour {
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
-        componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(setComponentEnabled);
+        componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
 
     }
 
@@ -884,17 +884,20 @@ public partial class LuauCore : MonoBehaviour {
     
     /// When lua wants to toggle the enabled state of a component
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ComponentSetEnabledCallback))]
-    private static void setComponentEnabled(IntPtr thread, int instanceId, int componentId, int enabled)
-    {
-        var component = AirshipBehaviourRootV2.GetComponent(instanceId, componentId);
-        if (component == null)
-        {
-            Debug.LogWarning($"Failed to change enabled state of component {componentId} under {instanceId}");
+    private static void SetComponentEnabled(IntPtr thread, int instanceId, int componentId, int enabled) {
+        var gameObject = AirshipBehaviourRootV2.GetGameObject(instanceId);
+        if (gameObject == null) {
+            Debug.LogError($"Could not find GameObject by id {instanceId} while trying to set enabled state");
             return;
         }
         
-        Debug.Log($"Check for component {component != null}");
-        component.enabled = enabled != 0;
+        var component = AirshipBehaviourRootV2.GetComponent(gameObject, componentId);
+        if (component == null) {
+            Debug.LogError($"Could not set component {componentId} enabled to {enabled} for {gameObject.name}", gameObject);
+            return;
+        }
+        
+        component.enabled = (enabled != 0);
     }
     
     
