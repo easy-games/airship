@@ -24,7 +24,8 @@ public partial class LuauCore : MonoBehaviour {
     public static LuauContext CurrentContext = LuauContext.Game;
 
     private static LuauPlugin.PrintCallback printCallback_holder = printf;
-
+    
+    private LuauPlugin.ComponentSetEnabledCallback componentSetEnabledCallback_holder;
     private LuauPlugin.GetPropertyCallback getPropertyCallback_holder;
     private LuauPlugin.SetPropertyCallback setPropertyCallback_holder;
     private LuauPlugin.CallMethodCallback callMethodCallback_holder;
@@ -77,6 +78,8 @@ public partial class LuauCore : MonoBehaviour {
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
+        componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
+
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -878,7 +881,26 @@ public partial class LuauCore : MonoBehaviour {
         }
         // Debug.Log("event connections: " + eventConnections.Count);
     }
-
+    
+    /// When lua wants to toggle the enabled state of a component
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ComponentSetEnabledCallback))]
+    private static void SetComponentEnabled(IntPtr thread, int instanceId, int componentId, int enabled) {
+        var gameObject = AirshipBehaviourRootV2.GetGameObject(instanceId);
+        if (gameObject == null) {
+            Debug.LogError($"Could not find GameObject by id {instanceId} while trying to set enabled state");
+            return;
+        }
+        
+        var component = AirshipBehaviourRootV2.GetComponent(gameObject, componentId);
+        if (component == null) {
+            Debug.LogError($"Could not set component {componentId} enabled to {enabled} for {gameObject.name}", gameObject);
+            return;
+        }
+        
+        component.enabled = (enabled != 0);
+    }
+    
+    
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
