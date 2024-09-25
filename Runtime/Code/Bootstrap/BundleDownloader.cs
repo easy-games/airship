@@ -296,7 +296,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 	public static string GetBundleVersionCacheFilePath(string bundleId) {
 		var versionCacheFileName = $"{bundleId}_bundle_version";
-		return Path.Join(AssetBridge.GamesPath, versionCacheFileName);
+		return Path.Join(Application.persistentDataPath, "Games", versionCacheFileName);
 	}
 
 	private IEnumerator UpdateDownloadProgressBar(BundleLoadingScreen loadingScreen) {

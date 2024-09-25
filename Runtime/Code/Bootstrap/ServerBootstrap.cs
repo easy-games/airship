@@ -310,7 +310,7 @@ public class ServerBootstrap : MonoBehaviour
 		// Download game config
 		var url = $"{startupConfig.CdnUrl}/game/{startupConfig.GameBundleId}/code/{startupConfig.GameCodeVersion}/gameConfig.json";
 		var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(url));
-		var gameConfigPath = Path.Join(AssetBridge.GamesPath, startupConfig.GameBundleId, "gameConfig.json");
+		var gameConfigPath = Path.Combine(Application.persistentDataPath, "Games", startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
 		yield return request.SendWebRequest();
 		if (request.result != UnityWebRequest.Result.Success) {
