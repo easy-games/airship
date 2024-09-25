@@ -980,9 +980,16 @@ public class AirshipComponent : MonoBehaviour {
     public bool enabled {
         get => base.enabled;
         // because of Luau, we need to defer it until end of frame
-        set => StartCoroutine(SetEnabledAtEndOfFrame(value));
+        set {
+            if (Application.isPlaying) {
+                StartCoroutine(SetEnabledAtEndOfFrame(value));
+            }
+            else {
+                base.enabled = value;
+            }
+        }
     }
-    
+
     public void SetScript(AirshipScript script, bool attemptStartup = false) {
         scriptFile = script;
         
