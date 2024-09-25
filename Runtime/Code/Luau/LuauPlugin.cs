@@ -332,7 +332,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr SetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int result);
-	public static void SetComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
+	public static void LuauSetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(SetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, enabled ? 1 : 0));
 	}
