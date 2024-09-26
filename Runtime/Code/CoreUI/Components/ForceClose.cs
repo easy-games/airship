@@ -40,7 +40,7 @@ namespace Code.CoreUI.Components {
 
                 return;
             }
-            
+
             this.holdTime = 0f;
 
             // not holding escape
