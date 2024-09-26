@@ -50,8 +50,13 @@ public class AccessoryBuilder : MonoBehaviour
         // update list of accessories
         var accessoryComponents = rig.transform.GetComponentsInChildren<AccessoryComponent>();
         foreach (var accessoryComponent in accessoryComponents) {
-            if (!_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
-                _activeAccessories.Add(accessoryComponent.accessorySlot, new ActiveAccessory());
+            // if (!_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
+            //     _activeAccessories.Add(accessoryComponent.accessorySlot, new ActiveAccessory());
+            // }
+            
+            //If we have already tracked this slot, overwrite it
+            if (_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
+                this.RemoveAccessorySlot(accessoryComponent.accessorySlot, false);
             }
 
             Renderer[] renderers;
