@@ -55,7 +55,6 @@ namespace Assets.Luau.Network {
 	    private void OnBroadcastFromClient(NetworkConnectionToClient conn, NetBroadcast msg) {
 		    // Runs on the server, when the client broadcasts a message
 		    var targetContext = msg.FromProtectedContext ? LuauContext.Protected : LuauContext.Game;
-		    Debug.Log("Receive message with target: " + targetContext);
 		    broadcastFromClientAction?.Invoke((object) targetContext, (object)conn.connectionId, msg.Blob);
 		}
 
