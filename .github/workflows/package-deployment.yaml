@@ -2,9 +2,9 @@ name: Publish Airship Package
 run-name: Publish Airship Package env:${{ inputs.environment || 'platform-staging' }}
 
 on:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
   workflow_dispatch:
     inputs:
       environment:
