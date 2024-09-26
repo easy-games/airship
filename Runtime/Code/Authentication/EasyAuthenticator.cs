@@ -98,7 +98,7 @@ namespace Code.Authentication {
             Debug.Log("Authenticating " + conn);
 #endif
             try {
-                var userData = await LoadUserData(loginData);
+                var userData = await LoadUserData(loginData.authToken);
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) throw new Exception("No reserved slot.");
                 PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
@@ -130,7 +130,7 @@ namespace Code.Authentication {
             connectionsPendingDisconnect.Remove(conn);
         }
 
-        private async Task<UserData> LoadUserData(LoginMessage loginData) {
+        private async Task<UserData> LoadUserData(string authToken) {
             var tcs = new TaskCompletionSource<UserData>();
 
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
@@ -154,7 +154,7 @@ namespace Code.Authentication {
 
             RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
                 Uri = AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/validate",
-                BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
+                BodyString = "{\"userIdToken\": \"" + authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }
