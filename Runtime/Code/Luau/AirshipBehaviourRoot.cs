@@ -19,6 +19,8 @@ namespace Luau {
             IdToGameObject.Clear();
         }
 
+        public static int Count => Ids.Count;
+
         public static int GetId(GameObject gameObject) {
             if (Ids.TryGetValue(gameObject, out var id)) return id;
 
@@ -27,6 +29,13 @@ namespace Luau {
             IdToGameObject.Add(id, gameObject);
 
             return id;
+        }
+
+        internal static void Cleanup(GameObject gameObject) {
+            if (!Ids.TryGetValue(gameObject, out var id)) return;
+            
+            IdToGameObject.Remove(id);
+            Ids.Remove(gameObject);
         }
 
         public static int GetId(Component component) {
