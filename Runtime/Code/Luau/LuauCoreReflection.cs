@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Airship.DevConsole;
+using Code.Luau;
 using UnityEngine;
 using Luau;
 using UnityEngine.Profiling;
@@ -364,7 +365,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
+        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, false, out parsedData);
         if (success == false)
         {
             ThreadDataManager.Error(thread);
@@ -642,19 +643,22 @@ public partial class LuauCore : MonoBehaviour
         return false;
     }
 
-    private static bool ParseParameterData(IntPtr thread, int numParameters, IntPtr[] intPtrs, int[] podTypes, ParameterInfo[] methodParameters, int[] sizes, object[] podObjects, out object[] parsedData)
-    {
-        parsedData = new object[numParameters];
+    private static bool ParseParameterData(IntPtr thread, int numParameters, IntPtr[] intPtrs, int[] podTypes, ParameterInfo[] methodParameters, int[] sizes, object[] podObjects, bool usingAttachedContext, out object[] parsedData) {
+        var numParametersIncludingContext = numParameters;
+        if (usingAttachedContext) numParametersIncludingContext += 1;
+        parsedData = new object[numParametersIncludingContext];
 
-        for (int paramIndex = 0; paramIndex < numParameters; paramIndex++)
-        {
-            PODTYPE paramType = (PODTYPE)podTypes[paramIndex];
+        for (int i = 0; i < numParameters; i++) {
+            var paramIndex = i;
+            if (usingAttachedContext) paramIndex += 1;
+            
+            PODTYPE paramType = (PODTYPE)podTypes[i];
             Type sourceParamType = methodParameters[paramIndex].ParameterType;
             switch (paramType)
             {
                 case PODTYPE.POD_OBJECT:
                     {
-                        System.Object objectRef = podObjects[paramIndex];
+                        System.Object objectRef = podObjects[i];
                         parsedData[paramIndex] = objectRef;
                         continue;
                     }
@@ -663,7 +667,7 @@ public partial class LuauCore : MonoBehaviour
                 case PODTYPE.POD_DOUBLE:
                     {
                         double[] doubleData = new double[1];
-                        Marshal.Copy(intPtrs[paramIndex], doubleData, 0, 1);
+                        Marshal.Copy(intPtrs[i], doubleData, 0, 1);
                         if (sourceParamType.IsAssignableFrom(doubleType))
                         {
                             parsedData[paramIndex] = doubleData[0];
@@ -721,7 +725,7 @@ public partial class LuauCore : MonoBehaviour
                 case PODTYPE.POD_BOOL:
                     {
                         double[] doubleData = new double[1];
-                        Marshal.Copy(intPtrs[paramIndex], doubleData, 0, 1);
+                        Marshal.Copy(intPtrs[i], doubleData, 0, 1);
                         if (doubleData[0] == 0)
                         {
                             parsedData[paramIndex] = false;
@@ -737,13 +741,13 @@ public partial class LuauCore : MonoBehaviour
 
                 case PODTYPE.POD_VECTOR3:
                     {
-                        parsedData[paramIndex] = NewVector3FromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewVector3FromPointer(intPtrs[i]);
                         continue;
                     }
 
                 case PODTYPE.POD_STRING:
                     {
-                        string dataStr = LuauCore.PtrToStringUTF8(intPtrs[paramIndex], sizes[paramIndex]);
+                        string dataStr = LuauCore.PtrToStringUTF8(intPtrs[i], sizes[i]);
                         parsedData[paramIndex] = dataStr;
 
                         continue;
@@ -751,49 +755,49 @@ public partial class LuauCore : MonoBehaviour
 
                 case PODTYPE.POD_RAY:
                     {
-                        parsedData[paramIndex] = NewRayFromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewRayFromPointer(intPtrs[i]);
                         continue;
                     }
 
                 case PODTYPE.POD_BINARYBLOB:
                     {
-                        parsedData[paramIndex] = NewBinaryBlobFromPointer(intPtrs[paramIndex], sizes[paramIndex]);
+                        parsedData[paramIndex] = NewBinaryBlobFromPointer(intPtrs[i], sizes[i]);
                         continue;
                     }
 
                 case PODTYPE.POD_PLANE:
                     {
-                        parsedData[paramIndex] = NewPlaneFromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewPlaneFromPointer(intPtrs[i]);
                         continue;
                     }
                 case PODTYPE.POD_QUATERNION:
                     {
-                        parsedData[paramIndex] = NewQuaternionFromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewQuaternionFromPointer(intPtrs[i]);
                         continue;
                     }
                 case PODTYPE.POD_VECTOR2:
                     {
-                        parsedData[paramIndex] = NewVector2FromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewVector2FromPointer(intPtrs[i]);
                         continue;
                     }
                 case PODTYPE.POD_VECTOR4:
                     {
-                        parsedData[paramIndex] = NewVector4FromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewVector4FromPointer(intPtrs[i]);
                         continue;
                     }
                 case PODTYPE.POD_COLOR:
                     {
-                        parsedData[paramIndex] = NewColorFromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewColorFromPointer(intPtrs[i]);
                         continue;
                     }
                 case PODTYPE.POD_MATRIX:
                     {
-                        parsedData[paramIndex] = NewMatrixFromPointer(intPtrs[paramIndex]);
+                        parsedData[paramIndex] = NewMatrixFromPointer(intPtrs[i]);
                         continue;
                     }
             }
 
-            Debug.LogError("Param " + paramIndex + " " + podTypes[paramIndex] + " not valid type for this parameter/unhandled so far.");
+            Debug.LogError("Param " + paramIndex + " " + podTypes[i] + " not valid type for this parameter/unhandled so far.");
             return false;
         }
         return true;
@@ -912,7 +916,7 @@ public partial class LuauCore : MonoBehaviour
 
 
     private static HashSet<MethodInfo> _methodsUsedTest = new();
-    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext)
+    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext)
     {
         nameFound = false;
         countFound = false;
@@ -920,6 +924,7 @@ public partial class LuauCore : MonoBehaviour
         finalMethod = null;
         finalExtensionMethod = false;
         insufficientContext = false;
+        attachContext = false;
         
         var methodDict = GetCachedMethods(type);
         if (methodDict.TryGetValue(methodName, out var methods))
@@ -929,14 +934,21 @@ public partial class LuauCore : MonoBehaviour
             {
                 ParameterInfo[] parameters = GetCachedParameters(info);
 
+                var contextAttached = false;
                 //match parameters
                 if (parameters.Length != numParameters)
                 {
-                    continue;
+                    // Check for context pass through (c# function would have 1 more param then Luau call)
+                    if (parameters.Length != (numParameters + 1)) {
+                        continue;
+                    }
+                    
+                    contextAttached = info.GetCustomAttribute<AttachContext>() != null;
+                    if (!contextAttached) continue;
                 }
                 countFound = true;
 
-                bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
+                bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, contextAttached);
                 if (match)
                 {
                     if (!type.IsArray) {
@@ -949,6 +961,7 @@ public partial class LuauCore : MonoBehaviour
                     finalMethod = info;
                     finalParameters = parameters;
                     finalExtensionMethod = false;
+                    attachContext = contextAttached;
 
                     // if (_methodsUsedTest.Add(finalMethod)) {
                     //     Debug.Log($"METHOD: {type} {finalMethod}");
@@ -984,7 +997,7 @@ public partial class LuauCore : MonoBehaviour
             parameters = parameters.Skip(1).ToArray();
             countFound = true;
 
-            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
+            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, false);
 
             if (match)
             {
@@ -1018,7 +1031,7 @@ public partial class LuauCore : MonoBehaviour
             }
             countFound = true;
 
-            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
+            bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, false) ;
             if (match == true)
             {
                 finalConstructor = info;
@@ -1028,11 +1041,12 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, int[] podTypes, object[] podObjects)
-    {
-        for (int paramIndex = 0; paramIndex < numParameters; paramIndex++)
-        {
-            PODTYPE paramType = (PODTYPE)podTypes[paramIndex];
+    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, int[] podTypes, object[] podObjects, bool contextAttached) {
+        for (int i = 0; i < numParameters; i++) {
+            var paramIndex = i;
+            if (contextAttached) paramIndex += 1; // Because 0'th param should be context
+            
+            PODTYPE paramType = (PODTYPE)podTypes[i];
             Type sourceParamType = parameters[paramIndex].ParameterType;
             if (parameters[paramIndex].IsOut == true || parameters[paramIndex].IsIn == true)
             {
@@ -1044,7 +1058,7 @@ public partial class LuauCore : MonoBehaviour
                 case PODTYPE.POD_NULL:
                     continue;
                 case PODTYPE.POD_OBJECT:
-                    var obj = podObjects[paramIndex];
+                    var obj = podObjects[i];
                     if (obj == null || sourceParamType.IsAssignableFrom(obj.GetType()))
                     {
                         continue;
