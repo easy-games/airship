@@ -40,11 +40,12 @@ namespace Code.CoreUI.Components {
 
                 return;
             }
+            
+            this.holdTime = 0f;
 
             // not holding escape
             if (this.isShown) {
                 this.isShown = false;
-                this.holdTime = 0f;
                 this.tween = NativeTween.AnchoredPositionY(this.container, 71f, 0.2f).SetEaseQuadOut();
             }
         }
