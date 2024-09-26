@@ -1,15 +1,15 @@
 name: Outbound Trigger Deploy (Fast)
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: environment
-        default: platform-staging
-        required: true
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
+#     inputs:
+#       environment:
+#         type: environment
+#         default: platform-staging
+#         required: true
 
 jobs:
   trigger:
