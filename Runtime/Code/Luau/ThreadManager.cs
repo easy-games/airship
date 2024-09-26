@@ -150,10 +150,10 @@ namespace Luau {
             s_cleanUpKeys.Add(instanceId);
         }
 
-        public static Luau.CallbackWrapper RegisterCallback(LuauContext context, IntPtr thread, int handle, string methodName) {
+        public static Luau.CallbackWrapper RegisterCallback(LuauContext context, IntPtr thread, int handle, string methodName, bool validateContext) {
             ThreadData threadData = GetOrCreateThreadData(context, thread, "RegisterCallback");
 
-            Luau.CallbackWrapper callback = new Luau.CallbackWrapper(context, thread, methodName, handle);
+            Luau.CallbackWrapper callback = new Luau.CallbackWrapper(context, thread, methodName, handle, validateContext);
             threadData.m_callbacks.Add(callback);
 
             return callback;

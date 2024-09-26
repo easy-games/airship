@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Code.Luau;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Profiling;
@@ -1022,13 +1023,15 @@ public partial class LuauCore : MonoBehaviour {
                 ParameterInfo[] eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
 
                 foreach (ParameterInfo param in eventInfoParams) {
-                    if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false) {
+                    if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false && param.ParameterType.IsEnum == false) {
                         return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                     }
                 }
 
+                var attachContextToEvent = eventInfo.GetCustomAttribute<AttachContext>() != null;
+
                 //grab the correct one for the number of parameters
-                var callbackWrapper = ThreadDataManager.RegisterCallback(context, thread, handle, methodName);
+                var callbackWrapper = ThreadDataManager.RegisterCallback(context, thread, handle, methodName, attachContextToEvent);
                 string reflectionMethodName = "HandleEventDelayed" + eventInfoParams.Length.ToString();
                 MethodInfo method = callbackWrapper.GetType().GetMethod(reflectionMethodName);
 
@@ -1060,7 +1063,7 @@ public partial class LuauCore : MonoBehaviour {
         object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
 
         Profiler.BeginSample("LuauCore.FindMethod");
-        FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext);
+        FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext, out var attachContext);
         Profiler.EndSample();
 
         if (finalMethod == null) {
@@ -1082,7 +1085,10 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
+        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, attachContext, out parsedData);
+        if (attachContext) {
+            parsedData[0] = context;
+        }
         if (success == false) {
             return LuauError(thread, $"Error: Unable to parse parameters for {type.Name} {finalMethod.Name}");
         }
