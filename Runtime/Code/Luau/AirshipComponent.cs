@@ -868,7 +868,6 @@ public class AirshipComponent : MonoBehaviour {
 
                     InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
                     LuauPlugin.LuauRemoveAirshipComponent(context, m_thread, unityInstanceId, _scriptBindingId);
-                    AirshipBehaviourRootV2.Cleanup(gameObject);
                 }
                 LuauState.FromContext(context).RemoveThread(m_thread);
                 LuauPlugin.LuauSetThreadDestroyed(m_thread);
