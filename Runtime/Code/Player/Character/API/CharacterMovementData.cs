@@ -16,10 +16,12 @@ namespace Code.Player.Character.API {
 		public float colliderGroundOffset = .015f;
 
 
+
 		[Header("Movement")]
 
 		[Tooltip("Only allow sprinting forward.")]
 		public bool onlySprintForward = false;
+
 		[Tooltip("Should movement be applied over time as a force? Or a constant speed.")]
 		public bool useAccelerationMovement = false;
 
@@ -31,19 +33,26 @@ namespace Code.Player.Character.API {
 
 		[Tooltip("How much to accelerate (units per second) when using acceleration movement or when going faster than the target speed")] [Min(0f)]
 		public float accelerationForce = 1;
+
 		[Tooltip("How much to accelerate sprinting (units per second) when using acceleration movement or when going faster than the target speed")] [Min(0f)]
 		public float sprintAccelerationForce = 1.4f;
+
 		[Tooltip("If accelerating in a direction you are already moving, how much force can you still apply?")]
 		[Range(0,1)]
 		public float minAccelerationDelta = 0;
 
+		[Tooltip("How much control do you have over movement while in the air? 0 is no control, 1 is full control just like on the ground")]
+		[Range(0,1)]
+		public float inAirDirectionalControl = 1;
 
 		[Tooltip("An experimental force that makes changing directions stop your forward momentum as if the character has to plant their feet to turn.")]
 		[Range(0,1)]
 		public float accelerationTurnFriction = 0;
 
 
+
 		[Header("Crouch")]
+
 		[Tooltip("Auto crouch will make the character crouch if they walk into a small area")]
 		public bool autoCrouch = true;
 
@@ -60,7 +69,9 @@ namespace Code.Player.Character.API {
 		public float crouchHeightMultiplier = 0.75f;
 
 
+
 		[Header("Jump")]
+
 		[Tooltip("How many jumps you can make before hitting the ground again")] [Min(0f)]
 		public int numberOfJumps = 1;
 
@@ -71,9 +82,12 @@ namespace Code.Player.Character.API {
 		public float jumpCoyoteTime = 0.14f;
 
 
+
 		[Header("Fly")]
+
 		[Tooltip("Let console commands toggle flying (/fly from chat)")]
 		public bool allowDebugFlying = true;
+
 		[Tooltip("Flying speed is determined by multiplying the speed against this number")]
 		public float flySpeedMultiplier = 3f;
 		
@@ -93,13 +107,16 @@ namespace Code.Player.Character.API {
 		[Header("Gravity")]
 		[Tooltip("Apply Physics.gravity force every tick")]
 		public bool useGravity = true;
+
 		[Tooltip("Apply gravity even when on the ground for accurate physics")]
 		public bool useGravityWhileGrounded = false;
 
 		[Tooltip("Multiplier of global gravity force")]
 		public float gravityMultiplier = 2;
+
 		[Tooltip("Use this to adjust gravity while moving in the +Y. So you can have floaty jumps upwards but still have hard drops downward")]
 		public float upwardsGravityMultiplier = 1;
+
 
 
 		[Header("Physics")]
@@ -109,10 +126,13 @@ namespace Code.Player.Character.API {
 
 		[Tooltip("Maximum fall speed m/s")]
 		public float terminalVelocity = 50;
+
 		[Tooltip("Velocity will be set to zero when below this threshold on the ground")]
 		public float minimumVelocity = 1;
+
 		[Tooltip("Also stop momentum when in the air")]
 		public bool useMinimumVelocityInAir = false;
+
 		[Tooltip("Push the character away from walls to prevent rigibody friction")]
 		public bool preventWallClipping = false;
 
@@ -130,7 +150,9 @@ namespace Code.Player.Character.API {
 		public float airSpeedMultiplier = 1;
 
 
+
 		[Header("Step Ups")]
+
 		[Tooltip("Push the character up when they stop over a set threshold")]
 		public bool detectStepUps = true;
 		[Tooltip("Step the character up every frame if it theres nothing to push up to")]
@@ -148,7 +170,9 @@ namespace Code.Player.Character.API {
 		public float stepUpRampDistance = .75f;
 
 
+
 		[Header("Slopes")]
+
 		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
 		public bool detectSlopes = false;
 
@@ -158,6 +182,7 @@ namespace Code.Player.Character.API {
 		[Tooltip("Slopes below this threshold will be ignored. O is flat ground, 1 is a vertical wall")]
 		[Range(0,1)]
 		public float minSlopeDelta = .1f;
+		
 		[Tooltip("Slopes above this threshold will be treated as walls")]
 		[Range(0,1)]
 		public float maxSlopeDelta = .3f;
