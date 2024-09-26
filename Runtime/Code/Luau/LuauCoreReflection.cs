@@ -325,7 +325,7 @@ public partial class LuauCore : MonoBehaviour
             else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_COMPONENT) {
                 var ptr = parameterDataPtrs[j];
                 var componentRef = Marshal.PtrToStructure<AirshipComponentRef>(ptr);
-                podObjects[j] = componentRef.TryGetComponent(out var component) ? component as MonoBehaviour : null;
+                podObjects[j] = componentRef.AsUnityComponent();
             }
             else
             {

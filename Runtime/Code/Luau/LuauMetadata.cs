@@ -92,9 +92,9 @@ namespace Luau {
             this.unityInstanceId = unityInstanceId;
         }
 
-        public bool TryGetComponent(out AirshipComponent component) {
-            component = AirshipBehaviourRootV2.GetComponent(unityInstanceId, airshipComponentId);
-            return component != null;
+        public AirshipComponent AsUnityComponent() {
+            var component = AirshipBehaviourRootV2.GetComponent(unityInstanceId, airshipComponentId);
+            return component;
         }
     }
     
