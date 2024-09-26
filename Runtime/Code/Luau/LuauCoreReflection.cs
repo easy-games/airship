@@ -322,6 +322,14 @@ public partial class LuauCore : MonoBehaviour
                 int instanceId = intData[0];
                 podObjects[j] = ThreadDataManager.GetObjectReference(thread, instanceId);
             }
+            else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_COMPONENT) {
+                var ptr = parameterDataPtrs[j];
+                Debug.Log("Got pod component at address " + parameterDataPtrs[j]);
+                var componentRef = Marshal.PtrToStructure<AirshipComponentRef>(ptr);
+                Debug.Log($"Got ref {componentRef.unityInstanceId}, {componentRef.airshipComponentId}");
+                podObjects[j] = componentRef.TryGetComponent(out var component) ? component as MonoBehaviour : null;
+                Debug.Log($"Got value {(MonoBehaviour) podObjects[j]}");
+            }
             else
             {
                 podObjects[j] = null;
@@ -658,8 +666,11 @@ public partial class LuauCore : MonoBehaviour
                         parsedData[paramIndex] = objectRef;
                         continue;
                     }
-
-
+                case PODTYPE.POD_AIRSHIP_COMPONENT: {
+                    var objectRef = podObjects[paramIndex] as AirshipComponent;
+                    parsedData[paramIndex] = objectRef;
+                    continue;
+                }
                 case PODTYPE.POD_DOUBLE:
                     {
                         double[] doubleData = new double[1];
@@ -1043,6 +1054,11 @@ public partial class LuauCore : MonoBehaviour
             {
                 case PODTYPE.POD_NULL:
                     continue;
+                case PODTYPE.POD_AIRSHIP_COMPONENT:
+                    if (sourceParamType.IsAssignableFrom(componentType)) {
+                        continue;
+                    }
+                    break;
                 case PODTYPE.POD_OBJECT:
                     var obj = podObjects[paramIndex];
                     if (obj == null || sourceParamType.IsAssignableFrom(obj.GetType()))
@@ -1169,6 +1185,18 @@ public partial class LuauCore : MonoBehaviour
         }
         return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], paramaterDataSizes[paramIndex]);
     }
+
+    // public static AirshipComponent GetParameterAsAirshipComponent(int paramIndex, int numParameters, int[] parameterDataPODTypes,
+    //     IntPtr[] parameterDataPtrs, int[] parameterDataSizes) {
+    //     if (paramIndex >= numParameters)
+    //     {
+    //         return null;
+    //     }
+    //     if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_STRING)
+    //     {
+    //         return null;
+    //     }
+    // }
 
     public static string GetPropertyAsString(PODTYPE dataPodType, IntPtr dataPtr) {
         return dataPodType == PODTYPE.POD_STRING ? PtrToStringUTF8NullTerminated(dataPtr) : null;
