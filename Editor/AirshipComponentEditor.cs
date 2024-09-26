@@ -42,6 +42,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
     }
 
+    private bool debugging = false;
+    
     public override void OnInspectorGUI() {
         serializedObject.Update();
 
@@ -75,6 +77,18 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 DrawBinaryFileMetadata(binding, metadata);
             }
         }
+        
+#if AIRSHIP_INTERNAL
+        if (Application.isPlaying) {
+            AirshipEditorGUI.HorizontalLine();
+            EditorGUILayout.BeginHorizontal();
+            {
+                EditorGUILayout.LabelField("GameObject Id", AirshipBehaviourRootV2.GetId(binding.gameObject).ToString());
+                EditorGUILayout.LabelField("Component Id", binding.GetAirshipComponentId().ToString());
+            }
+            EditorGUILayout.EndHorizontal();
+        }        
+#endif
         
         serializedObject.ApplyModifiedProperties();
     }
@@ -299,7 +313,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Select Airship Component", style)) {
                 AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
-                    binding.SetScript(binaryFile);
+                    binding.SetScript(binaryFile, Application.isPlaying);
                     serializedObject.ApplyModifiedProperties();
                     EditorUtility.SetDirty(serializedObject.targetObject);
                 });
