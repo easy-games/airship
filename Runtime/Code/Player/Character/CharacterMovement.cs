@@ -729,7 +729,7 @@ private void OnEnable() {
 					// if(Mathf.Abs(characterMoveVelocity.z) > Mathf.Abs(newVelocity.z)){
 					// 	newVelocity.z = characterMoveVelocity.z;
 					// }
-					if(Mathf.Abs(characterMoveVelocity.x) + Mathf.Abs(characterMoveVelocity.z)> Mathf.Abs(newVelocity.x) + Mathf.Abs(newVelocity.z)){
+					if(moveMagnitude+.5 >= velMagnitude){
 						newVelocity.x = characterMoveVelocity.x;
 						newVelocity.z = characterMoveVelocity.z;
 					}
