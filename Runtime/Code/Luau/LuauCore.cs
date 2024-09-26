@@ -39,6 +39,7 @@ public partial class LuauCore : MonoBehaviour {
         POD_BINARYBLOB = 13,
         POD_VECTOR2 = 14,
         POD_VECTOR4 = 15,
+        POD_AIRSHIP_COMPONENT = 16,
     };
 
     public static bool s_shutdown = false;
@@ -53,6 +54,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type longType = System.Type.GetType("System.Int64");
     private static Type uLongType = System.Type.GetType("System.UInt64");
     private static Type boolType = System.Type.GetType("System.Boolean");
+    private static Type componentType = typeof(Component);
     private static Type floatType = System.Type.GetType("System.Single");
 
     private static Type ushortType = System.Type.GetType("System.UInt16");
