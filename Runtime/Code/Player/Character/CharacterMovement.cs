@@ -131,6 +131,7 @@ namespace Code.Player.Character {
 		private bool airborneFromImpulse = false;
 		private float currentSpeed;
 		private float trackedDeltaTime = 0;
+		private Vector3 lastGroundedMoveDir = Vector3.zero;
 		
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier() {
 			speedMultiplier = 1,
@@ -288,13 +289,20 @@ private void OnEnable() {
 			if(grounded){
 				//Reset airborne impulse
 				airborneFromImpulse = false;
+
+				//Store this move dir
+				lastGroundedMoveDir = md.moveDir;
 				
 				if(groundHit.point.y > transform.position.y && 
 					((!prevGrounded && this.moveData.colliderGroundOffset > 0) || moveData.alwaysSnapToGround)){
 					this.SnapToY(groundHit.point.y, true);
 					newVelocity.y = 0;
 				}
+			} else{
+				//While in the air how much control do we have over our direction?
+				md.moveDir = Vector3.Lerp(lastGroundedMoveDir, md.moveDir, moveData.inAirDirectionalControl);
 			}
+			
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;

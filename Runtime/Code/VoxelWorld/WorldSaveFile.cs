@@ -6,6 +6,7 @@ using BlockId = System.UInt16;
 
 
 [System.Serializable]
+[LuauAPI]
 public class WorldSaveFile : ScriptableObject
 {
     public List<SaveChunk> chunks = new List<SaveChunk>();

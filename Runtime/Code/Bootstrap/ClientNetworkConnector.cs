@@ -13,7 +13,7 @@ using UnityEngine.SceneManagement;
 [LuauAPI]
 public class ClientNetworkConnector : MonoBehaviour {
     public bool expectingDisconnect = false;
-    public ushort reconnectAttempt = 1;
+    public ushort reconnectAttempt = 0;
 
     private Uri uri;
     
@@ -70,11 +70,16 @@ public class ClientNetworkConnector : MonoBehaviour {
     }
 
     public void NetworkClient_OnDisconnected() {
-        // print("OnDisconnected");
+        print("NetworkClient_OnDisconnected");
         if (!this.expectingDisconnect) {
             var scene = SceneManager.GetActiveScene();
             if (scene.name == "CoreScene") {
                 this.reconnectAttempt++;
+                if (this.reconnectAttempt >= 5) {
+                    Debug.Log("Ran out of reconnect attempts. Cancelling connect.");
+                    TransferManager.Instance.NetworkClient_OnDisconnected();
+                    return;
+                }
                 StartCoroutine(Reconnect());
             } else {
                 TransferManager.Instance.NetworkClient_OnDisconnected();
