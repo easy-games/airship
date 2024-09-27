@@ -36,6 +36,8 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.YieldCallback yieldCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
+    private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
+    
 
     private struct AwaitingTask
     {
@@ -80,7 +82,7 @@ public partial class LuauCore : MonoBehaviour {
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
         componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
-
+        toggleProfilerCallback_holder = new LuauPlugin.ToggleProfilerCallback(ToggleProfilerCallback);
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -178,6 +180,26 @@ public partial class LuauCore : MonoBehaviour {
         len = bytes.Length > maxLen ? maxLen : bytes.Length;
 
         Marshal.Copy(bytes, 0, str, len);
+    }
+    
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToggleProfilerCallback))]
+    static void ToggleProfilerCallback(int componentId, IntPtr strPtr, int strLen) {
+        // Disable
+        if (componentId == -1) {
+            Profiler.EndSample();
+            return;
+        }
+
+        if (AirshipComponent.componentIdToScriptName.TryGetValue(componentId, out var componentName)) {
+            if (strLen > 0) {
+                var str = PtrToStringUTF8(strPtr, strLen);
+                Profiler.BeginSample($"{componentName}{str}");
+                LuauPlugin.LuauFreeString(strPtr);
+            }
+            else {
+                Profiler.BeginSample($"{componentName}");
+            }
+        }
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
