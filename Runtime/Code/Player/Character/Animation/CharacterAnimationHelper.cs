@@ -118,6 +118,9 @@ namespace Code.Player.Character {
                 currentPlaybackSpeed = 1;
             } else if (currentState == CharacterState.Airborne){
                 currentPlaybackSpeed = 1;
+            }else if ((currentState == CharacterState.Crouching && currentPlaybackSpeed < .1) || currentPlaybackSpeed < .01){
+                targetVelNormalized = Vector2.zero;
+                currentPlaybackSpeed = 1;
             }
 
             float currentMagnitude = currentVelNormalized.magnitude;
@@ -167,8 +170,13 @@ namespace Code.Player.Character {
             }
             currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
             //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed);
-            this.targetPlaybackSpeed = Mathf.Max(0, currentSpeed  / targetSpeed);
-            targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
+            this.targetPlaybackSpeed = Mathf.Max(.01f, currentSpeed  / targetSpeed);
+            if(currentSpeed < .06){
+                currentSpeed = 0;
+                targetVelNormalized = Vector2.zero;
+            }else{
+                targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
+            }
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
         }
 
