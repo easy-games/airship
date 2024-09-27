@@ -67,7 +67,7 @@ namespace Airship.Editor {
                                 if (!targetGo) return;
 
                                 var binding = targetGo.AddComponent<AirshipComponent>();
-                                binding.SetScript(binaryFile);
+                                binding.SetScript(binaryFile, Application.isPlaying);
 
                                 EditorUtility.SetDirty(targetGo);
                             });

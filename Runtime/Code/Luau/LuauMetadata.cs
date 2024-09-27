@@ -91,6 +91,11 @@ namespace Luau {
             this.airshipComponentId = airshipComponentId;
             this.unityInstanceId = unityInstanceId;
         }
+
+        public AirshipComponent AsUnityComponent() {
+            var component = AirshipBehaviourRootV2.GetComponent(unityInstanceId, airshipComponentId);
+            return component;
+        }
     }
     
     // This must match up with the C++ version of the struct
