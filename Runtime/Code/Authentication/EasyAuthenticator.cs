@@ -130,7 +130,7 @@ namespace Code.Authentication {
             connectionsPendingDisconnect.Remove(conn);
         }
 
-        private async Task<UserData> LoadUserData(string authToken) {
+        private async Task<UserData> LoadUserData(string userIdToken) {
             var tcs = new TaskCompletionSource<UserData>();
 
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
@@ -154,13 +154,13 @@ namespace Code.Authentication {
 
             RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
                 Uri = AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/validate",
-                BodyString = "{\"userIdToken\": \"" + authToken + "\"}",
+                BodyString = "{\"userIdToken\": \"" + userIdToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }
 
             })).Then((res) => {
-                print("transfer: " + res.Text);
+                print($"[Transfer Packet] userIdToken: {userIdToken}, packet response: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 tcs.SetResult(new UserData() {
