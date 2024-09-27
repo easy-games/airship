@@ -47,6 +47,7 @@ namespace Code.Health
         public static string fileIOKey = "LGF5JOI.F0YF0ET-N6PMPS6-NWGVZEW-9984TYP"; // TODO throw out this key (it lives in git).
         private static AirshipProfileExporter _instance;
         public static AirshipProfileExporter Instance => _instance;
+        private bool lastProfilerEnabled = false;
 
         private void Awake() {
             if (_instance != null && _instance != this) {
@@ -84,6 +85,13 @@ namespace Code.Health
                         NetworkClient.Send(new StartProfilingMessage { DurationSecs = d });
                     }
                 }));
+        }
+
+        private void Update() {
+            if (Profiler.enabled != lastProfilerEnabled) {
+                lastProfilerEnabled = Profiler.enabled;
+                LuauPlugin.LuauSetProfilerEnabled(Profiler.enabled);
+            }
         }
 
         public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartProfilingMessage msg) {
