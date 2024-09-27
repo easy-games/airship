@@ -8,9 +8,9 @@ namespace Code.Components {
             if (!scrollRect) return;
 
             if (Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor) {
-                scrollRect.scrollSensitivity = 12f;
+                scrollRect.scrollSensitivity = 15f;
             } else if (Application.platform is RuntimePlatform.WindowsPlayer or RuntimePlatform.LinuxPlayer) {
-                scrollRect.scrollSensitivity = 10f;
+                scrollRect.scrollSensitivity = 18f;
             }
         }
     }
