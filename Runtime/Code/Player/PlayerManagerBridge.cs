@@ -191,9 +191,9 @@ namespace Code.Player {
 			var playerInfo = go.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.connectionId);
 			if (userData != null) {
-#if UNITY_SERVER || true
-				Debug.Log($"Initializing Player as {userData.username} owned by " + conn);
-#endif
+// #if UNITY_SERVER || true
+// 				Debug.Log($"Initializing Player as {userData.username} owned by " + conn);
+// #endif
 				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId);
 			} else {
 #if UNITY_SERVER || true

@@ -160,7 +160,7 @@ namespace Code.Authentication {
                 }
 
             })).Then((res) => {
-                print($"[Transfer Packet] userIdToken: {userIdToken}, packet response: " + res.Text);
+                // print($"[Transfer Packet] userIdToken: {userIdToken}, packet response: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 tcs.SetResult(new UserData() {
