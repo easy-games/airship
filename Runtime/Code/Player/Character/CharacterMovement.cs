@@ -246,8 +246,8 @@ private void OnEnable() {
 			//Update visual state of client character
 			var currentPos = rootTransform.position;
 			trackedDeltaTime += Time.fixedDeltaTime;
-			if (currentPos != trackedPosition) {
-				var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
+			var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
+			if (currentPos != trackedPosition || worldVel != lastWorldVel) {
 				lastWorldVel = worldVel;
 				trackedPosition = currentPos;
 				// if(!this.isOwned){
