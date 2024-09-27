@@ -10,5 +10,10 @@ namespace Code {
         /// TypeScript work in cases where the method doesn't exist.</para>
         /// </summary>
         public const int playerVersion = 1;
+
+        /// <summary>
+        /// The server will kick clients that have a playerVersion lower than this value.
+        /// </summary>
+        public const int minAcceptedPlayerVersionOnServer = 1;
     }
 }

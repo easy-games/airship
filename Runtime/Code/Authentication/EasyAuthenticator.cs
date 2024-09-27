@@ -15,10 +15,13 @@ using Debug = UnityEngine.Debug;
 namespace Code.Authentication {
     public struct LoginMessage : NetworkMessage {
         public string authToken;
+        public int playerVersion;
     }
     public struct LoginResponseMessage : NetworkMessage
     {
         public bool passed;
+        public string disconnectMessage;
+        public bool updateRequried;
     }
 
     public struct KickMessage : NetworkMessage {
@@ -70,7 +73,8 @@ namespace Code.Authentication {
                         Debug.Log("[Authenticator] Fetched auth token in " + st.ElapsedMilliseconds + " ms.");
                         authToken = data.id_token;
                         NetworkClient.Send(new LoginMessage {
-                            authToken = authToken
+                            authToken = authToken,
+                            playerVersion = AirshipConst.playerVersion,
                         });
                         return;
                     }
@@ -78,7 +82,8 @@ namespace Code.Authentication {
             }
 
             NetworkClient.Send(new LoginMessage {
-                authToken = authToken
+                authToken = authToken,
+                playerVersion = AirshipConst.playerVersion,
             });
         }
 
@@ -100,22 +105,36 @@ namespace Code.Authentication {
             try {
                 var userData = await LoadUserData(loginData.authToken);
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
-                if (!reserved) throw new Exception("No reserved slot.");
-                PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
+                if (!reserved) {
+                    Debug.LogError("No reserved agones slot for player " + userData.username);
+                    this.RejectConnection(conn, "Failed to authenticate.", false);
+                    return;
+                }
 
+                if (loginData.playerVersion < AirshipConst.minAcceptedPlayerVersionOnServer) {
+                    this.RejectConnection(conn, "Please update your Airship App. Your version is outdated.",  true);
+                    return;
+                }
+
+                PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
                 conn.Send(new LoginResponseMessage() {
                     passed = true,
                 });
-
                 ServerAccept(conn);
             } catch (Exception err) {
                 Debug.LogError(err);
-                connectionsPendingDisconnect.Add(conn);
-                conn.Send(new LoginResponseMessage() {
-                    passed = false,
-                });
-                StartCoroutine(DelayedDisconnect(conn, 1));
+                this.RejectConnection(conn, "An error occured while authenticating.", false);
             }
+        }
+
+        private void RejectConnection(NetworkConnectionToClient conn, string message, bool updateRequired) {
+            this.connectionsPendingDisconnect.Add(conn);
+            conn.Send(new LoginResponseMessage() {
+                passed = false,
+                disconnectMessage = message,
+                updateRequried = updateRequired,
+            });
+            StartCoroutine(DelayedDisconnect(conn, 1));
         }
 
         IEnumerator DelayedDisconnect(NetworkConnectionToClient conn, float waitTime) {
