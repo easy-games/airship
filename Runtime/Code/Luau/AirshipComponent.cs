@@ -29,6 +29,7 @@ public class AirshipComponent : MonoBehaviour {
     #endif
     private const bool ElevateToProtectedWithinCoreScene = true;
     
+    public static Dictionary<int, string> componentIdToScriptName = new();
     private static int _scriptBindingIdGen;
     
     public AirshipScript scriptFile;
@@ -90,7 +91,7 @@ public class AirshipComponent : MonoBehaviour {
     public static IAssetBridge AssetBridge;
 
     public static bool validatedSceneInGameConfig = false;
-
+    
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void OnLoad() {
         validatedSceneInGameConfig = false;
@@ -127,6 +128,12 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         return script;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnReload() {
+        _scriptBindingIdGen = 0;
+        componentIdToScriptName.Clear();
     }
 
     public void Error() {
@@ -197,6 +204,8 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
+ 
+
         m_metadata.name = scriptFile.m_metadata.name;
 
         // Add missing properties or reconcile existing ones:
@@ -239,6 +248,13 @@ public class AirshipComponent : MonoBehaviour {
             serializedProperty.refPath = property.refPath;
         }
         
+        _isAirshipComponent = true;
+        
+        // Need to recompile
+        if (scriptFile.HasFileChanged) {
+            return;
+        }
+        
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
         var seenProperties = new HashSet<string>();
@@ -258,8 +274,6 @@ public class AirshipComponent : MonoBehaviour {
                 m_metadata.properties.Remove(serializedProperty);
             }
         }
-
-        _isAirshipComponent = true;
     }
 
     private void WriteChangedComponentProperties() {
@@ -492,6 +506,9 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void Awake() {
+        if (scriptFile != null) {
+            componentIdToScriptName[_scriptBindingId] = scriptFile.name;
+        }
 #if UNITY_EDITOR
         if (!validatedSceneInGameConfig) {
             var sceneName = this.gameObject.scene.name;

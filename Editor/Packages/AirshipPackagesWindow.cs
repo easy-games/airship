@@ -779,7 +779,7 @@ namespace Editor.Packages {
 
             // Tell the compiler to restart soon™
 #if UNITY_EDITOR
-            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            EditorCoroutines.Execute(TypescriptServices.RestartAndAwaitUpdates());
 #endif
             
             yield return new WaitUntil(() => sourceZipRequest.isDone);
@@ -1114,7 +1114,7 @@ namespace Editor.Packages {
             yield return null;
             var packageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
             activeRemovals.Add(packageId);
-            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            EditorCoroutines.Execute(TypescriptServices.RestartAndAwaitUpdates());
             
             if (packageDoc != null) {
                 this.gameConfig.packages.Remove(packageDoc);

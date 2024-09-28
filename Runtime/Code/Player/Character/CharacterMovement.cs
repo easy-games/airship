@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using Assets.Luau;
 using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using Mirror;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Code.Player.Character {
 	[LuauAPI]
@@ -75,6 +72,12 @@ namespace Code.Player.Character {
 		/// Params: Vector3 velocity
 		/// </summary>
 		public event Action<object> OnJumped;
+
+		/// <summary>
+		/// Called when the look vector is externally set
+		/// Params: Vector3 currentLookVector
+		/// </summary>
+		public event Action<object> OnNewLookVector;
 
 		[NonSerialized] public RaycastHit groundedRaycastHit;
 
@@ -243,8 +246,8 @@ private void OnEnable() {
 			//Update visual state of client character
 			var currentPos = rootTransform.position;
 			trackedDeltaTime += Time.fixedDeltaTime;
-			if (currentPos != trackedPosition) {
-				var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
+			var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
+			if (currentPos != trackedPosition || worldVel != lastWorldVel) {
 				lastWorldVel = worldVel;
 				trackedPosition = currentPos;
 				// if(!this.isOwned){
@@ -968,7 +971,21 @@ private void OnEnable() {
 			impulseVelocity = impulse;
 		}
 
+		/// <summary>
+		/// Manually force the look direction of the character. Triggers the OnNewLookVector event.
+		/// </summary>
+		/// <param name="lookVector"></param>
 		public void SetLookVector(Vector3 lookVector) {
+			OnNewLookVector?.Invoke(lookVector);
+			SetLookVectorRecurring(lookVector);
+		}
+
+		/// <summary>
+		/// Manually force the look direction of the character without triggering the OnNewLookVector event. 
+		/// Useful for something that is updating the lookVector frequently and needs to listen for other scripts modifying the lookVector. 
+		/// </summary>
+		/// <param name="lookVector"></param>
+		public void SetLookVectorRecurring(Vector3 lookVector){
 			this.lookVector = lookVector;
 			this.replicatedLookVector = lookVector;
 		}

@@ -43,7 +43,7 @@ public class AirshipNetworkManager : NetworkManager {
 
     public override void OnStopClient() {
         base.OnStopClient();
-        Debug.Log("OnStopClient");
+        // Debug.Log("OnStopClient");
         this.clientBundleLoader.CleanupClient();
 
         var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();

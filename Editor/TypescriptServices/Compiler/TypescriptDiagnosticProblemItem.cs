@@ -73,7 +73,7 @@ namespace Airship.Editor {
             TypescriptProblemType problemType
         ) {
             Project = project;
-            FileLocation = fileLocation;
+            FileLocation = fileLocation.Replace("\\", "/");
             Message = message;
             ErrorCode = errorCode;
             ProblemType = problemType;
