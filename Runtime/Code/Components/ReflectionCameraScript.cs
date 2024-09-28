@@ -1,7 +1,8 @@
-using UnityEditor;
 #if UNITY_EDITOR
-using UnityEngine;
+using UnityEditor;
 #endif
+using UnityEngine;
+
 //Script that produces a reflection texture based on a plane (like water) and the current scene/editor/game main camera
 //Useful for planar water, mirrors, etc
 
