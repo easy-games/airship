@@ -39,7 +39,11 @@ public static class MiscProjectSetup
         return null;
     }
 
+    /// <summary>
+    /// Editor only
+    /// </summary>
     public static GameConfig GetOrCreateGameConfig(){
+#if UNITY_EDITOR
         var gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
         if (gameBundleConfig == null)
         {
@@ -50,6 +54,9 @@ public static class MiscProjectSetup
             AssetDatabase.Refresh();
         }
         return gameBundleConfig;
+#else
+        return null;
+#endif
     }
 
     /*
