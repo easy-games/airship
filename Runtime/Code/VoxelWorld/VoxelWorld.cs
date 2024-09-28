@@ -517,6 +517,9 @@ public partial class VoxelWorld : MonoBehaviour {
      * Creates missing child GameObjects and names things properly.
      */
     private void PrepareVoxelWorldGameObject() {
+        
+        this.loadingStatus = LoadingStatus.NotLoading;
+        
         if (transform.Find("Chunks") != null) {
             this.chunksFolder = transform.Find("Chunks").gameObject;
         }
@@ -529,25 +532,11 @@ public partial class VoxelWorld : MonoBehaviour {
         this.chunksFolder.transform.localRotation = Quaternion.identity;
 
         this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-
-        if (transform.Find("Lights") != null) {
-            this.lightsFolder = transform.Find("Lights").gameObject;
-        }
-        else {
-            this.lightsFolder = new GameObject("Lights");
-            this.lightsFolder.transform.parent = this.transform;
-        }
-
-        this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-        this.lightsFolder.transform.localPosition = Vector3.zero;
-        this.lightsFolder.transform.localScale = Vector3.one;
-        this.lightsFolder.transform.localRotation = Quaternion.identity;
     }
 
     public void GenerateWorld(bool populateTerrain = false) {
         this.PrepareVoxelWorldGameObject();
-
-        
+                
         if (!voxelBlocks) {
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
@@ -669,15 +658,18 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return sphere;
     }
-
-   
-
+    
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
 
+    public enum LoadingStatus {
+        NotLoading,
+        Loading,
+        Loaded
+    }
     
     [NonSerialized]
-    public bool finishedLoading = false;   //Collision has been fully instantiated for this map
-
+    public LoadingStatus loadingStatus = LoadingStatus.NotLoading;
+    
     
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
@@ -691,14 +683,15 @@ public partial class VoxelWorld : MonoBehaviour {
         float startTime = Time.realtimeSinceStartup;
  
         this.delayUpdate = 1;
-        this.finishedLoading = false;
-
+        
         //Clear to begin with
         DeleteChildGameObjects(gameObject);
         
         this.PrepareVoxelWorldGameObject();
+        this.loadingStatus = LoadingStatus.Loading;
 
         this.voxelBlocks.Reload();
+        
         //load the text of textAsset
         file.LoadIntoVoxelWorld(this);
 
@@ -709,7 +702,6 @@ public partial class VoxelWorld : MonoBehaviour {
 
         RegenerateAllMeshes();
          
-
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
 
@@ -827,14 +819,7 @@ public partial class VoxelWorld : MonoBehaviour {
  
 
     private void Awake() {
-        this.finishedLoading = false;
-
-        /*
-        // Load the text of textAsset
-        if (Application.isPlaying == false) {
-            this.blocks = new VoxelBlocks();
-            this.blocks.Load(this.GetBlockDefinesContents());
-        }*/
+  
     }
 
     public VoxelWorld() {
@@ -968,7 +953,8 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
 
-        if (!this.finishedLoading) {
+        if (this.loadingStatus == LoadingStatus.Loading) {
+            
             bool hasDirtyChunk = false;
             foreach (var chunkPair in chunks) {
                 if (chunkPair.Value.IsGeometryDirty()) {
@@ -976,9 +962,10 @@ public partial class VoxelWorld : MonoBehaviour {
                     break;
                 }
             }
+            //Debug.Log("Awaiting load - chunks remaining:" + hasDirtyChunk);
 
             if (!hasDirtyChunk) {
-                this.finishedLoading = true;
+                this.loadingStatus = LoadingStatus.Loaded;
                 this.OnFinishedLoading?.Invoke();
             }
         }
