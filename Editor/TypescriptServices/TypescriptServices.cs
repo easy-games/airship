@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 using System.Collections;
+using Editor;
 using Editor.EditorInternal;
 using Editor.Packages;
 using ParrelSync;
@@ -73,8 +74,8 @@ namespace Airship.Editor {
         /// True if the compiler services is currently "restarting" due to something like packages updating
         /// </summary>
         internal static bool IsAwaitingRestart { get; private set; }
-
-        internal static IEnumerator RestartForPackageModification() {
+        
+        internal static IEnumerator RestartAndAwaitUpdates() {
             if (!TypescriptCompilationService.IsWatchModeRunning || IsAwaitingRestart) {
                 yield break;
             }
@@ -82,7 +83,7 @@ namespace Airship.Editor {
             IsAwaitingRestart = true;
             TypescriptCompilationService.StopCompilerServices();
             TypescriptCompilationService.ClearIncrementalCache();
-            yield return new WaitUntil(() => !AirshipPackagesWindow.IsModifyingPackages);
+            yield return new WaitUntil(() => !AirshipPackagesWindow.IsModifyingPackages && !AirshipUpdateService.IsUpdatingAirship);
             TypescriptCompilationService.StartCompilerServices();
             IsAwaitingRestart = false;
         }

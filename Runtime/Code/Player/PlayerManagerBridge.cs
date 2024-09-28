@@ -185,16 +185,20 @@ namespace Code.Player {
 				await Awaitable.NextFrameAsync();
 			}
 
-			#if UNITY_SERVER
-			Debug.Log("Creating PlayerInfo for " + conn);
-			#endif
 			var go = GameObject.Instantiate(this.playerPrefab, PlayerManagerBridge.Instance.transform.parent);
 			var identity = go.GetComponent<NetworkIdentity>();
 			_clientIdToObject[conn.connectionId] = identity;
 			var playerInfo = go.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.connectionId);
 			if (userData != null) {
+// #if UNITY_SERVER || true
+// 				Debug.Log($"Initializing Player as {userData.username} owned by " + conn);
+// #endif
 				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId);
+			} else {
+#if UNITY_SERVER || true
+				Debug.Log("Missing UserData for " + conn);
+#endif
 			}
 			NetworkServer.Spawn(go, conn);
 			NetworkServer.AddPlayerForConnection(conn, go);

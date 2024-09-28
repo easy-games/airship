@@ -7,6 +7,7 @@ using Code.Platform.Server;
 using Code.Platform.Shared;
 using Editor.Auth;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 [CustomEditor(typeof(AccessoryComponent))]
 public class AccessoryComponentEditor : UnityEditor.Editor {
@@ -40,42 +41,54 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         //Find Organization
         var orgResourceId = staging ? "6536df9f3843ac629cf3b8b1" : "6b62d6e3-9d74-449c-aeac-b4feed2012b1";
 
-        bool first = true;
+        var allAcc = new List<AccessoryComponent>();
+        var allFace = new List<AccessoryFace>();
+        var printStatement = "Are you sure you want to create an new item for all of these items?";
         //Find any missing class ID's
         foreach (var accessory in collection.accessories) {
-            if(!first){
-                //break;
-            }
-            first = false;
             var classId = staging ? accessory.serverClassIdStaging : accessory.serverClassId;
             if(string.IsNullOrEmpty(classId)){
-                var result = await GenerateServerItem(orgResourceId, accessory.name, staging);
-                if(staging){
-                    accessory.serverClassIdStaging = result;
-                }else{
-                    accessory.serverClassId = result;
-                }
-                EditorUtility.SetDirty(accessory);
+                printStatement += "\nACC: "+accessory.name;
+                allAcc.Add(accessory);
             }
         }
-        first = true;
         foreach (var accessory in collection.faces) {
-            if(!first){
-                //break;
-            }
-            first = false;
             var classId = staging ? accessory.serverClassIdStaging : accessory.serverClassId;
             if(string.IsNullOrEmpty(classId)){
-                var result = await GenerateServerItem(orgResourceId, accessory.name, staging);
-                if(staging){
-                    accessory.serverClassIdStaging = result;
-                }else{
-                    accessory.serverClassId = result;
-                }
-                EditorUtility.SetDirty(accessory);
+                printStatement += "\nFACE: "+accessory.name;
+                allFace.Add(accessory);
             }
         }
-        AssetDatabase.SaveAssets();
+        var totalItems = allAcc.Count + allFace.Count;
+        printStatement += "\nTotal Items: " + totalItems;
+        
+        if(totalItems > 0){
+            if(EditorUtility.DisplayDialog("CREATING NEW SERVER ITEMS", printStatement, "CREATE", "Cancel")){
+                foreach(var acc in allAcc){
+                    var result = await GenerateServerItem(orgResourceId, acc.name, staging);
+                    if(staging){
+                        acc.serverClassIdStaging = result;
+                    }else{
+                        acc.serverClassId = result;
+                    }
+                    EditorUtility.SetDirty(acc);
+                }
+
+                foreach(var face in allAcc){
+                    var result = await GenerateServerItem(orgResourceId, face.name, staging);
+                    if(staging){
+                        face.serverClassIdStaging = result;
+                    }else{
+                        face.serverClassId = result;
+                    }
+                    EditorUtility.SetDirty(face);
+                }
+                AssetDatabase.SaveAssets();
+            }
+        }else{
+            EditorUtility.DisplayDialog("CREATING NEW SERVER ITEMS", "Unable to find any missing accessories on the server.", "Ok");
+        }
+        
     }
 
     //Creates an item on the server and returns the class ID

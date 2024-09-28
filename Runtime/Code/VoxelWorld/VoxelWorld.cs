@@ -863,12 +863,10 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         if (Application.isPlaying && this.autoLoad) {
-            if (RunCore.IsServer() && voxelWorldFile != null) {
+            if (voxelWorldFile != null) {
                 this.LoadWorldFromSaveFile(voxelWorldFile);
             }
-            else {
-                this.LoadEmptyWorld();
-            }
+            
             return;
         }
 

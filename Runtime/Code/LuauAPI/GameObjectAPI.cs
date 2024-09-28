@@ -474,6 +474,20 @@ public class GameObjectAPI : BaseLuaAPIClass {
             return 0;
         }
 
+        if(methodName == "SetLayerRecursive") {
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            int layer = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            SetLayerRecursive(gameObject.transform, layer);
+            return 0;
+        }
+
         return -1;
+    }
+
+    private void SetLayerRecursive(Transform transform, int layer){
+        transform.gameObject.layer = layer;
+        foreach (Transform child in transform) {
+            SetLayerRecursive(child, layer);
+        }
     }
 }

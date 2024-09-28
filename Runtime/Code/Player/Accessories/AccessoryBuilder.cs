@@ -31,6 +31,10 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void Start() {
+        if(!enabled){
+            return;
+        }
+        
         //Have to do it here instead of OnEnable so everything gets initialized
         if(currentOutfit){
             var pendingOutfit = currentOutfit;
@@ -46,8 +50,13 @@ public class AccessoryBuilder : MonoBehaviour
         // update list of accessories
         var accessoryComponents = rig.transform.GetComponentsInChildren<AccessoryComponent>();
         foreach (var accessoryComponent in accessoryComponents) {
-            if (!_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
-                _activeAccessories.Add(accessoryComponent.accessorySlot, new ActiveAccessory());
+            // if (!_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
+            //     _activeAccessories.Add(accessoryComponent.accessorySlot, new ActiveAccessory());
+            // }
+            
+            //If we have already tracked this slot, overwrite it
+            if (_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
+                this.RemoveAccessorySlot(accessoryComponent.accessorySlot, false);
             }
 
             Renderer[] renderers;
@@ -502,8 +511,10 @@ public class AccessoryBuilder : MonoBehaviour
     public Renderer[] GetAccessoryMeshes(AccessorySlot slot) {
         var renderers = new List<Renderer>();
         var activeAccessory = GetActiveAccessoryBySlot(slot);
-        foreach (var ren in activeAccessory.renderers){
-            renderers.Add(ren);
+        if(activeAccessory.renderers != null){
+            foreach (var ren in activeAccessory.renderers){
+                renderers.Add(ren);
+            }
         }
         return renderers.ToArray();
     }
@@ -511,9 +522,11 @@ public class AccessoryBuilder : MonoBehaviour
     public ParticleSystem[] GetAccessoryParticles(AccessorySlot slot) {
         var results = new List<ParticleSystem>();
         var activeAccessory = GetActiveAccessoryBySlot(slot);
-        foreach (var go in activeAccessory.gameObjects) {
-            var particles = go.GetComponentsInChildren<ParticleSystem>();
-            foreach (var particle in particles) results.Add(particle);
+        if(activeAccessory.gameObjects != null){
+            foreach (var go in activeAccessory.gameObjects) {
+                var particles = go.GetComponentsInChildren<ParticleSystem>();
+                foreach (var particle in particles) results.Add(particle);
+            }
         }
 
         return results.ToArray();

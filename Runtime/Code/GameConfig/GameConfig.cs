@@ -26,6 +26,8 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public List<string> tags = new();
     [HideInInspector] public string[] gameLayers;
     [HideInInspector] public string[] gameTags;
+    [HideInInspector] public bool[] physicsMatrix;
+    [HideInInspector] public Vector3 physicsGravity;
 
     private const string TagPrefix = "AirshipTag";
     public const int MaximumTags = 64;

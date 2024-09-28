@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Agones.Model;
 using Airship;
 using Assets.Code.Misc;
 using Code.Bootstrap;
@@ -41,6 +42,8 @@ using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
 using Code.Player.Human.Net;
 using Mirror;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 
 public class TypeGenerator : MonoBehaviour
@@ -89,7 +92,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(AccessoryBuilder),
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
-            // typeof(VoxelWorld),
             typeof(GizmoUtils),
             typeof(CollisionWatcher),
             typeof(TriggerWatcher),
@@ -120,7 +122,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(VoxelBlocks),
             typeof(CharacterController),
             typeof(TrailRenderer),
-            typeof(EntityAnimationEventKey),
             typeof(WindowCore),
             typeof(CharacterMoveModifier),
             typeof(MaterialColorURP),
@@ -156,7 +157,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(DevConsole),
             typeof(EasyShake),
             typeof(EasyMotion),
-            typeof(GroundItemDrop),
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
@@ -220,6 +220,11 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementData),
             typeof(TreeInstance),
             typeof(Terrain),
+            typeof(GameServer),
+            typeof(GraphicRaycaster),
+            typeof(DepthOfField),
+            typeof(Volume),
+            typeof(DepthOfFieldMode),
 
             // Mirror
             typeof(NetworkServer),
@@ -250,6 +255,9 @@ public class TypeGenerator : MonoBehaviour
 
             // Airship
             typeof(CharacterMovementData),
+            typeof(AnimationEventData),
+            typeof(VoxelWorld),
+            
             // Steam
             typeof(AirshipSteamFriendInfo),
         };
@@ -304,7 +312,6 @@ public class TypeGenerator : MonoBehaviour
             "\\.DynamicVariablesManager$",
             "\\.HttpGetResponse$",
             "\\.Collider$",
-            "\\.VoxelWorld$",
             "\\.NetworkObject$",
             "\\.InputProxy$",
             "\\.NavMesh$",
@@ -318,6 +325,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkTime$",
             "UnityEngine.TextCore.Text.Character",
             "\\.AccessoryComponent$",
+            "\\.VolumeProfile$",
         };
 
         var options = new TypeScriptOptions

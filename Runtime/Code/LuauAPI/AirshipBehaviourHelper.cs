@@ -24,23 +24,19 @@ public static class AirshipBehaviourHelper {
         return 1;
     }
     
-    private static AirshipBehaviourRoot GetAirshipBehaviourRoot(GameObject gameObject) {
-        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-        if (airshipComponent == null) {
+    private static int GetAirshipBehaviourRootId(GameObject gameObject) {
+        if (!AirshipBehaviourRootV2.HasId(gameObject)) {
             // See if it just needs to be started first:
-            var foundAny = false;
             foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
-                foundAny = true;
                 binding.InitEarly();
-            }
-            
-            // Retry getting AirshipBehaviourRoot:
-            if (foundAny) {
-                airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
             }
         }
 
-        return airshipComponent;
+        if (!AirshipBehaviourRootV2.HasId(gameObject)) {
+            return -1;
+        }
+
+        return AirshipBehaviourRootV2.GetId(gameObject);
     }
 
     private static bool IsTypeOrInheritingType(AirshipComponent binding, string typeName, string targetTypeScriptPath) {
@@ -58,15 +54,14 @@ public static class AirshipBehaviourHelper {
     }
     
     public static int GetAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {
-        var airshipComponent = GetAirshipBehaviourRoot(gameObject);
-        if (airshipComponent == null) {
+        var unityInstanceId = GetAirshipBehaviourRootId(gameObject);
+        if (unityInstanceId == -1) {
             return PushNil(thread);
         }
 
         var buildInfo = AirshipBuildInfo.Instance;
         var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
-        
-        var unityInstanceId = airshipComponent.Id;
+
         foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
             binding.InitEarly();
             if (!binding.IsAirshipComponent) continue;
@@ -83,9 +78,8 @@ public static class AirshipBehaviourHelper {
     }
     
     public static int GetAirshipComponents(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {
-        var airshipComponent = GetAirshipBehaviourRoot(gameObject);
-        if (airshipComponent != null) {
-            var unityInstanceId = airshipComponent.Id;
+        var unityInstanceId = GetAirshipBehaviourRootId(gameObject);
+        if (unityInstanceId != -1) {
 
             var buildInfo = AirshipBuildInfo.Instance;
             var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
@@ -120,27 +114,24 @@ public static class AirshipBehaviourHelper {
         var scriptBindings = gameObject.GetComponentsInChildren<AirshipComponent>();
         foreach (var binding in scriptBindings) {
             // Side effect loads the components if found. No need for its return result here.
-            GetAirshipBehaviourRoot(binding.gameObject);
+            GetAirshipBehaviourRootId(binding.gameObject);
         }
         
-        var airshipComponents = gameObject.GetComponentsInChildren<AirshipBehaviourRoot>(includeInactive);
+        var airshipComponents = gameObject.GetComponentsInChildren<AirshipComponent>(includeInactive);
         var buildInfo = AirshipBuildInfo.Instance;
         var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
         
         foreach (var airshipComponent in airshipComponents) {
-            var unityInstanceId = airshipComponent.Id;
-            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
-                binding.InitEarly();
-                if (!binding.IsAirshipComponent) continue;
+            airshipComponent.InitEarly();
+            if (!airshipComponent.IsAirshipComponent) continue;
 
-                var componentName = binding.GetAirshipComponentName();
-                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
+            var componentName = airshipComponent.GetAirshipComponentName();
+            if (!IsTypeOrInheritingType(airshipComponent, typeName, targetTypeScriptPath)) continue;
 
-                var componentId = binding.GetAirshipComponentId();
+            var componentId = airshipComponent.GetAirshipComponentId();
 
-                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
-                return 1;
-            }
+            LuauPlugin.LuauPushAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(airshipComponent), componentId);
+            return 1;
         }
 
         return PushNil(thread);
@@ -152,73 +143,61 @@ public static class AirshipBehaviourHelper {
         
         foreach (var binding in scriptBindings) {
             // Side effect loads the components if found. No need for its return result here.
-            GetAirshipBehaviourRoot(binding.gameObject);
+            GetAirshipBehaviourRootId(binding.gameObject);
         }
         
-        var airshipComponents = gameObject.GetComponentsInParent<AirshipBehaviourRoot>(includeInactive);
+        var airshipComponents = gameObject.GetComponentsInParent<AirshipComponent>(includeInactive);
         var buildInfo = AirshipBuildInfo.Instance;
         var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
         
         foreach (var airshipComponent in airshipComponents) {
-            var unityInstanceId = airshipComponent.Id;
-            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
-                binding.InitEarly();
-                if (!binding.IsAirshipComponent) continue;
-                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
+            airshipComponent.InitEarly();
+            if (!airshipComponent.IsAirshipComponent) continue;
+            if (!IsTypeOrInheritingType(airshipComponent, typeName, targetTypeScriptPath)) continue;
 
-                var componentId = binding.GetAirshipComponentId();
+            var componentId = airshipComponent.GetAirshipComponentId();
 
-                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
-                return 1;
-            }
+            LuauPlugin.LuauPushAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(airshipComponent), componentId);
+            return 1;
         }
 
         return PushNil(thread);
     }
 
     public static int GetAirshipComponentsInChildren(LuauContext context, IntPtr thread, GameObject gameObject, string typeName, bool includeInactive) {
-        var foundComponents = false;
-
         // Attempt to initialize any uninitialized bindings first:
         var scriptBindings = gameObject.GetComponentsInChildren<AirshipComponent>();
         foreach (var binding in scriptBindings) {
             // Side effect loads the components if found. No need for its return result here.
-            GetAirshipBehaviourRoot(binding.gameObject);
+            GetAirshipBehaviourRootId(binding.gameObject);
         }
         
-        var airshipComponents = gameObject.GetComponentsInChildren<AirshipBehaviourRoot>(includeInactive);
+        var airshipComponents = gameObject.GetComponentsInChildren<AirshipComponent>(includeInactive);
         var buildInfo = AirshipBuildInfo.Instance;
         var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
-        
-        var first = true;
+
+        var componentIdsByUnityInstanceIds = new Dictionary<int, List<int>>();
+
         foreach (var airshipComponent in airshipComponents) {
-            var hasAny = false;
-            
-            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
-                binding.InitEarly();
-                if (!binding.IsAirshipComponent) continue;
+            airshipComponent.InitEarly();
+            if (!airshipComponent.IsAirshipComponent) continue;
+            if (!IsTypeOrInheritingType(airshipComponent, typeName, targetTypeScriptPath)) continue;
 
-                // var componentName = binding.GetAirshipComponentName();
-                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
-
-                var componentId = binding.GetAirshipComponentId();
-
-                if (!hasAny) {
-                    hasAny = true;
-                    ComponentIds.Clear();
-                }
-                ComponentIds.Add(componentId);
+            var componentId = airshipComponent.GetAirshipComponentId();
+            var unityInstanceId = AirshipBehaviourRootV2.GetId(airshipComponent);
+            if (!componentIdsByUnityInstanceIds.ContainsKey(unityInstanceId)) {
+                componentIdsByUnityInstanceIds.Add(unityInstanceId, new List<int>());
             }
-
-            if (hasAny) {
-                LuauPlugin.LuauPushAirshipComponents(context, thread, airshipComponent.Id, ComponentIds.ToArray(), !first);
-                ComponentIds.Clear();
-                first = false;
-                foundComponents = true;
-            }
+            componentIdsByUnityInstanceIds[unityInstanceId].Add(componentId);
         }
-        
-        if (foundComponents) {
+
+        if (componentIdsByUnityInstanceIds.Count > 0) {
+            var first = true;
+            foreach (var (unityInstanceId, componentIds) in componentIdsByUnityInstanceIds) {
+                LuauPlugin.LuauPushAirshipComponents(context, thread, unityInstanceId, componentIds.ToArray(), !first);
+                first = false;
+            }
+
             return 1;
         }
 
@@ -232,42 +211,35 @@ public static class AirshipBehaviourHelper {
         var scriptBindings = gameObject.GetComponentsInParent<AirshipComponent>();
         foreach (var binding in scriptBindings) {
             // Side effect loads the components if found. No need for its return result here.
-            GetAirshipBehaviourRoot(binding.gameObject);
+            GetAirshipBehaviourRootId(binding.gameObject);
         }
         
-        var airshipComponents = gameObject.GetComponentsInParent<AirshipBehaviourRoot>(includeInactive);
+        var airshipComponents = gameObject.GetComponentsInParent<AirshipComponent>(includeInactive);
         var buildInfo = AirshipBuildInfo.Instance;
         var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
         
-        var first = true;
+        var componentIdsByUnityInstanceIds = new Dictionary<int, List<int>>();
+
         foreach (var airshipComponent in airshipComponents) {
-            var hasAny = false;
-            
-            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
-                binding.InitEarly();
-                if (!binding.IsAirshipComponent) continue;
+            airshipComponent.InitEarly();
+            if (!airshipComponent.IsAirshipComponent) continue;
+            if (!IsTypeOrInheritingType(airshipComponent, typeName, targetTypeScriptPath)) continue;
 
-                // var componentName = binding.GetAirshipComponentName();
-                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
-
-                var componentId = binding.GetAirshipComponentId();
-
-                if (!hasAny) {
-                    hasAny = true;
-                    ComponentIds.Clear();
-                }
-                ComponentIds.Add(componentId);
+            var componentId = airshipComponent.GetAirshipComponentId();
+            var unityInstanceId = AirshipBehaviourRootV2.GetId(airshipComponent);
+            if (!componentIdsByUnityInstanceIds.ContainsKey(unityInstanceId)) {
+                componentIdsByUnityInstanceIds.Add(unityInstanceId, new List<int>());
             }
-
-            if (hasAny) {
-                LuauPlugin.LuauPushAirshipComponents(context, thread, airshipComponent.Id, ComponentIds.ToArray(), !first);
-                ComponentIds.Clear();
-                first = false;
-                foundComponents = true;
-            }
+            componentIdsByUnityInstanceIds[unityInstanceId].Add(componentId);
         }
-        
-        if (foundComponents) {
+
+        if (componentIdsByUnityInstanceIds.Count > 0) {
+            var first = true;
+            foreach (var (unityInstanceId, componentIds) in componentIdsByUnityInstanceIds) {
+                LuauPlugin.LuauPushAirshipComponents(context, thread, unityInstanceId, componentIds.ToArray(), !first);
+                first = false;
+            }
+
             return 1;
         }
 
@@ -292,16 +264,15 @@ public static class AirshipBehaviourHelper {
         var binding = gameObject.AddComponent<AirshipComponent>();
         var path = buildInfo.GetScriptPath(componentName);
         binding.SetScriptFromPath($"Assets/{path}", context, true);
-        
-        var airshipComponent = GetAirshipBehaviourRoot(gameObject);
-        if (airshipComponent == null) {
+
+        if (!AirshipBehaviourRootV2.HasId(gameObject)) {
             ThreadDataManager.Error(thread);
             Debug.LogError($"Error: AddAirshipComponent - Failed to add \"{componentName}\"");
             return 0;
         }
         
         var componentId = binding.GetAirshipComponentId();
-        var unityInstanceId = airshipComponent.Id;
+        var unityInstanceId = AirshipBehaviourRootV2.GetId(gameObject);
         LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
 
         return 1;

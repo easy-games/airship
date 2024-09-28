@@ -16,8 +16,8 @@ using Object = UnityEngine.Object;
 [Preserve]
 public class AssetBridge : IAssetBridge
 {
-	public static string GamesPath = Path.Join(Application.persistentDataPath, "Games");
-	public static string PackagesPath = Path.Join(Application.persistentDataPath, "Packages");
+	public static string GamesPath = Path.Join("bundles", "games");
+	public static string PackagesPath = Path.Join("bundles", "packages");
 
 	public static bool useBundles = true;
 
@@ -212,7 +212,7 @@ public class AssetBridge : IAssetBridge
 
 				if (loadedBundle.assetBundle.Contains(fullFilePath)) {
 					if (RunCore.IsServer()) {
-						Debug.Log($"Loading asset {fullFilePath}");
+						// Debug.Log($"Loading asset {fullFilePath}");
 					}
 					return loadedBundle.assetBundle.LoadAsset<T>(fullFilePath);
 				} else {

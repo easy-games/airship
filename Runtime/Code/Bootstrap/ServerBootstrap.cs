@@ -20,6 +20,7 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [Serializable]
@@ -53,6 +54,8 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string organizationId = "";
 
     public ServerContext serverContext;
+
+    private GameServer gameServer;
 
     /// <summary>
     /// When set, this will be used as the starting scene.
@@ -98,19 +101,21 @@ public class ServerBootstrap : MonoBehaviour
 #if UNITY_EDITOR
 			port = AirshipEditorNetworkConfig.instance.portOverride;
 #endif
-			var transport = NetworkManager.singleton.transport as KcpTransport;
+			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = port;
 
 			if (RunCore.IsClient()) {
-				NetworkManager.singleton.StartHost();
+				// use random port in shared mode
+				transport.port = (ushort)Random.Range(7770, 7870);
+				print("Listening on port " + transport.port);
+				AirshipNetworkManager.singleton.StartHost();
 			} else {
-				print("Listening on port " + port);
-				NetworkManager.singleton.StartServer();
+				AirshipNetworkManager.singleton.StartServer();
 			}
 		} else {
-			var transport = NetworkManager.singleton.transport as KcpTransport;
+			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = 7654;
-			NetworkManager.singleton.StartServer();
+			AirshipNetworkManager.singleton.StartServer();
 		}
 
 		this.Setup();
@@ -127,12 +132,22 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void ProcessExit(object sender, EventArgs args) {
-		Debug.Log("----> Process Exit!");
 		this.onProcessExit?.Invoke();
 	}
 
 	public bool IsAgonesEnvironment() {
 		return Environment.GetEnvironmentVariable("AGONES_SDK_HTTP_PORT") != null;
+	}
+
+	[HideFromTS][LuauAPI(LuauContext.Protected)]
+	public GameServer GetGameServer() {
+		if (this.gameServer.ObjectMeta.Annotations.TryGetValue("GameConfig", out var gc)) {
+			Debug.Log("GetGameServer GameConfig: " + gc);
+		} else {
+			Debug.Log("GetGameServer CameConfig is missing.");
+		}
+
+		return this.gameServer;
 	}
 
 	private async void Setup() {
@@ -166,7 +181,7 @@ public class ServerBootstrap : MonoBehaviour
 			 */
 
 			// Wait for queue configuration to hit agones.
-			var gameServer = await agones.GameServer();
+			this.gameServer = await agones.GameServer();
 			OnGameServerChange(gameServer);
 
 			agones.WatchGameServer(OnGameServerChange);
@@ -199,7 +214,13 @@ public class ServerBootstrap : MonoBehaviour
      */
 	private bool processedMarkedForDeletion = false;
 	public void OnGameServerChange(GameServer server) {
-		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
+		if (server == null) {
+			Debug.Log("Agones GameServer is null. Ignoring.");
+			return;
+		}
+		this.gameServer = server;
+
+		if (!processedMarkedForDeletion && server.ObjectMeta != null && server.ObjectMeta.Labels != null && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
 			this.InvokeOnProcessExit();
@@ -289,7 +310,7 @@ public class ServerBootstrap : MonoBehaviour
 		// Download game config
 		var url = $"{startupConfig.CdnUrl}/game/{startupConfig.GameBundleId}/code/{startupConfig.GameCodeVersion}/gameConfig.json";
 		var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(url));
-		var gameConfigPath = Path.Join(AssetBridge.GamesPath, startupConfig.GameBundleId, "gameConfig.json");
+		var gameConfigPath = Path.Combine(Application.persistentDataPath, "Games", startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
 		yield return request.SendWebRequest();
 		if (request.result != UnityWebRequest.Result.Success) {

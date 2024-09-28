@@ -19,6 +19,12 @@ public class AirshipNetworkManager : NetworkManager {
         this.clientBundleLoader.SetupServer();
     }
 
+    public void LogDedicated(string msg) {
+#if UNITY_SERVER
+        Debug.Log(msg);
+#endif
+    }
+
     public override void OnStartClient() {
         this.net.OnStartClient();
         this.clientBundleLoader.SetupClient();
@@ -37,6 +43,7 @@ public class AirshipNetworkManager : NetworkManager {
 
     public override void OnStopClient() {
         base.OnStopClient();
+        // Debug.Log("OnStopClient");
         this.clientBundleLoader.CleanupClient();
 
         var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();

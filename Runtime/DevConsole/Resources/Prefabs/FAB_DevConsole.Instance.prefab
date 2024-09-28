@@ -639,6 +639,7 @@ MonoBehaviour:
   textColorInactive: {r: 0.4745098, g: 0.47843137, b: 0.4862745, a: 1}
   tabClient: {fileID: 7698611809988111119}
   tabServer: {fileID: 264935783764998699}
+  bottom: {fileID: 3240027391199046436}
   activeContext: 0
 --- !u!1 &2882227552420178953
 GameObject:
@@ -1693,8 +1694,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8078689388876524734}
   m_HandleRect: {fileID: 8432754194276795180}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.6821818
+  m_Value: 0
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3018,10 +3019,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8873818845564592851}
     m_Modifications:
-    - target: {fileID: 97973453866908033, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
-      propertyPath: m_GlobalFontAsset
-      value: 
-      objectReference: {fileID: 11400000, guid: d04b2314d743e4cc5829d840e66cf5bb, type: 2}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -3048,7 +3045,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 884.64154
+      value: 1050.0421
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_SizeDelta.y
@@ -3084,7 +3081,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 444.32077
+      value: 527.02106
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -3102,25 +3099,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 915693941556747371, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
-      propertyPath: m_Layer
-      value: 5
-      objectReference: {fileID: 0}
     - target: {fileID: 922122731342770246, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_Name
       value: LogInstance
-      objectReference: {fileID: 0}
-    - target: {fileID: 922122731342770246, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
-      propertyPath: m_Layer
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 6945350098497969374, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
-      propertyPath: m_StyleSheet
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 7307277244357059459, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
-      propertyPath: m_Layer
-      value: 5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

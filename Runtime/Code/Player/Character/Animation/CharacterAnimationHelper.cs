@@ -18,9 +18,8 @@ namespace Code.Player.Character {
         [SerializeField]
         public Animator animator;
         [SerializeField]
-        public NetworkAnimator networkAnimator;
-
-        public EntityAnimationEvents events;
+        public NetworkAnimator? networkAnimator;
+        public AnimationEventListener? animationEvents;
         public ParticleSystem sprintVfx;
         public ParticleSystem jumpPoofVfx;
         public ParticleSystem slideVfx;
@@ -29,10 +28,8 @@ namespace Code.Player.Character {
         public float minAirborneTime = .4f;
         public float particleMaxDistance = 25f;
         public float directionalBlendLerpMod = 8f;
-        public float animationSpeedLerpMod = 5;
         [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
         public float idleRectionLength = 3;
-
 
         private float nextIdleReactionLength = 0;
         private AnimatorOverrideController animatorOverride;
@@ -41,6 +38,7 @@ namespace Code.Player.Character {
         private Vector2 targetVelNormalized;
         private float verticalVel = 0;
         private float currentPlaybackSpeed = 0;
+        private float currentSpeed = 0;
         private bool firstPerson = false;
         private float lastStateTime = 0;
         private float targetPlaybackSpeed = 0;
@@ -113,13 +111,16 @@ namespace Code.Player.Character {
             if(!enabled || !this.gameObject.activeInHierarchy){
                 return;
             }
-            var modifiedTargetPlaybackSpeed = targetPlaybackSpeed;
+            currentPlaybackSpeed = targetPlaybackSpeed;
             //When idle lerp to a standstill
             if (currentState == CharacterState.Idle) {
                 targetVelNormalized = Vector2.zero;
-                modifiedTargetPlaybackSpeed = 1;
+                currentPlaybackSpeed = 1;
             } else if (currentState == CharacterState.Airborne){
-                modifiedTargetPlaybackSpeed = 1;
+                currentPlaybackSpeed = 1;
+            }else if ((currentState == CharacterState.Crouching && currentPlaybackSpeed < .1) || currentPlaybackSpeed < .01){
+                targetVelNormalized = Vector2.zero;
+                currentPlaybackSpeed = 1;
             }
 
             float currentMagnitude = currentVelNormalized.magnitude;
@@ -127,15 +128,14 @@ namespace Code.Player.Character {
 
             //RUNNING SPEED
             //Speed up animations based on actual speed vs target speed
-            this.currentPlaybackSpeed = Mathf.Lerp(currentPlaybackSpeed, modifiedTargetPlaybackSpeed, animationSpeedLerpMod * Time.deltaTime);
-            animator.SetFloat("MovementPlaybackSpeed", modifiedTargetPlaybackSpeed);
+            animator.SetFloat("MovementPlaybackSpeed", currentPlaybackSpeed);
 
             //Blend directional influence
             float blendMod = targetMagnitude > currentMagnitude ? this.directionalBlendLerpMod : this.directionalBlendLerpMod /2f;
             currentVelNormalized = Vector2.MoveTowards(currentVelNormalized, targetVelNormalized, blendMod * Time.deltaTime);
-            animator.SetFloat("VelX",  currentVelNormalized.x * Mathf.Clamp01(currentPlaybackSpeed));
+            animator.SetFloat("VelX",  currentSpeed < .01 ? 0 : currentVelNormalized.x);// * Mathf.Clamp01(currentPlaybackSpeed));
             animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime*1.5f));
-            animator.SetFloat("VelZ", currentVelNormalized.y * Mathf.Clamp01(currentPlaybackSpeed));
+            animator.SetFloat("VelZ", currentSpeed < .01 ? 0 : currentVelNormalized.y);// * Mathf.Clamp01(currentPlaybackSpeed));
             animator.SetFloat("Speed", targetMagnitude);
 
             
@@ -161,19 +161,23 @@ namespace Code.Player.Character {
         }
 
         public void SetVelocity(Vector3 localVel) {
+            //The target speed is the movement speed the animations were built for
             var targetSpeed = 4.4444445f;
             if (currentState == CharacterState.Sprinting) {
                 targetSpeed = 6.6666667f;
             } else if (currentState == CharacterState.Crouching) {
                 targetSpeed = 2.1233335f;
             }
-            
-            this.targetPlaybackSpeed = Mathf.Max(0, 
-                new Vector2(localVel.x, localVel.z).magnitude  / 
-                targetSpeed);//The speeds the animations were designed for
-            targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
+            currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
+            //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed);
+            this.targetPlaybackSpeed = Mathf.Max(.01f, currentSpeed  / targetSpeed);
+            if(currentSpeed < .06){
+                currentSpeed = 0;
+                targetVelNormalized = Vector2.zero;
+            }else{
+                targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
+            }
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
-            //print("localVel: " + localVel + " speed: " +  new Vector2(localVel.x, localVel.z).magnitude + " targetPlaybackSpeed: " + this.targetPlaybackSpeed);
         }
 
         public void SetState(CharacterStateData syncedState) {
@@ -244,6 +248,10 @@ namespace Code.Player.Character {
 
             animator.CrossFadeInFixedTime("EarlyExit", fixedTransitionDuration, 4 + (int)layer);
             animator.SetBool("Override" + (int)layer + "Looping", false);
+        }
+
+        public float GetPlaybackSpeed(){
+            return this.targetPlaybackSpeed;
         }
     }
 }

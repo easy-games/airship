@@ -94,23 +94,13 @@ public class NetworkPrefabManager : AssetPostprocessor {
         
         // Register existing prefabs in session cache
         RefreshSessionCollectionCache();
-        
-        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
     }
-
-    private static void OnPlayModeStateChanged(PlayModeStateChange state) {
-        if (state == PlayModeStateChange.ExitingEditMode) {
-            WriteAllCollections();
-        }
-    }
-
+    
     private static AssetData GetAssetDataFromPath(string path) {
         return new AssetData(path);
     }
 
     private static void RefreshSessionCollectionCache() {
-        Profiler.BeginSample("RefreshSessionCollectionCache");
         SessionCollectionCache.Clear();
         foreach (var collection in GetCollections()) {
             foreach (var prefab in collection.networkPrefabs) {
@@ -118,7 +108,6 @@ public class NetworkPrefabManager : AssetPostprocessor {
                 SessionCollectionCache.Add(guid);
             }
         }
-        Profiler.EndSample();
     }
     
     private static List<NetworkPrefabCollection> GetCollections() {
@@ -171,13 +160,9 @@ public class NetworkPrefabManager : AssetPostprocessor {
             var path = AssetDatabase.GUIDToAssetPath(result);
             var assetData = GetAssetDataFromPath(path);
             if (assetData.IsInternalAsset()) continue;
-            var loaded = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-
-            // todo: change to NetworkIdentity
-            var maybeNob = loaded.GetComponent<NetworkIdentity>();
-            if (maybeNob == null) continue;
-
-            networkObjects.Add(loaded);
+            var loaded = AssetDatabase.LoadAssetAtPath<NetworkIdentity>(path);
+            if (loaded == null) continue;
+            networkObjects.Add(loaded.gameObject);
         }
         return networkObjects;
     }

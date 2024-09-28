@@ -69,7 +69,7 @@ namespace Editor.Packages {
             "Server/Scenes"
         };
 
-        [MenuItem("Airship/Packages")]
+        [MenuItem("Airship/Airship Packages")]
         public static void ShowWindow() {
             var window = EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
             window.minSize = new Vector2(430, 550);
@@ -119,6 +119,11 @@ namespace Editor.Packages {
 #endif
             GUILayout.Space(10);
 
+            if (this.gameConfig == null || this.gameConfig.packages == null) {
+                EditorGUILayout.LabelField("Invalid GameConfig reference.");
+                return;
+            }
+
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
@@ -137,7 +142,7 @@ namespace Editor.Packages {
                         if (GUILayout.Button("Publish All")) {
                             // Make sure we generate and write all `NetworkPrefabCollection`s before we
                             // build the package.
-                            NetworkPrefabManager.WriteAllCollections();
+                            // NetworkPrefabManager.WriteAllCollections();
                             EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
                         }
                         GUILayout.EndVertical();
@@ -307,6 +312,17 @@ namespace Editor.Packages {
         }
 
         public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
+            var confirmTitle = "Package Publish";
+            var confirmMessage = $"You are about to publish {packageDoc.id}.";
+            #if AIRSHIP_INTERNAL
+                confirmTitle = $"{currentEnvironment} Publish";
+                confirmMessage = $"You are about to publish {packageDoc.id} to {currentEnvironment}.";
+            #endif
+            var okWithPublish = EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Publish", "Cancel");
+            if (!okWithPublish) {
+                yield break;
+            }
+            
             List<string> possibleKeys;
             if (currentEnvironment == "Staging") {
                 possibleKeys = new List<string> { AuthConfig.instance.stagingApiKey, InternalHttpManager.editorAuthToken };
@@ -362,7 +378,7 @@ namespace Editor.Packages {
 
             // Sort the current platform first to speed up build time
             List<AirshipPlatform> platforms = new() {
-                AirshipPlatform.iOS,
+                // AirshipPlatform.iOS,
                 AirshipPlatform.Mac,
                 AirshipPlatform.Windows,
             };
@@ -444,16 +460,12 @@ namespace Editor.Packages {
             var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
             var typesFolder = Path.Join(Path.Join("Assets", "AirshipPackages", "Types~"), packageDoc.id);
 
-            if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
-                Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-            }
+            Directory.CreateDirectory(Path.Join("bundles", "uploads"));
 
             // Create org scope folder (@Easy)
-            string orgScopePath = Path.Join(Application.persistentDataPath, "Uploads",
+            string orgScopePath = Path.Join("bundles", "uploads",
                 packageDoc.id.Split("/")[0]);
-            if (!Directory.Exists(orgScopePath)) {
-                Directory.CreateDirectory(orgScopePath);
-            }
+            Directory.CreateDirectory(orgScopePath);
 
             packageUploadProgress[packageDoc.id] = "Zipping source...";
             Repaint();
@@ -487,8 +499,8 @@ namespace Editor.Packages {
             yield return null; // give time to repaint
 
             // code.zip
-            AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-            var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+            AirshipEditorUtil.EnsureDirectory(Path.Join("bundles", "uploads"));
+            var codeZipPath = Path.Join("bundles", "uploads", "code.zip");
             {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
@@ -565,8 +577,8 @@ namespace Editor.Packages {
 
                     // UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
                     // UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
-                    UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
-                    UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+                    // UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    // UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
                 });
             }
 
@@ -632,7 +644,7 @@ namespace Editor.Packages {
                                 // "Linux_shared_resources",
                                 "Mac_shared_resources",
                                 "Windows_shared_resources",
-                                "iOS_shared_resources",
+                                // "iOS_shared_resources",
 
                                 // "Linux_shared_scenes",
                                 // "Mac_shared_scenes",
@@ -754,7 +766,7 @@ namespace Editor.Packages {
             // Source.zip
             var url = $"{gameCdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
-                Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
+                Path.Join("bundles", "temp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
                 File.Delete(sourceZipDownloadPath);
             }
@@ -767,7 +779,7 @@ namespace Editor.Packages {
 
             // Tell the compiler to restart soon™
 #if UNITY_EDITOR
-            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            EditorCoroutines.Execute(TypescriptServices.RestartAndAwaitUpdates());
 #endif
             
             yield return new WaitUntil(() => sourceZipRequest.isDone);
@@ -826,12 +838,17 @@ namespace Editor.Packages {
                  if (File.Exists(rootGitIgnore)) {
                      try {
                          var lines = File.ReadLines(rootGitIgnore);
+                         var org = packageId.Split("/")[0];
 
                          var srcIgnore = $"Assets/AirshipPackages/{packageId}/*";
+                         var orgMetaIgnore = $"Assets/AirshipPackages/{org}.meta";
                          var metaIgnore = $"Assets/AirshipPackages/{packageId}.meta";
                          var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
                          if (!lines.Contains(srcIgnore)) {
                              File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
+                         }
+                         if (!lines.Contains(orgMetaIgnore)) {
+                             File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{orgMetaIgnore}" });
                          }
                          if (!lines.Contains(metaIgnore)) {
                              File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
@@ -939,10 +956,11 @@ namespace Editor.Packages {
 
         private static string contentUrl {
             get {
-                if (currentEnvironment == "Staging") {
-                    return "https://content-service-fxy2zritya-uc.a.run.app";
-                }
-                return "https://content-service-hwcvz2epka-uc.a.run.app";
+                return AirshipPlatformUrl.contentService;
+                // if (currentEnvironment == "Staging") {
+                //     return "https://content-service-fxy2zritya-uc.a.run.app";
+                // }
+                // return "https://content-service-hwcvz2epka-uc.a.run.app";
             }
         }
 
@@ -1018,7 +1036,7 @@ namespace Editor.Packages {
 
             var url = "https://github.com/easy-games/ExamplePackage/zipball/main";
             var request = new UnityWebRequest(url);
-            var zipDownloadPath = Path.Join(Application.persistentDataPath, "EditorTemp", "PackageTemplate.zip");
+            var zipDownloadPath = Path.Join("bundles", "temp", "PackageTemplate.zip");
             request.downloadHandler = new DownloadHandlerFile(zipDownloadPath);
             request.SendWebRequest();
 
@@ -1096,7 +1114,7 @@ namespace Editor.Packages {
             yield return null;
             var packageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
             activeRemovals.Add(packageId);
-            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            EditorCoroutines.Execute(TypescriptServices.RestartAndAwaitUpdates());
             
             if (packageDoc != null) {
                 this.gameConfig.packages.Remove(packageDoc);

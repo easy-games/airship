@@ -132,9 +132,13 @@ namespace Code.Bootstrap {
         }
 
         public void CleanupServer() {
-            NetworkServer.UnregisterHandler<RequestScriptsMessage>();
-            NetworkServer.UnregisterHandler<ClientFinishedPreparingMessage>();
-            NetworkServer.UnregisterHandler<GreetingMessage>();
+            try {
+                NetworkServer.UnregisterHandler<RequestScriptsMessage>();
+                NetworkServer.UnregisterHandler<ClientFinishedPreparingMessage>();
+                NetworkServer.UnregisterHandler<GreetingMessage>();
+            } catch (Exception e) {
+                Debug.LogException(e);
+            }
         }
 
         /// <summary>

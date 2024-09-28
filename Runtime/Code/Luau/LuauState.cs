@@ -124,6 +124,10 @@ namespace Luau {
             _threads.TryAdd(thread, binding);
         }
 
+        public void RemoveThread(IntPtr thread) {
+            _threads.Remove(thread);
+        }
+
         public int ResumeScript(AirshipComponent binding) {
             return LuauPlugin.LuauRunThread(binding.m_thread);
         }

@@ -193,13 +193,15 @@ public static class CreateAssetBundles {
 					var addUrpFiles = new Action<string>((string path) => {
 						var urpGuids = AssetDatabase.FindAssets("*",
 							new string[] { path });
-						Debug.Log("Found URP files: " + urpGuids.Length);
 						assetGuids.AddRange(urpGuids);
 					});
 
-					addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
-					addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
-					addUrpFiles("Packages/com.unity.render-pipelines.universal/Textures");
+					if (!EditorIntegrationsConfig.instance.selfCompileAllShaders) {
+						Debug.Log("Adding URP assets to CoreMaterials bundle.");
+						addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
+						addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
+						addUrpFiles("Packages/com.unity.render-pipelines.universal/Textures");
+					}
 				}
 
 				var assetPaths = assetGuids.Select((guid) => {
@@ -227,6 +229,56 @@ public static class CreateAssetBundles {
 		return builds;
 	}
 
+#if UNITY_EDITOR
+    [MenuItem("Airship/Misc/Test Build Game Config")]
+	public static void TestBuildGameConfig(){
+		BuildGameConfig();
+	}
+#endif
+
+	private static GameConfig BuildGameConfig(){
+		GameConfig gameConfig = GameConfig.Load();
+
+		// Update tags
+		var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
+		if (tagList.Length > GameConfig.MaximumTags) {
+			Debug.LogError($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
+			return null;
+		}
+		gameConfig.gameTags = tagList.ToArray();
+
+		// Update layers
+		var layers = new List<string>();
+		for (int i = 0; i < 31; i++) {
+			var layerName = LayerMask.LayerToName(i);
+			layers.Add(layerName);
+		}
+		gameConfig.gameLayers = layers.ToArray();
+
+		//Update physics matrix        
+		bool[] areLayersIgnored = new bool[15 * 32];
+		string TheMatrixLog = "GAME LAYER MATRIX: \n";
+		//15 Game Layers and how they collide with all 32 layers
+        for (int i = 0; i < 15; i++) {
+			//Check
+            for (int otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
+				int gameLayerI = 17 + i;
+				bool ignored = Physics.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
+            	areLayersIgnored[i * 32 + otherLayerI] = ignored;
+				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
+            }
+        }
+		//Debug.Log(TheMatrixLog);
+		gameConfig.physicsMatrix = areLayersIgnored;
+
+		//Update physics gravity
+		gameConfig.physicsGravity = Physics.gravity;
+		
+		EditorUtility.SetDirty(gameConfig);
+		AssetDatabase.SaveAssetIfDirty(gameConfig);
+		return gameConfig;
+	}
+
 	private static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
 		ResetScenes();
 
@@ -240,26 +292,10 @@ public static class CreateAssetBundles {
 		}
 
 		var sw = Stopwatch.StartNew();
-		var gameConfig = GameConfig.Load();
-
-		// Update layers
-		var layers = new List<string>();
-		for (int i = 0; i < 31; i++) {
-			var layerName = LayerMask.LayerToName(i);
-			layers.Add(layerName);
-		}
-
-		// Update tags
-		var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
-		if (tagList.Length > GameConfig.MaximumTags) {
-			Debug.LogError($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
+		var gameConfig = BuildGameConfig();
+		if(!gameConfig){
 			return false;
 		}
-		
-		gameConfig.gameLayers = layers.ToArray();
-		gameConfig.gameTags = tagList.ToArray();
-		EditorUtility.SetDirty(gameConfig);
-		AssetDatabase.SaveAssetIfDirty(gameConfig);
 
 		var buildPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", platform.ToString());
 		if (!Directory.Exists(buildPath)) {

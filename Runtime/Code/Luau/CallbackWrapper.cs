@@ -10,6 +10,10 @@ namespace Luau
         public int handle;
         public IntPtr thread;
         public string methodName;
+        /// <summary>
+        /// If true we will not send an event if the first variable (context) doesn't match the creation context
+        /// </summary>
+        public bool validateContext;
         public delegate void EventHandler();
 
         private static Dictionary<IntPtr, int> m_threadPinCount = new Dictionary<IntPtr, int>();
@@ -19,11 +23,12 @@ namespace Luau
             m_threadPinCount.Clear();
         }
 
-        public CallbackWrapper(LuauContext context, IntPtr thread, string methodName, int handle) {
+        public CallbackWrapper(LuauContext context, IntPtr thread, string methodName, int handle, bool validateContext) {
             this.context = context;
             this.thread = thread;
             this.methodName = methodName;
             this.handle = handle;
+            this.validateContext = validateContext;
 
             m_threadPinCount.TryAdd(this.thread, 0);
             m_threadPinCount[this.thread] += 1;
@@ -75,8 +80,18 @@ namespace Luau
             }
         }
 
-        unsafe public void HandleEventDelayed1(object param0)
-        {
+        private bool IsBlockedByInvalidContext(object param0) {
+            if (!validateContext) return false;
+            if (param0 is null) return false;
+            if (param0 is not LuauContext lc) return false;
+            var isBlocked = lc != context;
+            // if (isBlocked) Debug.Log("Blocked by invalid context: lc=" + lc + " context=" + context + " mn=" + methodName);
+            return isBlocked;
+        }
+        
+        unsafe public void HandleEventDelayed1(object param0) {
+            if (IsBlockedByInvalidContext(param0)) return;
+            
             int numParameters = 1;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
@@ -96,8 +111,9 @@ namespace Luau
         }
 
 
-        unsafe public void HandleEventDelayed2(object param0, object param1)
-        {
+        unsafe public void HandleEventDelayed2(object param0, object param1) {
+            if (IsBlockedByInvalidContext(param0)) return;
+            
             int numParameters = 2;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
@@ -120,8 +136,9 @@ namespace Luau
             }
         }
 
-        unsafe public void HandleEventDelayed3(object param0, object param1, object param2)
-        {
+        unsafe public void HandleEventDelayed3(object param0, object param1, object param2) {
+            if (IsBlockedByInvalidContext(param0)) return;
+            
             int numParameters = 3;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
@@ -143,8 +160,9 @@ namespace Luau
             }
         }
 
-        unsafe public void HandleEventDelayed4(object param0, object param1, object param2, object param3)
-        {
+        unsafe public void HandleEventDelayed4(object param0, object param1, object param2, object param3) {
+            if (IsBlockedByInvalidContext(param0)) return;
+            
             int numParameters = 4;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)

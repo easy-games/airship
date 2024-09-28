@@ -62,7 +62,7 @@ namespace Editor {
 
     
     [InitializeOnLoad]
-    public class AirshipPackageManager {
+    public class AirshipUpdateService {
         private enum EnvironmentTag {
             Production,
             Staging,
@@ -72,6 +72,11 @@ namespace Editor {
         
         private static PackageInfo _airshipLocalPackageInfo;
         private static bool showDialog = false;
+
+        /// <summary>
+        /// Will be true if Airship is currently updating
+        /// </summary>
+        public static bool IsUpdatingAirship { get; private set; }
 
         private struct GitCommitsResponse {
             [JsonProperty("sha")] public string SHA { get; set; }
@@ -126,7 +131,7 @@ namespace Editor {
             AirshipPackageAutoUpdater.CheckPackageVersions(ignoreUserSetting: true);
         }
 
-        static AirshipPackageManager() {
+        static AirshipUpdateService() {
             if (RunCore.IsClone()) return;
             if (CurrentPlayer.ReadOnlyTags().Length > 0 || ClonesManager.IsClone()) return;
 
@@ -202,6 +207,10 @@ namespace Editor {
                 if (EditorUtility.DisplayDialog("Airship Update",
                         "A new version of Airship is available, would you like to update?", "Update", "Ignore")) {
                     Debug.Log($"Updating Airship, this may take a few moments...");
+
+                    // Force restart TS if we're package updating
+                    IsUpdatingAirship = true;
+                    EditorCoroutines.Execute(TypescriptServices.RestartAndAwaitUpdates());
                     
                     _airshipPackageAddRequest = Client.Add($"gg.easy.airship@{remoteVersion}"); // We can thankfully install a specific version
                     
@@ -224,21 +233,22 @@ namespace Editor {
 
         private static AddRequest _airshipPackageAddRequest;
         private static void AwaitAirshipAddRequest() {
-            if (_airshipPackageAddRequest.IsCompleted) {
-                var result = _airshipPackageAddRequest.Result;
-                if (result != null) {
-                    Debug.Log($"Updated Airship to v{result.version}");
-                }
-                else if (_airshipPackageAddRequest.Error != null) {
-                    Debug.LogWarning($"Unable to update Airship: {_airshipPackageAddRequest.Error.message}");
-                }
-                else {
-                    Debug.LogWarning($"Unable to update Airship");
-                }
-
-                EditorApplication.update -= AwaitAirshipAddRequest;
-                EditorUtility.ClearProgressBar();
+            if (!_airshipPackageAddRequest.IsCompleted) return;
+            
+            var result = _airshipPackageAddRequest.Result;
+            if (result != null) {
+                Debug.Log($"Updated Airship to v{result.version}");
             }
+            else if (_airshipPackageAddRequest.Error != null) {
+                Debug.LogWarning($"Unable to update Airship: {_airshipPackageAddRequest.Error.message}");
+            }
+            else {
+                Debug.LogWarning($"Unable to update Airship");
+            }
+
+            EditorApplication.update -= AwaitAirshipAddRequest;
+            IsUpdatingAirship = false;
+            EditorUtility.ClearProgressBar();
         }
     }
 }

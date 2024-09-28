@@ -48,27 +48,28 @@ public class TransferManager : Singleton<TransferManager> {
         conn.Disconnect();
     }
 
+    /**
+     * Fired when the client loses connection to server.
+     */
     public void NetworkClient_OnDisconnected() {
         var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
         if (clientNetworkConnector != null && clientNetworkConnector.expectingDisconnect) {
             return;
         }
 
-        LuauCore.ResetContext(LuauContext.Game);
-        LuauCore.ResetContext(LuauContext.Protected);
-
-        ResetClientUnityState();
+        Debug.Log("Client unexpectedly lost connection to server.");
+        this.Disconnect(true, "Lost connection to the server.");
     }
 
     // ************** //
 
     public void Disconnect(bool kicked, string kickMessage) {
-        var clientNetworkConnector = FindObjectOfType<ClientNetworkConnector>();
+        var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
         if (clientNetworkConnector) {
             clientNetworkConnector.expectingDisconnect = true;
         }
 
-        StartCoroutine(this.StartDisconnect());
+        StartCoroutine(this.StartDisconnect(kicked, kickMessage));
     }
 
     public void Disconnect() {

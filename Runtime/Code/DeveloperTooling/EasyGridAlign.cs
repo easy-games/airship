@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 
 [ExecuteInEditMode]
 public class EasyGridAlign : MonoBehaviour {

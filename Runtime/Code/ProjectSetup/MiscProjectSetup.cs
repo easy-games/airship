@@ -11,18 +11,7 @@ public static class MiscProjectSetup
     public static GameConfig Setup() {
 
 #if UNITY_EDITOR
-        GameConfig gameBundleConfig;
-        gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
-        if (gameBundleConfig == null)
-        {
-            Debug.Log("Creating new game config file at \"Assets/GameConfig.asset\"");
-            var newConfig = ScriptableObject.CreateInstance<GameConfig>();
-            AssetDatabase.CreateAsset(newConfig, "Assets/GameConfig.asset");
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-        }
-
-        Physics.gravity = new Vector3(0, -24f, 0);
+        GameConfig gameBundleConfig = GetOrCreateGameConfig();
 
         EditorSettings.enterPlayModeOptionsEnabled = true;
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
@@ -48,6 +37,19 @@ public static class MiscProjectSetup
         return gameBundleConfig;
 #endif
         return null;
+    }
+
+    public static GameConfig GetOrCreateGameConfig(){
+        var gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+        if (gameBundleConfig == null)
+        {
+            Debug.Log("Creating new game config file at \"Assets/GameConfig.asset\"");
+            var newConfig = ScriptableObject.CreateInstance<GameConfig>();
+            AssetDatabase.CreateAsset(newConfig, "Assets/GameConfig.asset");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+        return gameBundleConfig;
     }
 
     /*

@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Code.Luau;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Profiling;
@@ -24,7 +25,8 @@ public partial class LuauCore : MonoBehaviour {
     public static LuauContext CurrentContext = LuauContext.Game;
 
     private static LuauPlugin.PrintCallback printCallback_holder = printf;
-
+    
+    private LuauPlugin.ComponentSetEnabledCallback componentSetEnabledCallback_holder;
     private LuauPlugin.GetPropertyCallback getPropertyCallback_holder;
     private LuauPlugin.SetPropertyCallback setPropertyCallback_holder;
     private LuauPlugin.CallMethodCallback callMethodCallback_holder;
@@ -34,6 +36,8 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.YieldCallback yieldCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
+    private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
+    
 
     private struct AwaitingTask
     {
@@ -77,6 +81,8 @@ public partial class LuauCore : MonoBehaviour {
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
+        componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
+        toggleProfilerCallback_holder = new LuauPlugin.ToggleProfilerCallback(ToggleProfilerCallback);
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -166,7 +172,7 @@ public partial class LuauCore : MonoBehaviour {
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToStringCallback))]
     static void toStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
-        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true);
+        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true, true);
         
         var toString = obj != null ? obj.ToString() : "null";
         
@@ -174,6 +180,26 @@ public partial class LuauCore : MonoBehaviour {
         len = bytes.Length > maxLen ? maxLen : bytes.Length;
 
         Marshal.Copy(bytes, 0, str, len);
+    }
+    
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToggleProfilerCallback))]
+    static void ToggleProfilerCallback(int componentId, IntPtr strPtr, int strLen) {
+        // Disable
+        if (componentId == -1) {
+            Profiler.EndSample();
+            return;
+        }
+
+        if (AirshipComponent.componentIdToScriptName.TryGetValue(componentId, out var componentName)) {
+            if (strLen > 0) {
+                var str = PtrToStringUTF8(strPtr, strLen);
+                Profiler.BeginSample($"{componentName}{str}");
+                LuauPlugin.LuauFreeString(strPtr);
+            }
+            else {
+                Profiler.BeginSample($"{componentName}");
+            }
+        }
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
@@ -878,7 +904,26 @@ public partial class LuauCore : MonoBehaviour {
         }
         // Debug.Log("event connections: " + eventConnections.Count);
     }
-
+    
+    /// When lua wants to toggle the enabled state of a component
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ComponentSetEnabledCallback))]
+    private static void SetComponentEnabled(IntPtr thread, int instanceId, int componentId, int enabled) {
+        var gameObject = AirshipBehaviourRootV2.GetGameObject(instanceId);
+        if (gameObject == null) {
+            Debug.LogError($"Could not find GameObject by id {instanceId} while trying to set enabled state");
+            return;
+        }
+        
+        var component = AirshipBehaviourRootV2.GetComponent(gameObject, componentId);
+        if (component == null) {
+            Debug.LogError($"Could not set component {componentId} enabled to {enabled} for {gameObject.name}", gameObject);
+            return;
+        }
+        
+        component.enabled = (enabled != 0);
+    }
+    
+    
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
@@ -1000,13 +1045,15 @@ public partial class LuauCore : MonoBehaviour {
                 ParameterInfo[] eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
 
                 foreach (ParameterInfo param in eventInfoParams) {
-                    if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false) {
+                    if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false && param.ParameterType.IsEnum == false) {
                         return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                     }
                 }
 
+                var attachContextToEvent = eventInfo.GetCustomAttribute<AttachContext>() != null;
+
                 //grab the correct one for the number of parameters
-                var callbackWrapper = ThreadDataManager.RegisterCallback(context, thread, handle, methodName);
+                var callbackWrapper = ThreadDataManager.RegisterCallback(context, thread, handle, methodName, attachContextToEvent);
                 string reflectionMethodName = "HandleEventDelayed" + eventInfoParams.Length.ToString();
                 MethodInfo method = callbackWrapper.GetType().GetMethod(reflectionMethodName);
 
@@ -1038,7 +1085,7 @@ public partial class LuauCore : MonoBehaviour {
         object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
 
         Profiler.BeginSample("LuauCore.FindMethod");
-        FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext);
+        FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext, out var attachContext);
         Profiler.EndSample();
 
         if (finalMethod == null) {
@@ -1060,7 +1107,10 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
+        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, attachContext, out parsedData);
+        if (attachContext) {
+            parsedData[0] = context;
+        }
         if (success == false) {
             return LuauError(thread, $"Error: Unable to parse parameters for {type.Name} {finalMethod.Name}");
         }

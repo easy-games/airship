@@ -10,12 +10,14 @@ using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
 using UnityEngine.Tilemaps;
 using UnityEngine.VFX;
+using Toggle = UnityEngine.UI.Toggle;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -133,6 +135,7 @@ namespace Luau {
             [typeof(UnityEngine.UI.ScrollRect)] = LuauContextAll,
             [typeof(UnityEngine.UI.VerticalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.RawImage)] = LuauContextAll,
+            [typeof(Toggle)] = LuauContextAll,
             // Particles
             [typeof(ParticleSystem)] = LuauContextAll,
             [typeof(ParticleSystemRenderer)] = LuauContextAll,
@@ -174,6 +177,9 @@ namespace Luau {
             // Visual Effects
             [typeof(VisualEffect)] = LuauContextAll,
             [typeof(Volume)] = LuauContextAll,
+            [typeof(VolumeProfile)] = LuauContextAll,
+            [typeof(DepthOfField)] = LuauContextAll,
+            [typeof(GraphicRaycaster)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.

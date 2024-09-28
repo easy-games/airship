@@ -59,7 +59,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     public void Retry() {
         // Delete existing @Easy folder. This will force redownload of core.
-        var easyDir = Path.Combine(AssetBridge.PackagesPath, "@Easy");
+        var easyDir = Path.Combine(Application.persistentDataPath, "Packages", "@Easy");
         if (Directory.Exists(easyDir)) {
             Directory.Delete(easyDir, true);
         }
