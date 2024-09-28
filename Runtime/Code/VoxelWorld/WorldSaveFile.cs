@@ -7,50 +7,40 @@ using BlockId = System.UInt16;
 
 [System.Serializable]
 [LuauAPI]
-public class WorldSaveFile : ScriptableObject
-{
+public class WorldSaveFile : ScriptableObject {
     public List<SaveChunk> chunks = new List<SaveChunk>();
     public List<BlockIdToScopedName> blockIdToScopeName = new();
 
     [System.Serializable]
-    public struct BlockIdToScopedName
-    {
+    public struct BlockIdToScopedName {
         public BlockId id;
         public string name;
     }
 
     [System.Serializable]
-    public struct SaveChunk
-    {
+    public struct SaveChunk {
         public Vector3Int key;
         public VoxelData[] data;
-        public SaveChunk(Vector3Int key, VoxelData[] data)
-        {
+        public SaveChunk(Vector3Int key, VoxelData[] data) {
             this.key = key;
-            this.data = data; 
+            this.data = data;
         }
     }
-     
-    private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world)
-    {
+
+    private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world) {
         blockIdToScopeName.Clear();
         var blockMap = world.voxelBlocks.loadedBlocks;
-        foreach (var block in blockMap)
-        {
-            blockIdToScopeName.Add(new BlockIdToScopedName()
-            {
+        foreach (var block in blockMap) {
+            blockIdToScopeName.Add(new BlockIdToScopedName() {
                 id = block.Key,
                 name = block.Value.blockTypeId,
             });
         }
     }
 
-    public BlockId GetFileBlockIdFromStringId(string blockTypeId)
-    {
-        foreach (var pair in this.blockIdToScopeName)
-        {
-            if (pair.name == blockTypeId)
-            {
+    public BlockId GetFileBlockIdFromStringId(string blockTypeId) {
+        foreach (var pair in this.blockIdToScopeName) {
+            if (pair.name == blockTypeId) {
                 return pair.id;
             }
         }
@@ -58,37 +48,53 @@ public class WorldSaveFile : ScriptableObject
         return 0;
     }
 
-    public void CreateFromVoxelWorld(VoxelWorld world)
-    {
-        
+    public void CreateFromVoxelWorld(VoxelWorld world) {
+
         // Add used blocks + their ids to file
         this.CreateScopedBlockDictionaryFromVoxelWorld(world);
-        
+
         var chunks = world.chunks;
         int counter = 0;
-        foreach (var chunk in chunks)
-        {
+        this.chunks.Clear();
+        Dictionary<Vector3Int, VoxelWorldStuff.Chunk> finalChunks = new();
+
+        //Merge all chunks (how?!)
+        foreach (var chunk in chunks) {
+            var key = chunk.Key;
+            var data = chunk.Value.readWriteVoxel;
+
+            finalChunks.TryGetValue(key, out var finalChunk);
+            if (finalChunk == null) {
+                finalChunk = new();
+                finalChunks.Add(key, finalChunk);
+            }
+
+            for (int j = 0; j < data.Length; j++) {
+                if (data[j] != 0) {
+                    finalChunk.readWriteVoxel[j] = data[j];
+                }
+            }
+        }
+
+        //Discard any empty chunks
+        foreach (var chunk in finalChunks) {
             var key = chunk.Key;
             var data = chunk.Value.readWriteVoxel;
 
             int count = 0;
-            foreach (var voxel in data)
-            {
-                if (voxel != 0)
-                {
+            foreach (var voxel in data) {
+                if (voxel != 0) {
                     count += 1;
-                    
                 }
             }
-            if (count > 0)
-            {
-              
+            if (count > 0) {
+
                 counter++;
                 var chunkData = new SaveChunk(key, data);
                 this.chunks.Add(chunkData);
             }
         }
-         
+
         Debug.Log("Saved " + counter + " chunks.");
         // Debug.Log("Saved " + worldPositions.Count + " world positions.");
     }
@@ -98,22 +104,18 @@ public class WorldSaveFile : ScriptableObject
     /// </summary>
     /// <param name="fileBlockId"></param>
     /// <returns></returns>
-    public string GetFileScopedBlockTypeId(BlockId fileBlockId)
-    {
-        foreach (var blockDef in this.blockIdToScopeName)
-        {
-            if (blockDef.id == fileBlockId)
-            {
+    public string GetFileScopedBlockTypeId(BlockId fileBlockId) {
+        foreach (var blockDef in this.blockIdToScopeName) {
+            if (blockDef.id == fileBlockId) {
                 return blockDef.name;
             }
         }
         return null;
     }
 
-    public void LoadIntoVoxelWorld(VoxelWorld world)
-    {
+    public void LoadIntoVoxelWorld(VoxelWorld world) {
         Profiler.BeginSample("CreateVoxelWorld");
-        
+
         //Todo: Load lighting settings
         world.chunks.Clear();
         int counter = 0;
@@ -126,7 +128,7 @@ public class WorldSaveFile : ScriptableObject
             var definition = world.voxelBlocks.GetBlockDefinitionByStringId(blockIdToScopeName.name);
             if (definition == null) {
                 Debug.LogWarning($"Warning: Block {blockIdToScopeName.name} not found in world block definitions - Creating a placeholder. You can still safely save this file.");
-                
+
                 definition = world.voxelBlocks.CreateTemporaryBlockDefinition(blockIdToScopeName.name);
                 blockRemapping[blockIdToScopeName.id] = definition.blockId;
             }
@@ -136,28 +138,26 @@ public class WorldSaveFile : ScriptableObject
         }
 
 
-        foreach (var chunk in chunks)
-        {
+        foreach (var chunk in chunks) {
             counter += 1;
             var key = chunk.key;
             var data = chunk.data;
 
             VoxelWorldStuff.Chunk writeChunk = VoxelWorld.CreateChunk(key);
             writeChunk.SetWorld(world);
-             
-            for (int i = 0; i < data.Length;i++)
-            {
+
+            for (int i = 0; i < data.Length; i++) {
                 BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
                 ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
 
                 BlockId updatedBlockId = blockRemapping[fileBlockId];
                 writeChunk.readWriteVoxel[i] = ((ushort)(updatedBlockId | extraBits));
-                
+
             }
             world.chunks[key] = writeChunk;
         }
         Debug.Log("[Voxel World]: Loaded " + counter + " chunks.");
- 
+
 
         Profiler.EndSample();
     }
@@ -165,6 +165,5 @@ public class WorldSaveFile : ScriptableObject
     public SaveChunk[] GetChunks() {
         return this.chunks.ToArray();
     }
- 
+
 }
- 
