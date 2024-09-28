@@ -204,6 +204,8 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
+ 
+
         m_metadata.name = scriptFile.m_metadata.name;
 
         // Add missing properties or reconcile existing ones:
@@ -246,6 +248,13 @@ public class AirshipComponent : MonoBehaviour {
             serializedProperty.refPath = property.refPath;
         }
         
+        _isAirshipComponent = true;
+        
+        // Need to recompile
+        if (scriptFile.HasFileChanged) {
+            return;
+        }
+        
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
         var seenProperties = new HashSet<string>();
@@ -265,8 +274,6 @@ public class AirshipComponent : MonoBehaviour {
                 m_metadata.properties.Remove(serializedProperty);
             }
         }
-
-        _isAirshipComponent = true;
     }
 
     private void WriteChangedComponentProperties() {
