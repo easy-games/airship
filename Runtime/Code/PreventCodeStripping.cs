@@ -19,5 +19,7 @@ public class PreventCodeStripping : MonoBehaviour
 
         CharacterAnimationHelper animationHelper = null;
         animationHelper.PlayAnimation(null, CharacterAnimationHelper.CharacterAnimationLayer.OVERRIDE_1, 1f);
+
+        ReflectionCameraScript cam = null;
     }
 }
