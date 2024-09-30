@@ -67,7 +67,7 @@ public class PublishTargetPopup : PopupWindowContent {
             GUILayout.Label("No game found with this id.", errorStyle);
         }
         
-        if (myGames.Result != null) {
+        if (myGames.IsCompleted) {
             GUILayout.Space(10);
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Create game")) {

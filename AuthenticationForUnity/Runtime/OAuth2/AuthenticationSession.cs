@@ -50,15 +50,10 @@ namespace Cdm.Authentication.OAuth2
             try
             {
                 // 1. Create authorization request URL.
-                Debug.Log("Making authorization request...");
-
                 var redirectUrl = _client.configuration.redirectUri;
                 var authorizationUrl = _client.GetAuthorizationUrl();
 
                 // 2. Get authorization code grant using login form in the browser.
-                Debug.Log("Getting authorization grant using browser login...");
-
-
                 using var loginCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
                     cancellationToken, timeoutCancellationTokenSource.Token);
 
@@ -67,11 +62,6 @@ namespace Cdm.Authentication.OAuth2
                 if (browserResult.status == BrowserStatus.Success)
                 {
                     // 3. Exchange authorization code for access and refresh tokens.
-                    Debug.Log("Exchanging authorization code for access and refresh tokens...");
-
-#if UNITY_EDITOR
-                    Debug.Log($"Redirect URL: {browserResult.redirectUrl}");
-#endif
                     return await _client.ExchangeCodeForAccessTokenAsync(browserResult.redirectUrl, cancellationToken);
                 }
 
