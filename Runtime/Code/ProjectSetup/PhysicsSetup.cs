@@ -1,12 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
-public static class PhysicsSetup
-{
+public static class PhysicsSetup {
     private const int NumberOfCoreLayers= 12;
     private const int GameLayerStartIndex= 17;
     private static Vector3 defaultGravity = new Vector3(0, -24f, 0);
@@ -15,7 +10,6 @@ public static class PhysicsSetup
 
     //Setup required settings for Airship that all games need
     public static void Setup(GameConfig config) {
-#if UNITY_EDITOR
         InitLayerCollection();
 
         //Set the physics mat
@@ -63,30 +57,25 @@ public static class PhysicsSetup
             //Collides with
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("VoxelWorld"), LayerMask.NameToLayer("Default"), false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("VoxelWorld"), LayerMask.NameToLayer("VisuallyHidden"), false);
-#endif
     }
     
 
     public static void IgnoreAllLayers(int layer, bool ignoreGameLayers) {
-#if UNITY_EDITOR
         foreach (var otherLayer in corelayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, true);
         }
         foreach (var otherLayer in gameLayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, ignoreGameLayers);
         }
-#endif
     }
 
     public static void CollideWithAllLayers(int layer, bool collideWithGameLayers) {
-#if UNITY_EDITOR
         foreach (var otherLayer in corelayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, false);
         }
         foreach (var otherLayer in gameLayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, !collideWithGameLayers);
         }
-#endif
     }
 
     private static void InitLayerCollection(){
@@ -103,7 +92,6 @@ public static class PhysicsSetup
 
     //Reset physics values that users may have changed
     public static void ResetDefaults(GameConfig config){
-#if UNITY_EDITOR
         InitLayerCollection();
 
         Physics.gravity = defaultGravity;
@@ -112,13 +100,14 @@ public static class PhysicsSetup
         int gameId = 0;
         for (int i = GameLayerStartIndex; i <= 31; i++) {        
             CollideWithAllLayers(i, true);
+#if UNITY_EDITOR
             string name = "GameLayer"+gameId;
             PhysicsLayerEditor.SetLayer(i, name);
+#endif
             gameId++;
         }
 
         //Run setup to make the game layers collide properly with core layers
         Setup(config);
-#endif
     }
 }

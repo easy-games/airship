@@ -4,7 +4,6 @@ using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEditorInternal;
 #endif
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -111,5 +110,36 @@ public class GameConfig : ScriptableObject
         };
         var json = JsonUtility.ToJson(gameConfigDto);
         return json;
+    }
+
+    public void SerializeSettings(){
+		//Update physics matrix        
+		bool[] areLayersIgnored = new bool[15 * 32];
+		string TheMatrixLog = "SAVING GAME LAYER MATRIX: \n";
+		//15 Game Layers and how they collide with all 32 layers
+        for (int i = 0; i < 15; i++) {
+			//Check
+            for (int otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
+				int gameLayerI = 17 + i;
+				bool ignored = Physics.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
+            	areLayersIgnored[i * 32 + otherLayerI] = ignored;
+				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
+            }
+        }
+        this.physicsMatrix = areLayersIgnored;
+		this.physicsGravity = Physics.gravity;
+    }
+
+    public void DeserializeSettings(){
+		//15 Game Layers and how they collide with all 32 layers
+		string TheMatrixLog = "LOADING GAME LAYER MATRIX: \n";
+        for (int i = 0; i < 15; i++) {
+            for (int otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
+				int gameLayerI = 17 + i;
+                bool ignored = this.physicsMatrix[i];
+                Physics.IgnoreLayerCollision(gameLayerI, otherLayerI, ignored);
+				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
+            }
+        }
     }
 }
