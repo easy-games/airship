@@ -68,16 +68,23 @@ namespace Editor.Auth {
         public static Action<User> localUserChanged;
         public static EditorAuthSignInStatus signInStatus = EditorAuthSignInStatus.LOADING;
         private static TaskCompletionSource<EditorAuthSignInStatus> signInTcs = new();
+        private static DateTime lastRefreshTime;
         
         static EditorAuthManager() {
             AuthManager.authed += GetSelf;
             AuthManager.authed += async () => {
                 StartAutoRefreshAuthTimer();
             };
-            RefreshAuth();
+            CheckAndRefreshAuth();
         }
 
-        private static void RefreshAuth() {
+        private static void CheckAndRefreshAuth() {
+            if (DateTime.UtcNow - lastRefreshTime < TimeSpan.FromMinutes(25)) {
+                StartAutoRefreshAuthTimer();
+                return;
+            }
+            lastRefreshTime = DateTime.UtcNow;
+            
             var authSave = AuthManager.GetSavedAccount();
             if (authSave == null) {
                 signInStatus = EditorAuthSignInStatus.SIGNED_OUT;
@@ -100,8 +107,9 @@ namespace Editor.Auth {
         }
 
         private static async Task StartAutoRefreshAuthTimer() {
-            await Task.Delay(1000 * 60 * 25); // 25 mins
-            RefreshAuth();
+            // Check every 10 seconds in case computer fell asleep (relying on timeSinceLastAuth)
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            CheckAndRefreshAuth();
         } 
         
         private static void GetSelf() {
