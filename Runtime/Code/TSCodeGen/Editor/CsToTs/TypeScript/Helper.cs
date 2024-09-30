@@ -7,6 +7,7 @@ using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Code.Luau;
 using Codice.Utils;
 using HandlebarsDotNet;
 using PlasticPipe.PlasticProtocol.Messages;
@@ -324,6 +325,11 @@ namespace CsToTs.TypeScript {
                 var skipAttribute = method.GetCustomAttribute(typeof(HideFromTS), false);
                 if (skipAttribute != null) {
                     continue;
+                }
+
+                // Remove the context parameter from attached context methods
+                if (method.GetCustomAttribute<AttachContext>() != null) {
+                    parameters = parameters.Skip(1);
                 }
                 
                 var returnType = GetTypeRef(method.ReturnType, context);
