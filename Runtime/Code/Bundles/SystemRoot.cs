@@ -284,23 +284,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 		}
 
-
-#if AIRSHIP_PLAYER || !UNITY_EDITOR
-		//Reset Unity to Airship defaults and GameConfig customizations
-		var gameConfig = AssetBridge.LoadGameConfigAtRuntime();
-		if(gameConfig && gameConfig.physicsMatrix != null && this.physicsGravity != null){
-				Debug.Log("Loading project settings from GameConfig");
-				//Setup the Core Layers
-				PhysicsSetup.Setup(this);
-				//Load in game specific Layers and Settings
-				gameConfig.DeserializeSettings();
-		}else{
-			//Use default Airship values if we aren't setting up game specific values
-			Debug.Log("No custom GameConfig settings found. Reseting to defaults");
-			PhysicsSetup.ResetDefaults(this);
-		}
-#endif
-
 #if AIRSHIP_PLAYER || true
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + " ms.");
 #endif

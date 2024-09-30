@@ -185,6 +185,9 @@ public class MainMenuSceneManager : MonoBehaviour {
         yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
+        //Setup project configurations from loaded package
+        PhysicsSetup.SetupFromGameConfig();
+        
         // var mainMenuBindingGO = new GameObject("MainMenuBinding");
         // var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
         // mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);

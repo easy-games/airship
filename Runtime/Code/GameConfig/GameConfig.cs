@@ -141,5 +141,6 @@ public class GameConfig : ScriptableObject
 				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
             }
         }
+        Physics.gravity = this.physicsGravity;
     }
 }

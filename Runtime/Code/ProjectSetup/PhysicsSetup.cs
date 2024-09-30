@@ -16,6 +16,9 @@ public static class PhysicsSetup {
         //How the heck do I set this? 
         //UnityEditor.physicsMat??? = AssetDatabase.LoadAllAssetsAtPath("defaultphysicsmat");
 
+        Physics.simulationMode = SimulationMode.FixedUpdate;
+
+#if UNITY_EDITOR
         //Airship Core Layers
         PhysicsLayerEditor.SetLayer(3, "Character");
         PhysicsLayerEditor.SetLayer(6, "WorldUI");
@@ -25,12 +28,11 @@ public static class PhysicsSetup {
         PhysicsLayerEditor.SetLayer(10, "AvatarEditor");
         PhysicsLayerEditor.SetLayer(11, "VoxelWorld");
 
-        Physics.simulationMode = SimulationMode.FixedUpdate;
-
         //Reserved for future use
         for (int i = NumberOfCoreLayers; i < GameLayerStartIndex; i++) {
             PhysicsLayerEditor.SetLayer(i, "");
         }
+#endif
         
         //Create the Physics Matrix
             //Non colliding layers
@@ -109,5 +111,23 @@ public static class PhysicsSetup {
 
         //Run setup to make the game layers collide properly with core layers
         Setup(config);
+    }
+
+    public static void SetupFromGameConfig(){
+#if AIRSHIP_PLAYER || !UNITY_EDITOR
+		//Reset Unity to Airship defaults and GameConfig customizations
+		var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+		if(gameConfig && gameConfig.physicsMatrix != null && this.physicsGravity != null){
+				Debug.Log("Loading project settings from GameConfig");
+				//Setup the Core Layers
+				PhysicsSetup.Setup(this);
+				//Load in game specific Layers and Settings
+				gameConfig.DeserializeSettings();
+		}else{
+			//Use default Airship values if we aren't setting up game specific values
+			Debug.Log("No custom GameConfig settings found. Reseting to defaults");
+			PhysicsSetup.ResetDefaults(this);
+		}
+#endif
     }
 }
