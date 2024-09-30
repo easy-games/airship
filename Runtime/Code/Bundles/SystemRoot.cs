@@ -287,29 +287,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 #if AIRSHIP_PLAYER || !UNITY_EDITOR
 		//Reset Unity to Airship defaults and GameConfig customizations
-		// var gameConfigPath = AssetDatabase.FindAssets("t:GameConfig");
-		// bool customConfig = false;
-		// if(gameConfigPath.Length > 0){
-		// 	var path = AssetDatabase.GUIDToAssetPath(gameConfigPath[0]);
-		// 	if(!string.IsNullOrEmpty(path)){
-		// 		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>(path);
-		// 		if(gameConfig){
-		// 			if(gameConfig.physicsMatrix != null && this.physicsGravity != null){
-		// 				customConfig = true;
-		// 				Debug.Log("Loading project settings from GameConfig");
-		// 				//Setup the Core Layers
-		// 				PhysicsSetup.Setup(this);
-		// 				//Load in game specific Layers and Settings
-		// 				gameConfig.DeserializeSettings();
-		// 			}
-		// 		}
-		// 	}
-		// }
-		//Use default Airship values if we aren't setting up game specific values
-		//if(!customConfig){
-			//Debug.Log("No custom GameConfig settings found. Reseting to defaults");
+		var gameConfig = AssetBridge.LoadGameConfigAtRuntime();
+		if(gameConfig && gameConfig.physicsMatrix != null && this.physicsGravity != null){
+				Debug.Log("Loading project settings from GameConfig");
+				//Setup the Core Layers
+				PhysicsSetup.Setup(this);
+				//Load in game specific Layers and Settings
+				gameConfig.DeserializeSettings();
+		}else{
+			//Use default Airship values if we aren't setting up game specific values
+			Debug.Log("No custom GameConfig settings found. Reseting to defaults");
 			PhysicsSetup.ResetDefaults(this);
-		//}
+		}
 #endif
 
 #if AIRSHIP_PLAYER || true
