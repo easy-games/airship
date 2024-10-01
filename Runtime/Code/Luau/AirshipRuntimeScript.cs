@@ -6,6 +6,9 @@ using Luau;
 using UnityEngine;
 
 public class AirshipRuntimeScript : MonoBehaviour {
+    // Injected from LuauHelper
+    public static IAssetBridge AssetBridge;
+    
     // asset-related fields
     public AirshipScript scriptFile;
     [SerializeField][Obsolete("Do not use for referencing the script - use 'scriptFile'")]

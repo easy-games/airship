@@ -63,9 +63,6 @@ public class AirshipComponent : AirshipRuntimeScript {
     
     public bool IsAirshipComponent => _isAirshipComponent;
     public bool IsAirshipComponentEnabled => _airshipComponentEnabled;
-    
-    // Injected from LuauHelper
-    public static IAssetBridge AssetBridge;
 
     public static bool validatedSceneInGameConfig = false;
     
