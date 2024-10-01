@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using Assets.Code.Luau;
 using Luau;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
+[AddComponentMenu("Airship/Airship Runtime Script")]
 public class AirshipRuntimeScript : MonoBehaviour {
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
@@ -33,6 +37,17 @@ public class AirshipRuntimeScript : MonoBehaviour {
     [HideInInspector]
     public int m_onLateUpdateHandle = -1;
     
+    // Lifecycle stuffs
+    private bool _hasInitEarly = false;
+    [HideInInspector] protected bool started = false;
+    protected bool _isAirshipComponent;
+    private const bool ElevateToProtectedWithinCoreScene = true;
+    protected bool _airshipScheduledToStart = false;
+    public bool contextOverwritten = false;
+    protected bool _airshipWaitingForLuauCoreReady = false;
+    protected bool _scriptBindingStarted = false;
+    protected bool _isDestroyed;
+    
     // coroutines
     protected List<IntPtr> m_pendingCoroutineResumes = new List<IntPtr>();
     internal void QueueCoroutineResume(IntPtr thread) {
@@ -54,15 +69,6 @@ public class AirshipRuntimeScript : MonoBehaviour {
         }
         
         return path;
-    }
-
-    protected bool cacheThread { get; }
-    
-    protected virtual IntPtr GetCachedThread(string path, int gameObjectId) {
-        return IntPtr.Zero;
-    }
-
-    protected virtual void OnThreadCreated(IntPtr thread, string path) {
     }
     
     protected bool CreateThread() {
@@ -143,8 +149,28 @@ public class AirshipRuntimeScript : MonoBehaviour {
         return true;
     }
     
-    
     #region Script Lifecycles
+
+    protected void Awake() {
+        LuauCore.CoreInstance.CheckSetup();
+        LuauCore.onResetInstance += OnLuauReset;
+
+        ScriptingEntryPoint.InvokeOnLuauStartup();
+        
+        InitEarly();
+    }
+
+    protected void Start() {
+        if (scriptFile == null) {
+            return;
+        }
+        
+        _scriptBindingStarted = true;
+        OnScriptStart();
+        
+        InitWhenCoreReady();
+    }
+    
     public void Update() {
         if (m_error) {
             return;
@@ -186,8 +212,196 @@ public class AirshipRuntimeScript : MonoBehaviour {
             }
 
         }
-
-        // double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
     }
+
+    protected bool IsDestroyed() {
+        return _isDestroyed || this == null;
+    }
+    
+    #endregion
+    
+    #region Script Init
+    
+    protected static bool IsReadyToStart() {
+        return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
+    }
+    
+
+    public void Init() {
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
+        
+        if (started) return;
+        started = true;
+        
+        // Assume protected context for bindings within CoreScene
+        if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+            context = LuauContext.Protected;
+        }
+
+        if (scriptFile == null) {
+            Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
+            return;
+        }
+        
+        bool res = CreateThread();
+    }
+    
+    public void InitEarly() {
+        if (_hasInitEarly) {
+            if (!started && IsReadyToStart()) {
+                Init();
+            }
+            return;
+        }
+        _hasInitEarly = true;
+
+        if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
+            scriptFile = LoadBinaryFileFromPath(m_fileFullPath);
+            if (scriptFile == null) {
+                Debug.LogWarning($"Failed to reconcile script from path \"{m_fileFullPath}\" on {name}", this.gameObject);
+            }
+        } else if (scriptFile == null && string.IsNullOrEmpty(m_fileFullPath)) {
+            // No script to run; stop here.
+            _hasInitEarly = false;
+            return;
+        }
+        
+        _isAirshipComponent = this.scriptFile != null && this.scriptFile.airshipBehaviour;
+        InitWhenCoreReady();
+    }
+    
+    protected void InitWhenCoreReady() {
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
+        
+        if (IsReadyToStart()) {
+            Init();
+        } else {
+            if (_isAirshipComponent && isActiveAndEnabled) {
+                _airshipScheduledToStart = true;
+            }
+            AwaitCoreThenInit();
+        }
+    }
+    
+    protected void AwaitCoreThenInit() {
+        _airshipWaitingForLuauCoreReady = true;
+        LuauCore.OnInitialized += OnCoreInitialized;
+        if (LuauCore.IsReady) {
+            OnCoreInitialized();
+        }
+    }
+
+    protected void OnLuauReset(LuauContext ctx) {
+        if (ctx == context) {
+            m_thread = IntPtr.Zero;
+        }
+    }
+    
+    private void OnActiveSceneChanged(Scene current, Scene next) {
+        if (IsReadyToStart()) {
+            SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+            _airshipWaitingForLuauCoreReady = false;
+            Init();
+        }
+    }
+    
+    protected void DisconnectUnityEvents() {
+        LuauCore.onResetInstance -= OnLuauReset;
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+    }
+    
+    protected void OnCoreInitialized() {
+        if (IsDestroyed()) {
+            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
+            return;
+        }
+        
+        LuauCore.OnInitialized -= OnCoreInitialized;
+        if (IsReadyToStart()) {
+            _airshipWaitingForLuauCoreReady = false;
+            Init();
+        } else {
+            SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        }
+    }
+    
+    #endregion
+    
+    #region Script Loading
+    
+    public bool CreateThreadFromPath(string fullFilePath, LuauContext context) {
+        SetScriptFromPath(fullFilePath, context);
+        if (scriptFile == null) {
+            return false;
+        }
+
+        return CreateThread();
+    }
+    
+    public AirshipScript LoadBinaryFileFromPath(string fullFilePath) {
+        var cleanPath = CleanupFilePath(fullFilePath);
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
+        this.m_fileFullPath = fullFilePath;
+        return AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
+               ?? AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath); // as we have Luau files in core as well
+#endif
+        AirshipScript script = null;
+        if (AssetBridge != null && AssetBridge.IsLoaded()) {
+            try {
+                var luaPath = cleanPath.Replace(".ts", ".lua");
+                script = AssetBridge.LoadAssetInternal<AirshipScript>(luaPath);
+            } catch (Exception e) {
+                Debug.LogError($"Failed to load asset for script on GameObject \"{this.gameObject.name}\". Path: {fullFilePath}. Message: {e.Message}", gameObject);
+                return null;
+            }
+        }
+
+        return script;
+    }
+    
+    public void SetScript(AirshipScript script, bool attemptStartup = false) {
+        scriptFile = script;
+        
+        if (!string.IsNullOrEmpty(script.m_path))
+            m_fileFullPath = script.m_path;
+
+        if (Application.isPlaying && attemptStartup) {
+            OnSetScriptStartup();
+        }
+    }   
+
+    public void SetScriptFromPath(string path, LuauContext context, bool attemptStartup = false) {
+        var script = LoadBinaryFileFromPath(path);
+        if (script != null) {
+            this.context = context;
+            SetScript(script, attemptStartup);
+        } else {
+            Debug.LogError($"Failed to load script: {path}", this.gameObject);
+        }
+    }
+
+    protected virtual void OnSetScriptStartup() {
+        
+    }
+    
+    #endregion
+    
+    #region Virtual Thread Methods
+    protected virtual IntPtr GetCachedThread(string path, int gameObjectId) {
+        return IntPtr.Zero;
+    }
+
+    protected virtual void OnThreadCreated(IntPtr thread, string path) {
+    }
+
+    protected virtual void OnScriptStart() {
+    }
+
     #endregion
 }

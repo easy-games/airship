@@ -869,7 +869,7 @@ public partial class LuauCore : MonoBehaviour {
         // }
         // obj.transform.parent = luauModulesFolder.transform;
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        AirshipComponent newBinding = obj.AddComponent<AirshipComponent>();
+        AirshipRuntimeScript newBinding = obj.AddComponent<AirshipRuntimeScript>();
 
         if (newBinding.CreateThreadFromPath(fileNameStr, context) == false)
         {

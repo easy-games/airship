@@ -47,21 +47,19 @@ namespace Assets.Code.Luau {
 			// Main Menu
 			{
 				var go = new GameObject("MainMenuInGame");
-				var binding = go.AddComponent<AirshipComponent>();
-
-				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
+				var binding = go.AddComponent<AirshipRuntimeScript>();
+				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected, true);
+				// binding.contextOverwritten = true;
+				// binding.InitEarly();
 			}
 
 			// Core
 			{
 				var go = new GameObject("@Easy/Core");
-				var binding = go.AddComponent<AirshipComponent>();
-
-				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
+				var binding = go.AddComponent<AirshipRuntimeScript>();
+				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game, true);
+				// binding.contextOverwritten = true;
+				// binding.InitEarly();
 			}
 		}
 	}
