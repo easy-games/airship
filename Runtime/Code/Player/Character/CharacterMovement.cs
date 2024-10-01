@@ -296,8 +296,9 @@ private void OnEnable() {
 				//Store this move dir
 				lastGroundedMoveDir = md.moveDir;
 				
-				if(groundHit.point.y > transform.position.y && 
-					((!prevGrounded && this.moveData.colliderGroundOffset > 0) || moveData.alwaysSnapToGround)){
+				if(newVelocity.y < 0 && groundHit.point.y > transform.position.y && 
+					((!prevGrounded && this.moveData.colliderGroundOffset > 0) || 
+						(moveData.alwaysSnapToGround && !prevStepUp && !isImpulsing))){
 					this.SnapToY(groundHit.point.y, true);
 					newVelocity.y = 0;
 				}
