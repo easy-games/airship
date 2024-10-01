@@ -265,7 +265,7 @@ public class SelectionZoneEditor : UnityEditor.Editor {
     private bool mouseDown = false;
 
     static bool haveCopiedData = false;
-    static UInt16[] copiedData;
+    static UInt16[,,] copiedData;
     static Vector3Int copiedSize;
     
     // Define local handle positions based on the cube's size
@@ -372,7 +372,7 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             haveCopiedData = true;
             copiedSize = new Vector3Int((int)cube.size.x, (int)cube.size.y, (int)cube.size.z);
 
-            copiedData = new UInt16[(int)cube.size.x * (int)cube.size.y * (int)cube.size.z];
+            copiedData = new UInt16[(int)cube.size.x , (int)cube.size.y , (int)cube.size.z];
 
             if (cube.voxelWorld) {
                 
@@ -381,10 +381,16 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 for (int x = Mathf.FloorToInt(px - dx); x < Mathf.CeilToInt(px + dx); x++) {
                     for (int y = Mathf.FloorToInt(py - dy); y < Mathf.CeilToInt(py + dy); y++) {
                         for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
-                            copiedData[index++] = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z)); 
+
+                            int xx = x - Mathf.FloorToInt(px - dx);
+                            int yy = y - Mathf.FloorToInt(py - dy);
+                            int zz = z - Mathf.FloorToInt(pz - dz);
+                            
+                            copiedData[xx,yy,zz] = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z)); 
                         }
                     }
                 }
+ 
             }
         }
 
@@ -419,7 +425,11 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                             for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
                                 //cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), copiedData[index++], false);
                                 UInt16 prevData = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z));
-                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, copiedData[index++]));
+                                int xx = x - Mathf.FloorToInt(px - dx);
+                                int yy = y - Mathf.FloorToInt(py - dy);
+                                int zz = z - Mathf.FloorToInt(pz - dz);
+
+                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, copiedData[xx,yy,zz]));
                             }
                         }
                     }
@@ -433,6 +443,61 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 SnapToGrid();
                 cube.BuildCube();
                 ResetHandles();
+            }
+        }
+
+
+        if (haveCopiedData == false) {
+            //Disable ui
+            GUI.enabled = false;
+            //Make fake paste button
+            if (GUILayout.Button("Rotate Selection 90")) {
+                //Do nothing
+            }
+
+            GUI.enabled = true;
+        }
+        else {
+            //Actual paste
+            if (GUILayout.Button("Rotate Selection 90")) {
+                
+
+                if (cube.voxelWorld) {
+                    // Initialize newCopiedData with the correct size
+               
+                    Vector3Int newCopiedSize = new Vector3Int(copiedSize.z, copiedSize.y, copiedSize.x);
+                    UInt16[,,] newCopiedData = new UInt16[newCopiedSize.x, newCopiedSize.y, newCopiedSize.z];
+
+                    // Rotate voxel data by 90 degrees around Y-axis
+                    for (int x = 0; x < copiedSize.x; x++) {
+                        for (int y = 0; y < copiedSize.y; y++) {
+                            for (int z = 0; z < copiedSize.z; z++) {
+                              
+                                int newX = z;
+                                int newY = y;
+                                int newZ = (newCopiedSize.z - 1) - x;
+
+                                newCopiedData[newX,newY,newZ] = copiedData[x,y,z];
+                            }
+                        }
+                    }
+
+                    // Update the copiedData to the newly rotated data
+                    copiedData = newCopiedData;
+
+                    // Rotate the copiedSize to reflect the new dimensions
+                    copiedSize = newCopiedSize;
+
+                    // Resize the cube and rebuild it
+                    cube.size = new Vector3(newCopiedSize.x, newCopiedSize.y, newCopiedSize.z);
+
+                    SnapToGrid();
+                    cube.BuildCube();
+                    ResetHandles();
+
+                }
+
+
             }
         }
     }
