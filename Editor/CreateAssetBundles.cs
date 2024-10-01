@@ -255,24 +255,8 @@ public static class CreateAssetBundles {
 		}
 		gameConfig.gameLayers = layers.ToArray();
 
-		//Update physics matrix        
-		bool[] areLayersIgnored = new bool[15 * 32];
-		string TheMatrixLog = "GAME LAYER MATRIX: \n";
-		//15 Game Layers and how they collide with all 32 layers
-        for (int i = 0; i < 15; i++) {
-			//Check
-            for (int otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
-				int gameLayerI = 17 + i;
-				bool ignored = Physics.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
-            	areLayersIgnored[i * 32 + otherLayerI] = ignored;
-				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
-            }
-        }
-		//Debug.Log(TheMatrixLog);
-		gameConfig.physicsMatrix = areLayersIgnored;
-
-		//Update physics gravity
-		gameConfig.physicsGravity = Physics.gravity;
+		gameConfig.SerializeSettings();       
+		
 		
 		EditorUtility.SetDirty(gameConfig);
 		AssetDatabase.SaveAssetIfDirty(gameConfig);

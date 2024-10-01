@@ -410,6 +410,9 @@ public class ServerBootstrap : MonoBehaviour
         print("Loaded packages in " + stPackage.ElapsedMilliseconds + " ms.");
 #endif
 
+        //Setup project configurations from loaded package
+        PhysicsSetup.SetupFromGameConfig();
+
 		this.isStartupConfigReady = true;
 		this.OnStartupConfigReady?.Invoke();
 

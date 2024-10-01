@@ -26,7 +26,15 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public string[] gameLayers;
     [HideInInspector] public string[] gameTags;
     [HideInInspector] public bool[] physicsMatrix;
-    [HideInInspector] public Vector3 physicsGravity;
+    [HideInInspector] public Vector3 gravity = new Vector3(0, -24, 0);
+    [HideInInspector] public float bounceThreshold = 2;
+    [HideInInspector] public float defaultMaxDepenetrationVelocity = 10;
+    [HideInInspector] public float sleepThreshold = 0.005f;
+    [HideInInspector] public float defaultContactOffset = 0.01f;
+    [HideInInspector] public int defaultSolverIterations = 6;
+    [HideInInspector] public int defaultSolverVelocityIterations = 1;
+    [HideInInspector] public bool queriesHitBackfaces = false;
+    [HideInInspector] public bool queriesHitTriggers = true;
 
     private const string TagPrefix = "AirshipTag";
     public const int MaximumTags = 64;
@@ -126,21 +134,42 @@ public class GameConfig : ScriptableObject
 				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
             }
         }
-        this.physicsMatrix = areLayersIgnored;
-		this.physicsGravity = Physics.gravity;
+        //Debug.Log(TheMatrixLog);
+        physicsMatrix = areLayersIgnored;
+		gravity = Physics.gravity;
+        bounceThreshold = Physics.bounceThreshold;
+        defaultMaxDepenetrationVelocity = Physics.defaultMaxDepenetrationVelocity;
+        sleepThreshold = Physics.sleepThreshold;
+        defaultContactOffset = Physics.defaultContactOffset;
+        defaultSolverIterations = Physics.defaultSolverIterations;
+        defaultSolverVelocityIterations = Physics.defaultSolverVelocityIterations;
+        queriesHitBackfaces = Physics.queriesHitBackfaces;
+        queriesHitTriggers = Physics.queriesHitTriggers;
     }
 
     public void DeserializeSettings(){
 		//15 Game Layers and how they collide with all 32 layers
+        int gameLayerI = 17;
 		string TheMatrixLog = "LOADING GAME LAYER MATRIX: \n";
-        for (int i = 0; i < 15; i++) {
-            for (int otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
-				int gameLayerI = 17 + i;
-                bool ignored = this.physicsMatrix[i];
+        for (int byteI = 0; byteI < this.physicsMatrix.Length; byteI+= 32) {
+            for(int otherLayerI=0; otherLayerI < 32; otherLayerI++){
+                bool ignored = this.physicsMatrix[byteI+otherLayerI];
                 Physics.IgnoreLayerCollision(gameLayerI, otherLayerI, ignored);
-				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
+				TheMatrixLog += "GameLayer" + gameLayerI + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
             }
+            gameLayerI++;
         }
-        Physics.gravity = this.physicsGravity;
+        //Debug.Log(TheMatrixLog);
+
+        //Physics Settings
+        Physics.gravity = gravity;
+        Physics.bounceThreshold = bounceThreshold;
+        Physics.defaultMaxDepenetrationVelocity = defaultMaxDepenetrationVelocity;
+        Physics.sleepThreshold = sleepThreshold;
+        Physics.defaultContactOffset = defaultContactOffset;
+        Physics.defaultSolverIterations = defaultSolverIterations;
+        Physics.defaultSolverVelocityIterations = defaultSolverVelocityIterations;
+        Physics.queriesHitBackfaces = queriesHitBackfaces;
+        Physics.queriesHitTriggers = queriesHitTriggers;
     }
 }

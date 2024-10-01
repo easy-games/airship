@@ -4,7 +4,7 @@ using UnityEngine;
 public static class PhysicsSetup {
     private const int NumberOfCoreLayers= 12;
     private const int GameLayerStartIndex= 17;
-    private static Vector3 defaultGravity = new Vector3(0, -24f, 0);
+    private static readonly Vector3 defaultGravity = new Vector3(0, -24f, 0);
     private static List<int> corelayers;
     private static List<int> gameLayers;
 
@@ -96,8 +96,10 @@ public static class PhysicsSetup {
     public static void ResetDefaults(GameConfig config){
         InitLayerCollection();
 
-        Physics.gravity = defaultGravity;
+        //PHYSICS SETTINGS
+        SetPhysicsSettings(defaultGravity);
 
+        //PHYSICS MATRIX
         //Make Game Layers Collide With Everything
         int gameId = 0;
         for (int i = GameLayerStartIndex; i <= 31; i++) {        
@@ -113,20 +115,34 @@ public static class PhysicsSetup {
         Setup(config);
     }
 
+    private static void SetPhysicsSettings(Vector3 gravity, float bouncThreshold = 2, float defaultMaxDepenetrationVelocity = 10, 
+                float sleepThreshold = 0.005f, float defaultContactOffset = 0.01f, int defaultSolverIterations = 6, int defaultSolverVelocityIterations = 1,
+                bool queriesHitBackfaces = false, bool queriesHitTriggers = true){
+        Physics.gravity = gravity;
+        Physics.bounceThreshold = bouncThreshold;
+        Physics.defaultMaxDepenetrationVelocity = defaultMaxDepenetrationVelocity;
+        Physics.sleepThreshold = sleepThreshold;
+        Physics.defaultContactOffset = defaultContactOffset;
+        Physics.defaultSolverIterations = defaultSolverIterations;
+        Physics.defaultSolverVelocityIterations = defaultSolverVelocityIterations;
+        Physics.queriesHitBackfaces = queriesHitBackfaces;
+        Physics.queriesHitTriggers = queriesHitTriggers;
+    }
+
     public static void SetupFromGameConfig(){
 #if AIRSHIP_PLAYER || !UNITY_EDITOR
 		//Reset Unity to Airship defaults and GameConfig customizations
 		var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
-		if(gameConfig && gameConfig.physicsMatrix != null && this.physicsGravity != null){
-				Debug.Log("Loading project settings from GameConfig");
+		if(gameConfig && gameConfig.physicsMatrix != null && gameConfig.gravity != null){
+				Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " + gameConfig.physicsMatrix.Length);
 				//Setup the Core Layers
-				PhysicsSetup.Setup(this);
+				PhysicsSetup.Setup(gameConfig);
 				//Load in game specific Layers and Settings
 				gameConfig.DeserializeSettings();
 		}else{
 			//Use default Airship values if we aren't setting up game specific values
 			Debug.Log("No custom GameConfig settings found. Reseting to defaults");
-			PhysicsSetup.ResetDefaults(this);
+			PhysicsSetup.ResetDefaults(gameConfig);
 		}
 #endif
     }
