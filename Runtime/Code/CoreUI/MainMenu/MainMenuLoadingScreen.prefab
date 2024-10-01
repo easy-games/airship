@@ -769,8 +769,8 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 25
+  m_VertexColorAlwaysGammaSpace: 1
+  m_AdditionalShaderChannelsFlag: 1
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 5
@@ -832,6 +832,7 @@ MonoBehaviour:
   continueButton: {fileID: 9053801594986153048}
   spinner: {fileID: 4779218537929143458}
   errorWrapper: {fileID: 4109353328159437557}
+  logo: {fileID: 0}
   errorText: {fileID: 5212947246896266066}
   sceneManager: {fileID: 0}
   mainContent: {fileID: 387499054817921413}

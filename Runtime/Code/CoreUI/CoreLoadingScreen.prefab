@@ -513,7 +513,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.083214656, g: 0.08794395, b: 0.09433961, a: 0.9764706}
+  m_Color: {r: 0.1764706, g: 0.1764706, b: 0.1764706, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 0
@@ -969,7 +969,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 1
-  m_AdditionalShaderChannelsFlag: 25
+  m_AdditionalShaderChannelsFlag: 1
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 5
@@ -1148,9 +1148,9 @@ MonoBehaviour:
   m_Colors:
     m_NormalColor: {r: 0.16037738, g: 0.16037738, b: 0.16037738, a: 0}
     m_HighlightedColor: {r: 0.1764706, g: 0.1764706, b: 0.1764706, a: 1}
-    m_PressedColor: {r: 0.103773594, g: 0.103773594, b: 0.103773594, a: 1}
-    m_SelectedColor: {r: 0.101960786, g: 0.101960786, b: 0.101960786, a: 1}
-    m_DisabledColor: {r: 0.101960786, g: 0.101960786, b: 0.101960786, a: 1}
+    m_PressedColor: {r: 0.1764706, g: 0.1764706, b: 0.1764706, a: 1}
+    m_SelectedColor: {r: 0.1764706, g: 0.1764706, b: 0.1764706, a: 1}
+    m_DisabledColor: {r: 0.1764706, g: 0.1764706, b: 0.1764706, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.08
   m_SpriteState:
@@ -1253,7 +1253,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.14509805, g: 0.14509805, b: 0.14509805, a: 1}
+  m_Color: {r: 0.09411765, g: 0.09803922, b: 0.101960786, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
