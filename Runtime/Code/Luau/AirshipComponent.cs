@@ -489,7 +489,6 @@ public class AirshipComponent : AirshipRuntimeScript {
     protected override void OnThreadCreated(IntPtr thread, string path) {
         // Cache the module when the thread is created, so we can reuse the module for each component
         var requirePath = LuauCore.GetRequirePath(this, path);
-        Debug.Log($"Cache module on path ya C*** {requirePath}", gameObject);
         LuauPlugin.LuauCacheModuleOnThread(thread, requirePath);
         InitializeAndAwakeAirshipComponent(thread, true);
     }
