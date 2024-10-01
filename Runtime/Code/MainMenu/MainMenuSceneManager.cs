@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Code;
 using Code.Bootstrap;
 using Code.Platform.Shared;
+using Code.UI;
 using Luau;
 using Proyecto26;
 using RSG;
@@ -30,6 +31,8 @@ public class MainMenuSceneManager : MonoBehaviour {
     private bool successfulTSLoad = false;
 
     private void Start() {
+        InternalAirshipUtil.HandleWindowSize();
+        
         var savedAccount = AuthManager.GetSavedAccount();
         if (savedAccount == null) {
             SceneManager.LoadScene("Login");

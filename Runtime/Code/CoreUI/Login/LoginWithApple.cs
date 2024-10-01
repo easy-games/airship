@@ -3,6 +3,7 @@ using AppleAuth.Enums;
 using AppleAuth.Extensions;
 using AppleAuth.Interfaces;
 using AppleAuth.Native;
+using Code.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,6 +23,8 @@ public class LoginWithApple : MonoBehaviour {
     // public GameMenuHandler GameMenu;
 
     private void Start() {
+        InternalAirshipUtil.HandleWindowSize();
+        
         // If the current platform is supported
         if (AppleAuthManager.IsCurrentPlatformSupported) {
             // Creates a default JSON deserializer, to transform JSON Native responses to C# instances
