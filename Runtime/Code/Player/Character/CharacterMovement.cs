@@ -279,6 +279,7 @@ private void OnEnable() {
 			var newVelocity = currentVelocity;
 			var isIntersecting = IsIntersectingWithBlock();
 			var deltaTime = Time.fixedDeltaTime;
+			var isImpulsing = impulseVelocity != Vector3.zero;
 
 #region GROUNDED
 			//Ground checks
@@ -572,7 +573,6 @@ private void OnEnable() {
 			// }
 
 		//Use the reconciled impulse velocity 
-		var isImpulsing = impulseVelocity != Vector3.zero;
 		if (isImpulsing) {
 			//The velocity will create drag in X and Z but ignore Y. 
 			//So we need to manually drag the impulses Y so it doesn't behave differently than the other axis
