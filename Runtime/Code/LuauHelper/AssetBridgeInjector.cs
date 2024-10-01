@@ -4,6 +4,6 @@
 public class AssetBridgeInjector : MonoBehaviour
 {
     private void OnEnable() {
-        AirshipComponent.AssetBridge = AssetBridge.Instance;
+        AirshipModuleScript.AssetBridge = AssetBridge.Instance;
     }
 }

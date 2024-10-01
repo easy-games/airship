@@ -793,7 +793,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
+    public static string GetRequirePath(AirshipRuntimeScript binding, string fileNameStr) {
         if (binding != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name

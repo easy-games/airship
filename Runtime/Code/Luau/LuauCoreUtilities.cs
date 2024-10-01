@@ -22,7 +22,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    public int ResumeScript(LuauContext context, AirshipComponent binding) {
+    public int ResumeScript(LuauContext context, AirshipRuntimeScript binding) {
         var retValue = LuauState.FromContext(context).ResumeScript(binding);
 
         return retValue;

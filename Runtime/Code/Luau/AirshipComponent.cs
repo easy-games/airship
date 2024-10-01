@@ -23,7 +23,7 @@ public struct PropertyValueState {
 
 [AddComponentMenu("Airship/Airship Component")]
 [LuauAPI(LuauContext.Protected)]
-public class AirshipComponent : MonoBehaviour {
+public class AirshipComponent : AirshipRuntimeScript {
     #if UNITY_EDITOR
     private bool hasDelayedValidateCall = false;
     #endif
@@ -31,13 +31,6 @@ public class AirshipComponent : MonoBehaviour {
     
     public static Dictionary<int, string> componentIdToScriptName = new();
     private static int _scriptBindingIdGen;
-    
-    public AirshipScript scriptFile;
-    
-    [SerializeField][Obsolete("Do not use for referencing the script - use 'scriptFile'")]
-    public string m_fileFullPath;
-    public bool m_error = false;
-    public bool m_yielded = false;
 
     public string TypescriptFilePath => m_fileFullPath.Replace(".lua", ".ts");
 
@@ -48,33 +41,17 @@ public class AirshipComponent : MonoBehaviour {
 
     internal bool HasComponentReference { get; private set; }
 
-    [HideInInspector]
-    public bool m_canResume = false;
-    [HideInInspector]
-    public bool m_asyncYield = false;
-    [HideInInspector]
-    public IntPtr m_thread = IntPtr.Zero;
-    [HideInInspector]
-    public int m_onUpdateHandle = -1;
-    [HideInInspector]
-    public int m_onLateUpdateHandle = -1;
-
-    [HideInInspector]
-    public string m_shortFileName;
     private byte[] m_fileContents;
 
-    private List<IntPtr> m_pendingCoroutineResumes = new List<IntPtr>();
     
     [HideInInspector]
     public LuauMetadata m_metadata = new();
     private readonly int _scriptBindingId = _scriptBindingIdGen++;
 
-    [NonSerialized] public LuauContext context = LuauContext.Game;
+
     public bool contextOverwritten = false;
 
     private bool _isAirshipComponent;
-
-    // private AirshipBehaviourRoot _airshipBehaviourRoot;
     private bool _airshipComponentEnabled = false;
     private bool _airshipReadyToStart = false;
     private bool _airshipScheduledToStart = false;
@@ -423,7 +400,7 @@ public class AirshipComponent : MonoBehaviour {
 
         LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, propertyDtos);
         // Set enabled property
-        LuauPlugin.LuauSetAirshipComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, enabled);
+        LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, enabled);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
@@ -675,149 +652,120 @@ public class AirshipComponent : MonoBehaviour {
 
         return CreateThread();
     }
-    
-    public bool CreateThread() {
-        if (m_thread != IntPtr.Zero) {
-            return false;
-        }
 
-        if (!this.scriptFile.m_compiled) {
-            if (string.IsNullOrEmpty(scriptFile.m_compilationError)) {
-                throw new Exception($"{scriptFile.assetPath} cannot be executed due to not being compiled");
-            }
-            else {
-                throw new Exception($"Cannot start script at {this.scriptFile.assetPath} with compilation errors: {this.scriptFile.m_compilationError}");
-            }
-        }
-
-        var cleanPath = CleanupFilePath(this.scriptFile.m_path);
-        m_shortFileName = Path.GetFileName(this.scriptFile.m_path);
-        m_fileFullPath = this.scriptFile.m_path;
-
-#if !UNITY_EDITOR || AIRSHIP_PLAYER
-        var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(this.scriptFile.m_path.ToLower());
-        if (runtimeCompiledScriptFile) {
-            this.scriptFile = runtimeCompiledScriptFile;
-        } else {
-            Debug.LogError($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
-            return false;
-        }
-#endif
-
-        LuauCore.CoreInstance.CheckSetup();
-
-        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
-
-        //trickery, grab the id before we know the thread
-        int id = ThreadDataManager.GetOrCreateObjectId(gameObject);
-
-        // We only want one instance of airship components, so let's see if it already exists
-        // in our require cache first.
-        if (_isAirshipComponent) {
-            var path = LuauCore.GetRequirePath(this, cleanPath);
-            var thread = LuauPlugin.LuauCreateThreadWithCachedModule(context, path, id);
+    protected override IntPtr GetCachedThread(string path, int gameObjectId) {
+        var requirePath = LuauCore.GetRequirePath(this, path);
+        var thread = LuauPlugin.LuauCreateThreadWithCachedModule(context, requirePath, gameObjectId);
             
-            // If thread exists, we've found the module and put it onto the top of the thread stack. Use
-            // this as our component startup thread:
-            if (thread != IntPtr.Zero) {
-                m_thread = thread;
-                InitializeAndAwakeAirshipComponent(m_thread, false);
-                return true;
-            }
+        // If thread exists, we've found the module and put it onto the top of the thread stack. Use
+        // this as our component startup thread:
+        if (thread != IntPtr.Zero) {
+            InitializeAndAwakeAirshipComponent(thread, false);
+            return m_thread;
         }
 
-        var gch = GCHandle.Alloc(this.scriptFile.m_bytes, GCHandleType.Pinned); //Ok
-
-        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
-
-        Marshal.FreeCoTaskMem(filenameStr);
-        gch.Free();
-
-        if (m_thread == IntPtr.Zero) {
-            Debug.LogError("Script failed to compile" + m_shortFileName);
-            m_canResume = false;
-            m_error = true;
-
-            return false;
-        } else {
-            LuauState.FromContext(context).AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
-            m_canResume = true;
-        }
-        
-
-
-        if (m_canResume) {
-            var retValue = LuauCore.CoreInstance.ResumeScript(context, this);
-            if (retValue == 1) {
-                //We yielded
-                m_canResume = true;
-            } else {
-                m_canResume = false;
-                if (retValue == -1) {
-                    m_error = true;
-                } else {
-                    // Start airship component if applicable:
-                    if (_isAirshipComponent) {
-                        var path = LuauCore.GetRequirePath(this, cleanPath);
-                        LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
-                        InitializeAndAwakeAirshipComponent(m_thread, true);
-                    }
-                }
-            }
-
-        }
-        return true;
+        return IntPtr.Zero;
     }
 
-    public void Update() {
-        if (m_error) {
-            return;
-        }
-
-        //Run any pending coroutines that waiting last frame
-     
-        foreach (IntPtr coroutinePtr in m_pendingCoroutineResumes) {
-            if (coroutinePtr == m_thread) {
-                //This is us, we dont need to resume ourselves here,
-                //just set the flag to do it.
-                m_canResume = true;
-                continue;
-            }
-            
-            ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauPlugin.LuauRunThread(coroutinePtr);
-          
-            if (retValue == -1) {
-                m_canResume = false;
-                m_error = true;
-                break;
-            }
-        }
-        m_pendingCoroutineResumes.Clear();
-
-
-        double time = Time.realtimeSinceStartupAsDouble;
-        if (m_canResume && !m_asyncYield) {
-            ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauCore.CoreInstance.ResumeScript(context, this);
-            if (retValue != 1) {
-                //we hit an error
-                Debug.LogError("ResumeScript hit an error.", gameObject);
-                m_canResume = false;
-            }
-            if (retValue == -1) {
-                m_error = true;
-            }
-
-        }
-
-        // double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
+    protected override void OnThreadCreated(IntPtr thread, string cleanPath) {
+        // Cache the module when the thread is created, so we can reuse the module for each component
+        var path = LuauCore.GetRequirePath(this, cleanPath);
+        LuauPlugin.LuauCacheModuleOnThread(thread, path);
+        InitializeAndAwakeAirshipComponent(thread, true);
     }
 
- 
-    public void QueueCoroutineResume(IntPtr thread) {
-        m_pendingCoroutineResumes.Add(thread);
-    }
+//     public bool CreateThread() {
+//         if (m_thread != IntPtr.Zero) {
+//             return false;
+//         }
+//
+//         if (!this.scriptFile.m_compiled) {
+//             if (string.IsNullOrEmpty(scriptFile.m_compilationError)) {
+//                 throw new Exception($"{scriptFile.assetPath} cannot be executed due to not being compiled");
+//             }
+//             else {
+//                 throw new Exception($"Cannot start script at {this.scriptFile.assetPath} with compilation errors: {this.scriptFile.m_compilationError}");
+//             }
+//         }
+//
+//         var cleanPath = CleanupFilePath(this.scriptFile.m_path);
+//         m_shortFileName = Path.GetFileName(this.scriptFile.m_path);
+//         m_fileFullPath = this.scriptFile.m_path;
+//
+// #if !UNITY_EDITOR || AIRSHIP_PLAYER
+//         var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(this.scriptFile.m_path.ToLower());
+//         if (runtimeCompiledScriptFile) {
+//             this.scriptFile = runtimeCompiledScriptFile;
+//         } else {
+//             Debug.LogError($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
+//             return false;
+//         }
+// #endif
+//
+//         LuauCore.CoreInstance.CheckSetup();
+//
+//         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
+//
+//         //trickery, grab the id before we know the thread
+//         int id = ThreadDataManager.GetOrCreateObjectId(gameObject);
+//
+//         // We only want one instance of airship components, so let's see if it already exists
+//         // in our require cache first.
+//         if (_isAirshipComponent) {
+//             var path = LuauCore.GetRequirePath(this, cleanPath);
+//             var thread = LuauPlugin.LuauCreateThreadWithCachedModule(context, path, id);
+//             
+//             // If thread exists, we've found the module and put it onto the top of the thread stack. Use
+//             // this as our component startup thread:
+//             if (thread != IntPtr.Zero) {
+//                 m_thread = thread;
+//                 InitializeAndAwakeAirshipComponent(m_thread, false);
+//                 return true;
+//             }
+//         }
+//
+//         var gch = GCHandle.Alloc(this.scriptFile.m_bytes, GCHandleType.Pinned); //Ok
+//
+//         m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
+//
+//         Marshal.FreeCoTaskMem(filenameStr);
+//         gch.Free();
+//
+//         if (m_thread == IntPtr.Zero) {
+//             Debug.LogError("Script failed to compile" + m_shortFileName);
+//             m_canResume = false;
+//             m_error = true;
+//
+//             return false;
+//         } else {
+//             LuauState.FromContext(context).AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
+//             m_canResume = true;
+//         }
+//         
+//
+//
+//         if (m_canResume) {
+//             var retValue = LuauCore.CoreInstance.ResumeScript(context, this);
+//             if (retValue == 1) {
+//                 //We yielded
+//                 m_canResume = true;
+//             } else {
+//                 m_canResume = false;
+//                 if (retValue == -1) {
+//                     m_error = true;
+//                 } else {
+//                     // Start airship component if applicable:
+//                     if (_isAirshipComponent) {
+//                         var path = LuauCore.GetRequirePath(this, cleanPath);
+//                         LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
+//                         InitializeAndAwakeAirshipComponent(m_thread, true);
+//                     }
+//                 }
+//             }
+//
+//         }
+//         return true;
+//     }
 
     private void OnEnable() {
         // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
