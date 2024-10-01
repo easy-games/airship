@@ -381,6 +381,9 @@ namespace Code.Bootstrap {
 
             EasyFileService.ClearCache();
 
+            //Setup project configurations from loaded package
+            PhysicsSetup.SetupFromGameConfig();
+
             this.packagesReady = true;
         }
     }

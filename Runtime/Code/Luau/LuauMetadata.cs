@@ -87,6 +87,8 @@ namespace Luau {
         public int unityInstanceId;
         public int airshipComponentId;
 
+        public AirshipComponentRef() {}
+        
         public AirshipComponentRef(int unityInstanceId, int airshipComponentId) {
             this.airshipComponentId = airshipComponentId;
             this.unityInstanceId = unityInstanceId;

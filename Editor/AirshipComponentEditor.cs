@@ -1071,7 +1071,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var element = decorators[i];
             var decoratorName = element.name;
             var paramsProperty = element.parameters;
-            result.Add(decoratorName, paramsProperty);
+            result[decoratorName] = paramsProperty;
         }
 
         return result;

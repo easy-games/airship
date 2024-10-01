@@ -27,6 +27,8 @@ public class MainMenuSceneManager : MonoBehaviour {
     private string cachedCoreAssetVersion = "";
     private string cachedCoreCodeVersion = "";
 
+    private bool successfulTSLoad = false;
+
     private void Start() {
         var savedAccount = AuthManager.GetSavedAccount();
         if (savedAccount == null) {
@@ -38,6 +40,13 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         Application.focusChanged += OnApplicationFocus;
         OnApplicationFocus(Application.isFocused);
+    }
+
+    /**
+     * Called by TS to signal that the menu loaded successfully.
+     */
+    public void CompletedTSLoad() {
+        this.successfulTSLoad = true;
     }
 
     private void OnDestroy() {
@@ -182,9 +191,13 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {
         var st = Stopwatch.StartNew();
+        this.successfulTSLoad = false;
         yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
+        //Setup project configurations from loaded package
+        PhysicsSetup.SetupFromGameConfig();
+        
         // var mainMenuBindingGO = new GameObject("MainMenuBinding");
         // var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
         // mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
@@ -199,6 +212,24 @@ public class MainMenuSceneManager : MonoBehaviour {
         var coreLuauBinding = coreLuauBindingGO.AddComponent<AirshipComponent>();
         coreLuauBinding.SetScriptFromPath("AirshipPackages/@Easy/Core/Shared/MainMenu.ts", LuauContext.Protected);
         coreLuauBinding.Init();
+
+        StartCoroutine(CheckForFailedStartup());
+    }
+
+    public IEnumerator CheckForFailedStartup() {
+        yield return new WaitForSeconds(2);
+        if (!this.successfulTSLoad) {
+            LuauCore.ResetContext(LuauContext.Protected);
+
+            // Delete core packages
+            var path = Path.Combine(Application.persistentDataPath, "Packages", "@Easy");
+            if (Directory.Exists(path)) {
+                Directory.Delete(path, true);
+            }
+
+            // yield return SceneManager.UnloadSceneAsync("MainMenu");
+            SceneManager.LoadScene("MainMenu");
+        }
     }
 
     public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {

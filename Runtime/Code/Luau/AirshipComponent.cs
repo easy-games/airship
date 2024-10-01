@@ -250,10 +250,10 @@ public class AirshipComponent : MonoBehaviour {
         
         _isAirshipComponent = true;
         
-        // Need to recompile
-        if (scriptFile.HasFileChanged) {
-            return;
-        }
+        // // Need to recompile
+        // if (scriptFile.HasFileChanged) {
+        //     return;
+        // }
         
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;

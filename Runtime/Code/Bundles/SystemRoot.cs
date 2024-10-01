@@ -238,7 +238,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// 	this.networkCollectionIdCounter++;
 			// }
 
-			#if AIRSHIP_PLAYER || true
+#if AIRSHIP_PLAYER || true
 			try {
 				Debug.Log("Scanning network prefabs...");
 				Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
@@ -454,7 +454,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 		}));
 
-		DevConsole.AddCommand(Command.Create("clearcodecache", "", "Clears all code.zip caches", () => {
+		DevConsole.AddCommand(Command.Create("delcode", "", "Clears all code.zip caches", () => {
 			var path = Path.Join(Application.persistentDataPath, "Scripts");
 			if (Directory.Exists(path)) {
 				Directory.Delete(path, true);
@@ -509,5 +509,14 @@ public class SystemRoot : Singleton<SystemRoot> {
 				Debug.Log($"Luau GC: [Game: {gcKbGame} KB] [Protected: {gcKbProtected} KB] [Total: {gcKb} KB]");
 			}
 		));
+
+		DevConsole.AddCommand(Command.Create("delpackages", "", "Clears all package caches", () => {
+			var path = Path.Join(Application.persistentDataPath, "Packages");
+			if (Directory.Exists(path)) {
+				Directory.Delete(path, true);
+			}
+
+			print("Successfully deleted package cache.");
+		}));
 	}
 }
