@@ -1241,14 +1241,6 @@ public partial class LuauCore : MonoBehaviour
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
     
-    public static bool IsParameterRay(int paramIndex, int[] parameterDataPODTypes) {
-        return parameterDataPODTypes[paramIndex] == (int)PODTYPE.POD_RAY;
-    }
-    
-    public static bool IsParameterVector3(int paramIndex, int[] parameterDataPODTypes) {
-        return parameterDataPODTypes[paramIndex] == (int)PODTYPE.POD_VECTOR3;
-    }
-    
     static public Ray GetParameterAsRay(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
