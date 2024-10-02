@@ -509,7 +509,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         // Delete all the children
-        children.ForEach(child => GameObject.DestroyImmediate(child));
+        //children.ForEach(child => GameObject.DestroyImmediate(child));
         Profiler.EndSample();
     }
 

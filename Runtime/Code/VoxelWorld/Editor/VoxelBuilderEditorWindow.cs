@@ -123,27 +123,32 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             if (VoxelWorldSelectionToolBase.buttonActive == true) {
                 //Find or create the SelectionZone for this voxelWorld
 
-                selection = world.GetComponentInChildren<SelectionZone>();
+                selection = world.GetComponentInChildren<SelectionZone>(true);
                 if (selection == null) {
                     selection = new GameObject("SelectionZone").AddComponent<SelectionZone>();
-                    selection.hideFlags = HideFlags.DontSave;
+                    selection.hideFlags = HideFlags.HideAndDontSave;
                     selection.transform.parent = world.transform;
                     selection.transform.localPosition = Vector3.zero;
                     selection.voxelWorld = world;
                 }
                 //Select this
+                selection.gameObject.SetActive(true);
                 Selection.activeGameObject = selection.gameObject;
+                
             }
             if (VoxelWorldEditorToolBase.buttonActive == true) {
             
-                //If we're not in selection mode, destroy the selection zone
+                //If we're not in selection mode, disable the selection zone
                 selection = world.GetComponentInChildren<SelectionZone>();
                                 
                 if (selection) {
                     //Select the world
                     Selection.activeGameObject = world.gameObject;
-                    //Destroy it
-                    DestroyImmediate(selection.gameObject);
+                    //disable it
+                    selection.gameObject.SetActive(false);
+                    
+                    //we used to destroy it
+                    //DestroyImmediate(selection.gameObject);
                 }
             }
 

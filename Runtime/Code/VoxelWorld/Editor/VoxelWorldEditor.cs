@@ -620,6 +620,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         //Add a handler for the gizmo refresh event
         SceneView.duringSceneGui += GizmoRefreshEvent;
 
+        EditorApplication.update += OnEditorUpdate;
+
         //Save handler
         EditorSceneManager.sceneSaving += OnSavingScene;
     }
@@ -631,9 +633,39 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         //Remove the gizmo refresh event handler
         SceneView.duringSceneGui -= GizmoRefreshEvent;
 
+        EditorApplication.update -= OnEditorUpdate;
+
         //Save handler
         EditorSceneManager.sceneSaving -= OnSavingScene;
     }
+
+    private static GameObject lastSelectedGameObject;
+
+    private static void OnEditorUpdate() {
+        // Check if a new GameObject has been selected
+        GameObject selected = Selection.activeGameObject;
+
+        // If selection has changed and the object is inactive or active, detect it
+        if (selected != lastSelectedGameObject) {
+            if (selected != null && !selected.activeInHierarchy) {
+                
+                SelectionZone zone = selected.GetComponent<SelectionZone>();
+                if (zone) {
+                    //If it does, select the voxel world
+                    selected.SetActive(true);
+                    ToolManager.SetActiveTool<VoxelWorldSelectionToolBase>();
+                    
+                }
+            }
+            else if (selected != null) {
+
+            }
+
+            // Store the current selection to detect changes
+            lastSelectedGameObject = selected;
+        }
+    }
+
     private void OnSavingScene(UnityEngine.SceneManagement.Scene scene, string path) {
         VoxelWorld world = (VoxelWorld)target;
         if (world == null) {
@@ -653,8 +685,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         //If we're seleceted
         if (Selection.activeGameObject == ((VoxelWorld)target).gameObject) {
             ToolManager.SetActiveTool<VoxelWorldEditorToolBase>();
+            
         }
-
+     
         
        
     }
