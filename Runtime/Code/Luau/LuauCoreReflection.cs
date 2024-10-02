@@ -1240,7 +1240,7 @@ public partial class LuauCore : MonoBehaviour
         }
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
-
+    
     static public Ray GetParameterAsRay(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
