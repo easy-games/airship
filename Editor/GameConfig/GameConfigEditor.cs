@@ -42,7 +42,7 @@ public class GameConfigEditor : UnityEditor.Editor {
         GUILayout.EndHorizontal();
 
         foreach (var field in typeof(GameConfig).GetFields()) {
-            if (field.Name is "gameId" or "gameLayers") continue; // Rendered above
+            if (field.Name is "gameId" or "gameLayers" || Attribute.IsDefined(field, typeof(HideInInspector))) continue; // Rendered above
 
             var serializedProp = serializedObject.FindProperty(field.Name);
             if (serializedProp == null) continue;
