@@ -472,8 +472,8 @@ public class VoxelBlocks : MonoBehaviour {
         
         //Add air
         BlockDefinition airBlock = new BlockDefinition();
-
-        airBlock.definition = (VoxelBlockDefinition)ScriptableObject.CreateInstance("VoxelBlockDefinition");
+        
+        airBlock.definition = ScriptableObject.CreateInstance<VoxelBlockDefinition>();
         airBlock.definition.blockName = "Air";
         airBlock.definition.solid = false;
         airBlock.definition.collisionType = CollisionType.None;
@@ -1075,7 +1075,7 @@ public class VoxelBlocks : MonoBehaviour {
        
         BlockDefinition blockDef = new BlockDefinition();
 
-        blockDef.definition = (VoxelBlockDefinition)ScriptableObject.CreateInstance("VoxelBlockDefinition");
+        blockDef.definition = ScriptableObject.CreateInstance<VoxelBlockDefinition>();
         blockDef.definition.blockName = name;
         blockDef.definition.solid = true;
         blockDef.definition.collisionType = CollisionType.Solid;
