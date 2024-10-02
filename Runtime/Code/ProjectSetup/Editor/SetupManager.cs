@@ -24,7 +24,7 @@ public class SetupManager : AssetPostprocessor{
     public static void ResetPhysics()
     {
         var config = MiscProjectSetup.GetOrCreateGameConfig();
-        PhysicsSetup.ResetDefaults(config);
+        PhysicsSetup.ResetDefaults(config, PhysicsSetup.defaultGravity);
     }
 }
 #endif
