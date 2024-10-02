@@ -83,6 +83,9 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public VoxelBlocks voxelBlocks; 
     [HideInInspector] public int selectedBlockIndex = 1;
 
+    // Mirroring
+    public Vector3 mirrorAround = Vector3.zero;
+    
     [HideInInspector] public bool renderingDisabled = false;
 
     [HideInInspector] private bool debugGrass = false;
