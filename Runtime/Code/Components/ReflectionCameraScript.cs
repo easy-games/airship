@@ -41,6 +41,9 @@ public class ReflectionCameraScript : MonoBehaviour {
 #endif    
     
     private void Render() {
+        if (RunCore.IsServer()) {
+            return;
+        }
 
         if (!reflectiveSurface || !reflectionTexture)
             return;
