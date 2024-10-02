@@ -17,7 +17,7 @@ public class MirrorPlacementMod : VoxelPlacementModifier {
     public override void OnPlaceVoxels(VoxelWorld world, HashSet<Vector3Int> positions, int data) {
         var toAdd = new List<Vector3Int>();
         var mirrorAroundPosition = world.mirrorAround;
-        // For each current placement position rotate it 3 times around center
+        // Check for mirror around each axis 
         for (var i = 0; i < 3; i++) {
             if (!mirror[i]) continue;
             var mirrorAxis = new Vector3(i == 0 ? 1 : 0, i == 1 ? 1 : 0, i == 2 ? 1 : 0);
