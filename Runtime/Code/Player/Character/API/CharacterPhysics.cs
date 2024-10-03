@@ -282,20 +282,21 @@ namespace Code.Player.Character.API {
 				Vector3 startPoint;
 				if(!didHitExactForward){
 					startPoint = startPos;
-					startPoint.y += movement.moveData.maxStepUpHeight;
+					startPoint.y += movement.moveData.maxStepUpHeight + movement.standingCharacterHeight;
 				}else{
-					startPoint = new Vector3(forwardExactHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardExactHitInfo.point.z);
+					startPoint = new Vector3(forwardExactHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight + movement.standingCharacterHeight, forwardExactHitInfo.point.z);
 				}
 				startPoint += vel * offsetMargin;
 				
 				//Cast a ray down from where the character will be next frame
-				if(Physics.Raycast(startPoint, Vector3.down, out RaycastHit quickStepHitInfo, movement.moveData.maxStepUpHeight,  movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+				if(Physics.Raycast(startPoint, Vector3.down, out RaycastHit quickStepHitInfo, movement.moveData.maxStepUpHeight+ movement.standingCharacterHeight,  movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//make sure there isn't an obstruction above us
 					if(!Physics.Raycast(quickStepHitInfo.point, Vector3.up, movement.standingCharacterHeight+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)
-						&& IsWalkableSurface(quickStepHitInfo.normal)){
+						&& IsWalkableSurface(quickStepHitInfo.normal)
+						&& Mathf.Abs(quickStepHitInfo.point.y - movement.transform.position.y) < movement.moveData.maxStepUpHeight){
 						var hitPoint = quickStepHitInfo.point + new Vector3(0,offsetMargin+offsetMargin, 0);
 						if(movement.drawDebugGizmos_STEPUP){
-							GizmoUtils.DrawSphere(hitPoint, .1f, Color.white, 4, gizmoDuration);
+							GizmoUtils.DrawSphere(startPoint, .1f, Color.white, 4, gizmoDuration);
 							GizmoUtils.DrawSphere(hitPoint, .05f, Color.white, 4, gizmoDuration);
 						}
 						return (true, false, hitPoint, vel);
