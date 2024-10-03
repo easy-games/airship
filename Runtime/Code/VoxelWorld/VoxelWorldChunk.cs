@@ -380,8 +380,10 @@ namespace VoxelWorldStuff {
                 if (obj == null) {
                     obj = new GameObject();
                     obj.transform.parent = parent.transform;
+                    obj.transform.localRotation = Quaternion.identity;
+                    obj.transform.localScale = Vector3.one;
                     obj.name = "Chunk";
-              
+
                     renderer = obj.AddComponent<MeshRenderer>();
                 }
 
@@ -437,7 +439,10 @@ namespace VoxelWorldStuff {
 
                         obj = new GameObject();
                         obj.transform.parent = parent.transform;
+                        obj.transform.localRotation = Quaternion.identity;
+                        obj.transform.localScale = Vector3.one;
                         obj.name = "Chunk";
+                        
                         mesh = new Mesh();
                         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
