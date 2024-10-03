@@ -382,10 +382,12 @@ namespace VoxelWorldStuff {
                     obj.transform.parent = parent.transform;
                     obj.name = "Chunk";
               
-
                     renderer = obj.AddComponent<MeshRenderer>();
                 }
 
+                //Fill the prefabs out
+                FullInstatiatePrefabsMainThread();
+                
                 //Fill the collision out
                 VoxelWorldCollision.MakeCollision(this);
                 geometryDirty = false;
@@ -504,9 +506,6 @@ namespace VoxelWorldStuff {
                     Profiler.EndSample();
 
                     Profiler.BeginSample("RebuildCollision");
-
-                    
-
                     //Fill the collision out
                     //Greedy mesh time!
                     VoxelWorldCollision.MakeCollision(this);
