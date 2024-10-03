@@ -401,11 +401,13 @@ public class VoxelBlocks : MonoBehaviour {
 
         block.meshMaterial = block.definition.meshMaterial;
 
+        VoxelQuarterBlockMeshDefinition source = block.definition.quarterBlockMesh;
+
         //Parse the quarterblocks
         for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
 
             string name = QuarterBlockNames[i];
-            GameObject obj = block.definition.quarterBlockMesh.GetQuarterBlockMesh(name);
+            GameObject obj = source.GetQuarterBlockMesh(name);
                         
             if (i == 0 && obj == null) {
                 break;
