@@ -382,6 +382,8 @@ namespace VoxelWorldStuff {
                     obj.transform.parent = parent.transform;
                     obj.transform.localRotation = Quaternion.identity;
                     obj.transform.localScale = Vector3.one;
+                    obj.transform.localPosition = Vector3.zero;
+            
                     obj.name = "Chunk";
 
                     renderer = obj.AddComponent<MeshRenderer>();
@@ -441,6 +443,7 @@ namespace VoxelWorldStuff {
                         obj.transform.parent = parent.transform;
                         obj.transform.localRotation = Quaternion.identity;
                         obj.transform.localScale = Vector3.one;
+                        obj.transform.localPosition = Vector3.zero;
                         obj.name = "Chunk";
                         
                         mesh = new Mesh();
