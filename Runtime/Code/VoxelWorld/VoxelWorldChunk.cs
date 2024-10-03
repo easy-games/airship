@@ -362,7 +362,7 @@ namespace VoxelWorldStuff {
 
         public bool MainthreadUpdateMesh(VoxelWorld world) {
 #pragma warning disable CS0162
-            if (VoxelWorld.doVisuals == false) {
+            if (this.world.doVisuals == false) {
                 return DoHeadlessUpdate(world);
             }
             else {

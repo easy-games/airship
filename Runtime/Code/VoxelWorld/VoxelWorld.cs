@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using Assets.Luau;
 
 #if UNITY_EDITOR
+using ParrelSync;
 using UnityEditor;
 #endif
 
@@ -18,7 +19,8 @@ using UnityEditor;
 [RequireComponent(typeof(VoxelRollbackManager))]
 public partial class VoxelWorld : MonoBehaviour {
 
-    public bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
+    [NonSerialized]
     public bool doVisuals = true;         //Turn on for headless servers
 
     public const int maxActiveThreads = 8;
@@ -814,23 +816,29 @@ public partial class VoxelWorld : MonoBehaviour {
  
 
     private void Awake() {
-  
+        doVisuals = true;
+#if UNITY_EDITOR        
+        if (RunCore.IsServer() == true || ClonesManager.GetArgument() == "server") {
+            doVisuals = false;
+            Debug.Log("Voxelworld do visuals is false");
+        }
+#endif
+#if UNITY_SERVER
+        doVisuals = false;
+#endif
+        
     }
 
     public VoxelWorld() {
         #if UNITY_EDITOR
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
-        #endif
-        
-        if (!RunCore.IsClient()) {
-            doVisuals = false;
-        }
+#endif
 
-    }
-    
+    } 
+
     private void OnEnable() {
 
-#if UNITY_EDITOR        
+#if UNITY_EDITOR
         if (this.domainReloadSaveFile != null) {
             Debug.Log("Reloading " + name + " after doman reload");
             this.LoadWorldFromSaveFile(this.domainReloadSaveFile);
@@ -839,7 +847,7 @@ public partial class VoxelWorld : MonoBehaviour {
             return;
         }
           
-#endif        
+#endif
 
         if (!Application.isPlaying) {
             if (this.voxelWorldFile != null) {
@@ -1019,7 +1027,7 @@ public partial class VoxelWorld : MonoBehaviour {
             if (SceneView.lastActiveSceneView != null) {
                 this.focusPosition = SceneView.lastActiveSceneView.camera.transform.position;
             }
-#endif          
+#endif
 
         }
     }
