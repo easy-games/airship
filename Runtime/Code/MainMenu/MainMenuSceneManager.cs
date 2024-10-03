@@ -89,14 +89,14 @@ public class MainMenuSceneManager : MonoBehaviour {
             if (isUsingBundles) {
                 List<IPromise<PackageLatestVersionResponse>> promises = new();
                 promises.Add(GetLatestPackageVersion("@Easy/Core"));
-                promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
-                PromiseHelpers.All(promises[0], promises[1]).Then((results) => {
-                    print(results.Item1.package);
+                // promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
+                promises[0].Then((results) => {
+                    print(results.package);
                     promise.Resolve(new List<string>() {
-                        results.Item1.package.assetVersionNumber + "",
-                        results.Item1.package.codeVersionNumber + "",
-                        results.Item2.package.assetVersionNumber + "",
-                        results.Item2.package.codeVersionNumber + ""
+                        results.package.assetVersionNumber + "",
+                        results.package.codeVersionNumber + "",
+                        // results.Item2.package.assetVersionNumber + "",
+                        // results.Item2.package.codeVersionNumber + ""
                     });
                 }).Catch((err) => {
                     promise.Reject(err);
@@ -105,8 +105,8 @@ public class MainMenuSceneManager : MonoBehaviour {
                 promise.Resolve(new List<string>() {
                     "LocalBuild",
                     "LocalBuild",
-                    "LocalBuild",
-                    "LocalBuild"
+                    // "LocalBuild",
+                    // "LocalBuild"
                 });
             }
 
@@ -114,8 +114,8 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then(async (versions) => {
             var corePackageAssetVersion = versions[0];
             var corePackageCodeVersion = versions[1];
-            var coreMaterialsPackageAssetVersion = versions[2];
-            var coreMaterialsPackageCodeVersion = versions[3];
+            // var coreMaterialsPackageAssetVersion = versions[2];
+            // var coreMaterialsPackageCodeVersion = versions[3];
 
             // Check if app update is required
             if (isUsingBundles) {
@@ -135,10 +135,10 @@ public class MainMenuSceneManager : MonoBehaviour {
                 Debug.Log("Checked latest airship version in " + versionCheckSw.ElapsedMilliseconds + " ms.");
             }
 
-            Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
+            Debug.Log($"@Easy/Core: {versions[0]}");
             List<AirshipPackage> packages = new();
             packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
-            packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
+            // packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 await this.StartPackageDownload(packages);
             } else {
