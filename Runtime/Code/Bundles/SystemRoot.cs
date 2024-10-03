@@ -34,6 +34,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	public List<AssetBundleCreateRequest> extraBundleLoadRequests = new();
 	public static bool startedLoadingExtraBundle = false;
 	public static bool preWarmedCoreShaders = false;
+	public AssetBundle coreMaterialsAssetBundle;
 
 	private void Awake() {
 		DontDestroyOnLoad(this);
@@ -81,16 +82,17 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// CoreMaterials
 		{
 			var platform = AirshipPlatformUtil.GetLocalPlatform();
-			var path = Path.Join(Application.streamingAssetsPath, "ShippedBundles", $"CoreMaterials_{platform}.bundle");
+			var path = Path.Join(Application.streamingAssetsPath, "ShippedBundles", $"CoreMaterials_{platform}/@easy/corematerials_shared/resources");
 			if (File.Exists(path)) {
+				var st = Stopwatch.StartNew();
 				var ao = AssetBundle.LoadFromFileAsync(path);
 				this.extraBundleLoadRequests.Add(ao);
 				await ao;
+				this.coreMaterialsAssetBundle = ao.assetBundle;
+				Debug.Log($"Loaded CoreMaterials bundle in {st.ElapsedMilliseconds} ms.");
 			}
 		}
 	}
-
-	// public void ClearGameBundles()
 
 	public bool IsUsingBundles() {
 #if AIRSHIP_PLAYER
@@ -300,19 +302,21 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders) {
 				preWarmedCoreShaders = true;
-				string[] collections = new[] { "MainMenu", "RacingGame" };
+				while (!this.coreMaterialsAssetBundle) {
+					yield return null;
+				}
+				string[] collections = new[] {
+					"MainMenu",
+					// "RacingGame",
+				};
 				foreach (var collectionName in collections) {
-					var path =
-						$"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants";
-					print("checking: " + path);
-					var shaderVariants = AssetBridge.Instance.LoadAssetIfExistsInternal<ShaderVariantCollection>(path);
+					var path = $"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants".ToLower();
+					var shaderVariants = this.coreMaterialsAssetBundle.LoadAssetAsync<ShaderVariantCollection>(path);
+					yield return shaderVariants;
 					if (shaderVariants != null) {
-						print("Warming up: " + collectionName);
 						var st = Stopwatch.StartNew();
-						shaderVariants.WarmUp();
+						(shaderVariants.asset as ShaderVariantCollection).WarmUp();
 						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");
-					} else {
-						print("did not exist");
 					}
 				}
 			}

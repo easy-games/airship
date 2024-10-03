@@ -412,7 +412,7 @@ namespace Editor.Packages {
                     Debug.Log($"Building {platform} asset bundles...");
                     string buildPath;
                     if (isCoreMaterials) {
-                        buildPath = Path.Join("bundles", "corematerials", $"CoreMaterials_{platform.ToString()}.bundle");
+                        buildPath = Path.Join("bundles", "ShippedBundles", $"CoreMaterials_{platform.ToString()}");
                     } else {
                         buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
                             platform.ToString());
