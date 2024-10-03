@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public static class PhysicsSetup {
+    public static readonly Vector3 defaultGravity = new Vector3(0, -9.81f, 0);
     private const int NumberOfCoreLayers= 12;
     private const int GameLayerStartIndex= 17;
-    private static readonly Vector3 defaultGravity = new Vector3(0, -24f, 0);
     private static List<int> corelayers;
     private static List<int> gameLayers;
 
@@ -93,11 +93,11 @@ public static class PhysicsSetup {
     }
 
     //Reset physics values that users may have changed
-    public static void ResetDefaults(GameConfig config){
+    public static void ResetDefaults(GameConfig config, Vector3 gravity){
         InitLayerCollection();
 
         //PHYSICS SETTINGS
-        SetPhysicsSettings(defaultGravity);
+        SetPhysicsSettings(gravity);
 
         //PHYSICS MATRIX
         //Make Game Layers Collide With Everything
@@ -136,13 +136,15 @@ public static class PhysicsSetup {
 		if(gameConfig && gameConfig.physicsMatrix != null && gameConfig.gravity != null){
 				Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " + gameConfig.physicsMatrix.Length);
 				//Setup the Core Layers
-				PhysicsSetup.Setup(gameConfig);
+				Setup(gameConfig);
 				//Load in game specific Layers and Settings
 				gameConfig.DeserializeSettings();
 		}else{
 			//Use default Airship values if we aren't setting up game specific values
 			Debug.Log("No custom GameConfig settings found. Reseting to defaults");
-			PhysicsSetup.ResetDefaults(gameConfig);
+            //TODO: This gravity value is old to support games that havne't been built with the new gravity values. 
+            //Can swap to default gravity once those games have been published again
+			ResetDefaults(gameConfig, new Vector3(0,-24,0));
 		}
 #endif
     }

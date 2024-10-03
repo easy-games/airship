@@ -111,6 +111,9 @@ namespace Code.Player.Character.API {
 		[Tooltip("Apply gravity even when on the ground for accurate physics")]
 		public bool useGravityWhileGrounded = false;
 
+		[Tooltip("When grounded force the Y position of the character to the found ground plane")]
+		public bool alwaysSnapToGround = false;
+
 		[Tooltip("Multiplier of global gravity force")]
 		public float gravityMultiplier = 2;
 
@@ -135,9 +138,6 @@ namespace Code.Player.Character.API {
 
 		[Tooltip("Push the character away from walls to prevent rigibody friction")]
 		public bool preventWallClipping = false;
-
-		[Tooltip("When grounded force the Y position of the character to the found ground plane")]
-		public bool alwaysSnapToGround = false;
 
 		[Tooltip("Drag coefficient")]
 		[Range(0,1)]

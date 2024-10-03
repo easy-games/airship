@@ -297,8 +297,10 @@ private void OnEnable() {
 				//Store this move dir
 				lastGroundedMoveDir = md.moveDir;
 				
-				if(newVelocity.y < 0 && groundHit.point.y > transform.position.y && 
+				//Snap to the ground if you are falling into the ground
+				if(newVelocity.y < 1  && 
 					((!prevGrounded && this.moveData.colliderGroundOffset > 0) || 
+						//Snap if we always snap to ground
 						(moveData.alwaysSnapToGround && !prevStepUp && !isImpulsing))){
 					this.SnapToY(groundHit.point.y, true);
 					newVelocity.y = 0;

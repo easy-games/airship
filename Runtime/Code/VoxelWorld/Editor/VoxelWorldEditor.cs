@@ -6,7 +6,6 @@ using UnityEditor;
 using UnityEditor.EditorTools;
 using UnityEngine;
 using System;
-using static UnityEditor.PlayerSettings;
 using static VoxelEditAction;
 using UnityEditor.SceneManagement;
 
@@ -42,10 +41,25 @@ public class VoxelEditMarker : ScriptableObject {
     public VoxelEditAction lastAction;
 }
 public class VoxelEditManager : Singleton<VoxelEditManager> {
-
+    public Dictionary<string, VoxelPlacementModifier> placementModifiers = new();
+    public bool buildModsEnabled = false;
     VoxelEditMarker undoObject;
     public List<VoxelEditAction> edits = new List<VoxelEditAction>();
     public List<VoxelEditAction> redos = new List<VoxelEditAction>();
+
+    private HashSet<Vector3Int> WriteVoxel(VoxelWorld world, Vector3Int position, ushort num) {
+        var positionSet = new HashSet<Vector3Int>() { position };
+        if (buildModsEnabled) {
+            foreach (var (id, modifier) in placementModifiers) {
+                modifier.OnPlaceVoxels(world, positionSet, num);
+            }
+        }
+
+        foreach (var pos in positionSet) {
+            world.WriteVoxelAtInternal(pos, num);
+        }
+        return positionSet;
+    }
         
     public void AddEdit(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue, string name) {
         VoxelEditAction edit = new VoxelEditAction();
@@ -63,8 +77,9 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         //Save the state of this whole object into the undo system
         Undo.RegisterCompleteObjectUndo(undoObject, name);
 
-        world.WriteVoxelAtInternal(position, newValue);
-        world.DirtyNeighborMeshes(position);
+        foreach (var affectedPos in WriteVoxel(world, position, newValue)) {
+            world.DirtyNeighborMeshes(affectedPos);   
+        }
 
         world.hasUnsavedChanges = true; 
     }
@@ -86,8 +101,10 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         Undo.RegisterCompleteObjectUndo(undoObject, name);
 
         foreach (EditInfo editInfo in editInfos) {
-            world.WriteVoxelAtInternal(editInfo.position, editInfo.newValue);
-            world.DirtyNeighborMeshes(editInfo.position);
+            var affected = WriteVoxel(world, editInfo.position, editInfo.newValue);
+            foreach (var pos in affected) {
+                world.DirtyNeighborMeshes(pos);   
+            }
         }
         
         world.hasUnsavedChanges = true;
@@ -110,8 +127,10 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
                 edit.world.TryGetTarget(out VoxelWorld currentWorld);
                 if (currentWorld){
                     foreach (var editInfo in edit.edits) {
-                        currentWorld.WriteVoxelAtInternal(editInfo.position, editInfo.oldValue);
-                        currentWorld.DirtyNeighborMeshes(editInfo.position);
+                        var affectedPositions = WriteVoxel(currentWorld, editInfo.position, editInfo.oldValue);
+                        foreach (var editPos in affectedPositions) {
+                            currentWorld.DirtyNeighborMeshes(editPos);   
+                        }
                     }
                     currentWorld.hasUnsavedChanges = true;
                 }
@@ -126,8 +145,10 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
                 edit.world.TryGetTarget(out VoxelWorld currentWorld);
                 if (currentWorld) {
                     foreach (var editInfo in edit.edits) {
-                        currentWorld.WriteVoxelAtInternal(editInfo.position, editInfo.newValue);
-                        currentWorld.DirtyNeighborMeshes(editInfo.position);
+                        var affectedPositions = WriteVoxel(currentWorld, editInfo.position, editInfo.newValue);
+                        foreach (var editPos in affectedPositions) {
+                            currentWorld.DirtyNeighborMeshes(editPos);   
+                        }
                     }
                     currentWorld.hasUnsavedChanges = true;
                 }
@@ -158,6 +179,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     Vector3 lastNormal;
     Vector3Int lastNormalPos;
     bool validPosition = false;
+    private bool placementModsOpen = false;
+
+    private static List<VoxelPlacementModifier> allPlacementModifiers = new() {
+        new RotationPlacementMod(),
+        new MirrorPlacementMod(),
+    };
         
     public void Load(VoxelWorld world) {
 
@@ -311,6 +338,34 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             world.GenerateWorld();
             world.FillSingleBlock();
         }
+
+        AirshipEditorGUI.HorizontalLine();
+        EditorGUILayout.LabelField("Build Mods", EditorStyles.boldLabel);
+        VoxelEditManager.Instance.buildModsEnabled =
+            GUILayout.Toggle(VoxelEditManager.Instance.buildModsEnabled, "Enabled");
+        // placementModsOpen = EditorGUILayout.Foldout(placementModsOpen, "Build Mods");
+        // if (placementModsOpen) {
+        GUI.enabled = VoxelEditManager.Instance.buildModsEnabled;
+        EditorGUI.indentLevel++;
+        var enabledMods = VoxelEditManager.Instance.placementModifiers;
+        foreach (var placementMod in allPlacementModifiers) {
+            var modName = placementMod.GetName();
+            var modEnabledOld = enabledMods.ContainsKey(modName);
+            var modEnabledNew = GUILayout.Toggle(modEnabledOld, modName);
+            if (modEnabledOld && !modEnabledNew) { // Disabled mod
+                enabledMods.Remove(modName);
+            } else if (!modEnabledOld && modEnabledNew) { // Enable mod
+                enabledMods[modName] = placementMod;
+            }
+
+            GUI.enabled = modEnabledNew;
+            EditorGUI.indentLevel++;
+            placementMod.OnInspectorGUI();
+            EditorGUI.indentLevel--;
+            GUI.enabled = VoxelEditManager.Instance.buildModsEnabled;
+        }
+        EditorGUI.indentLevel--;
+        GUI.enabled = true;
 
         EditorGUILayout.Space(10);
         AirshipEditorGUI.HorizontalLine();

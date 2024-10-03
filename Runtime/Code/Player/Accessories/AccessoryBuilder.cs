@@ -37,6 +37,7 @@ public class AccessoryBuilder : MonoBehaviour
         
         //Have to do it here instead of OnEnable so everything gets initialized
         if(currentOutfit){
+            print("Loading avatar current outfit: " + this.gameObject.name);
             var pendingOutfit = currentOutfit;
             //Apply outfit skin if provided
             RemoveClothingAccessories(false);
@@ -45,6 +46,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void OnEnable() {
+        print("AccessoryBuilder OnEnable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete += OnCombineComplete;
 
         // update list of accessories
@@ -80,6 +82,7 @@ public class AccessoryBuilder : MonoBehaviour
         }
 
         if(!currentOutfit){
+            print("AccessoryBuilder combining found meshes: " + this.gameObject.name);
             //Mesh combine any found accessories already on the instance
             TryCombineMeshes();
         }
@@ -87,6 +90,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void OnDisable() {
+        print("AccessoryBuilder OnDisable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete -= OnCombineComplete;
     }
 
@@ -425,11 +429,14 @@ public class AccessoryBuilder : MonoBehaviour
                 }
             }
 
+
+            print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
             meshCombiner.LoadMeshCopies();
             meshCombiner.CombineMeshes();
             OnCombineComplete();
         } else {
             //MAP ITEMS TO RIG
+            print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();
             OnCombineComplete();
         }
