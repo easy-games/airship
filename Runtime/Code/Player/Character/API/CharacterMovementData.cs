@@ -136,7 +136,7 @@ namespace Code.Player.Character.API {
 		[Tooltip("Also stop momentum when in the air")]
 		public bool useMinimumVelocityInAir = false;
 
-		[Tooltip("Push the character away from walls to prevent rigibody friction")]
+		[Tooltip("Push the character away from walls to prevent rigibody friction and unwanted collision overlaps")]
 		public bool preventWallClipping = false;
 
 		[Tooltip("Drag coefficient")]
