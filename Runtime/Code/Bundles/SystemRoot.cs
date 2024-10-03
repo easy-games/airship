@@ -7,6 +7,7 @@ using Code.Bootstrap;
 using Luau;
 using System;
 using Airship.DevConsole;
+using JetBrains.Annotations;
 using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -30,6 +31,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 	public string currentCoreVersion = "";
 	public string currentCoreMaterialsVersion = "";
 
+	public List<AssetBundleCreateRequest> extraBundleLoadRequests = new();
+	public static bool startedLoadingExtraBundle = false;
+	public static bool preWarmedCoreShaders = false;
+
 	private void Awake() {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
@@ -38,20 +43,51 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private void Start() {
 		this.RegisterCommands();
 
+#if AIRSHIP_PLAYER
+		this.LoadExtraBundle();
+#endif
+	}
+
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+	private static void OnReload() {
+		startedLoadingExtraBundle = false;
+		preWarmedCoreShaders = false;
+	}
+
+	private async void LoadExtraBundle() {
+		if (startedLoadingExtraBundle) return;
+		startedLoadingExtraBundle = true;
+
 		// debug: load extra bundles folder
-		// var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
-		// if (Directory.Exists(extraBundlesDir)) {
-		// 	string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
-		// 	foreach (var path in bundlePaths) {
-		// 		Debug.Log("Loading extra asset bundle: " + Path.GetFileName(path));
-		// 		try {
-		//
-		// 		} catch (Exception e) {
-		//
-		// 		}
-		// 		AssetBundle.LoadFromFile(path);
-		// 	}
-		// }
+		var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
+		if (Directory.Exists(extraBundlesDir)) {
+			string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
+			foreach (var path in bundlePaths) {
+				var fileName = Path.GetFileName(path);
+				// Ignore ".DS_Store"
+				if (fileName.StartsWith(".")) continue;
+
+				Debug.Log("Loading extra asset bundle: " + fileName);
+				var st = Stopwatch.StartNew();
+				startedLoadingExtraBundle = true;
+
+				var ao = AssetBundle.LoadFromFileAsync(path);
+				this.extraBundleLoadRequests.Add(ao);
+				await ao;
+				Debug.Log($"Loaded extra asset bundle {fileName} in {st.ElapsedMilliseconds}ms");
+			}
+		}
+
+		// CoreMaterials
+		{
+			var platform = AirshipPlatformUtil.GetLocalPlatform();
+			var path = Path.Join(Application.streamingAssetsPath, "ShippedBundles", $"CoreMaterials_{platform}.bundle");
+			if (File.Exists(path)) {
+				var ao = AssetBundle.LoadFromFileAsync(path);
+				this.extraBundleLoadRequests.Add(ao);
+				await ao;
+			}
+		}
 	}
 
 	// public void ClearGameBundles()
@@ -209,7 +245,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 			foreach (var package in packages) {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
-
 			}
 			// foreach (var package in packages) {
 			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
@@ -255,6 +290,32 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 
 			yield return this.WaitAll(loadLists[0].ToArray());
+
+			foreach (var ao in this.extraBundleLoadRequests) {
+				if (!ao.isDone) {
+					yield return ao;
+				}
+			}
+
+			// Shader Variant Collections
+			if (!preWarmedCoreShaders) {
+				preWarmedCoreShaders = true;
+				string[] collections = new[] { "MainMenu", "RacingGame" };
+				foreach (var collectionName in collections) {
+					var path =
+						$"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants";
+					print("checking: " + path);
+					var shaderVariants = AssetBridge.Instance.LoadAssetIfExistsInternal<ShaderVariantCollection>(path);
+					if (shaderVariants != null) {
+						print("Warming up: " + collectionName);
+						var st = Stopwatch.StartNew();
+						shaderVariants.WarmUp();
+						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");
+					} else {
+						print("did not exist");
+					}
+				}
+			}
 		} else {
 			if (NetworkClient.isConnected) {
 #if UNITY_EDITOR

@@ -337,6 +337,10 @@ namespace Code.Bootstrap {
 
             List<AirshipPackage> packages = new();
             foreach (var packageDoc in startupConfig.packages) {
+                if (packageDoc.id.ToLower() == "@easy/corematerials") {
+                    continue;
+                }
+
                 packages.Add(new AirshipPackage(packageDoc.id, packageDoc.assetVersion, packageDoc.codeVersion, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
             }
 
