@@ -7,11 +7,8 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Unity.Mathematics;
 
-
 using System.Runtime.CompilerServices;
 using Assets.Luau;
-using System.Linq;
-
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -21,14 +18,9 @@ using UnityEditor;
 [RequireComponent(typeof(VoxelRollbackManager))]
 public partial class VoxelWorld : MonoBehaviour {
 
-#if UNITY_SERVER
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
-    public const bool doVisuals = false;         //Turn on for headless servers
+    public bool runThreaded = true;       //Turn off if you suspect threading problems
+    public bool doVisuals = true;         //Turn on for headless servers
 
-#else
-    public const bool runThreaded = false;       //Turn off if you suspect threading problems
-    public const bool doVisuals = true;         //Turn on for headless servers
-#endif
     public const int maxActiveThreads = 8;
     public const int maxMainThreadMeshMillisecondsPerFrame = 8;    //Dont spend more than 10ms per frame on uploading meshes to GPU or rebuilding collision
     public const int maxMainThreadThreadKickoffMillisecondsPerFrame = 4; //Dont spent more than 4ms on the main thread kicking off threads
@@ -829,8 +821,13 @@ public partial class VoxelWorld : MonoBehaviour {
         #if UNITY_EDITOR
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
         #endif
-    }
+        
+        if (!RunCore.IsClient()) {
+            doVisuals = false;
+        }
 
+    }
+    
     private void OnEnable() {
 
 #if UNITY_EDITOR        
