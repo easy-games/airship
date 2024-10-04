@@ -300,7 +300,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 
 			// Shader Variant Collections
-			if (!preWarmedCoreShaders) {
+			if (!preWarmedCoreShaders && RunCore.IsClient()) {
 				preWarmedCoreShaders = true;
 				while (!this.coreMaterialsAssetBundle) {
 					yield return null;
