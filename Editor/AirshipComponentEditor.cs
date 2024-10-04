@@ -694,24 +694,24 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         float newValue;
         if (modifiers.TryGetValue("Range", out var rangeProps))
         {
-            var min = Convert.ToSingle(rangeProps[0].value);
-            var max = Convert.ToSingle(rangeProps[1].value);
+            var min = Convert.ToSingle(rangeProps[0].value, CultureInfo.InvariantCulture);
+            var max = Convert.ToSingle(rangeProps[1].value, CultureInfo.InvariantCulture);
             newValue = EditorGUILayout.Slider(guiContent, currentValue, min, max);
         }
         else
         {
             newValue = EditorGUILayout.FloatField(guiContent, currentValue);   
         }
-        
+    
         if (modifiers.TryGetValue("Min", out var minParams))
         {
-            newValue = Math.Max(Convert.ToSingle(minParams[0].value), newValue);
+            newValue = Math.Max(Convert.ToSingle(minParams[0].value, CultureInfo.InvariantCulture), newValue);
         }
         if (modifiers.TryGetValue("Max", out var maxParams))
         {
-            newValue = Math.Min(Convert.ToSingle(maxParams[0].value), newValue);
+            newValue = Math.Min(Convert.ToSingle(maxParams[0].value, CultureInfo.InvariantCulture), newValue);
         }
-        
+    
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (newValue != currentValue) {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);

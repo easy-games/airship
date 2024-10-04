@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -401,7 +402,7 @@ namespace Luau {
                         obj = 0.0f;
                         break;
                     }
-                    float.TryParse(serializedObjectValue, out var value);
+                    float.TryParse(serializedObjectValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var value);
                     obj = value;
                     break;
                 }
@@ -411,7 +412,7 @@ namespace Luau {
                         obj = 0;
                         break;
                     }
-                    int.TryParse(serializedObjectValue, out var value);
+                    int.TryParse(serializedObjectValue, NumberStyles.Integer, CultureInfo.InvariantCulture,  out var value);
                     obj = value;
                     break;
                 }

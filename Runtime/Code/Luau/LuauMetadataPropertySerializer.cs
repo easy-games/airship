@@ -91,7 +91,7 @@ namespace Luau {
             StringBuilder sb = new StringBuilder();
             foreach (Keyframe key in curve.keys)
             {
-                sb.Append($"{key.time},{key.value},{key.inTangent},{key.outTangent},{key.inWeight},{key.outWeight};");
+                sb.Append($"{key.time.ToString(CultureInfo.InvariantCulture)},{key.value.ToString(CultureInfo.InvariantCulture)},{key.inTangent.ToString(CultureInfo.InvariantCulture)},{key.outTangent.ToString(CultureInfo.InvariantCulture)},{key.inWeight.ToString(CultureInfo.InvariantCulture)},{key.outWeight.ToString(CultureInfo.InvariantCulture)};");
             }
             return sb.ToString().TrimEnd(';');
         }
@@ -105,12 +105,12 @@ namespace Luau {
                 string[] values = keyframeString.Split(',');
                 if (values.Length == 6)
                 {
-                    float time = float.Parse(values[0]);
-                    float value = float.Parse(values[1]);
-                    float inTangent = float.Parse(values[2]);
-                    float outTangent = float.Parse(values[3]);
-                    float inWeight = float.Parse(values[4]);
-                    float outWeight = float.Parse(values[5]);
+                    float time = float.Parse(values[0], CultureInfo.InvariantCulture);
+                    float value = float.Parse(values[1], CultureInfo.InvariantCulture);
+                    float inTangent = float.Parse(values[2], CultureInfo.InvariantCulture);
+                    float outTangent = float.Parse(values[3], CultureInfo.InvariantCulture);
+                    float inWeight = float.Parse(values[4], CultureInfo.InvariantCulture);
+                    float outWeight = float.Parse(values[5], CultureInfo.InvariantCulture);
 
                     Keyframe keyframe = new Keyframe(time, value, inTangent, outTangent)
                     {
