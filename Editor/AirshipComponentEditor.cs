@@ -690,7 +690,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     }
 
     private void DrawCustomFloatProperty(GUIContent guiContent, SerializedProperty type, Dictionary<string, List<LuauMetadataDecoratorValue>> modifiers, SerializedProperty value, SerializedProperty modified) {
-        float.TryParse(value.stringValue, out var currentValue);
+        float.TryParse(value.stringValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var currentValue);
         float newValue;
         if (modifiers.TryGetValue("Range", out var rangeProps))
         {
