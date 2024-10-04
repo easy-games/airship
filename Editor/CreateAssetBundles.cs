@@ -369,7 +369,7 @@ public static class CreateAssetBundles {
 		);
 		buildParams.UseCache = useCache;
 		EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
-		buildParams.BundleCompression = BuildCompression.Uncompressed;
+		buildParams.BundleCompression = BuildCompression.LZ4;
 		var buildContent = new BundleBuildContent(builds);
 
 		Debug.Log("Additional files:");
