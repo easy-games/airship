@@ -82,6 +82,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// CoreMaterials
 		{
 			var platform = AirshipPlatformUtil.GetLocalPlatform();
+			if (platform == AirshipPlatform.Linux) {
+				platform = AirshipPlatform.Windows;
+			}
 			var path = Path.Join(Application.streamingAssetsPath, "ShippedBundles", $"CoreMaterials_{platform}/@easy/corematerials_shared/resources");
 			if (File.Exists(path)) {
 				var st = Stopwatch.StartNew();
