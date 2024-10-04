@@ -207,7 +207,6 @@ private void OnEnable() {
 					Quaternion.LookRotation(lookTarget),
 					observerRotationLerpMod * Time.deltaTime);
 			}
-
 			if (isLocalPlayer || _networkAnimator == null) {
 				//Track movement to visually sync animator
 				UpdateAnimationVelocity();
@@ -217,7 +216,6 @@ private void OnEnable() {
 
 #region FIXEDUPDATE
 		private void FixedUpdate() {	
-
 			// Observers don't calculate moves
 			if (!isOwned){
 				return;
@@ -236,7 +234,7 @@ private void OnEnable() {
 		private void UpdateAnimationVelocity() {
 			//Update visual state of client character
 			var currentPos = rootTransform.position;
-			trackedDeltaTime += Time.fixedDeltaTime;
+			trackedDeltaTime += Time.deltaTime;
 			var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
 			if (currentPos != trackedPosition || worldVel != lastWorldVel) {
 				lastWorldVel = worldVel;
