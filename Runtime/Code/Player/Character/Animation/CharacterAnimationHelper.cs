@@ -155,7 +155,7 @@ namespace Code.Player.Character {
         }
 
         private void GetRandomReactionLength() {
-                nextIdleReactionLength = this.idleRectionLength + Random.Range(-this.idleRectionLength/2, this.idleRectionLength/2);
+            nextIdleReactionLength = this.idleRectionLength + Random.Range(-this.idleRectionLength/2, this.idleRectionLength/2);
         }
 
         public void SetVelocity(Vector3 localVel) {

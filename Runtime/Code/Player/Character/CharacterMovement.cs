@@ -62,9 +62,9 @@ namespace Code.Player.Character {
 		public event Action<object> OnAdjustMove;
 
 		/// <summary>
-		/// Params: Vector3 velocity, ushort blockId
+		/// Params: Vector3 velocity, RaycastHit hitInfo
 		/// </summary>
-		public event Action<object> OnImpactWithGround;
+		public event Action<object, object> OnImpactWithGround;
 		public event Action<object> OnMoveDirectionChanged;
 	
 		/// <summary>
@@ -246,11 +246,7 @@ private void OnEnable() {
 				animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 			}
 		}
-
-		[ClientRpc]
-		private void ObserverOnImpactWithGround(Vector3 velocity) {
-			this.OnImpactWithGround?.Invoke(velocity);
-		}
+		
 		public bool IsGrounded() {
 			return grounded;
 		}
@@ -301,7 +297,7 @@ private void OnEnable() {
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
-				this.OnImpactWithGround?.Invoke(currentVelocity);
+				this.OnImpactWithGround?.Invoke(currentVelocity, groundHit);
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
