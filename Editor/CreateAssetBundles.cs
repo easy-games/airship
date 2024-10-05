@@ -368,8 +368,8 @@ public static class CreateAssetBundles {
 			buildPath
 		);
 		buildParams.UseCache = useCache;
-		buildParams.BundleCompression = BuildCompression.LZ4;
 		EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
+		buildParams.BundleCompression = BuildCompression.LZ4;
 		var buildContent = new BundleBuildContent(builds);
 
 		Debug.Log("Additional files:");
@@ -379,6 +379,10 @@ public static class CreateAssetBundles {
 				Debug.Log("  - " + p.fileAlias);
 			}
 		}
+
+		ContentPipeline.BuildCallbacks.PostPackingCallback = (parameters, data, arg3) => {
+			return ReturnCode.Success;
+		};
 
 		AirshipPackagesWindow.buildingPackageId = "game";
 		buildingBundles = true;

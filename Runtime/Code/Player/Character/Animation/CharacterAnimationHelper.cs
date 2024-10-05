@@ -111,27 +111,25 @@ namespace Code.Player.Character {
             if(!enabled || !this.gameObject.activeInHierarchy){
                 return;
             }
-            currentPlaybackSpeed = targetPlaybackSpeed;
-            //When idle lerp to a standstill
-            if (currentState == CharacterState.Idle) {
+            
+            //Don't vary animation speeds if we are in the air or not moving
+            if (currentState == CharacterState.Airborne){
+                targetPlaybackSpeed = 1;
+            }else if ((currentState == CharacterState.Crouching && targetPlaybackSpeed < .1) || targetPlaybackSpeed < .03){
                 targetVelNormalized = Vector2.zero;
-                currentPlaybackSpeed = 1;
-            } else if (currentState == CharacterState.Airborne){
-                currentPlaybackSpeed = 1;
-            }else if ((currentState == CharacterState.Crouching && currentPlaybackSpeed < .1) || currentPlaybackSpeed < .01){
-                targetVelNormalized = Vector2.zero;
-                currentPlaybackSpeed = 1;
+                targetPlaybackSpeed = 1;
             }
 
             float currentMagnitude = currentVelNormalized.magnitude;
             float targetMagnitude = targetVelNormalized.magnitude;
+            float blendMod = targetMagnitude > currentMagnitude ? this.directionalBlendLerpMod : this.directionalBlendLerpMod /2f;
 
             //RUNNING SPEED
             //Speed up animations based on actual speed vs target speed
+            currentPlaybackSpeed = Mathf.Lerp(currentPlaybackSpeed, targetPlaybackSpeed, Time.deltaTime * blendMod);
             animator.SetFloat("MovementPlaybackSpeed", currentPlaybackSpeed);
 
             //Blend directional influence
-            float blendMod = targetMagnitude > currentMagnitude ? this.directionalBlendLerpMod : this.directionalBlendLerpMod /2f;
             currentVelNormalized = Vector2.MoveTowards(currentVelNormalized, targetVelNormalized, blendMod * Time.deltaTime);
             animator.SetFloat("VelX",  currentSpeed < .01 ? 0 : currentVelNormalized.x);// * Mathf.Clamp01(currentPlaybackSpeed));
             animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime*1.5f));
@@ -157,7 +155,7 @@ namespace Code.Player.Character {
         }
 
         private void GetRandomReactionLength() {
-                nextIdleReactionLength = this.idleRectionLength + Random.Range(-this.idleRectionLength/2, this.idleRectionLength/2);
+            nextIdleReactionLength = this.idleRectionLength + Random.Range(-this.idleRectionLength/2, this.idleRectionLength/2);
         }
 
         public void SetVelocity(Vector3 localVel) {
@@ -169,15 +167,10 @@ namespace Code.Player.Character {
                 targetSpeed = 2.1233335f;
             }
             currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
-            //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed);
-            this.targetPlaybackSpeed = Mathf.Max(.01f, currentSpeed  / targetSpeed);
-            if(currentSpeed < .06){
-                currentSpeed = 0;
-                targetVelNormalized = Vector2.zero;
-            }else{
-                targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
-            }
+            this.targetPlaybackSpeed = currentSpeed  / targetSpeed;
+            targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
+            //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
         }
 
         public void SetState(CharacterStateData syncedState) {
@@ -208,6 +201,7 @@ namespace Code.Player.Character {
 
             lastStateTime = Time.time;
             currentState = newState;
+            //print("Set state: " + currentState);
         }
 
         public void TriggerJump(){

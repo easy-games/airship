@@ -62,9 +62,9 @@ namespace Code.Player.Character {
 		public event Action<object> OnAdjustMove;
 
 		/// <summary>
-		/// Params: Vector3 velocity, ushort blockId
+		/// Params: Vector3 velocity, RaycastHit hitInfo
 		/// </summary>
-		public event Action<object> OnImpactWithGround;
+		public event Action<object, object> OnImpactWithGround;
 		public event Action<object> OnMoveDirectionChanged;
 	
 		/// <summary>
@@ -135,6 +135,7 @@ namespace Code.Player.Character {
 		private float currentSpeed;
 		private float trackedDeltaTime = 0;
 		private Vector3 lastGroundedMoveDir = Vector3.zero;
+		private float forwardMargin = .05f;
 		
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier() {
 			speedMultiplier = 1,
@@ -181,13 +182,7 @@ private void OnEnable() {
 		}
 #endregion
 
-		public void SetReplicatedState(CharacterStateData oldData, CharacterStateData newData) {
-			animationHelper.SetState(newData);
-			if(oldData.state != newData.state){
-				this.stateChanged?.Invoke((int)newData.state);
-			}
-		}
-
+#region LATEUPDATE
 		private void LateUpdate(){
 			if (isClient && isOwned) {
 				var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
@@ -212,21 +207,15 @@ private void OnEnable() {
 					Quaternion.LookRotation(lookTarget),
 					observerRotationLerpMod * Time.deltaTime);
 			}
-		}
-
-		public Vector3 GetLookVector() {
-			if (isOwned) {
-				return this.lookVector;
-			}
-			return this.replicatedLookVector;
-		}
-
-		private void FixedUpdate() {	
 			if (isLocalPlayer || _networkAnimator == null) {
 				//Track movement to visually sync animator
 				UpdateAnimationVelocity();
 			}
+		}
+#endregion
 
+#region FIXEDUPDATE
+		private void FixedUpdate() {	
 			// Observers don't calculate moves
 			if (!isOwned){
 				return;
@@ -240,12 +229,12 @@ private void OnEnable() {
 			Move(md);
 			OnEndMove?.Invoke(md);
 		}
-
+#endregion
 
 		private void UpdateAnimationVelocity() {
 			//Update visual state of client character
 			var currentPos = rootTransform.position;
-			trackedDeltaTime += Time.fixedDeltaTime;
+			trackedDeltaTime += Time.deltaTime;
 			var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
 			if (currentPos != trackedPosition || worldVel != lastWorldVel) {
 				lastWorldVel = worldVel;
@@ -254,15 +243,10 @@ private void OnEnable() {
 				// 	Debug.Log("Pos: " + currentPos + " ve: " + lastWorldVel + " time: " + trackedDeltaTime);
 				// }
 				trackedDeltaTime = 0;
-				//Debug.Log("VEL: " + worldVel);
 				animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 			}
 		}
-
-		[ClientRpc]
-		private void ObserverOnImpactWithGround(Vector3 velocity) {
-			this.OnImpactWithGround?.Invoke(velocity);
-		}
+		
 		public bool IsGrounded() {
 			return grounded;
 		}
@@ -313,7 +297,7 @@ private void OnEnable() {
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
-				this.OnImpactWithGround?.Invoke(currentVelocity);
+				this.OnImpactWithGround?.Invoke(currentVelocity, groundHit);
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -655,7 +639,7 @@ private void OnEnable() {
 #endregion
 
 			//Used by step ups and forward check
-			var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
+			var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+forwardMargin);
 			var forwardVector = (characterMoveVelocity + newVelocity).normalized * forwardDistance;
 	
 #region MOVE_FORCE
@@ -672,19 +656,18 @@ private void OnEnable() {
 				newVelocity += -Vector3.ClampMagnitude(flatVelocity, currentSpeed) * parallelDot * moveData.accelerationTurnFriction;
 			}			
 
-			//Stop character from moveing into colliders (Not really needed anymore unless you have friction on your physics mats)
+			//Stop character from moveing into colliders (Helps prevent axis aligned box colliders from colliding when they shoudln't like jumping in a voxel world)
 			if(moveData.preventWallClipping){
 				//Do raycasting after we have claculated our move direction
-				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
+				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true, true);
 
 				if(!prevStepUp && didHitForward){
 					var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+					var isKinematic = forwardHit.collider?.attachedRigidbody == null || forwardHit.collider.attachedRigidbody.isKinematic;
 
-					//Stop character from walking into walls		
-					if(isVerticalWall &&
-						//Let character push into rigidbodies
-						(forwardHit.collider?.attachedRigidbody == null ||
-						forwardHit.collider.attachedRigidbody.isKinematic)){
+					//print("Avoiding wall: " + forwardHit.collider.gameObject.name + " distance: " + forwardHit.distance + " isVerticalWall: " + isVerticalWall + " isKinematic: " + isKinematic);
+					//Stop character from walking into walls but Let character push into rigidbodies	
+					if(isVerticalWall && isKinematic){
 						//Stop movement into this surface
 						var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVelocity.normalized));
 						// var tempMagnitude = characterMoveVector.magnitude;
@@ -692,20 +675,20 @@ private void OnEnable() {
 						characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, forwardHit.normal);
 						characterMoveVelocity.y = 0;
 						characterMoveVelocity *= colliderDot;
-						//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+						//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVelocity);
 					}
 
 					//Push the character out of any colliders
-					flatVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
+					flatVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius-forwardMargin);
 					newVelocity.x = flatVelocity.x;
 					newVelocity.z = flatVelocity.z;
 				}
 
-				/*if(!grounded && detectedGround){
+				if(!grounded && detectedGround){
 					//Hit ground but its not valid ground, push away from it
 					//print("PUSHING AWAY FROM: " + groundHit.normal);
 					newVelocity += groundHit.normal * physics.GetFlatDistance(transform.position, groundHit.point) * .25f / deltaTime;
-				}*/
+				}
 			}
 			
 			//Instantly move at the desired speed
@@ -934,6 +917,20 @@ private void OnEnable() {
 		}
 
 #region TS_ACCESS
+		public void SetReplicatedState(CharacterStateData oldData, CharacterStateData newData) {
+			animationHelper.SetState(newData);
+			if(oldData.state != newData.state){
+				this.stateChanged?.Invoke((int)newData.state);
+			}
+		}
+
+		public Vector3 GetLookVector() {
+			if (isOwned) {
+				return this.lookVector;
+			}
+			return this.replicatedLookVector;
+		}
+
 		public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace) {
 			if (moveDirWorldSpace) {
 				_moveDir = moveDir;

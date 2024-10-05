@@ -816,16 +816,7 @@ public partial class VoxelWorld : MonoBehaviour {
  
 
     private void Awake() {
-        doVisuals = true;
-#if UNITY_EDITOR        
-        if (!RunCore.IsClient()) {
-            doVisuals = false;
-        }
-#endif
-#if UNITY_SERVER
-        doVisuals = false;
-#endif
-        
+        doVisuals = RunCore.IsClient() || Application.isEditor;
     }
 
     public VoxelWorld() {

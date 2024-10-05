@@ -128,6 +128,8 @@ namespace Editor.Packages {
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
 
+                bool isCoreMaterials = package.id.ToLower() == "@easy/corematerials";
+
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(package.id.Split("/")[1], new GUIStyle(GUI.skin.label) { fixedWidth = 150, fontStyle = FontStyle.Bold});
                 if (package.localSource) {
@@ -137,13 +139,13 @@ namespace Editor.Packages {
                         GUILayout.FlexibleSpace();
                         GUILayout.BeginVertical(GUILayout.Width(120));
                         if (GUILayout.Button("Publish Code")) {
-                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false, isCoreMaterials));
                         }
                         if (GUILayout.Button("Publish All")) {
                             // Make sure we generate and write all `NetworkPrefabCollection`s before we
                             // build the package.
                             // NetworkPrefabManager.WriteAllCollections();
-                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true, isCoreMaterials));
                         }
                         GUILayout.EndVertical();
                         GUILayout.FlexibleSpace();
@@ -311,7 +313,7 @@ namespace Editor.Packages {
             GUILayout.EndScrollView();
         }
 
-        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
+        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets, bool isCoreMaterials) {
             var confirmTitle = "Package Publish";
             var confirmMessage = $"You are about to publish {packageDoc.id}.";
             #if AIRSHIP_INTERNAL
@@ -408,11 +410,14 @@ namespace Editor.Packages {
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
                     Debug.Log($"Building {platform} asset bundles...");
-                    var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
-                        platform.ToString());
-                    if (!Directory.Exists(buildPath)) {
-                        Directory.CreateDirectory(buildPath);
+                    string buildPath;
+                    if (isCoreMaterials) {
+                        buildPath = Path.Join("bundles", "ShippedBundles", $"CoreMaterials_{platform.ToString()}");
+                    } else {
+                        buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
+                            platform.ToString());
                     }
+                    Directory.CreateDirectory(buildPath);
 
                     // var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
                     var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
@@ -427,9 +432,13 @@ namespace Editor.Packages {
                         buildPath
                     );
                     buildParams.UseCache = this.publishOptionUseCache;
-                    Debug.Log("Building package " + packageDoc.id + " with cache=" + this.publishOptionUseCache);
-                    buildParams.BundleCompression = BuildCompression.LZ4;
-                    EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
+                    Debug.Log("Building package " + packageDoc.id + " with cache: " + this.publishOptionUseCache);
+                    if (isCoreMaterials) {
+                        buildParams.BundleCompression = BuildCompression.Uncompressed;
+                    } else {
+                        buildParams.BundleCompression = BuildCompression.LZ4;
+                    }
+                    // EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
                     buildingAssetBundles = true;
@@ -439,7 +448,7 @@ namespace Editor.Packages {
                     buildingAssetBundles = false;
                     AirshipScriptableBuildPipelineConfig.buildingPackageName = null;
                     if (returnCode != ReturnCode.Success) {
-                        Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
+                        Debug.LogError("Failed to build asset bundles. ReturnCode: " + returnCode);
                         packageUploadProgress.Remove(packageDoc.id);
                         yield break;
                     }
@@ -489,13 +498,15 @@ namespace Editor.Packages {
             }
             sourceAssetsZip.Save(zippedSourceAssetsZipPath);
 
-            packageUploadProgress[packageDoc.id] = "Starting upload...";
-            Repaint();
-            if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
+            if (EditorIntegrationsConfig.instance.buildWithoutUpload || isCoreMaterials) {
                 packageUploadProgress.Remove(packageDoc.id);
                 Repaint();
+                Debug.Log("<color=green>Done!</color>");
                 yield break;
             }
+
+            packageUploadProgress[packageDoc.id] = "Starting upload...";
+            Repaint();
             yield return null; // give time to repaint
 
             // code.zip

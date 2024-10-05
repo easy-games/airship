@@ -189,7 +189,7 @@ namespace Code.Player.Character.API {
 			var flatDir = new Vector3(velDir.x, 0 , velDir.z).normalized;
 			var velFrame = vel/deltaTime;
 			float stepUpRampDistance = movement.moveData.stepUpRampDistance;
-			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos + new Vector3(0,offsetMargin,0) - velDir * offsetMargin, flatDir * (stepUpRampDistance+offsetMargin), false, true);
+			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos + new Vector3(0,offsetMargin,0) - velDir * offsetMargin, flatDir * (stepUpRampDistance+offsetMargin), false, false);
 
 			if(didHitForward && movement.useExtraLogging){
 				Debug.Log("currentUpNormal: " + currentUpNormal + " forwardHitInfo: " + forwardHitInfo.normal + " EQUAL: "+ (currentUpNormal == forwardHitInfo.normal));
@@ -272,7 +272,7 @@ namespace Code.Player.Character.API {
 				}
 			}
 
-			(bool didHitExactForward, RaycastHit forwardExactHitInfo) = CheckForwardHit(startPos - velDir*offsetMargin, velDir * (stepUpRampDistance+offsetMargin));
+			(bool didHitExactForward, RaycastHit forwardExactHitInfo) = CheckForwardHit(startPos - velDir*offsetMargin, velDir * (stepUpRampDistance+offsetMargin), false, false);
 
 			//See if we should fallback to simplified stepup
 			if(movement.moveData.alwaysStepUp || 
@@ -310,9 +310,9 @@ namespace Code.Player.Character.API {
 #region CAN STAND
 		public bool CanStand(){
 			if(Physics.BoxCast(
-				movement.rootTransform.position + new Vector3(0,movement.characterRadius,0), 
-				new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
-				Vector3.up, out RaycastHit hitInfo, Quaternion.identity, movement.standingCharacterHeight - movement.characterRadius, 
+				movement.rootTransform.position + new Vector3(0,movement.characterRadius+offsetMargin,0), 
+				new Vector3(movement.characterRadius, movement.characterRadius ,movement.characterRadius), 
+				Vector3.up, out RaycastHit hitInfo, Quaternion.identity, movement.standingCharacterHeight - movement.characterRadius - movement.characterRadius - offsetMargin, 
 				movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					if(!this.ignoredColliders.ContainsKey(hitInfo.collider.GetInstanceID())){
 						return false;
