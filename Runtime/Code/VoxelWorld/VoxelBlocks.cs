@@ -180,7 +180,21 @@ public class VoxelBlocks : MonoBehaviour {
         QuarterBlockTypes.MAX, //UK
         QuarterBlockTypes.MAX, //UL
         QuarterBlockTypes.MAX, //UM
-        QuarterBlockTypes.UM, //UN
+        QuarterBlockTypes.UM,  //UN
+        QuarterBlockTypes.MAX, //UA
+        QuarterBlockTypes.DA,  //UB can be flipped UA
+        QuarterBlockTypes.MAX, //uc
+        QuarterBlockTypes.MAX, //ud
+        QuarterBlockTypes.MAX, //ue
+        QuarterBlockTypes.DE,  //UF can be flipped UE
+        QuarterBlockTypes.MAX, //ug
+        QuarterBlockTypes.MAX, //UH
+        QuarterBlockTypes.MAX, //UI
+        QuarterBlockTypes.DI,  //UJ can be flipped UI
+        QuarterBlockTypes.MAX, //UK
+        QuarterBlockTypes.MAX, //UL
+        QuarterBlockTypes.MAX, //UM
+        QuarterBlockTypes.DM,  //UN
     };
 
     public class LodSet {
@@ -418,7 +432,7 @@ public class VoxelBlocks : MonoBehaviour {
             if (obj == null) {
              
                 //Can we flip an existing one
-                if (i < (int)QuarterBlockTypes.DA && QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
+                if (QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
                     VoxelMeshCopy meshSrc = block.meshContexts[ (int)QuarterBlockSubstitutions[i]];
                     if (meshSrc != null && meshSrc.surfaces != null) {
                         VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
@@ -429,8 +443,10 @@ public class VoxelBlocks : MonoBehaviour {
                 }
 
                 if (meshToAdd == null) {
-                    //Can we flip the upwards one?
+                    
                     if (i >= (int)QuarterBlockTypes.DA) {
+
+                        //Can we flip the upwards one?
                         VoxelMeshCopy meshSrc = block.meshContexts[i - (int)QuarterBlockTypes.DA];
 
                         if (meshSrc != null && meshSrc.surfaces != null) {

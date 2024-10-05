@@ -498,7 +498,7 @@ public partial class VoxelWorld : MonoBehaviour {
         // Get a list of all the child game objects
         List<GameObject> children = new List<GameObject>();
         foreach (Transform child in parent.transform) {
-            if (child.name == "Chunks" || child.name == "Lights") {
+            if (child.name == "Chunks") {
                 DeleteChildGameObjects(child.gameObject);
                 continue;
             }
@@ -506,7 +506,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         // Delete all the children
-        //children.ForEach(child => GameObject.DestroyImmediate(child));
+        children.ForEach(child => GameObject.DestroyImmediate(child));
         Profiler.EndSample();
     }
 
@@ -818,9 +818,8 @@ public partial class VoxelWorld : MonoBehaviour {
     private void Awake() {
         doVisuals = true;
 #if UNITY_EDITOR        
-        if (RunCore.IsServer() == true || ClonesManager.GetArgument() == "server") {
+        if (!RunCore.IsClient()) {
             doVisuals = false;
-            Debug.Log("Voxelworld do visuals is false");
         }
 #endif
 #if UNITY_SERVER
