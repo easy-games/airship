@@ -35,7 +35,6 @@ public static class PhysicsSetup {
 
         // Clear all unused layers reserved for Airship core
         for (var i = lastCoreLayerNumber + 1; i <= 16; i++) {
-            Debug.Log("Setting layer: " + i);
             PhysicsLayerEditor.SetLayer(i, "");
         }
 
