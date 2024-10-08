@@ -130,10 +130,17 @@ namespace Code.Player.Character {
             animator.SetFloat("MovementPlaybackSpeed", currentPlaybackSpeed);
 
             //Blend directional influence
-            currentVelNormalized = Vector2.MoveTowards(currentVelNormalized, targetVelNormalized, blendMod * Time.deltaTime);
-            animator.SetFloat("VelX",  currentSpeed < .01 ? 0 : currentVelNormalized.x);// * Mathf.Clamp01(currentPlaybackSpeed));
-            animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime*1.5f));
-            animator.SetFloat("VelZ", currentSpeed < .01 ? 0 : currentVelNormalized.y);// * Mathf.Clamp01(currentPlaybackSpeed));
+            float smoothXVelocity = 0f;
+            float smoothYVelocity = 0f;
+            float smoothTime = 0.04f;
+
+            currentVelNormalized.x = Mathf.SmoothDamp(currentVelNormalized.x, targetVelNormalized.x, ref smoothXVelocity, smoothTime);
+            currentVelNormalized.y = Mathf.SmoothDamp(currentVelNormalized.y, targetVelNormalized.y, ref smoothYVelocity, smoothTime);
+            float velX = Mathf.Abs(currentVelNormalized.x) < 0.01f ? 0 : currentVelNormalized.x;
+            float velZ = Mathf.Abs(currentVelNormalized.y) < 0.01f ? 0 : currentVelNormalized.y;
+            animator.SetFloat("VelX", velX);
+            animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime * 1.5f));
+            animator.SetFloat("VelZ", velZ);
             animator.SetFloat("Speed", targetMagnitude);
 
             
