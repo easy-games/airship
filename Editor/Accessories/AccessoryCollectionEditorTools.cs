@@ -16,7 +16,7 @@ public class AccessoryCollectionTools {
         string folderPath = Application.dataPath + "/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems";
         string allItemsPath
             = "Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset";
-            //
+        
         AvatarAccessoryCollection allAccessories = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(allItemsPath);
 
         //Compile accessories
@@ -24,10 +24,12 @@ public class AccessoryCollectionTools {
         int count = 0;
         GetAccessoriesInFolder(ref count, folderPath, "prefab", (relativePath)=>{
                 var go = AssetDatabase.LoadAssetAtPath<GameObject>(relativePath);
-                var acc = go.GetComponent<AccessoryComponent>();
-                if (acc != null) {
-                    //Debug.Log("Found Accessory: " + relativePath);
-                    accs.Add(acc);
+                if(go != null){
+                    var acc = go.GetComponent<AccessoryComponent>();
+                    if (acc != null) {
+                        //Debug.Log("Found Accessory: " + relativePath);
+                        accs.Add(acc);
+                    }
                 }
         });
         allAccessories.accessories = accs.ToArray();
@@ -140,7 +142,7 @@ public class AccessoryCollectionTools {
     [MenuItem("Assets/Create/Airship/Accessories/Create Outfit Accessories from Mesh")]
     static void CreateAccFromMesh(){
         processedPaths.Clear();
-        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials//MaterialLibrary/Organic/Clay.mat");
+        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials/MaterialLibrary/Clay.mat");
         var objects = Selection.GetFiltered<GameObject>(AssetModeMask);
         foreach(var obj in objects){
             Debug.Log("Unpacking: " + obj.name);
