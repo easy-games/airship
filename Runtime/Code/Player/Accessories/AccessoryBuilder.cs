@@ -46,7 +46,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void OnEnable() {
-        print("AccessoryBuilder OnEnable: " + this.gameObject.name);
+        //print("AccessoryBuilder OnEnable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete += OnCombineComplete;
 
         // update list of accessories
@@ -90,7 +90,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void OnDisable() {
-        print("AccessoryBuilder OnDisable: " + this.gameObject.name);
+        //print("AccessoryBuilder OnDisable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete -= OnCombineComplete;
     }
 
