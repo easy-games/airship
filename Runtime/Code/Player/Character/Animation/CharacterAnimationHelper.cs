@@ -132,10 +132,10 @@ namespace Code.Player.Character {
             //Blend directional influence
             float smoothXVelocity = 0f;
             float smoothYVelocity = 0f;
-            float smoothTime = 0.04f;
+            float smoothTime = 0.025f;
 
-            currentVelNormalized.x = Mathf.SmoothDamp(currentVelNormalized.x, targetVelNormalized.x, ref smoothXVelocity, smoothTime);
-            currentVelNormalized.y = Mathf.SmoothDamp(currentVelNormalized.y, targetVelNormalized.y, ref smoothYVelocity, smoothTime);
+            currentVelNormalized.x = Mathf.SmoothDamp(currentVelNormalized.x, targetVelNormalized.x, ref smoothXVelocity, smoothTime, Mathf.Infinity, Time.deltaTime);
+            currentVelNormalized.y = Mathf.SmoothDamp(currentVelNormalized.y, targetVelNormalized.y, ref smoothYVelocity, smoothTime, Mathf.Infinity, Time.deltaTime);
             float velX = Mathf.Abs(currentVelNormalized.x) < 0.01f ? 0 : currentVelNormalized.x;
             float velZ = Mathf.Abs(currentVelNormalized.y) < 0.01f ? 0 : currentVelNormalized.y;
             animator.SetFloat("VelX", velX);
