@@ -107,7 +107,7 @@ public class ServerBootstrap : MonoBehaviour
 			if (RunCore.IsClient()) {
 				// use random port in shared mode
 				transport.port = (ushort)Random.Range(7770, 7870);
-				print("Listening on port " + transport.port);
+				// print("Listening on port " + transport.port);
 				AirshipNetworkManager.singleton.StartHost();
 			} else {
 				AirshipNetworkManager.singleton.StartServer();

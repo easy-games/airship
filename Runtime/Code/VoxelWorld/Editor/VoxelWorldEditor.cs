@@ -614,9 +614,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
                     ushort newValue = (ushort)world.selectedBlockIndex;
 
+                 
                     VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
                     var def = world.voxelBlocks.GetBlock(newValue);
+
+                    //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
                     voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue, "Add Voxel " + def.definition.name);
 
                     if (leftControlDown == false) {

@@ -71,15 +71,28 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     [HideInInspector]
     public float lodTransitionSpeed = 1;
-
- 
+     
     //Texture atlas/block definitions    
     [HideInInspector] public VoxelBlocks voxelBlocks; 
     [HideInInspector] public int selectedBlockIndex = 1;
 
     // Mirroring
     public Vector3 mirrorAround = Vector3.zero;
-    
+
+    //Flipped blocks 
+    public enum Flips : int {
+        ____ = 0,               // No flip
+        _X__ = 1 << 0,          // Flip on X (bit 0)
+        __Y_ = 1 << 1,          // Flip on Y (bit 1)
+        ___Z = 1 << 2,          // Flip on Z (bit 2)
+        _XY_ = (1 << 0) | (1 << 1),  // Flip on X and Y (bit 0 and bit 1)
+        _X_Z = (1 << 0) | (1 << 2),  // Flip on X and Z (bit 0 and bit 2)
+        __YZ = (1 << 1) | (1 << 2),  // Flip on Y and Z (bit 1 and bit 2)
+        _XYZ = (1 << 0) | (1 << 1) | (1 << 2)  // Flip on X, Y, and Z (bit 0, bit 1, and bit 2)
+    }
+    public static Flips[] allFlips = (Flips[])System.Enum.GetValues(typeof(Flips));
+
+
     [HideInInspector] public bool renderingDisabled = false;
 
     [HideInInspector] private bool debugGrass = false;
@@ -106,6 +119,27 @@ public partial class VoxelWorld : MonoBehaviour {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool VoxelIsSolid(VoxelData voxel) {
         return (voxel & 0x8000) != 0; //15th bit 
+    }
+
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int GetVoxelFlippedBits(VoxelData voxel) {
+        //Flipped bits are the 12th,13th and 14th bits
+        return (voxel & 0x7000) >> 12;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int SetVoxelFlippedBits(int voxel, int flippedBits) {
+        // Ensure flippedBits is a 3-bit value (0-7)
+        flippedBits &= 0x7;
+
+        // Clear the 12th, 13th, and 14th bits in the original voxel
+        voxel &= ~0x7000;
+
+        // Set the 12th, 13th, and 14th bits using the flippedBits
+        voxel |= (flippedBits << 12);
+
+        return voxel;
     }
 
 

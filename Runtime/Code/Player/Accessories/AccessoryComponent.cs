@@ -111,7 +111,8 @@ namespace Code.Player.Accessories {
         public VisibilityMode visibilityMode = VisibilityMode.BOTH;
         public bool skinnedToCharacter = false;
 
-        public bool canMeshCombine = true;
+        [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
+        public bool canMeshCombine = false;
 
         //Array of (bones?) that get hidden on body mesh when this accessory is worn
         [HideInInspector]
