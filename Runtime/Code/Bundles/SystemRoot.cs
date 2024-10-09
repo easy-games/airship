@@ -339,7 +339,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 						}
 					}
 				}
+				#if AIRSHIP_INTERNAL
 				Debug.Log($"[Airship]: Registered network prefabs in {st.ElapsedMilliseconds} ms.");
+				#endif
 #endif
 			}
 		}
@@ -352,7 +354,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 		}
 
-#if AIRSHIP_PLAYER || true
+#if AIRSHIP_PLAYER
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + " ms.");
 #endif
 	}
