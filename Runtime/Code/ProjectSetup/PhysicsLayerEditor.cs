@@ -78,9 +78,8 @@ public class PhysicsLayerEditor
         //     }
         // }
 
-        if (!PropertyExists(layersProp, 0, MAX_LAYERS, layerName))
-        {
-            SerializedProperty sp = layersProp.GetArrayElementAtIndex(number);
+        if (string.IsNullOrEmpty(layerName) || !PropertyExists(layersProp, 0, MAX_LAYERS, layerName)) {
+            var sp = layersProp.GetArrayElementAtIndex(number);
             sp.stringValue = layerName;
             tagManager.ApplyModifiedProperties();
         }

@@ -20,13 +20,23 @@ public static class PhysicsSetup {
 
 #if UNITY_EDITOR
         //Airship Core Layers
+        // 0 is built in Default
+        // 1 is built in TransparentFX
+        // 2 is built in Ignore Raycast
         PhysicsLayerEditor.SetLayer(3, "Character");
+        // 4 is built in Water
+        // 5 is built in UI
         PhysicsLayerEditor.SetLayer(6, "WorldUI");
         PhysicsLayerEditor.SetLayer(7, "Viewmodel");
         PhysicsLayerEditor.SetLayer(8, "VisuallyHidden");
         PhysicsLayerEditor.SetLayer(9, "IgnoreCollision");
         PhysicsLayerEditor.SetLayer(10, "AvatarEditor");
-        PhysicsLayerEditor.SetLayer(11, "VoxelWorld");
+        var lastCoreLayerNumber = 10; // Update this if we add more layers
+
+        // Clear all unused layers reserved for Airship core
+        for (var i = lastCoreLayerNumber + 1; i <= 16; i++) {
+            PhysicsLayerEditor.SetLayer(i, "");
+        }
 
         //Reserved for future use
         for (int i = NumberOfCoreLayers; i < GameLayerStartIndex; i++) {
@@ -46,19 +56,12 @@ public static class PhysicsSetup {
         IgnoreAllLayers(LayerMask.NameToLayer("WorldUI"), true);
             //Only collide with game layers
         IgnoreAllLayers(LayerMask.NameToLayer("Character"), false);
-        IgnoreAllLayers(LayerMask.NameToLayer("VoxelWorld"), false);
 
         //Character
             //Collides with
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Default"), false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VisuallyHidden"), false);
-        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VoxelWorld"), false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Water"), false);
-        
-        //VoxelWorld
-            //Collides with
-        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("VoxelWorld"), LayerMask.NameToLayer("Default"), false);
-        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("VoxelWorld"), LayerMask.NameToLayer("VisuallyHidden"), false);
     }
     
 
