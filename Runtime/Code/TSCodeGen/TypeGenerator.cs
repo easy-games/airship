@@ -123,7 +123,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterController),
             typeof(TrailRenderer),
             typeof(WindowCore),
-            typeof(CharacterMoveModifier),
             typeof(MaterialColorURP),
             typeof(MaterialColorURP.ColorSetting),
             typeof(MainMenuLoadingScreen),

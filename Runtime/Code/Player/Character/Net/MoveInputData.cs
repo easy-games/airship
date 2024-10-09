@@ -16,11 +16,6 @@ namespace Code.Player.Human.Net {
 		public bool sprint;
 		public Vector3 lookVector;
 		public BinaryBlob customData;
-		private uint tick;
-
-		public void Dispose() { }
-		public uint GetTick() => tick;
-		public void SetTick(uint value) => tick = value;
 
 		public MoveInputData(Vector3 moveDir, bool jump, bool crouch, bool sprint, Vector3 lookVector, BinaryBlob customData) {
 			this.moveDir = moveDir;
@@ -29,30 +24,6 @@ namespace Code.Player.Human.Net {
 			this.sprint = sprint;
 			this.lookVector = lookVector;
 			this.customData = customData;
-			this.tick = 0;
-		}
-
-		/// <summary>
-		/// Compare BinaryBlobs. FishNet internally uses this.
-		/// </summary>
-		public static bool CompareBinaryBlobs(BinaryBlob a, BinaryBlob b) {
-			var aNull = a is null;
-			var bNull = b is null;
-			
-			if ((aNull && bNull) || (aNull != bNull) || (a.m_dataSize != b.m_dataSize)) {
-				Profiler.EndSample();
-				return false;
-			}
-			
-			// Full compare:
-			var len = a.m_dataSize;
-			for (long i = 0; i < len; i++) {
-				if (a.m_data[i] != b.m_data[i]) {
-					Profiler.EndSample();
-					return false;
-				}
-			}
-			return true;
 		}
 	}
 }
