@@ -475,7 +475,7 @@ public class VoxelBlocks : MonoBehaviour {
         
         for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
             if (block.meshContexts[i] == null) {
-                Debug.Log("Missing mesh for " + block.blockTypeId + " " + QuarterBlockNames[i]);
+                //Debug.Log("Missing mesh for " + block.blockTypeId + " " + QuarterBlockNames[i]);
             }
         }
     }
