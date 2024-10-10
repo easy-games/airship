@@ -42,6 +42,7 @@ public class VoxelBlocks : MonoBehaviour {
         TileSize4x4x4 = 3,
         Max = 4,
     }
+    static public int[] allTileSizes = new int[] { 1, 2, 3, 4 };
 
     public static Dictionary<int, Vector3> meshTileOffsets = new Dictionary<int, Vector3>()
     {
@@ -229,7 +230,7 @@ public class VoxelBlocks : MonoBehaviour {
 
         public LodSet mesh = null;
 
-        public Dictionary<int, LodSet> meshTiles = new();
+        public LodSet[] meshTiles = new LodSet[4];
 
         public List<int> meshTileProcessingOrder = new();
         
@@ -377,6 +378,43 @@ public class VoxelBlocks : MonoBehaviour {
         loadedBlocks = new();
     }
 
+    private LodSet BuildLodSet(VoxelBlockDefinition.MeshSet meshSet) {
+        LodSet result = new();
+
+        if (meshSet.mesh_LOD0) {
+            result.lod0 = new VoxelMeshCopy(meshSet.mesh_LOD0);
+        }
+        if (meshSet.mesh_LOD1) {
+            result.lod1 = new VoxelMeshCopy(meshSet.mesh_LOD1);
+        }
+        if (meshSet.mesh_LOD2) {
+            result.lod2 = new VoxelMeshCopy(meshSet.mesh_LOD2);
+        }
+
+        return result;
+    }
+
+    private void ParseGreedyTilingMeshBlock(BlockDefinition block) {
+        if (block.definition.contextStyle != ContextStyle.GreedyMeshingTiles) {
+            return;
+        }
+
+        if (block.definition.meshTile1x1x1.mesh_LOD0 == null) {
+            return;
+        }
+        
+        block.meshTiles[(int)TileSizes.TileSize1x1x1] = BuildLodSet(block.definition.meshTile1x1x1);
+        block.meshTiles[(int)TileSizes.TileSize2x2x2] = BuildLodSet(block.definition.meshTile2x2x2);
+        block.meshTiles[(int)TileSizes.TileSize3x3x3] = BuildLodSet(block.definition.meshTile3x3x3);
+        block.meshTiles[(int)TileSizes.TileSize4x4x4] = BuildLodSet(block.definition.meshTile4x4x4);
+
+        for (int i = (int)TileSizes.Max - 1; i > 0; i--) {
+            
+            if (block.meshTiles[i].lod0 != null && i > 0) {
+                block.meshTileProcessingOrder.Add(i);
+            }
+        }
+    }
     private void ParseStaticMeshBlock(BlockDefinition block) {
         if (block.definition.contextStyle != ContextStyle.StaticMesh) {
             return;
@@ -542,6 +580,8 @@ public class VoxelBlocks : MonoBehaviour {
                 ParseQuarterBlock(block);
 
                 ParseStaticMeshBlock(block);
+
+                ParseGreedyTilingMeshBlock(block);
 
                 loadedBlocks.Add(block.blockId, block);
             }

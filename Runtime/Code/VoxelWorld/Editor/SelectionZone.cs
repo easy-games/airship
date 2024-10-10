@@ -304,14 +304,16 @@ public class SelectionZoneEditor : UnityEditor.Editor {
         SelectionZone cube = (SelectionZone)target;
         Vector3Int oldSize = new Vector3Int((int)cube.size.x, (int)cube.size.y, (int)cube.size.z);
         Vector3Int newSize = EditorGUILayout.Vector3IntField("Size", oldSize);
-        
+
+        GUI.enabled = true;
+
         if (newSize != oldSize) {
             cube.size = newSize;
             SnapToGrid();
             cube.BuildCube();
             ResetHandles();
         }
-
+         
         //Draw a reset button
         if (GUILayout.Button("Reset")) {
             handleOffset = new float[6] {

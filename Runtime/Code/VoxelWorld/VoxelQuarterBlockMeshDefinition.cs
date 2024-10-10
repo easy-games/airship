@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-[CreateAssetMenu(fileName = "VoxelQuarterBlockMeshDefinition", menuName = "Airship/VoxelQuarterBlockMeshDefinition")]
+[CreateAssetMenu(fileName = "VoxelQuarterBlockMeshDefinition", menuName = "Airship/VoxelWorld/QuarterBlock/VoxelQuarterBlockMeshDefinition")]
 public class VoxelQuarterBlockMeshDefinition : ScriptableObject {
     public GameObject UA;
     public GameObject UB;

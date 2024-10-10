@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-[CreateAssetMenu(fileName = "VoxelBlockDefinionList", menuName = "Airship/VoxelBlockDefinionList", order = 2)]
+[CreateAssetMenu(fileName = "VoxelBlockDefinionList", menuName = "Airship/VoxelWorld/VoxelBlockDefinionList", order = 2)]
 public class VoxelBlockDefinionList : ScriptableObject {
 
     public string scope = "@Easy/Default";
