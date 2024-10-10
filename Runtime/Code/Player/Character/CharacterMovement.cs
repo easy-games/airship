@@ -94,15 +94,25 @@ namespace Code.Player.Character {
 		private CharacterPhysics physics;
 		private PredictedRigidbody predictedRigid;
 		private NetworkAnimator networkAnimator;
+		private NetworkTransformUnreliable networkTransform;
 #endregion
 
 #region INTERNAL
 		//Calculated on start
 		private bool isServerAuth = false;
+		private bool hasMovementAuth = false;
 
 		//Locally tracked variables
+		private float currentSpeed;
 		private Vector3 lastPos = Vector3.zero;
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
+		private Vector3 trackedPosition = Vector3.zero;
+		private Vector3 impulseVelocity;
+		private float lastServerUpdateTime = 0;
+		private float serverUpdateRefreshDelay = .1f;
+		private float trackedDeltaTime = 0;
+		private float forwardMargin = .05f;
+		private BinaryBlob queuedCustomData = null;
 
 		//Input Controls
 		private bool jumpInput;
@@ -112,54 +122,33 @@ namespace Code.Player.Character {
 #endregion
 
 #region STATE
-		private bool disableInput = false;
-		private bool isFlying = false;
-		private Vector3 impulseVelocity;
-#endregion
-
-		private MoveInputData currentMoveInputData;
-
-
-		// History
-		private bool prevCrouch;
-		private bool prevSprint;
-		private int jumpCount = 0;
-		private bool alreadyJumped = false;
-		private bool prevStepUp;
-		private Vector2 prevMoveVector;
-		private Vector3 prevMoveDir;
-		private Vector3 prevLookVector;
-		private bool prevGrounded;
-		private float timeSinceBecameGrounded;
-		private float timeSinceWasGrounded;
-		private float timeSinceJump;
-		private float lastServerUpdateTime = 0;
-		private float serverUpdateRefreshDelay = .1f;
-		private bool airborneFromImpulse = false;
-		private float currentSpeed;
-		private float trackedDeltaTime = 0;
-		private Vector3 lastGroundedMoveDir = Vector3.zero;
-		private float forwardMargin = .05f;
-
-		private Vector3 trackedPosition = Vector3.zero;
-
 		/// <summary>
 		/// This is replicated to observers.
 		/// </summary>
 		[NonSerialized]
 		public CharacterStateData stateData = new CharacterStateData();
-
-		[NonSerialized] [SyncVar] public Vector3 replicatedLookVector = Vector3.one;
-		public Vector3 lookVector = Vector3.one;
+		private MoveInputData currentMoveInputData;
+		private bool disableInput = false;
+		private bool isFlying = false;
+		private int jumpCount = 0;
+		private bool airborneFromImpulse = false;
+		private bool alreadyJumped = false;//Only lets the character jump once until the jump key is released
+		private Vector3 lastGroundedMoveDir = Vector3.zero;//What direction were we moving on the ground, so we can float that dir in the air
+		private bool prevCrouch;
+		private bool prevStepUp;
+		private bool prevGrounded;
 
 		private CharacterState state = CharacterState.Idle;
 		private CharacterState prevState = CharacterState.Idle;
+		private Vector3 prevMoveDir;//Only used for fireing an event
+		private float timeSinceBecameGrounded;
+		private float timeSinceWasGrounded;
+		private float timeSinceJump;
+#endregion
 
-		private BinaryBlob queuedCustomData = null;
-		
-
-		private bool hasAuth = false;
-		private NetworkTransformUnreliable networkTransform;
+#region SYNC VARS
+		[NonSerialized] [SyncVar] public Vector3 lookVector = Vector3.one;		
+#endregion
 
 #region INIT
 
@@ -180,12 +169,20 @@ namespace Code.Player.Character {
 
 		private void RefreshAuthority(){
 			//Debug.Log("ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
+			if(isServerAuth){
+				//Owning client and server can control
+				hasMovementAuth = netIdentity.connectionToClient == null || isOwned;
+				predictedRigid.syncDirection = SyncDirection.ServerToClient;
+			}else{
+				//Only the owner can control
+				hasMovementAuth = (isServer && netIdentity.connectionToClient == null) || (isClient && isOwned);
 
-			hasAuth = (isServer && netIdentity.connectionToClient == null) || (isClient && isOwned);
-			if(isServerOnly){
-				networkTransform.syncDirection = hasAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
-			}else {
-				networkTransform.syncDirection = hasAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
+				//Have to manualy control the flow of data
+				if(isServerOnly){
+					networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
+				}else {
+					networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
+				}
 			}
 			//print("Refreshed auth: " + hasAuth);
 		}
@@ -246,7 +243,7 @@ private void OnEnable() {
 				}
 			} else {
 				//Tween to rotation
-				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
+				var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
 				if(lookTarget == Vector3.zero){
 					lookTarget = new Vector3(0,0,.01f);
 				}
@@ -317,13 +314,16 @@ private void OnEnable() {
 
 #region MOVE START
 		private void Move(MoveInputData md) {
-			var characterMoveVelocity = Vector3.zero;
 			var currentVelocity = this.GetRigidbody().velocity;
 			var newVelocity = currentVelocity;
 			var isIntersecting = IsIntersectingWithBlock();
 			var deltaTime = Time.fixedDeltaTime;
 			var isImpulsing = impulseVelocity != Vector3.zero;
 			var rootPosition = this.GetRigidbody().transform.position;
+			var normalizedMoveDir = md.moveDir.normalized;
+			var characterMoveVelocity = Vector3.zero;
+			characterMoveVelocity.x = normalizedMoveDir.x;
+			characterMoveVelocity.z = normalizedMoveDir.z;
 
 			//Ground checks
 			var (grounded, groundHit, detectedGround) = physics.CheckIfGrounded(rootPosition, newVelocity * deltaTime, md.moveDir);
@@ -370,7 +370,7 @@ private void OnEnable() {
 				md.moveDir = Vector3.zero;
 				md.crouch = false;
 				md.jump = false;
-				md.lookVector = prevLookVector;
+				md.lookVector = lookVector;
 				md.sprint = false;
 			}
 
@@ -402,7 +402,7 @@ private void OnEnable() {
 				}else{
 					//In the air
 					// coyote jump
-					if (prevMoveVector.y <= 0.02f && timeSinceWasGrounded <= moveData.jumpCoyoteTime && currentVelocity.y <= 0 && timeSinceJump > moveData.jumpCoyoteTime) {
+					if (normalizedMoveDir.y <= 0.02f && timeSinceWasGrounded <= moveData.jumpCoyoteTime && currentVelocity.y <= 0 && timeSinceJump > moveData.jumpCoyoteTime) {
 						canJump = true;
 					}
 					//the first jump requires grounded, so if in the air bump the jumpCount up
@@ -513,12 +513,6 @@ private void OnEnable() {
 				timeSinceWasGrounded = Math.Min(timeSinceWasGrounded + deltaTime, 100f);
 			}
 
-			/*
-	         * md.State has been set. We can use it now.
-	         */
-			var normalizedMoveDir = md.moveDir.normalized;
-			characterMoveVelocity.x = normalizedMoveDir.x;
-			characterMoveVelocity.z = normalizedMoveDir.z;
 	#region CROUCH
 			// Prevent falling off blocks while crouching
 			var isCrouching = groundedState == CharacterState.Crouching;
@@ -873,11 +867,8 @@ private void OnEnable() {
 				OnMoveDirectionChanged?.Invoke(md.moveDir);
 			}
 			prevState = state;
-			prevSprint = md.sprint;
 			prevCrouch = md.crouch;
 			prevMoveDir = md.moveDir;
-			prevLookVector = md.lookVector;
-			prevMoveVector = characterMoveVelocity;
 			prevGrounded = grounded;
 			prevStepUp = didStepUp;
 #endregion
@@ -892,7 +883,7 @@ private void OnEnable() {
 #endregion
 
 		public void Teleport(Vector3 position) {
-			TeleportAndLook(position, isOwned ? lookVector : replicatedLookVector);
+			TeleportAndLook(position, isOwned ? lookVector : lookVector);
 		}
 
 		public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
@@ -900,7 +891,7 @@ private void OnEnable() {
 				print("Teleporting to: " + position);
 			}
 
-			if(hasAuth){
+			if(hasMovementAuth){
 				//Teleport Locally
 				TeleportInternal(position, lookVector);
 			} else {
@@ -917,11 +908,11 @@ private void OnEnable() {
 		private void TeleportInternal(Vector3 pos, Vector3 lookVector){
 			this.GetRigidbody().position = pos;
 			this.lookVector = lookVector;
-			this.replicatedLookVector = lookVector;
+			this.lookVector = lookVector;
 		}
 
 		public void SetVelocity(Vector3 velocity) {
-			if (hasAuth) {
+			if (hasMovementAuth) {
 				SetVelocityInternal(velocity);
 			} else if(isServerOnly){
 				if (netId == 0) return;
@@ -968,10 +959,7 @@ private void OnEnable() {
 		}
 
 		public Vector3 GetLookVector() {
-			if (isOwned) {
-				return this.lookVector;
-			}
-			return this.replicatedLookVector;
+			return this.lookVector;
 		}
 
 		public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace) {
@@ -993,7 +981,7 @@ private void OnEnable() {
 		}
 
 		public void SetImpulse(Vector3 impulse){
-			if (hasAuth) {
+			if (hasMovementAuth) {
 				//Locally
 				SetImpulseInternal(impulse);
 			} else if(isServerOnly){
@@ -1030,7 +1018,7 @@ private void OnEnable() {
 		/// <param name="lookVector"></param>
 		public void SetLookVectorRecurring(Vector3 lookVector){
 			this.lookVector = lookVector;
-			this.replicatedLookVector = lookVector;
+			this.lookVector = lookVector;
 		}
 
 		public void SetCustomData(BinaryBlob customData) {
@@ -1086,23 +1074,23 @@ private void OnEnable() {
 			SetFlying(flying);
 		}
 
-		public void SetFlying(bool flying) {
-			this._flying = flying;
-			if(isClient && hasAuth){
-				CommandSetFlying(flying);
+		public void SetFlying(bool flyModeEnabled) {
+			this.isFlying = flyModeEnabled;
+			if(isClient && hasMovementAuth){
+				CommandSetFlying(flyModeEnabled);
 			}else if(isServerOnly){
-				RpcSetFlying(flying);
+				RpcSetFlying(flyModeEnabled);
 			}
 		}
 
 		[ClientRpc(includeOwner = false)]
 		private void RpcSetFlying(bool flyModeEnabled) {
-			this._flying = flyModeEnabled;
+			this.isFlying = flyModeEnabled;
 		}
 
 		[Command]
 		private void CommandSetFlying(bool flyModeEnabled) {
-			this._flying = flyModeEnabled;
+			this.isFlying = flyModeEnabled;
 		}
 
 		private void TrySetState(CharacterStateData newStateData) {
@@ -1112,9 +1100,9 @@ private void OnEnable() {
 			// If new value in the state
 			if (isNewData) {
 				this.stateData = newStateData;
-				if(isClientOnly && hasAuth){
+				if(isClientOnly && hasMovementAuth){
 					CommandSetStateData(newStateData);
-				} else if (isServerOnly && hasAuth){
+				} else if (isServerOnly && hasMovementAuth){
 					RpcSetStateData(newStateData);
 				}
 			}
@@ -1156,7 +1144,7 @@ private void OnEnable() {
 		
 		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
 		[Command] private void SetServerLookVector(Vector3 value) {
-			this.replicatedLookVector = value;
+			this.lookVector = value;
 		}
 
 		private void TriggerJump(){
