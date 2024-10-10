@@ -470,6 +470,11 @@ namespace VoxelWorldStuff {
                             for (int i = 0; i < 3; i++) {
                                 detailGameObjects[i] = new GameObject();
                                 detailGameObjects[i].transform.parent = obj.transform;
+                         
+                                detailGameObjects[i].transform.localRotation = Quaternion.identity;
+                                detailGameObjects[i].transform.localScale = Vector3.one;
+                                detailGameObjects[i].transform.localPosition = Vector3.zero;
+                                
                                 if (i == 0) {
                                     detailGameObjects[i].name = "DetailMeshNear";
                                 }

@@ -976,11 +976,16 @@ namespace VoxelWorldStuff {
                                             VoxelBlocks.LodSet set = block.meshTiles[index];
 
                                             int flip = 0;
-                                            EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip);
-
-                                            EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip);
-
-                                            EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip);
+                                           
+                                            if (set.lod1 != null) {
+                                                EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip);
+                                                EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip);
+                                                EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip);
+                                            }
+                                            else {
+                                                EmitMesh(block, set.lod0, temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip);
+                                            }
+                                           
                                         }
                                         break;
                                     }
@@ -996,9 +1001,14 @@ namespace VoxelWorldStuff {
                                         VoxelBlocks.LodSet set = block.meshTiles[0];
 
                                         int flip = 0;
-                                        EmitMesh(block, set.lod0, detailMeshData[0], world, origin, rotation, flip);
-                                        EmitMesh(block, set.lod1, detailMeshData[1], world, origin, rotation, flip);
-                                        EmitMesh(block, set.lod2, detailMeshData[2], world, origin, rotation, flip);
+                                        if (set.lod1 != null) {
+                                            EmitMesh(block, set.lod0, detailMeshData[0], world, origin, rotation, flip);
+                                            EmitMesh(block, set.lod1, detailMeshData[1], world, origin, rotation, flip);
+                                            EmitMesh(block, set.lod2, detailMeshData[2], world, origin, rotation, flip);
+                                        } else {
+                                            EmitMesh(block, set.lod0, temporaryMeshData, world, origin, rotation, flip);
+                                        
+                                        }
                                     }
                                     else {
                                         skipCount++;
@@ -1224,6 +1234,11 @@ namespace VoxelWorldStuff {
         }
 
         private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, VoxelWorld world, bool cloneMaterials) {
+
+            if (mesh == null || renderer == null || tempMesh == null) {
+                return;
+            }
+
             Profiler.BeginSample("ConstructMesh");
             mesh.subMeshCount = tempMesh.subMeshes.Count;
             mesh.SetVertices(tempMesh.vertices, 0, tempMesh.verticesCount);
@@ -1258,9 +1273,9 @@ namespace VoxelWorldStuff {
                 matWrite++;
             }
             Profiler.EndSample();
-            Profiler.BeginSample("AssignMaterials");
+           
             renderer.sharedMaterials = mats;
-            Profiler.EndSample();
+           
         }
 
         public void FinalizeMesh(GameObject obj, Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, VoxelWorld world) {
@@ -1274,6 +1289,7 @@ namespace VoxelWorldStuff {
                 if (detailMeshes != null) {
                     for (int i = 0; i < 3; i++) {
                         Profiler.BeginSample("FinalizeMeshDetail");
+                        
                         CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, false);
                         Profiler.EndSample();
                     }
