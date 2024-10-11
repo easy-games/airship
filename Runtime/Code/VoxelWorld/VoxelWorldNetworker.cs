@@ -35,33 +35,15 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         List<Chunk> chunks = new(world.chunks.Count);
         List<Vector3Int> chunkPositions = new(world.chunks.Count);
         var keys = world.chunks.Keys.ToArray();
-        for (int i = 0; i < 900 && i < world.chunks.Count; i++) {
+        // Send whole world
+        for (int i = 0; i < world.chunks.Count; i++) {
             var pos = keys[i];
             var chunk = world.chunks[pos];
             chunks.Add(chunk);
             chunkPositions.Add(pos);
         }
         TargetWriteChunksRpc(connection, chunkPositions.ToArray(), chunks.ToArray());
-
-        TargetSetLightingProperties(
-            connection
-        );
-
-        /*
-        var pointLights = world.GetChildPointLights();
-        List<PointLightDto> pointLightDtos = new(pointLights.Count);
-        foreach (var pointlight in pointLights) {
-            pointLightDtos.Add(PointLightUtility.BuildDto(pointlight));
-        }
-        TargetAddPointLights(connection, pointLightDtos.ToArray());
-
-        print("VoxelWorldNetworker.OnSpawnServer");
         TargetFinishedSendingWorldRpc(connection);
-        */
-        
-        // StartCoroutine(SlowlySendChunks(connection, chunkPositions));
-
-        /* TargetDirtyLights(connection); */
     }
 
     private IEnumerator SlowlySendChunks(NetworkConnection connection, List<Vector3Int> skipChunks) {
@@ -114,36 +96,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     }
 
     [TargetRpc]
-    public void TargetSetLightingProperties(
-        NetworkConnection conn
-    ) {
-
-    }
-
-    /*
-    [ObserversRpc]
-    [TargetRpc]
-    public void TargetAddPointLights(NetworkConnection conn, PointLightDto[] dtos) {
-        foreach (var dto in dtos) {
-            world.AddPointLight(
-                dto.color,
-                dto.position,
-                dto.rotation,
-                dto.intensity,
-                dto.range,
-                dto.castShadows
-            );
-        }
-    }*/
-
-    [TargetRpc]
-    public void TargetDirtyLights(NetworkConnection conn) {
-
-    }
-
-    [TargetRpc]
     public void TargetFinishedSendingWorldRpc(NetworkConnection conn) {
-
         world.renderingDisabled = false;
         Profiler.BeginSample("FinishedSendingWorldRpc.RegenMeshes");
         world.RegenerateAllMeshes();
