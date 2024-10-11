@@ -433,6 +433,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
         
         validPosition = false;
+
+        VoxelWorld world = (VoxelWorld)target;
+        if (world) {
+            world.highlightedBlock = 0;
+        }
     }
 
     private void DoMouseMoveEvent(Vector2 mousePosition, VoxelWorld world) {
@@ -465,7 +470,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (validPosition == false) {
             CleanupHandles();
             return;
-              
         }
 
         if (handle == null) {
@@ -512,6 +516,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
                 wireCube.Update();
             }
+
+            //Track what we mouse over'd
+            world.highlightedBlockPos = lastPos;
+            world.highlightedBlock = world.GetVoxelAt(lastPos);
+            
         }
         
         if (faceHandle) {
@@ -637,6 +646,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
 
             UpdateHandlePosition(world);
+
+                        
+
             //Repaint
             SceneView.RepaintAll();
         }

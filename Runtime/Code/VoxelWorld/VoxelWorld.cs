@@ -73,8 +73,14 @@ public partial class VoxelWorld : MonoBehaviour {
     public float lodTransitionSpeed = 1;
      
     //Texture atlas/block definitions    
-    [HideInInspector] public VoxelBlocks voxelBlocks; 
+    [HideInInspector] public VoxelBlocks voxelBlocks;
     [HideInInspector] public int selectedBlockIndex = 1;
+
+    //For the editor
+    [HideInInspector] public VoxelData highlightedBlock = 0;
+    [HideInInspector] public Vector3Int highlightedBlockPos = new();
+
+
 
     // Mirroring
     public Vector3 mirrorAround = Vector3.zero;
