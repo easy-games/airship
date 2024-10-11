@@ -13,7 +13,7 @@ namespace Code.Player.Character {
 		[Header("References")]
 		public Rigidbody rigidbody;
 		public Transform rootTransform; //The true position transform
-		public Transform networkTransform; //The visual transform controlled by this script
+		public Transform airshipTransform; //The visual transform controlled by this script
 		public Transform graphicTransform; //A transform that games can animate
 		public CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
@@ -163,12 +163,35 @@ namespace Code.Player.Character {
 		private CharacterPhysics physics;
 		private NetworkAnimator _networkAnimator;
 
+		private bool hasAuth = false;
+		private NetworkTransformUnreliable networkTransform;
+
 #region INIT
 
 		private void Awake() {
 			_networkAnimator = transform.GetComponent<NetworkAnimator>();
+			networkTransform = transform.GetComponent<NetworkTransformUnreliable>();
+		}
+		
+		private void Start(){
+			RefreshAuthority();
 		}
 
+		private void OnStopAuthority(){
+			RefreshAuthority();
+		}
+
+		private void RefreshAuthority(){
+			//Debug.Log("ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
+
+			hasAuth = (isServer && netIdentity.connectionToClient == null) || (isClient && isOwned);
+			if(isServerOnly){
+				networkTransform.syncDirection = hasAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
+			}else {
+				networkTransform.syncDirection = hasAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
+			}
+			//print("Refreshed auth: " + hasAuth);
+		}
 private void OnEnable() {
 			this.physics = new CharacterPhysics(this);
 			this.disableInput = false;
@@ -190,7 +213,7 @@ private void OnEnable() {
 					lookTarget = new Vector3(0,0,.01f);
 				}
 				//Instantly rotate for owner
-				networkTransform.rotation = Quaternion.LookRotation(lookTarget);
+				airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
 				//Notify the server of the new rotation periodically
 				if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
 					lastServerUpdateTime = Time.time;
@@ -202,7 +225,7 @@ private void OnEnable() {
 				if(lookTarget == Vector3.zero){
 					lookTarget = new Vector3(0,0,.01f);
 				}
-				networkTransform.rotation = Quaternion.Lerp(
+				airshipTransform.rotation = Quaternion.Lerp(
 					graphicTransform.rotation,
 					Quaternion.LookRotation(lookTarget),
 					observerRotationLerpMod * Time.deltaTime);
@@ -217,7 +240,7 @@ private void OnEnable() {
 #region FIXEDUPDATE
 		private void FixedUpdate() {	
 			// Observers don't calculate moves
-			if (!isOwned){
+			if (!hasAuth){
 				return;
 			}
 
@@ -746,7 +769,7 @@ private void OnEnable() {
 				var oldPos = transform.position;
 				if(pointOnRamp.y > oldPos.y){
 					SnapToY(pointOnRamp.y, true);
-					//networkTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
+					//airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
 				}
 				//print("STEPPED UP. Vel before: " + newVelocity);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
@@ -804,7 +827,7 @@ private void OnEnable() {
 
 			if (didJump){
 				//Fire on the server
-				CommandTriggerJump();
+				TriggerJump();
 				if(isClientOnly){
 					//Fire locally immediately
 					this.animationHelper.TriggerJump();
@@ -864,10 +887,11 @@ private void OnEnable() {
 			if (useExtraLogging) {
 				print("Teleporting to: " + position);
 			}
-			if (this.isClient) {
+
+			if(hasAuth){
 				//Teleport Locally
 				TeleportInternal(position, lookVector);
-			} else {
+			}else if (isServerOnly){
 				//Tell client to teleport
 				RpcTeleport(base.connectionToClient, position, lookVector);
 			}
@@ -885,9 +909,9 @@ private void OnEnable() {
 		}
 
 		public void SetVelocity(Vector3 velocity) {
-			if (isClient) {
+			if (hasAuth) {
 				SetVelocityInternal(velocity);
-			} else {
+			} else if(isServerOnly){
 				if (netId == 0) return;
 			 	RpcSetVelocity(base.connectionToClient, velocity);
 			}
@@ -907,6 +931,7 @@ private void OnEnable() {
 			SetVelocityInternal(velocity);
 		}
 
+#region TS_ACCESS
 		public void DisableMovement() {
 			SetVelocity(Vector3.zero);
 			disableInput = true;
@@ -916,7 +941,6 @@ private void OnEnable() {
 			disableInput = false;
 		}
 
-#region TS_ACCESS
 		public void SetReplicatedState(CharacterStateData oldData, CharacterStateData newData) {
 			animationHelper.SetState(newData);
 			if(oldData.state != newData.state){
@@ -950,10 +974,10 @@ private void OnEnable() {
 		}
 
 		public void SetImpulse(Vector3 impulse){
-			if (this.isClient) {
+			if (hasAuth) {
 				//Locally
 				SetImpulseInternal(impulse);
-			} else {
+			} else if(isServerOnly){
 				//Tell client
 				RpcSetImpulse(base.connectionToClient, impulse);
 			}
@@ -1043,11 +1067,6 @@ private void OnEnable() {
 
 #endregion
 
-		[Command]
-		private void RpcSetFlying(bool flyModeEnabled) {
-			this._flying = flyModeEnabled;
-		}
-
 		public void SetDebugFlying(bool flying){
 			if (!this.moveData.allowDebugFlying) {
 				// Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
@@ -1058,7 +1077,21 @@ private void OnEnable() {
 
 		public void SetFlying(bool flying) {
 			this._flying = flying;
-			RpcSetFlying(flying);
+			if(isClient && hasAuth){
+				CommandSetFlying(flying);
+			}else if(isServerOnly){
+				RpcSetFlying(flying);
+			}
+		}
+
+		[ClientRpc(includeOwner = false)]
+		private void RpcSetFlying(bool flyModeEnabled) {
+			this._flying = flyModeEnabled;
+		}
+
+		[Command]
+		private void CommandSetFlying(bool flyModeEnabled) {
+			this._flying = flyModeEnabled;
 		}
 
 		private void TrySetState(CharacterStateData newStateData) {
@@ -1068,7 +1101,11 @@ private void OnEnable() {
 			// If new value in the state
 			if (isNewData) {
 				this.stateData = newStateData;
-				CommandSetStateData(newStateData);
+				if(isClientOnly){
+					CommandSetStateData(newStateData);
+				} else if (isServerOnly){
+					RpcSetStateData(newStateData);
+				}
 			}
 
 			// If the character state is different
@@ -1109,6 +1146,17 @@ private void OnEnable() {
 		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
 		[Command] private void SetServerLookVector(Vector3 value) {
 			this.replicatedLookVector = value;
+		}
+
+		private void TriggerJump(){
+			if(isClientOnly){
+				CommandTriggerJump();
+			}else if (isServer){
+				if (playAnimationOnServer) animationHelper.TriggerJump();
+				if(isServerOnly){
+					RpcTriggerJump();
+				}
+			}
 		}
 
 		[Command]

@@ -732,11 +732,6 @@ public partial class VoxelWorld : MonoBehaviour {
         //load the text of textAsset
         file.LoadIntoVoxelWorld(this);
 
-        //Turns grass bushes on
-        if (debugGrass == true) {
-            PlaceGrassOnTopOfGrass();
-        }
-
         RegenerateAllMeshes();
          
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
@@ -786,51 +781,6 @@ public partial class VoxelWorld : MonoBehaviour {
             this.domainReloadSaveFile.CreateFromVoxelWorld(this);
         }
 #endif        
-    }
-
-    public void PlaceGrassOnTopOfGrass() {
-        
-        if (voxelBlocks == null) {
-            return;
-        }
-        //Copy the list of chunks
-        List<Chunk> chunksCopy = new List<Chunk>(chunks.Values);
-
-        BlockId grass = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:GRASS");
-        BlockId grassTop = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:FLUFFY_GRASS");
-
-        foreach (var chunk in chunksCopy) {
-            //get voxels
-            VoxelData[] readOnlyVoxel = chunk.readWriteVoxel;
-
-            //scan through all voxels, if its grass, spawn a grass tile
-            for (int x = 0; x < VoxelWorld.chunkSize; x++) {
-                for (int y = 0; y < VoxelWorld.chunkSize; y++) {
-                    for (int z = 0; z < VoxelWorld.chunkSize; z++) {
-
-                        int voxelKey = x + y * chunkSize + z * chunkSize * chunkSize;
-                        VoxelData vox = readOnlyVoxel[voxelKey];
-
-                        BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
-
-                        if (blockIndex == grass) //grass
-                        {
-                            //grab the one above, if its air
-                            VoxelData air = ReadVoxelAt(new Vector3Int(x, y + 1, z) + chunk.bottomLeftInt);
-                            BlockId blockIndex2 = VoxelWorld.VoxelDataToBlockId(air);
-
-                            if (blockIndex2 == 0) //air
-                            {
-                                //spawn a grass tile
-                                WriteVoxelAt(new Vector3Int(x, y + 1, z) + chunk.bottomLeftInt, grassTop, false); //grasstop
-                            }
-                        }
-
-
-                    }
-                }
-            }
-        }
     }
 
     /**
