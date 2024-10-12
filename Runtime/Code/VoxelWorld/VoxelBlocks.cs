@@ -235,7 +235,8 @@ public class VoxelBlocks : MonoBehaviour {
         public List<int> meshTileProcessingOrder = new();
 
         public List<VoxelMeshCopy[]> meshContexts = new();
-        
+        public int[] meshContextsRandomTable = new int[0];
+
         public Texture2D editorTexture; //Null in release
 
         public Rect topUvs;
@@ -450,10 +451,42 @@ public class VoxelBlocks : MonoBehaviour {
         if (block.definition.contextStyle != ContextStyle.QuarterBlocks) {
             return;
         }
+        
         foreach (var quarter in block.definition.quarterBlockMeshes) {
             ParseQuarterBlockItem(block, quarter);
         }
+        int resolution = 100;
+        int probabilityCount = block.definition.quarterBlockMeshes.Length * resolution;
+        block.meshContextsRandomTable = new int[probabilityCount];
+
+        //Horrible, but very fast to access later
+        int index = 0;
+        for (int i = 0; i < block.definition.quarterBlockMeshes.Length; i++) {
+            for (int j = 0; j < block.definition.quarterBlockMeshes[i].probablity * resolution; j++) {
+                block.meshContextsRandomTable[index] = i;
+                index++;
+            }
+        }
     }
+    public static VoxelMeshCopy[] GetRandomMeshContext(BlockDefinition block) {
+        int randomIndex = UnityEngine.Random.Range(0, block.meshContextsRandomTable.Length);
+        int meshIndex = block.meshContextsRandomTable[randomIndex];
+        return block.meshContexts[meshIndex];
+    }
+    public static VoxelMeshCopy[] GetRandomMeshContext(BlockDefinition block, Vector3 origin, int offset) {
+
+        // Use a more varied hash function
+        int hash = (int)(((int)origin.x * 73856093) ^ ((int)origin.y * 19349663) ^ ((int)origin.z * 83492791) ^ (offset * 1548585));
+        
+        // Ensure the result is within the range of the random table length
+        int randomIndex = Mathf.Abs(hash) % block.meshContextsRandomTable.Length;
+ 
+        int meshIndex = block.meshContextsRandomTable[randomIndex];
+        return block.meshContexts[meshIndex];
+    }
+
+
+
     private void ParseQuarterBlockItem(BlockDefinition block, VoxelQuarterBlockMeshDefinition source) {
 
         if (source == null || block.definition.contextStyle != ContextStyle.QuarterBlocks) {
@@ -521,9 +554,6 @@ public class VoxelBlocks : MonoBehaviour {
 
             meshList[i] = meshToAdd;
         }
-
-        
-        
     }
     public void Load(bool loadTexturesDirectlyFromDisk = false) {
 
