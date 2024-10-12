@@ -23,6 +23,13 @@ public class AccessoryBuilder : MonoBehaviour
 
     private Dictionary<AccessorySlot, ActiveAccessory> _activeAccessories = new Dictionary<AccessorySlot, ActiveAccessory>();
 
+    //EVENTS
+    /// <summary>
+    /// Called whenever the accessory builder combines the mesh
+    /// </summary>
+    /// used mesh combiner: bool, combined skin mesh: SkinnedMeshRenderer, combined rigid mesh: MeshRenderer
+    public event Action<object, object, object> OnMeshCombined;
+
     private void Awake() {
         if (!rig)
             Debug.LogError(
@@ -47,7 +54,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     private void OnEnable() {
         //print("AccessoryBuilder OnEnable: " + this.gameObject.name);
-        meshCombiner.OnCombineComplete += OnCombineComplete;
+        meshCombiner.OnCombineComplete += OnMeshCombineCompleted;
 
         // update list of accessories
         var accessoryComponents = rig.transform.GetComponentsInChildren<AccessoryComponent>();
@@ -91,7 +98,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     private void OnDisable() {
         //print("AccessoryBuilder OnDisable: " + this.gameObject.name);
-        meshCombiner.OnCombineComplete -= OnCombineComplete;
+        meshCombiner.OnCombineComplete -= OnMeshCombineCompleted;
     }
 
     /// <summary>
@@ -433,12 +440,11 @@ public class AccessoryBuilder : MonoBehaviour
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
             meshCombiner.LoadMeshCopies();
             meshCombiner.CombineMeshes();
-            OnCombineComplete();
         } else {
             //MAP ITEMS TO RIG
             // print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();
-            OnCombineComplete();
+            OnCombineComplete(false);
         }
     }
 
@@ -496,8 +502,14 @@ public class AccessoryBuilder : MonoBehaviour
         return meshCombiner.combinedStaticMeshRenderer;
     }
 
-    private void OnCombineComplete() {
+    //Event from MeshCombine component
+    private void OnMeshCombineCompleted(){
+        OnCombineComplete(true);
+    }
+
+    private void OnCombineComplete(bool usedMeshCombiner) {
         //Mesh Combine Complete
+        OnMeshCombined?.Invoke(usedMeshCombiner, meshCombiner.combinedSkinnedMeshRenderer, meshCombiner.combinedStaticMeshRenderer);
     }
 
     public Renderer[] GetAllAccessoryMeshes() {
@@ -537,5 +549,11 @@ public class AccessoryBuilder : MonoBehaviour
         }
 
         return results.ToArray();
+    }
+
+    public void SetCreateOverlayMeshOnCombine(bool on){
+        if(this.meshCombiner){
+            this.meshCombiner.createOverlayMesh = on;
+        }
     }
 }
