@@ -451,7 +451,10 @@ public class VoxelBlocks : MonoBehaviour {
         if (block.definition.contextStyle != ContextStyle.QuarterBlocks) {
             return;
         }
-        
+
+        if (block.definition.quarterBlockMeshes == null) {
+            throw new Exception($"[VoxelWorld] {block.blockTypeId} is a QuarterBlock but doesn't have any QuarterBlockMeshes.");
+        }
         foreach (var quarter in block.definition.quarterBlockMeshes) {
             ParseQuarterBlockItem(block, quarter);
         }
