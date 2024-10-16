@@ -38,6 +38,33 @@ public class WorldSaveFile : ScriptableObject {
         }
     }
 
+    private void CreateScopedBlockDictionaryFromVoxelWorldTight(VoxelWorld world) {
+
+        HashSet<int> UsedIds = new();
+        foreach (var chunk in chunks) {
+            var data = chunk.data;
+            for (int j = 0; j < data.Length; j++) {
+                UsedIds.Add(VoxelWorld.VoxelDataToBlockId(data[j]));
+            }
+        }
+
+        blockIdToScopeName.Clear();
+        var blockMap = world.voxelBlocks.loadedBlocks;
+        foreach (var block in blockMap) {
+
+            if (UsedIds.Contains(block.Value.blockId)==true) {
+
+                blockIdToScopeName.Add(new BlockIdToScopedName() {
+                    id = block.Key,
+                    name = block.Value.blockTypeId,
+                });
+            }
+        }
+    }
+
+
+
+
     public BlockId GetFileBlockIdFromStringId(string blockTypeId) {
         foreach (var pair in this.blockIdToScopeName) {
             if (pair.name == blockTypeId) {
@@ -51,7 +78,7 @@ public class WorldSaveFile : ScriptableObject {
     public void CreateFromVoxelWorld(VoxelWorld world) {
 
         // Add used blocks + their ids to file
-        this.CreateScopedBlockDictionaryFromVoxelWorld(world);
+        this.CreateScopedBlockDictionaryFromVoxelWorldTight(world);
 
         var chunks = world.chunks;
         int counter = 0;
