@@ -108,18 +108,18 @@ public partial class VoxelWorld : MonoBehaviour {
     //Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static BlockId VoxelDataToBlockId(int block) {
-        return (byte)(block & 0xFFF);    //Lower 12 bits
+        return (ushort)(block & 0xFFF);    //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static BlockId VoxelDataToBlockId(VoxelData block) {
-        return (byte)(block & 0xFFF);    //Lower 12 bits
+        return (ushort)(block & 0xFFF);    //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort VoxelDataToExtraBits(VoxelData block) {
         //mask off everything except the upper 4 bits
-        return (byte)(block & 0xF000);
+        return (ushort)(block & 0xF000);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

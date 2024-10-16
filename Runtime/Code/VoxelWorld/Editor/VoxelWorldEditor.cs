@@ -622,8 +622,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     Vector3Int voxelPos = lastNormalPos;
                     ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
                     ushort newValue = (ushort)world.selectedBlockIndex;
-
-                 
+                                     
                     VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
                     var def = world.voxelBlocks.GetBlock(newValue);
@@ -673,6 +672,30 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             if (Event.current.keyCode == KeyCode.LeftShift) {
                 leftShiftDown = false;
             }
+            if (Event.current.keyCode == KeyCode.A) {
+                //Cycle the bits on the selected block
+                if (world.selectedBlockIndex > 0) {
+                    
+                    ushort oldValue = world.GetVoxelAt(lastPos); // Assuming you have a method to get the voxel value
+                    ushort newValue = oldValue;
+
+                    int flipBits = VoxelWorld.GetVoxelFlippedBits(oldValue);
+                    flipBits += 1;
+                    flipBits %= 8;
+                    newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, flipBits);
+
+                    VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
+
+                    var def = world.voxelBlocks.GetBlock(newValue);
+
+                    //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
+                    voxelEditManager.AddEdit(world, lastPos, oldValue, newValue, "Flip Voxel " + def.definition.name);
+                }
+
+                
+            }
+
+
             //Refresh the view
             UpdateHandlePosition(world);
             //Repaint

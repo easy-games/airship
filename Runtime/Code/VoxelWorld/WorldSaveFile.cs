@@ -176,7 +176,7 @@ public class WorldSaveFile : ScriptableObject {
             for (int i = 0; i < data.Length; i++) {
                 BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
                 ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
-
+               
                 BlockId updatedBlockId = blockRemapping[fileBlockId];
                 writeChunk.readWriteVoxel[i] = ((ushort)(updatedBlockId | extraBits));
 
