@@ -176,9 +176,15 @@ public class WorldSaveFile : ScriptableObject {
             for (int i = 0; i < data.Length; i++) {
                 BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
                 ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
-               
-                BlockId updatedBlockId = blockRemapping[fileBlockId];
-                writeChunk.readWriteVoxel[i] = ((ushort)(updatedBlockId | extraBits));
+
+
+                bool found= blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
+                if (found) {               
+                    writeChunk.readWriteVoxel[i] = ((ushort)(updatedBlockId | extraBits));
+                }
+                else {
+                    Debug.LogWarning($"Warning: Block {fileBlockId} not found in world block definitions - Replacing with air.");
+                }
 
             }
             world.chunks[key] = writeChunk;
