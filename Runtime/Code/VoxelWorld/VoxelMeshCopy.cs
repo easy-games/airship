@@ -48,31 +48,87 @@ namespace Assets.Airship.VoxelRenderer {
                 }
                 int parity = 0;
 
-                //check for bit 0
-                if ((bits & 1<<0)> 0) {
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i].x = -this.vertices[i].x;
-                        this.normals[i].x = -this.normals[i].x;
+                //FlipBits
 
-                    }
-                    parity++;
-                }
-                //check for bit 1
-                if ((bits & 1<<1) > 0) {
+                //0 No rotation
+                //1 rot left 
+                //2 rot right
+                //3 rot 180
+                //4 flip y 
+                //5 flip y, rot left
+                //6 flip y, rot right
+                //7 flip y, rot 180
+                
+
+                //check for 1
+                if (bits == 1) {
+
+                    //Rot left 90
                     for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i].y = -this.vertices[i].y;
-                        this.normals[i].y = -this.normals[i].y;
+                        this.vertices[i] = new Vector3(srcVertices[i].z, srcVertices[i].y, -srcVertices[i].x);
+                        this.normals[i] = new Vector3(srcNormals[i].z, srcNormals[i].y, -srcNormals[i].x);
                     }
-                    parity++;
+                    
                 }
-                //check for bit 2
-                if ((bits & 1<<2) > 0) {
+                //check for 2
+                if (bits == 2) {
+                    //Rot 180
                     for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i].z = -this.vertices[i].z;
-                        this.normals[i].z = -this.normals[i].z;
+                        this.vertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, -srcVertices[i].z);
+                        this.normals[i] = new Vector3(-srcNormals[i].x, srcNormals[i].y, -srcNormals[i].z);
+                    }
+                }
+                //check for 3
+                if (bits == 3) {
+                    //Rot right 270
+                    for (int i = 0; i < srcVertices.Length; i++) {
+                        this.vertices[i] = new Vector3(-srcVertices[i].z, srcVertices[i].y, srcVertices[i].x);
+                        this.normals[i] = new Vector3(-srcNormals[i].z, srcNormals[i].y, srcNormals[i].x);
+                    }
+
+                }
+
+                //Do the vertical flipped ones
+                //check for 4
+                if (bits == 4) {
+                    //Flip y
+                    for (int i = 0; i < srcVertices.Length; i++) {
+                        this.vertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y, srcVertices[i].z);
+                        this.normals[i] = new Vector3(srcNormals[i].x, -srcNormals[i].y, srcNormals[i].z);
                     }
                     parity++;
                 }
+                //check for 5
+                if (bits == 5) {
+                    //Flip y, rot left 90
+                    for (int i = 0; i < srcVertices.Length; i++) {
+                        this.vertices[i] = new Vector3(srcVertices[i].z, -srcVertices[i].y, -srcVertices[i].x);
+                        this.normals[i] = new Vector3(srcNormals[i].z, -srcNormals[i].y, -srcNormals[i].x);
+                    }
+                    parity++;
+                }
+                //check for 6
+                if (bits == 6) {
+
+                    //Flip y, rot 180
+                    for (int i = 0; i < srcVertices.Length; i++) {
+                        this.vertices[i] = new Vector3(-srcVertices[i].x, -srcVertices[i].y, -srcVertices[i].z);
+                        this.normals[i] = new Vector3(-srcNormals[i].x, -srcNormals[i].y, -srcNormals[i].z);
+                    }
+                    parity++;
+                }
+                //check for 7
+                if (bits == 7) {
+                    //Flip y, rot right 90
+                    for (int i = 0; i < srcVertices.Length; i++) {
+                        this.vertices[i] = new Vector3(-srcVertices[i].z, -srcVertices[i].y, srcVertices[i].x);
+                        this.normals[i] = new Vector3(-srcNormals[i].z, -srcNormals[i].y, srcNormals[i].x);
+                    }
+                    parity++;
+                }
+
+
+
                 //Check for parity, if so we have to flip the winding orders
                 if (parity % 2 > 0) {
                     //flip faces
