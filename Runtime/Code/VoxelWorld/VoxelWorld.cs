@@ -812,8 +812,9 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public VoxelWorld() {
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 #endif
 
     } 
@@ -1113,5 +1114,15 @@ public partial class VoxelWorld : MonoBehaviour {
         SaveToDomainReloadFile();
     } 
 
-    
+    private void OnPlayModeStateChanged(PlayModeStateChange state) {
+#if UNITY_EDITOR
+        if (state == PlayModeStateChange.EnteredPlayMode) {
+            SaveToFile();
+        }
+
+#endif        
+    }
+
+
+
 }
