@@ -82,6 +82,10 @@ public class VoxelQuarterBlockMeshDefinitionEditor : Editor {
             EditorUtility.SetDirty(myScript);
             AssetDatabase.SaveAssets();
         }
+
+        if (GUI.changed) {
+            EditorUtility.SetDirty(myScript);
+        }
     }
 
 }

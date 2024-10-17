@@ -409,8 +409,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         if (GUI.changed) {
-
-
+           
+            EditorUtility.SetDirty(world);
             // Trigger a repaint
             world.FullWorldUpdate();
         }
@@ -626,8 +626,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
                     var def = world.voxelBlocks.GetBlock(newValue);
-
-                    //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
+ 
                     voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue, "Add Voxel " + def.definition.name);
 
                     if (leftControlDown == false) {
@@ -642,11 +641,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     }
                 }
             }
-
-
             UpdateHandlePosition(world);
-
-                        
 
             //Repaint
             SceneView.RepaintAll();
@@ -691,8 +686,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
                     voxelEditManager.AddEdit(world, lastPos, oldValue, newValue, "Flip Voxel " + def.definition.name);
                 }
-
-                
             }
 
 
@@ -780,9 +773,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             ToolManager.SetActiveTool<VoxelWorldEditorToolBase>();
             
         }
-     
-        
-       
     }
 }
 
