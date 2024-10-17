@@ -42,7 +42,7 @@ public partial class VoxelWorld : MonoBehaviour {
     
     [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
 
-    [SerializeField][HideInInspector] private WorldSaveFile domainReloadSaveFile = null;
+    //[SerializeField][HideInInspector] private WorldSaveFile domainReloadSaveFile = null;
     
     [SerializeField][HideInInspector] public VoxelWorldNetworker worldNetworker;
 
@@ -101,7 +101,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideInInspector] public bool renderingDisabled = false;
 
-    [HideInInspector] private bool debugGrass = false;
+    //[HideInInspector] private bool debugGrass = false;
 
     [SerializeField] public bool hasUnsavedChanges = false;
 
@@ -777,11 +777,13 @@ public partial class VoxelWorld : MonoBehaviour {
 
         if (chunks.Count > 0) {
             //Create a temporary asset for saving
-            this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+            /*this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
             this.domainReloadSaveFile.CreateFromVoxelWorld(this);
+            Debug.Log("Temporarily saving Voxel World");*/
+            SaveToFile();
         }
 #endif        
-    }
+    } 
 
     /**
      * Used in TS on the client.
@@ -819,13 +821,13 @@ public partial class VoxelWorld : MonoBehaviour {
     private void OnEnable() {
 
 #if UNITY_EDITOR
-        if (this.domainReloadSaveFile != null) {
+       /* if (this.domainReloadSaveFile != null) {
             Debug.Log("Reloading " + name + " after doman reload");
             this.LoadWorldFromSaveFile(this.domainReloadSaveFile);
             this.domainReloadSaveFile = null;
             this.hasUnsavedChanges = true;
-            return;
-        }
+            return; 
+        }*/
           
 #endif
 
