@@ -409,8 +409,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         if (GUI.changed) {
-
-
+           
+            EditorUtility.SetDirty(world);
             // Trigger a repaint
             world.FullWorldUpdate();
         }
@@ -433,6 +433,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
         
         validPosition = false;
+
+        VoxelWorld world = (VoxelWorld)target;
+        if (world) {
+            world.highlightedBlock = 0;
+        }
     }
 
     private void DoMouseMoveEvent(Vector2 mousePosition, VoxelWorld world) {
@@ -465,7 +470,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (validPosition == false) {
             CleanupHandles();
             return;
-              
         }
 
         if (handle == null) {
@@ -512,6 +516,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
                 wireCube.Update();
             }
+
+            //Track what we mouse over'd
+            world.highlightedBlockPos = lastPos;
+            world.highlightedBlock = world.GetVoxelAt(lastPos);
+            
         }
         
         if (faceHandle) {
@@ -613,13 +622,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     Vector3Int voxelPos = lastNormalPos;
                     ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
                     ushort newValue = (ushort)world.selectedBlockIndex;
-
-                 
+                                     
                     VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
                     var def = world.voxelBlocks.GetBlock(newValue);
-
-                    //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
+ 
                     voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue, "Add Voxel " + def.definition.name);
 
                     if (leftControlDown == false) {
@@ -634,9 +641,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     }
                 }
             }
-
-
             UpdateHandlePosition(world);
+
             //Repaint
             SceneView.RepaintAll();
         }
@@ -661,6 +667,28 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             if (Event.current.keyCode == KeyCode.LeftShift) {
                 leftShiftDown = false;
             }
+            if (Event.current.keyCode == KeyCode.A) {
+                //Cycle the bits on the selected block
+                if (world.selectedBlockIndex > 0) {
+                    
+                    ushort oldValue = world.GetVoxelAt(lastPos); // Assuming you have a method to get the voxel value
+                    ushort newValue = oldValue;
+
+                    int flipBits = VoxelWorld.GetVoxelFlippedBits(oldValue);
+                    flipBits += 1;
+                    flipBits %= 8;
+                    newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, flipBits);
+
+                    VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
+
+                    var def = world.voxelBlocks.GetBlock(newValue);
+
+                    //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
+                    voxelEditManager.AddEdit(world, lastPos, oldValue, newValue, "Flip Voxel " + def.definition.name);
+                }
+            }
+
+
             //Refresh the view
             UpdateHandlePosition(world);
             //Repaint
@@ -745,9 +773,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             ToolManager.SetActiveTool<VoxelWorldEditorToolBase>();
             
         }
-     
-        
-       
     }
 }
 

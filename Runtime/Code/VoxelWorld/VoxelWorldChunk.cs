@@ -457,8 +457,8 @@ namespace VoxelWorldStuff {
                         renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
 
                         //See if this mesh has detail meshes
-                        if (meshProcessor.GetHasDetailMeshes() == true) {
-                            
+                        if (meshProcessor.GetHasDetailMeshes() == true) { //@@ This code has bugs when you delete all the meshes
+
                             if (detailGameObjects == null) {
                                 detailGameObjects = new GameObject[3];
 
@@ -470,11 +470,11 @@ namespace VoxelWorldStuff {
                             for (int i = 0; i < 3; i++) {
                                 detailGameObjects[i] = new GameObject();
                                 detailGameObjects[i].transform.parent = obj.transform;
-                         
+
                                 detailGameObjects[i].transform.localRotation = Quaternion.identity;
                                 detailGameObjects[i].transform.localScale = Vector3.one;
                                 detailGameObjects[i].transform.localPosition = Vector3.zero;
-                                
+
                                 if (i == 0) {
                                     detailGameObjects[i].name = "DetailMeshNear";
                                 }
@@ -484,7 +484,7 @@ namespace VoxelWorldStuff {
                                 if (i == 2) {
                                     detailGameObjects[i].name = "DetailMeshVeryFar";
                                 }
-                                
+
                                 detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
                                 detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
 
@@ -492,22 +492,33 @@ namespace VoxelWorldStuff {
                                 detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                                 detailFilters[i].mesh = detailMeshes[i];
+
+
+                                LODGroup lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
+
+                                // Enable crossfade
+                                lodSystem.fadeMode = LODFadeMode.CrossFade;
+                                lodSystem.animateCrossFading = true;
+
+                                // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
+                                LOD[] lods = new LOD[3] {
+                                    new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                    new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
+                                    new LOD(0.0f, new Renderer[] { detailRenderers[2] })
+                                };
+
+                                lodSystem.SetLODs(lods);
                             }
-
-                            LODGroup lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
-
-                            // Enable crossfade
-                            lodSystem.fadeMode = LODFadeMode.CrossFade;
-                            lodSystem.animateCrossFading = true;
-
-                            // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
-                            LOD[] lods = new LOD[3] {
-                                new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
-                                new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
-                                new LOD(0.0f, new Renderer[] { detailRenderers[2] })  
-                            };
-                       
-                            lodSystem.SetLODs(lods);
+                        }
+                        else {
+                            if (detailGameObjects != null) {
+                                for (int i = 0; i < 3; i++) {
+                                    if (detailGameObjects[i] != null) {
+                                        GameObject.DestroyImmediate(detailGameObjects[i]);
+                                        detailGameObjects[i] = null;
+                                    }
+                                }
+                            }
                         }
                     }
                     

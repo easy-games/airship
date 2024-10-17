@@ -89,7 +89,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(RenderSettings),
             typeof(ServerBootstrap),
             typeof(SceneManager),
-            typeof(AccessoryBuilder),
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
             typeof(GizmoUtils),

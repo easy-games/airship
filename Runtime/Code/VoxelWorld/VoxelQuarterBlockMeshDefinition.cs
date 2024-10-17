@@ -35,6 +35,9 @@ public class VoxelQuarterBlockMeshDefinition : ScriptableObject {
     public GameObject DM;
     public GameObject DN;
 
+    [HideInInspector]
+    public float probablity = 1;
+
     //Accessor to get them by enum
     public GameObject GetQuarterBlockMesh(string blockName) {
         //use GetField
@@ -49,8 +52,14 @@ public class VoxelQuarterBlockMeshDefinition : ScriptableObject {
 public class VoxelQuarterBlockMeshDefinitionEditor : Editor {
     public override void OnInspectorGUI() {
         DrawDefaultInspector();
+
+        //Draw a slider for probability
         VoxelQuarterBlockMeshDefinition myScript = (VoxelQuarterBlockMeshDefinition)target;
-        if (GUILayout.Button("Load")) {
+
+        myScript.probablity = EditorGUILayout.Slider("Probability %", myScript.probablity * 100.0f, 0, 100) / 100.0f;
+                
+        
+        if (GUILayout.Button("Load")) { 
             //Get the path of this asset
             string path = AssetDatabase.GetAssetPath(myScript);
             //Get the path of the folder containing this asset
@@ -69,6 +78,13 @@ public class VoxelQuarterBlockMeshDefinitionEditor : Editor {
                     }
                 }
             }
+
+            EditorUtility.SetDirty(myScript);
+            AssetDatabase.SaveAssets();
+        }
+
+        if (GUI.changed) {
+            EditorUtility.SetDirty(myScript);
         }
     }
 

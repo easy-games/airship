@@ -565,6 +565,7 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             //Debug.Log("Has changed");
             SnapToGrid();
             cube.transform.hasChanged = false;
+            EditorUtility.SetDirty(target);
         }
         
 

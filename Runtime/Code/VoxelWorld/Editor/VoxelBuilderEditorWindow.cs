@@ -109,8 +109,6 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             ShowSelectionGui();
             
-            
-            
             VoxelWorld world = GetVoxelWorld();
             SelectionZone selection = null;
             if (world == null || world.voxelBlocks == null) {
@@ -118,7 +116,6 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 return; 
             }
             
-
             //See if we're in the selection mode
             if (VoxelWorldSelectionToolBase.buttonActive == true) {
                 //Find or create the SelectionZone for this voxelWorld
@@ -160,6 +157,61 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             //gap
             EditorGUILayout.Space();
 
+            //Row of three tiny buttons, X Y Z
+            ushort blockData = world.highlightedBlock;
+            
+            if (blockData > 0) {
+                GUILayout.Label("Block flipping");
+
+                int flipBits = VoxelWorld.GetVoxelFlippedBits(blockData);
+                
+                if (Event.current.keyCode == KeyCode.LeftAlt) {
+                    flipBits = (flipBits + 1) % 3;
+                }
+                ushort newData = (ushort)VoxelWorld.SetVoxelFlippedBits(blockData, flipBits);
+                if (newData != blockData) {
+                    world.WriteVoxelAt(world.highlightedBlockPos, newData, true);
+                }
+                
+
+                Color def = GUI.backgroundColor;
+
+                GUILayout.BeginHorizontal();
+                if ((flipBits & 1 << 0) > 0) {
+                    GUI.backgroundColor = Color.green;
+                }
+                else {
+                    GUI.backgroundColor = def;
+                }
+
+                if (GUILayout.Button("X", GUILayout.Width(20))) {
+                 
+                }
+
+                if ((flipBits & 1 << 0) > 0) {
+                    GUI.backgroundColor = Color.green;
+                }
+                else {
+                    GUI.backgroundColor = def;
+                }
+                if (GUILayout.Button("Y", GUILayout.Width(20))) {
+
+                }
+
+                if ((flipBits & 1 << 0) > 0) {
+                    GUI.backgroundColor = Color.green;
+                }
+                else {
+                    GUI.backgroundColor = def;
+                }
+                if (GUILayout.Button("Z", GUILayout.Width(20))) {
+
+                }
+
+                GUI.backgroundColor = def;
+                GUILayout.EndHorizontal();
+            }
+            
             GUILayout.Label("Blocks", EditorStyles.boldLabel);
 
             scrollPos = GUILayout.BeginScrollView(scrollPos);

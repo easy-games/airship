@@ -30,6 +30,8 @@ namespace Airship {
         
         [SerializeField]
         public bool executeOnLoad = false;
+        [SerializeField]
+        public bool createOverlayMesh = false;
 
         [SerializeField]
         public List<Transform> hiddenSurfaces = new();
@@ -361,19 +363,29 @@ namespace Airship {
             GameObject meshCombinerGameObjectStatic = null;
             GameObject meshCombinerGameObjectSkinned = null;
 
+            var foundSkinned = false;
+            var foundStatic = false;
+            //Check to see if we already have the combined mesh holders
             foreach (Transform child in transform) {
                 if (child.name == MeshCombineSkinnedName) {
                     meshCombinerGameObjectSkinned = child.gameObject;
-                    break;
+                    foundSkinned = true;
+                    if(foundStatic){
+                        break;
+                    }
+                    continue;
                 }
-            }
-            foreach (Transform child in transform) {
                 if (child.name == MeshCombineStaticName) {
                     meshCombinerGameObjectStatic = child.gameObject;
-                    break;
+                    foundStatic = true;
+                    if(foundSkinned){
+                        break;
+                    }
+                    continue;
                 }
             }
 
+            //If they don't exist, create the combined mesh holders
             if (meshCombinerGameObjectSkinned == null) {
                 meshCombinerGameObjectSkinned = new GameObject(MeshCombineSkinnedName);
                 meshCombinerGameObjectSkinned.transform.parent = transform;
@@ -426,6 +438,13 @@ namespace Airship {
                     mesh.SetTriangles(finalStaticMesh.subMeshes[i].triangles, i);
                 }
 
+                //Create an extra sub mesh for rendering a full body material
+                if(createOverlayMesh){
+                    var subMeshCount = mesh.subMeshCount;
+                    mesh.subMeshCount = subMeshCount +1;
+                    mesh.SetTriangles(mesh.triangles, subMeshCount);
+                }
+
                 //Copy the materials to the renderer
                 Material[] finalMaterials = new Material[finalStaticMesh.subMeshes.Count];
                 for (int i = 0; i < finalStaticMesh.subMeshes.Count; i++) {
@@ -468,6 +487,13 @@ namespace Airship {
                 mesh.subMeshCount = finalSkinnedMesh.subMeshes.Count;
                 for (int i = 0; i < finalSkinnedMesh.subMeshes.Count; i++) {
                     mesh.SetTriangles(finalSkinnedMesh.subMeshes[i].triangles, i);
+                }
+
+                //Create an extra sub mesh for rendering a full body material
+                if(createOverlayMesh){
+                    var subMeshCount = mesh.subMeshCount;
+                    mesh.subMeshCount = subMeshCount +1;
+                    mesh.SetTriangles(mesh.triangles, subMeshCount);
                 }
 
                 //Copy the materials to the renderer
@@ -557,6 +583,7 @@ namespace Airship {
                 }
             }
 
+            //Disable renderers we combined
             foreach (MeshCopyReference reference in readOnlySourceReferences) {
                 if (reference.transform) {
                     MeshRenderer meshRenderer = reference.transform.gameObject.GetComponent<MeshRenderer>();
@@ -698,6 +725,7 @@ namespace Airship {
             //Add rootBone picker
             meshCombinerScript.rootBone = (Transform)EditorGUILayout.ObjectField("Root Bone", meshCombinerScript.rootBone, typeof(Transform), true);
 
+            meshCombinerScript.createOverlayMesh = EditorGUILayout.Toggle("Create Overlay Mesh", meshCombinerScript.createOverlayMesh);
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Vis", GUILayout.Width(20));
             EditorGUILayout.LabelField("Name");

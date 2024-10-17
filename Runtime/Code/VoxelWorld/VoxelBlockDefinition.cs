@@ -36,9 +36,9 @@ public class VoxelBlockDefinition : ScriptableObject {
     public TextureSet sideTexture = new();
     public TextureSet bottomTexture = new();
     
-    public VoxelQuarterBlockMeshDefinition quarterBlockMesh;
-    public VoxelBlockDefinition quarterBlockTopDefinition;
-   
+    
+    public VoxelQuarterBlockMeshDefinition[] quarterBlockMeshes;
+       
 
     //ContextStyle.Prefab
     public GameObject prefab;
@@ -268,9 +268,9 @@ public class VoxelBlockDefinitionEditor : Editor {
         }
         if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
             block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
-            block.quarterBlockMesh = (VoxelQuarterBlockMeshDefinition)EditorGUILayout.ObjectField("QuarterBlock Mesh", block.quarterBlockMesh, typeof(VoxelQuarterBlockMeshDefinition), false);
-
-            block.quarterBlockTopDefinition = (VoxelBlockDefinition)EditorGUILayout.ObjectField("Topper Block", block.quarterBlockTopDefinition, typeof(VoxelBlockDefinition), false);
+            
+            SerializedProperty quarterBlockMeshesProp = serializedObject.FindProperty("quarterBlockMeshes");
+            EditorGUILayout.PropertyField(quarterBlockMeshesProp, new GUIContent("QuarterBlock Meshes"), true);
         }
         if (block.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
             block.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab", block.prefab, typeof(GameObject), false);

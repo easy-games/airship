@@ -233,9 +233,10 @@ public class VoxelBlocks : MonoBehaviour {
         public LodSet[] meshTiles = new LodSet[4];
 
         public List<int> meshTileProcessingOrder = new();
-        
-        public VoxelMeshCopy[] meshContexts = new VoxelMeshCopy[(int)QuarterBlockTypes.MAX];
-        
+
+        public List<VoxelMeshCopy[]> meshContexts = new();
+        public int[] meshContextsRandomTable = new int[0];
+
         public Texture2D editorTexture; //Null in release
 
         public Rect topUvs;
@@ -289,7 +290,8 @@ public class VoxelBlocks : MonoBehaviour {
     [SerializeField] public List<VoxelBlockDefinionList> blockDefinionLists = new();
 
     public BlockDefinition GetBlock(BlockId index) {
-        loadedBlocks.TryGetValue(index, out BlockDefinition value);
+        var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
+        loadedBlocks.TryGetValue(ix, out BlockDefinition value);
         return value;
     }
 
@@ -447,13 +449,59 @@ public class VoxelBlocks : MonoBehaviour {
 
     private void ParseQuarterBlock(BlockDefinition block) {
 
-        if (block.definition.quarterBlockMesh == null || block.definition.contextStyle != ContextStyle.QuarterBlocks) {
+        if (block.definition.contextStyle != ContextStyle.QuarterBlocks) {
+            return;
+        }
+
+        if (block.definition.quarterBlockMeshes == null) {
+            Debug.LogWarning($"[VoxelWorld] {block.blockTypeId} is a QuarterBlock but doesn't have any QuarterBlockMeshes.");
+            return;
+        } 
+        foreach (var quarter in block.definition.quarterBlockMeshes) {
+            ParseQuarterBlockItem(block, quarter);
+        }
+        int resolution = 100;
+        int probabilityCount = block.definition.quarterBlockMeshes.Length * resolution;
+        block.meshContextsRandomTable = new int[probabilityCount];
+
+        //Horrible, but very fast to access later
+        int index = 0;
+        for (int i = 0; i < block.definition.quarterBlockMeshes.Length; i++) {
+            for (int j = 0; j < block.definition.quarterBlockMeshes[i].probablity * resolution; j++) {
+                block.meshContextsRandomTable[index] = i;
+                index++;
+            }
+        }
+    }
+    public static VoxelMeshCopy[] GetRandomMeshContext(BlockDefinition block) {
+        int randomIndex = UnityEngine.Random.Range(0, block.meshContextsRandomTable.Length);
+        int meshIndex = block.meshContextsRandomTable[randomIndex];
+        return block.meshContexts[meshIndex];
+    }
+    public static VoxelMeshCopy[] GetRandomMeshContext(BlockDefinition block, Vector3 origin, int offset) {
+
+        // Use a more varied hash function
+        int hash = (int)(((int)origin.x * 73856093) ^ ((int)origin.y * 19349663) ^ ((int)origin.z * 83492791) ^ (offset * 1548585));
+        
+        // Ensure the result is within the range of the random table length
+        int randomIndex = Mathf.Abs(hash) % block.meshContextsRandomTable.Length;
+ 
+        int meshIndex = block.meshContextsRandomTable[randomIndex];
+        return block.meshContexts[meshIndex];
+    }
+
+
+
+    private void ParseQuarterBlockItem(BlockDefinition block, VoxelQuarterBlockMeshDefinition source) {
+
+        if (source == null || block.definition.contextStyle != ContextStyle.QuarterBlocks) {
             return;
         }
 
         block.meshMaterial = block.definition.meshMaterial;
-
-        VoxelQuarterBlockMeshDefinition source = block.definition.quarterBlockMesh;
+        var meshList = new VoxelMeshCopy[(int)QuarterBlockTypes.MAX];
+        block.meshContexts.Add(meshList); //Random variation
+        //VoxelQuarterBlockMeshDefinition source = block.definition.quarterBlockMesh;
 
         //Parse the quarterblocks
         for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
@@ -467,11 +515,13 @@ public class VoxelBlocks : MonoBehaviour {
 
             VoxelMeshCopy meshToAdd = null;
 
+            
+        
             if (obj == null) {
              
                 //Can we flip an existing one
                 if (QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
-                    VoxelMeshCopy meshSrc = block.meshContexts[ (int)QuarterBlockSubstitutions[i]];
+                    VoxelMeshCopy meshSrc = meshList[ (int)QuarterBlockSubstitutions[i]];
                     if (meshSrc != null && meshSrc.surfaces != null) {
                         VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
                         meshCopySub.FlipHorizontally();
@@ -485,7 +535,7 @@ public class VoxelBlocks : MonoBehaviour {
                     if (i >= (int)QuarterBlockTypes.DA) {
 
                         //Can we flip the upwards one?
-                        VoxelMeshCopy meshSrc = block.meshContexts[i - (int)QuarterBlockTypes.DA];
+                        VoxelMeshCopy meshSrc = meshList[i - (int)QuarterBlockTypes.DA];
 
                         if (meshSrc != null && meshSrc.surfaces != null) {
                             VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
@@ -506,15 +556,8 @@ public class VoxelBlocks : MonoBehaviour {
             if (meshToAdd == null) {
                 meshToAdd = new VoxelMeshCopy("", false);
             }
-          
-            block.meshContexts[i] = meshToAdd;
-        }
 
-        
-        for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
-            if (block.meshContexts[i] == null) {
-                //Debug.Log("Missing mesh for " + block.blockTypeId + " " + QuarterBlockNames[i]);
-            }
+            meshList[i] = meshToAdd;
         }
     }
     public void Load(bool loadTexturesDirectlyFromDisk = false) {

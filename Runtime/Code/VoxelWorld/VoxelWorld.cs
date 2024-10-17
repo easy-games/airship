@@ -42,7 +42,7 @@ public partial class VoxelWorld : MonoBehaviour {
     
     [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
 
-    [SerializeField][HideInInspector] private WorldSaveFile domainReloadSaveFile = null;
+    //[SerializeField][HideInInspector] private WorldSaveFile domainReloadSaveFile = null;
     
     [SerializeField][HideInInspector] public VoxelWorldNetworker worldNetworker;
 
@@ -73,8 +73,14 @@ public partial class VoxelWorld : MonoBehaviour {
     public float lodTransitionSpeed = 1;
      
     //Texture atlas/block definitions    
-    [HideInInspector] public VoxelBlocks voxelBlocks; 
+    [HideInInspector] public VoxelBlocks voxelBlocks;
     [HideInInspector] public int selectedBlockIndex = 1;
+
+    //For the editor
+    [HideInInspector] public VoxelData highlightedBlock = 0;
+    [HideInInspector] public Vector3Int highlightedBlockPos = new();
+
+
 
     // Mirroring
     public Vector3 mirrorAround = Vector3.zero;
@@ -95,25 +101,25 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideInInspector] public bool renderingDisabled = false;
 
-    [HideInInspector] private bool debugGrass = false;
+    //[HideInInspector] private bool debugGrass = false;
 
     [SerializeField] public bool hasUnsavedChanges = false;
 
     //Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static BlockId VoxelDataToBlockId(int block) {
-        return (byte)(block & 0xFFF);    //Lower 12 bits
+        return (ushort)(block & 0xFFF);    //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static BlockId VoxelDataToBlockId(VoxelData block) {
-        return (byte)(block & 0xFFF);    //Lower 12 bits
+        return (ushort)(block & 0xFFF);    //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort VoxelDataToExtraBits(VoxelData block) {
         //mask off everything except the upper 4 bits
-        return (byte)(block & 0xF000);
+        return (ushort)(block & 0xF000);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -726,11 +732,6 @@ public partial class VoxelWorld : MonoBehaviour {
         //load the text of textAsset
         file.LoadIntoVoxelWorld(this);
 
-        //Turns grass bushes on
-        if (debugGrass == true) {
-            PlaceGrassOnTopOfGrass();
-        }
-
         RegenerateAllMeshes();
          
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
@@ -776,56 +777,13 @@ public partial class VoxelWorld : MonoBehaviour {
 
         if (chunks.Count > 0) {
             //Create a temporary asset for saving
-            this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+            /*this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
             this.domainReloadSaveFile.CreateFromVoxelWorld(this);
+            Debug.Log("Temporarily saving Voxel World");*/
+            SaveToFile();
         }
 #endif        
-    }
-
-    public void PlaceGrassOnTopOfGrass() {
-        
-        if (voxelBlocks == null) {
-            return;
-        }
-        //Copy the list of chunks
-        List<Chunk> chunksCopy = new List<Chunk>(chunks.Values);
-
-        BlockId grass = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:GRASS");
-        BlockId grassTop = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:FLUFFY_GRASS");
-
-        foreach (var chunk in chunksCopy) {
-            //get voxels
-            VoxelData[] readOnlyVoxel = chunk.readWriteVoxel;
-
-            //scan through all voxels, if its grass, spawn a grass tile
-            for (int x = 0; x < VoxelWorld.chunkSize; x++) {
-                for (int y = 0; y < VoxelWorld.chunkSize; y++) {
-                    for (int z = 0; z < VoxelWorld.chunkSize; z++) {
-
-                        int voxelKey = x + y * chunkSize + z * chunkSize * chunkSize;
-                        VoxelData vox = readOnlyVoxel[voxelKey];
-
-                        BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
-
-                        if (blockIndex == grass) //grass
-                        {
-                            //grab the one above, if its air
-                            VoxelData air = ReadVoxelAt(new Vector3Int(x, y + 1, z) + chunk.bottomLeftInt);
-                            BlockId blockIndex2 = VoxelWorld.VoxelDataToBlockId(air);
-
-                            if (blockIndex2 == 0) //air
-                            {
-                                //spawn a grass tile
-                                WriteVoxelAt(new Vector3Int(x, y + 1, z) + chunk.bottomLeftInt, grassTop, false); //grasstop
-                            }
-                        }
-
-
-                    }
-                }
-            }
-        }
-    }
+    } 
 
     /**
      * Used in TS on the client.
@@ -854,8 +812,9 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public VoxelWorld() {
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 #endif
 
     } 
@@ -863,13 +822,13 @@ public partial class VoxelWorld : MonoBehaviour {
     private void OnEnable() {
 
 #if UNITY_EDITOR
-        if (this.domainReloadSaveFile != null) {
+       /* if (this.domainReloadSaveFile != null) {
             Debug.Log("Reloading " + name + " after doman reload");
             this.LoadWorldFromSaveFile(this.domainReloadSaveFile);
             this.domainReloadSaveFile = null;
             this.hasUnsavedChanges = true;
-            return;
-        }
+            return; 
+        }*/
           
 #endif
 
@@ -1155,5 +1114,15 @@ public partial class VoxelWorld : MonoBehaviour {
         SaveToDomainReloadFile();
     } 
 
-    
+    private void OnPlayModeStateChanged(PlayModeStateChange state) {
+#if UNITY_EDITOR
+        if (state == PlayModeStateChange.EnteredPlayMode) {
+            SaveToFile();
+        }
+
+#endif        
+    }
+
+
+
 }
