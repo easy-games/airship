@@ -114,6 +114,12 @@ namespace Airship
 			return values.ToArray();
 		}
 
+		public async Task<bool> ListContains(string list, string value)
+		{
+			if (!RunCore.IsServer()) return false;
+			return await _sdk.ListContains(list, value);
+		}
+
 		private async void SignalConnect()
 		{
 			var connectSuccess = await _sdk.Connect();
