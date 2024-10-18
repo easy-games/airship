@@ -355,7 +355,6 @@ namespace VoxelWorldStuff {
             }
 
             color[key] = Color32ToUInt(col);
-            Debug.Log("Colored!");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
