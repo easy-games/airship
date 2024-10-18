@@ -4,19 +4,17 @@ using System.Runtime.CompilerServices;
 using Mirror;
 using UnityEngine;
 
-// PredictedCharacterMovement is based off of:
+// PredictedController is based off of:
 // PredictedRigidbody which stores & indidvidually rewinds history per Rigidbody.
-// Instead of syncing position and velocity we sync the movement state and inputs for replays.
-// This will be slower as we have to resimulate physics steps. Perhaps a future optimization
-// would be to seperate the scene into multiple physics scenes and only resimulate the once the player is in
+// Keeping this layer abstract so child classes can impliment the details of the states
 
 /// <summary>
 /// Base functionality for a client predicted object
 /// Has code for storeing history for type T data
 /// and handeling generic server client syncronization
 /// </summary>
-/// <typeparam name="T">The synced data needed for replays</typeparam>
-public abstract class PredictionController<T> : NetworkBehaviour where T: PredictionState{
+/// <typeparam name="T">The data type stored in the history that is needed for replays</typeparam>
+public abstract class AirshipPredictionController<T> : NetworkBehaviour where T: AirshipPredictionState{
 
 #region INSPECTOR
     // client keeps state history for correction & reconciliation.
@@ -71,6 +69,20 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
     [Tooltip("How fast to interpolate to the target position, relative to how far we are away from it.\nHigher value will be more jitter but sharper moves, lower value will be less jitter but a little too smooth / rounded moves.")]
     public float positionInterpolationSpeed = 15; // 10 is a little too low for billiards at least
     public float rotationInterpolationSpeed = 10;
+    
+
+    [Header("Debugging")]
+
+    [Tooltip("Draw gizmos. Shows server position and client position")]
+    public bool showGizmos = false;
+
+    [Tooltip("Physics components are moved onto a ghost object beyond this threshold. Main object visually interpolates to it.")]
+    public float gizmoVelocityThreshold = 0.1f;
+
+    [Tooltip("Performance optimization: only draw gizmos at an interval.")]
+    public int drawGizmosEveryNthFrame = 4;
+    public Color serverColor = Color.red;
+    public Color clientColor = Color.red;
 #endregion
 
 
@@ -105,13 +117,16 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
 
 #region ABSTRACT
 
-    protected abstract Vector3 currentPosition {get; set;}
-    protected abstract Vector3 currentVelocity {get; set;}
-    protected abstract void MoveTo(Vector3 newPosition, Vector3 newVelocity);
-    protected abstract bool CanReceiveServerState(T serverState);
+    protected abstract Vector3 currentPosition {get;}
+    protected abstract Vector3 currentVelocity {get;}
+    protected abstract void SnapTo(T newState);
+    protected abstract void MoveTo(T newState);
     protected abstract bool NeedsCorrection(T serverState, T interpolatedState);
-    protected abstract T CreateCurrentState();
+    protected abstract T CreateCurrentState(double currentTime);
+    protected abstract T ReplayStates(T serverState, int numberOfFutureStates);
 
+    protected abstract void SerializeState(NetworkWriter writer);
+    protected abstract T DeserializeState(NetworkReader reader, double timestamp);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected virtual bool IsMoving() =>
@@ -196,7 +211,7 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
 
         void LateUpdate(){
             // only follow on client-only, not in server or host mode
-            if (isClientOnly) SmoothFollowPhysicsCopy();
+            //if (isClientOnly) SmoothFollowPhysicsCopy();
         }
         
         void FixedUpdate() {
@@ -246,7 +261,7 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
         if (stateHistory.Count >= stateHistoryLimit)
             stateHistory.RemoveAt(0);
 
-        var newState = CreateCurrentState();
+        var newState = CreateCurrentState(predictedTime);
         // add state to history
         stateHistory.Add(predictedTime, newState);
 
@@ -265,18 +280,19 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
             // important to apply velocity as well, instead of Vector3.zero.
             // in case an object is still slightly moving, we don't want it
             // to stop and start moving again on client - slide as well here.
-            currentPosition = snapshotState.position;
-            currentVelocity = snapshotState.velocity;
+
+            //Set the position and velocity immediatly
+            SnapTo(snapshotState);
 
             // clear history and insert the exact state we just applied.
             // this makes future corrections more accurate.
             stateHistory.Clear();
             stateHistory.Add(snapshotState.timestamp, snapshotState);
-            return;
+        }else{
+            //Smoothly move towards the new state
+            MoveTo(snapshotState);
         }
 
-        //Smoothly move towards the new state
-        MoveTo(snapshotState.position, snapshotState.velocity);
     }
 #endregion
 
@@ -321,9 +337,10 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
             return;
         }
 
-        //Does the subclass think we can recieve a new server state?
-        if(!CanReceiveServerState(serverState)){
-            return;
+        //Render server state
+        if(this.showGizmos){
+            GizmoUtils.DrawBox(serverState.position + new Vector3(0,.5f, 0), Quaternion.identity, 
+                new Vector3(.5f, .5f, .5f), serverColor);
         }
 
         // we only capture state every 'interval' milliseconds.
@@ -393,8 +410,8 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
             //Debug.DrawLine(state.position, state.position + state.velocity * 0.1f, Color.white, lineTime);
 
             // insert the correction and correct the history on top of it.
-            // returns the final recomputed state after rewinding.
-            T recomputed = CorrectHistory(stateHistory, stateHistoryLimit, serverState, before, after, afterIndex);
+            // returns the final recomputed state after replaying.
+            T recomputed = CorrectHistory(stateHistory, stateHistoryLimit, serverState, afterIndex);
 
             // log, draw & apply the final position.
             // always do this here, not when iterating above, in case we aren't iterating.
@@ -403,13 +420,61 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
             // Debug.Log($"Correcting {name}: {correctedAmount} / {stateHistory.Count} states to final position from: {rb.position} to: {last.position}");
             //Debug.DrawLine(physicsCopyRigidbody.position, recomputed.position, Color.green, lineTime);
             ApplyState(recomputed);
-
-            // user callback
-            OnCorrected();
         }
     }
 #endregion
 
+
+#region SERIALIZATION
+
+    // send state to clients every sendInterval.
+    // reliable for now.
+    // TODO we should use the one from FixedUpdate
+    public override void OnSerialize(NetworkWriter writer, bool initialState) {
+        // Time.time was at the beginning of this frame.
+        // NetworkLateUpdate->Broadcast->OnSerialize is at the end of the frame.
+        // as result, client should use this to correct the _next_ frame.
+        // otherwise we see noticeable resets that seem off by one frame.
+        //
+        // to solve this, we can send the current deltaTime.
+        // server is technically supposed to be at a fixed frame rate, but this can vary.
+        // sending server's current deltaTime is the safest option.
+        // client then applies it on top of remoteTimestamp.
+        //Saves just the time changed this frame rather than the double timestamp
+        writer.WriteFloat(Time.deltaTime);
+
+        //Let the child class serialize its data
+        SerializeState(writer);
+
+        //TODO: Why can't I just pass the timestamp???
+    }
+
+    // read the server's state, compare with client state & correct if necessary.
+    public override void OnDeserialize(NetworkReader reader, bool initialState) {
+        
+        // deserialize data
+        // we want to know the time on the server when this was sent, which is remoteTimestamp.
+        double timestamp = NetworkClient.connection.remoteTimeStamp;
+        double serverDeltaTime = reader.ReadFloat();
+
+        // server sends state at the end of the frame.
+        // parse and apply the server's delta time to our timestamp.
+        // otherwise we see noticeable resets that seem off by one frame.
+        timestamp += serverDeltaTime;
+
+        // however, adding yet one more frame delay gives much(!) better results.
+        // we don't know why yet, so keep this as an option for now.
+        // possibly because client captures at the beginning of the frame,
+        // with physics happening at the end of the frame?
+        if (oneFrameAhead) timestamp += serverDeltaTime;
+
+        //Let the child class deserialize its data
+        T newState = DeserializeState(reader, timestamp);
+
+        // process received state
+        OnReceivedState(newState.timestamp, newState);
+    }
+#endregion
 
 #region HISTORY
         // get the two states closest to a given timestamp.
@@ -449,8 +514,7 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
 
             // SortedList foreach iteration allocates a LOT. use for-int instead.
             // foreach (KeyValuePair<double, T> entry in history) {
-            for (int i = 0; i < history.Count; ++i)
-            {
+            for (int i = 0; i < history.Count; ++i) {
                 double key = history.Keys[i];
                 T value = history.Values[i];
 
@@ -486,97 +550,58 @@ public abstract class PredictionController<T> : NetworkBehaviour where T: Predic
         // readjust the deltas of the states after the inserted one.
         // returns the corrected final position.
         // => RingBuffer: see prediction_ringbuffer_2 branch, but it's slower!
-        public static T CorrectHistory<T>(
+        public T CorrectHistory(
             SortedList<double, T> history,
             int stateHistoryLimit,
             T corrected,     // corrected state with timestamp
-            T before,        // state in history before the correction
-            T after,         // state in history after the correction
             int afterIndex)  // index of the 'after' value so we don't need to find it again here
-            where T: PredictedState
         {
             // respect the limit
             // TODO unit test to check if it respects max size
-            if (history.Count >= stateHistoryLimit)
-            {
+            var historyCount = history.Count;
+            if (historyCount >= stateHistoryLimit) {
                 history.RemoveAt(0);
+                historyCount -= 1;
                 afterIndex -= 1; // we removed the first value so all indices are off by one now
             }
 
-            // PERFORMANCE OPTIMIZATION: avoid O(N) insertion, only readjust all values after.
-            // the end result is the same since after.delta and after.position are both recalculated.
-            // it's technically not correct if we were to reconstruct final position from 0..after..end but
-            // we never do, we only ever iterate from after..end!
-            //
-            //   insert the corrected state into the history, or overwrite if already exists
-            //   SortedList insertions are O(N)!
-            //     history[corrected.timestamp] = corrected;
-            //     afterIndex += 1; // we inserted the corrected value before the previous index
-
-            // the entry behind the inserted one still has the delta from (before, after).
-            // we need to correct it to (corrected, after).
-            //
-            // for example:
-            //   before:    (t=1.0, delta=10, position=10)
-            //   after:     (t=3.0, delta=20, position=30)
-            //
-            // then we insert:
-            //   corrected: (t=2.5, delta=__, position=25)
-            //
-            // previous delta was from t=1.0 to t=3.0 => 2.0
-            // inserted delta is from t=2.5 to t=3.0 => 0.5
-            // multiplier is 0.5 / 2.0 = 0.25
-            // multiply 'after.delta(20)' by 0.25 to get the new 'after.delta(5)
-            //
-            // so the new history is:
-            //   before:    (t=1.0, delta=10, position=10)
-            //   corrected: (t=2.5, delta=__, position=25)
-            //   after:     (t=3.0, delta= 5, position=__)
-            //
-            // so when we apply the correction, the new after.position would be:
-            //   corrected.position(25) + after.delta(5) = 30
-            //
-            double previousDeltaTime = after.timestamp - before.timestamp;     // 3.0 - 1.0 = 2.0
-            double correctedDeltaTime = after.timestamp - corrected.timestamp; // 3.0 - 2.5 = 0.5
-
-            // fix multiplier becoming NaN if previousDeltaTime is 0:
-            // double multiplier = correctedDeltaTime / previousDeltaTime;
-            double multiplier = previousDeltaTime != 0 ? correctedDeltaTime / previousDeltaTime : 0; // 0.5 / 2.0 = 0.25
-
-            // recalculate 'after.delta' with the multiplier
-            after.positionDelta        = Vector3.Lerp(Vector3.zero, after.positionDelta, (float)multiplier);
-            after.velocityDelta        = Vector3.Lerp(Vector3.zero, after.velocityDelta, (float)multiplier);
-            after.angularVelocityDelta = Vector3.Lerp(Vector3.zero, after.angularVelocityDelta, (float)multiplier);
-            // Quaternions always need to be normalized in order to be a valid rotation after operations
-            after.rotationDelta        = Quaternion.Slerp(Quaternion.identity, after.rotationDelta, (float)multiplier).normalized;
-
-            // changes aren't saved until we overwrite them in the history
-            history[after.timestamp] = after;
-
-            // second step: readjust all absolute values by rewinding client's delta moves on top of it.
-            T last = corrected;
-            for (int i = afterIndex; i < history.Count; ++i)
-            {
-                double key = history.Keys[i];
-                T value = history.Values[i];
-
-                // correct absolute position based on last + delta.
-                value.position        = last.position + value.positionDelta;
-                value.velocity        = last.velocity + value.velocityDelta;
-                value.angularVelocity = last.angularVelocity + value.angularVelocityDelta;
-                // Quaternions always need to be normalized in order to be a valid rotation after operations
-                value.rotation        = (value.rotationDelta * last.rotation).normalized; // quaternions add delta by multiplying in this order
-
-                // save the corrected entry into history.
-                history[key] = value;
-
-                // save last
-                last = value;
+            //Add the corrected state to the history and remove all following states
+            for(int i=afterIndex; i < historyCount; i++){
+                history.Remove(i);
             }
+            history.Add(corrected.timestamp, corrected);
 
-            // third step: return the final recomputed state.
-            return last;
+            //Recalculate states starting with the corrected server sate then return the final recomputed state.
+            return ReplayStates(corrected, historyCount-afterIndex);
         }
 #endregion
 
+#region UTIL
+    
+    // simple and slow version with MoveTowards, which recalculates delta and delta.sqrMagnitude:
+    //   Vector3 newPosition = Vector3.MoveTowards(currentPosition, physicsPosition, positionStep * deltaTime);
+    // faster version copied from MoveTowards:
+    // this increases Prediction Benchmark Client's FPS from 615 -> 640.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected static Vector3 MoveTowardsCustom(
+        Vector3 current,
+        Vector3 target,
+        Vector3 _delta,     // pass this in since we already calculated it
+        float _sqrDistance, // pass this in since we already calculated it
+        float _distance,    // pass this in since we already calculated it
+        float maxDistanceDelta) {
+        if (_sqrDistance == 0.0 || maxDistanceDelta >= 0.0 && _sqrDistance <= maxDistanceDelta * maxDistanceDelta)
+            return target;
+
+        float distFactor = maxDistanceDelta / _distance; // unlike Vector3.MoveTowards, we only calculate this once
+        return new Vector3(
+            // current.x + (_delta.x / _distance) * maxDistanceDelta,
+            // current.y + (_delta.y / _distance) * maxDistanceDelta,
+            // current.z + (_delta.z / _distance) * maxDistanceDelta);
+            current.x + _delta.x * distFactor,
+            current.y + _delta.y * distFactor,
+            current.z + _delta.z * distFactor);
+    }
+
+#endregion
 }

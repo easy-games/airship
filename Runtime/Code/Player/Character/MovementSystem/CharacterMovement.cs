@@ -92,9 +92,9 @@ namespace Code.Player.Character {
 
 #region PRIVATE REFS
 		private CharacterPhysics physics;
-		private PredictedRigidbody predictedRigid;
 		private NetworkAnimator networkAnimator;
 		private NetworkTransformUnreliable networkTransform;
+		private AirshipPredictedRigidbody predictedRigid;
 #endregion
 
 #region INTERNAL
@@ -151,12 +151,11 @@ namespace Code.Player.Character {
 #endregion
 
 #region INIT
-
 		private void Awake() {
 			//Gather references and constant variables
 			networkAnimator = transform.GetComponent<NetworkAnimator>();
 			networkTransform = transform.GetComponent<NetworkTransformUnreliable>();
-			predictedRigid = gameObject.GetComponent<PredictedRigidbody>();
+			predictedRigid = gameObject.GetComponent<AirshipPredictedRigidbody>();
 			isServerAuth = predictedRigid != null;
 			if(this.physics == null){
 				this.physics = new CharacterPhysics(this);
@@ -172,7 +171,6 @@ namespace Code.Player.Character {
 			if(isServerAuth){
 				//Owning client and server can control
 				hasMovementAuth = netIdentity.connectionToClient == null || isOwned;
-				predictedRigid.syncDirection = SyncDirection.ServerToClient;
 			}else{
 				//Only the owner can control
 				hasMovementAuth = (isServer && netIdentity.connectionToClient == null) || (isClient && isOwned);
@@ -202,17 +200,11 @@ private void OnEnable() {
 #region HELPERS
 		//Mirror prediction can move the colliders during rollback so you have to access the collider dynamically
 		public Collider GetCollider(){
-			if(isServerAuth){
-				return predictedRigid.predictedRigidbody.GetComponentInChildren<Collider>();
-			}
 			return mainCollider;
 		}
 
 		//Mirror prediction can move the rigidbody during rollback so you have to access the collider dynamically
 		public Rigidbody GetRigidbody(){
-			if(isServerAuth){
-				return predictedRigid.predictedRigidbody;
-			}
 			return rigidbody;
 		}
 		
