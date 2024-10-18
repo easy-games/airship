@@ -48,6 +48,7 @@ namespace VoxelWorldStuff {
 
         //Permanent data
         public UInt16[] readWriteVoxel = new UInt16[chunkSize * chunkSize * chunkSize];
+        public uint[] color = new uint[chunkSize * chunkSize * chunkSize];
 
         //Currently instantiated prefabs
         private Dictionary<Vector3Int,GameObject> prefabObjects;
@@ -326,6 +327,35 @@ namespace VoxelWorldStuff {
             int key = WorldPosToVoxelIndex(worldPos);
 
             return readWriteVoxel[key];
+        }
+
+        private uint Color32ToUInt(Color32 col) {
+            uint res = (uint) col.r << 24;
+            res |= (uint) col.g << 16;
+            res |= (uint) col.b << 8;
+            res |= (uint)col.a;
+            return res;
+        }
+        
+        public Color32 GetVoxelColorAt(Vector3Int worldPos) {
+            var key = WorldPosToVoxelIndex(worldPos);
+            var col= color[key];
+            var r = (byte) ((col & 0xFF000000) >> 24);
+            var g = (byte) ((col & 0x00FF0000) >> 16);
+            var b = (byte) ((col & 0x0000FF00) >> 8);
+            var a = (byte) (col & 0x000000FF);
+            return new Color32(r, g, b, a);
+        }
+        
+        public void WriteVoxelColor(Vector3Int worldPos, Color32 col) {
+            int key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return;
+            }
+
+            color[key] = Color32ToUInt(col);
+            Debug.Log("Colored!");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
