@@ -21,9 +21,11 @@ public class WorldSaveFile : ScriptableObject {
     public struct SaveChunk {
         public Vector3Int key;
         public VoxelData[] data;
-        public SaveChunk(Vector3Int key, VoxelData[] data) {
+        public uint[] color;
+        public SaveChunk(Vector3Int key, VoxelData[] data, uint[] color) {
             this.key = key;
             this.data = data;
+            this.color = color;
         }
     }
 
@@ -89,6 +91,7 @@ public class WorldSaveFile : ScriptableObject {
         foreach (var chunk in chunks) {
             var key = chunk.Key;
             var data = chunk.Value.readWriteVoxel;
+            var color = chunk.Value.color;
 
             finalChunks.TryGetValue(key, out var finalChunk);
             if (finalChunk == null) {
@@ -99,6 +102,7 @@ public class WorldSaveFile : ScriptableObject {
             for (int j = 0; j < data.Length; j++) {
                 if (data[j] != 0) {
                     finalChunk.readWriteVoxel[j] = data[j];
+                    finalChunk.color[j] = color[j];
                 }
             }
         }
@@ -107,19 +111,21 @@ public class WorldSaveFile : ScriptableObject {
         foreach (var chunk in finalChunks) {
             var key = chunk.Key;
             var data = chunk.Value.readWriteVoxel;
+            var color = chunk.Value.color;
 
-            int count = 0;
+            var foundVoxel = false;
             foreach (var voxel in data) {
                 if (voxel != 0) {
-                    count += 1;
+                    foundVoxel = true;
+                    break;
                 }
             }
-            if (count > 0) {
 
-                counter++;
-                var chunkData = new SaveChunk(key, data);
-                this.chunks.Add(chunkData);
-            }
+            if (!foundVoxel) continue;
+
+            counter++;
+            var chunkData = new SaveChunk(key, data, color);
+            this.chunks.Add(chunkData);
         }
 
         Debug.Log("Saved " + counter + " chunks.");
@@ -169,6 +175,7 @@ public class WorldSaveFile : ScriptableObject {
             counter += 1;
             var key = chunk.key;
             var data = chunk.data;
+            var color = chunk.color;
 
             VoxelWorldStuff.Chunk writeChunk = VoxelWorld.CreateChunk(key);
             writeChunk.SetWorld(world);
@@ -178,14 +185,16 @@ public class WorldSaveFile : ScriptableObject {
                 ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
 
 
-                bool found= blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
+                bool found = blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
                 if (found) {               
                     writeChunk.readWriteVoxel[i] = ((ushort)(updatedBlockId | extraBits));
+                    if (color != null && color.Length > 0) {
+                        writeChunk.color[i] = color[i];
+                    }
+                } else {
+                    Debug.LogWarning(
+                        $"Warning: Block {fileBlockId} not found in world block definitions - Replacing with air.");
                 }
-                else {
-                    Debug.LogWarning($"Warning: Block {fileBlockId} not found in world block definitions - Replacing with air.");
-                }
-
             }
             world.chunks[key] = writeChunk;
         }

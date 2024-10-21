@@ -1,13 +1,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
-using UnityEngine;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Assets.Airship.VoxelRenderer;
+using UnityEngine;
 using UnityEngine.Profiling;
+using Debug = UnityEngine.Debug;
+using Random = System.Random;
 
 namespace VoxelWorldStuff {
 
@@ -703,7 +706,8 @@ namespace VoxelWorldStuff {
                     }
                 }
             }
- 
+
+            int count = 0;
             //Use the rot over using the flip bits (? is this correct? should we define it per block?)
             if (rot != 0) {
                 //Add mesh data
@@ -711,7 +715,7 @@ namespace VoxelWorldStuff {
                 if (sourceRotation == null) {
                     return;
                 }
-                int count = sourceRotation.vertices.Length;
+                count = sourceRotation.vertices.Length;
                 Vector3 offset = origin + new Vector3(0.5f, 0.5f, 0.5f);
 
                 // Ensure capacity
@@ -730,22 +734,9 @@ namespace VoxelWorldStuff {
 
                 Array.Copy(sourceRotation.normals, 0, target.normals, target.normalsCount, count);
                 target.normalsCount += count;
-
-                if (mesh.srcColors != null && mesh.srcColors.Length > 0) {
-                    Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
-                    target.colorsCount += count;
-                }
-                else {
-                    //fill with white
-                    for (int i = 0; i < count; i++) {
-                        target.colors[target.colorsCount++] = Color.white;
-
-                    }
-                }
-            }
-            else {
+            } else {
                 //Add mesh data
-                int count = flipSurface.vertices.Length;
+                count = flipSurface.vertices.Length;
                 Vector3 offset = origin + new Vector3(0.5f, 0.5f, 0.5f);
 
                 // Ensure capacity
@@ -764,18 +755,10 @@ namespace VoxelWorldStuff {
 
                 Array.Copy(flipSurface.normals, 0, target.normals, target.normalsCount, count);
                 target.normalsCount += count;
-
-                if (mesh.srcColors != null && mesh.srcColors.Length > 0) {
-                    Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
-                    target.colorsCount += count;
-                }
-                else {
-                    //fill with white
-                    for (int i = 0; i < count; i++) {
-                        target.colors[target.colorsCount++] = Color.white;
-
-                    }
-                }
+            }
+            
+            if (mesh.srcColors != null && mesh.srcColors.Length > 0) {
+                Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
             }
         }
 
@@ -961,7 +944,6 @@ namespace VoxelWorldStuff {
                                 }
                             break;
                             case VoxelBlocks.ContextStyle.GreedyMeshingTiles:
-                              
                                 InitDetailMeshes();
                             
                                 foreach (int index in block.meshTileProcessingOrder) {
@@ -1151,43 +1133,6 @@ namespace VoxelWorldStuff {
                                         }
                                     }
                                 }
-                                else {
-                                    //Unused
-                                    /*
-                                    for (int j = 0; j < 4; j++)
-                                    {
-                                        Vector3 worldPoint = srcVertices[(faceIndex * 4) + j] + origin;
-                                        float occlusion = world.CalculateSunShadowAtPoint(worldPoint + (normal * 0.01f), faceAxis, normal);
-                                        shade[j] = occlusion > 0;
-
-                                        colors.Add(new Color32((byte)(occlusion * 255.0f), 0, 0, 0));
-                                    }
-
-                                    //See if opposite corners are shaded      0--1        0--1
-                                    //see if single 1 corner is shaded     alt|\ |    norm| /|
-                                    //see if single 2 corner is shaded        2--3        2--3
-                                    if ((shade[0] && shade[3]) || (shade[1] && !shade[0] && !shade[2] && !shade[3]) || (shade[2] && !shade[0] && !shade[1] && !shade[3]))
-                                    {
-                                        //Turn the triangulation
-
-                                        for (int j = 0; j < altSrcFaces[faceIndex].Length; j++)
-                                        {
-                                            //triangles[trianglesWritePos++] = altSrcFaces[i][j] + vertexCount;
-                                            subMesh.triangles.Add(altSrcFaces[faceIndex][j] + vertexCount);
-                                        }
-                                    }
-                                    else
-                                    {
-
-                                        for (int j = 0; j < srcFaces[faceIndex].Length; j++)
-                                        {
-                                            //triangles[trianglesWritePos++] = srcFaces[i][j] + vertexCount;
-                                            subMesh.triangles.Add(srcFaces[faceIndex][j] + vertexCount);
-                                        }
-                                    }
-                                    */
-                                }
-
                             }
                         }
                     }
@@ -1195,8 +1140,53 @@ namespace VoxelWorldStuff {
             }
 
             if (skipCount > 0) {
-                //Debug.Log("Skipped " + skipCount + " blocks");
+                // Debug.Log("Skipped " + skipCount + " blocks");
             }
+
+            var s = Stopwatch.StartNew();
+            for (int i = 0; i < temporaryMeshData.verticesCount; i++) {
+                var vertPos = temporaryMeshData.vertices[i];
+                var vertWorldPos = vertPos;
+                var vertWorldPosRounded = new Vector3((float) Math.Round(vertWorldPos.x), (float) Math.Round(vertWorldPos.y),
+                    (float) Math.Round(vertWorldPos.z));
+                var voxelData = world.GetVoxelAt(vertPos);
+                
+                var neighborColors = new Color32[8];
+                var neighborWeights = new double[8];
+                var neighborCount = 0;
+                var weightTotal = 0.0;
+                // Grab neighbor colors and pick a weighted average color for this position
+                for (var x = -1; x <= 1; x += 2) {
+                    for (var y = -1; y <= 1; y += 2) {
+                        for (var z = -1; z <= 1; z += 2) {
+                            var pos = vertWorldPosRounded + new Vector3(x, y, z) * 0.5f;
+                            // var neighborData = world.GetVoxelAt(pos);
+                            // if ((neighborData & 0xFF) != (blockId & 0xFF)) continue;
+
+                            var voxelPos = VoxelWorld.FloorInt(pos) + Vector3.one * 0.5f;
+                            var dist = (vertWorldPos - voxelPos).magnitude;
+                            if (dist > 1.5) continue;
+                            var weight = 1.5 - dist;
+                            weightTotal += weight;
+                                
+                            neighborColors[neighborCount] = world.GetVoxelColorAt(pos);
+                            neighborWeights[neighborCount] = weight;
+                            neighborCount++;
+                        }
+                    }   
+                }
+
+                var finalColor = new Color32();
+                for (var n = 0; n < neighborCount; n++) {
+                    var weightedColor = Color32.Lerp(new Color32(), neighborColors[n], (float)(neighborWeights[n] / weightTotal));
+                    finalColor.r += weightedColor.r;
+                    finalColor.g += weightedColor.g;
+                    finalColor.b += weightedColor.b;
+                    finalColor.a += weightedColor.a;
+                }
+                temporaryMeshData.colors[i] = finalColor;
+            }
+            temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
 
             lastMeshUpdateDuration = (int)((DateTime.Now - startMeshProcessingTime).TotalMilliseconds);
 

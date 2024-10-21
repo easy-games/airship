@@ -562,7 +562,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Event e = Event.current;
 
         //Only allow editing if both the editor window is active and the gizmo toolbar is active
-        bool enabled = VoxelBuilderEditorWindow.Enabled() && VoxelWorldEditorToolBase.buttonActive;
+        bool enabled = VoxelBuilderEditorWindow.Enabled() && (VoxelWorldEditorToolBase.buttonActive || VoxelWorldBrushToolBase.buttonActive);
         
         if (enabled != lastEnabled) {
             CleanupHandles();
@@ -594,83 +594,92 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         //Leftclick up
-        if (e.type == EventType.MouseUp && e.button == 0) {
-            
-            // Create a ray from the mouse position
-            if (validPosition) {
-                
-                if (Event.current.shift) {
-                    // Remove voxel
-                    Vector3Int voxelPos = lastPos;
-                    ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
+        if (VoxelWorldEditorToolBase.buttonActive) {
+            if (e.type == EventType.MouseUp && e.button == 0) {
 
-                    VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
+                // Create a ray from the mouse position
+                if (validPosition) {
 
-                    voxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
+                    if (Event.current.shift) {
+                        // Remove voxel
+                        Vector3Int voxelPos = lastPos;
+                        ushort oldValue =
+                            world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
 
-                    if (leftControlDown == false) {
-                        //Refresh the gizmo like we just moved the mouse here
-                        DoMouseMoveEvent(Event.current.mousePosition, world);
-                    } else {
-                        //Move the pos against the normal to delete along this vector
-                        lastPos -= VoxelWorld.CardinalVector(lastNormal);
-                        lastNormalPos -= VoxelWorld.CardinalVector(lastNormal);
-                    }
-                }
-                else {
-                    // Add voxel
-                    Vector3Int voxelPos = lastNormalPos;
-                    ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
-                    ushort newValue = (ushort)world.selectedBlockIndex;
-                                     
-                    VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
+                        VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
-                    var def = world.voxelBlocks.GetBlock(newValue);
- 
-                    voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue, "Add Voxel " + def.definition.name);
+                        voxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
 
-                    if (leftControlDown == false) {
-                        //Refresh the gizmo like we just moved the mouse here
-                        DoMouseMoveEvent(Event.current.mousePosition, world);
+                        if (leftControlDown == false) {
+                            //Refresh the gizmo like we just moved the mouse here
+                            DoMouseMoveEvent(Event.current.mousePosition, world);
+                        }
+                        else {
+                            //Move the pos against the normal to delete along this vector
+                            lastPos -= VoxelWorld.CardinalVector(lastNormal);
+                            lastNormalPos -= VoxelWorld.CardinalVector(lastNormal);
+                        }
                     }
                     else {
-                        //Move the pos by the normal to continue this "line" of voxels
-                        lastPos += VoxelWorld.CardinalVector(lastNormal);
-                        lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
-                        
+                        // Add voxel
+                        Vector3Int voxelPos = lastNormalPos;
+                        ushort oldValue =
+                            world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
+                        ushort newValue = (ushort)world.selectedBlockIndex;
+
+                        VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
+
+                        var def = world.voxelBlocks.GetBlock(newValue);
+
+                        voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
+                            "Add Voxel " + def.definition.name);
+
+                        if (leftControlDown == false) {
+                            //Refresh the gizmo like we just moved the mouse here
+                            DoMouseMoveEvent(Event.current.mousePosition, world);
+                        }
+                        else {
+                            //Move the pos by the normal to continue this "line" of voxels
+                            lastPos += VoxelWorld.CardinalVector(lastNormal);
+                            lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
+
+                        }
                     }
                 }
-            }
-            UpdateHandlePosition(world);
 
-            //Repaint
-            SceneView.RepaintAll();
+                UpdateHandlePosition(world);
+
+                //Repaint
+                SceneView.RepaintAll();
+            }
         }
 
-        if (Event.current.GetTypeForControl(controlID) == EventType.KeyDown) {
-            if (Event.current.keyCode == KeyCode.LeftControl) {
-                leftControlDown = true;
+        // Voxel painter
+        if (VoxelWorldBrushToolBase.buttonActive) {
+            if (e.type == EventType.MouseUp && e.button == 0) {
+                // Create a ray from the mouse position
+                if (validPosition) {
+                    var voxelPos = lastPos;
+                    var oldColor = world.GetVoxelColorAt(voxelPos);
+                    var newCol = new Color32((byte) (oldColor.r + 10), oldColor.g, oldColor.b, oldColor.a);
+                    world.ColorVoxelAt(voxelPos, newCol, true);
+                }
             }
-            if (Event.current.keyCode == KeyCode.LeftShift) {
-                leftShiftDown = true;
-            }
-            //Refresh the view
-            UpdateHandlePosition(world);
-            //Repaint
-            SceneView.RepaintAll();
-            
         }
+
         if (Event.current.GetTypeForControl(controlID) == EventType.KeyUp) {
             if (Event.current.keyCode == KeyCode.LeftControl) {
                 leftControlDown = false;
             }
+
             if (Event.current.keyCode == KeyCode.LeftShift) {
                 leftShiftDown = false;
             }
+
             if (Event.current.keyCode == KeyCode.A) {
                 //Cycle the bits on the selected block
                 if (world.selectedBlockIndex > 0) {
-                    
+
                     ushort oldValue = world.GetVoxelAt(lastPos); // Assuming you have a method to get the voxel value
                     ushort newValue = oldValue;
 
@@ -686,16 +695,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
                     voxelEditManager.AddEdit(world, lastPos, oldValue, newValue, "Flip Voxel " + def.definition.name);
                 }
+                //Refresh the view
+                UpdateHandlePosition(world);
+                //Repaint
+                SceneView.RepaintAll();
             }
-
-
-            //Refresh the view
-            UpdateHandlePosition(world);
-            //Repaint
-            SceneView.RepaintAll();
-          
         }
-
     }
 
     void Awake(){
@@ -832,12 +837,42 @@ public class VoxelWorldSelectionToolBase : EditorTool {
     }
 }
 
+public class VoxelWorldBrushToolBase : EditorTool {
+
+    public static bool buttonActive = false;
+
+    static GUIContent iconContent = null;
+    
+    public override void OnActivated() {
+        buttonActive = true;
+        
+    }
+    public override void OnWillBeDeactivated() {
+        buttonActive = false;
+    }
+    public override GUIContent toolbarIcon {
+        get { 
+            if (iconContent == null) {
+                iconContent = new GUIContent() {
+                    image = Resources.Load<Texture>("BrushIcon"),
+                    tooltip = "Brush"
+                };
+            }
+            return iconContent; 
+        }
+    }
+}
+
 [EditorTool("Edit Voxel World", typeof(VoxelWorld))]
 public class VoxelWorldSelectionToolVW : VoxelWorldSelectionToolBase {
 }
 
 [EditorTool("Edit Voxel Selection", typeof(VoxelWorld))]
 public class VoxelWorldEditorToolVW : VoxelWorldEditorToolBase {
+}
+
+[EditorTool("Paint Voxels", typeof(VoxelWorld))]
+public class VoxelWorldBrushToolVW : VoxelWorldBrushToolBase {
 }
 
 //Same again for SelectionZone
@@ -847,6 +882,10 @@ public class VoxelWorldSelectionToolSZ : VoxelWorldSelectionToolBase {
 
 [EditorTool("Edit Voxel Selection", typeof(SelectionZone))]
 public class VoxelWorldEditorToolSZ : VoxelWorldEditorToolBase {
+}
+
+[EditorTool("Paint Voxels", typeof(SelectionZone))]
+public class VoxelWorldBrushToolSZ : VoxelWorldBrushToolBase {
 }
 
 #endif

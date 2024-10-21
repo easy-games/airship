@@ -160,6 +160,9 @@ namespace Code.Player.Character {
 			if(this.physics == null){
 				this.physics = new CharacterPhysics(this);
 			}
+			if(this.animationHelper){
+				this.animationHelper.skiddingSpeed = this.moveData.sprintSpeed + .5f;
+			}
 		}
 
 		private void OnStopAuthority(){
@@ -754,7 +757,7 @@ private void OnEnable() {
 			}else if(!isImpulsing && !airborneFromImpulse && //Not impulsing AND under our max speed
 						(velMagnitude < (moveData.useAccelerationMovement?currentSpeed:Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1))){
 				if(moveData.useAccelerationMovement){
-					newVelocity += characterMoveVelocity;
+					newVelocity += Vector3.ClampMagnitude(characterMoveVelocity, currentSpeed-velMagnitude);
 				}else{
 					// if(Mathf.Abs(characterMoveVelocity.x) > Mathf.Abs(newVelocity.x)){
 					// 	newVelocity.x = characterMoveVelocity.x;
@@ -762,7 +765,7 @@ private void OnEnable() {
 					// if(Mathf.Abs(characterMoveVelocity.z) > Mathf.Abs(newVelocity.z)){
 					// 	newVelocity.z = characterMoveVelocity.z;
 					// }
-					if(moveMagnitude+.5 >= velMagnitude){
+					if(moveMagnitude+.5f >= velMagnitude){
 						newVelocity.x = characterMoveVelocity.x;
 						newVelocity.z = characterMoveVelocity.z;
 					}

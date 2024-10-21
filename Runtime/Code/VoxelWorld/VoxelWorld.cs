@@ -216,6 +216,20 @@ public partial class VoxelWorld : MonoBehaviour {
         }
     }
 
+    public void ColorVoxelAt(Vector3 pos, Color32 color, bool priority) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out Chunk chunk);
+        if (chunk == null) {
+            return;
+        }
+
+        var voxelPos = FloorInt(pos);
+        if (chunk.GetVoxelAt(voxelPos) == 0) return;
+        
+        chunk.WriteVoxelColor(voxelPos, color);
+        DirtyMesh(voxelPos, priority);
+    }
+
     private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
         Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel);
         if (affectedChunk != null) {
@@ -468,7 +482,8 @@ public partial class VoxelWorld : MonoBehaviour {
         return (value.GetVoxelAt(pos), value);
     }
 
-    public VoxelData GetVoxelAt(Vector3 pos) {
+    public VoxelData 
+        GetVoxelAt(Vector3 pos) {
         Vector3Int posi = FloorInt(pos);
         Vector3Int chunkKey = WorldPosToChunkKey(posi);
         chunks.TryGetValue(chunkKey, out Chunk value);
@@ -477,6 +492,15 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         return value.GetVoxelAt(posi);
+    }
+    
+    public Color32 GetVoxelColorAt(Vector3 pos) {
+        var posi = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posi);
+        if (!chunks.TryGetValue(chunkKey, out var value)) {
+            return new Color32();
+        }
+        return value.GetVoxelColorAt(posi);
     }
 
     public void DirtyMesh(Vector3Int voxel, bool priority = false) {
