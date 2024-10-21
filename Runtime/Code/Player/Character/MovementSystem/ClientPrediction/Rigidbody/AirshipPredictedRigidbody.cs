@@ -12,6 +12,14 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
     public double rotationCorrectionThreshold = 5;
 #endregion
 
+private void Awake() {
+    if(!rigid){
+        rigid = gameObject.GetComponent<Rigidbody>();
+    }
+    
+    base.Awake();
+}
+
     protected override Vector3 currentPosition {
         get{
             return rigid.position;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Mirror;
+using UnityEditor;
 using UnityEngine;
 
 // PredictedController is based off of:
@@ -14,6 +15,7 @@ using UnityEngine;
 /// and handeling generic server client syncronization
 /// </summary>
 /// <typeparam name="T">The data type stored in the history that is needed for replays</typeparam>
+[RequireComponent(typeof(NetworkIdentity))]
 public abstract class AirshipPredictionController<T> : NetworkBehaviour where T: AirshipPredictionState{
 
 #region INSPECTOR
@@ -72,6 +74,8 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
     
 
     [Header("Debugging")]
+    [Tooltip("Draw gizmos. Shows server position and client position")]
+    public bool showLogs = false;
 
     [Tooltip("Draw gizmos. Shows server position and client position")]
     public bool showGizmos = false;
@@ -82,7 +86,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
     [Tooltip("Performance optimization: only draw gizmos at an interval.")]
     public int drawGizmosEveryNthFrame = 4;
     public Color serverColor = Color.red;
-    public Color clientColor = Color.red;
+    public Color clientColor = Color.blue;
 #endregion
 
 
@@ -132,6 +136,13 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
     protected virtual bool IsMoving() =>
         currentVelocity.sqrMagnitude >= motionSmoothingVelocityThresholdSqr;
 #endregion
+
+private void Log(string message){
+    if(!showLogs){
+        return;
+    }
+    Debug.Log(gameObject.name + " Prediction: " + message);
+}
 
 #region INIT
     protected virtual void Awake() {
@@ -225,10 +236,10 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
             // but it doesn't matter since we'll always compare with the 'newest' anyway.
             //
             // we check in here instead of in RecordState() because RecordState() should definitely record if we call it!
-            if (onlyRecordChanges) {
+            if (onlyRecordChanges && lastRecorded != null) {
                 // TODO maybe don't reuse the correction thresholds?
                 if ((lastRecorded.position - currentPosition).sqrMagnitude < positionCorrectionThresholdSqr) {
-                    // Debug.Log($"FixedUpdate for {name}: taking optimized early return instead of recording state.");
+                    // Log($"FixedUpdate for {name}: taking optimized early return instead of recording state.");
                     return;
                 }
             }
@@ -255,7 +266,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
 
         // FixedUpdate may run twice in the same frame / NetworkTime.time.
         // for now, simply don't record if already recorded there.
-        if (predictedTime == lastRecorded.timestamp) return;
+        if (lastRecorded != null && predictedTime == lastRecorded.timestamp) return;
 
         // keep state history within limit
         if (stateHistory.Count >= stateHistoryLimit)
@@ -274,7 +285,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
         // Hard snap to the position below a threshold velocity.
         // this is fine because the visual object still smoothly interpolates to it.
         if (currentVelocity.magnitude <= velocitySnapThreshold) {
-            // Debug.Log($"Prediction: snapped {name} into place because velocity {predictedRigidbody.velocity.magnitude:F3} <= {snapThreshold:F3}");
+            Log($"Prediction: snapped {name} into place because velocity {currentVelocity.magnitude:F3} <= {velocitySnapThreshold:F3}");
 
             // apply server state immediately.
             // important to apply velocity as well, instead of Vector3.zero.
@@ -333,7 +344,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
         //
         // if this ever causes issues, feel free to disable it.
         if (Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr) {
-            // Debug.Log($"OnReceivedState for {name}: taking optimized early return!");
+            Log($"OnReceivedState for {name}: taking optimized early return!");
             return;
         }
 
@@ -351,7 +362,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
         RecordState();
 
         T oldest = stateHistory.Values[0];
-        T newest = stateHistory.Values[stateHistory.Count - 1];
+        T newestState = stateHistory.Values[stateHistory.Count - 1];
 
         // edge case: is the state older than the oldest state in history?
         // this can happen if the client gets so far behind the server
@@ -363,7 +374,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
             // it's expected that server states would be behind those 2-3.
             // only show a warning if it's behind the full history limit!
             if (stateHistory.Count >= stateHistoryLimit)
-                Debug.LogWarning($"Hard correcting client object {name} because the client is too far behind the server. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newest.timestamp:F3}. This would cause the client to be out of sync as long as it's behind.");
+                Debug.LogWarning($"Hard correcting client object {name} because the client is too far behind the server. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This would cause the client to be out of sync as long as it's behind.");
 
             // force apply the state
             ApplyState(serverState);
@@ -377,13 +388,13 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
         //
         // for example, when running prediction on the same machine with near zero latency.
         // when applying corrections here, this looks just fine on the local machine.
-        if (newest.timestamp < serverState.timestamp) {
+        if (newestState.timestamp < serverState.timestamp) {
             // the correction is for a state in the future.
             // we clamp it to 'now'.
             // TODO maybe we should interpolate this back to 'now'?
             // this can happen a lot when latency is ~0. logging all the time allocates too much and is too slow.
-            // double ahead = state.timestamp - newest.timestamp;
-            // Debug.Log($"Hard correction because the client is ahead of the server by {(ahead*1000):F1}ms. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newest.timestamp:F3}. This can happen when latency is near zero, and is fine unless it shows jitter.");
+             double ahead = serverState.timestamp - newestState.timestamp;
+             Log($"Hard correction because the client is ahead of the server by {(ahead*1000):F1}ms. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This can happen when latency is near zero, and is fine unless it shows jitter.");
             ApplyState(serverState);
             return;
         }
@@ -393,21 +404,23 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
         {
             // something went very wrong. sampling should've worked.
             // hard correct to recover the error.
-            Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newest.timestamp:F3}. This should never happen because the timestamp is within history.");
+            Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This should never happen because the timestamp is within history.");
             ApplyState(serverState);
             return;
         }
 
         // interpolate between them to get the best approximation
         T interpolatedState = (T)before.Interpolate(after, (float)t);
-        // Debug.Log($"CORRECTION NEEDED FOR {name} @ {timestamp:F3}: client={interpolated.position} server={state.position} difference={difference:F3}");
+        Log($"CORRECTION NEEDED FOR {name} @ {timestamp:F3}: client={interpolatedState.position} server={serverState.position} timeDelta={t:F3}");
 
         // too far off? then correct it
         if (Vector3.SqrMagnitude(serverState.position - interpolatedState.position) >= positionCorrectionThresholdSqr
                 || NeedsCorrection(serverState, interpolatedState)) {
             // show the received correction position + velocity for debugging.
             // helps to compare with the interpolated/applied correction locally.
-            //Debug.DrawLine(state.position, state.position + state.velocity * 0.1f, Color.white, lineTime);
+            if(showGizmos){
+                GizmoUtils.DrawLine(serverState.position, serverState.position + serverState.velocity * 0.1f, Color.white, .1f);
+            }
 
             // insert the correction and correct the history on top of it.
             // returns the final recomputed state after replaying.
@@ -417,7 +430,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
             // always do this here, not when iterating above, in case we aren't iterating.
             // for example, on same machine with near zero latency.
             // int correctedAmount = stateHistory.Count - afterIndex;
-            // Debug.Log($"Correcting {name}: {correctedAmount} / {stateHistory.Count} states to final position from: {rb.position} to: {last.position}");
+            // Log($"Correcting {name}: {correctedAmount} / {stateHistory.Count} states to final position from: {rb.position} to: {last.position}");
             //Debug.DrawLine(physicsCopyRigidbody.position, recomputed.position, Color.green, lineTime);
             ApplyState(recomputed);
         }

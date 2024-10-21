@@ -99,8 +99,8 @@ namespace Code.Player.Character {
 
 #region INTERNAL
 		//Calculated on start
-		private bool isServerAuth = false;
 		private bool hasMovementAuth = false;
+		private bool isServerAuth = false;
 
 		//Locally tracked variables
 		private float currentSpeed;
@@ -165,25 +165,32 @@ namespace Code.Player.Character {
 			}
 		}
 
-		private void OnStopAuthority(){
+        public override void OnStartClient() {
+			RefreshAuthority();
+        }
+
+        public override void OnStartServer() {
+			RefreshAuthority();
+        }
+
+        public override void OnStartAuthority() {
+			RefreshAuthority();
+        }
+
+        public override void OnStopAuthority() {
 			RefreshAuthority();
 		}
 
 		private void RefreshAuthority(){
-			//Debug.Log("ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
-			if(isServerAuth){
-				//Owning client and server can control
-				hasMovementAuth = netIdentity.connectionToClient == null || isOwned;
-			}else{
-				//Only the owner can control
-				hasMovementAuth = (isServer && netIdentity.connectionToClient == null) || (isClient && isOwned);
+			Debug.Log("ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
+			//Only the owner can control
+			hasMovementAuth = isOwned || (isServer && (netIdentity.connectionToClient == null || isServerAuth));
 
-				//Have to manualy control the flow of data
-				if(isServerOnly){
-					networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
-				}else {
-					networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
-				}
+			//Have to manualy control the flow of data
+			if(isServerOnly){
+				networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
+			}else {
+				networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
 			}
 			//print("Refreshed auth: " + hasAuth);
 		}
@@ -275,7 +282,7 @@ private void OnEnable() {
 		//Every Physics tick we process the move data
 		private void FixedUpdate() {	
 			// Observers don't calculate moves
-			if((isClientOnly && !authority) || (isServerOnly && !isServerAuth)){
+			if(!hasMovementAuth || (isServerOnly && !isServerAuth)) {
 				return;
 			}
 
@@ -303,7 +310,7 @@ private void OnEnable() {
 		[Command]
 		//Sync the move input data to the server
 		private void CmdMove(MoveInputData moveData){
-			Move(moveData);
+			//Move(moveData);
 		}
 #endregion
 
@@ -889,7 +896,7 @@ private void OnEnable() {
 			if(hasMovementAuth){
 				//Teleport Locally
 				TeleportInternal(position, lookVector);
-			} else {
+			} else if(!isServerAuth && isServerOnly){
 				//Tell client to teleport
 				RpcTeleport(base.connectionToClient, position, lookVector);
 			}
@@ -903,13 +910,12 @@ private void OnEnable() {
 		private void TeleportInternal(Vector3 pos, Vector3 lookVector){
 			this.GetRigidbody().position = pos;
 			this.lookVector = lookVector;
-			this.lookVector = lookVector;
 		}
 
 		public void SetVelocity(Vector3 velocity) {
 			if (hasMovementAuth) {
 				SetVelocityInternal(velocity);
-			} else if(isServerOnly){
+			} else if(!isServerAuth && isServerOnly){
 				if (netId == 0) return;
 			 	RpcSetVelocity(base.connectionToClient, velocity);
 			}
@@ -979,7 +985,7 @@ private void OnEnable() {
 			if (hasMovementAuth) {
 				//Locally
 				SetImpulseInternal(impulse);
-			} else if(isServerOnly){
+			} else if(!isServerAuth && isServerOnly){
 				//Tell client
 				RpcSetImpulse(base.connectionToClient, impulse);
 			}
@@ -1012,7 +1018,6 @@ private void OnEnable() {
 		/// </summary>
 		/// <param name="lookVector"></param>
 		public void SetLookVectorRecurring(Vector3 lookVector){
-			this.lookVector = lookVector;
 			this.lookVector = lookVector;
 		}
 
@@ -1073,7 +1078,7 @@ private void OnEnable() {
 			this.isFlying = flyModeEnabled;
 			if(isClient && hasMovementAuth){
 				CommandSetFlying(flyModeEnabled);
-			}else if(isServerOnly){
+			}else if(!isServerAuth && isServerOnly){
 				RpcSetFlying(flyModeEnabled);
 			}
 		}
