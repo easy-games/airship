@@ -45,6 +45,7 @@ using Mirror;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
+using Code.Player.Accessories;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -256,6 +257,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementData),
             typeof(AnimationEventData),
             typeof(VoxelWorld),
+            typeof(AccessorySkin),
+            typeof(AccessoryComponent),
+            typeof(ActiveAccessory),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
@@ -323,7 +327,6 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkIdentity$",
             "\\.NetworkTime$",
             "UnityEngine.TextCore.Text.Character",
-            "\\.AccessoryComponent$",
             "\\.VolumeProfile$",
         };
 
