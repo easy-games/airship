@@ -5,9 +5,9 @@ namespace Code.Player.Accessories {
     [Icon("Packages/gg.easy.airship/Editor/shirt-outline-icon.png")]
     public class AccessoryComponent : MonoBehaviour {
         public enum VisibilityMode {
-            THIRD_PERSON,
-            FIRST_PERSON,
-            BOTH
+            ThirdPerson,
+            FirstPerson,
+            Both
         }
 
         //must match the bodyMask image that artist UV the body regions to
@@ -108,7 +108,7 @@ namespace Code.Player.Accessories {
         private string serverInstanceId;
 
         public AccessorySlot accessorySlot = AccessorySlot.RightHand;
-        public VisibilityMode visibilityMode = VisibilityMode.BOTH;
+        public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
 
         [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]

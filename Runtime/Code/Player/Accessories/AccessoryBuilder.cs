@@ -412,15 +412,15 @@ public class AccessoryBuilder : MonoBehaviour
                 foreach (var ren in kvp.Value.renderers) {
                     
                     meshCombinedAcc = false;
-                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.THIRD_PERSON ||
-                            acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && !firstPerson) {
+                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
+                            acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && !firstPerson) {
                         //VISIBLE IN THIRD PERSON
                         meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                         meshCombinedAcc = true;
                     }
 
-                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FIRST_PERSON ||
-                            acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && firstPerson) {
+                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FirstPerson ||
+                            acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && firstPerson) {
                         //VISIBLE IN FIRST PERSON
                         meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                         meshCombinedAcc = true;
