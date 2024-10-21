@@ -1,4 +1,5 @@
-﻿using Code.Player.Character.API;
+﻿using System.Windows.Forms;
+using Code.Player.Character.API;
 using Mirror;
 using UnityEngine;
 
@@ -28,6 +29,8 @@ namespace Code.Player.Character {
         public float minAirborneTime = .4f;
         public float particleMaxDistance = 25f;
         public float directionalBlendLerpMod = 8f;
+        [Tooltip("At what speed should we be considered skidding")]
+        public float skiddingSpeed = 7.5f;
         [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
         public float idleRectionLength = 3;
 
@@ -146,8 +149,10 @@ namespace Code.Player.Character {
             
             if(grounded){
                 lastGroundedTime = Time.time;
+                animator.SetBool("Skidding", currentSpeed >= skiddingSpeed);
                 animator.SetBool("Airborne", false);
             }else{
+                animator.SetBool("Skidding", false);
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
 
@@ -191,7 +196,6 @@ namespace Code.Player.Character {
             animator.SetBool("Grounded", grounded);
             animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
             animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
-
             if(sprintVfx){
                 if (newState == CharacterState.Sprinting) {
                     if (this.IsInParticleDistance()) {
