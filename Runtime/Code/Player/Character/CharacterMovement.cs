@@ -5,6 +5,7 @@ using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character {
 	[LuauAPI]
