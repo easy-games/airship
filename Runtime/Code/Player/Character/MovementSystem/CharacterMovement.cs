@@ -4,6 +4,7 @@ using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character {
 	[LuauAPI]
@@ -12,6 +13,7 @@ namespace Code.Player.Character {
 		[Header("References")]
 		public Rigidbody rigidbody;
 		public Transform rootTransform; //The true position transform
+		[FormerlySerializedAs("networkTransform")]
 		public Transform airshipTransform; //The visual transform controlled by this script
 		public Transform graphicTransform; //A transform that games can animate
 		public CharacterMovementData moveData;
