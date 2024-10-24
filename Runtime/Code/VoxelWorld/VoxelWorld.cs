@@ -86,16 +86,29 @@ public partial class VoxelWorld : MonoBehaviour {
     public Vector3 mirrorAround = Vector3.zero;
 
     //Flipped blocks 
-    public enum Flips : int {
-        ____ = 0,               // No flip
-        _X__ = 1 << 0,          // Flip on X (bit 0)
-        __Y_ = 1 << 1,          // Flip on Y (bit 1)
-        ___Z = 1 << 2,          // Flip on Z (bit 2)
-        _XY_ = (1 << 0) | (1 << 1),  // Flip on X and Y (bit 0 and bit 1)
-        _X_Z = (1 << 0) | (1 << 2),  // Flip on X and Z (bit 0 and bit 2)
-        __YZ = (1 << 1) | (1 << 2),  // Flip on Y and Z (bit 1 and bit 2)
-        _XYZ = (1 << 0) | (1 << 1) | (1 << 2)  // Flip on X, Y, and Z (bit 0, bit 1, and bit 2)
+    public enum Flips : byte {
+        Flip_0Deg = 0,
+        Flip_90Deg = 1,
+        Flip_180Deg = 2,
+        Flip_270Deg = 3,
+        Flip_0DegVertical = 4,
+        Flip_90DegVertical = 5,
+        Flip_180DegVertical = 6,
+        Flip_270DegVertical = 7
     }
+
+    public static string[] flipNames = {
+        "0 Deg",
+        "90 Deg",
+        "180 Deg",
+        "270 Deg",
+        "0 Deg Vertical",
+        "90 Deg Vertical",
+        "180 Deg Vertical",
+        "270 Deg Vertical"
+    };
+
+
     public static Flips[] allFlips = (Flips[])System.Enum.GetValues(typeof(Flips));
 
 
@@ -799,7 +812,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public void SaveToDomainReloadFile() {
 #if UNITY_EDITOR
 
-        if (chunks.Count > 0) {
+        if (chunks.Count > 0 && hasUnsavedChanges) {
             //Create a temporary asset for saving
             /*this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
             this.domainReloadSaveFile.CreateFromVoxelWorld(this);
