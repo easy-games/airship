@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Mirror;
-using UnityEditor;
 using UnityEngine;
 
 // PredictedController is based off of:
@@ -16,7 +15,7 @@ using UnityEngine;
 /// </summary>
 /// <typeparam name="T">The data type stored in the history that is needed for replays</typeparam>
 [RequireComponent(typeof(NetworkIdentity))]
-public abstract class AirshipPredictionController<T> : NetworkBehaviour where T: AirshipPredictionState{
+public abstract class AirshipPredictionController<T> : NetworkBehaviour, IPredictionReplay where T: AirshipPredictionState{
 
 #region INSPECTOR
     // client keeps state history for correction & reconciliation.
@@ -79,6 +78,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
 
     [Tooltip("Draw gizmos. Shows server position and client position")]
     public bool showGizmos = false;
+    public float gizmoDuration = 1;
 
     [Tooltip("Physics components are moved onto a ghost object beyond this threshold. Main object visually interpolates to it.")]
     public float gizmoVelocityThreshold = 0.1f;
@@ -93,7 +93,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
 #region PRIVATE
 
     //State History
-    private readonly SortedList<double, T> stateHistory = new SortedList<double, T>();
+    protected readonly SortedList<double, T> stateHistory = new SortedList<double, T>();
     // manually store last recorded so we can easily check against this
     // without traversing the SortedList.
     protected T lastRecorded {get; private set;}
@@ -120,16 +120,21 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
 
 
 #region ABSTRACT
-
+    
     protected abstract Vector3 currentPosition {get;}
     protected abstract Vector3 currentVelocity {get;}
     protected abstract void SnapTo(T newState);
     protected abstract void MoveTo(T newState);
     protected abstract T CreateCurrentState(double currentTime);
-    protected abstract T ReplayStates(T serverState, int nextIndex);
-
     protected abstract void SerializeState(NetworkWriter writer);
     protected abstract T DeserializeState(NetworkReader reader, double timestamp);
+
+    public abstract void OnReplayStart(AirshipPredictionState initialState);
+    public abstract void OnReplayTickStarted(double time);
+    public abstract void OnReplayTickFinished(double time);
+    public abstract void OnReplayFinished(AirshipPredictionState initialState);
+
+    public virtual string friendlyName => "Prediction: " + gameObject.name;
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected virtual bool IsMoving() =>
@@ -140,16 +145,6 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour where T:
     //Do we need to correct this state?
     protected virtual bool NeedsCorrection(T serverState, T interpolatedState){
         return Vector3.SqrMagnitude(serverState.position - interpolatedState.position) >= positionCorrectionThresholdSqr;
-    }
-
-    //The recieved server state is older than our history
-    protected virtual void OnRecievedOlderState(T serverState){
-        ApplyState(serverState);
-    }
-
-    //The recieved server state is newer than our prediction (usually when testing locally on 0 latency)
-    protected virtual void OnRecievedNewerState(T serverState){
-        ApplyState(serverState);
     }
 #endregion
 
@@ -275,21 +270,20 @@ protected void Log(string message){
 
 #region PREDICTION
     //If we are in a new state then insert the current state into the history at this specific time
-    protected void RecordState(double predictedTime) {
+    protected void RecordState(double stateTime) {
         lastRecordTime = NetworkTime.time;
-
 
         // FixedUpdate may run twice in the same frame / NetworkTime.time.
         // for now, simply don't record if already recorded there.
-        if (lastRecorded != null && predictedTime == lastRecorded.timestamp) return;
+        if (lastRecorded != null && stateTime == lastRecorded.timestamp) return;
 
         // keep state history within limit
         if (stateHistory.Count >= stateHistoryLimit)
             stateHistory.RemoveAt(0);
 
-        var newState = CreateCurrentState(predictedTime);
+        var newState = CreateCurrentState(stateTime);
         // add state to history
-        stateHistory.Add(predictedTime, newState);
+        stateHistory.Add(stateTime, newState);
 
         // manually remember last inserted state for faster .Last comparisons
         lastRecorded = newState;
@@ -356,15 +350,17 @@ protected void Log(string message){
         //    this is as fast as it gets for skipping idle objects.
         //
         // if this ever causes issues, feel free to disable it.
-        if (!IsMoving() && Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr) {
+        if (Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr &&
+            Vector3.SqrMagnitude(serverState.velocity - currentVelocity) < motionSmoothingVelocityThresholdSqr) {
             Log($"OnReceivedState for {name}: taking is idle optimized early return!");
             return;
         }
 
         //Render server state
         if(this.showGizmos){
+            //Recieved server position
             GizmoUtils.DrawBox(serverState.position + new Vector3(0,.5f, 0), Quaternion.identity, 
-                new Vector3(.5f, .5f, .5f), serverColor);
+                new Vector3(.5f, .5f, .5f), serverColor, gizmoDuration);
         }
 
         // we only capture state every 'interval' milliseconds.
@@ -377,7 +373,7 @@ protected void Log(string message){
         T oldest = stateHistory.Values[0];
         T newestState = stateHistory.Values[stateHistory.Count - 1];
 
-        // edge case: is it newer than the newest state in history?
+        // edge case: is the server state newer than the newest state in history?
         // this can happen if client's predictedTime predicts too far ahead of the server.
         // in that case, log a warning for now but still apply the correction.
         // otherwise it could be out of sync as long as it's too far ahead.
@@ -389,11 +385,14 @@ protected void Log(string message){
             // we clamp it to 'now'.
             // TODO maybe we should interpolate this back to 'now'?
             // this can happen a lot when latency is ~0. logging all the time allocates too much and is too slow.
-             double ahead = serverState.timestamp - newestState.timestamp;
-             Log($"Hard correction because the client is ahead of the server by {(ahead*1000):F1}ms. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This can happen when latency is near zero, and is fine unless it shows jitter.");
-            OnRecievedOlderState(serverState);
+            double ahead = serverState.timestamp - newestState.timestamp;
+            Log($"Hard correction because the client is ahead of the server by {(ahead*1000):F1}ms. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This can happen when latency is near zero, and is fine unless it shows jitter.");
+            ApplyState(serverState);
             return;
         }
+
+        T interpolatedState;
+        int afterIndex = 0;
 
         // edge case: is the state older than the oldest state in history?
         // this can happen if the client gets so far behind the server
@@ -407,55 +406,45 @@ protected void Log(string message){
             if (stateHistory.Count >= stateHistoryLimit)
                 Debug.LogWarning($"Hard correcting client object {name} because the client is too far behind the server. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This would cause the client to be out of sync as long as it's behind.");
 
-            Log("serverState is older than out history");
-            // force apply the state
-            OnRecievedOlderState(serverState);
-            return;
+            Log("serverState is older than our history");
+            //Add a history element before everything to replay from
+            stateHistory.Add(serverState.timestamp, serverState);
+            interpolatedState = serverState;
+            afterIndex = 1;
+            //Continue to the replay below
         }
-
         // find the two closest client states between timestamp
-        if (!Sample(stateHistory, timestamp, out T before, out T after, out int afterIndex, out double t))
+        else if (!Sample(stateHistory, timestamp, out T before, out T after, out afterIndex, out double t))
         {
             // something went very wrong. sampling should've worked.
             // hard correct to recover the error.
             Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This should never happen because the timestamp is within history.");
             ApplyState(serverState);
             return;
+        }else{
+            // interpolate between them to get the best approximation
+            interpolatedState = (T)before.Interpolate(after, (float)t);
+            Log($"CORRECTION NEEDED FOR {name} @ {timestamp:F3}: client={interpolatedState.position} server={serverState.position} timeDelta={t:F3}");
         }
 
-        // interpolate between them to get the best approximation
-        T interpolatedState = (T)before.Interpolate(after, (float)t);
-        Log($"CORRECTION NEEDED FOR {name} @ {timestamp:F3}: client={interpolatedState.position} server={serverState.position} timeDelta={t:F3}");
 
         // too far off? then correct it
         if (NeedsCorrection(serverState, interpolatedState)) {
-            // show the received correction position + velocity for debugging.
-            // helps to compare with the interpolated/applied correction locally.
             if(showGizmos){
-                GizmoUtils.DrawLine(serverState.position, serverState.position + serverState.velocity * 0.1f, Color.white, .1f);
+                // show the received correction position + velocity for debugging.
+                // helps to compare with the interpolated/applied correction locally.
+                GizmoUtils.DrawLine(serverState.position, serverState.position + serverState.velocity * 0.1f, Color.white, gizmoDuration);
             }
 
             // insert the correction and correct the history on top of it.
             // returns the final recomputed state after replaying.
             ClearHistoryAfterState(serverState, afterIndex);
 
+            //Simulate until the end of our history or however long we think we are ahead of the server whicher is longer
+            double finalTime = lastRecorded.timestamp > NetworkTime.predictedTime ? lastRecorded.timestamp : NetworkTime.predictedTime;
+
             //Replay States
-            T recomputed = ReplayStates(serverState, afterIndex);
-
-            var log = "History after replay";
-            foreach(var state in stateHistory){
-                log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
-            }
-            print(log);
-
-            // log, draw & apply the final position.
-            // always do this here, not when iterating above, in case we aren't iterating.
-            // for example, on same machine with near zero latency.
-            // int correctedAmount = stateHistory.Count - afterIndex;
-            // Log($"Correcting {name}: {correctedAmount} / {stateHistory.Count} states to final position from: {rb.position} to: {lastState.position}");
-            if(showGizmos){
-                GizmoUtils.DrawLine(serverState.position, recomputed.position, Color.green, .1f);
-            }
+            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverState.timestamp);
         }
     }
 #endregion
@@ -506,7 +495,11 @@ protected void Log(string message){
         T newState = DeserializeState(reader, timestamp);
 
         // process received state
-        OnReceivedState(newState.timestamp, newState);
+        try{
+            OnReceivedState(newState.timestamp, newState);
+        }catch(Exception e){
+            Debug.LogError("Error on recieved state: " + e.Message);
+        }
     }
 #endregion
 

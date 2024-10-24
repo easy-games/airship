@@ -3,7 +3,6 @@ using Unity.Mathematics;
 using UnityEngine;
 
 public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPredictedRigidbodyState> {
-    private const float replayGizmoDuration = 2;
 
 #region INSPECTOR
     [Header("References")]
@@ -45,15 +44,20 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
         print("Snapping to state: " + newState.timestamp + " pos: " + newState.position);
         // apply the state to the Rigidbody instantly
         rigid.position = newState.position;
+        rigid.rotation = newState.rotation;
 
-        // Set the velocity
+        // Set the velocities
         if (!rigid.isKinematic) {
             rigid.velocity = newState.velocity;
+            rigid.angularVelocity = newState.angularVelocity;
         }
 
+        
+
         if(showGizmos){
-            GizmoUtils.DrawSphere(newState.position, .2f, Color.red, 4, replayGizmoDuration);
-            GizmoUtils.DrawLine(newState.position, newState.position+newState.velocity, Color.red, replayGizmoDuration);
+            //Snapped position and velocity
+            GizmoUtils.DrawSphere(newState.position, .2f, Color.red, 4, gizmoDuration);
+            GizmoUtils.DrawLine(newState.position, newState.position+newState.velocity, Color.red, gizmoDuration);
         }
     }
 
@@ -74,62 +78,51 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
             Quaternion.Angle(serverState.rotation, interpolatedState.rotation) > rotationCorrectionThreshold;
     }
 
-    protected override void OnRecievedOlderState(AirshipPredictedRigidbodyState serverState) {
-        ReplayStates(serverState, 5);
-    }
-
     #region REPLAY
 
-    protected override AirshipPredictedRigidbodyState ReplayStates(AirshipPredictedRigidbodyState serverState, int numberOfFutureStates) {
-        print("Replaying to server state: " + serverState.timestamp);
+    public override void OnReplayStart(AirshipPredictionState initialState){
+        print("Replaying to server state: " + initialState.timestamp);
 
         //Snap to the servers state
-        SnapTo(serverState);
-
-        double time = serverState.timestamp;
-        double simulationDuration;
-
-        //Simulate until the end of our history or however long we think we are ahead of the server whicher is longer
-        double finalTime = lastRecorded.timestamp > NetworkTime.predictedTime ? lastRecorded.timestamp : NetworkTime.predictedTime;
-        Log("Replaying for " + (finalTime - time) + " seconds");
-        while(time <= finalTime){
-            //Move the rigidbody based on the saved inputs (impulses)
-            //If no inputs then just resimulate with its current velocity
-            //TODO
-
-            //Move all dynamic rigidbodies to their saved states at this time
-            //TODO
-            //TODO maybe make a bool so this is optional?
-
-            //Simulate physics until the next input state
-            //TODO
-            simulationDuration = finalTime - time;
-            time += simulationDuration;
-
-            //Don't simulate the last tiny bit of time
-            if(simulationDuration < Time.fixedDeltaTime){
-                //continue;
-            }
-            Log("Simulating: " + simulationDuration);
-            Physics.Simulate((float)simulationDuration);
-
-
-            if(showGizmos){
-                GizmoUtils.DrawSphere(currentPosition, .2f, Color.black, 4, replayGizmoDuration);
-                GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, Color.black, replayGizmoDuration);
-            }
-            
-            //Save the new history state
-            RecordState(time);
-        }
-
-        //Return the most recent state
-        return lastRecorded;
+        SnapTo((AirshipPredictedRigidbodyState)initialState);
     }
 
-#endregion
+    public override void OnReplayTickStarted(double time){
+        //TODO
+        //run any input changes on this rigibodys
+    }
 
-#region SERIALIZE
+    public override void OnReplayTickFinished(double time){
+        if(showGizmos){
+            //Replay Position and velocity
+            GizmoUtils.DrawSphere(currentPosition, .2f, Color.black, 4, gizmoDuration);
+            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, Color.black, gizmoDuration);
+        }
+        
+        //Save the new history state
+        RecordState(time);
+    }
+
+    public override void OnReplayFinished(AirshipPredictionState initialState){
+        var log = "History after replay";
+        foreach(var state in stateHistory){
+            log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
+        }
+        print(log);
+
+        // log, draw & apply the final position.
+        // always do this here, not when iterating above, in case we aren't iterating.
+        // for example, on same machine with near zero latency.
+        // int correctedAmount = stateHistory.Count - afterIndex;
+        // Log($"Correcting {name}: {correctedAmount} / {stateHistory.Count} states to final position from: {rb.position} to: {lastState.position}");
+        if(showGizmos){
+            GizmoUtils.DrawLine(initialState.position, currentPosition, Color.green, gizmoDuration);
+        }
+    }
+
+    #endregion
+
+    #region SERIALIZE
     protected override void SerializeState(NetworkWriter writer) {
         writer.WriteVector3(rigid.position);
         writer.WriteVector4(rigid.rotation.ConvertToVector4());
@@ -144,5 +137,5 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
             reader.ReadVector3(), 
             reader.ReadVector3());
     }
-#endregion
+    #endregion
 }

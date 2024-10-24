@@ -87,15 +87,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictionController<Air
 
 #region REPLAY
 
-    protected override AirshipPredictedCharacterState ReplayStates(AirshipPredictedCharacterState serverState, int numberOfFutureStates) {
-        SnapTo(serverState);
-        for(int i=0; i<numberOfFutureStates;i++){
-            //TODO tick from the server state to the next history state
-            //Will need to save the delta changes between ticks? 
-        }
-        return CreateCurrentState(NetworkTime.predictedTime);
-    }
-
 #endregion
 
 #region SERIALIZE
@@ -109,5 +100,25 @@ public class AirshipPredictedCharacterMovement : AirshipPredictionController<Air
             reader.ReadVector3(), 
             reader.ReadVector3());
     }
-#endregion
+
+    public override void OnReplayStart(AirshipPredictionState initialState)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public override void OnReplayTickStarted(double time)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public override void OnReplayTickFinished(double time)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public override void OnReplayFinished(AirshipPredictionState initialState)
+    {
+        throw new System.NotImplementedException();
+    }
+    #endregion
 }

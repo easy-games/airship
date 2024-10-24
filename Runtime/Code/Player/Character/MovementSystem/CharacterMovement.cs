@@ -241,10 +241,11 @@ private void OnEnable() {
 				//Instantly rotate for owner
 				airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
 				//Notify the server of the new rotation periodically
-				if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
-					lastServerUpdateTime = Time.time;
-					SetServerLookVector(this.lookVector);
-				}
+				//Not doing now that look vector is sync var
+				// if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
+				// 	lastServerUpdateTime = Time.time;
+				// 	SetServerLookVector(this.lookVector);
+				// }
 			} else {
 				//Tween to rotation
 				var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
