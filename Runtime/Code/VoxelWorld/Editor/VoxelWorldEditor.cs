@@ -179,7 +179,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     Vector3 lastNormal;
     Vector3Int lastNormalPos;
     bool validPosition = false;
-    private bool placementModsOpen = false;
+
+    Vector3 placementRotationVector;
+    VoxelWorld.Flips placementFlip = VoxelWorld.Flips.Flip_0Deg;
+    bool placementVertical = false;
+ 
 
     private static List<VoxelPlacementModifier> allPlacementModifiers = new() {
         new RotationPlacementMod(),
@@ -443,6 +447,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     private void DoMouseMoveEvent(Vector2 mousePosition, VoxelWorld world) {
         // Create a ray from the mouse position
         Ray ray = HandleUtility.GUIPointToWorldRay(mousePosition);
+        
 
         //Transform the ray into localspace of this world
         ray = world.TransformRayToLocalSpace(ray);
@@ -452,13 +457,47 @@ public class VoxelWorldEditor : UnityEditor.Editor {
       
             //handle.transform.position = pos + new Vector3(0.5f, 0.5f, 0.5f); //;//+  VoxelWorld.FloorInt(pos)+ new Vector3(0.5f,0.5f,0.5f);
             // Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
-            Vector3 pos = hitPosition - (normal * 0.5f);
-            pos = VoxelWorld.FloorInt(pos) + new Vector3(0.5f, 0.5f, 0.5f);
+            Vector3 rawPos = hitPosition - (normal * 0.5f);
+            Vector3 pos = VoxelWorld.FloorInt(rawPos) + new Vector3(0.5f, 0.5f, 0.5f);
             
             lastPos = VoxelWorld.FloorInt(pos);
             lastNormal = normal;
             lastNormalPos = VoxelWorld.FloorInt(pos + (lastNormal * 0.6f));
             validPosition = true;
+            
+            //We aiming at the top half of a block?
+            Vector3 blockTargetPos = hitPosition + (normal * 0.001f);
+            if (blockTargetPos.y - Mathf.Floor(blockTargetPos.y) > 0.5) {
+                placementVertical = true;
+            }
+            else {
+                placementVertical = false;
+            }
+
+            Vector3 viewDir = Vector3.zero;
+
+            if (world.currentCamera != null) {
+                viewDir = world.TransformVectorToLocalSpace(world.currentCamera.transform.forward);
+            }
+            placementRotationVector = VoxelWorld.CardinalVector(new Vector3(viewDir.x,0, viewDir.z).normalized);
+
+             
+            if (placementRotationVector.x > 0.01) {
+                placementFlip = VoxelWorld.Flips.Flip_180Deg;
+            }
+            else if (placementRotationVector.x < -0.01) {
+                placementFlip = VoxelWorld.Flips.Flip_0Deg;
+            }
+            else if (placementRotationVector.z < -0.01) {
+                placementFlip = VoxelWorld.Flips.Flip_270Deg;
+            } else {
+                placementFlip = VoxelWorld.Flips.Flip_90Deg;
+            }
+            if (placementVertical) {
+                placementFlip += 4;
+            }
+ 
+
         }
         else {
             validPosition = false;
@@ -525,8 +564,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         
         if (faceHandle) {
             faceHandle.transform.position = world.TransformPointToWorldSpace(lastPos + new Vector3(0.5f, 0.5f, 0.5f) + lastNormal * 0.51f);
-
-            Matrix4x4 mat = new Matrix4x4();
+ 
             
             Vector3 forward = world.transform.forward;
             Vector3 up = world.transform.up;
@@ -587,7 +625,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
             if (leftControlDown == false) {
                 
-                DoMouseMoveEvent(Event.current.mousePosition, world);
+                DoMouseMoveEvent(Event.current.mousePosition,  world);
             }
             UpdateHandlePosition(world);
             SceneView.RepaintAll();
@@ -631,6 +669,10 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
                         var def = world.voxelBlocks.GetBlock(newValue);
 
+                        if (def.definition.rotatedPlacement) {
+                            newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, (int)placementFlip);
+                        } 
+
                         voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
                             "Add Voxel " + def.definition.name);
 
@@ -642,8 +684,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                             //Move the pos by the normal to continue this "line" of voxels
                             lastPos += VoxelWorld.CardinalVector(lastNormal);
                             lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
-
                         }
+
+                        
                     }
                 }
 

@@ -80,7 +80,9 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public VoxelData highlightedBlock = 0;
     [HideInInspector] public Vector3Int highlightedBlockPos = new();
 
-
+    [NonSerialized]
+    [HideInInspector]
+    public Camera currentCamera;
 
     // Mirroring
     public Vector3 mirrorAround = Vector3.zero;
@@ -196,6 +198,9 @@ public partial class VoxelWorld : MonoBehaviour {
 
     public Vector3 TransformVectorToWorldSpace(Vector3 vec) {
         return transform.localToWorldMatrix.MultiplyVector(vec);
+    }
+    public Vector3 TransformVectorToLocalSpace(Vector3 vec) {
+        return transform.worldToLocalMatrix.MultiplyVector(vec);
     }
 
 
@@ -1017,6 +1022,7 @@ public partial class VoxelWorld : MonoBehaviour {
         foreach (var c in chunks) {
             c.Value.currentCamera = cam;
         }
+        currentCamera = cam;
 
         Profiler.BeginSample("RegenerateMissingChunkGeometry");
         RegenerateMissingChunkGeometry();
