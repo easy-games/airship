@@ -49,24 +49,29 @@ namespace Code.Player.Character {
         private bool grounded = false;
 
         private void Awake() {
-            if(sprintVfx){
+            if (this.sprintVfx){
                 sprintVfx.Stop();
             }
-            if(jumpPoofVfx){
+            if (this.jumpPoofVfx){
                 jumpPoofVfx.Stop();
             }
-            if(slideVfx){
+            if (this.slideVfx){
                 slideVfx.Stop();
             }
 
-            animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
-            if(!animatorOverride){
-                animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            // animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
+            if (!this.animatorOverride){
+                this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
             }
-            animator.runtimeAnimatorController = animatorOverride;
+            this.animator.runtimeAnimatorController = animatorOverride;
         }
 
-        private void Start(){
+        private void Start() {
+            // AnimatorOverrideController animatorOverrideController =
+            //     new AnimatorOverrideController(this.animator.runtimeAnimatorController);
+            // this.animator.runtimeAnimatorController = animatorOverrideController;
+            // this.animatorOverride = animatorOverrideController;
+
             var offset = Random.Range(0f,1f);
             animator.SetFloat("AnimationOffset", offset);
         }
