@@ -25,14 +25,14 @@ namespace Assets.Airship.VoxelRenderer {
             public Vector3[] vertices;
             public Vector3[] normals;
             public Surface[] surfaces;
-            VoxelWorld.Flips flip;
+            
             public PrecalculatedFlip(Vector3[] srcVertices, Vector3[] srcNormals, Surface[] srcSurfaces, VoxelWorld.Flips flip) {
                 
 
                 this.vertices = new Vector3[srcVertices.Length];
                 this.normals = new Vector3[srcNormals.Length];
 
-                int bits = (int)flip;
+                VoxelWorld.Flips bits = (VoxelWorld.Flips)flip;
 
                 //Copy the surfaces
                 this.surfaces = new Surface[srcSurfaces.Length];
@@ -61,7 +61,7 @@ namespace Assets.Airship.VoxelRenderer {
                 
 
                 //check for 1
-                if (bits == 1) {
+                if (bits == VoxelWorld.Flips.Flip_90Deg) {
 
                     //Rot left 90
                     for (int i = 0; i < srcVertices.Length; i++) {
@@ -71,7 +71,7 @@ namespace Assets.Airship.VoxelRenderer {
                     
                 }
                 //check for 2
-                if (bits == 2) {
+                if (bits == VoxelWorld.Flips.Flip_180Deg) {
                     //Rot 180
                     for (int i = 0; i < srcVertices.Length; i++) {
                         this.vertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, -srcVertices[i].z);
@@ -79,7 +79,7 @@ namespace Assets.Airship.VoxelRenderer {
                     }
                 }
                 //check for 3
-                if (bits == 3) {
+                if (bits == VoxelWorld.Flips.Flip_270Deg) {
                     //Rot right 270
                     for (int i = 0; i < srcVertices.Length; i++) {
                         this.vertices[i] = new Vector3(-srcVertices[i].z, srcVertices[i].y, srcVertices[i].x);
@@ -90,7 +90,7 @@ namespace Assets.Airship.VoxelRenderer {
 
                 //Do the vertical flipped ones
                 //check for 4
-                if (bits == 4) {
+                if (bits == VoxelWorld.Flips.Flip_0DegVertical) {
                     //Flip y
                     for (int i = 0; i < srcVertices.Length; i++) {
                         this.vertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y, srcVertices[i].z);
@@ -99,7 +99,7 @@ namespace Assets.Airship.VoxelRenderer {
                     parity++;
                 }
                 //check for 5
-                if (bits == 5) {
+                if (bits == VoxelWorld.Flips.Flip_90DegVertical) {
                     //Flip y, rot left 90
                     for (int i = 0; i < srcVertices.Length; i++) {
                         this.vertices[i] = new Vector3(srcVertices[i].z, -srcVertices[i].y, -srcVertices[i].x);
@@ -108,7 +108,7 @@ namespace Assets.Airship.VoxelRenderer {
                     parity++;
                 }
                 //check for 6
-                if (bits == 6) {
+                if (bits == VoxelWorld.Flips.Flip_180DegVertical) {
 
                     //Flip y, rot 180
                     for (int i = 0; i < srcVertices.Length; i++) {
@@ -118,7 +118,7 @@ namespace Assets.Airship.VoxelRenderer {
                     parity++;
                 }
                 //check for 7
-                if (bits == 7) {
+                if (bits == VoxelWorld.Flips.Flip_270DegVertical) {
                     //Flip y, rot right 90
                     for (int i = 0; i < srcVertices.Length; i++) {
                         this.vertices[i] = new Vector3(-srcVertices[i].z, -srcVertices[i].y, srcVertices[i].x);
@@ -126,9 +126,7 @@ namespace Assets.Airship.VoxelRenderer {
                     }
                     parity++;
                 }
-
-
-
+                
                 //Check for parity, if so we have to flip the winding orders
                 if (parity % 2 > 0) {
                     //flip faces
@@ -155,8 +153,6 @@ namespace Assets.Airship.VoxelRenderer {
             new KeyValuePair<Rotations, Quaternion>(Rotations.Y180, Quaternion.Euler(0, 180, 0)),
             new KeyValuePair<Rotations, Quaternion>(Rotations.Y270, Quaternion.Euler(0, 270, 0)),
         };
-
-
 
         //List of vertices uvs etc
         public PrecalculatedFlip[] flip = new PrecalculatedFlip[8];

@@ -58,6 +58,8 @@ public class VoxelBlockDefinition : ScriptableObject {
 
     ///////////////////////////
 
+    public bool rotatedPlacement = false;
+
     public float metallic = 0;
     public float smoothness = 0;
     public float normalScale = 1;
@@ -299,6 +301,8 @@ public class VoxelBlockDefinitionEditor : Editor {
         block.collisionType = (VoxelBlocks.CollisionType)EditorGUILayout.EnumPopup("Collision Type", block.collisionType);
 
         block.randomRotation = EditorGUILayout.Toggle("Random Rotation", block.randomRotation);
+
+        block.rotatedPlacement = EditorGUILayout.Toggle("Rotated Placement", block.rotatedPlacement);
 
         block.minecraftIds = EditorGUILayout.TextField("Minecraft Ids", block.minecraftIds);
         

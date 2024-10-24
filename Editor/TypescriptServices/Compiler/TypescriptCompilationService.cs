@@ -612,7 +612,7 @@ using Object = UnityEngine.Object;
                         }
                     }
                     catch (Exception e) {
-                        Debug.LogError($"Got {e.GetType().Name}: {e.Message}");
+                        Debug.LogException(e);
                     }
                 };
 
