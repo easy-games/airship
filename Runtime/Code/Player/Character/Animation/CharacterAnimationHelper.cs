@@ -1,4 +1,5 @@
-﻿using Code.Player.Character.API;
+﻿using System.Collections.Generic;
+using Code.Player.Character.API;
 using Mirror;
 using UnityEngine;
 
@@ -59,10 +60,19 @@ namespace Code.Player.Character {
                 slideVfx.Stop();
             }
 
-            this.animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
-            if (!this.animatorOverride){
-                this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
-                this.animator.runtimeAnimatorController = this.animatorOverride;
+            // Make a new instance of the animator override controller
+            if (!this.animatorOverride) {
+                if (this.animator.runtimeAnimatorController is AnimatorOverrideController over) {
+                    // Copy all the overrides if we already have an override controller in use
+                    var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(over.overridesCount);
+                    over.GetOverrides(overrides);
+                    this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                    this.animator.runtimeAnimatorController = this.animatorOverride;
+                    this.animatorOverride.ApplyOverrides(overrides);
+                } else {
+                    this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                    this.animator.runtimeAnimatorController = this.animatorOverride;
+                }
             }
         }
 
