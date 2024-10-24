@@ -59,11 +59,11 @@ namespace Code.Player.Character {
                 slideVfx.Stop();
             }
 
-            // animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
+            this.animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
             if (!this.animatorOverride){
                 this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                this.animator.runtimeAnimatorController = this.animatorOverride;
             }
-            this.animator.runtimeAnimatorController = animatorOverride;
         }
 
         private void Start() {
