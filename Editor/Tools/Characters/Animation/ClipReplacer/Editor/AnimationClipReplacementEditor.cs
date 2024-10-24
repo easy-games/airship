@@ -95,7 +95,7 @@ public class AnimatorClipReplacementEditor : UnityEditor.Editor
     private void DrawClipReplacementsList()
     {
         clipReplacementsList.DoLayoutList();
-        if (GUILayout.Button("Replace Clips"))
+        if (GUILayout.Button("Replace Clips in Overrider Asset"))
         {
             var replacer = (AnimatorClipReplacer)target;
 
