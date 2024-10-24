@@ -4,13 +4,6 @@ using UnityEngine;
 
 namespace Code.Platform.Shared {
     [Serializable ]
-     public class ProfilePicture {
-        public string uid;
-        public string instanceId;
-        public string imageId;
-    }
-
-    [Serializable ]
      public enum ResourceType {
         GAME,
         ORGANIZATION
@@ -68,11 +61,6 @@ namespace Code.Platform.Shared {
     [Serializable]
     public class ImageId{
         public string imageId;
-    }
-
-    [Serializable ]
-     public class ProfilePictureClass : ItemClass {
-        public ImageId profilePicture;
     }
 
     [Serializable ]
