@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,9 +20,12 @@ public class AirshipPredictionManager : MonoBehaviour {
         public IPredictionReplay replayController;
         public AirshipPredictionState initialState;
         public double duration;
-        public ReplayData(IPredictionReplay replayController, AirshipPredictionState initialState, double duration){
+        public double maxTickDuration = 1;
+        public ReplayData(IPredictionReplay replayController, AirshipPredictionState initialState, double duration, double maxTickDuration){
+            this.replayController = replayController;
             this.initialState = initialState;
             this.duration = duration;
+            this.maxTickDuration = maxTickDuration;
         }
     }
 
@@ -81,7 +83,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         }
     }
 
-    public void QueueReplay(IPredictionReplay replayController, AirshipPredictionState initialState, double duration){
+    public void QueueReplay(IPredictionReplay replayController, AirshipPredictionState initialState, double duration, double maxTickDuration){
         if(replayController == null){
             Debug.LogError("Trying to queue replay without a controller");
             return;
@@ -99,7 +101,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         //pendingReplays.Add(initialState.timestamp, new ReplayData(replayController, initialState, duration));
 
         //Replay this instantly
-        Replay(replayController, initialState, duration);
+        Replay(new ReplayData(replayController, initialState, duration, maxTickDuration));
     }
 
     private void StartReplays(){
@@ -107,22 +109,22 @@ public class AirshipPredictionManager : MonoBehaviour {
         //So if you have 10 predicted rigidbodies they can share replay simulations
         foreach(var kvp in pendingReplays){
             Debug.Log("Starting replay for: " + kvp.Value.replayController.friendlyName);
-            Replay(kvp.Value.replayController, kvp.Value.initialState, kvp.Value.duration);
+            Replay(kvp.Value);
         }
 
         //Dont processing at all replays
         pendingReplays.Clear();
     }
 
-    private void Replay(IPredictionReplay replayController, AirshipPredictionState initialState, double duration){
+    private void Replay(ReplayData replayData){
         //print("Replaying A: " + replayController.friendlyName);
         //Replay started callback
-        replayController.OnReplayStart(initialState);
+        replayData.replayController.OnReplayStart(replayData.initialState);
         //print("replaying B");
 
-        double time = initialState.timestamp;
+        double time = replayData.initialState.timestamp;
         double simulationDuration;
-        double finalTime = time+duration;
+        double finalTime = time+replayData.duration;
 
         //print("replaying C");
         //Simulate physics for the duration of the replay
@@ -140,6 +142,9 @@ public class AirshipPredictionManager : MonoBehaviour {
 
             //For now just simulate all the way to the final time
             simulationDuration = finalTime - time;
+            if(simulationDuration > replayData.maxTickDuration){
+                simulationDuration = replayData.maxTickDuration;
+            }
             //print("replaying D");
             if(simulationDuration < 0){
                 Debug.LogError("NEGATIVE DURATION");
@@ -154,7 +159,7 @@ public class AirshipPredictionManager : MonoBehaviour {
             }
 
             //Replay ticked callback
-            replayController.OnReplayTickStarted(time);
+            replayData.replayController.OnReplayTickStarted(time);
             //print("replaying E");
 
             //Run the simulation in the scene
@@ -162,13 +167,13 @@ public class AirshipPredictionManager : MonoBehaviour {
 
             //print("replaying F");
             //Replay ticked callback
-            replayController.OnReplayTickFinished(time);
+            replayData.replayController.OnReplayTickFinished(time);
             //print("replaying G");
         }
 
         //print("replaying H");
         //Done replaying callback
-        replayController.OnReplayFinished(initialState);
+        replayData.replayController.OnReplayFinished(replayData.initialState);
         //print("replaying I");
     }
 }

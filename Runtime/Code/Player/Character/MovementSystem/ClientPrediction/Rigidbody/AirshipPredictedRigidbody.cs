@@ -62,6 +62,7 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
     }
 
     protected override void MoveTo(AirshipPredictedRigidbodyState newState){
+        print("Moving To to state: " + newState.timestamp + " pos: " + newState.position);
         // apply the state to the Rigidbody
         // The only smoothing we get is from Rigidbody.MovePosition.
         rigid.MovePosition(newState.position);
@@ -74,8 +75,8 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
 
     protected override bool NeedsCorrection(AirshipPredictedRigidbodyState serverState, AirshipPredictedRigidbodyState interpolatedState) {
         print("Rotation Angle: " + Quaternion.Angle(serverState.rotation, interpolatedState.rotation));
-        return base.NeedsCorrection(serverState, interpolatedState) || 
-            Quaternion.Angle(serverState.rotation, interpolatedState.rotation) > rotationCorrectionThreshold;
+        return base.NeedsCorrection(serverState, interpolatedState);// || 
+            //Quaternion.Angle(serverState.rotation, interpolatedState.rotation) > rotationCorrectionThreshold;
     }
 
     #region REPLAY
@@ -85,6 +86,11 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
 
         //Snap to the servers state
         SnapTo((AirshipPredictedRigidbodyState)initialState);
+        if(showGizmos){
+            //Replay Position and velocity
+            GizmoUtils.DrawSphere(currentPosition, .4f, Color.blue, 4, gizmoDuration);
+            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, clientColor, gizmoDuration);
+        }
     }
 
     public override void OnReplayTickStarted(double time){
@@ -95,9 +101,11 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
     public override void OnReplayTickFinished(double time){
         if(showGizmos){
             //Replay Position and velocity
-            GizmoUtils.DrawSphere(currentPosition, .2f, Color.black, 4, gizmoDuration);
-            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, Color.black, gizmoDuration);
+            GizmoUtils.DrawSphere(currentPosition, .2f, clientColor, 4, gizmoDuration);
+            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, clientColor, gizmoDuration);
         }
+
+        print("Replay tick: " + time);
         
         //Save the new history state
         RecordState(time);
@@ -109,6 +117,7 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
             log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
         }
         print(log);
+        print("new velocity: " + rigid.velocity);
 
         // log, draw & apply the final position.
         // always do this here, not when iterating above, in case we aren't iterating.

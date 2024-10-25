@@ -24,6 +24,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour, IPredic
     [Header("State History")]
     public int stateHistoryLimit = 32; // 32 x 50 ms = 1.6 seconds is definitely enough
 
+    [Tooltip("How many seconds between each call to record the history state of the object.")]
     public float recordInterval = 0.050f;
 
     [Tooltip("(Optional) performance optimization where FixedUpdate.RecordState() only inserts state into history if the state actually changed.\nThis is generally a good idea.")]
@@ -46,6 +47,9 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour, IPredic
     [Tooltip("Correction threshold in meters. For example, 0.1 means that if the client is off by more than 10cm, it gets corrected.")]
     public double positionCorrectionThreshold = 0.10;
 
+    [Tooltip("Snap to the server state directly when velocity is < threshold. This is useful to reduce jitter/fighting effects before coming to rest.\nNote this applies position, rotation and velocity(!) so it's still smooth.")]
+    public float velocitySnapThreshold = 2; // 0.5 has too much fighting-at-rest, 2 seems ideal.
+
 
     [Header("Bandwidth")]
 
@@ -61,15 +65,12 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour, IPredic
     public float motionSmoothingVelocityThreshold = 0.1f;
     public float motionSmoothingTimeTolerance = 0.5f;
 
-    [Tooltip("Snap to the server state directly when velocity is < threshold. This is useful to reduce jitter/fighting effects before coming to rest.\nNote this applies position, rotation and velocity(!) so it's still smooth.")]
-    public float velocitySnapThreshold = 2; // 0.5 has too much fighting-at-rest, 2 seems ideal.
-
-    [Tooltip("Teleport if we are further than 'multiplier x collider size' behind.")]
-    public float teleportDistanceMultiplier = 10;
+    [Tooltip("Teleport if we are further than this units")]
+    public float motionSmoothingTeleportDistance = 10;
 
     [Tooltip("How fast to interpolate to the target position, relative to how far we are away from it.\nHigher value will be more jitter but sharper moves, lower value will be less jitter but a little too smooth / rounded moves.")]
-    public float positionInterpolationSpeed = 15; // 10 is a little too low for billiards at least
-    public float rotationInterpolationSpeed = 10;
+    public float motionSmoothingPositionInterpolationSpeed = 15; // 10 is a little too low for billiards at least
+    public float motionSmoothinRotationInterpolationSpeed = 10;
     
 
     [Header("Debugging")]
@@ -144,6 +145,7 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour, IPredic
 #region VIRTUAL
     //Do we need to correct this state?
     protected virtual bool NeedsCorrection(T serverState, T interpolatedState){
+        print("Correction distance: " + Vector3.SqrMagnitude(serverState.position - interpolatedState.position));
         return Vector3.SqrMagnitude(serverState.position - interpolatedState.position) >= positionCorrectionThresholdSqr;
     }
 #endregion
@@ -159,7 +161,7 @@ protected void Log(string message){
     protected virtual void Awake() {
         // cache some threshold to avoid calculating them in LateUpdate
         float colliderSize = GetComponentInChildren<Collider>().bounds.size.magnitude;
-        smoothFollowThreshold = colliderSize * teleportDistanceMultiplier;
+        smoothFollowThreshold = motionSmoothingTeleportDistance;
         smoothFollowThresholdSqr = smoothFollowThreshold * smoothFollowThreshold;
 
         // cache ² computations
@@ -359,8 +361,8 @@ protected void Log(string message){
         //Render server state
         if(this.showGizmos){
             //Recieved server position
-            GizmoUtils.DrawBox(serverState.position + new Vector3(0,.5f, 0), Quaternion.identity, 
-                new Vector3(.5f, .5f, .5f), serverColor, gizmoDuration);
+            GizmoUtils.DrawBox(serverState.position, Quaternion.identity, 
+                new Vector3(.1f, .1f, .1f), serverColor, gizmoDuration);
         }
 
         // we only capture state every 'interval' milliseconds.
@@ -424,12 +426,12 @@ protected void Log(string message){
         }else{
             // interpolate between them to get the best approximation
             interpolatedState = (T)before.Interpolate(after, (float)t);
-            Log($"CORRECTION NEEDED FOR {name} @ {timestamp:F3}: client={interpolatedState.position} server={serverState.position} timeDelta={t:F3}");
         }
 
 
         // too far off? then correct it
         if (NeedsCorrection(serverState, interpolatedState)) {
+            Log($"CORRECTION NEEDED FOR {name} @ {timestamp:F3}: client= {interpolatedState.timestamp} + pos: {interpolatedState.position} server= {interpolatedState.timestamp} + pos: {serverState.position}");
             if(showGizmos){
                 // show the received correction position + velocity for debugging.
                 // helps to compare with the interpolated/applied correction locally.
@@ -443,8 +445,10 @@ protected void Log(string message){
             //Simulate until the end of our history or however long we think we are ahead of the server whicher is longer
             double finalTime = lastRecorded.timestamp > NetworkTime.predictedTime ? lastRecorded.timestamp : NetworkTime.predictedTime;
 
+            print("Replaying until: " + finalTime + " which is " + (finalTime - serverState.timestamp) + " seconds away");
+
             //Replay States
-            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverState.timestamp);
+            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverState.timestamp, recordInterval);
         }
     }
 #endregion
