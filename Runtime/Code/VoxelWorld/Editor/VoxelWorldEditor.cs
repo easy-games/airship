@@ -743,6 +743,25 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 //Repaint
                 SceneView.RepaintAll();
             }
+
+            if (Event.current.keyCode == KeyCode.M) {
+                //Cycle the bits on the selected block
+                if (world.selectedBlockIndex > 0) {
+
+                    //not undoable
+                    var chunk = world.GetChunkByVoxel(lastPos);
+                    if (chunk != null) {
+                        var localKey = (ushort)VoxelWorldStuff.Chunk.WorldPosToVoxelIndex(lastPos);
+                        
+                        chunk.damageMap[localKey] = 1;
+                        world.DirtyNeighborMeshes(lastPos, true);
+                    }
+                }
+                //Refresh the view
+                UpdateHandlePosition(world);
+                //Repaint
+                SceneView.RepaintAll();
+            }
         }
     }
 

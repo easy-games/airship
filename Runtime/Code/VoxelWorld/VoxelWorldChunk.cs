@@ -49,6 +49,7 @@ namespace VoxelWorldStuff {
         //Permanent data
         public UInt16[] readWriteVoxel = new UInt16[chunkSize * chunkSize * chunkSize];
         public uint[] color = new uint[chunkSize * chunkSize * chunkSize];
+        public Dictionary<ushort, float> damageMap = new();
 
         //Currently instantiated prefabs
         private Dictionary<Vector3Int,GameObject> prefabObjects;
