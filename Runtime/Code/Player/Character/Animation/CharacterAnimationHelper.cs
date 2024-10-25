@@ -1,4 +1,5 @@
-﻿using Code.Player.Character.API;
+﻿using System.Collections.Generic;
+using Code.Player.Character.API;
 using Mirror;
 using UnityEngine;
 
@@ -49,24 +50,38 @@ namespace Code.Player.Character {
         private bool grounded = false;
 
         private void Awake() {
-            if(sprintVfx){
+            if (this.sprintVfx){
                 sprintVfx.Stop();
             }
-            if(jumpPoofVfx){
+            if (this.jumpPoofVfx){
                 jumpPoofVfx.Stop();
             }
-            if(slideVfx){
+            if (this.slideVfx){
                 slideVfx.Stop();
             }
 
-            animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
-            if(!animatorOverride){
-                animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            // Make a new instance of the animator override controller
+            if (!this.animatorOverride) {
+                if (this.animator.runtimeAnimatorController is AnimatorOverrideController over) {
+                    // Copy all the overrides if we already have an override controller in use
+                    var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(over.overridesCount);
+                    over.GetOverrides(overrides);
+                    this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                    this.animator.runtimeAnimatorController = this.animatorOverride;
+                    this.animatorOverride.ApplyOverrides(overrides);
+                } else {
+                    this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                    this.animator.runtimeAnimatorController = this.animatorOverride;
+                }
             }
-            animator.runtimeAnimatorController = animatorOverride;
         }
 
-        private void Start(){
+        private void Start() {
+            // AnimatorOverrideController animatorOverrideController =
+            //     new AnimatorOverrideController(this.animator.runtimeAnimatorController);
+            // this.animator.runtimeAnimatorController = animatorOverrideController;
+            // this.animatorOverride = animatorOverrideController;
+
             var offset = Random.Range(0f,1f);
             animator.SetFloat("AnimationOffset", offset);
         }
@@ -237,12 +252,13 @@ namespace Code.Player.Character {
                 return;
             }
 
-            var layerName = "Override" + (int)layer;
+            animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
 
-            animatorOverride[layerName] = clip;
+            var stateName = "Override" + (int)layer;
 
-            animator.SetBool(layerName + "Looping", clip.isLooping);
-            animator.CrossFadeInFixedTime(layerName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(layerName));
+            animatorOverride[stateName] = clip;
+            animator.SetBool(stateName + "Looping", clip.isLooping);
+            animator.CrossFadeInFixedTime(stateName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(stateName));
         }
 
         public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration) {

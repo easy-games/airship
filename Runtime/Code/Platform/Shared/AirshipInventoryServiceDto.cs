@@ -4,13 +4,6 @@ using UnityEngine;
 
 namespace Code.Platform.Shared {
     [Serializable ]
-     public class ProfilePicture {
-        public string uid;
-        public string instanceId;
-        public string imageId;
-    }
-
-    [Serializable ]
      public enum ResourceType {
         GAME,
         ORGANIZATION
@@ -71,11 +64,6 @@ namespace Code.Platform.Shared {
     }
 
     [Serializable ]
-     public class ProfilePictureClass : ItemClass {
-        public ImageId profilePicture;
-    }
-
-    [Serializable ]
      public class ItemInstanceDto {
         public string ownerId;
         public string classId;
@@ -92,22 +80,6 @@ namespace Code.Platform.Shared {
         public string instanceId;
         public string createdAt;
         float @float;
-    }
-
-    [Serializable ]
-     public class ProfilePictureInstanceDto {
-        public ProfilePictureClass @class;
-        public string ownerId;    
-        public string instanceId;
-        public string createdAt;
-        float @float;
-    }
-
-    [Serializable ]
-     public class EquippedProfilePicture {
-        public string uid;
-        public string instanceId;
-        public string imageId;
     }
 
     [Serializable ]
@@ -128,40 +100,6 @@ namespace Code.Platform.Shared {
         public AccessoryInstanceDto[] accessories;
 
         public bool equipped;
-    }
-
-    /** Describes an item that was gained in a transaction */
-    [Serializable ]
-     public class GainedItemSummary {
-        /** The userId of the user that gained the item */
-        public string uid;
-        public string resourceType;
-        public string resourceId;
-        public string classId;
-        public string instanceId;
-    }
-
-    /** Describes an item that was lost in a transaction */
-    [Serializable ]
-     public class LostItemSummary {
-        /** The userId of the user that lost the item */
-        public string uid;
-        public string resourceType;
-        public string resourceId;
-        public string classId;
-        public string instanceId;
-    }
-
-    [Serializable ]
-     public class Transaction {
-        /** Describes the items gained in the transaction */
-        public GainedItemSummary[] itemsGained;
-        /** Describes the items lost in the transaction */
-        public LostItemSummary[] itemsLost;
-
-        public string type = "GAME_BROKERED_TRADE";
-        public string transactionId;
-        public string createdAt;
     }
 
     [Serializable ]

@@ -153,7 +153,10 @@ namespace Code.Player.Character
 
             if (!hasError)
             {
+                if (!Application.isPlaying)
+                {
                 Debug.Log("Clips overrides have been applied");
+                }
             }
             else
             {
@@ -171,13 +174,48 @@ namespace Code.Player.Character
         /// </summary>
         private bool TryGetOverrideController(Object controller, out AnimatorOverrideController overrideController)
         {
-            overrideController = controller switch
+            overrideController = null;
+
+            if (controller is Animator animator)
+            {      
+                overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
+
+                if (Application.isPlaying)
+                {
+                    AnimatorOverrideController instanaceAnimator = new(animator.runtimeAnimatorController);
+                    var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
+                    overrideController.GetOverrides(overrides);
+
+                    instanaceAnimator.ApplyOverrides(overrides);
+                    animator.runtimeAnimatorController = instanaceAnimator;
+
+                    overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
+                }
+            }
+            else if (controller is GameObject go)
             {
-                Animator animator => animator.runtimeAnimatorController as AnimatorOverrideController,
-                GameObject go => go.GetComponent<Animator>()?.runtimeAnimatorController as AnimatorOverrideController,
-                AnimatorOverrideController oc => oc,
-                _ => null
-            };
+                Animator animatorComponent = go.GetComponent<Animator>();
+                if (animatorComponent != null)
+                {
+                    overrideController = animatorComponent.runtimeAnimatorController as AnimatorOverrideController;
+
+                    if (Application.isPlaying)
+                    {
+                        AnimatorOverrideController instanaceAnimator = new(animatorComponent.runtimeAnimatorController);
+                        var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
+                        overrideController.GetOverrides(overrides);
+
+                        instanaceAnimator.ApplyOverrides(overrides);
+                        animatorComponent.runtimeAnimatorController = instanaceAnimator;
+
+                        overrideController = animatorComponent.runtimeAnimatorController as AnimatorOverrideController;
+                    }
+                }
+            }
+            else if (controller is AnimatorOverrideController oc)
+            {
+                overrideController = oc;
+            }
 
             return overrideController != null;
         }

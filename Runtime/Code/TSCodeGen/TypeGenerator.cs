@@ -9,8 +9,6 @@ using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Http.Public;
-using Code.Platform.Client;
-using Code.Platform.Server;
 using Code.Player.Character.API;
 using Code.UI;
 using Code.UI.Canvas;
@@ -129,20 +127,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(MainMenuLoadingScreen),
             typeof(HttpManager),
             typeof(InternalHttpManager),
-            typeof(FriendsControllerBackend),
-            typeof(MatchmakingControllerBackend),
-            typeof(PartyControllerBackend),
-            typeof(AirshipInventoryControllerBackend),
-            typeof(TransferControllerBackend),
-            typeof(UsersControllerBackend),
-            typeof(CacheStoreServiceBackend),
-            typeof(DataStoreServiceBackend),
-            typeof(LeaderboardServiceBackend),
-            typeof(PartyServiceBackend),
-            typeof(MatchmakingServiceBackend),
-            typeof(TransferServiceBackend),
-            typeof(AirshipInventoryServiceBackend),
-            typeof(UsersServiceBackend),
             typeof(CrossSceneState),
             typeof(Toggle),
             typeof(HorizontalLayoutGroup),
