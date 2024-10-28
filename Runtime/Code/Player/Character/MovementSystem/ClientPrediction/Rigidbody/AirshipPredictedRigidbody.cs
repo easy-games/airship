@@ -1,8 +1,7 @@
 using Mirror;
-using Unity.Mathematics;
 using UnityEngine;
 
-public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPredictedRigidbodyState> {
+public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredictedRigidbodyState> {
 
 #region INSPECTOR
     [Header("References")]
@@ -13,10 +12,17 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
     public double rotationCorrectionThreshold = 5;
 #endregion
 
+#region PRIVATES
+
+    private bool wasKinematic = false;
+    private bool waitingForOthers = false;
+
+#endregion
 
     private void Awake() {
         if(!rigid){
             rigid = gameObject.GetComponent<Rigidbody>();
+            wasKinematic = rigid.isKinematic;
         }
 
         AirshipPredictionManager.instance.StartPrediction();
@@ -80,8 +86,24 @@ public class AirshipPredictedRigidbody : AirshipPredictionController<AirshipPred
     }
 
     #region REPLAY
+    public override void OnReplayingOthersStarted() {
+        // if(waitingForOthers){
+        //     return;
+        // }
+        // waitingForOthers = true;
+        // wasKinematic = rigid.isKinematic;
+        // rigid.isKinematic = true;
+    }
 
-    public override void OnReplayStart(AirshipPredictionState initialState){
+    public override void OnReplayingOthersFinished() {
+        // if(!waitingForOthers){
+        //     return;
+        // }
+        // waitingForOthers = false;
+        // rigid.isKinematic = wasKinematic;
+    }
+
+    public override void OnReplayStarted(AirshipPredictionState initialState){
         print("Replaying to server state: " + initialState.timestamp);
 
         //Snap to the servers state

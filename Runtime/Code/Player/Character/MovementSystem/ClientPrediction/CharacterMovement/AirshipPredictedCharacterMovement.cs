@@ -9,7 +9,7 @@ using UnityEngine;
 // This will be slower as we have to resimulate physics steps. Perhaps a future optimization
 // would be to seperate the scene into multiple physics scenes and only resimulate the once the player is in
 
-public class AirshipPredictedCharacterMovement : AirshipPredictionController<AirshipPredictedCharacterState> {
+public class AirshipPredictedCharacterMovement : AirshipPredictedController<AirshipPredictedCharacterState> {
 
 #region PUBLIC 
     [Header("References")]
@@ -101,7 +101,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictionController<Air
             reader.ReadVector3());
     }
 
-    public override void OnReplayStart(AirshipPredictionState initialState)
+    public override void OnReplayStarted(AirshipPredictionState initialState)
     {
         throw new System.NotImplementedException();
     }
@@ -120,5 +120,16 @@ public class AirshipPredictedCharacterMovement : AirshipPredictionController<Air
     {
         throw new System.NotImplementedException();
     }
+
+    public override void OnReplayingOthersStarted()
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public override void OnReplayingOthersFinished()
+    {
+        throw new System.NotImplementedException();
+    }
     #endregion
+
 }

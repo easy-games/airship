@@ -15,7 +15,7 @@ using UnityEngine;
 /// </summary>
 /// <typeparam name="T">The data type stored in the history that is needed for replays</typeparam>
 [RequireComponent(typeof(NetworkIdentity))]
-public abstract class AirshipPredictionController<T> : NetworkBehaviour, IPredictionReplay where T: AirshipPredictionState{
+public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredictedReplay where T: AirshipPredictionState{
 
 #region INSPECTOR
     // client keeps state history for correction & reconciliation.
@@ -130,19 +130,23 @@ public abstract class AirshipPredictionController<T> : NetworkBehaviour, IPredic
     protected abstract void SerializeState(NetworkWriter writer);
     protected abstract T DeserializeState(NetworkReader reader, double timestamp);
 
-    public abstract void OnReplayStart(AirshipPredictionState initialState);
+    public abstract void OnReplayStarted(AirshipPredictionState initialState);
     public abstract void OnReplayTickStarted(double time);
     public abstract void OnReplayTickFinished(double time);
     public abstract void OnReplayFinished(AirshipPredictionState initialState);
+    public abstract void OnReplayingOthersStarted();
+    public abstract void OnReplayingOthersFinished();
 
-    public virtual string friendlyName => "Prediction: " + gameObject.name;
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected virtual bool IsMoving() =>
-        currentVelocity.sqrMagnitude >= motionSmoothingVelocityThresholdSqr;
 #endregion
 
 #region VIRTUAL
+    public virtual string friendlyName => "Prediction: " + gameObject.name;
+    public virtual float guid => gameObject.GetInstanceID();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected virtual bool IsMoving() =>
+        currentVelocity.sqrMagnitude >= motionSmoothingVelocityThresholdSqr;
+
     //Do we need to correct this state?
     protected virtual bool NeedsCorrection(T serverState, T interpolatedState){
         print("Correction distance: " + Vector3.SqrMagnitude(serverState.position - interpolatedState.position));
@@ -167,6 +171,14 @@ protected void Log(string message){
         // cache ² computations
         motionSmoothingVelocityThresholdSqr = motionSmoothingVelocityThreshold * motionSmoothingVelocityThreshold;
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
+    }
+
+    private void OnEnable() {
+        AirshipPredictionManager.instance.RegisterPredictedObject(this);
+    }
+
+    private void OnDisable() {
+        AirshipPredictionManager.instance.UnRegisterPredictedObject(this);
     }
 
     protected virtual void Update() {
@@ -284,6 +296,7 @@ protected void Log(string message){
             stateHistory.RemoveAt(0);
 
         var newState = CreateCurrentState(stateTime);
+        print("Recording state: " + stateTime);
         // add state to history
         stateHistory.Add(stateTime, newState);
 
@@ -597,6 +610,7 @@ protected void Log(string message){
             for(int i=afterIndex; i < historyCount; i++){
                 stateHistory.Remove(i);
             }
+            print("Clearing states after: " + correctedState.timestamp);
             stateHistory.Add(correctedState.timestamp, correctedState);
         }
 #endregion

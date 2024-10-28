@@ -2,11 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class AirshipPredictionManager : MonoBehaviour {
-    private static AirshipPredictionManager _instance;
+    private static AirshipPredictionManager _instance = null;
 
     public static AirshipPredictionManager instance {
         get{
             if(!_instance){
+                Debug.Log("Creating Prediction Singleton");
                 var go = new GameObject("PredictionManager");
                 DontDestroyOnLoad(go);
                 _instance = go.AddComponent<AirshipPredictionManager>();
@@ -17,11 +18,11 @@ public class AirshipPredictionManager : MonoBehaviour {
     }
 
     internal class ReplayData{
-        public IPredictionReplay replayController;
+        public IPredictedReplay replayController;
         public AirshipPredictionState initialState;
         public double duration;
         public double maxTickDuration = 1;
-        public ReplayData(IPredictionReplay replayController, AirshipPredictionState initialState, double duration, double maxTickDuration){
+        public ReplayData(IPredictedReplay replayController, AirshipPredictionState initialState, double duration, double maxTickDuration){
             this.replayController = replayController;
             this.initialState = initialState;
             this.duration = duration;
@@ -33,6 +34,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     private bool readyToTick = false;
     private float timer;
     private SortedList<double, ReplayData> pendingReplays = new SortedList<double, ReplayData>();
+    private Dictionary<float, IPredictedReplay> replayObjects = new Dictionary<float, IPredictedReplay>();
 
     public void StartPrediction(){
         Physics.simulationMode = SimulationMode.Script;
@@ -56,14 +58,22 @@ public class AirshipPredictionManager : MonoBehaviour {
         readyToTick = true;
     }
 
+    public void RegisterPredictedObject(IPredictedReplay replayObject) {
+        this.replayObjects.Add(replayObject.guid, replayObject);
+    }
+    
+    public void UnRegisterPredictedObject(IPredictedReplay replayObject) {
+        this.replayObjects.Remove(replayObject.guid);
+    }
+
     private void Update() {
         if(Physics.simulationMode != SimulationMode.Script){
             return;
         }
 
-        if(pendingReplays.Count > 0){
-            StartReplays();
-        }
+        // if(pendingReplays.Count > 0){
+        //     StartReplays();
+        // }
 
 
         if(debugging && !readyToTick){
@@ -83,7 +93,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         }
     }
 
-    public void QueueReplay(IPredictionReplay replayController, AirshipPredictionState initialState, double duration, double maxTickDuration){
+    public void QueueReplay(IPredictedReplay replayController, AirshipPredictionState initialState, double duration, double maxTickDuration){
         if(replayController == null){
             Debug.LogError("Trying to queue replay without a controller");
             return;
@@ -94,32 +104,66 @@ public class AirshipPredictionManager : MonoBehaviour {
         }
         if(duration <= 0){
             Debug.LogError("Trying to queue a replay with a negative duration");
+            return;
+        }
+        if(pendingReplays.ContainsKey(initialState.timestamp)){
+            Debug.LogError("Trying to queue a timestamp that already exists");
+            return;
         }
 
         Debug.Log("Queue replay: " + replayController.friendlyName);
-        //TODO queue for mass processing of many replays at once
-        //pendingReplays.Add(initialState.timestamp, new ReplayData(replayController, initialState, duration));
 
-        //Replay this instantly
+        //TODO let predicted objects queue replay data and then do the replay simulations all together
+        //So if you have 10 predicted rigidbodies they can share replay simulations
+        //pendingReplays.Add(initialState.timestamp, new ReplayData(replayController, initialState, duration, maxTickDuration));
+
+        //For now replay this instantly
+        //StartReplays();
+
+        //Clear all pending replays
+        //pendingReplays.Clear();
+
+        //Just replay this
         Replay(new ReplayData(replayController, initialState, duration, maxTickDuration));
     }
 
     private void StartReplays(){
-        //TODO let predicted objects queue replay data and then do the replay simulations all together
-        //So if you have 10 predicted rigidbodies they can share replay simulations
-        foreach(var kvp in pendingReplays){
-            Debug.Log("Starting replay for: " + kvp.Value.replayController.friendlyName);
-            Replay(kvp.Value);
+        // //Let any other objects disable while this replays
+        foreach(var kvp in replayObjects){
+            kvp.Value.OnReplayingOthersStarted();
         }
+        
+        // //Replay all pending replays
+        foreach(var kvp in pendingReplays){
+            //Make sure this object isn't disabled
+            kvp.Value.replayController.OnReplayingOthersFinished();
 
-        //Dont processing at all replays
-        pendingReplays.Clear();
+            Debug.Log("Starting replay for: " + kvp.Value.replayController.friendlyName);
+            //Replay Logic
+            Replay(kvp.Value);
+
+            //Reset for other replays
+            kvp.Value.replayController.OnReplayingOthersStarted();
+        }
+        
+        //Let any other objects reset after this replay
+        foreach(var kvp in replayObjects){
+            kvp.Value.OnReplayingOthersFinished();
+        }
     }
 
     private void Replay(ReplayData replayData){
+        // //Let any other objects disable while this replays
+        foreach(var kvp in replayObjects){
+            if(kvp.Key == replayData.replayController.guid){
+                continue;
+            }
+            kvp.Value.OnReplayingOthersStarted();
+        }
+
         //print("Replaying A: " + replayController.friendlyName);
         //Replay started callback
-        replayData.replayController.OnReplayStart(replayData.initialState);
+        replayData.replayController.OnReplayStarted(replayData.initialState);
         //print("replaying B");
 
         double time = replayData.initialState.timestamp;
@@ -175,14 +219,26 @@ public class AirshipPredictionManager : MonoBehaviour {
         //Done replaying callback
         replayData.replayController.OnReplayFinished(replayData.initialState);
         //print("replaying I");
+        
+        //Let any other objects reset after this replay
+        foreach(var kvp in replayObjects){
+            if(kvp.Key == replayData.replayController.guid){
+                continue;
+            }
+            kvp.Value.OnReplayingOthersFinished();
+        }
     }
 }
 
 
-public interface IPredictionReplay {
+public interface IPredictedReplay {
     public abstract string friendlyName{get;}
-    public abstract void OnReplayStart(AirshipPredictionState initialState);
+    public abstract float guid {get;}
+    public abstract void OnReplayStarted(AirshipPredictionState initialState);
     public abstract void OnReplayTickStarted(double time);
     public abstract void OnReplayTickFinished(double time);
     public abstract void OnReplayFinished(AirshipPredictionState initialState);
+
+    public abstract void OnReplayingOthersStarted();
+    public abstract void OnReplayingOthersFinished();
 } 
