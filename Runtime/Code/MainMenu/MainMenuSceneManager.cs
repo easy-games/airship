@@ -235,11 +235,13 @@ public class MainMenuSceneManager : MonoBehaviour {
         }
     }
 
-    public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
+    public static IPromise<PackageVersionResponse> GetLatestPackageVersion(string packageId) {
         var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{packageId}";
 
         return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
             Uri = url
+        }).Then((res) => {
+            return res.version;
         });
     }
 }
