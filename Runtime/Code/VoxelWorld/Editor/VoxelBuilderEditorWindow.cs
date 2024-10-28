@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.TerrainTools;
 using UnityEngine;
 
 namespace Code.Airship.Resources.VoxelRenderer.Editor {
@@ -24,6 +25,13 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
         [MenuItem("Airship/Misc/VoxelEditor")]
         static void Init() {
             ShowWindow();
+        }
+
+        public static void ForceRepaint() {
+
+            if (active) {
+                GetWindow<VoxelBuilderEditorWindow>().Repaint();
+            }
         }
 
         public static void ShowWindow() {
@@ -157,61 +165,26 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             //gap
             EditorGUILayout.Space();
 
-            //Row of three tiny buttons, X Y Z
-            ushort blockData = world.highlightedBlock;
+            ushort blockData = world.GetVoxelAt(world.highlightedBlockPos);
+
             
-            if (blockData > 0) {
-                GUILayout.Label("Block flipping");
+            GUILayout.Label("Highlighted Block");
 
-                int flipBits = VoxelWorld.GetVoxelFlippedBits(blockData);
-                
-                if (Event.current.keyCode == KeyCode.LeftAlt) {
-                    flipBits = (flipBits + 1) % 3;
-                }
-                ushort newData = (ushort)VoxelWorld.SetVoxelFlippedBits(blockData, flipBits);
-                if (newData != blockData) {
-                    world.WriteVoxelAt(world.highlightedBlockPos, newData, true);
-                }
-                
-
-                Color def = GUI.backgroundColor;
-
-                GUILayout.BeginHorizontal();
-                if ((flipBits & 1 << 0) > 0) {
-                    GUI.backgroundColor = Color.green;
-                }
-                else {
-                    GUI.backgroundColor = def;
-                }
-
-                if (GUILayout.Button("X", GUILayout.Width(20))) {
-                 
-                }
-
-                if ((flipBits & 1 << 0) > 0) {
-                    GUI.backgroundColor = Color.green;
-                }
-                else {
-                    GUI.backgroundColor = def;
-                }
-                if (GUILayout.Button("Y", GUILayout.Width(20))) {
-
-                }
-
-                if ((flipBits & 1 << 0) > 0) {
-                    GUI.backgroundColor = Color.green;
-                }
-                else {
-                    GUI.backgroundColor = def;
-                }
-                if (GUILayout.Button("Z", GUILayout.Width(20))) {
-
-                }
-
-                GUI.backgroundColor = def;
-                GUILayout.EndHorizontal();
+            if (VoxelWorld.VoxelDataToBlockId(blockData) == 0) {
+                GUI.enabled = false;
             }
+            int flipBits = VoxelWorld.GetVoxelFlippedBits(blockData);
+
+            Color def = GUI.backgroundColor;
+
+            GUILayout.BeginHorizontal();
+
+            GUILayout.Label("Rotation: " + VoxelWorld.flipNames[flipBits]);
             
+            GUI.backgroundColor = def;
+            GUILayout.EndHorizontal();
+            GUI.enabled = true;
+
             GUILayout.Label("Blocks", EditorStyles.boldLabel);
 
             scrollPos = GUILayout.BeginScrollView(scrollPos);
@@ -240,11 +213,25 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             }
             GUILayout.EndScrollView();
             GUI.enabled = true;
+ 
+
+        }
+        
+        void onSceneGUIDelegate(SceneView sceneView) {
+           
+           
+            
         }
 
         void OnEnable() {
             base.autoRepaintOnSceneChange = true;
+            SceneView.duringSceneGui += onSceneGUIDelegate;
+            
+        } 
+        private void OnDisable() {
+            SceneView.duringSceneGui -= onSceneGUIDelegate;
         }
     }
+
 }
 #endif

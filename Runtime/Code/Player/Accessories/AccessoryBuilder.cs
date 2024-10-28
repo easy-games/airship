@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Airship;
-using Code.Platform.Client;
 using Code.Platform.Server;
 using Code.Platform.Shared;
 using Code.Player.Accessories;
