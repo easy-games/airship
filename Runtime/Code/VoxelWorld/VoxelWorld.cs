@@ -234,7 +234,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
     }
 
-    public void ColorVoxelAt(Vector3 pos, Color32 color, bool priority) {
+    public void ColorVoxelAt(Vector3 pos, Color color, bool priority) {
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out Chunk chunk);
         if (chunk == null) {
