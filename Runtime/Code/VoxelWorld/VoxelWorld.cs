@@ -694,6 +694,10 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     private void OnDestroy() {
+
+        AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+
         foreach (var chunk in chunks) {
             chunk.Value.Free();
         }
