@@ -1412,8 +1412,8 @@ namespace VoxelWorldStuff {
             CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, world, true);
 
             foreach (Material mat in meshRenderer.sharedMaterials) {
-                var existing = mat.GetFloat("_TriplanarScale");
-                mat.SetFloat("_TriplanarScale", existing * triplanarScale);
+                var existing = mat.GetFloat("_Triplanar_Scale");
+                mat.SetFloat("_Triplanar_Scale", existing * triplanarScale);
             }
 
             meshFilter.sharedMesh = theMesh;
