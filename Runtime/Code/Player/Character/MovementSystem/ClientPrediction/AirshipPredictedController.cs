@@ -173,11 +173,11 @@ protected void Log(string message){
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
     }
 
-    private void OnEnable() {
+    protected void OnEnable() {
         AirshipPredictionManager.instance.RegisterPredictedObject(this);
     }
 
-    private void OnDisable() {
+    protected void OnDisable() {
         AirshipPredictionManager.instance.UnRegisterPredictedObject(this);
     }
 
@@ -308,6 +308,7 @@ protected void Log(string message){
     void ApplyState(T snapshotState){
         // Hard snap to the position below a threshold velocity.
         // this is fine because the visual object still smoothly interpolates to it.
+        print("VEL: " + currentVelocity.magnitude);
         if (currentVelocity.magnitude <= velocitySnapThreshold) {
             Log($"Prediction: snapped {name} into place because velocity {currentVelocity.magnitude:F3} <= {velocitySnapThreshold:F3}");
 
@@ -378,12 +379,17 @@ protected void Log(string message){
                 new Vector3(.1f, .1f, .1f), serverColor, gizmoDuration);
         }
 
-        // we only capture state every 'interval' milliseconds.
-        // so the newest entry in 'history' may be up to 'interval' behind 'now'.
-        // if there's no latency, we may receive a server state for 'now'.
-        // sampling would fail, if we haven't recorded anything in a while.
-        // to solve this, always record the current state when receiving a server state.
-        RecordState(NetworkTime.predictedTime);
+        //print("lastRecordTime: " + lastRecordTime + " serverTime: " + NetworkTime.predictedTime);
+        //if(Mathf.Abs((float)lastRecordTime-(float)NetworkTime.predictedTime) >= syncInterval){
+            //print("No recent recorded state, recording: " + timestamp);
+            
+            // we only capture state every 'interval' milliseconds.
+            // so the newest entry in 'history' may be up to 'interval' behind 'now'.
+            // if there's no latency, we may receive a server state for 'now'.
+            // sampling would fail, if we haven't recorded anything in a while.
+            // to solve this, always record the current state when receiving a server state.
+            RecordState(NetworkTime.predictedTime);
+        //}
 
         T oldest = stateHistory.Values[0];
         T newestState = stateHistory.Values[stateHistory.Count - 1];
@@ -407,7 +413,7 @@ protected void Log(string message){
         }
 
         T interpolatedState;
-        int afterIndex = 0;
+        int afterIndex;
 
         // edge case: is the state older than the oldest state in history?
         // this can happen if the client gets so far behind the server
@@ -461,7 +467,7 @@ protected void Log(string message){
             print("Replaying until: " + finalTime + " which is " + (finalTime - serverState.timestamp) + " seconds away");
 
             //Replay States
-            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverState.timestamp, recordInterval);
+            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverState.timestamp);
         }
     }
 #endregion
@@ -591,27 +597,21 @@ protected void Log(string message){
         }
 
         // inserts a server state into the client's history.
-        // returns the corrected final position.
-        // => RingBuffer: see prediction_ringbuffer_2 branch, but it's slower!
+        // clears all entries after the states time
         public void ClearHistoryAfterState(
             T correctedState,     // corrected state with timestamp
             int afterIndex)  // index of the 'after' value so we don't need to find it again here
         {
-            var historyCount = stateHistory.Count;
-            // respect the limit
-            // TODO unit test to check if it respects max size
-            if (historyCount >= stateHistoryLimit) {
-                stateHistory.RemoveAt(0);
-                historyCount -= 1;
-                afterIndex -= 1; // we removed the first value so all indices are off by one now
-            }
-
             //Add the corrected state to the history and remove all following states
-            for(int i=afterIndex; i < historyCount; i++){
-                stateHistory.Remove(i);
+            for(int i=afterIndex; i < stateHistory.Count; i++){
+                stateHistory.Remove(afterIndex);
             }
-            print("Clearing states after: " + correctedState.timestamp);
             stateHistory.Add(correctedState.timestamp, correctedState);
+            // var log = "Cleared states after: " + correctedState.timestamp;
+            // foreach(var state in stateHistory){
+            //     log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
+            // }
+            //print(log);
         }
 #endregion
 

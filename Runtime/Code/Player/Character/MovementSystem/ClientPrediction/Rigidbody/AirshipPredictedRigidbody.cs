@@ -6,6 +6,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
 #region INSPECTOR
     [Header("References")]
     public Rigidbody rigid;
+    public Transform graphicsHolder;
 
     [Header("Rigidbody Variables")]
     [Tooltip("Correction threshold in degrees. For example, 5 means that if the client is off by more than 5 degrees, it gets corrected.")]
@@ -22,12 +23,22 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     private void Awake() {
         if(!rigid){
             rigid = gameObject.GetComponent<Rigidbody>();
-            wasKinematic = rigid.isKinematic;
         }
+        wasKinematic = rigid.isKinematic;
 
         AirshipPredictionManager.instance.StartPrediction();
         
         base.Awake();
+    }
+
+    protected new void OnEnable() {
+        AirshipPredictionManager.instance.RegisterRigidbody(this.rigid, this.graphicsHolder);
+        base.OnEnable();
+    }
+
+    protected new void OnDisable() {
+        AirshipPredictionManager.instance.UnRegisterRigidbody(this.rigid);
+        base.OnDisable();
     }
 
     protected override Vector3 currentPosition {
@@ -76,6 +87,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         // Set the velocity
         if (!rigid.isKinematic) {
             rigid.velocity = newState.velocity;
+            rigid.angularVelocity = newState.angularVelocity;
         }
     }
 
@@ -104,7 +116,11 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     }
 
     public override void OnReplayStarted(AirshipPredictionState initialState){
-        print("Replaying to server state: " + initialState.timestamp);
+        // var log = initialState.timestamp + ": History before replay: ";
+        // foreach(var state in stateHistory){
+        //     log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
+        // }
+        // print(log);
 
         //Snap to the servers state
         SnapTo((AirshipPredictedRigidbodyState)initialState);
@@ -127,19 +143,19 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
             GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, clientColor, gizmoDuration);
         }
 
-        print("Replay tick: " + time);
+        //print("Replay tick: " + time);
         
         //Save the new history state
         RecordState(time);
     }
 
     public override void OnReplayFinished(AirshipPredictionState initialState){
-        var log = "History after replay";
-        foreach(var state in stateHistory){
-            log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
-        }
-        print(log);
-        print("new velocity: " + rigid.velocity);
+        // var log = initialState.timestamp + "History after replay";
+        // foreach(var state in stateHistory){
+        //     log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
+        // }
+        // print(log);
+        // print("new velocity: " + rigid.velocity);
 
         // log, draw & apply the final position.
         // always do this here, not when iterating above, in case we aren't iterating.
