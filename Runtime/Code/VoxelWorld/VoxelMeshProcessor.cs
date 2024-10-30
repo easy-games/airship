@@ -1347,6 +1347,7 @@ namespace VoxelWorldStuff {
             }
 
             GameObject obj = new GameObject();
+            obj.name = block.definition.name;
             MeshFilter meshFilter = obj.AddComponent<MeshFilter>();
             MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
 
@@ -1360,14 +1361,20 @@ namespace VoxelWorldStuff {
             Vector3 origin = new Vector3(-0.5f, -0.5f, -0.5f);
             int flip = 0;
             int rotation = 0;
-
+            
             float damage = 0;
             var damageUv = new Vector2(damage, 0);
-
-            if (block.mesh != null && block.mesh.lod0 != null) {
-                EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv);
+            
+            if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
+                QuarterBlocskEmitSingleBlock(block, meshData, world, dama);
             }
-            else {
+            if (block.definition.contextStyle == VoxelBlocks.ContextStyle.StaticMesh) {
+                if (block.mesh != null && block.mesh.lod0 != null) {
+                    EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv);
+                }
+            }
+            if (block.definition.contextStyle == VoxelBlocks.ContextStyle.Block) {
+
                 //Add regular cube Faces
                 for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
                     Rect uvRect = block.GetUvsForFace(faceIndex);
@@ -1439,9 +1446,7 @@ namespace VoxelWorldStuff {
                 bool airRight = (VoxelWorld.VoxelIsSolid(voxRight) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight));
                 bool airForward = (VoxelWorld.VoxelIsSolid(voxForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward));
                 bool airBack = (VoxelWorld.VoxelIsSolid(voxBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack));
-
-
-
+                
                 //Are we a block with 4 surrounding air spaces? That is block C!
                 if (airLeft && airRight && airForward && airBack) {
                     EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.C], temporaryMeshData, world, origin, 0, flip, damageUv);

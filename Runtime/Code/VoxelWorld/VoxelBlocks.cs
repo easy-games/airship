@@ -290,6 +290,7 @@ public class VoxelBlocks : MonoBehaviour {
     [SerializeField] public List<VoxelBlockDefinionList> blockDefinionLists = new();
 
     public BlockDefinition GetBlock(BlockId index) {
+        
         var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
         loadedBlocks.TryGetValue(ix, out BlockDefinition value);
         return value;
@@ -311,6 +312,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     public BlockDefinition GetBlockDefinitionFromBlockId(int index) {
+        index = VoxelWorld.VoxelDataToBlockId(index);
         return GetBlock((ushort)index);
     }
 

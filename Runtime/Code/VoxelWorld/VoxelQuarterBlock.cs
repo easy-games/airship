@@ -33,6 +33,26 @@ namespace VoxelWorldStuff {
             return false;
         }
 
+        private static bool QuarterBlocskEmitSingleBlock(VoxelBlocks.BlockDefinition block, TemporaryMeshData meshData, VoxelWorld world, Vector2 damageUv) {
+
+            Vector3 origin = Vector3.zero;
+            int flip = 0;
+        
+            var meshContextListU0 = VoxelBlocks.GetRandomMeshContext(block, origin, 0);
+
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 0, flip, damageUv);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 1, flip, damageUv);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 2, flip, damageUv);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 3, flip, damageUv);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 0, flip, damageUv);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 1, flip, damageUv);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 2, flip, damageUv);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 3, flip, damageUv);
+
+            //EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv);
+            return true;
+        }
+
         private static bool QuarterBlocksPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv) {
             if (block.meshContexts.Count == 0) {
                 return false;

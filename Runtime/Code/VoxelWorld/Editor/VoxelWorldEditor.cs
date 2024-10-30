@@ -8,6 +8,7 @@ using UnityEngine;
 using System;
 using static VoxelEditAction;
 using UnityEditor.SceneManagement;
+using VoxelWorldStuff;
 
 public class VoxelEditAction {
     
@@ -409,11 +410,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         world.autoLoad = EditorGUILayout.Toggle("Auto Load", world.autoLoad);
 
-        //if (GUILayout.Button("Emit block"))
-        //{
-        //    MeshProcessor.ProduceSingleBlock(1, world);
-        //}
-
+        
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.Space(5);
         EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
@@ -424,7 +421,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (GUILayout.Button("Reload Atlas")) {
             world.ReloadTextureAtlas();
         }
-
+        if (GUILayout.Button("Debug Emit block"))
+        {
+            MeshProcessor.ProduceSingleBlock(world.selectedBlockIndex, world);
+        }
+        
         if (GUI.changed) {
            
             EditorUtility.SetDirty(world);
