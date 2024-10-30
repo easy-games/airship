@@ -1385,7 +1385,7 @@ namespace VoxelWorldStuff {
                         meshData.vertices[meshData.verticesCount++] = srcVertices[(faceIndex * 4) + j] + origin;
                         meshData.normals[meshData.normalsCount++] = srcNormals[faceIndex];
                         //Vertex color
-                        meshData.colors[meshData.colorsCount++] = Color.white;
+                        meshData.colors[meshData.colorsCount++] = Color.black;
                     }
 
                     //UV gen

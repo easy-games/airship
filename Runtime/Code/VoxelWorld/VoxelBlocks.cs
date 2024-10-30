@@ -355,6 +355,9 @@ public class VoxelBlocks : MonoBehaviour {
     /// <param name="blockVoxelId">The voxel block id</param>
     /// <returns>The string id of this voxel block</returns>
     public string GetStringIdFromBlockId(BlockId blockVoxelId) {
+
+        blockVoxelId = VoxelWorld.VoxelDataToBlockId(blockVoxelId); //anti foot gun
+        
         var block = TryGetBlock(blockVoxelId, out var blockDefinition);
         if (block) {
             return blockDefinition.blockTypeId;
