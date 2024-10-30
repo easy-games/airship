@@ -70,7 +70,7 @@ namespace VoxelWorldStuff {
         public Dictionary<ushort, float> readOnlyDamageMap = new();
         
         private const int capacity = 40000;
-
+                
         class TemporaryMeshData {
             public Dictionary<Material, SubMesh> subMeshes = new();
 
@@ -1327,6 +1327,14 @@ namespace VoxelWorldStuff {
 
         }
 
+
+        //Swap shaders to get around the need to 
+        //Local on the left, world on the right
+        static List<Tuple<string, string>> shaderPairs = new List<Tuple<string, string>>
+        {
+            Tuple.Create("Shader Graphs/TriplanarSmoothstepLocalURP", "Shader Graphs/TriplanarSmoothstepWorldURP")
+        };
+
         /// <summary>
         /// Generate game object with a block mesh
         /// </summary>
@@ -1366,7 +1374,7 @@ namespace VoxelWorldStuff {
             var damageUv = new Vector2(damage, 0);
             
             if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
-                QuarterBlocskEmitSingleBlock(block, meshData, world, dama);
+                QuarterBlocskEmitSingleBlock(block, meshData, world, damageUv);
             }
             if (block.definition.contextStyle == VoxelBlocks.ContextStyle.StaticMesh) {
                 if (block.mesh != null && block.mesh.lod0 != null) {
@@ -1418,9 +1426,31 @@ namespace VoxelWorldStuff {
             }
             CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, world, true);
 
+            //Tamper with the shaders/materials if they're known
             foreach (Material mat in meshRenderer.sharedMaterials) {
-                var existing = mat.GetFloat("_Triplanar_Scale");
-                mat.SetFloat("_Triplanar_Scale", existing * triplanarScale);
+
+                if (mat.HasProperty("_Triplanar_Scale")) {
+                    var existing = mat.GetFloat("_Triplanar_Scale");
+                    mat.SetFloat("_Triplanar_Scale", existing * triplanarScale);
+                }
+
+                //Swap the shader if its known
+                if (triplanerMode == 2) { //Local
+                    
+                    foreach (var shaderSwap in shaderPairs) {
+                        if (mat.shader.name == shaderSwap.Item2) {
+                            mat.shader = Shader.Find(shaderSwap.Item1);
+                        }
+                    }
+                }
+                if (triplanerMode == 1) { //World
+
+                    foreach (var shaderSwap in shaderPairs) {
+                        if (mat.shader.name == shaderSwap.Item1) {
+                            mat.shader = Shader.Find(shaderSwap.Item2);
+                        }
+                    }
+                }
             }
 
             meshFilter.sharedMesh = theMesh;
