@@ -192,7 +192,7 @@ public class AccessoryBuilder : MonoBehaviour
 
         var data = JsonUtility.FromJson<UserResponse>(res.data).user;
 
-        if (!data) {
+        if (data == null) {
 			Debug.LogError("failed to load username: " + username+ " error: " + (res.error ?? "Empty Data"));
             return new ActiveAccessory[0];
         }
@@ -220,7 +220,7 @@ public class AccessoryBuilder : MonoBehaviour
 
         var outfitDto = JsonUtility.FromJson<OutfitResponse>(res.data).outfit;
 
-        if (!outfitDto) {
+        if (outfitDto == null) {
 			Debug.LogError("failed to load player equipped outfit, no data");
             return new ActiveAccessory[0];
         }

@@ -945,7 +945,7 @@ namespace Editor.Packages {
 
             var response = JsonUtility.FromJson<PackageSlugResponse>(request.downloadHandler.text);
 
-            if (!response.pkg) {
+            if (response.pkg == null) {
                 addPackageError = $"No package exists with id {packageId}";
                 return null;
             }
@@ -1018,7 +1018,7 @@ namespace Editor.Packages {
             PackageLatestVersionResponse response =
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
-            if (!response.version) {
+            if (response.version == null) {
                 addPackageError = $"No package exists with id {packageId}";
                 window.Repaint();
                 request.Dispose();

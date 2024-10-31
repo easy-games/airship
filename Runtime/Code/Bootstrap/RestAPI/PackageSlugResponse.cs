@@ -1,6 +1,6 @@
 [System.Serializable]
 public class PackageSlugResponse {
-    [System.CanBeNull] public PackageDto pkg;
+    public PackageDto pkg;
 }
 
 [System.Serializable]

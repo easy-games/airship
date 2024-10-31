@@ -18,7 +18,7 @@ using Debug = UnityEngine.Debug;
 
 [Serializable]
 class PlatformVersionsResponse {
-    [CanBeNull] public PlatformVersion platformVersion;
+    public PlatformVersion platformVersion;
 }
 
 class PlatformVersion {
@@ -171,7 +171,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         var res = JsonUtility.FromJson<PlatformVersionsResponse>(www.downloadHandler.text);
 
-        if (!res.platformVersion) {
+        if (res.platformVersion == null) {
             Debug.LogError("No platform version found. Something went wrong. Allowing through...");
             return false;
         }

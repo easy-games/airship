@@ -172,7 +172,7 @@ public class LoginApp : MonoBehaviour {
 
         var user = JsonUtility.FromJson<UserResponse>(selfRes.data).user;
 
-        if (!user) {
+        if (user == null) {
             loading = false;
             RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
             return;
@@ -220,7 +220,7 @@ public class LoginApp : MonoBehaviour {
 
                 var user = JsonUtility.FromJson<UserResponse>(selfRes.data).user;
 
-                if (!user) {
+                if (user == null) {
                     this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                     return;
                 }
@@ -303,7 +303,7 @@ public class LoginApp : MonoBehaviour {
 
                     var user = JsonUtility.FromJson<UserResponse>(selfRes.data).user;
 
-                    if (!user) {
+                    if (user == null) {
                         this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                         return;
                     }
