@@ -22,6 +22,7 @@ class PlatformVersionsResponse {
     public PlatformVersion platformVersion;
 }
 
+[Serializable]
 class PlatformVersion {
     public int Core;
     public string Player;
@@ -172,7 +173,9 @@ public class MainMenuSceneManager : MonoBehaviour {
             return false;
         }
 
+        print("Platform version:" + www.downloadHandler.text);
         var res = JsonUtility.FromJson<PlatformVersionsResponse>(www.downloadHandler.text);
+        print(JsonConvert.SerializeObject(res));
 
         if (res.platformVersion == null) {
             Debug.LogError("No platform version found. Something went wrong. Allowing through...");
