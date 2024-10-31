@@ -197,7 +197,6 @@ public class AccessoryBuilder : MonoBehaviour
             return new ActiveAccessory[0];
         }
 
-        var data = JsonUtility.FromJson<UserData>(res.data);
         this.currentUserName = username;
         this.currentUserId = data.uid;
         return await AddOutfitFromUserId(this.currentUserId);
