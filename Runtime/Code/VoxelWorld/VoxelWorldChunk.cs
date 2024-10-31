@@ -140,10 +140,12 @@ namespace VoxelWorldStuff {
             return count;
         }
 
-        public GameObject GetPrefabForLocalKey(Vector3Int localKey) {
+        public GameObject GetPrefabAt(Vector3Int worldPos) {
             if (prefabObjects == null) {
                 return null;
             }
+            Vector3Int localKey = WorldPosToLocalPos(worldPos);
+
             if (prefabObjects.ContainsKey(localKey)) {
                 return prefabObjects[localKey];
             }
