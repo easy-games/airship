@@ -252,12 +252,13 @@ namespace Code.Player.Character {
                 return;
             }
 
-            var layerName = "Override" + (int)layer;
+            animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
 
-            animatorOverride[layerName] = clip;
+            var stateName = "Override" + (int)layer;
 
-            animator.SetBool(layerName + "Looping", clip.isLooping);
-            animator.CrossFadeInFixedTime(layerName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(layerName));
+            animatorOverride[stateName] = clip;
+            animator.SetBool(stateName + "Looping", clip.isLooping);
+            animator.CrossFadeInFixedTime(stateName + "Anim", fixedTransitionDuration, animator.GetLayerIndex(stateName));
         }
 
         public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration) {

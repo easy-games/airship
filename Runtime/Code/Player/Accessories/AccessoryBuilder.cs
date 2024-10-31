@@ -307,9 +307,9 @@ public class AccessoryBuilder : MonoBehaviour
                 //Create the prefab on the joint
                 newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
                 renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
-                if(renderers.Length == 0){
-                    Debug.LogWarning("Accessory with no renderers are on it: " + accessoryTemplate.name);
-                }
+                // if(renderers.Length == 0){
+                //     Debug.LogWarning("Accessory with no renderers are on it: " + accessoryTemplate.name);
+                // }
             }
 
             //Remove (Clone) from name

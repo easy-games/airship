@@ -165,9 +165,12 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             //gap
             EditorGUILayout.Space();
 
+            //Prefab
+
+            GameObject prefab = world.GetPrefabAt(world.highlightedBlockPos);
+            
             ushort blockData = world.GetVoxelAt(world.highlightedBlockPos);
 
-            
             GUILayout.Label("Highlighted Block");
 
             if (VoxelWorld.VoxelDataToBlockId(blockData) == 0) {
@@ -180,10 +183,14 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             GUILayout.BeginHorizontal();
 
             GUILayout.Label("Rotation: " + VoxelWorld.flipNames[flipBits]);
-            
+          
             GUI.backgroundColor = def;
             GUILayout.EndHorizontal();
             GUI.enabled = true;
+
+            if (prefab != null) {
+                GUILayout.Label("Prefab: " + prefab.name);
+            }
 
             GUILayout.Label("Blocks", EditorStyles.boldLabel);
 
