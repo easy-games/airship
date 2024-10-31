@@ -184,15 +184,23 @@ public class AccessoryBuilder : MonoBehaviour
     [HideFromTS]
     public async Task<ActiveAccessory[]> EquipOutfitFromUsername(string username){
         var res = await UsersServiceBackend.GetUserByUsername(username);
-		if (res.success && res.data != "") {
-            var data = JsonUtility.FromJson<UserData>(res.data);
-            this.currentUserName = username;
-            this.currentUserId = data.uid;
-            return await AddOutfitFromUserId(this.currentUserId);
-        } else {
+
+        if (!res.success) {
+			Debug.LogError("failed to load username: " + username+ " error: " + (res.error ?? "Empty Error"));
+            return new ActiveAccessory[0];
+        }
+
+        var data = JsonUtility.FromJson<UserResponse>(res.data).user;
+
+        if (!data) {
 			Debug.LogError("failed to load username: " + username+ " error: " + (res.error ?? "Empty Data"));
-		}
-        return new ActiveAccessory[0];
+            return new ActiveAccessory[0];
+        }
+
+        var data = JsonUtility.FromJson<UserData>(res.data);
+        this.currentUserName = username;
+        this.currentUserId = data.uid;
+        return await AddOutfitFromUserId(this.currentUserId);
     }
 
     [HideFromTS]
@@ -205,42 +213,50 @@ public class AccessoryBuilder : MonoBehaviour
             cancelPendingDownload = false;
             return new ActiveAccessory[0];
         }
-		if (res.success && res.data != "") {
-			var outfitDto = JsonUtility.FromJson<OutfitDto>(res.data);
-            RemoveClothingAccessories();
-            //Skin color
-            if(ColorUtility.TryParseHtmlString(outfitDto.skinColor, out Color skinColor)){
-                SetSkinColor(skinColor, true);
+
+        if (!res.success) {
+			Debug.LogError("failed to load player equipped outfit, http call failed");
+            return new ActiveAccessory[0];
+        }
+
+        var outfitDto = JsonUtility.FromJson<OutfitResponse>(res.data).outfit;
+
+        if (!outfitDto) {
+			Debug.LogError("failed to load player equipped outfit, no data");
+            return new ActiveAccessory[0];
+        }
+
+        RemoveClothingAccessories();
+        //Skin color
+        if(ColorUtility.TryParseHtmlString(outfitDto.skinColor, out Color skinColor)){
+            SetSkinColor(skinColor, true);
+        }
+        //Accessories
+        var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>("Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset");
+        //print("Found collection: " + collection.accessories.Length);
+        foreach(var acc in outfitDto.accessories){
+            bool foundItem = false;
+            foreach(var face in collection.faces){
+                if(face && face.serverClassId == acc.@class.classId){
+                    foundItem = true;
+                    SetFaceTexture(face.decalTexture);
+                    break;
+                }
             }
-            //Accessories
-            var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>("Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset");
-            //print("Found collection: " + collection.accessories.Length);
-            foreach(var acc in outfitDto.accessories){
-                bool foundItem = false;
-                foreach(var face in collection.faces){
-                    if(face && face.serverClassId == acc.@class.classId){
+            if(!foundItem){
+                foreach(var accComponent in collection.accessories){
+                    if(accComponent && accComponent.serverClassId == acc.@class.classId){
                         foundItem = true;
-                        SetFaceTexture(face.decalTexture);
+                        AddSingleAccessory(accComponent, false);
                         break;
                     }
                 }
-                if(!foundItem){
-                    foreach(var accComponent in collection.accessories){
-                        if(accComponent && accComponent.serverClassId == acc.@class.classId){
-                            foundItem = true;
-                            AddSingleAccessory(accComponent, false);
-                            break;
-                        }
-                    }
-                }
-                if(!foundItem){
-                    Debug.LogError("Unable to load acc: " + acc.@class.classId);
-                }
             }
-            TryCombineMeshes();
-		} else {
-			Debug.LogError("failed to load player equipped outfit: " + (res.error ?? "Empty Data"));
-		}
+            if(!foundItem){
+                Debug.LogError("Unable to load acc: " + acc.@class.classId);
+            }
+        }
+        TryCombineMeshes();
 
         return new ActiveAccessory[0];
     }

@@ -910,12 +910,14 @@ namespace Editor.Packages {
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }
 
-        public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
+        public static IPromise<PackageVersionResponse> GetLatestPackageVersion(string packageId) {
             var url = $"{deployUrl}/package-versions/packageSlug/{packageId}";
 
             return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
                 Uri = url,
                 Headers = GetDeploymentServiceHeaders()
+            }).Then((res) => {
+                return res.version;
             });
         }
 
@@ -942,7 +944,13 @@ namespace Editor.Packages {
             }
 
             var response = JsonUtility.FromJson<PackageSlugResponse>(request.downloadHandler.text);
-            return response.slugProperCase;
+
+            if (!response.pkg) {
+                addPackageError = $"No package exists with id {packageId}";
+                return null;
+            }
+
+            return response.pkg.slugProperCase;
         }
 
         private static string deployUrl {
@@ -1010,9 +1018,18 @@ namespace Editor.Packages {
             PackageLatestVersionResponse response =
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
+            if (!response.version) {
+                addPackageError = $"No package exists with id {packageId}";
+                window.Repaint();
+                request.Dispose();
+                yield break;
+            }
+
+            PackageVersionResponse version = response.version;
+
             // Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
             request.Dispose();
-            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "", response.package.assetVersionNumber + "");
+            yield return DownloadPackage(packageId, version.package.codeVersionNumber + "", version.package.assetVersionNumber + "");
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {

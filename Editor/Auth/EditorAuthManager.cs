@@ -27,6 +27,11 @@ namespace Editor.Auth {
         public string slugProperCase;
     }
     [Serializable]
+    public struct GameResponse {
+        public GameDto game;
+    }
+
+    [Serializable]
     public struct GameDto {
         public string slug;
         public string slugProperCase;
@@ -116,7 +121,9 @@ namespace Editor.Auth {
             var self = InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users/self").ContinueWith((t) => {
                 if (t.Result.data == null) return;
                 
-                localUser = JsonUtility.FromJson<User>(t.Result.data);
+                localUser = JsonUtility.FromJson<TransferUserResponse>(t.Result.data).user;
+                if (localUser == null) return;
+
                 signInStatus = EditorAuthSignInStatus.SIGNED_IN;
                 localUserChanged.Invoke(localUser);
                 signInTcs.SetResult(signInStatus);
@@ -187,8 +194,8 @@ namespace Editor.Auth {
             if (!res.success) return null;
             if (res.data.Length == 0) return null; // No response = fail
             
-            var gameDto = JsonConvert.DeserializeObject<GameDto>(res.data);
-            return gameDto;
+            var gameResponse = JsonConvert.DeserializeObject<GameResponse>(res.data);
+            return gameResponse.game;
         }
     }
 }

@@ -16,7 +16,12 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
+[Serializable]
 class PlatformVersionsResponse {
+    [CanBeNull] public PlatformVersion platformVersion;
+}
+
+class PlatformVersion {
     public int Core;
     public string Player;
     public int MinPlayerVersion;
@@ -87,7 +92,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then(() => {
             Promise<List<string>> promise = new Promise<List<string>>();
             if (isUsingBundles) {
-                List<IPromise<PackageLatestVersionResponse>> promises = new();
+                List<IPromise<PackageVersionResponse>> promises = new();
                 promises.Add(GetLatestPackageVersion("@Easy/Core"));
                 // promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
                 promises[0].Then((results) => {
@@ -165,7 +170,13 @@ public class MainMenuSceneManager : MonoBehaviour {
         }
 
         var res = JsonUtility.FromJson<PlatformVersionsResponse>(www.downloadHandler.text);
-        return AirshipConst.playerVersion < res.MinPlayerVersion;
+
+        if (!res.platformVersion) {
+            Debug.LogError("No platform version found. Something went wrong. Allowing through...");
+            return false;
+        }
+
+        return AirshipConst.playerVersion < res.platformVersion.MinPlayerVersion;
     }
 
     private async Task StartPackageDownload(List<AirshipPackage> packages) {
