@@ -35,7 +35,7 @@ namespace VoxelWorldStuff {
 
         private static bool QuarterBlocskEmitSingleBlock(VoxelBlocks.BlockDefinition block, TemporaryMeshData meshData, VoxelWorld world, Vector2 damageUv) {
 
-            Vector3 origin = Vector3.zero;
+            Vector3 origin = new Vector3(-0.5f,-0.5f,-0.5f);
             int flip = 0;
         
             var meshContextListU0 = VoxelBlocks.GetRandomMeshContext(block, origin, 0);
