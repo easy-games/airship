@@ -140,6 +140,16 @@ namespace VoxelWorldStuff {
             return count;
         }
 
+        public GameObject GetPrefabForLocalKey(Vector3Int localKey) {
+            if (prefabObjects == null) {
+                return null;
+            }
+            if (prefabObjects.ContainsKey(localKey)) {
+                return prefabObjects[localKey];
+            }
+            return null;
+        }
+
         private void ClearPrefabsMainThread() {
             //If its the editor detroy
 
