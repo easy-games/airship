@@ -15,6 +15,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
+using Newtonsoft.Json;
 
 [Serializable]
 class PlatformVersionsResponse {
@@ -96,7 +97,9 @@ public class MainMenuSceneManager : MonoBehaviour {
                 promises.Add(GetLatestPackageVersion("@Easy/Core"));
                 // promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
                 promises[0].Then((results) => {
-                    print(results.package);
+                    print(JsonConvert.SerializeObject(results.package));
+                    print("Asset Version Number: " + results.package.assetVersionNumber);
+                    print("Code Version Number: " + results.package.codeVersionNumber);
                     promise.Resolve(new List<string>() {
                         results.package.assetVersionNumber + "",
                         results.package.codeVersionNumber + "",
