@@ -38,7 +38,6 @@ using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
-using Code.Player.Human.Net;
 using Mirror;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;

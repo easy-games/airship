@@ -833,7 +833,7 @@ private void OnEnable() {
 
 		//Fire state change event
 		TrySetState(new CharacterStateSyncData() {
-			state = state,
+			state = currentMoveState.state,
 			grounded = !inAir || didStepUp,
 			sprinting = sprinting,
 			crouching = isCrouching,
