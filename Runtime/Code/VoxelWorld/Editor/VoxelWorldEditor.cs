@@ -8,6 +8,7 @@ using UnityEngine;
 using System;
 using static VoxelEditAction;
 using UnityEditor.SceneManagement;
+using VoxelWorldStuff;
 
 public class VoxelEditAction {
     
@@ -183,7 +184,20 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     Vector3 placementRotationVector;
     VoxelWorld.Flips placementFlip = VoxelWorld.Flips.Flip_0Deg;
     bool placementVertical = false;
- 
+
+    private VoxelWorldEditor() {
+        //Add selection handler
+        Selection.selectionChanged += OnSelectionChanged;
+
+        //Add a handler for the gizmo refresh event
+        SceneView.duringSceneGui += GizmoRefreshEvent;
+
+        EditorApplication.update += OnEditorUpdate;
+
+        //Save handler
+        EditorSceneManager.sceneSaving += OnSavingScene;
+    }
+
 
     private static List<VoxelPlacementModifier> allPlacementModifiers = new() {
         new RotationPlacementMod(),
@@ -396,11 +410,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         world.autoLoad = EditorGUILayout.Toggle("Auto Load", world.autoLoad);
 
-        //if (GUILayout.Button("Emit block"))
-        //{
-        //    MeshProcessor.ProduceSingleBlock(1, world);
-        //}
-
+        
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.Space(5);
         EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
@@ -411,7 +421,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (GUILayout.Button("Reload Atlas")) {
             world.ReloadTextureAtlas();
         }
-
+        if (GUILayout.Button("Debug Emit block"))
+        {
+            MeshProcessor.ProduceSingleBlock(world.selectedBlockIndex, world);
+        }
+        
         if (GUI.changed) {
            
             EditorUtility.SetDirty(world);
@@ -765,19 +779,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
     }
 
-    void Awake(){
-
-        //Add selection handler
-        Selection.selectionChanged += OnSelectionChanged;
-
-        //Add a handler for the gizmo refresh event
-        SceneView.duringSceneGui += GizmoRefreshEvent;
-
-        EditorApplication.update += OnEditorUpdate;
-
-        //Save handler
-        EditorSceneManager.sceneSaving += OnSavingScene;
-    }
 
     private void OnDestroy() {
         //Remove selection handler
@@ -792,10 +793,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         EditorSceneManager.sceneSaving -= OnSavingScene;
     }
 
-    private static GameObject lastSelectedGameObject;
+    [NonSerialized]
+    private GameObject lastSelectedGameObject = null;
 
-    private static void OnEditorUpdate() {
-        // Check if a new GameObject has been selected
+    private void OnEditorUpdate() {
+        
+        //Check to see if we selected the selection zone of this voxelWorldEditor
         GameObject selected = Selection.activeGameObject;
 
         // If selection has changed and the object is inactive or active, detect it
@@ -803,17 +806,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             if (selected != null && !selected.activeInHierarchy) {
                 
                 SelectionZone zone = selected.GetComponent<SelectionZone>();
-                if (zone) {
+                if (zone) { //&& zone.voxelWorld.gameObject == target
                     //If it does, select the voxel world
                     selected.SetActive(true);
                     ToolManager.SetActiveTool<VoxelWorldSelectionToolBase>();
                     
                 }
             }
-            else if (selected != null) {
-
-            }
-
+            
             // Store the current selection to detect changes
             lastSelectedGameObject = selected;
         }

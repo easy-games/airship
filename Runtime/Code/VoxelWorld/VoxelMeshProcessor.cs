@@ -70,7 +70,7 @@ namespace VoxelWorldStuff {
         public Dictionary<ushort, float> readOnlyDamageMap = new();
         
         private const int capacity = 40000;
-
+                
         class TemporaryMeshData {
             public Dictionary<Material, SubMesh> subMeshes = new();
 
@@ -1327,6 +1327,14 @@ namespace VoxelWorldStuff {
 
         }
 
+
+        //Swap shaders to get around the need to 
+        //Local on the left, world on the right
+        static List<Tuple<string, string>> shaderPairs = new List<Tuple<string, string>>
+        {
+            Tuple.Create("Shader Graphs/TriplanarSmoothstepLocalURP", "Shader Graphs/TriplanarSmoothstepWorldURP")
+        };
+
         /// <summary>
         /// Generate game object with a block mesh
         /// </summary>
@@ -1347,6 +1355,7 @@ namespace VoxelWorldStuff {
             }
 
             GameObject obj = new GameObject();
+            obj.name = block.definition.name;
             MeshFilter meshFilter = obj.AddComponent<MeshFilter>();
             MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
 
@@ -1360,14 +1369,20 @@ namespace VoxelWorldStuff {
             Vector3 origin = new Vector3(-0.5f, -0.5f, -0.5f);
             int flip = 0;
             int rotation = 0;
-
+            
             float damage = 0;
             var damageUv = new Vector2(damage, 0);
-
-            if (block.mesh != null && block.mesh.lod0 != null) {
-                EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv);
+            
+            if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
+                QuarterBlocskEmitSingleBlock(block, meshData, world, damageUv);
             }
-            else {
+            if (block.definition.contextStyle == VoxelBlocks.ContextStyle.StaticMesh) {
+                if (block.mesh != null && block.mesh.lod0 != null) {
+                    EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv);
+                }
+            }
+            if (block.definition.contextStyle == VoxelBlocks.ContextStyle.Block) {
+
                 //Add regular cube Faces
                 for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
                     Rect uvRect = block.GetUvsForFace(faceIndex);
@@ -1385,7 +1400,7 @@ namespace VoxelWorldStuff {
                         meshData.vertices[meshData.verticesCount++] = srcVertices[(faceIndex * 4) + j] + origin;
                         meshData.normals[meshData.normalsCount++] = srcNormals[faceIndex];
                         //Vertex color
-                        meshData.colors[meshData.colorsCount++] = Color.white;
+                        meshData.colors[meshData.colorsCount++] = Color.black;
                     }
 
                     //UV gen
@@ -1411,9 +1426,31 @@ namespace VoxelWorldStuff {
             }
             CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, world, true);
 
+            //Tamper with the shaders/materials if they're known
             foreach (Material mat in meshRenderer.sharedMaterials) {
-                var existing = mat.GetFloat("_TriplanarScale");
-                mat.SetFloat("_TriplanarScale", existing * triplanarScale);
+
+                if (mat.HasProperty("_Triplanar_Scale")) {
+                    var existing = mat.GetFloat("_Triplanar_Scale");
+                    mat.SetFloat("_Triplanar_Scale", existing * triplanarScale);
+                }
+
+                //Swap the shader if its known
+                if (triplanerMode == 2) { //Local
+                    
+                    foreach (var shaderSwap in shaderPairs) {
+                        if (mat.shader.name == shaderSwap.Item2) {
+                            mat.shader = Shader.Find(shaderSwap.Item1);
+                        }
+                    }
+                }
+                if (triplanerMode == 1) { //World
+
+                    foreach (var shaderSwap in shaderPairs) {
+                        if (mat.shader.name == shaderSwap.Item1) {
+                            mat.shader = Shader.Find(shaderSwap.Item2);
+                        }
+                    }
+                }
             }
 
             meshFilter.sharedMesh = theMesh;
@@ -1439,9 +1476,7 @@ namespace VoxelWorldStuff {
                 bool airRight = (VoxelWorld.VoxelIsSolid(voxRight) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight));
                 bool airForward = (VoxelWorld.VoxelIsSolid(voxForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward));
                 bool airBack = (VoxelWorld.VoxelIsSolid(voxBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack));
-
-
-
+                
                 //Are we a block with 4 surrounding air spaces? That is block C!
                 if (airLeft && airRight && airForward && airBack) {
                     EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.C], temporaryMeshData, world, origin, 0, flip, damageUv);

@@ -290,6 +290,7 @@ public class VoxelBlocks : MonoBehaviour {
     [SerializeField] public List<VoxelBlockDefinionList> blockDefinionLists = new();
 
     public BlockDefinition GetBlock(BlockId index) {
+        
         var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
         loadedBlocks.TryGetValue(ix, out BlockDefinition value);
         return value;
@@ -311,6 +312,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     public BlockDefinition GetBlockDefinitionFromBlockId(int index) {
+        index = VoxelWorld.VoxelDataToBlockId(index);
         return GetBlock((ushort)index);
     }
 
@@ -355,6 +357,9 @@ public class VoxelBlocks : MonoBehaviour {
     /// <param name="blockVoxelId">The voxel block id</param>
     /// <returns>The string id of this voxel block</returns>
     public string GetStringIdFromBlockId(BlockId blockVoxelId) {
+
+        blockVoxelId = VoxelWorld.VoxelDataToBlockId(blockVoxelId); //anti foot gun
+        
         var block = TryGetBlock(blockVoxelId, out var blockDefinition);
         if (block) {
             return blockDefinition.blockTypeId;

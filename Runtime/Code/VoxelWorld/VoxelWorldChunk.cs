@@ -140,6 +140,18 @@ namespace VoxelWorldStuff {
             return count;
         }
 
+        public GameObject GetPrefabAt(Vector3Int worldPos) {
+            if (prefabObjects == null) {
+                return null;
+            }
+            Vector3Int localKey = WorldPosToLocalPos(worldPos);
+
+            if (prefabObjects.ContainsKey(localKey)) {
+                return prefabObjects[localKey];
+            }
+            return null;
+        }
+
         private void ClearPrefabsMainThread() {
             //If its the editor detroy
 
@@ -356,6 +368,16 @@ namespace VoxelWorldStuff {
             }
 
             color[key] = Color32ToUInt(col);
+        }
+        
+        public void WriteVoxelDamage(Vector3Int worldPos, float dmg) {
+            int key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return;
+            }
+
+            damageMap[(ushort) key] = dmg;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
