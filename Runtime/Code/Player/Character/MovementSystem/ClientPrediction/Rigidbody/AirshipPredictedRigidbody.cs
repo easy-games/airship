@@ -17,6 +17,8 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
 
     private bool wasKinematic = false;
     private bool waitingForOthers = false;
+    private Vector3 storedVelocity;
+    private Vector3 storedAngularVelocity;
 
 #endregion
 
@@ -58,7 +60,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     }
 
     protected override void SnapTo(AirshipPredictedRigidbodyState newState){
-        print("Snapping to state: " + newState.timestamp + " pos: " + newState.position);
+        //print("Snapping to state: " + newState.timestamp + " pos: " + newState.position);
         // apply the state to the Rigidbody instantly
         rigid.position = newState.position;
         rigid.rotation = newState.rotation;
@@ -79,7 +81,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     }
 
     protected override void MoveTo(AirshipPredictedRigidbodyState newState){
-        print("Moving To to state: " + newState.timestamp + " pos: " + newState.position);
+        //print("Moving To to state: " + newState.timestamp + " pos: " + newState.position);
         // apply the state to the Rigidbody
         // The only smoothing we get is from Rigidbody.MovePosition.
         rigid.MovePosition(newState.position);
@@ -93,26 +95,37 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
 
     protected override bool NeedsCorrection(AirshipPredictedRigidbodyState serverState, AirshipPredictedRigidbodyState interpolatedState) {
         print("Rotation Angle: " + Quaternion.Angle(serverState.rotation, interpolatedState.rotation));
-        return base.NeedsCorrection(serverState, interpolatedState);// || 
-            //Quaternion.Angle(serverState.rotation, interpolatedState.rotation) > rotationCorrectionThreshold;
+        return base.NeedsCorrection(serverState, interpolatedState) || 
+            Quaternion.Angle(serverState.rotation, interpolatedState.rotation) > rotationCorrectionThreshold;
     }
 
     #region REPLAY
     public override void OnReplayingOthersStarted() {
-        // if(waitingForOthers){
-        //     return;
-        // }
-        // waitingForOthers = true;
-        // wasKinematic = rigid.isKinematic;
-        // rigid.isKinematic = true;
+        if(waitingForOthers){
+            return;
+        }
+        waitingForOthers = true;
+        wasKinematic = rigid.isKinematic;
+        if(!wasKinematic){
+            storedVelocity = rigid.velocity;
+            storedAngularVelocity = rigid.angularVelocity;
+            print("rigid " + gameObject.GetInstanceID() + " is kinematic");
+        }
+        rigid.isKinematic = true;
     }
 
+
     public override void OnReplayingOthersFinished() {
-        // if(!waitingForOthers){
-        //     return;
-        // }
-        // waitingForOthers = false;
-        // rigid.isKinematic = wasKinematic;
+        if(!waitingForOthers){
+            return;
+        }
+        waitingForOthers = false;
+        rigid.isKinematic = wasKinematic;
+        if(!wasKinematic){
+            rigid.velocity = storedVelocity;
+            rigid.angularVelocity = storedAngularVelocity;
+            print("rigid " + gameObject.GetInstanceID() + " WAS kinematic");
+        }
     }
 
     public override void OnReplayStarted(AirshipPredictionState initialState){

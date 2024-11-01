@@ -140,7 +140,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 #endregion
 
 #region VIRTUAL
-    public virtual string friendlyName => "Prediction: " + gameObject.name;
+    public virtual string friendlyName => "Prediction: " + gameObject.GetInstanceID();
     public virtual float guid => gameObject.GetInstanceID();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -296,7 +296,6 @@ protected void Log(string message){
             stateHistory.RemoveAt(0);
 
         var newState = CreateCurrentState(stateTime);
-        print("Recording state: " + stateTime);
         // add state to history
         stateHistory.Add(stateTime, newState);
 
@@ -382,7 +381,7 @@ protected void Log(string message){
         //print("lastRecordTime: " + lastRecordTime + " serverTime: " + NetworkTime.predictedTime);
         //if(Mathf.Abs((float)lastRecordTime-(float)NetworkTime.predictedTime) >= syncInterval){
             //print("No recent recorded state, recording: " + timestamp);
-            
+
             // we only capture state every 'interval' milliseconds.
             // so the newest entry in 'history' may be up to 'interval' behind 'now'.
             // if there's no latency, we may receive a server state for 'now'.

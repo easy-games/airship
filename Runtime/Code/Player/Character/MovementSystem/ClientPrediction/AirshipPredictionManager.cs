@@ -163,13 +163,14 @@ public class AirshipPredictionManager : MonoBehaviour {
 #endregion
 
 
-#region RIGIDBODIES
+#region SMOOTHING
 
     /*
     Based on Unity Engine Modules -> PhysicsManager.cpp
     void PhysicsManager::InterpolateBodies(PhysicsSceneHandle handle)
     */
     public void InterpolateBodies(){
+        return;
         if(lastSimulationDuration == 0){
             return;
         }
@@ -265,7 +266,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         double simulationDuration;
         double finalTime = time+replayData.duration;
 
-        Debug.Log("Starting replay");
+        Debug.Log("Starting replay: " + replayData.replayController.friendlyName);
 
         //Simulate physics for the duration of the replay
         while(time < finalTime) {
@@ -287,7 +288,7 @@ public class AirshipPredictionManager : MonoBehaviour {
             replayData.replayController.OnReplayTickStarted(time);
 
             //Run the simulation in the scene
-            Physics.Simulate((float)simulationDuration);
+            //Physics.Simulate((float)simulationDuration);
 
             //Replay ticked callback
             replayData.replayController.OnReplayTickFinished(time);
