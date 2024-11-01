@@ -1,6 +1,11 @@
 using System;
 
 [Serializable]
+public class TransferUserResponse {
+    public User user;
+}
+
+[Serializable]
 public class User {
     public string uid;
     public string username;

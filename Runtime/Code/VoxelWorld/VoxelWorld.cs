@@ -234,7 +234,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
     }
 
-    public void ColorVoxelAt(Vector3 pos, Color32 color, bool priority) {
+    public void ColorVoxelAt(Vector3 pos, Color color, bool priority) {
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out Chunk chunk);
         if (chunk == null) {
@@ -245,6 +245,20 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk.GetVoxelAt(voxelPos) == 0) return;
         
         chunk.WriteVoxelColor(voxelPos, color);
+        DirtyMesh(voxelPos, priority);
+    }
+    
+    public void DamageVoxelAt(Vector3 pos, float damage, bool priority) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out Chunk chunk);
+        if (chunk == null) {
+            return;
+        }
+
+        var voxelPos = FloorInt(pos);
+        if (chunk.GetVoxelAt(voxelPos) == 0) return;
+        
+        chunk.WriteVoxelDamage(voxelPos, damage);
         DirtyMesh(voxelPos, priority);
     }
 
@@ -309,19 +323,15 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return children;
     }
-
-    [HideFromTS]
-    public List<Light> GetChildPointLights() {
-        List<Light> children = new List<Light>();
-        if (this.lightsFolder != null) {
-            foreach (Transform pl in this.lightsFolder.transform) {
-                var maybePl = pl.GetComponent<Light>();
-                if (maybePl != null) {
-                    children.Add(maybePl);
-                }
-            }
+     
+    public GameObject GetPrefabAt(Vector3Int pos) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out Chunk chunk);
+        if (chunk == null) {
+            return null;
         }
-        return children;
+ 
+        return chunk.GetPrefabAt(pos);
     }
 
     /*
@@ -694,6 +704,11 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     private void OnDestroy() {
+
+#if UNITY_EDITOR        
+        AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+#endif
         foreach (var chunk in chunks) {
             chunk.Value.Free();
         }
