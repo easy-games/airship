@@ -1,7 +1,6 @@
-using Code.Player.Character;
 using Code.Player.Character.API;
 
-public class CharacterStateData {
+public class CharacterStateSyncData {
     public CharacterState state = CharacterState.Idle;
     public bool grounded = true;
     public bool sprinting = false;
@@ -9,7 +8,7 @@ public class CharacterStateData {
 
     // override object.Equals
     public override bool Equals(object obj) {
-        CharacterStateData data = (CharacterStateData)obj;
+        CharacterStateSyncData data = (CharacterStateSyncData)obj;
         return this.state == data.state &&
                this.grounded == data.grounded &&
                this.sprinting == data.sprinting &&

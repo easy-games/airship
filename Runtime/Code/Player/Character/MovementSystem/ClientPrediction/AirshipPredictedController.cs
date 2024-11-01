@@ -46,6 +46,8 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     [Tooltip("Correction threshold in meters. For example, 0.1 means that if the client is off by more than 10cm, it gets corrected.")]
     public double positionCorrectionThreshold = 0.10;
+    [Tooltip("How much can velocity be off before being corrected. In meters per second")]
+    public float velocityCorrectionThreshold = 0.5f;
 
     [Tooltip("Snap to the server state directly when velocity is < threshold. This is useful to reduce jitter/fighting effects before coming to rest.\nNote this applies position, rotation and velocity(!) so it's still smooth.")]
     public float velocitySnapThreshold = 2; // 0.5 has too much fighting-at-rest, 2 seems ideal.
@@ -55,22 +57,6 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     [Tooltip("Reduce sends while velocity==0. Client's objects may slightly move due to gravity/physics, so we still want to send corrections occasionally even if an object is idle on the server the whole time.")]
     public bool reduceSendsWhileIdle = true;
-
-    // Smooth the visual object over time between syncs
-    // this only starts at a given velocity and ends when stopped moving.
-    // to avoid constant on/off/on effects, it also stays on for a minimum time.
-    [Header("Motion Smoothing")]
-
-    [Tooltip("Smoothing via a graphics holder only happens on demand, while moving with a minimum velocity.")]
-    public float motionSmoothingVelocityThreshold = 0.1f;
-    public float motionSmoothingTimeTolerance = 0.5f;
-
-    [Tooltip("Teleport if we are further than this units")]
-    public float motionSmoothingTeleportDistance = 10;
-
-    [Tooltip("How fast to interpolate to the target position, relative to how far we are away from it.\nHigher value will be more jitter but sharper moves, lower value will be less jitter but a little too smooth / rounded moves.")]
-    public float motionSmoothingPositionInterpolationSpeed = 15; // 10 is a little too low for billiards at least
-    public float motionSmoothinRotationInterpolationSpeed = 10;
     
 
     [Header("Debugging")]
@@ -100,14 +86,9 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     protected T lastRecorded {get; private set;}
     double lastRecordTime;
 
-    //Reconcile
-    private bool wasMovingLastReconcile = false;
-
     //Mothion Smoothing
-    private float motionSmoothingVelocityThresholdSqr; // ² cached in Awake
-    private double motionSmoothingLastMovedTime;
-    private float smoothFollowThreshold; // caching to avoid calculation in LateUpdate
-    private float smoothFollowThresholdSqr; // caching to avoid calculation in LateUpdate
+    private float velocityCorrectionThresholdSqr; // ² cached in Awake
+    private float velocitySnapThresholdSqr; // ² cached in Awake
     private double positionCorrectionThresholdSqr; // ² cached in Awake
     
 #endregion
@@ -145,7 +126,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected virtual bool IsMoving() =>
-        currentVelocity.sqrMagnitude >= motionSmoothingVelocityThresholdSqr;
+        currentVelocity.sqrMagnitude >= velocityCorrectionThresholdSqr;
 
     //Do we need to correct this state?
     protected virtual bool NeedsCorrection(T serverState, T interpolatedState){
@@ -165,11 +146,10 @@ protected void Log(string message){
     protected virtual void Awake() {
         // cache some threshold to avoid calculating them in LateUpdate
         float colliderSize = GetComponentInChildren<Collider>().bounds.size.magnitude;
-        smoothFollowThreshold = motionSmoothingTeleportDistance;
-        smoothFollowThresholdSqr = smoothFollowThreshold * smoothFollowThreshold;
 
         // cache ² computations
-        motionSmoothingVelocityThresholdSqr = motionSmoothingVelocityThreshold * motionSmoothingVelocityThreshold;
+        velocitySnapThresholdSqr = velocitySnapThreshold * velocitySnapThreshold;
+        velocityCorrectionThresholdSqr = velocityCorrectionThreshold * velocityCorrectionThreshold;
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
     }
 
@@ -179,11 +159,6 @@ protected void Log(string message){
 
     protected void OnDisable() {
         AirshipPredictionManager.instance.UnRegisterPredictedObject(this);
-    }
-
-    protected virtual void Update() {
-        if (isServer) UpdateServer();
-        if (isClientOnly) UpdateClient();
     }
 
     protected override void OnValidate() {
@@ -200,8 +175,11 @@ protected void Log(string message){
 #endregion
 
 #region SERVER
-        private void UpdateServer()
-        {
+        protected virtual void Update() {
+            if (!isServer){
+                return;
+            }
+
             // bandwidth optimization while idle.
             if (reduceSendsWhileIdle) {
                 // while moving, always sync every frame for immediate corrections.
@@ -223,33 +201,8 @@ protected void Log(string message){
         }
 #endregion
 #region CLIENT
-        private void UpdateClient(){
-            // perf: enough to check reconcile every few frames.
-            // PredictionBenchmark: only checking every 4th frame: 770 => 800 FPS
-            if (Time.frameCount % checkReconcileEveryNthFrame != 0) return;
-
-            bool moving = IsMoving();
-
-            // started moving?
-            if (moving && !wasMovingLastReconcile) {
-                OnBeginPrediction?.Invoke();
-                wasMovingLastReconcile = true;
-            }
-            // stopped moving?
-            else if (!moving && wasMovingLastReconcile) {
-                // ensure a minimum time since starting to move, to avoid on/off/on effects.
-                if (NetworkTime.time >= motionSmoothingLastMovedTime + motionSmoothingTimeTolerance) {
-                    OnEndPrediction?.Invoke();
-                    wasMovingLastReconcile = false;
-                }
-            }
-        }
-
-        void LateUpdate(){
-            // only follow on client-only, not in server or host mode
-            //if (isClientOnly) SmoothFollowPhysicsCopy();
-        }
         
+        //Record history states
         void FixedUpdate() {
             // on clients (not host) we record the current state every FixedUpdate.
             // this is cheap, and allows us to keep a dense history.
@@ -308,7 +261,7 @@ protected void Log(string message){
         // Hard snap to the position below a threshold velocity.
         // this is fine because the visual object still smoothly interpolates to it.
         print("VEL: " + currentVelocity.magnitude);
-        if (currentVelocity.magnitude <= velocitySnapThreshold) {
+        if (currentVelocity.sqrMagnitude <= velocitySnapThresholdSqr) {
             Log($"Prediction: snapped {name} into place because velocity {currentVelocity.magnitude:F3} <= {velocitySnapThreshold:F3}");
 
             // apply server state immediately.
@@ -366,7 +319,7 @@ protected void Log(string message){
         //
         // if this ever causes issues, feel free to disable it.
         if (Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr &&
-            Vector3.SqrMagnitude(serverState.velocity - currentVelocity) < motionSmoothingVelocityThresholdSqr) {
+            Vector3.SqrMagnitude(serverState.velocity - currentVelocity) < velocityCorrectionThresholdSqr) {
             Log($"OnReceivedState for {name}: taking is idle optimized early return!");
             return;
         }
