@@ -369,6 +369,16 @@ namespace VoxelWorldStuff {
 
             color[key] = Color32ToUInt(col);
         }
+        
+        public void WriteVoxelDamage(Vector3Int worldPos, float dmg) {
+            int key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return;
+            }
+
+            damageMap[(ushort) key] = dmg;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VoxelData GetLocalVoxelAt(Vector3Int localPos) {

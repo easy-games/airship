@@ -247,6 +247,20 @@ public partial class VoxelWorld : MonoBehaviour {
         chunk.WriteVoxelColor(voxelPos, color);
         DirtyMesh(voxelPos, priority);
     }
+    
+    public void DamageVoxelAt(Vector3 pos, float damage, bool priority) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out Chunk chunk);
+        if (chunk == null) {
+            return;
+        }
+
+        var voxelPos = FloorInt(pos);
+        if (chunk.GetVoxelAt(voxelPos) == 0) return;
+        
+        chunk.WriteVoxelDamage(voxelPos, damage);
+        DirtyMesh(voxelPos, priority);
+    }
 
     private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
         Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel);
