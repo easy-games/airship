@@ -1,10 +1,15 @@
 [System.Serializable]
 public class PackageLatestVersionResponse {
-    public PackageResponse package;
+    public PackageVersionResponse version;
 }
 
 [System.Serializable]
-public class PackageResponse {
+public class PackageVersionResponse {
+    public Package package;
+}
+
+[System.Serializable]
+public class Package {
     public int assetVersionNumber;
     public int codeVersionNumber;
 }

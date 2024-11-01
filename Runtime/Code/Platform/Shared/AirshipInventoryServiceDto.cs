@@ -90,7 +90,12 @@ namespace Code.Platform.Shared {
     }
 
     [Serializable ]
-     public class OutfitDto {
+     public class OutfitResponse {
+        public OutfitDto outfit;
+    }
+
+    [Serializable ]
+    public class OutfitDto {
         public string outfitId;
         public string owner;
 
@@ -100,6 +105,11 @@ namespace Code.Platform.Shared {
         public AccessoryInstanceDto[] accessories;
 
         public bool equipped;
+    }
+
+    [Serializable]
+    public class UserResponse {
+        public UserData user;
     }
 
     [Serializable ]

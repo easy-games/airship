@@ -93,21 +93,23 @@ namespace Editor.Packages {
                 PackageLatestVersionResponse res =
                     JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
-                if (res == null || res.package == null) {
+                if (res == null || res.version == null) {
                     Debug.LogError("[Airship]: Failed to check package: " + package.id + ". Got response: " + request.downloadHandler.text);
                     yield break;
                 }
 
-                var targetCodeVersion = useLocalVersion ? package.codeVersion : res.package.codeVersionNumber.ToString();
+                PackageVersionResponse version = res.version;
+
+                var targetCodeVersion = useLocalVersion ? package.codeVersion : version.package.codeVersionNumber.ToString();
                 var targetAssetVersion =
-                    useLocalVersion ? package.assetVersion : res.package.assetVersionNumber.ToString();
+                    useLocalVersion ? package.assetVersion : version.package.assetVersionNumber.ToString();
 
                 if (!package.IsDownloaded()) {
-                    Debug.Log($"[Airship]: Updating default package {package.id} from v{package.codeVersion} to v{res.package.codeVersionNumber}");
+                    Debug.Log($"[Airship]: Updating default package {package.id} from v{package.codeVersion} to v{version.package.codeVersionNumber}");
                     yield return AirshipPackagesWindow.DownloadPackage(package.id, targetCodeVersion, targetAssetVersion);
                     yield break;
                 }
-                if (res.package.codeVersionNumber.ToString() != package.codeVersion) {
+                if (version.package.codeVersionNumber.ToString() != package.codeVersion) {
                     if (!immediatelyUpdateCore && (package.id.ToLower() == "@easy/core" || package.id.ToLower() == "@easy/corematerials")) {
                         isCoreUpdateAvailable = true;
                     } else {

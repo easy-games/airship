@@ -15,8 +15,15 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
+using Newtonsoft.Json;
 
+[Serializable]
 class PlatformVersionsResponse {
+    public PlatformVersion platformVersion;
+}
+
+[Serializable]
+class PlatformVersion {
     public int Core;
     public string Player;
     public int MinPlayerVersion;
@@ -87,11 +94,13 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then(() => {
             Promise<List<string>> promise = new Promise<List<string>>();
             if (isUsingBundles) {
-                List<IPromise<PackageLatestVersionResponse>> promises = new();
+                List<IPromise<PackageVersionResponse>> promises = new();
                 promises.Add(GetLatestPackageVersion("@Easy/Core"));
                 // promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
                 promises[0].Then((results) => {
-                    print(results.package);
+                    print(JsonConvert.SerializeObject(results.package));
+                    print("Asset Version Number: " + results.package.assetVersionNumber);
+                    print("Code Version Number: " + results.package.codeVersionNumber);
                     promise.Resolve(new List<string>() {
                         results.package.assetVersionNumber + "",
                         results.package.codeVersionNumber + "",
@@ -164,8 +173,16 @@ public class MainMenuSceneManager : MonoBehaviour {
             return false;
         }
 
+        print("Platform version:" + www.downloadHandler.text);
         var res = JsonUtility.FromJson<PlatformVersionsResponse>(www.downloadHandler.text);
-        return AirshipConst.playerVersion < res.MinPlayerVersion;
+        print(JsonConvert.SerializeObject(res));
+
+        if (res.platformVersion == null) {
+            Debug.LogError("No platform version found. Something went wrong. Allowing through...");
+            return false;
+        }
+
+        return AirshipConst.playerVersion < res.platformVersion.MinPlayerVersion;
     }
 
     private async Task StartPackageDownload(List<AirshipPackage> packages) {
@@ -235,11 +252,13 @@ public class MainMenuSceneManager : MonoBehaviour {
         }
     }
 
-    public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
+    public static IPromise<PackageVersionResponse> GetLatestPackageVersion(string packageId) {
         var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{packageId}";
 
         return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
             Uri = url
+        }).Then((res) => {
+            return res.version;
         });
     }
 }
