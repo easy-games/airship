@@ -40,6 +40,7 @@ public class WorldSaveFile : ScriptableObject {
         }
     }
 
+    //This is unusable - for some reason it seems to be causing errors
     private void CreateScopedBlockDictionaryFromVoxelWorldTight(VoxelWorld world) {
 
         HashSet<int> UsedIds = new();
@@ -80,7 +81,7 @@ public class WorldSaveFile : ScriptableObject {
     public void CreateFromVoxelWorld(VoxelWorld world) {
 
         // Add used blocks + their ids to file
-        this.CreateScopedBlockDictionaryFromVoxelWorldTight(world);
+        this.CreateScopedBlockDictionaryFromVoxelWorld(world);
 
         var chunks = world.chunks;
         int counter = 0;
