@@ -732,7 +732,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 if (validPosition) {
                     var voxelPos = lastPos;
                     var oldColor = world.GetVoxelColorAt(voxelPos);
-                    var newCol = new Color32((byte) (oldColor.r + 10), oldColor.g, oldColor.b, oldColor.a);
+                    Color newCol;
+                    if (e.shift) {
+                        newCol = new Color32((byte) (Math.Max(oldColor.r + -10, 0)), oldColor.g, oldColor.b, oldColor.a);
+                    } else {
+                        newCol = new Color32((byte) (Math.Min(oldColor.r + 10, 255)), oldColor.g, oldColor.b, oldColor.a);
+                    }
                     VoxelEditManager.Instance.ColorVoxel(world, voxelPos, newCol);
                 }
             }
