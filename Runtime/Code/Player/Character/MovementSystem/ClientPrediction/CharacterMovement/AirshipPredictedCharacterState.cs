@@ -9,7 +9,7 @@ public enum CharacterState {
 }
 
 public class AirshipPredictedCharacterState : AirshipPredictionState{
-	public MoveInputData currentMoveInput;
+	public MoveInputData currentMoveInput = new MoveInputData();
     public bool disableInput = false;
     public bool isFlying = false;
     public int jumpCount = 0;

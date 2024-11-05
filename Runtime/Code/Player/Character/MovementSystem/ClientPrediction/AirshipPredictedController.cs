@@ -103,15 +103,15 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
 #region ABSTRACT
     
-    protected abstract Vector3 currentPosition {get;}
-    protected abstract Vector3 currentVelocity {get;}
-    protected abstract void SnapTo(T newState);
-    protected abstract void MoveTo(T newState);
-    protected abstract T CreateCurrentState(double currentTime);
-    protected abstract void SerializeState(NetworkWriter writer);
-    protected abstract T DeserializeState(NetworkReader reader, double timestamp);
+    public abstract Vector3 currentPosition {get;}
+    public abstract Vector3 currentVelocity {get;}
+    public abstract void SnapTo(T newState);
+    public abstract void MoveTo(T newState);
+    public abstract T CreateCurrentState(double currentTime);
+    public abstract void SerializeState(NetworkWriter writer);
+    public abstract T DeserializeState(NetworkReader reader, double timestamp);
 
-    public abstract void OnReplayStarted(AirshipPredictionState initialState);
+    public abstract void OnReplayStarted(AirshipPredictionState initialState, int historyIndex);
     public abstract void OnReplayTickStarted(double time);
     public abstract void OnReplayTickFinished(double time);
     public abstract void OnReplayFinished(AirshipPredictionState initialState);
@@ -153,11 +153,11 @@ protected void Log(string message){
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
     }
 
-    protected void OnEnable() {
+    protected virtual void OnEnable() {
         AirshipPredictionManager.instance.RegisterPredictedObject(this);
     }
 
-    protected void OnDisable() {
+    protected virtual void OnDisable() {
         AirshipPredictionManager.instance.UnRegisterPredictedObject(this);
     }
 
@@ -203,7 +203,7 @@ protected void Log(string message){
 #region CLIENT
         
         //Record history states
-        void FixedUpdate() {
+        protected virtual void FixedUpdate() {
             // on clients (not host) we record the current state every FixedUpdate.
             // this is cheap, and allows us to keep a dense history.
             if (!isClientOnly) return;
@@ -409,9 +409,6 @@ protected void Log(string message){
                 GizmoUtils.DrawLine(serverState.position, serverState.position + serverState.velocity * 0.1f, Color.white, gizmoDuration);
             }
 
-            // insert the correction and correct the history on top of it.
-            // returns the final recomputed state after replaying.
-            ClearHistoryAfterState(serverState, afterIndex);
 
             //Simulate until the end of our history or however long we think we are ahead of the server whicher is longer
             double finalTime = lastRecorded.timestamp > NetworkTime.predictedTime ? lastRecorded.timestamp : NetworkTime.predictedTime;
@@ -419,7 +416,7 @@ protected void Log(string message){
             print("Replaying until: " + finalTime + " which is " + (finalTime - serverState.timestamp) + " seconds away");
 
             //Replay States
-            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverState.timestamp);
+            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverState.timestamp, afterIndex);
         }
     }
 #endregion

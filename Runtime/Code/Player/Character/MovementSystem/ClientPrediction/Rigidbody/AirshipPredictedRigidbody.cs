@@ -43,23 +43,23 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         base.OnDisable();
     }
 
-    protected override Vector3 currentPosition {
+    public override Vector3 currentPosition {
         get{
             return rigid.position;
         } 
     }
 
-    protected override Vector3 currentVelocity {
+    public override Vector3 currentVelocity {
         get{
             return rigid.velocity;
         }
     }
 
-    protected override AirshipPredictedRigidbodyState CreateCurrentState(double currentTime) {
+    public override AirshipPredictedRigidbodyState CreateCurrentState(double currentTime) {
         return new AirshipPredictedRigidbodyState(currentTime, rigid.position, rigid.rotation, rigid.velocity, rigid.angularVelocity);
     }
 
-    protected override void SnapTo(AirshipPredictedRigidbodyState newState){
+    public override void SnapTo(AirshipPredictedRigidbodyState newState){
         //print("Snapping to state: " + newState.timestamp + " pos: " + newState.position);
         // apply the state to the Rigidbody instantly
         rigid.position = newState.position;
@@ -80,7 +80,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         }
     }
 
-    protected override void MoveTo(AirshipPredictedRigidbodyState newState){
+    public override void MoveTo(AirshipPredictedRigidbodyState newState){
         //print("Moving To to state: " + newState.timestamp + " pos: " + newState.position);
         // apply the state to the Rigidbody
         // The only smoothing we get is from Rigidbody.MovePosition.
@@ -128,15 +128,21 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         }
     }
 
-    public override void OnReplayStarted(AirshipPredictionState initialState){
+    public override void OnReplayStarted(AirshipPredictionState initialState, int historyIndex){
+        // insert the correction and correct the history on top of it.
+        // returns the final recomputed state after replaying.
+
         // var log = initialState.timestamp + ": History before replay: ";
         // foreach(var state in stateHistory){
         //     log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
         // }
         // print(log);
 
+        var rigidState = (AirshipPredictedRigidbodyState)initialState;
+        ClearHistoryAfterState(rigidState, historyIndex);
+
         //Snap to the servers state
-        SnapTo((AirshipPredictedRigidbodyState)initialState);
+        SnapTo(rigidState);
         if(showGizmos){
             //Replay Position and velocity
             GizmoUtils.DrawSphere(currentPosition, .4f, Color.blue, 4, gizmoDuration);
@@ -183,14 +189,14 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     #endregion
 
     #region SERIALIZE
-    protected override void SerializeState(NetworkWriter writer) {
+    public override void SerializeState(NetworkWriter writer) {
         writer.WriteVector3(rigid.position);
         writer.WriteVector4(rigid.rotation.ConvertToVector4());
         writer.WriteVector3(rigid.velocity);
         writer.WriteVector3(rigid.angularVelocity);
     }
 
-    protected override AirshipPredictedRigidbodyState DeserializeState(NetworkReader reader, double timestamp) {
+    public override AirshipPredictedRigidbodyState DeserializeState(NetworkReader reader, double timestamp) {
         return new AirshipPredictedRigidbodyState(timestamp, 
             reader.ReadVector3(), 
             reader.ReadVector4().ConvertToQuaternion(), 

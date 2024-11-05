@@ -9,7 +9,6 @@ using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Http.Public;
-using Code.Player.Character.API;
 using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;

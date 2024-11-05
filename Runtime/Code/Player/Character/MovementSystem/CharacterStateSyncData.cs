@@ -1,5 +1,3 @@
-using Code.Player.Character.API;
-
 public class CharacterStateSyncData {
     public CharacterState state = CharacterState.Idle;
     public bool grounded = true;

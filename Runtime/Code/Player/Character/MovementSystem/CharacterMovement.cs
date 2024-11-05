@@ -45,12 +45,12 @@ public class CharacterMovement : NetworkBehaviour {
 	
 	/// <summary>
 	/// Called on the start of a Move function.
-	/// Params: MoveInputData moveData, boolean isReplay, 
+	/// Params: AirshipPredictedCharacterState moveData, boolean isReplay, 
 	/// </summary>
 	public event Action<object> OnBeginMove;
 	/// <summary>
 	/// Called at the end of a Move function.
-	/// Params: MoveInputData moveData, boolean isReplay
+	/// Params: AirshipPredictedCharacterState moveData, boolean isReplay
 	/// </summary>
 	public event Action<object> OnEndMove;
 
@@ -93,7 +93,7 @@ public class CharacterMovement : NetworkBehaviour {
 	private CharacterPhysics physics;
 	private NetworkAnimator networkAnimator;
 	private NetworkTransformUnreliable networkTransform;
-	private AirshipPredictedRigidbody predictedRigid;
+	private AirshipPredictedCharacterMovement predictedMovement;
 #endregion
 
 #region INTERNAL
@@ -107,8 +107,6 @@ public class CharacterMovement : NetworkBehaviour {
 	private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 	private Vector3 trackedPosition = Vector3.zero;
 	private Vector3 impulseVelocity;
-	private float lastServerUpdateTime = 0;
-	private float serverUpdateRefreshDelay = .1f;
 	private float trackedDeltaTime = 0;
 	private float forwardMargin = .05f;
 	private BinaryBlob queuedCustomData = null;
@@ -138,8 +136,8 @@ public class CharacterMovement : NetworkBehaviour {
 		//Gather references and constant variables
 		networkAnimator = transform.GetComponent<NetworkAnimator>();
 		networkTransform = transform.GetComponent<NetworkTransformUnreliable>();
-		predictedRigid = gameObject.GetComponent<AirshipPredictedRigidbody>();
-		isServerAuth = predictedRigid != null;
+		predictedMovement = gameObject.GetComponent<AirshipPredictedCharacterMovement>();
+		isServerAuth = predictedMovement != null;
 		if(this.physics == null){
 			this.physics = new CharacterPhysics(this);
 		}
@@ -170,10 +168,12 @@ public class CharacterMovement : NetworkBehaviour {
 		hasMovementAuth = isOwned || (isServer && (netIdentity.connectionToClient == null || isServerAuth));
 
 		//Have to manualy control the flow of data
-		if(isServerOnly){
-			networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
-		}else {
-			networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
+		if(networkTransform){	
+			if(isServerOnly){
+				networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
+			}else {
+				networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
+			}
 		}
 		//print("Refreshed auth: " + hasAuth);
 	}
@@ -269,15 +269,15 @@ private void OnEnable() {
 		if(!hasMovementAuth || (isServerOnly && !isServerAuth)) {
 			return;
 		}
+		RunMovementTick();
+	}
 
+	public void RunMovementTick(){
 		//Update the movement state of the character	
 		currentMoveState.currentMoveInput = BuildMoveData();
-		OnBeginMove?.Invoke(currentMoveState.currentMoveInput);
+		OnBeginMove?.Invoke(currentMoveState);
 		Move(currentMoveState.currentMoveInput);
-		if(isServerAuth && isClient){
-			CmdMove(currentMoveState.currentMoveInput);
-		}
-		OnEndMove?.Invoke(currentMoveState.currentMoveInput);
+		OnEndMove?.Invoke(currentMoveState);
 	}
 
 	//Compile the inputs and custom data into one struct
@@ -289,12 +289,6 @@ private void OnEnable() {
 		queuedCustomData = null;
 
 		return new MoveInputData(moveDirInput, jumpInput, crouchInput, sprintInput, this.lookVector, customData);
-	}
-
-	[Command]
-	//Sync the move input data to the server
-	private void CmdMove(MoveInputData moveData){
-		//Move(moveData);
 	}
 #endregion
 
@@ -956,6 +950,13 @@ private void OnEnable() {
 		crouchInput = crouch;
 		sprintInput = sprinting;
 		jumpInput = jump;
+	}
+
+	public void SetMoveInputData(MoveInputData data){
+		moveDirInput = data.moveDir;
+		crouchInput = data.crouch;
+		sprintInput = data.sprint;
+		jumpInput = data.jump;
 	}
 
 	public void AddImpulse(Vector3 impulse){
