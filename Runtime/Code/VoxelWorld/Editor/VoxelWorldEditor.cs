@@ -52,12 +52,26 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         var positionSet = new HashSet<Vector3Int>() { position };
         if (buildModsEnabled) {
             foreach (var (id, modifier) in placementModifiers) {
-                modifier.OnPlaceVoxels(world, positionSet, num);
+                modifier.OnPlaceVoxels(world, positionSet);
             }
         }
 
         foreach (var pos in positionSet) {
             world.WriteVoxelAtInternal(pos, num);
+        }
+        return positionSet;
+    }
+    
+    public HashSet<Vector3Int> ColorVoxel(VoxelWorld world, Vector3Int position, Color col) {
+        var positionSet = new HashSet<Vector3Int>() { position };
+        if (buildModsEnabled) {
+            foreach (var (id, modifier) in placementModifiers) {
+                modifier.OnPlaceVoxels(world, positionSet);
+            }
+        }
+
+        foreach (var pos in positionSet) {
+            world.ColorVoxelAt(pos, col, false);
         }
         return positionSet;
     }
@@ -719,7 +733,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     var voxelPos = lastPos;
                     var oldColor = world.GetVoxelColorAt(voxelPos);
                     var newCol = new Color32((byte) (oldColor.r + 10), oldColor.g, oldColor.b, oldColor.a);
-                    world.ColorVoxelAt(voxelPos, newCol, true);
+                    VoxelEditManager.Instance.ColorVoxel(world, voxelPos, newCol);
                 }
             }
         }
