@@ -199,6 +199,16 @@ public class CharacterMovement : NetworkBehaviour {
 		newPos.y = newY;
 		this.rigidbody.position = newPos;
 	}
+
+	public void ForceToNewMoveState(AirshipPredictedCharacterState newState){
+        // apply the state to the Rigidbody instantly
+        rigidbody.position = newState.position;
+
+        // Set the velocity
+        if (!rigidbody.isKinematic) {
+            rigidbody.velocity = newState.velocity;
+        }
+	}
 #endregion
 
 #region LATEUPDATE

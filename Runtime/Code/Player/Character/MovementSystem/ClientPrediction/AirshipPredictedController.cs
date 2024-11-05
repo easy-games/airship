@@ -106,7 +106,6 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     public abstract Vector3 currentPosition {get;}
     public abstract Vector3 currentVelocity {get;}
     public abstract void SnapTo(T newState);
-    public abstract void MoveTo(T newState);
     public abstract T CreateCurrentState(double currentTime);
     public abstract void SerializeState(NetworkWriter writer);
     public abstract T DeserializeState(NetworkReader reader, double timestamp);
@@ -260,9 +259,8 @@ protected void Log(string message){
     void ApplyState(T snapshotState){
         // Hard snap to the position below a threshold velocity.
         // this is fine because the visual object still smoothly interpolates to it.
-        print("VEL: " + currentVelocity.magnitude);
-        if (currentVelocity.sqrMagnitude <= velocitySnapThresholdSqr) {
-            Log($"Prediction: snapped {name} into place because velocity {currentVelocity.magnitude:F3} <= {velocitySnapThreshold:F3}");
+        // if (currentVelocity.sqrMagnitude <= velocitySnapThresholdSqr) {
+            //Log($"Prediction: snapped {name} into place because velocity {currentVelocity.magnitude:F3} <= {velocitySnapThreshold:F3}");
 
             // apply server state immediately.
             // important to apply velocity as well, instead of Vector3.zero.
@@ -276,10 +274,10 @@ protected void Log(string message){
             // this makes future corrections more accurate.
             stateHistory.Clear();
             stateHistory.Add(snapshotState.timestamp, snapshotState);
-        }else{
-            //Smoothly move towards the new state
-            MoveTo(snapshotState);
-        }
+        // }else{
+        //     //Smoothly move towards the new state
+        //     MoveTo(snapshotState);
+        // }
 
     }
 

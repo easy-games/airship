@@ -19,16 +19,14 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
 #region PRIVATE
     //Cached Values
     private Transform tf; // this component is performance critical. cache .transform getter!
-    private Rigidbody rigid;
     private AirshipPredictedCharacterState currentState;
 
-    //For the client this stores inputs to use in the replay. For server this stores the recieved inputs from the client
-    private List<AirshipPredictedCharacterState> predictionStates = new List<AirshipPredictedCharacterState>();
-
+    //For the client this stores inputs to use in the replay.
+    private List<AirshipPredictedCharacterState> replayPredictionStates = new List<AirshipPredictedCharacterState>();
+    private SortedList<double, MoveInputData> recievedInputs = new SortedList<double, MoveInputData>();
 #endregion
 
 #region GETTERS
-
     public override Vector3 currentPosition {
         get{
             return tf.position;
@@ -36,26 +34,27 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
     }
     public override Vector3 currentVelocity {
         get{
-            return rigid.velocity;
+            return movement.GetVelocity();
         } 
     }
 #endregion 
 
 #region INIT
     protected override void Awake() {
-        rigid = movement.rigidbody;
         tf = transform;
         base.Awake();
     }
 
     protected override void OnEnable() {
         base.OnEnable();
-        movement.OnEndMove += OnMovementUpdate;
+        movement.OnSetCustomData += OnSetMovementData;
+        movement.OnEndMove += OnMovementEnd;
     }
 
     protected override void OnDisable() {
         base.OnDisable();
-        movement.OnEndMove -= OnMovementUpdate;
+        movement.OnSetCustomData -= OnSetMovementData;
+        movement.OnEndMove -= OnMovementEnd;
     }
 #endregion
 
@@ -66,44 +65,65 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
     }
 
     public override void SnapTo(AirshipPredictedCharacterState newState){
-        // apply the state to the Rigidbody instantly
-        rigid.position = newState.position;
-
-        // Set the velocity
-        if (!rigid.isKinematic) {
-            rigid.velocity = newState.velocity;
-        }
-    }
-
-    public override void MoveTo(AirshipPredictedCharacterState newState){
-        // apply the state to the Rigidbody
-        // The only smoothing we get is from Rigidbody.MovePosition.
-        rigid.MovePosition(newState.position);
-
-        // Set the velocity
-        if (!rigid.isKinematic) {
-            rigid.velocity = newState.velocity;
-        }
+        movement.ForceToNewMoveState(newState);
     }
 
     protected override void FixedUpdate() {
         //This disables the automatic calls to RecordState()
     }
+    
+    private void OnSetMovementData(){
+        if(!isServerOnly){
+            return;
+        }
+        
+        //The server applys inputs it recieves from the client
+        int lastIndex = recievedInputs.Count-1;
+        if(lastIndex >= 0 && NetworkTime.time >= recievedInputs.Keys[lastIndex]){
+            if(recievedInputs.Values[lastIndex].jump){
+                print("JUMP Applying inputs from client: " + recievedInputs.Keys[lastIndex] + " servertime: " + NetworkTime.time);
+            }
+            //This input should be used
+            movement.SetMoveInputData(recievedInputs.Values[lastIndex]);
+            recievedInputs.RemoveAt(lastIndex);
+        }
+    }
 
-    private void OnMovementUpdate(object data, object isReplay){
+    private void OnMovementEnd(object data, object isReplay){
         currentState = (AirshipPredictedCharacterState)data;
+
+        if(!isClientOnly){
+            return;
+        }
 
         //Save the state in the history
         RecordState(NetworkTime.predictedTime);
 
         //Send the inputs to the server
-        CmdMove(currentState.currentMoveInput);
+        if(currentState.currentMoveInput.jump){
+            print("JUMP sending inputs to server: " + NetworkTime.predictedTime);
+        }
+        SetServerInput(NetworkTime.predictedTime, currentState.currentMoveInput);
     }
 
 	[Command]
 	//Sync the move input data to the server
-	private void CmdMove(MoveInputData moveData){
-		//Move(moveData);
+	private void SetServerInput(double timeStamp, MoveInputData moveData){
+        //print("recieved inputs from: " + timeStamp + " current time: " + NetworkTime.time);
+        if(timeStamp > NetworkTime.time){
+            var diff = Mathf.Abs((float)(NetworkTime.time - timeStamp));
+            if(diff > .1f){
+                Debug.LogWarning("Recieved inputs from client that are in the past by " + diff + " seconds");
+            }
+        }
+
+        //Store this input sorted by time
+        recievedInputs.Add(timeStamp, moveData);
+
+        // keep state history within limit
+        if(recievedInputs.Count > this.stateHistoryLimit){
+            recievedInputs.Remove(0);
+        }
 	}
 
     public override AirshipPredictedCharacterState CreateCurrentState(double currentTime){
@@ -116,10 +136,12 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
 
     public override void OnReplayStarted(AirshipPredictionState initialState, int historyIndex){
         //Save the future inputs
-        predictionStates.Clear();
+        replayPredictionStates.Clear();
         for(int i=historyIndex; i < stateHistory.Count; i++){
+            var nextState = stateHistory[historyIndex];
+            print("Replaying state: " + nextState.timestamp + " jump: " + nextState.currentMoveInput.jump);
             //Store the states into a new array
-            predictionStates.Add(stateHistory[historyIndex]);
+            replayPredictionStates.Add(nextState);
             //Clear the official history since we will be re writing it
             stateHistory.Remove(historyIndex);
         }
@@ -137,11 +159,14 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
         //Before physics sim 
 
         //If needed apply the inputs the player issued
-        if(predictionStates.Count > 0) {
-            var futureState = predictionStates[0];
+        if(replayPredictionStates.Count > 0) {
+            var futureState = replayPredictionStates[0];
             if(time >= futureState.timestamp) {
+                if(futureState.currentMoveInput.jump){
+                    print("JUMP Replaying inputs: " + futureState.timestamp + " at: " + time);
+                }
                 movement.SetMoveInputData(futureState.currentMoveInput);
-                predictionStates.RemoveAt(0);
+                replayPredictionStates.RemoveAt(0);
             }
         }
         //Run the movement logic based on the saved input history
@@ -172,8 +197,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
 
 #region SERIALIZE
     public override void SerializeState(NetworkWriter writer) {
-        writer.WriteVector3(rigid.position);
-        writer.WriteVector3(rigid.velocity);
+        writer.WriteVector3(tf.position);
+        writer.WriteVector3(movement.GetVelocity());
     }
 
     public override AirshipPredictedCharacterState DeserializeState(NetworkReader reader, double timestamp) {
