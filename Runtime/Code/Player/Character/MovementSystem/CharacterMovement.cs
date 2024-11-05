@@ -47,12 +47,12 @@ public class CharacterMovement : NetworkBehaviour {
 	/// Called on the start of a Move function.
 	/// Params: AirshipPredictedCharacterState moveData, boolean isReplay, 
 	/// </summary>
-	public event Action<object> OnBeginMove;
+	public event Action<object, object> OnBeginMove;
 	/// <summary>
 	/// Called at the end of a Move function.
 	/// Params: AirshipPredictedCharacterState moveData, boolean isReplay
 	/// </summary>
-	public event Action<object> OnEndMove;
+	public event Action<object, object> OnEndMove;
 
 	/// <summary>
 	/// Params: MoveModifier
@@ -79,14 +79,18 @@ public class CharacterMovement : NetworkBehaviour {
 #endregion
 
 #region PUBLIC GET
+	public AirshipPredictedCharacterState currentMoveState {get; private set;} = new AirshipPredictedCharacterState();
+	public float currentCharacterHeight {get; private set;}
 	public float standingCharacterHeight => moveData.characterHeight;
 	public float characterRadius => moveData.characterRadius;
 	public Vector3 characterHalfExtents {get; private set;}
-
-	public float currentCharacterHeight {get; private set;}
 	public RaycastHit groundedRaycastHit {get; private set;}
-	public bool grounded {get; private set;}
-	public bool sprinting {get; private set;}
+	public bool isGrounded {get; private set;}
+	public bool isSprinting {get; private set;}
+	public bool disableInput {
+		get { return currentMoveState.inputDisabled;} 
+		set {currentMoveState.inputDisabled = value;}
+	}
 #endregion
 
 #region PRIVATE REFS
@@ -116,10 +120,6 @@ public class CharacterMovement : NetworkBehaviour {
 	private Vector3 moveDirInput;
 	private bool sprintInput;
 	private bool crouchInput;
-#endregion
-
-#region STATE
-	AirshipPredictedCharacterState currentMoveState = new AirshipPredictedCharacterState();
 #endregion
 
 #region SYNC VARS
@@ -177,37 +177,27 @@ public class CharacterMovement : NetworkBehaviour {
 		}
 		//print("Refreshed auth: " + hasAuth);
 	}
-private void OnEnable() {
+	private void OnEnable() {
 		this.physics = new CharacterPhysics(this);
-		this.currentMoveState.disableInput = false;
+		this.currentMoveState.inputDisabled = false;
 		this.currentMoveState.isFlying = false;
-		this.GetCollider().enabled = true;
+		this.mainCollider.enabled = true;
 	}
 
 	private void OnDisable() {
 		// EntityManager.Instance.RemoveEntity(this);
-		this.GetCollider().enabled = false;
+		this.mainCollider.enabled = false;
 	}
 #endregion
 
 #region HELPERS
-	//Mirror prediction can move the colliders during rollback so you have to access the collider dynamically
-	public Collider GetCollider(){
-		return mainCollider;
-	}
-
-	//Mirror prediction can move the rigidbody during rollback so you have to access the collider dynamically
-	public Rigidbody GetRigidbody(){
-		return rigidbody;
-	}
-	
 	private void SnapToY(float newY, bool forceSnap){
 		if(useExtraLogging){
 			print("Snapping to Y: " + newY);
 		}
-		var newPos = this.GetRigidbody().transform.position;
+		var newPos = this.rigidbody.transform.position;
 		newPos.y = newY;
-		this.GetRigidbody().position = newPos;
+		this.rigidbody.position = newPos;
 	}
 #endregion
 
@@ -272,12 +262,12 @@ private void OnEnable() {
 		RunMovementTick();
 	}
 
-	public void RunMovementTick(){
+	public void RunMovementTick(bool isReplay = false){
 		//Update the movement state of the character	
 		currentMoveState.currentMoveInput = BuildMoveData();
-		OnBeginMove?.Invoke(currentMoveState);
+		OnBeginMove?.Invoke(currentMoveState, isReplay);
 		Move(currentMoveState.currentMoveInput);
-		OnEndMove?.Invoke(currentMoveState);
+		OnEndMove?.Invoke(currentMoveState, isReplay);
 	}
 
 	//Compile the inputs and custom data into one struct
@@ -294,12 +284,12 @@ private void OnEnable() {
 
 #region MOVE START
 	private void Move(MoveInputData md) {
-		var currentVelocity = this.GetRigidbody().velocity;
+		var currentVelocity = this.rigidbody.velocity;
 		var newVelocity = currentVelocity;
 		var isIntersecting = IsIntersectingWithBlock();
 		var deltaTime = Time.fixedDeltaTime;
 		var isImpulsing = impulseVelocity != Vector3.zero;
-		var rootPosition = this.GetRigidbody().transform.position;
+		var rootPosition = this.rigidbody.transform.position;
 		var normalizedMoveDir = md.moveDir.normalized;
 		var characterMoveVelocity = Vector3.zero;
 		characterMoveVelocity.x = normalizedMoveDir.x;
@@ -310,7 +300,7 @@ private void OnEnable() {
 		if (isIntersecting) {
 			grounded = true;
 		}
-		this.grounded = grounded;
+		this.isGrounded = grounded;
 		this.groundedRaycastHit = groundHit;
 
 		if(grounded){
@@ -346,7 +336,8 @@ private void OnEnable() {
 		var canStand = physics.CanStand();
 #endregion
 
-		if (this.currentMoveState.disableInput) {
+		if (currentMoveState.inputDisabled) {
+			//Zero out inputs
 			md.moveDir = Vector3.zero;
 			md.crouch = false;
 			md.jump = false;
@@ -452,7 +443,7 @@ private void OnEnable() {
 		} else if (isMoving) {
 			if (tryingToSprint) {
 				groundedState = CharacterState.Sprinting;
-				sprinting = true;
+				isSprinting = true;
 			} else {
 				groundedState = CharacterState.Running;
 			}
@@ -473,7 +464,7 @@ private void OnEnable() {
 		}
 
 		if (!tryingToSprint) {
-			sprinting = false;
+			isSprinting = false;
 		}
 
 		/*
@@ -528,9 +519,8 @@ private void OnEnable() {
 		var offsetExtent = this.moveData.colliderGroundOffset / 2;
 		this.currentCharacterHeight = isCrouching ? standingCharacterHeight * moveData.crouchHeightMultiplier : standingCharacterHeight;
 		characterHalfExtents = new Vector3(moveData.characterRadius,  this.currentCharacterHeight/2f - offsetExtent,moveData.characterRadius);
-		var collider = this.GetCollider();
-		collider.transform.localScale = characterHalfExtents*2;
-		collider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f+offsetExtent,0);
+		mainCollider.transform.localScale = characterHalfExtents*2;
+		mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f+offsetExtent,0);
 #endregion
 
 #region FLYING
@@ -813,7 +803,7 @@ private void OnEnable() {
 		//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>currentMoveState.prevState</b>: {currentMoveState.prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 		
 		//Execute the forces onto the rigidbody
-		this.GetRigidbody().velocity = newVelocity;
+		this.rigidbody.velocity = newVelocity;
 #endregion
 
 		
@@ -829,7 +819,7 @@ private void OnEnable() {
 		TrySetState(new CharacterStateSyncData() {
 			state = currentMoveState.state,
 			grounded = !inAir || didStepUp,
-			sprinting = sprinting,
+			sprinting = isSprinting,
 			crouching = isCrouching,
 		});
 
@@ -886,7 +876,7 @@ private void OnEnable() {
 	}
 
 	private void TeleportInternal(Vector3 pos, Vector3 lookVector){
-		this.GetRigidbody().position = pos;
+		this.rigidbody.position = pos;
 		this.lookVector = lookVector;
 	}
 
@@ -904,7 +894,7 @@ private void OnEnable() {
 			print("Setting velocity: " + velocity);
 		}
 
-		this.GetRigidbody().velocity = velocity;
+		this.rigidbody.velocity = velocity;
 	}
 
 	[TargetRpc]
@@ -913,23 +903,7 @@ private void OnEnable() {
 	}
 
 #region TS_ACCESS
-	public void DisableMovement() {
-		SetVelocity(Vector3.zero);
-		currentMoveState.disableInput = true;
-	}
 
-	public void EnableMovement() {
-		currentMoveState.disableInput = false;
-	}
-
-	
-	public bool IsGrounded() {
-		return grounded;
-	}
-
-	public bool IsSprinting() {
-		return sprinting;
-	}
 	public void SetReplicatedState(CharacterStateSyncData oldData, CharacterStateSyncData newData) {
 		animationHelper.SetState(newData);
 		if(oldData.state != newData.state){
@@ -1022,7 +996,7 @@ private void OnEnable() {
 	}
 
 	public Vector3 GetVelocity() {
-		return this.GetRigidbody().velocity;
+		return this.rigidbody.velocity;
 	}
 
 	public void IgnoreGroundCollider(Collider collider, bool ignore){

@@ -111,7 +111,7 @@ public class CharacterPhysics {
 			if(movement.drawDebugGizmos_GROUND){
 				GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
 			}
-			if(!movement.grounded){
+			if(!movement.isGrounded){
 				if(movement.drawDebugGizmos_GROUND){
 					GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, gizmoDuration);
 					
@@ -274,7 +274,7 @@ public class CharacterPhysics {
 
 		//See if we should fallback to simplified stepup
 		if(movement.moveData.alwaysStepUp || 
-			(didHitExactForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius
+			(didHitExactForward && movement.isGrounded && flatDistance < velFrame.magnitude+movement.characterRadius
 				&& (Vector3.Equals(currentUpNormal, Vector3.up) || !IsWalkableSurface(forwardExactHitInfo.normal)))){
 			//We hit something but don't qualify for the advanced ramp step up
 			Vector3 startPoint;

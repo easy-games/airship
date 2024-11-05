@@ -1,3 +1,4 @@
+using Assets.Luau;
 using UnityEngine;
 
 public enum CharacterState {
@@ -10,7 +11,7 @@ public enum CharacterState {
 
 public class AirshipPredictedCharacterState : AirshipPredictionState{
 	public MoveInputData currentMoveInput = new MoveInputData();
-    public bool disableInput = false;
+    public bool inputDisabled = false;
     public bool isFlying = false;
     public int jumpCount = 0;
     public bool airborneFromImpulse = false;
@@ -25,6 +26,7 @@ public class AirshipPredictedCharacterState : AirshipPredictionState{
     public float timeSinceBecameGrounded;
     public float timeSinceWasGrounded;
     public float timeSinceJump;
+    public BinaryBlob customData;
 
     public AirshipPredictedCharacterState(){
     }

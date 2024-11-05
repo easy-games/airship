@@ -90,7 +90,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
         //This disables the automatic calls to RecordState()
     }
 
-    private void OnMovementUpdate(object data){
+    private void OnMovementUpdate(object data, object isReplay){
         currentState = (AirshipPredictedCharacterState)data;
 
         //Save the state in the history
