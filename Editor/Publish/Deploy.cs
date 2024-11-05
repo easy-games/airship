@@ -430,6 +430,9 @@ public class Deploy {
 		}
 
 		var slug = activeDeployTarget.slug;
+		if (slug == null) {
+			slug = activeDeployTarget.id;
+		}
 		if (slug != null) {
 			string gameLink;
 			#if AIRSHIP_STAGING
