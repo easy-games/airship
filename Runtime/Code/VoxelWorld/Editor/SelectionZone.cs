@@ -362,6 +362,35 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             }
         }
 
+        if (GUILayout.Button("Replace")) {
+            //walk the bounds
+            float dx = cube.size.x / 2;
+            float dy = cube.size.y / 2;
+            float dz = cube.size.z / 2;
+            float px = cube.transform.localPosition.x;
+            float py = cube.transform.localPosition.y;
+            float pz = cube.transform.localPosition.z;
+
+            if (cube.voxelWorld) {
+
+                List<VoxelEditAction.EditInfo> edits = new();
+
+                int selectedIndex = cube.voxelWorld.selectedBlockIndex;
+                //Walk the current selection zone
+                for (int x = Mathf.FloorToInt(px - dx); x < Mathf.CeilToInt(px + dx); x++) {
+                    for (int y = Mathf.FloorToInt(py - dy); y < Mathf.CeilToInt(py + dy); y++) {
+                        for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
+                            UInt16 prevData = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z));
+                            if (prevData != 0) {
+                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, (UInt16)selectedIndex));
+                            }
+                        }
+                    }
+                }
+                voxelEditManager.AddEdits(cube.voxelWorld, edits, "Replace Voxels");
+            }
+        }
+
         if (GUILayout.Button("Copy")) {
             //walk the bounds 
             float dx = cube.size.x / 2;
