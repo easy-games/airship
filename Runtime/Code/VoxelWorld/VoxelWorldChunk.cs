@@ -195,18 +195,21 @@ namespace VoxelWorldStuff {
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for (int z = 0; z < chunkSize; z++) {
-                        
-                        BlockId blockId = VoxelWorld.VoxelDataToBlockId(GetLocalVoxelAt(x, y, z));
+
+                        var voxelData = GetLocalVoxelAt(x, y, z);
+                        BlockId blockId = VoxelWorld.VoxelDataToBlockId(voxelData);
                         
                         if (blockId > 0) {
                             var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
                             if (blockDefinition.definition.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
                                 GameObject prefabDef = blockDefinition.definition.prefab;
                                 GameObject prefab = GameObject.Instantiate(prefabDef);
+                                var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
+                                var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
                                 Vector3Int pos = new Vector3Int(x, y, z);
                                 prefab.transform.parent = obj.transform;
                                 prefab.transform.localPosition = origin + pos;
-                                prefab.transform.localRotation = Quaternion.identity;
+                                prefab.transform.localRotation = rot;
                                 prefab.transform.localScale = Vector3.one;
 
                                 if (blockDefinition.definition.randomRotation) {

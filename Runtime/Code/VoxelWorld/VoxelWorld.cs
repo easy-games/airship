@@ -148,6 +148,29 @@ public partial class VoxelWorld : MonoBehaviour {
         //Flipped bits are the 12th,13th and 14th bits
         return (voxel & 0x7000) >> 12;
     }
+    
+    public static Quaternion FlipBitsToQuaternion(int flipBits) {
+        var flipEnum = (Flips) flipBits;
+        switch (flipEnum) {
+            case Flips.Flip_0Deg:
+                return Quaternion.identity;
+            case Flips.Flip_90Deg:
+                return Quaternion.Euler(0, 90, 0);
+            case Flips.Flip_180Deg:
+                return Quaternion.Euler(0, 180, 0);
+            case Flips.Flip_270Deg:
+                return Quaternion.Euler(0, 270, 0);
+            case Flips.Flip_0DegVertical:
+                return Quaternion.Euler(0, 0, 180);
+            case Flips.Flip_90DegVertical:
+                return Quaternion.Euler(0, 90, 180);
+            case Flips.Flip_180DegVertical:
+                return Quaternion.Euler(0, 180, 180);
+            case Flips.Flip_270DegVertical:
+                return Quaternion.Euler(0, 270, 180);
+        }
+        return Quaternion.identity;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int SetVoxelFlippedBits(int voxel, int flippedBits) {
