@@ -251,7 +251,7 @@ public partial class VoxelWorld : MonoBehaviour {
         var affectedChunk = WriteSingleVoxelAt(posInt, voxel, priority);
         if (affectedChunk != null) {
             //Send network update
-            if (RunCore.IsServer() && worldNetworker != null) {
+            if (RunCore.IsServer() && worldNetworker != null && worldNetworker.networkWriteVoxels) {
                 worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
             }
         }
@@ -889,6 +889,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private void Awake() {
         doVisuals = RunCore.IsClient() || Application.isEditor;
+        PrepareVoxelWorldGameObject();
     }
 
     public VoxelWorld() {

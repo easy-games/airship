@@ -15,6 +15,8 @@ using Debug = UnityEngine.Debug;
 
 public class VoxelWorldNetworker : NetworkBehaviour {
     [SerializeField] public VoxelWorld world;
+    [Tooltip("If set to true all written voxels will sync from server to clients. If false only the initial load will be networked.")]
+    public bool networkWriteVoxels = true;
     private Stopwatch spawnTimer = new();
     private Stopwatch replicationTimer = new();
 
@@ -71,9 +73,18 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
     public override void OnStartClient() {
         base.OnStartClient();
+        // If we ever want to load a different definition file specified by server this will
+        // need to be swapped to an rpc. But right now we always load the definition file attached
+        // to the VW.
+        SetupClientVoxelWorld();
+        
         this.replicationTimer.Start();
         // print($"VoxelWorldNetworker.OnStartClient. Spawned on net after {this.spawnTimer.ElapsedMilliseconds}ms");
         // world.FullWorldUpdate();
+    }
+
+    private void SetupClientVoxelWorld() {
+        this.world.voxelBlocks.Reload();
     }
 
     [TargetRpc]
