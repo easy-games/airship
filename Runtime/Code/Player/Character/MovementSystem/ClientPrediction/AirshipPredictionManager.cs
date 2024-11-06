@@ -25,10 +25,10 @@ public class AirshipPredictionManager : MonoBehaviour {
 
     internal class ReplayData{
         public IPredictedReplay replayController;
-        public AirshipPredictionState initialState;
+        public AirshipPredictedState initialState;
         public double duration;
         public int afterIndex;
-        public ReplayData(IPredictedReplay replayController, AirshipPredictionState initialState, double duration, int afterIndex){
+        public ReplayData(IPredictedReplay replayController, AirshipPredictedState initialState, double duration, int afterIndex){
             this.replayController = replayController;
             this.initialState = initialState;
             this.duration = duration;
@@ -196,7 +196,7 @@ public class AirshipPredictionManager : MonoBehaviour {
 
 #region REPLAYING
 
-    public void QueueReplay(IPredictedReplay replayController, AirshipPredictionState initialState, double duration, int afterIndex){
+    public void QueueReplay(IPredictedReplay replayController, AirshipPredictedState initialState, double duration, int afterIndex){
         if(replayController == null){
             Debug.LogError("Trying to queue replay without a controller");
             return;
@@ -315,10 +315,10 @@ public class AirshipPredictionManager : MonoBehaviour {
 public interface IPredictedReplay {
     public abstract string friendlyName{get;}
     public abstract float guid {get;}
-    public abstract void OnReplayStarted(AirshipPredictionState initialState, int historyIndex);
+    public abstract void OnReplayStarted(AirshipPredictedState initialState, int historyIndex);
     public abstract void OnReplayTickStarted(double time);
     public abstract void OnReplayTickFinished(double time);
-    public abstract void OnReplayFinished(AirshipPredictionState initialState);
+    public abstract void OnReplayFinished(AirshipPredictedState initialState);
 
     public abstract void OnReplayingOthersStarted();
     public abstract void OnReplayingOthersFinished();

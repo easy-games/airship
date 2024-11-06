@@ -45,12 +45,12 @@ public class CharacterMovement : NetworkBehaviour {
 	
 	/// <summary>
 	/// Called on the start of a Move function.
-	/// Params: AirshipPredictedCharacterState moveData, boolean isReplay, 
+	/// Params: CharacterMovementState moveData, boolean isReplay, 
 	/// </summary>
 	public event Action<object, object> OnBeginMove;
 	/// <summary>
 	/// Called at the end of a Move function.
-	/// Params: AirshipPredictedCharacterState moveData, boolean isReplay
+	/// Params: CharacterMovementState moveData, boolean isReplay
 	/// </summary>
 	public event Action<object, object> OnEndMove;
 
@@ -79,7 +79,7 @@ public class CharacterMovement : NetworkBehaviour {
 #endregion
 
 #region PUBLIC GET
-	public AirshipPredictedCharacterState currentMoveState {get; private set;} = new AirshipPredictedCharacterState();
+	public CharacterMovementState currentMoveState {get; private set;} = new CharacterMovementState();
 	public float currentCharacterHeight {get; private set;}
 	public float standingCharacterHeight => moveData.characterHeight;
 	public float characterRadius => moveData.characterRadius;
@@ -200,8 +200,13 @@ public class CharacterMovement : NetworkBehaviour {
 		this.rigidbody.position = newPos;
 	}
 
-	public void ForceToNewMoveState(AirshipPredictedCharacterState newState){
-        // apply the state to the Rigidbody instantly
+	public void ForceToNewMoveState(CharacterMovementState newState){
+		//Apply inputs
+		SetMoveInputData(newState.currentMoveInput);
+
+		this.currentMoveState = newState;
+		
+		// apply the state to the Rigidbody instantly
         rigidbody.position = newState.position;
 
         // Set the velocity

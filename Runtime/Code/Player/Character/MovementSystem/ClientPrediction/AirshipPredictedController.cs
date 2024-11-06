@@ -15,7 +15,7 @@ using UnityEngine;
 /// </summary>
 /// <typeparam name="T">The data type stored in the history that is needed for replays</typeparam>
 [RequireComponent(typeof(NetworkIdentity))]
-public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredictedReplay where T: AirshipPredictionState{
+public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredictedReplay where T: AirshipPredictedState{
 
 #region INSPECTOR
     // client keeps state history for correction & reconciliation.
@@ -110,10 +110,10 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     public abstract void SerializeState(NetworkWriter writer);
     public abstract T DeserializeState(NetworkReader reader, double timestamp);
 
-    public abstract void OnReplayStarted(AirshipPredictionState initialState, int historyIndex);
+    public abstract void OnReplayStarted(AirshipPredictedState initialState, int historyIndex);
     public abstract void OnReplayTickStarted(double time);
     public abstract void OnReplayTickFinished(double time);
-    public abstract void OnReplayFinished(AirshipPredictionState initialState);
+    public abstract void OnReplayFinished(AirshipPredictedState initialState);
     public abstract void OnReplayingOthersStarted();
     public abstract void OnReplayingOthersFinished();
 
@@ -230,6 +230,10 @@ protected void Log(string message){
             // use predictedTime to record state, otherwise we would record in the past.
             RecordState(NetworkTime.predictedTime);
         }
+
+        protected void AttemptToRecord(){
+            
+        }
 #endregion
 
 
@@ -289,7 +293,7 @@ protected void Log(string message){
         // if we don't have two yet, drop this state and try again next time once we recorded more.
         if (stateHistory.Count < 2) return;
         
-        print("RECIEVED STATE: " + timestamp);
+        //print("RECIEVED STATE: " + timestamp);
 
         // DO NOT SYNC SLEEPING! this cuts benchmark performance in half(!!!)
         // color code remote sleeping objects to debug objects coming to rest
@@ -318,7 +322,7 @@ protected void Log(string message){
         // if this ever causes issues, feel free to disable it.
         if (Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr &&
             Vector3.SqrMagnitude(serverState.velocity - currentVelocity) < velocityCorrectionThresholdSqr) {
-            Log($"OnReceivedState for {name}: taking is idle optimized early return!");
+            //Log($"OnReceivedState for {name}: taking is idle optimized early return!");
             return;
         }
 
@@ -358,7 +362,13 @@ protected void Log(string message){
             // this can happen a lot when latency is ~0. logging all the time allocates too much and is too slow.
             double ahead = serverState.timestamp - newestState.timestamp;
             Log($"Hard correction because the client is ahead of the server by {(ahead*1000):F1}ms. History of size={stateHistory.Count} @ t={timestamp:F3} oldest={oldest.timestamp:F3} newest={newestState.timestamp:F3}. This can happen when latency is near zero, and is fine unless it shows jitter.");
-            ApplyState(serverState);
+            
+            var log = "ALL HISTORY: ";
+            for(int i=0; i<stateHistory.Count; i++){
+                log += "\n state " + i + ": " + stateHistory.Keys[i];
+            }
+            print(log);
+            //ApplyState(serverState);
             return;
         }
 

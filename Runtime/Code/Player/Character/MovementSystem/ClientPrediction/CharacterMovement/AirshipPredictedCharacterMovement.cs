@@ -8,7 +8,7 @@ using UnityEngine;
 // This will be slower as we have to resimulate physics steps. Perhaps a future optimization
 // would be to seperate the scene into multiple physics scenes and only resimulate the once the player is in
 
-public class AirshipPredictedCharacterMovement : AirshipPredictedController<AirshipPredictedCharacterState> {
+public class AirshipPredictedCharacterMovement : AirshipPredictedController<CharacterMovementState> {
 
 #region PUBLIC 
     [Header("References")]
@@ -19,10 +19,10 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
 #region PRIVATE
     //Cached Values
     private Transform tf; // this component is performance critical. cache .transform getter!
-    private AirshipPredictedCharacterState currentState;
+    private CharacterMovementState currentState;
 
     //For the client this stores inputs to use in the replay.
-    private List<AirshipPredictedCharacterState> replayPredictionStates = new List<AirshipPredictedCharacterState>();
+    private List<CharacterMovementState> replayPredictionStates = new List<CharacterMovementState>();
     private SortedList<double, MoveInputData> recievedInputs = new SortedList<double, MoveInputData>();
 #endregion
 
@@ -60,11 +60,12 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
 
 #region PREDICTION
 
-    protected override bool NeedsCorrection(AirshipPredictedCharacterState serverState, AirshipPredictedCharacterState interpolatedState){
+    protected override bool NeedsCorrection(CharacterMovementState serverState, CharacterMovementState interpolatedState){
         return false;
     }
 
-    public override void SnapTo(AirshipPredictedCharacterState newState){
+    public override void SnapTo(CharacterMovementState newState){
+        print("Snapping Movement To: " + newState.timestamp);
         movement.ForceToNewMoveState(newState);
     }
 
@@ -90,7 +91,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
     }
 
     private void OnMovementEnd(object data, object isReplay){
-        currentState = (AirshipPredictedCharacterState)data;
+        currentState = (CharacterMovementState)data;
 
         if(!isClientOnly){
             return;
@@ -126,7 +127,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
         }
 	}
 
-    public override AirshipPredictedCharacterState CreateCurrentState(double currentTime){
+    public override CharacterMovementState CreateCurrentState(double currentTime){
         // create state to insert
         return currentState;
     }
@@ -134,7 +135,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
 
 #region REPLAY
 
-    public override void OnReplayStarted(AirshipPredictionState initialState, int historyIndex){
+    public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
         //Save the future inputs
         replayPredictionStates.Clear();
         for(int i=historyIndex; i < stateHistory.Count; i++){
@@ -147,7 +148,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
         }
 
         //Snap to the servers state
-        SnapTo((AirshipPredictedCharacterState)initialState);
+        SnapTo((CharacterMovementState)initialState);
         if(showGizmos){
             //Replay Position and velocity
             GizmoUtils.DrawSphere(currentPosition, .4f, Color.blue, 4, gizmoDuration);
@@ -180,7 +181,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
         RecordState(time);
     }
 
-    public override void OnReplayFinished(AirshipPredictionState initialState) {
+    public override void OnReplayFinished(AirshipPredictedState initialState) {
         if(showGizmos){
             GizmoUtils.DrawLine(initialState.position, currentPosition, Color.green, gizmoDuration);
         }
@@ -201,8 +202,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Airs
         writer.WriteVector3(movement.GetVelocity());
     }
 
-    public override AirshipPredictedCharacterState DeserializeState(NetworkReader reader, double timestamp) {
-        var state = new AirshipPredictedCharacterState(timestamp, reader.ReadVector3(), reader.ReadVector3());
+    public override CharacterMovementState DeserializeState(NetworkReader reader, double timestamp) {
+        var state = new CharacterMovementState(timestamp, reader.ReadVector3(), reader.ReadVector3());
         return state;
     }
     #endregion

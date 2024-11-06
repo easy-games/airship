@@ -4,7 +4,7 @@
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-public abstract class AirshipPredictionState{
+public abstract class AirshipPredictedState{
     public double timestamp { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] protected set; }
     public Vector3 position { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] protected set; }
     public Vector3 velocity { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] protected set; }
@@ -16,5 +16,5 @@ public abstract class AirshipPredictionState{
     /// <param name="other">The other state to lerp to</param>
     /// <param name="delta">the normalized percentage between the states</param>
     /// <returns>A new state object withe the interpolated result</returns>
-    public abstract AirshipPredictionState Interpolate(AirshipPredictionState other, float delta);
+    public abstract AirshipPredictedState Interpolate(AirshipPredictedState other, float delta);
 }

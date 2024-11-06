@@ -80,19 +80,6 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         }
     }
 
-    public override void MoveTo(AirshipPredictedRigidbodyState newState){
-        //print("Moving To to state: " + newState.timestamp + " pos: " + newState.position);
-        // apply the state to the Rigidbody
-        // The only smoothing we get is from Rigidbody.MovePosition.
-        rigid.MovePosition(newState.position);
-
-        // Set the velocity
-        if (!rigid.isKinematic) {
-            rigid.velocity = newState.velocity;
-            rigid.angularVelocity = newState.angularVelocity;
-        }
-    }
-
     protected override bool NeedsCorrection(AirshipPredictedRigidbodyState serverState, AirshipPredictedRigidbodyState interpolatedState) {
         print("Rotation Angle: " + Quaternion.Angle(serverState.rotation, interpolatedState.rotation));
         return base.NeedsCorrection(serverState, interpolatedState) || 
@@ -128,7 +115,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         }
     }
 
-    public override void OnReplayStarted(AirshipPredictionState initialState, int historyIndex){
+    public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
         // insert the correction and correct the history on top of it.
         // returns the final recomputed state after replaying.
 
@@ -168,7 +155,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         RecordState(time);
     }
 
-    public override void OnReplayFinished(AirshipPredictionState initialState){
+    public override void OnReplayFinished(AirshipPredictedState initialState){
         // var log = initialState.timestamp + "History after replay";
         // foreach(var state in stateHistory){
         //     log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;

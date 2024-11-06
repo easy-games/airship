@@ -9,7 +9,7 @@ public enum CharacterState {
     Crouching = 4,
 }
 
-public class AirshipPredictedCharacterState : AirshipPredictionState{
+public class CharacterMovementState : AirshipPredictedState{
 	public MoveInputData currentMoveInput = new MoveInputData();
     public bool inputDisabled = false;
     public bool isFlying = false;
@@ -28,16 +28,16 @@ public class AirshipPredictedCharacterState : AirshipPredictionState{
     public float timeSinceJump;
     public BinaryBlob customData;
 
-    public AirshipPredictedCharacterState(){
+    public CharacterMovementState(){
     }
     
-    public AirshipPredictedCharacterState(double time, Vector3 pos, Vector3 vel){
+    public CharacterMovementState(double time, Vector3 pos, Vector3 vel){
         this.position = pos;
         this.velocity = vel;
         this.timestamp = time;
     }
 
-    public override AirshipPredictionState Interpolate(AirshipPredictionState other, float delta) {
+    public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
         //TODO: make actual interpolation here
         return other;
     }

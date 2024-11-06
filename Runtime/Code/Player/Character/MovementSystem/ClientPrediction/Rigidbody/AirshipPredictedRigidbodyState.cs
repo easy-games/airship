@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class AirshipPredictedRigidbodyState : AirshipPredictionState {
+public class AirshipPredictedRigidbodyState : AirshipPredictedState {
     public Quaternion rotation { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] protected set; }
     public Vector3 angularVelocity { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] protected set; }
     public AirshipPredictedRigidbodyState(double time, Vector3 pos, Quaternion rot, Vector3 vel, Vector3 angularVel){
@@ -13,7 +13,7 @@ public class AirshipPredictedRigidbodyState : AirshipPredictionState {
         this.angularVelocity = angularVel;
     }
 
-    public override AirshipPredictionState Interpolate(AirshipPredictionState other, float delta) {
+    public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
         var otherRigid = (AirshipPredictedRigidbodyState)other;
         if(otherRigid != null){
             this.timestamp = math.lerp(this.timestamp, otherRigid.timestamp, delta);
