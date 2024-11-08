@@ -313,6 +313,14 @@ public partial class VoxelWorld : MonoBehaviour {
         this.WriteVoxelGroupAt(positions, nums, priority);
     }
 
+    public ushort[] BulkReadVoxels(Vector3[] positions) {
+        var result = new ushort[positions.Length];
+        for (var i = 0; i < positions.Length; i++) {
+            result[i] = ReadVoxelAt(positions[i]);
+        }
+        return result;
+    }
+
     public void WriteVoxelGroupAt(Vector3[] positions, double[] nums, bool priority) {
         HashSet<Chunk> affectedChunks = new();
         for (var i = 0; i < positions.Length; i++) {
