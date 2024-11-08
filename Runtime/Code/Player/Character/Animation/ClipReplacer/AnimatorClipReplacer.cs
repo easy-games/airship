@@ -170,6 +170,74 @@ namespace Code.Player.Character
         }
 
         /// <summary>
+        /// Method that performs the actual removal of animation clips from the given
+        /// <see cref="AnimatorOverrideController"/>.
+        /// It validates the clip replacements and removes them from the controller.
+        /// </summary>
+        /// <param name="controller">The AnimatorOverrideController to apply the replacements to.</param>
+        public void RemoveClips(Object controller)
+        {
+
+            AnimatorOverrideController overrideController = null;
+
+            if (controller == null)
+            {
+                Debug.LogError("No valid AnimatorOverrideController found.");
+                return;
+            }
+
+            if (clipReplacements.Count == 0)
+            {
+                Debug.LogError("No clips has been removed as the overrider list is empty");
+                return;
+            }
+
+            if (controller is Animator animator)
+            {
+                overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
+            }
+            else if (controller is GameObject go && go.TryGetComponent(out Animator animatorComponent))
+            {
+                overrideController = animatorComponent.runtimeAnimatorController as AnimatorOverrideController;
+            }
+            else if (controller is AnimatorOverrideController oc)
+            {
+                overrideController = oc;
+            }
+            else
+            {
+                Debug.LogError("No valid AnimatorOverrideController found.");
+                return;
+            }
+
+            // Creates the animation map without duplicates
+            var animationMap = clipReplacements.ToDictionary(
+                clip => clip.baseClipName,
+                clip => clip.replacementClip
+            );
+
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
+            overrideController.GetOverrides(overrides);
+
+            // Overwriting null clips in the overrider list
+            for (int i = 0; i < overrides.Count; i++)
+            {
+                var originalClip = overrides[i].Key;
+                if (animationMap.TryGetValue(originalClip.name, out var newClip))
+                {
+                    overrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(originalClip, null);
+                }
+            }
+
+            // Apply the updated overrides
+            overrideController.ApplyOverrides(overrides);
+
+            if (!Application.isPlaying)
+            {
+                Debug.Log("Clips Overrides have been removed");
+            }
+        }
+        /// <summary>
         /// Attempts to extract an AnimatorOverrideController from the given object.
         /// </summary>
         private bool TryGetOverrideController(Object controller, out AnimatorOverrideController overrideController)

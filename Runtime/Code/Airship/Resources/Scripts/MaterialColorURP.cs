@@ -78,6 +78,11 @@ public class MaterialColorURP : MonoBehaviour {
         }
 
     }
+    
+    public void SetColor(int indx, Color newColor) {
+        colorSettings[indx].baseColor = newColor;
+        DoUpdate();
+    }
 
     public void SetColorOnAll(Color newColor){
         foreach (var colorSetting in colorSettings) {

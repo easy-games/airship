@@ -915,7 +915,7 @@ namespace VoxelWorldStuff {
                 ThreadedUpdateFullMesh(worldObj);
             }
             catch (System.Exception e) {
-                Debug.LogError("Error in threaded update full mesh: " + e.Message);
+                Debug.LogError("Error in threaded update full mesh: " + e);
             }
         }
 
