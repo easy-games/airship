@@ -74,11 +74,11 @@ public partial class VoxelWorld : MonoBehaviour {
      
     //Texture atlas/block definitions    
     [HideInInspector] public VoxelBlocks voxelBlocks;
-    [HideInInspector] public int selectedBlockIndex = 1;
+    [NonSerialized] public int selectedBlockIndex = 1;
 
     //For the editor
-    [HideInInspector] public VoxelData highlightedBlock = 0;
-    [HideInInspector] public Vector3Int highlightedBlockPos = new();
+    [NonSerialized] public VoxelData highlightedBlock = 0;
+    [NonSerialized] public Vector3Int highlightedBlockPos = new();
 
     [NonSerialized]
     [HideInInspector]
