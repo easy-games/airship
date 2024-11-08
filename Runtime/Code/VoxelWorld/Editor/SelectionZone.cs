@@ -391,8 +391,8 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             }
         }
 
-        if (GUILayout.Button("Copy")) {
-            //walk the bounds 
+        void Copy(bool cut) {
+            //walk the bounds
             float dx = cube.size.x / 2;
             float dy = cube.size.y / 2;
             float dz = cube.size.z / 2;
@@ -406,7 +406,7 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             copiedData = new UInt16[(int)cube.size.x , (int)cube.size.y , (int)cube.size.z];
 
             if (cube.voxelWorld) {
-                
+
                 int index = 0;
                 //Walk the current selection zone
                 for (int x = Mathf.FloorToInt(px - dx); x < Mathf.CeilToInt(px + dx); x++) {
@@ -416,13 +416,27 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                             int xx = x - Mathf.FloorToInt(px - dx);
                             int yy = y - Mathf.FloorToInt(py - dy);
                             int zz = z - Mathf.FloorToInt(pz - dz);
-                            
-                            copiedData[xx,yy,zz] = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z)); 
+
+                            ushort data = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z));
+                            copiedData[xx, yy, zz] = data;
+                            if (cut) {
+                                List<VoxelEditAction.EditInfo> edits = new();
+                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), data, 0));
+                                voxelEditManager.AddEdits(cube.voxelWorld, edits, "Cut Voxels");
+                            }
                         }
                     }
                 }
- 
+
             }
+        }
+
+        if (GUILayout.Button("Copy")) {
+            Copy(false);
+        }
+
+        if (GUILayout.Button("Cut")) {
+            Copy(true);
         }
 
         if (haveCopiedData == false) {
@@ -434,7 +448,7 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             }
 
             GUI.enabled = true;
-        }else {
+        } else {
             //Actual paste
             if (GUILayout.Button("Paste")) {
                 //walk the bouns

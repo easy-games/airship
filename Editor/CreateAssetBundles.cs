@@ -339,6 +339,7 @@ public static class CreateAssetBundles {
 				var assetPaths = assetGuids
 					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
 					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
+					.Where((path) => !path.ToLower().Contains("editor/"))
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
 				Debug.Log("Resources:");
