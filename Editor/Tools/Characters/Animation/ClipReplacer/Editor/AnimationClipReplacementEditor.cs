@@ -109,6 +109,21 @@ public class AnimatorClipReplacementEditor : UnityEditor.Editor
                 Debug.LogError("No AnimatorOverrideController assigned in the component.");
             }
         }
+
+        if (GUILayout.Button("Remove Clips"))
+        {
+            var replacer = (AnimatorClipReplacer)target;
+
+            if (replacer.AnimatorController != null)
+            {
+                replacer.RemoveClips(replacer.AnimatorController);
+
+            }
+            else
+            {
+                Debug.LogError("No AnimatorOverrideController assigned in the component.");
+            }
+        }
     }
    
     private void DrawPresetsList()
