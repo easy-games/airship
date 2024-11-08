@@ -11,6 +11,7 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 using Random = System.Random;
+using System.Runtime.CompilerServices;
 
 namespace VoxelWorldStuff {
 
@@ -666,22 +667,26 @@ namespace VoxelWorldStuff {
             }
         }
 
-        private static void EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv) {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static byte ByteRemap(float a, float left, float right) {
+            a = Mathf.Clamp(a, -0.5f, 0.5f) + 0.5f;  //0..1
+            return (byte)(Mathf.Lerp(left, right, a) * 255.0f);
+        }
+
+        private static int EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv, float[] lerps = null) {
             if (mesh == null) {
-                return;
+                return 0;
             }
             if (mesh.srcVertices == null) {
-                return;
+                return 0;
             }
-
-            //Pass in damage value later
-            float damage = 0;
-
+            
             //Grab the flipped surface
             VoxelMeshCopy.PrecalculatedFlip flipSurface = mesh.flip[flip];
             if (flipSurface == null) {
-                return;
+                return 0;
             }
+
             //Material meshMaterial = block.meshMaterial;
             if (block.meshMaterial) {
                 SubMesh targetSubMesh;
@@ -719,68 +724,73 @@ namespace VoxelWorldStuff {
             }
 
             int count = 0;
+
+            Vector3[] sourceVertices = null;
+            Vector3[] sourceNormals = null;
+
             //Use the rot over using the flip bits (? is this correct? should we define it per block?)
             if (rot != 0) {
-                //Add mesh data
                 VoxelMeshCopy.PrecalculatedRotation sourceRotation = mesh.rotation[rot];
                 if (sourceRotation == null) {
-                    return;
+                    return 0;
                 }
-                count = sourceRotation.vertices.Length;
-                Vector3 offset = origin + new Vector3(0.5f, 0.5f, 0.5f);
+                sourceVertices = sourceRotation.vertices;
+                sourceNormals = sourceRotation.normals;
+            }
+            else {
+                sourceVertices = flipSurface.vertices;
+                sourceNormals = flipSurface.normals;
+            }
+                 
+            count = sourceVertices.Length;
+            Vector3 offset = origin + new Vector3(0.5f, 0.5f, 0.5f);
 
-                // Ensure capacity
-                EnsureCapacity(target, target.verticesCount + count);
+            // Ensure capacity
+            EnsureCapacity(target, target.verticesCount + count);
 
-                // Prepare transformed vertices
-                for (int i = 0; i < count; i++) {
-                    Vector3 transformedPosition = sourceRotation.vertices[i] + offset;
-                    //write the transformed position (well, translated)
-                    target.vertices[target.verticesCount++] = transformedPosition;
-                }
+            // Prepare transformed vertices
+     
+            for (int i = 0; i < count; i++) {
+                Vector3 transformedPosition = sourceVertices[i] + offset;
+                //write the transformed position (well, translated)
+                target.vertices[target.verticesCount++] = transformedPosition;
+            }
 
-                // Copy other arrays directly
-                Array.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
-                target.uvsCount += count;
+            // Copy other arrays directly
+            Array.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
+            target.uvsCount += count;
                 
-                //damage UVs
-                Array.Fill(target.damageUvs, new Vector2(damage,0), target.damageUvsCount, count);
-                target.damageUvsCount += count;
+            //damage UVs
+            Array.Fill(target.damageUvs, damageUv, target.damageUvsCount, count);
+            target.damageUvsCount += count;
 
-                Array.Copy(sourceRotation.normals, 0, target.normals, target.normalsCount, count);
-                target.normalsCount += count;
-            } else {
-                //Add mesh data
-                count = flipSurface.vertices.Length;
-                Vector3 offset = origin + new Vector3(0.5f, 0.5f, 0.5f);
-
-                // Ensure capacity
-                EnsureCapacity(target, target.verticesCount + count);
-
-                // Prepare transformed vertices
-                for (int i = 0; i < count; i++) {
-                    Vector3 transformedPosition = flipSurface.vertices[i] + offset;
-                    //write the transformed position (well, translated)
-                    target.vertices[target.verticesCount++] = transformedPosition;
+            //Normals
+            Array.Copy(sourceNormals, 0, target.normals, target.normalsCount, count);
+            target.normalsCount += count;
+            
+            
+            if (lerps == null) {
+                if (mesh.srcColors != null && mesh.srcColors.Length > 0) {
+                    Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
+                    target.colorsCount += count;
                 }
-
-                // Copy other arrays directly
-                Array.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
-                target.uvsCount += count;
-                      
-               
-                Array.Fill(target.damageUvs, damageUv, target.damageUvsCount, count);
-                target.damageUvsCount += count;
-                
-
-                Array.Copy(flipSurface.normals, 0, target.normals, target.normalsCount, count);
-                target.normalsCount += count;
+            }
+            else {
+                //Interpolate the lerps and use that for vertex colors
+                for (int j = 0; j < sourceVertices.Length; j++) {
+                    Vector3 pos = sourceVertices[j];
+                    byte dx = ByteRemap(pos.x, lerps[0], lerps[1]);
+                    byte dy = ByteRemap(pos.y, lerps[3], lerps[2]);
+                    byte dz = ByteRemap(pos.z, lerps[5], lerps[4]);
+                    target.colors[target.colorsCount++] = new Color32(dx, dy, dz, 255);
+                }
             }
             
-            if (mesh.srcColors != null && mesh.srcColors.Length > 0) {
-                Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
-            }
+            return count;
         }
+
+
+       
 
         public enum FitResult {
             NO_FIT,
@@ -1171,6 +1181,7 @@ namespace VoxelWorldStuff {
                 // Debug.Log("Skipped " + skipCount + " blocks");
             }
 
+            /*
             var s = Stopwatch.StartNew();
             for (int i = 0; i < temporaryMeshData.verticesCount; i++) {
                 var vertPos = temporaryMeshData.vertices[i];
@@ -1215,7 +1226,7 @@ namespace VoxelWorldStuff {
                 temporaryMeshData.colors[i] = finalColor;
             }
             temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
-
+            */
             lastMeshUpdateDuration = (int)((DateTime.Now - startMeshProcessingTime).TotalMilliseconds);
 
             //All done
@@ -1261,11 +1272,7 @@ namespace VoxelWorldStuff {
             mesh.subMeshCount = tempMesh.subMeshes.Count;
             mesh.SetVertices(tempMesh.vertices, 0, tempMesh.verticesCount);
             mesh.SetUVs(0, tempMesh.uvs, 0, tempMesh.uvsCount);
-         
             mesh.SetUVs(1, tempMesh.damageUvs, 0, tempMesh.damageUvsCount);
-           
-           
-
             mesh.SetColors(tempMesh.colors, 0, tempMesh.colorsCount);
             mesh.SetNormals(tempMesh.normals, 0, tempMesh.normalsCount);
 

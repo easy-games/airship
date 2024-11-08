@@ -517,7 +517,7 @@ public partial class VoxelWorld : MonoBehaviour {
         chunks.TryGetValue(chunkKey, out Chunk value);
         if (value == null) {
             return 0;
-        }
+        } 
 
         return value.GetVoxelAt(posi);
     }

@@ -166,23 +166,36 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor {
     private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/SurvivalBlockDefines.xml";
+    [NonSerialized]
     GameObject handle = null;
+    [NonSerialized]
     GameObject faceHandle = null;
+    [NonSerialized]
     GameObject raytraceHandle = null;
     
+    [NonSerialized]
     bool mouseOverViewport = false;
+    [NonSerialized]
     bool lastEnabled = false;
+    [NonSerialized]
     bool leftControlDown = false;
+    [NonSerialized]
     bool leftShiftDown = false;
-
+    [NonSerialized]
+    bool draggingSelection = false;
+    [NonSerialized]
     Vector3Int lastPos;
-    
+    [NonSerialized]
     Vector3 lastNormal;
+    [NonSerialized]
     Vector3Int lastNormalPos;
+    [NonSerialized]
     bool validPosition = false;
-
+    [NonSerialized]
     Vector3 placementRotationVector;
+    [NonSerialized]
     VoxelWorld.Flips placementFlip = VoxelWorld.Flips.Flip_0Deg;
+    [NonSerialized]
     bool placementVertical = false;
 
     private VoxelWorldEditor() {
@@ -592,12 +605,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             }
             
             MeshRenderer ren = faceHandle.GetComponent<MeshRenderer>();
-            if (leftControlDown == true) {
+            /*if (leftControlDown == true) {
                 ren.sharedMaterial.SetColor("_Color", new Color(0, 1, 0, 0.25f));
             }
             else {
                 ren.sharedMaterial.SetColor("_Color", new Color(1, 1, 0, 0.25f));
-            }
+            }*/
+            ren.sharedMaterial.SetColor("_Color", new Color(1, 1, 0, 0.25f));
         }
 
     }
@@ -636,11 +650,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 CleanupHandles();
 
             }
-
-            if (leftControlDown == false) {
-                
-                DoMouseMoveEvent(Event.current.mousePosition,  world);
-            }
+ 
+            DoMouseMoveEvent(Event.current.mousePosition,  world);
+           
             UpdateHandlePosition(world);
             SceneView.RepaintAll();
         }
@@ -650,14 +662,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             if (e.type == EventType.MouseUp && e.button == 0) {
 
                 // Create a ray from the mouse position
-                if (validPosition) {
-
+                if (validPosition && draggingSelection == false) {
+                  
                     if (Event.current.shift) {
                         // Remove voxel
                         Vector3Int voxelPos = lastPos;
                         ushort oldValue =
                             world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
-
+                             
                         VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
                         voxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
@@ -690,18 +702,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
                             "Add Voxel " + def.definition.name);
 
-                        if (leftControlDown == false) {
-                            //Refresh the gizmo like we just moved the mouse here
-                            DoMouseMoveEvent(Event.current.mousePosition, world);
-                        }
-                        else {
-                            //Move the pos by the normal to continue this "line" of voxels
-                            lastPos += VoxelWorld.CardinalVector(lastNormal);
-                            lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
-                        }
+                         
+                        //Move the pos by the normal to continue this "line" of voxels
+                        lastPos += VoxelWorld.CardinalVector(lastNormal);
+                        lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
+                        
 
                         
                     }
+                    
                 }
 
                 UpdateHandlePosition(world);
