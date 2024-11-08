@@ -898,6 +898,7 @@ private void OnEnable() {
 				TeleportInternal(position, lookVector);
 			}else if (isServerOnly){
 				//Tell client to teleport
+				this.networkTransform.RpcTeleport(position); // This is to stop interpolation from overriding tp
 				RpcTeleport(base.connectionToClient, position, lookVector);
 			}
 		}
