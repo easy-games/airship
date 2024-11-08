@@ -19,7 +19,7 @@ using UnityEditor;
 [RequireComponent(typeof(VoxelRollbackManager))]
 public partial class VoxelWorld : MonoBehaviour {
 
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     [NonSerialized]
     public bool doVisuals = true;         //Turn on for headless servers
 
