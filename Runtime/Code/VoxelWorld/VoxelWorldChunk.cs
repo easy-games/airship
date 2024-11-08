@@ -203,13 +203,11 @@ namespace VoxelWorldStuff {
                             var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
                             if (blockDefinition.definition.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
                                 GameObject prefabDef = blockDefinition.definition.prefab;
-                                GameObject prefab = GameObject.Instantiate(prefabDef);
+                                Vector3Int pos = new Vector3Int(x, y, z);
                                 var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
                                 var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
-                                Vector3Int pos = new Vector3Int(x, y, z);
+                                GameObject prefab = GameObject.Instantiate(prefabDef, origin + pos, rot,  obj.transform);
                                 prefab.transform.parent = obj.transform;
-                                prefab.transform.localPosition = origin + pos;
-                                prefab.transform.localRotation = rot;
                                 prefab.transform.localScale = Vector3.one;
 
                                 if (blockDefinition.definition.randomRotation) {
