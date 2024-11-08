@@ -686,9 +686,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         }
                     } else if (Event.current.alt) {
                         ushort voxel = world.GetVoxelAt(lastPos);
-                        Debug.Log("alt voxel: " + voxel);
                         world.selectedBlockIndex = VoxelWorld.VoxelDataToBlockId(voxel);;
-
                     } else {
                         // Add voxel
                         Vector3Int voxelPos = lastNormalPos;
