@@ -1181,52 +1181,52 @@ namespace VoxelWorldStuff {
                 // Debug.Log("Skipped " + skipCount + " blocks");
             }
 
-            /*
-            var s = Stopwatch.StartNew();
-            for (int i = 0; i < temporaryMeshData.verticesCount; i++) {
-                var vertPos = temporaryMeshData.vertices[i];
-                var vertWorldPos = vertPos;
-                var vertWorldPosRounded = new Vector3((float) Math.Round(vertWorldPos.x), (float) Math.Round(vertWorldPos.y),
-                    (float) Math.Round(vertWorldPos.z));
-                var voxelData = world.GetVoxelAt(vertPos);
+            if (true) {   
+                var s = Stopwatch.StartNew();
+                for (int i = 0; i < temporaryMeshData.verticesCount; i++) {
+                    var vertPos = temporaryMeshData.vertices[i];
+                    var vertWorldPos = vertPos;
+                    var vertWorldPosRounded = new Vector3((float) Math.Round(vertWorldPos.x), (float) Math.Round(vertWorldPos.y),
+                        (float) Math.Round(vertWorldPos.z));
+                    var voxelData = world.GetVoxelAt(vertPos); //Not allowed to call this in a thread!!!
                 
-                var neighborColors = new Color32[8];
-                var neighborWeights = new double[8];
-                var neighborCount = 0;
-                var weightTotal = 0.0;
-                // Grab neighbor colors and pick a weighted average color for this position
-                for (var x = -1; x <= 1; x += 2) {
-                    for (var y = -1; y <= 1; y += 2) {
-                        for (var z = -1; z <= 1; z += 2) {
-                            var pos = vertWorldPosRounded + new Vector3(x, y, z) * 0.5f;
-                            // var neighborData = world.GetVoxelAt(pos);
-                            // if ((neighborData & 0xFF) != (blockId & 0xFF)) continue;
+                    var neighborColors = new Color32[8];
+                    var neighborWeights = new double[8];
+                    var neighborCount = 0;
+                    var weightTotal = 0.0;
+                    // Grab neighbor colors and pick a weighted average color for this position
+                    for (var x = -1; x <= 1; x += 2) {
+                        for (var y = -1; y <= 1; y += 2) {
+                            for (var z = -1; z <= 1; z += 2) {
+                                var pos = vertWorldPosRounded + new Vector3(x, y, z) * 0.5f;
+                                // var neighborData = world.GetVoxelAt(pos);
+                                // if ((neighborData & 0xFF) != (blockId & 0xFF)) continue;
 
-                            var voxelPos = VoxelWorld.FloorInt(pos) + Vector3.one * 0.5f;
-                            var dist = (vertWorldPos - voxelPos).magnitude;
-                            if (dist > 1.5) continue;
-                            var weight = 1.5 - dist;
-                            weightTotal += weight;
+                                var voxelPos = VoxelWorld.FloorInt(pos) + Vector3.one * 0.5f;
+                                var dist = (vertWorldPos - voxelPos).magnitude;
+                                if (dist > 1.5) continue;
+                                var weight = 1.5 - dist;
+                                weightTotal += weight;
                                 
-                            neighborColors[neighborCount] = world.GetVoxelColorAt(pos);
-                            neighborWeights[neighborCount] = weight;
-                            neighborCount++;
-                        }
-                    }   
-                }
+                                neighborColors[neighborCount] = world.GetVoxelColorAt(pos);
+                                neighborWeights[neighborCount] = weight;
+                                neighborCount++;
+                            }
+                        }   
+                    }
 
-                var finalColor = new Color32();
-                for (var n = 0; n < neighborCount; n++) {
-                    var weightedColor = Color32.Lerp(new Color32(), neighborColors[n], (float)(neighborWeights[n] / weightTotal));
-                    finalColor.r += weightedColor.r;
-                    finalColor.g += weightedColor.g;
-                    finalColor.b += weightedColor.b;
-                    finalColor.a += weightedColor.a;
+                    var finalColor = new Color32();
+                    for (var n = 0; n < neighborCount; n++) {
+                        var weightedColor = Color32.Lerp(new Color32(), neighborColors[n], (float)(neighborWeights[n] / weightTotal));
+                        finalColor.r += weightedColor.r;
+                        finalColor.g += weightedColor.g;
+                        finalColor.b += weightedColor.b;
+                        finalColor.a += weightedColor.a;
+                    }
+                    temporaryMeshData.colors[i] = finalColor;
                 }
-                temporaryMeshData.colors[i] = finalColor;
+                temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
             }
-            temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
-            */
             lastMeshUpdateDuration = (int)((DateTime.Now - startMeshProcessingTime).TotalMilliseconds);
 
             //All done

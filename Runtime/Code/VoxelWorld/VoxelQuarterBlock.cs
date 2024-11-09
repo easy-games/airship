@@ -136,8 +136,9 @@ namespace VoxelWorldStuff {
             var meshContextListD2 = VoxelBlocks.GetRandomMeshContext(block, origin,6);
             var meshContextListD3 = VoxelBlocks.GetRandomMeshContext(block, origin,7);
 
-            float[] lerps = new float[6];
 
+            float[] lerps = null;// new float[6];
+            /*
             if (!airLeft) {
                 lerps[0] = 1.0f;
             }
@@ -157,10 +158,8 @@ namespace VoxelWorldStuff {
             }
             if (!airBack) {
                 lerps[5] = 1.0f;
-            }
-
-
-
+            }*/
+            
             // do the vertical flat faces ///////////////////////////////////////////////////////////////////////////////////////////////
             //Flat Left - lots of neighbors
             if (airLeft) {

@@ -74,11 +74,11 @@ public partial class VoxelWorld : MonoBehaviour {
      
     //Texture atlas/block definitions    
     [HideInInspector] public VoxelBlocks voxelBlocks;
-    [HideInInspector] public int selectedBlockIndex = 1;
+    [NonSerialized][HideInInspector] public int selectedBlockIndex = 1;
 
     //For the editor
-    [HideInInspector] public VoxelData highlightedBlock = 0;
-    [HideInInspector] public Vector3Int highlightedBlockPos = new();
+    [NonSerialized][HideInInspector] public VoxelData highlightedBlock = 0;
+    [NonSerialized][HideInInspector] public Vector3Int highlightedBlockPos = new();
 
     [NonSerialized]
     [HideInInspector]
@@ -110,15 +110,12 @@ public partial class VoxelWorld : MonoBehaviour {
         "270 Deg Vertical"
     };
 
-
     public static Flips[] allFlips = (Flips[])System.Enum.GetValues(typeof(Flips));
-
 
     [HideInInspector] public bool renderingDisabled = false;
 
     //[HideInInspector] private bool debugGrass = false;
-
-    [SerializeField] public bool hasUnsavedChanges = false;
+    [NonSerialized] public bool hasUnsavedChanges = false;
 
     //Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -142,7 +139,20 @@ public partial class VoxelWorld : MonoBehaviour {
         return (voxel & 0x8000) != 0; //15th bit 
     }
 
-    
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static VoxelData SetVoxelSolidBit(VoxelData voxel, bool solid) {
+        //Solid bit is bit 15, toggle it on or off
+        if (solid) {
+            return (ushort)(voxel | 0x8000);
+        }
+        else {
+            return (ushort)(voxel & 0x7FFF);
+        }
+    }
+
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetVoxelFlippedBits(VoxelData voxel) {
         //Flipped bits are the 12th,13th and 14th bits
