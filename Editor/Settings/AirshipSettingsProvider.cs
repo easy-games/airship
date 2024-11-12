@@ -218,10 +218,14 @@ public class AirshipSettingsProvider : SettingsProvider
 
     // Register the SettingsProvider
     [SettingsProvider]
-    public static SettingsProvider CreateAirshipSettingsProvider()
-    {
+    public static SettingsProvider CreateAirshipSettingsProvider() {
         var provider = new AirshipSettingsProvider(Path, SettingsScope.Project);
         provider.keywords = new[] { "Github", "Airship", "MaterialColors", "Convert", "API", "Key", "Token", "Integration" };
         return provider;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void OnReload() {
+        LuauPlugin.LuauSetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
     }
 }
