@@ -368,7 +368,7 @@ protected void Log(string message){
                 log += "\n state " + i + ": " + stateHistory.Keys[i];
             }
             print(log);
-            //ApplyState(serverState);
+            ApplyState(serverState);
             return;
         }
 
