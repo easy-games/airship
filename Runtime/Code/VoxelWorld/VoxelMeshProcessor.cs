@@ -35,6 +35,7 @@ namespace VoxelWorldStuff {
         static int[][] altSrcFaces;
         static Vector3Int[] faceChecks;
         static Vector3Int[][] occlusionSamples;
+        [HideFromTS] public static Dictionary<int, Material> materialIdToMaterial = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void OnStartup() {
@@ -47,6 +48,7 @@ namespace VoxelWorldStuff {
             altSrcFaces = null;
             faceChecks = null;
             occlusionSamples = null;
+            materialIdToMaterial = new();
         }
 
         static int[] faceAxisForFace = { 2, 2, 0, 0, 1, 1 };
@@ -72,7 +74,10 @@ namespace VoxelWorldStuff {
         private const int capacity = 40000;
                 
         class TemporaryMeshData {
-            public Dictionary<Material, SubMesh> subMeshes = new();
+            /// <summary>
+            /// Map from GetInstanceId() of Material to submeshes
+            /// </summary>
+            public Dictionary<int, SubMesh> subMeshes = new();
 
             public Vector3[] vertices = new Vector3[capacity];
             public int verticesCount = 0;
@@ -106,11 +111,11 @@ namespace VoxelWorldStuff {
         class SubMesh {
             //Todo: Less garbage?
             public List<int> triangles = new(16000);
-            public Material srcMaterial;
+            public int srcMaterialId;
 
-            public SubMesh(Material originalMaterial) {
+            public SubMesh(int originalMaterialId) {
                 //material = new Material(originalMaterial);
-                srcMaterial = originalMaterial;
+                srcMaterialId = originalMaterialId;
                 triangles = new List<int>();
             }
         };
@@ -683,13 +688,13 @@ namespace VoxelWorldStuff {
                 return;
             }
             //Material meshMaterial = block.meshMaterial;
-            if (block.meshMaterial) {
+            if (block.meshMaterialInstanceId != 0) {
                 SubMesh targetSubMesh;
-                target.subMeshes.TryGetValue(block.meshMaterial, out SubMesh subMesh);
+                target.subMeshes.TryGetValue(block.meshMaterialInstanceId, out SubMesh subMesh);
                 
                 if (subMesh == null) {
-                    subMesh = new SubMesh(block.meshMaterial);
-                    target.subMeshes[block.meshMaterial] = subMesh;
+                    subMesh = new SubMesh(block.meshMaterialInstanceId);
+                    target.subMeshes[block.meshMaterialInstanceId] = subMesh;
                 }
                 targetSubMesh = subMesh;
                 // Add triangles
@@ -705,10 +710,10 @@ namespace VoxelWorldStuff {
                     if (surface.meshMaterial == null) {
                         continue;
                     }               
-                    target.subMeshes.TryGetValue(surface.meshMaterial, out SubMesh subMesh);
+                    target.subMeshes.TryGetValue(surface.meshMaterialId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(surface.meshMaterial);
-                        target.subMeshes[surface.meshMaterial] = subMesh;
+                        subMesh = new SubMesh(surface.meshMaterialId);
+                        target.subMeshes[surface.meshMaterialId] = subMesh;
                     }
                     targetSubMesh = subMesh;
                     // Add triangles
@@ -1086,12 +1091,11 @@ namespace VoxelWorldStuff {
                             if (solid == false && otherBlockIndex != blockIndex) {
                                 Rect uvRect = block.GetUvsForFace(faceIndex);
 
-                                Material faceMat = block.materials[faceIndex];
-
-                                temporaryMeshData.subMeshes.TryGetValue(faceMat, out SubMesh subMesh);
+                                int faceMatId = block.materialInstanceIds[faceIndex];
+                                temporaryMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
                                 if (subMesh == null) {
-                                    subMesh = new SubMesh(faceMat);
-                                    temporaryMeshData.subMeshes[faceMat] = subMesh;
+                                    subMesh = new SubMesh(faceMatId);
+                                    temporaryMeshData.subMeshes[faceMatId] = subMesh;
                                 }
 
                                 int faceAxis = faceAxisForFace[faceIndex];
@@ -1284,14 +1288,12 @@ namespace VoxelWorldStuff {
             Material[] mats = new Material[tempMesh.subMeshes.Count];
             int matWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values) {
+                var srcMaterial = materialIdToMaterial[subMeshRec.srcMaterialId];
                 if (cloneMaterials == true) {
-                    Material clonedMaterial = new Material(subMeshRec.srcMaterial);
-
-
+                    Material clonedMaterial = new Material(srcMaterial);
                     mats[matWrite] = clonedMaterial;
-                }
-                else {
-                    mats[matWrite] = subMeshRec.srcMaterial;
+                } else {
+                    mats[matWrite] = srcMaterial;
                 }
                 matWrite++;
             }
@@ -1386,12 +1388,11 @@ namespace VoxelWorldStuff {
                 //Add regular cube Faces
                 for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
                     Rect uvRect = block.GetUvsForFace(faceIndex);
-                    Material mat = block.materials[faceIndex];
-
-                    meshData.subMeshes.TryGetValue(mat, out SubMesh subMesh);
+                    var matInstanceId = block.materialInstanceIds[faceIndex];
+                    meshData.subMeshes.TryGetValue(matInstanceId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(mat);
-                        meshData.subMeshes[mat] = subMesh;
+                        subMesh = new SubMesh(matInstanceId);
+                        meshData.subMeshes[matInstanceId] = subMesh;
                     }
 
                     int vertexCount = meshData.verticesCount;
