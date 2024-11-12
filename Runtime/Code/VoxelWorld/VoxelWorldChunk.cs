@@ -436,7 +436,7 @@ namespace VoxelWorldStuff {
                     obj.transform.localRotation = Quaternion.identity;
                     obj.transform.localScale = Vector3.one;
                     obj.transform.localPosition = Vector3.zero;
-            
+                    obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                     obj.name = "Chunk";
 
                     renderer = obj.AddComponent<MeshRenderer>();
@@ -498,6 +498,7 @@ namespace VoxelWorldStuff {
                         obj.transform.localRotation = Quaternion.identity;
                         obj.transform.localScale = Vector3.one;
                         obj.transform.localPosition = Vector3.zero;
+                        obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
                         
                         mesh = new Mesh();
@@ -514,6 +515,7 @@ namespace VoxelWorldStuff {
 
                             if (detailGameObjects == null) {
                                 detailGameObjects = new GameObject[3];
+                                
 
                                 detailMeshes = new Mesh[3];
                                 detailFilters = new MeshFilter[3];
@@ -522,6 +524,7 @@ namespace VoxelWorldStuff {
 
                             for (int i = 0; i < 3; i++) {
                                 detailGameObjects[i] = new GameObject();
+                                detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                                 detailGameObjects[i].transform.parent = obj.transform;
 
                                 detailGameObjects[i].transform.localRotation = Quaternion.identity;

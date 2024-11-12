@@ -899,13 +899,8 @@ private void OnEnable() {
 			}else if (isServerOnly){
 				//Tell client to teleport
 				this.networkTransform.RpcTeleport(position); // This is to stop interpolation from overriding tp
-				RpcTeleport(base.connectionToClient, position, lookVector);
+				this.replicatedLookVector = lookVector; //Sync the look vector
 			}
-		}
-
-		[TargetRpc]
-		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Vector3 lookVector) {
-			this.TeleportInternal(pos, lookVector);
 		}
 
 		private void TeleportInternal(Vector3 pos, Vector3 lookVector){
