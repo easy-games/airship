@@ -744,9 +744,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     var oldColor = world.GetVoxelColorAt(voxelPos);
                     Color newCol;
                     if (e.shift) {
-                        newCol = new Color32((byte) (Math.Max(oldColor.r + -10, 0)), oldColor.g, oldColor.b, oldColor.a);
+                        newCol = new Color32((byte) (Math.Max(oldColor.r + -5, 0)), oldColor.g, oldColor.b, oldColor.a);
                     } else {
-                        newCol = new Color32((byte) (Math.Min(oldColor.r + 10, 255)), oldColor.g, oldColor.b, oldColor.a);
+                        var colIncr = 5;
+                        if (oldColor.r == 0) colIncr = 1; // If just being lightly painted to mark as receiving color
+                        newCol = new Color32((byte) (Math.Min(oldColor.r + colIncr, 255)), oldColor.g, oldColor.b, oldColor.a);
                     }
                     VoxelEditManager.Instance.ColorVoxel(world, voxelPos, newCol);
                 }
