@@ -135,6 +135,7 @@ namespace Code.Player.Character {
 		private float serverUpdateRefreshDelay = .1f;
 		private bool airborneFromImpulse = false;
 		private float currentSpeed;
+		private Vector3 currentLocalVelocity;
 		private float trackedDeltaTime = 0;
 		private Vector3 lastGroundedMoveDir = Vector3.zero;
 		private float forwardMargin = .05f;
@@ -212,6 +213,7 @@ private void OnEnable() {
 
 #region LATEUPDATE
 		private void LateUpdate(){
+			//Handle the look rotation
 			if (isClient && isOwned) {
 				var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
 				if(lookTarget == Vector3.zero){
@@ -234,16 +236,13 @@ private void OnEnable() {
 					graphicTransform.rotation,
 					Quaternion.LookRotation(lookTarget),
 					observerRotationLerpMod * Time.deltaTime);
-			}
-			if (isLocalPlayer || _networkAnimator == null) {
-				//Track movement to visually sync animator
-				UpdateAnimationVelocity();
-			}
+			}			
 		}
 #endregion
 
 #region FIXEDUPDATE
 		private void FixedUpdate() {	
+
 			// Observers don't calculate moves
 			if (!hasAuth){
 				return;
@@ -256,25 +255,10 @@ private void OnEnable() {
 			OnBeginMove?.Invoke(md);
 			Move(md);
 			OnEndMove?.Invoke(md);
+			
 		}
 #endregion
 
-		private void UpdateAnimationVelocity() {
-			//Update visual state of client character
-			var currentPos = rootTransform.position;
-			trackedDeltaTime += Time.deltaTime;
-			var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
-			if (currentPos != trackedPosition || worldVel != lastWorldVel) {
-				lastWorldVel = worldVel;
-				trackedPosition = currentPos;
-				// if(!this.isOwned){
-				// 	Debug.Log("Pos: " + currentPos + " ve: " + lastWorldVel + " time: " + trackedDeltaTime);
-				// }
-				trackedDeltaTime = 0;
-				animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
-			}
-		}
-		
 		public bool IsGrounded() {
 			return grounded;
 		}
@@ -821,6 +805,9 @@ private void OnEnable() {
 
 			//Replicate the look vector
 			SetLookVector(md.lookVector);
+			
+			//Calculate the local velocity for animations ease
+			currentLocalVelocity = graphicTransform.InverseTransformDirection(newVelocity);
 
 			//Fire state change event
 			TrySetState(new CharacterStateData() {
@@ -828,6 +815,7 @@ private void OnEnable() {
 				grounded = !inAir || didStepUp,
 				sprinting = sprinting,
 				crouching = isCrouching,
+				localVelocity = currentLocalVelocity
 			});
 
 			if (didJump){
@@ -1141,6 +1129,7 @@ private void OnEnable() {
 			if (oldState.state != data.state) {
 				stateChanged?.Invoke((int)data.state);
 			}
+
 			animationHelper.SetState(data);
 		}
 		

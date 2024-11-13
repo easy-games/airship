@@ -163,6 +163,7 @@ namespace Code.Player.Character {
             
             if(grounded){
                 lastGroundedTime = Time.time;
+                //print(gameObject.name + " current Speed: " + currentSpeed + " skidSpeed: " + skiddingSpeed);
                 animator.SetBool("Skidding", currentSpeed >= skiddingSpeed);
                 animator.SetBool("Airborne", false);
             }else{
@@ -185,6 +186,9 @@ namespace Code.Player.Character {
         }
 
         public void SetVelocity(Vector3 localVel) {
+			// if(localVel.magnitude > 1){
+			// 	print("SetVelocity localVel: " + localVel);
+			// }
             //The target speed is the movement speed the animations were built for
             var targetSpeed = 4.4444445f;
             if (currentState == CharacterState.Sprinting) {
@@ -205,7 +209,6 @@ namespace Code.Player.Character {
             }
 
             var newState = syncedState.state;
-            //this.SetVelocity(syncedState.velocity);
             this.grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
             animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
@@ -226,6 +229,8 @@ namespace Code.Player.Character {
 
             lastStateTime = Time.time;
             currentState = newState;
+
+            this.SetVelocity(syncedState.localVelocity);
             //print("Set state: " + currentState);
         }
 
