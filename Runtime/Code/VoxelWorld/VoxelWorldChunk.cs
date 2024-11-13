@@ -492,6 +492,7 @@ namespace VoxelWorldStuff {
 
         private bool DoVisualUpdate(VoxelWorld world) {
             if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true) {
+                LODGroup lodSystem = null;
                 //This runs on the main thread, so we can do unity scene manipulation here (and only here)
                 if (meshProcessor.GetGeometryReady() == true) {
                      
@@ -555,26 +556,28 @@ namespace VoxelWorldStuff {
                                 detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
 
                                 detailMeshes[i] = new Mesh();
+                                // Reading that this might cause mesh to not render on some platforms:
+                                // https://docs.unity3d.com/ScriptReference/Mesh-indexFormat.html
                                 detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                                 detailFilters[i].mesh = detailMeshes[i];
-
-
-                                LODGroup lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
-
-                                // Enable crossfade
-                                lodSystem.fadeMode = LODFadeMode.CrossFade;
-                                lodSystem.animateCrossFading = true;
-
-                                // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
-                                LOD[] lods = new LOD[3] {
-                                    new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
-                                    new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
-                                    new LOD(0.0f, new Renderer[] { detailRenderers[2] })
-                                };
-
-                                lodSystem.SetLODs(lods);
                             }
+                            
+                            lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
+
+                            // Enable crossfade
+                            lodSystem.fadeMode = LODFadeMode.CrossFade;
+                            lodSystem.animateCrossFading = true;
+
+                            // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
+                            LOD[] lods = new LOD[3] {
+                                new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
+                                new LOD(0.0f, new Renderer[] { detailRenderers[2] })
+                            };
+
+                            lodSystem.SetLODs(lods);
+                            lodSystem.RecalculateBounds();
                         }
                         else {
                             if (detailGameObjects != null) {
@@ -618,6 +621,12 @@ namespace VoxelWorldStuff {
                 meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, world);
                 meshProcessor = null; //clear it
                 Profiler.EndSample();
+
+                if (lodSystem != null) {
+                    Profiler.BeginSample("RecalculateLodBounds");
+                    lodSystem.RecalculateBounds();
+                    Profiler.EndSample();
+                }
 
                 Profiler.BeginSample("UpdatePropertiesForChunk");
                 materialPropertiesDirty = true;

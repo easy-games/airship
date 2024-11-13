@@ -1032,7 +1032,7 @@ namespace VoxelWorldStuff {
                             }
                             
                             //Grass etc                           
-                            if (block.definition.staticMeshLOD1 != null) {
+                            if (!ReferenceEquals(block.definition.staticMeshLOD1, null)) {
                                 //Init the detail meshes now
                                 InitDetailMeshes();
                                 
@@ -1292,6 +1292,7 @@ namespace VoxelWorldStuff {
             Profiler.EndSample();
            
             renderer.sharedMaterials = mats;
+            mesh.RecalculateBounds();
            
         }
 
