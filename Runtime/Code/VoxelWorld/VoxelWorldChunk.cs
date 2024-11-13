@@ -354,6 +354,10 @@ namespace VoxelWorldStuff {
         public Color32 GetVoxelColorAt(Vector3Int worldPos) {
             var key = WorldPosToVoxelIndex(worldPos);
             var col= color[key];
+            return UIntToColor32(col);
+        }
+
+        private Color32 UIntToColor32(uint col) {
             var r = (byte) ((col & 0xFF000000) >> 24);
             var g = (byte) ((col & 0x00FF0000) >> 16);
             var b = (byte) ((col & 0x0000FF00) >> 8);
@@ -391,6 +395,12 @@ namespace VoxelWorldStuff {
         public UInt16 GetLocalVoxelAt(int localX, int localY, int localZ) {
             int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
             return readWriteVoxel[key];
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Color32 GetLocalColorAt(int localX, int localY, int localZ) {
+            int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
+            return UIntToColor32(color[key]);
         }
 
         public void Clear() {

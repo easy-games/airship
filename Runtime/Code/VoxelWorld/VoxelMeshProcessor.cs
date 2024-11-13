@@ -69,6 +69,7 @@ namespace VoxelWorldStuff {
         const int paddedChunkSize = chunkSize + 2;
 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
+        Color32[] readOnlyColor = new Color32[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         public Dictionary<ushort, float> readOnlyDamageMap = new();
         
@@ -590,45 +591,27 @@ namespace VoxelWorldStuff {
             }
             else {
 
-                //Main block
-                for (int x = 0; x < chunkSize; x++) {
-                    for (int y = 0; y < chunkSize; y++) {
-                        for (int z = 0; z < chunkSize; z++) {
-                            int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
-                            readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
+                for (int x = 0; x < paddedChunkSize; x++) {
+                    for (int y = 0; y < paddedChunkSize; y++) {
+                        for (int z = 0; z < paddedChunkSize; z++) {
+                            int index = x + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+            
+                            if (x == 0 || x == paddedChunkSize - 1 || 
+                                y == 0 || y == paddedChunkSize - 1 || 
+                                z == 0 || z == paddedChunkSize - 1) {
+                                // Border voxel
+                                var worldPos = new Vector3Int(chunk.bottomLeftInt.x + x - 1,
+                                    chunk.bottomLeftInt.y + y - 1,
+                                    chunk.bottomLeftInt.z + z - 1);
+                                var vw = chunk.world;
+                                readOnlyVoxel[index] = vw.ReadVoxelAtInternal(worldPos);
+                                readOnlyColor[index] = vw.GetVoxelColorAt(worldPos);
+                            } else {
+                                // Interior voxel (subtract one because x=0 represents a voxel outside of this chunk)
+                                readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x - 1, y - 1, z - 1);
+                                readOnlyColor[index] = chunk.GetLocalColorAt(x - 1, y - 1, z - 1);
+                            }
                         }
-                    }
-                }
-
-                //xPlane
-                for (int y = 0; y < paddedChunkSize; y++) {
-                    for (int z = 0; z < paddedChunkSize; z++) {
-                        int x0 = 0;
-                        int x1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-
-
-                    }
-                }
-
-                //yPlane, skipping the voxels already filled by x plane
-                for (int x = 1; x < paddedChunkSize - 1; x++) {
-                    for (int z = 0; z < paddedChunkSize; z++) {
-                        int y0 = 0;
-                        int y1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
-                    }
-                }
-
-                //Zplane, skipping the voxels already filled by x plane and y plane
-                for (int x = 1; x < paddedChunkSize - 1; x++) {
-                    for (int y = 1; y < paddedChunkSize - 1; y++) {
-                        int z0 = 0;
-                        int z1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
-                        readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
                     }
                 }
 
@@ -1192,8 +1175,7 @@ namespace VoxelWorldStuff {
                     var vertWorldPos = vertPos;
                     var vertWorldPosRounded = new Vector3((float) Math.Round(vertWorldPos.x), (float) Math.Round(vertWorldPos.y),
                         (float) Math.Round(vertWorldPos.z));
-                    var voxelData = world.GetVoxelAt(vertPos); //Not allowed to call this in a thread!!!
-                
+                    
                     var neighborColors = new Color32[8];
                     var neighborWeights = new double[8];
                     var neighborCount = 0;
@@ -1203,16 +1185,18 @@ namespace VoxelWorldStuff {
                         for (var y = -1; y <= 1; y += 2) {
                             for (var z = -1; z <= 1; z += 2) {
                                 var pos = vertWorldPosRounded + new Vector3(x, y, z) * 0.5f;
-                                // var neighborData = world.GetVoxelAt(pos);
-                                // if ((neighborData & 0xFF) != (blockId & 0xFF)) continue;
+
+                                var readonlyVoxelPos = Vector3Int.FloorToInt(vertWorldPosRounded - chunk.chunkKey * chunkSize + new Vector3(x, y, z) * 0.5f + Vector3.one);
+                                var readonlyVoxelKey = ((readonlyVoxelPos.x) + (readonlyVoxelPos.y) * paddedChunkSize + (readonlyVoxelPos.z) * paddedChunkSize * paddedChunkSize);
+                                if (readonlyVoxelKey < 0 || readonlyVoxelKey >= readOnlyColor.Length) continue; // Out of bounds
 
                                 var voxelPos = VoxelWorld.FloorInt(pos) + Vector3.one * 0.5f;
                                 var dist = (vertWorldPos - voxelPos).magnitude;
                                 if (dist > 1.5) continue;
                                 var weight = 1.5 - dist;
                                 weightTotal += weight;
-                                
-                                neighborColors[neighborCount] = world.GetVoxelColorAt(pos);
+
+                                neighborColors[neighborCount] = readOnlyColor[readonlyVoxelKey];
                                 neighborWeights[neighborCount] = weight;
                                 neighborCount++;
                             }
@@ -1227,6 +1211,7 @@ namespace VoxelWorldStuff {
                         finalColor.b += weightedColor.b;
                         finalColor.a += weightedColor.a;
                     }
+
                     temporaryMeshData.colors[i] = finalColor;
                 }
                 temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
