@@ -36,6 +36,7 @@ namespace VoxelWorldStuff {
         static int[][] altSrcFaces;
         static Vector3Int[] faceChecks;
         static Vector3Int[][] occlusionSamples;
+        [HideFromTS] public static Dictionary<int, Material> materialIdToMaterial = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void OnStartup() {
@@ -48,6 +49,7 @@ namespace VoxelWorldStuff {
             altSrcFaces = null;
             faceChecks = null;
             occlusionSamples = null;
+            materialIdToMaterial = new();
         }
 
         static int[] faceAxisForFace = { 2, 2, 0, 0, 1, 1 };
@@ -67,13 +69,17 @@ namespace VoxelWorldStuff {
         const int paddedChunkSize = chunkSize + 2;
 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
+        Color32[] readOnlyColor = new Color32[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         public Dictionary<ushort, float> readOnlyDamageMap = new();
         
         private const int capacity = 40000;
                 
         class TemporaryMeshData {
-            public Dictionary<Material, SubMesh> subMeshes = new();
+            /// <summary>
+            /// Map from GetInstanceId() of Material to submeshes
+            /// </summary>
+            public Dictionary<int, SubMesh> subMeshes = new();
 
             public Vector3[] vertices = new Vector3[capacity];
             public int verticesCount = 0;
@@ -107,11 +113,11 @@ namespace VoxelWorldStuff {
         class SubMesh {
             //Todo: Less garbage?
             public List<int> triangles = new(16000);
-            public Material srcMaterial;
+            public int srcMaterialId;
 
-            public SubMesh(Material originalMaterial) {
+            public SubMesh(int originalMaterialId) {
                 //material = new Material(originalMaterial);
-                srcMaterial = originalMaterial;
+                srcMaterialId = originalMaterialId;
                 triangles = new List<int>();
             }
         };
@@ -585,45 +591,27 @@ namespace VoxelWorldStuff {
             }
             else {
 
-                //Main block
-                for (int x = 0; x < chunkSize; x++) {
-                    for (int y = 0; y < chunkSize; y++) {
-                        for (int z = 0; z < chunkSize; z++) {
-                            int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
-                            readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
+                for (int x = 0; x < paddedChunkSize; x++) {
+                    for (int y = 0; y < paddedChunkSize; y++) {
+                        for (int z = 0; z < paddedChunkSize; z++) {
+                            int index = x + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+            
+                            if (x == 0 || x == paddedChunkSize - 1 || 
+                                y == 0 || y == paddedChunkSize - 1 || 
+                                z == 0 || z == paddedChunkSize - 1) {
+                                // Border voxel
+                                var worldPos = new Vector3Int(chunk.bottomLeftInt.x + x - 1,
+                                    chunk.bottomLeftInt.y + y - 1,
+                                    chunk.bottomLeftInt.z + z - 1);
+                                var vw = chunk.world;
+                                readOnlyVoxel[index] = vw.ReadVoxelAtInternal(worldPos);
+                                readOnlyColor[index] = vw.GetVoxelColorAt(worldPos);
+                            } else {
+                                // Interior voxel (subtract one because x=0 represents a voxel outside of this chunk)
+                                readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x - 1, y - 1, z - 1);
+                                readOnlyColor[index] = chunk.GetLocalColorAt(x - 1, y - 1, z - 1);
+                            }
                         }
-                    }
-                }
-
-                //xPlane
-                for (int y = 0; y < paddedChunkSize; y++) {
-                    for (int z = 0; z < paddedChunkSize; z++) {
-                        int x0 = 0;
-                        int x1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-
-
-                    }
-                }
-
-                //yPlane, skipping the voxels already filled by x plane
-                for (int x = 1; x < paddedChunkSize - 1; x++) {
-                    for (int z = 0; z < paddedChunkSize; z++) {
-                        int y0 = 0;
-                        int y1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
-                    }
-                }
-
-                //Zplane, skipping the voxels already filled by x plane and y plane
-                for (int x = 1; x < paddedChunkSize - 1; x++) {
-                    for (int y = 1; y < paddedChunkSize - 1; y++) {
-                        int z0 = 0;
-                        int z1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
-                        readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
                     }
                 }
 
@@ -688,13 +676,13 @@ namespace VoxelWorldStuff {
             }
 
             //Material meshMaterial = block.meshMaterial;
-            if (block.meshMaterial) {
+            if (block.meshMaterialInstanceId != 0) {
                 SubMesh targetSubMesh;
-                target.subMeshes.TryGetValue(block.meshMaterial, out SubMesh subMesh);
+                target.subMeshes.TryGetValue(block.meshMaterialInstanceId, out SubMesh subMesh);
                 
                 if (subMesh == null) {
-                    subMesh = new SubMesh(block.meshMaterial);
-                    target.subMeshes[block.meshMaterial] = subMesh;
+                    subMesh = new SubMesh(block.meshMaterialInstanceId);
+                    target.subMeshes[block.meshMaterialInstanceId] = subMesh;
                 }
                 targetSubMesh = subMesh;
                 // Add triangles
@@ -710,10 +698,10 @@ namespace VoxelWorldStuff {
                     if (surface.meshMaterial == null) {
                         continue;
                     }               
-                    target.subMeshes.TryGetValue(surface.meshMaterial, out SubMesh subMesh);
+                    target.subMeshes.TryGetValue(surface.meshMaterialId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(surface.meshMaterial);
-                        target.subMeshes[surface.meshMaterial] = subMesh;
+                        subMesh = new SubMesh(surface.meshMaterialId);
+                        target.subMeshes[surface.meshMaterialId] = subMesh;
                     }
                     targetSubMesh = subMesh;
                     // Add triangles
@@ -1096,12 +1084,11 @@ namespace VoxelWorldStuff {
                             if (solid == false && otherBlockIndex != blockIndex) {
                                 Rect uvRect = block.GetUvsForFace(faceIndex);
 
-                                Material faceMat = block.materials[faceIndex];
-
-                                temporaryMeshData.subMeshes.TryGetValue(faceMat, out SubMesh subMesh);
+                                int faceMatId = block.materialInstanceIds[faceIndex];
+                                temporaryMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
                                 if (subMesh == null) {
-                                    subMesh = new SubMesh(faceMat);
-                                    temporaryMeshData.subMeshes[faceMat] = subMesh;
+                                    subMesh = new SubMesh(faceMatId);
+                                    temporaryMeshData.subMeshes[faceMatId] = subMesh;
                                 }
 
                                 int faceAxis = faceAxisForFace[faceIndex];
@@ -1188,8 +1175,7 @@ namespace VoxelWorldStuff {
                     var vertWorldPos = vertPos;
                     var vertWorldPosRounded = new Vector3((float) Math.Round(vertWorldPos.x), (float) Math.Round(vertWorldPos.y),
                         (float) Math.Round(vertWorldPos.z));
-                    var voxelData = world.GetVoxelAt(vertPos); //Not allowed to call this in a thread!!!
-                
+                    
                     var neighborColors = new Color32[8];
                     var neighborWeights = new double[8];
                     var neighborCount = 0;
@@ -1199,16 +1185,18 @@ namespace VoxelWorldStuff {
                         for (var y = -1; y <= 1; y += 2) {
                             for (var z = -1; z <= 1; z += 2) {
                                 var pos = vertWorldPosRounded + new Vector3(x, y, z) * 0.5f;
-                                // var neighborData = world.GetVoxelAt(pos);
-                                // if ((neighborData & 0xFF) != (blockId & 0xFF)) continue;
+
+                                var readonlyVoxelPos = Vector3Int.FloorToInt(vertWorldPosRounded - chunk.chunkKey * chunkSize + new Vector3(x, y, z) * 0.5f + Vector3.one);
+                                var readonlyVoxelKey = ((readonlyVoxelPos.x) + (readonlyVoxelPos.y) * paddedChunkSize + (readonlyVoxelPos.z) * paddedChunkSize * paddedChunkSize);
+                                if (readonlyVoxelKey < 0 || readonlyVoxelKey >= readOnlyColor.Length) continue; // Out of bounds
 
                                 var voxelPos = VoxelWorld.FloorInt(pos) + Vector3.one * 0.5f;
                                 var dist = (vertWorldPos - voxelPos).magnitude;
                                 if (dist > 1.5) continue;
                                 var weight = 1.5 - dist;
                                 weightTotal += weight;
-                                
-                                neighborColors[neighborCount] = world.GetVoxelColorAt(pos);
+
+                                neighborColors[neighborCount] = readOnlyColor[readonlyVoxelKey];
                                 neighborWeights[neighborCount] = weight;
                                 neighborCount++;
                             }
@@ -1223,6 +1211,7 @@ namespace VoxelWorldStuff {
                         finalColor.b += weightedColor.b;
                         finalColor.a += weightedColor.a;
                     }
+
                     temporaryMeshData.colors[i] = finalColor;
                 }
                 temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
@@ -1291,14 +1280,12 @@ namespace VoxelWorldStuff {
             Material[] mats = new Material[tempMesh.subMeshes.Count];
             int matWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values) {
+                var srcMaterial = materialIdToMaterial[subMeshRec.srcMaterialId];
                 if (cloneMaterials == true) {
-                    Material clonedMaterial = new Material(subMeshRec.srcMaterial);
-
-
+                    Material clonedMaterial = new Material(srcMaterial);
                     mats[matWrite] = clonedMaterial;
-                }
-                else {
-                    mats[matWrite] = subMeshRec.srcMaterial;
+                } else {
+                    mats[matWrite] = srcMaterial;
                 }
                 matWrite++;
             }
@@ -1393,12 +1380,11 @@ namespace VoxelWorldStuff {
                 //Add regular cube Faces
                 for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
                     Rect uvRect = block.GetUvsForFace(faceIndex);
-                    Material mat = block.materials[faceIndex];
-
-                    meshData.subMeshes.TryGetValue(mat, out SubMesh subMesh);
+                    var matInstanceId = block.materialInstanceIds[faceIndex];
+                    meshData.subMeshes.TryGetValue(matInstanceId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(mat);
-                        meshData.subMeshes[mat] = subMesh;
+                        subMesh = new SubMesh(matInstanceId);
+                        meshData.subMeshes[matInstanceId] = subMesh;
                     }
 
                     int vertexCount = meshData.verticesCount;

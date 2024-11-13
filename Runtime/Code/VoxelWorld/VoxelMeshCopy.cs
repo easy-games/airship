@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using VoxelWorldStuff;
 
 namespace Assets.Airship.VoxelRenderer {
 
@@ -170,13 +171,16 @@ namespace Assets.Airship.VoxelRenderer {
             public int[] triangles;
             public Material meshMaterial;
             public string meshMaterialName = "";
+            public int meshMaterialId;
 
-            public Surface(int[] triangles, Material material, string materialName) {
+            public Surface(int[] triangles, Material material, string materialName, int materialId) {
                 this.triangles = new int[triangles.Length];
                 System.Array.Copy(triangles, this.triangles, triangles.Length);
 
                 this.meshMaterial = material; // Assuming Material is a reference type; you might need to clone it depending on its implementation.
                 this.meshMaterialName = materialName;
+                this.meshMaterialId = materialId;
+                MeshProcessor.materialIdToMaterial[materialId] = material;
             }
 
             public Surface() {
@@ -191,7 +195,7 @@ namespace Assets.Airship.VoxelRenderer {
                 Material clonedMaterial = this.meshMaterial;
 
                 // Return a new Surface instance with the cloned data
-                return new Surface(clonedTriangles, clonedMaterial, this.meshMaterialName);
+                return new Surface(clonedTriangles, clonedMaterial, this.meshMaterialName, this.meshMaterialId);
             }
 
             public void Invert() {
@@ -223,7 +227,7 @@ namespace Assets.Airship.VoxelRenderer {
             //copy the surfaces
             surfaces = new Surface[src.surfaces.Length];
             for (int i = 0; i < src.surfaces.Length; i++) {
-                surfaces[i] = new Surface(src.surfaces[i].triangles, src.surfaces[i].meshMaterial, src.surfaces[i].meshMaterialName);
+                surfaces[i] = new Surface(src.surfaces[i].triangles, src.surfaces[i].meshMaterial, src.surfaces[i].meshMaterialName, src.surfaces[i].meshMaterialId);
             }
 
             //Calculate the rotations
@@ -391,6 +395,7 @@ namespace Assets.Airship.VoxelRenderer {
                     Material srcMat = filter.gameObject.GetComponent<MeshRenderer>().sharedMaterials[subMeshIndex];
                     surf.meshMaterial = srcMat;
                     surf.meshMaterialName = srcMat.name;
+                    surf.meshMaterialId = srcMat.GetInstanceID();
 
                     //Add the surface
                     surfaceList.Add(surf);
@@ -482,6 +487,7 @@ namespace Assets.Airship.VoxelRenderer {
             foreach (Surface surf in surfaces) {
                 surf.meshMaterial = meshMaterial;
                 surf.meshMaterialName = meshMaterial.name;
+                surf.meshMaterialId = meshMaterial.GetInstanceID();
             }
         }
     }
