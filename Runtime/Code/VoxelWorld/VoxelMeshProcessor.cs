@@ -1280,6 +1280,8 @@ namespace VoxelWorldStuff {
             Material[] mats = new Material[tempMesh.subMeshes.Count];
             int matWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values) {
+                if (subMeshRec.srcMaterialId == 0) continue;
+                
                 var srcMaterial = materialIdToMaterial[subMeshRec.srcMaterialId];
                 if (cloneMaterials == true) {
                     Material clonedMaterial = new Material(srcMaterial);
