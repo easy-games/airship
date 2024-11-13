@@ -385,7 +385,7 @@ public class ServerBootstrap : MonoBehaviour
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
 		foreach (var doc in startupConfig.packages) {
-			print("Loading pkg: " + doc.id);
+			// print("Loading pkg: " + doc.id);
 			if (doc.id.ToLower() == "@easy/corematerials") continue;
 			packages.Add(new AirshipPackage(doc.id, doc.assetVersion, doc.codeVersion, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
 		}
