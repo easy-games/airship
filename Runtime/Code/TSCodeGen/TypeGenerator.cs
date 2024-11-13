@@ -110,6 +110,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Rigidbody2D),
             typeof(Slider),
             typeof(Dropdown),
+            typeof(TMP_Dropdown),
             typeof(CanvasHitDetector),
             typeof(AudioSource),
             typeof(AudioClip),

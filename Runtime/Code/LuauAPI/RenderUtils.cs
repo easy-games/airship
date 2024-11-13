@@ -10,4 +10,12 @@ public static class RenderUtils{
         };
         return new RenderTexture(descriptor);
     }
+
+    public static Texture2D CreateDefaultTexture2D(int width, int height){
+        return new Texture2D(width, height);
+    }
+
+    public static Texture2D CreateTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear){
+        return new Texture2D(width, height, format, mipChain, linear);
+    }
 }
