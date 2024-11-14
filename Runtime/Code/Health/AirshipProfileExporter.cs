@@ -200,7 +200,7 @@ namespace Code.Health
             {
                 type = "MICRO_PROFILE",
                 name = RunCore.IsClient() ? $"Client Profile ({duration}s)" : $"Server Profile ({duration}s)",
-                contentType = "multipart/form-data",
+                contentType = "application/octet-stream",
                 contentLength = length
             };
             var response = await InternalHttpManager.PostAsync($"{AirshipPlatformUrl.contentService}/artifacts/signed-url", JsonUtility.ToJson(body));
@@ -218,9 +218,7 @@ namespace Code.Health
             var fileData = await File.ReadAllBytesAsync(uploadFilePath);
             File.Delete(uploadFilePath);
             
-            var form = new WWWForm();
-            form.AddBinaryData("file",  fileData, Path.GetFileName(uploadFilePath));
-            using var www = UnityWebRequest.Post(urlData.url, form);
+            using var www = UnityWebRequest.Put(urlData.url, fileData);
             MonitorUploadProgress(www);
             await UnityWebRequestProxyHelper.ApplyProxySettings(www).SendWebRequest();
             
