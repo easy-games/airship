@@ -221,7 +221,7 @@ namespace Code.Health
             var form = new WWWForm();
             form.AddBinaryData("file",  fileData, Path.GetFileName(uploadFilePath));
             using var www = UnityWebRequest.Post(urlData.url, form);
-            MonitorUploadProgress(www).Start();
+            MonitorUploadProgress(www);
             await UnityWebRequestProxyHelper.ApplyProxySettings(www).SendWebRequest();
             
             Debug.Log($"Upload response: {www.downloadHandler.text}");
