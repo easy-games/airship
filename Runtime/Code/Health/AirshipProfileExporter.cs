@@ -39,6 +39,7 @@ namespace Code.Health
     public struct ClientProfileUploadRequest : NetworkMessage
     {
         public string logLocation;
+        public string fileName;
         public float duration;
         public long contentSize;
     }
@@ -48,7 +49,6 @@ namespace Code.Health
         public string logLocation;
         public string id;
         public string url;
-        public float duration;
     }
     
     public struct StartServerProfileMessage : NetworkMessage {
@@ -115,11 +115,10 @@ namespace Code.Health
 
         public async void OnClientUploadRequest(NetworkConnectionToClient sender, ClientProfileUploadRequest msg)
         {
-            var urlData = await this.GetSignedUrl(msg.duration, msg.contentSize);
+            var urlData = await this.GetSignedUrl(msg.fileName, msg.duration, msg.contentSize);
             sender.Send(new ClientProfileUploadResponse
             {
                 logLocation = msg.logLocation,
-                duration = msg.duration,
                 url = urlData.url,
                 id = urlData.id
             });
@@ -131,7 +130,7 @@ namespace Code.Health
             {
                 id = msg.id,
                 url = msg.url
-            }, msg.logLocation, msg.duration, null);
+            }, msg.logLocation, null);
         }
 
         public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartServerProfileMessage msg) {
@@ -164,7 +163,8 @@ namespace Code.Health
             }
 
             var date = DateTime.Now.ToString("MM-dd-yyyy h.mm.ss");
-            var logPath = Path.Combine(Application.persistentDataPath, $"Profile-{date}.raw");
+            var fileName = RunCore.IsClient() ?  $"Client-Profile-{date}.raw" :  $"Server-Profile-{date}.raw";
+            var logPath = Path.Combine(Application.persistentDataPath, fileName);
             if (File.Exists(logPath)) File.WriteAllText(logPath, "");
 
             Profiler.logFile = logPath;
@@ -172,10 +172,10 @@ namespace Code.Health
             
             Debug.Log($"Starting profiler for {durationSecs} seconds.");
             Profiler.enabled = true;
-            StopProfilingAfterDelay(logPath, durationSecs, profileInitiator);
+            StopProfilingAfterDelay(logPath, fileName, durationSecs, profileInitiator);
         }
 
-        private async void StopProfilingAfterDelay(string logPath, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
+        private async void StopProfilingAfterDelay(string logPath, string fileName, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             await Task.Delay((int)(durationSecs * 1000));
             Profiler.enabled = false;
             var info = new FileInfo(logPath);
@@ -186,22 +186,23 @@ namespace Code.Health
                 NetworkClient.Send(new ClientProfileUploadRequest
                 {
                     contentSize = info.Length,
-                    logLocation = logPath
+                    logLocation = logPath,
+                    fileName = fileName
                 });
             }
             else
             {
-                var urlData = await this.GetSignedUrl(durationSecs, info.Length);
-                Upload(urlData, logPath, durationSecs, profileInitiator);
+                var urlData = await this.GetSignedUrl(fileName, durationSecs, info.Length);
+                Upload(urlData, logPath, profileInitiator);
             }
         }
 
-        private async Task<SignedUrlResponse> GetSignedUrl(float duration, long length)
+        private async Task<SignedUrlResponse> GetSignedUrl(string fileName, float duration, long length)
         {
             var body = new SignedUrlRequest()
             {
                 type = "MICRO_PROFILE",
-                name = RunCore.IsClient() ? $"Client Profile ({duration}s)" : $"Server Profile ({duration}s)",
+                name = fileName,
                 contentType = "application/octet-stream",
                 contentLength = length
             };
@@ -213,7 +214,7 @@ namespace Code.Health
             return JsonUtility.FromJson<SignedUrlResponse>(response.data);
         }
 
-        private async void Upload(SignedUrlResponse urlData, string logPath, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator)
+        private async void Upload(SignedUrlResponse urlData, string logPath, [CanBeNull] NetworkConnectionToClient profileInitiator)
         {
             Debug.Log("Uploading profile to backend...");
             var uploadFilePath = logPath;
