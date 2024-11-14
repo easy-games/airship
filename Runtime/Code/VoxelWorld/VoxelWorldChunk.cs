@@ -400,7 +400,9 @@ namespace VoxelWorldStuff {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Color32 GetLocalColorAt(int localX, int localY, int localZ) {
             int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
-            return UIntToColor32(color[key]);
+            var col = color[key];
+            if (col == 0) return default;
+            return UIntToColor32(col);
         }
 
         public void Clear() {
