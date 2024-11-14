@@ -221,8 +221,10 @@ namespace Code.Health
             var form = new WWWForm();
             form.AddBinaryData("file",  fileData, Path.GetFileName(uploadFilePath));
             using var www = UnityWebRequest.Post(urlData.url, form);
-            await MonitorUploadProgress(www);
+            MonitorUploadProgress(www).Start();
             await UnityWebRequestProxyHelper.ApplyProxySettings(www).SendWebRequest();
+            
+            Debug.Log($"Upload response: {www.downloadHandler.text}");
             
             if (profileInitiator != null && profileInitiator.isReady) {
                 profileInitiator.Send(new ServerProfileCompleteMessage { artifactId = urlData.id });
@@ -231,6 +233,7 @@ namespace Code.Health
         }
 
         private async Task MonitorUploadProgress(UnityWebRequest req) {
+            Debug.Log("Starting upload...");
             var elapsed = 0.0d;
             var timeSinceLastLog = 0.0d;
             try {
