@@ -200,7 +200,7 @@ namespace Code.Health
             {
                 type = "MICRO_PROFILE",
                 name = RunCore.IsClient() ? $"Client Profile ({duration}s)" : $"Server Profile ({duration}s)",
-                contentType = "application/octet-stream",
+                contentType = "multipart/form-data",
                 contentLength = length
             };
             var response = await InternalHttpManager.PostAsync($"{AirshipPlatformUrl.contentService}/artifacts/signed-url", JsonUtility.ToJson(body));
