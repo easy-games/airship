@@ -84,6 +84,8 @@ namespace VoxelWorldStuff {
             public Vector3[] vertices = new Vector3[capacity];
             public int verticesCount = 0;
 
+            public byte[] isColored = new byte[capacity];
+
             public Color32[] colors = new Color32[capacity];
             public int colorsCount = 0;
 
@@ -590,28 +592,52 @@ namespace VoxelWorldStuff {
                 }
             }
             else {
-
-                for (int x = 0; x < paddedChunkSize; x++) {
-                    for (int y = 0; y < paddedChunkSize; y++) {
-                        for (int z = 0; z < paddedChunkSize; z++) {
-                            int index = x + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
-            
-                            if (x == 0 || x == paddedChunkSize - 1 || 
-                                y == 0 || y == paddedChunkSize - 1 || 
-                                z == 0 || z == paddedChunkSize - 1) {
-                                // Border voxel
-                                var worldPos = new Vector3Int(chunk.bottomLeftInt.x + x - 1,
-                                    chunk.bottomLeftInt.y + y - 1,
-                                    chunk.bottomLeftInt.z + z - 1);
-                                var vw = chunk.world;
-                                readOnlyVoxel[index] = vw.ReadVoxelAtInternal(worldPos);
-                                readOnlyColor[index] = vw.GetVoxelColorAt(worldPos);
-                            } else {
-                                // Interior voxel (subtract one because x=0 represents a voxel outside of this chunk)
-                                readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x - 1, y - 1, z - 1);
-                                readOnlyColor[index] = chunk.GetLocalColorAt(x - 1, y - 1, z - 1);
-                            }
+                // This triple nested loop is split into different sections for cache locality
+                
+                //Main block
+                for (int x = 0; x < chunkSize; x++) {
+                    for (int y = 0; y < chunkSize; y++) {
+                        for (int z = 0; z < chunkSize; z++) {
+                            int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
+                            readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
+                            readOnlyColor[index] = chunk.GetLocalColorAt(x, y, z);
                         }
+                    }
+                }
+
+                //xPlane
+                for (int y = 0; y < paddedChunkSize; y++) {
+                    for (int z = 0; z < paddedChunkSize; z++) {
+                        int x0 = 0;
+                        int x1 = paddedChunkSize - 1;
+                        readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyColor[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyColor[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                    }
+                }
+
+                //yPlane, skipping the voxels already filled by x plane
+                for (int x = 1; x < paddedChunkSize - 1; x++) {
+                    for (int z = 0; z < paddedChunkSize; z++) {
+                        int y0 = 0;
+                        int y1 = paddedChunkSize - 1;
+                        readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyColor[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyColor[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                    }
+                }
+
+                //Zplane, skipping the voxels already filled by x plane and y plane
+                for (int x = 1; x < paddedChunkSize - 1; x++) {
+                    for (int y = 1; y < paddedChunkSize - 1; y++) {
+                        int z0 = 0;
+                        int z1 = paddedChunkSize - 1;
+                        readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
+                        readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
+                        readOnlyColor[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
+                        readOnlyColor[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
                     }
                 }
 
@@ -651,6 +677,7 @@ namespace VoxelWorldStuff {
                 Array.Resize(ref target.colors, requiredSize * 2);
                 Array.Resize(ref target.normals, requiredSize * 2);
                 Array.Resize(ref target.uvs, requiredSize * 2);
+                Array.Resize(ref target.isColored, requiredSize * 2 / sizeof(byte));
                 //Debug.Log("Resize! " + (requiredSize * 2));
             }
         }
@@ -661,7 +688,7 @@ namespace VoxelWorldStuff {
             return (byte)(Mathf.Lerp(left, right, a) * 255.0f);
         }
 
-        private static int EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv, float[] lerps = null) {
+        private static int EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv, Color32 col, float[] lerps = null) {
             if (mesh == null) {
                 return 0;
             }
@@ -737,11 +764,17 @@ namespace VoxelWorldStuff {
             EnsureCapacity(target, target.verticesCount + count);
 
             // Prepare transformed vertices
+
+            var isColored = col.r != 0 || col.g != 0 || col.b != 0 || col.a != 0; 
      
             for (int i = 0; i < count; i++) {
                 Vector3 transformedPosition = sourceVertices[i] + offset;
                 //write the transformed position (well, translated)
                 target.vertices[target.verticesCount++] = transformedPosition;
+
+                if (isColored) {
+                    target.isColored[(target.verticesCount - 1) / sizeof(byte)] |= (byte) (1 << (target.verticesCount % sizeof(byte)));
+                }
             }
 
             // Copy other arrays directly
@@ -900,7 +933,11 @@ namespace VoxelWorldStuff {
 
         private void ThreadedUpdateFullMeshWrapper(System.Object worldObj) {
             try {
+                Profiler.BeginThreadProfiling("VoxelWorld", "ThreadedUpdateFullMesh");
+                Profiler.BeginSample("UpdateMesh");
                 ThreadedUpdateFullMesh(worldObj);
+                Profiler.EndSample();
+                Profiler.EndThreadProfiling();
             }
             catch (System.Exception e) {
                 Debug.LogError("Error in threaded update full mesh: " + e);
@@ -934,6 +971,7 @@ namespace VoxelWorldStuff {
                         Vector3Int origin = localVector + worldKey;
                         int localVoxelKey = ((localVoxel.x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
                         VoxelData vox = readOnlyVoxel[localVoxelKey];
+                        var voxelColor = readOnlyColor[localVoxelKey];
 
                         //Read the damage number
                         ushort internalVoxelKey = (ushort)(x + y * chunkSize + z * chunkSize * chunkSize);
@@ -957,12 +995,12 @@ namespace VoxelWorldStuff {
                             case VoxelBlocks.ContextStyle.Prefab:
                                 continue;
                             case VoxelBlocks.ContextStyle.PipeBlocks:
-                                if (ContextPlacePipeBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin, damageUv) == true) {
+                                if (ContextPlacePipeBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin, damageUv, voxelColor) == true) {
                                     continue;
                                 }
                             break;
                             case VoxelBlocks.ContextStyle.QuarterBlocks:
-                                if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin, damageUv) == true) {
+                                if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin, damageUv, voxelColor) == true) {
                                     continue;
                                 }
                             break;
@@ -983,12 +1021,12 @@ namespace VoxelWorldStuff {
                                             int flip = 0;
                                            
                                             if (set.lod1 != null) {
-                                                EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv);
-                                                EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv);
-                                                EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv);
+                                                EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv, voxelColor);
+                                                EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv, voxelColor);
+                                                EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv, voxelColor);
                                             }
                                             else {
-                                                EmitMesh(block, set.lod0, temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv);
+                                                EmitMesh(block, set.lod0, temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv, voxelColor);
                                             }
                                            
                                         }
@@ -1007,11 +1045,11 @@ namespace VoxelWorldStuff {
 
                                         int flip = 0;
                                         if (set.lod1 != null) {
-                                            EmitMesh(block, set.lod0, detailMeshData[0], world, origin, rotation, flip, damageUv);
-                                            EmitMesh(block, set.lod1, detailMeshData[1], world, origin, rotation, flip, damageUv);
-                                            EmitMesh(block, set.lod2, detailMeshData[2], world, origin, rotation, flip, damageUv);
+                                            EmitMesh(block, set.lod0, detailMeshData[0], world, origin, rotation, flip, damageUv, voxelColor);
+                                            EmitMesh(block, set.lod1, detailMeshData[1], world, origin, rotation, flip, damageUv, voxelColor);
+                                            EmitMesh(block, set.lod2, detailMeshData[2], world, origin, rotation, flip, damageUv, voxelColor);
                                         } else {
-                                            EmitMesh(block, set.lod0, temporaryMeshData, world, origin, rotation, flip, damageUv);
+                                            EmitMesh(block, set.lod0, temporaryMeshData, world, origin, rotation, flip, damageUv, voxelColor);
                                         
                                         }
                                     }
@@ -1037,20 +1075,20 @@ namespace VoxelWorldStuff {
                                 InitDetailMeshes();
                                 
                                 if (block.mesh != null && block.mesh.lod0 != null) {
-                                    EmitMesh(block, block.mesh.lod0, detailMeshData[0], world, origin, rotation, flip, damageUv);
+                                    EmitMesh(block, block.mesh.lod0, detailMeshData[0], world, origin, rotation, flip, damageUv, voxelColor);
 
                                     if (block.mesh.lod1 != null) {
-                                        EmitMesh(block, block.mesh.lod1, detailMeshData[1], world, origin, rotation, flip, damageUv);
+                                        EmitMesh(block, block.mesh.lod1, detailMeshData[1], world, origin, rotation, flip, damageUv, voxelColor);
                                     }
                                     if (block.mesh.lod2 != null) {
-                                        EmitMesh(block, block.mesh.lod2, detailMeshData[2], world, origin, rotation, flip, damageUv);
+                                        EmitMesh(block, block.mesh.lod2, detailMeshData[2], world, origin, rotation, flip, damageUv, voxelColor);
                                     }
                                 }
                                 
                             }
                             else {
                                 //same mesh that the voxels use (think stairs etc)
-                                EmitMesh(block, block.mesh.lod0, temporaryMeshData, world, origin, rotation, flip, damageUv);
+                                EmitMesh(block, block.mesh.lod0, temporaryMeshData, world, origin, rotation, flip, damageUv, voxelColor);
                             }
                             //No code past here
                             continue;
@@ -1170,23 +1208,39 @@ namespace VoxelWorldStuff {
 
             if (true) {   
                 var s = Stopwatch.StartNew();
+                Profiler.BeginSample("ColorMesh");
+                
+                // Pre allocate variables
+                var neighborColors = new Color32[27];
+                var neighborWeights = new double[27];
+                var finalColor = new Color32();
+                var black = new Color32();
+                var offsetVec = Vector3.zero;
+                
                 for (int i = 0; i < temporaryMeshData.verticesCount; i++) {
+                    var colorBit = (byte)(1 << (i % sizeof(byte)));
+                    var isVertColored = (temporaryMeshData.isColored[i / sizeof(byte)] & colorBit) > 0;
+                    if (!isVertColored) {
+                        temporaryMeshData.colors[i] = black;
+                        continue;
+                    }
+                    
                     var vertPos = temporaryMeshData.vertices[i];
                     var vertWorldPos = vertPos;
-                    var vertWorldPosRounded = new Vector3((float) Math.Round(vertWorldPos.x), (float) Math.Round(vertWorldPos.y),
-                        (float) Math.Round(vertWorldPos.z));
+                    var vertWorldPosRounded = new Vector3((float)Math.Floor(vertWorldPos.x),
+                        (float)Math.Floor(vertWorldPos.y),
+                        (float)Math.Floor(vertWorldPos.z));// + Vector3.one / 2;
                     
-                    var neighborColors = new Color32[8];
-                    var neighborWeights = new double[8];
                     var neighborCount = 0;
                     var weightTotal = 0.0;
                     // Grab neighbor colors and pick a weighted average color for this position
-                    for (var x = -1; x <= 1; x += 2) {
-                        for (var y = -1; y <= 1; y += 2) {
-                            for (var z = -1; z <= 1; z += 2) {
-                                var pos = vertWorldPosRounded + new Vector3(x, y, z) * 0.5f;
+                    for (var x = -1; x <= 1; x += 1) {
+                        for (var y = -1; y <= 1; y += 1) {
+                            for (var z = -1; z <= 1; z += 1) {
+                                offsetVec.Set(x, y, z);
+                                var pos = vertWorldPosRounded + offsetVec;
 
-                                var readonlyVoxelPos = Vector3Int.FloorToInt(vertWorldPosRounded - chunk.chunkKey * chunkSize + new Vector3(x, y, z) * 0.5f + Vector3.one);
+                                var readonlyVoxelPos = Vector3Int.FloorToInt(vertWorldPosRounded - chunk.chunkKey * chunkSize + offsetVec + Vector3.one);
                                 var readonlyVoxelKey = ((readonlyVoxelPos.x) + (readonlyVoxelPos.y) * paddedChunkSize + (readonlyVoxelPos.z) * paddedChunkSize * paddedChunkSize);
                                 if (readonlyVoxelKey < 0 || readonlyVoxelKey >= readOnlyColor.Length) continue; // Out of bounds
 
@@ -1203,9 +1257,9 @@ namespace VoxelWorldStuff {
                         }   
                     }
 
-                    var finalColor = new Color32();
+                    finalColor.r = finalColor.g = finalColor.b = finalColor.a = 0;
                     for (var n = 0; n < neighborCount; n++) {
-                        var weightedColor = Color32.Lerp(new Color32(), neighborColors[n], (float)(neighborWeights[n] / weightTotal));
+                        var weightedColor = Color32.Lerp(black, neighborColors[n], (float)(neighborWeights[n] / weightTotal));
                         finalColor.r += weightedColor.r;
                         finalColor.g += weightedColor.g;
                         finalColor.b += weightedColor.b;
@@ -1215,6 +1269,7 @@ namespace VoxelWorldStuff {
                     temporaryMeshData.colors[i] = finalColor;
                 }
                 temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
+                Profiler.EndSample();
             }
             lastMeshUpdateDuration = (int)((DateTime.Now - startMeshProcessingTime).TotalMilliseconds);
 
@@ -1369,13 +1424,14 @@ namespace VoxelWorldStuff {
             
             float damage = 0;
             var damageUv = new Vector2(damage, 0);
+            var col = new Color32();
             
             if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
-                QuarterBlocskEmitSingleBlock(block, meshData, world, damageUv);
+                QuarterBlocskEmitSingleBlock(block, meshData, world, damageUv, col);
             }
             if (block.definition.contextStyle == VoxelBlocks.ContextStyle.StaticMesh) {
                 if (block.mesh != null && block.mesh.lod0 != null) {
-                    EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv);
+                    EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv, col);
                 }
             }
             if (block.definition.contextStyle == VoxelBlocks.ContextStyle.Block) {
@@ -1453,7 +1509,7 @@ namespace VoxelWorldStuff {
             return obj;
         }
  
-        private static bool ContextPlacePipeBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv) {
+        private static bool ContextPlacePipeBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, Color32 col) {
             //get surrounding data
             VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];
             VoxelData voxDown = readOnlyVoxel[localVoxelKey - paddedChunkSize];
@@ -1475,83 +1531,83 @@ namespace VoxelWorldStuff {
                 
                 //Are we a block with 4 surrounding air spaces? That is block C!
                 if (airLeft && airRight && airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.C], temporaryMeshData, world, origin, 0, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.C], temporaryMeshData, world, origin, 0, flip, damageUv, col);
                     return true;
                 }
 
                 //are we a block with 3 surrounding air spaces? That is block D!
                 //Four combos
                 if (airLeft && airRight && airForward && !airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 1, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 1, flip, damageUv, col);
                     return true;
                 }
                 if (airLeft && airRight && !airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 3, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 3, flip, damageUv, col);
                     return true;
                 }
                 if (airLeft && !airRight && airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 0, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 0, flip, damageUv, col);
                     return true;
                 }
                 if (!airLeft && airRight && airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 2, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, 2, flip, damageUv, col);
                     return true;
                 }
 
                 //2 edge visible (a corner)
                 if (airLeft && !airRight && airForward && !airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 0, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 0, flip, damageUv, col);
                     return true;
                 }
                 //2 edge visible (a corner)
                 if (airLeft && !airRight && !airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 3, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 3, flip, damageUv, col);
                     return true;
                 }
 
                 //2 edge visible (a corner)
                 if (!airLeft && airRight && airForward && !airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 1, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 1, flip, damageUv, col);
                     return true;
                 }
                 //2 edge visible (a corner)
                 if (!airLeft && airRight && !airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 2, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, 2, flip, damageUv, col);
                     return true;
                 }
 
                 //2 edger visible (a bridge)
                 if (airLeft && airRight && !airForward && !airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.F], temporaryMeshData, world, origin, 0, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.F], temporaryMeshData, world, origin, 0, flip, damageUv, col);
                     return true;
                 }
                 //2 edger visible (a bridge)
                 if (!airLeft && !airRight && airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.F], temporaryMeshData, world, origin, 1, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.F], temporaryMeshData, world, origin, 1, flip, damageUv, col);
                     return true;
                 }
 
                 //1 edge visible (t section)
                 if (airLeft && !airRight && !airForward && !airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 0, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 0, flip, damageUv, col);
                     return true;
                 }
 
                 //1 edge visible (t section)
                 if (!airLeft && airRight && !airForward && !airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 2, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 2, flip, damageUv, col);
                     return true;
                 }
 
                 // 1 edge visible(t section)
                 if (!airLeft && !airRight && airForward && !airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 1, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 1, flip, damageUv, col);
                     return true;
                 }
 
                 // 1 edge visible(t section)
                 if (!airLeft && !airRight && !airForward && airBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 3, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, 3, flip, damageUv, col);
                     return true;
                 }
 
@@ -1571,42 +1627,42 @@ namespace VoxelWorldStuff {
 
                 //Check for 1 air space
                 if (airLeftForward && !airRightForward && !airLeftBack && !airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 1, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 1, flip, damageUv, col);
                     return true;
                 }
                 if (!airLeftForward && airRightForward && !airLeftBack && !airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 2, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 2, flip, damageUv, col);
                     return true;
                 }
                 if (!airLeftForward && !airRightForward && airLeftBack && !airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 0, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 0, flip, damageUv, col);
                     return true;
                 }
                 if (!airLeftForward && !airRightForward && !airLeftBack && airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 3, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, 3, flip, damageUv, col);
                     return true;
                 }
 
                 //Check for 2 air space on the same side
                 if (airLeftForward && airRightForward && !airLeftBack && !airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 1, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 1, flip, damageUv, col);
                     return true;
                 }
                 if (!airLeftForward && !airRightForward && airLeftBack && airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 3, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 3, flip, damageUv, col);
                     return true;
                 }
                 if (airLeftForward && !airRightForward && airLeftBack && !airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 0, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 0, flip, damageUv, col);
                     return true;
                 }
                 if (!airLeftForward && airRightForward && !airLeftBack && airRightBack) {
-                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 2, flip, damageUv);
+                    EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, 2, flip, damageUv, col);
                     return true;
                 }
                 
                 //Assume we a flat top with no surrounding air spaces
-                EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B], temporaryMeshData, world, origin, 0, flip, damageUv);
+                EmitMesh(block, meshContextArray[(int)VoxelBlocks.PipeBlockTypes.B], temporaryMeshData, world, origin, 0, flip, damageUv, col);
 
                 //Todo, this needs to check diagonals
                 return true;
@@ -1618,7 +1674,7 @@ namespace VoxelWorldStuff {
                  (VoxelWorld.VoxelIsSolid(voxRight) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight)) ||
                  (VoxelWorld.VoxelIsSolid(voxForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward)) ||
                  (VoxelWorld.VoxelIsSolid(voxBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack))) {
-                EmitMesh(block, meshContextArray[0], temporaryMeshData, world, origin, 0, flip, damageUv);
+                EmitMesh(block, meshContextArray[0], temporaryMeshData, world, origin, 0, flip, damageUv, col);
             }
             else {
                 //Just empty air as this isnt visible

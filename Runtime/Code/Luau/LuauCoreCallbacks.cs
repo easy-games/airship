@@ -456,7 +456,8 @@ public partial class LuauCore : MonoBehaviour {
 
                 case PODTYPE.POD_NULL: {
                     //nulling anything nullable
-                    if (Nullable.GetUnderlyingType(t) != null) {
+                    // if (Nullable.GetUnderlyingType(t) != null) {
+                    if (t.IsClass) {
                         if (field != null) {
                             field.SetValue(objectReference, null);
                         } else {

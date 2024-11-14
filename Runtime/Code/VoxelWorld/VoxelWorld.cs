@@ -278,7 +278,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk.GetVoxelAt(voxelPos) == 0) return;
         
         chunk.WriteVoxelColor(voxelPos, color);
-        DirtyMesh(voxelPos, priority);
+        DirtyNeighborMeshes(voxelPos, priority);
     }
     
     public void DamageVoxelAt(Vector3 pos, float damage, bool priority) {
