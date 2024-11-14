@@ -514,7 +514,7 @@ namespace VoxelWorldStuff {
                         obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
                         
-                        mesh = new Mesh();
+                        if (mesh == null) mesh = new Mesh();
                         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                         filter = obj.AddComponent<MeshFilter>();

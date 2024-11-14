@@ -961,14 +961,20 @@ namespace VoxelWorldStuff {
             Vector3Int worldKey = (key * chunkSize);
             int skipCount = 0;
             const int inset = 1;
+            
+            // Preallocate vectors (for GC)
+            Vector3Int localVector = Vector3Int.zero;
+            Vector3Int localVoxel = Vector3Int.zero;
+            Vector3Int origin = Vector3Int.zero;
+            Vector2 damageUv = Vector2.zero;
 
             for (int x = 0; x < VoxelWorld.chunkSize; x++) {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++) {
                     for (int z = 0; z < VoxelWorld.chunkSize; z++) {
 
-                        Vector3Int localVector = new Vector3Int(x, y, z);
-                        Vector3Int localVoxel = new Vector3Int(x + inset, y + inset, z + inset); //Account for padding
-                        Vector3Int origin = localVector + worldKey;
+                        localVector.Set(x, y, z);
+                        localVoxel.Set(x + inset, y + inset, z + inset); // Account for padding
+                        origin.Set(localVector.x + worldKey.x, localVector.y + worldKey.y, localVector.z + worldKey.z);
                         int localVoxelKey = ((localVoxel.x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
                         VoxelData vox = readOnlyVoxel[localVoxelKey];
                         var voxelColor = readOnlyColor[localVoxelKey];
@@ -976,7 +982,7 @@ namespace VoxelWorldStuff {
                         //Read the damage number
                         ushort internalVoxelKey = (ushort)(x + y * chunkSize + z * chunkSize * chunkSize);
                         readOnlyDamageMap.TryGetValue(internalVoxelKey, out float damage);
-                        Vector2 damageUv = new Vector2(damage, 0);
+                        damageUv.Set(damage, 0);
 
                         BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
                         if (blockIndex == 0) //Air!
@@ -1306,7 +1312,7 @@ namespace VoxelWorldStuff {
             return finishedProcessing;
         }
 
-        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, VoxelWorld world, bool cloneMaterials) {
+        private static void CreateUnityMeshFromTemporaryMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, VoxelWorld world, bool cloneMaterials) {
 
             if (mesh == null || renderer == null || tempMesh == null) {
                 return;
@@ -1314,11 +1320,11 @@ namespace VoxelWorldStuff {
 
             Profiler.BeginSample("ConstructMesh");
             mesh.subMeshCount = tempMesh.subMeshes.Count;
-            mesh.SetVertices(tempMesh.vertices, 0, tempMesh.verticesCount);
-            mesh.SetUVs(0, tempMesh.uvs, 0, tempMesh.uvsCount);
-            mesh.SetUVs(1, tempMesh.damageUvs, 0, tempMesh.damageUvsCount);
-            mesh.SetColors(tempMesh.colors, 0, tempMesh.colorsCount);
-            mesh.SetNormals(tempMesh.normals, 0, tempMesh.normalsCount);
+            mesh.SetVertices(tempMesh.vertices);
+            mesh.SetUVs(0, tempMesh.uvs);
+            mesh.SetUVs(1, tempMesh.damageUvs);
+            mesh.SetColors(tempMesh.colors);
+            mesh.SetNormals(tempMesh.normals);
 
             int meshWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values) {
@@ -1358,14 +1364,14 @@ namespace VoxelWorldStuff {
 
                 //Updates both the geometry and baked lighting
                 Profiler.BeginSample("FinalizeMeshMain");
-                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, world, false);
+                CreateUnityMeshFromTemporaryMeshData(mesh, renderer, temporaryMeshData, world, false);
                 Profiler.EndSample();
 
                 if (detailMeshes != null) {
                     for (int i = 0; i < 3; i++) {
                         Profiler.BeginSample("FinalizeMeshDetail");
                         
-                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, false);
+                        CreateUnityMeshFromTemporaryMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, false);
                         Profiler.EndSample();
                     }
                 }
@@ -1476,7 +1482,7 @@ namespace VoxelWorldStuff {
                     }
                 }
             }
-            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, world, true);
+            CreateUnityMeshFromTemporaryMeshData(theMesh, meshRenderer, meshData, world, true);
 
             //Tamper with the shaders/materials if they're known
             foreach (Material mat in meshRenderer.sharedMaterials) {
