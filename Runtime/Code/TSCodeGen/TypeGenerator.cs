@@ -162,7 +162,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(LayoutElement),
             typeof(Screen),
             typeof(Gizmos),
-            typeof(RenderUtils),
             typeof(DeviceBridge),
             typeof(Mask),
             typeof(ImageWithRoundedCorners),
