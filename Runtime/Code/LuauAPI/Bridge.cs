@@ -42,6 +42,11 @@ public static class Bridge {
             new Vector2(0.5f, 0.5f), 100.0f);
     }
 
+    public static Sprite MakeSprite(Texture2D texture2D) {
+        return Sprite.Create(texture2D, new Rect(0.0f, 0.0f, texture2D.width, texture2D.height),
+            new Vector2(0.5f, 0.5f), 100.0f);
+    }
+
     public static Sprite MakeSprite(Texture2D texture, Rect rect, Vector2 pivot, float pixelsPerUnit){
         return Sprite.Create(texture, rect, pivot, pixelsPerUnit);
     }
