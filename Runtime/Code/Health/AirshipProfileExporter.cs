@@ -144,13 +144,13 @@ namespace Code.Health
                     $"{AirshipPlatformUrl.contentService}/artifacts/artifact-id/{msg.artifactId}");
             if (!downloadUrl.success)
             {
-                Debug.Log($"Profile Uploaded: <a href=\"https://create.airship.gg/dashboard/organization/game/artifacts?activeGame={msg.gameId}\">View it on the Create site.</a> (copied to your clipboard)");
+                Debug.Log($"Profile Uploaded:\n<a href=\"https://create.airship.gg/dashboard/organization/game/artifacts?activeGame={msg.gameId}\">https://create.airship.gg/dashboard/organization/game/artifacts?activeGame={msg.gameId}</a>\n(copied to your clipboard)");
                 return;
             }
 
             var data = JsonUtility.FromJson<ArtifactDownloadResponse>(downloadUrl.data);
             
-            Debug.Log($"Profile uploaded: <a href=\"{data.url}\">Download here.</a> (copied to your clipboard)");
+            Debug.Log($"Profile uploaded:\n<a href=\"{data.url}\">{data.url}</a>\n(copied to your clipboard)");
             GUIUtility.systemCopyBuffer = data.url;
         }
 
@@ -208,8 +208,7 @@ namespace Code.Health
             {
                 throw new Exception("Unable to get upload URL for profile.");
             }
-            
-           return JsonUtility.FromJson<SignedUrlResponse>(response.data);
+            return JsonUtility.FromJson<SignedUrlResponse>(response.data);
         }
 
         private async void Upload(SignedUrlResponse urlData, string logPath, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator)
@@ -222,7 +221,7 @@ namespace Code.Health
             var form = new WWWForm();
             form.AddBinaryData("file",  fileData, Path.GetFileName(uploadFilePath));
             using var www = UnityWebRequest.Post(urlData.url, form);
-            MonitorUploadProgress(www);
+            await MonitorUploadProgress(www);
             await UnityWebRequestProxyHelper.ApplyProxySettings(www).SendWebRequest();
             
             if (profileInitiator != null && profileInitiator.isReady) {
@@ -231,7 +230,7 @@ namespace Code.Health
             Debug.Log($"Profile uploaded.");
         }
 
-        private async void MonitorUploadProgress(UnityWebRequest req) {
+        private async Task MonitorUploadProgress(UnityWebRequest req) {
             var elapsed = 0.0d;
             var timeSinceLastLog = 0.0d;
             try {
