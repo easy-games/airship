@@ -13,6 +13,8 @@ using UnityEngine.Profiling;
 struct SignedUrlRequest {
     public string type;
     public string name;
+    [CanBeNull]
+    public string note;
     public string contentType;
     public long contentLength;
 }
