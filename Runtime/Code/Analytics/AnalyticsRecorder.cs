@@ -26,6 +26,10 @@ namespace Code.Analytics {
                     stackTrace = stackTrace,
                     message = message,
                 });
+
+                if (errors.Count > 100) {
+                    errors.RemoveAt(0);
+                }
             }
         }
 
