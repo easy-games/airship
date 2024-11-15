@@ -593,8 +593,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 			var pluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
 			var bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
 			var server = FindAnyObjectByType<LuauVersionFetcher>();
+			
 			Debug.Log($"CLIENT: {pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
-			Debug.Log($"SERVER: {server.version} - Bytecode Version: {server.bytecodeVersion.Target} (Min: {server.bytecodeVersion.Min}, Max: {server.bytecodeVersion.Max})");
+			if (server != null) {
+				Debug.Log($"SERVER: {server.version} - Bytecode Version: {server.bytecodeVersion.Target} (Min: {server.bytecodeVersion.Min}, Max: {server.bytecodeVersion.Max})");
+			}
 		}));
 	}
 }
