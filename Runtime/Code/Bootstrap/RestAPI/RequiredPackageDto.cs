@@ -7,6 +7,7 @@ public class RequiredPackageDto {
     public string packetVersionId;
     public int assetVersionNumber;
     public int codeVersionNumber;
+    public int publishVersionNumber;
 }
 
 [Serializable]

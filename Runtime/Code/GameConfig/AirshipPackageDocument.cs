@@ -12,6 +12,7 @@ namespace Code.GameBundle {
         public string id;
         [FormerlySerializedAs("version")] public string assetVersion;
         public string codeVersion;
+        public string publishVersionNumber;
         public bool game = false;
         public bool localSource = false;
         public bool disabled = false;
