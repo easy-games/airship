@@ -592,7 +592,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 		DevConsole.AddCommand(Command.Create("luau", "", "Prints info about the Luau plugin", () => {
 			var pluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
 			var bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
-			Debug.Log($"{pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
+			var server = FindAnyObjectByType<LuauVersionFetcher>();
+			Debug.Log($"CLIENT: {pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
+			Debug.Log($"SERVER: {server.version} - Bytecode Version: {server.bytecodeVersion.Target} (Min: {server.bytecodeVersion.Min}, Max: {server.bytecodeVersion.Max})");
 		}));
 	}
 }
