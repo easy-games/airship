@@ -597,6 +597,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 			Debug.Log($"CLIENT: {pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
 			if (server != null) {
 				Debug.Log($"SERVER: {server.version} - Bytecode Version: {server.bytecodeVersion.Target} (Min: {server.bytecodeVersion.Min}, Max: {server.bytecodeVersion.Max})");
+				if (pluginVersion != server.version) {
+					Debug.LogWarning("Luau plugin version mismatch between server and client");
+				}
 			}
 		}));
 	}
