@@ -588,5 +588,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			print("Successfully deleted package cache.");
 		}));
+
+		DevConsole.AddCommand(Command.Create("luau", "", "Prints info about the Luau plugin", () => {
+			var pluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
+			var bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
+			Debug.Log($"{pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
+		}));
 	}
 }
