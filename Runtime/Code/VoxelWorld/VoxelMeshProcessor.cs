@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -12,9 +13,11 @@ using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 using Random = System.Random;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using Unity.Collections;
+using Unity.Jobs;
 
 namespace VoxelWorldStuff {
-
     [LuauAPI]
     public partial class MeshProcessor {
         const bool doComplexMeshes = true;
@@ -69,11 +72,35 @@ namespace VoxelWorldStuff {
         const int paddedChunkSize = chunkSize + 2;
 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        Color32[] readOnlyColor = new Color32[paddedChunkSize * paddedChunkSize * paddedChunkSize];
+        NativeArray<Color32> readOnlyColor = new (paddedChunkSize * paddedChunkSize * paddedChunkSize, Allocator.Persistent);
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         public Dictionary<ushort, float> readOnlyDamageMap = new();
         
         private const int capacity = 40000;
+        
+        class TemporaryMeshPool {
+            private static readonly ConcurrentBag<TemporaryMeshData> _pool = new();
+
+            public static TemporaryMeshData Rent() {
+                if (_pool.TryTake(out var mesh)) {
+                    return mesh;
+                }
+        
+                return new TemporaryMeshData();
+            }
+
+            public static void Release(TemporaryMeshData mesh) {
+                // Reset counts
+                mesh.verticesCount = 0;
+                mesh.colorsCount = 0;
+                mesh.normalsCount = 0;
+                mesh.uvsCount = 0;
+                mesh.damageUvsCount = 0;
+                mesh.subMeshes.Clear();
+        
+                _pool.Add(mesh);
+            }
+        }
                 
         class TemporaryMeshData {
             /// <summary>
@@ -81,22 +108,88 @@ namespace VoxelWorldStuff {
             /// </summary>
             public Dictionary<int, SubMesh> subMeshes = new();
 
-            public Vector3[] vertices = new Vector3[capacity];
+            public NativeArray<Vector3> vertices = new(capacity, Allocator.Persistent);
             public int verticesCount = 0;
 
-            public byte[] isColored = new byte[capacity];
+            public NativeArray<byte> isColored = new(capacity / 8, Allocator.Persistent);
 
-            public Color32[] colors = new Color32[capacity];
+            public NativeArray<Color32> colors = new(capacity, Allocator.Persistent);
             public int colorsCount = 0;
 
-            public Vector3[] normals = new Vector3[capacity];
+            public NativeArray<Vector3> normals = new(capacity, Allocator.Persistent);
             public int normalsCount = 0;
 
-            public Vector2[] uvs = new Vector2[capacity];
+            public NativeArray<Vector2> uvs = new(capacity, Allocator.Persistent);
             public int uvsCount = 0;
 
-            public Vector2[] damageUvs = new Vector2[capacity];
+            public NativeArray<Vector2> damageUvs = new(capacity, Allocator.Persistent);
             public int damageUvsCount = 0;
+        }
+        
+        struct ParallelColorJob : IJobParallelFor {
+            [ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Vector3> Vertices;
+            [ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<byte> IsColored;
+            [ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Color32> ReadonlyColor;
+            [ReadOnly] [NativeDisableParallelForRestriction] public Vector3 ChunkKey;
+            public NativeArray<Color32> Colors;
+            
+            public void Execute(int i) {
+                var colorBit = (byte)(1 << (i % 8));
+                var isVertColored = (IsColored[i / 8] & colorBit) > 0;
+                if (!isVertColored) {
+                    Colors[i] = new Color32();
+                    return;
+                }
+
+                var vertPos = Vertices[i];
+                var vertWorldPos = vertPos;
+                var vertWorldPosRounded = new Vector3((float)Math.Floor(vertWorldPos.x),
+                    (float)Math.Floor(vertWorldPos.y),
+                    (float)Math.Floor(vertWorldPos.z)); // + Vector3.one / 2;
+
+                var neighborCount = 0;
+                var weightTotal = 0.0;
+                Span<Color32> neighborColors = stackalloc Color32[27];
+                Span<float> neighborWeights = stackalloc float[27];
+                // Grab neighbor colors and pick a weighted average color for this position
+                for (var x = -1; x <= 1; x += 1) {
+                    for (var y = -1; y <= 1; y += 1) {
+                        for (var z = -1; z <= 1; z += 1) {
+                            var offsetVec = new Vector3(x, y, z);
+                            var pos = vertWorldPosRounded + offsetVec;
+
+                            var readonlyVoxelPos = Vector3Int.FloorToInt(vertWorldPosRounded -
+                                ChunkKey * chunkSize + offsetVec + Vector3.one);
+                            var readonlyVoxelKey = ((readonlyVoxelPos.x) + (readonlyVoxelPos.y) * paddedChunkSize +
+                                                    (readonlyVoxelPos.z) * paddedChunkSize * paddedChunkSize);
+                            if (readonlyVoxelKey < 0 || readonlyVoxelKey >= ReadonlyColor.Length)
+                                continue; // Out of bounds
+
+                            var voxelPos = VoxelWorld.FloorInt(pos) + Vector3.one * 0.5f;
+                            var dist = (vertWorldPos - voxelPos).magnitude;
+                            if (dist > 1.5f) continue;
+                            var weight = 1.5f - dist;
+                            weightTotal += weight;
+
+                            neighborColors[neighborCount] = ReadonlyColor[readonlyVoxelKey];
+                            neighborWeights[neighborCount] = weight;
+                            neighborCount++;
+                        }
+                    }
+                }
+                
+                var finalColor = new Color32();
+                for (var n = 0; n < neighborCount; n++) {
+                    var weightedColor = Color32.Lerp(new Color32(), neighborColors[n],
+                        (float)(neighborWeights[n] / weightTotal));
+                    finalColor.r += weightedColor.r;
+                    finalColor.g += weightedColor.g;
+                    finalColor.b += weightedColor.b;
+                    finalColor.a += weightedColor.a;
+                }
+
+                Colors[i] = finalColor;
+            }
         }
  
         TemporaryMeshData temporaryMeshData;
@@ -673,13 +766,22 @@ namespace VoxelWorldStuff {
         private static void EnsureCapacity(TemporaryMeshData target, int requiredSize) {
             if (requiredSize > target.vertices.Length) {
                 // Double the size
-                Array.Resize(ref target.vertices, requiredSize * 2);
-                Array.Resize(ref target.colors, requiredSize * 2);
-                Array.Resize(ref target.normals, requiredSize * 2);
-                Array.Resize(ref target.uvs, requiredSize * 2);
-                Array.Resize(ref target.isColored, requiredSize * 2 / sizeof(byte));
+                target.vertices = Resize(target.vertices, requiredSize * 2);
+                target.colors = Resize(target.colors, requiredSize * 2);
+                target.normals = Resize(target.normals, requiredSize * 2);
+                target.uvs = Resize(target.uvs, requiredSize * 2);
+                target.damageUvs = Resize(target.damageUvs, requiredSize * 2);
+                target.isColored = Resize(target.isColored, requiredSize * 2 / sizeof(byte));
                 //Debug.Log("Resize! " + (requiredSize * 2));
             }
+        }
+        
+        private static NativeArray<T> Resize<T>(NativeArray<T> array, int newSize) where T : struct {
+            NativeArray<T> newArray = new NativeArray<T>(newSize, Allocator.Persistent);
+            int copyLength = Math.Min(newSize, array.Length);
+            NativeArray<T>.Copy(array, newArray, copyLength);
+            array.Dispose();
+            return newArray;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -772,27 +874,33 @@ namespace VoxelWorldStuff {
                 //write the transformed position (well, translated)
                 target.vertices[target.verticesCount++] = transformedPosition;
 
+                var isColoredIndex = (target.verticesCount - 1) / 8;
                 if (isColored) {
-                    target.isColored[(target.verticesCount - 1) / sizeof(byte)] |= (byte) (1 << (target.verticesCount % sizeof(byte)));
+                    // One bit represents whether this is a colored vertex (hence the bit shifting)
+                    target.isColored[isColoredIndex] |= (byte) (1 << ((target.verticesCount - 1) % 8));
+                } else {
+                    target.isColored[isColoredIndex] &= (byte) ~(1 << ((target.verticesCount - 1) % 8));
                 }
             }
 
             // Copy other arrays directly
-            Array.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
+            NativeArray<Vector2>.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
             target.uvsCount += count;
                 
             //damage UVs
-            Array.Fill(target.damageUvs, damageUv, target.damageUvsCount, count);
+            for (var i = target.damageUvsCount; i < target.damageUvsCount + count; i++) {
+                target.damageUvs[i] = damageUv;
+            }
             target.damageUvsCount += count;
 
             //Normals
-            Array.Copy(sourceNormals, 0, target.normals, target.normalsCount, count);
+            NativeArray<Vector3>.Copy(sourceNormals, 0, target.normals, target.normalsCount, count);
             target.normalsCount += count;
             
             
             if (lerps == null) {
                 if (mesh.srcColors != null && mesh.srcColors.Length > 0) {
-                    Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
+                    NativeArray<Color32>.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
                     target.colorsCount += count;
                 }
             }
@@ -947,17 +1055,8 @@ namespace VoxelWorldStuff {
         private void ThreadedUpdateFullMesh(System.Object worldObj) {
             VoxelWorld world = (VoxelWorld)worldObj;
 
-            temporaryMeshData = new TemporaryMeshData();
-            temporaryMeshData.verticesCount = 0;
-            temporaryMeshData.colorsCount = 0;
-            temporaryMeshData.normalsCount = 0;
-            temporaryMeshData.uvsCount = 0;
-            temporaryMeshData.damageUvsCount = 0;
-
-            Material mat = world.voxelBlocks.atlasMaterial;
+            temporaryMeshData = TemporaryMeshPool.Rent();
             
-            //temporaryMeshData.subMeshes["atlas"] = new SubMesh(mat);
-
             Vector3Int worldKey = (key * chunkSize);
             int skipCount = 0;
             const int inset = 1;
@@ -1216,64 +1315,16 @@ namespace VoxelWorldStuff {
                 var s = Stopwatch.StartNew();
                 Profiler.BeginSample("ColorMesh");
                 
-                // Pre allocate variables
-                var neighborColors = new Color32[27];
-                var neighborWeights = new double[27];
-                var finalColor = new Color32();
-                var black = new Color32();
-                var offsetVec = Vector3.zero;
+                var parallelColorJob = new ParallelColorJob() {
+                    Vertices = temporaryMeshData.vertices,
+                    IsColored = temporaryMeshData.isColored,
+                    ReadonlyColor = readOnlyColor,
+                    ChunkKey = chunk.chunkKey,
+                    Colors = temporaryMeshData.colors,
+                };
+                var jobHandle = parallelColorJob.Schedule(temporaryMeshData.colors.Length, 64);
+                jobHandle.Complete(); // Wait for job to complete
                 
-                for (int i = 0; i < temporaryMeshData.verticesCount; i++) {
-                    var colorBit = (byte)(1 << (i % sizeof(byte)));
-                    var isVertColored = (temporaryMeshData.isColored[i / sizeof(byte)] & colorBit) > 0;
-                    if (!isVertColored) {
-                        temporaryMeshData.colors[i] = black;
-                        continue;
-                    }
-                    
-                    var vertPos = temporaryMeshData.vertices[i];
-                    var vertWorldPos = vertPos;
-                    var vertWorldPosRounded = new Vector3((float)Math.Floor(vertWorldPos.x),
-                        (float)Math.Floor(vertWorldPos.y),
-                        (float)Math.Floor(vertWorldPos.z));// + Vector3.one / 2;
-                    
-                    var neighborCount = 0;
-                    var weightTotal = 0.0;
-                    // Grab neighbor colors and pick a weighted average color for this position
-                    for (var x = -1; x <= 1; x += 1) {
-                        for (var y = -1; y <= 1; y += 1) {
-                            for (var z = -1; z <= 1; z += 1) {
-                                offsetVec.Set(x, y, z);
-                                var pos = vertWorldPosRounded + offsetVec;
-
-                                var readonlyVoxelPos = Vector3Int.FloorToInt(vertWorldPosRounded - chunk.chunkKey * chunkSize + offsetVec + Vector3.one);
-                                var readonlyVoxelKey = ((readonlyVoxelPos.x) + (readonlyVoxelPos.y) * paddedChunkSize + (readonlyVoxelPos.z) * paddedChunkSize * paddedChunkSize);
-                                if (readonlyVoxelKey < 0 || readonlyVoxelKey >= readOnlyColor.Length) continue; // Out of bounds
-
-                                var voxelPos = VoxelWorld.FloorInt(pos) + Vector3.one * 0.5f;
-                                var dist = (vertWorldPos - voxelPos).magnitude;
-                                if (dist > 1.5) continue;
-                                var weight = 1.5 - dist;
-                                weightTotal += weight;
-
-                                neighborColors[neighborCount] = readOnlyColor[readonlyVoxelKey];
-                                neighborWeights[neighborCount] = weight;
-                                neighborCount++;
-                            }
-                        }   
-                    }
-
-                    finalColor.r = finalColor.g = finalColor.b = finalColor.a = 0;
-                    for (var n = 0; n < neighborCount; n++) {
-                        var weightedColor = Color32.Lerp(black, neighborColors[n], (float)(neighborWeights[n] / weightTotal));
-                        finalColor.r += weightedColor.r;
-                        finalColor.g += weightedColor.g;
-                        finalColor.b += weightedColor.b;
-                        finalColor.a += weightedColor.a;
-                    }
-
-                    temporaryMeshData.colors[i] = finalColor;
-                }
                 temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
                 Profiler.EndSample();
             }
@@ -1356,7 +1407,6 @@ namespace VoxelWorldStuff {
            
             renderer.sharedMaterials = mats;
             mesh.RecalculateBounds();
-           
         }
 
         public void FinalizeMesh(GameObject obj, Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, VoxelWorld world) {
@@ -1366,6 +1416,10 @@ namespace VoxelWorldStuff {
                 Profiler.BeginSample("FinalizeMeshMain");
                 CreateUnityMeshFromTemporaryMeshData(mesh, renderer, temporaryMeshData, world, false);
                 Profiler.EndSample();
+                
+                // Release TemporaryMeshData, we should no longer need it
+                TemporaryMeshPool.Release(temporaryMeshData);
+                temporaryMeshData = null;
 
                 if (detailMeshes != null) {
                     for (int i = 0; i < 3; i++) {

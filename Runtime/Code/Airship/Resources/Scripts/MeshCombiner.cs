@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Threading;
 using System;
 using System.IO;
+using UnityEngine.Profiling;
 
 
 #if UNITY_EDITOR
@@ -269,7 +270,11 @@ namespace Airship {
 
         public void ThreadedUpdateMeshWrapper(System.Object state) {
             try {
+                Profiler.BeginThreadProfiling("MeshCombiner", "MeshCombiner");
+                Profiler.BeginSample("ThreadedMeshCombinerUpdate");
                 ThreadedUpdateMesh(state);
+                Profiler.EndSample();
+                Profiler.EndThreadProfiling();
             }
             catch (Exception e) {
                 Debug.LogError("Error in ThreadedUpdateMesh: " + e.Message);
