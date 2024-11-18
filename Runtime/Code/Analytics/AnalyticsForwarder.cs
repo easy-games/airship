@@ -15,7 +15,7 @@ namespace Code.Analytics {
             if (!RunCore.IsServer()) {
                 return;
             }
-            Debug.Log("Starting Airship");
+            Debug.Log("Starting Analytics Forwarder");
             // Start the first action with a randomized initial delay
             ScheduleNextAction();
         }
