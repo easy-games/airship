@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Code.Platform.Shared;
 using Code.Platform.Server;
+using Code.Platform.Client;
 using UnityEngine;
 
 namespace Code.Analytics
@@ -12,17 +13,62 @@ namespace Code.Analytics
         private float maxInterval = 15f;
         private bool isScheduled = false;
         private bool isAlreadySending = false;
+        private ServerBootstrap serverBootstrap;
 
         void Start()
         {
-            if (!RunCore.IsServer())
-            {
-                return;
-            }
-            Debug.Log("Starting Analytics Forwarder");
-            // Start the first action with a randomized initial delay
+            this.serverBootstrap = FindObjectOfType<ServerBootstrap>();
             ScheduleNextAction();
         }
+
+        void SendServerMessages(List<ReportableError> errors, List<ActivePackage> activePackages)
+        {
+            var message = new AirshipAnalyticsServerDto
+            {
+                activePackages = activePackages,
+                errors = errors,
+                gameVersionId = AnalyticsRecorder.startupConfig.Value.GameAssetVersion,
+            };
+            var json = JsonUtility.ToJson(message);
+
+            if (isAlreadySending) return;
+
+            isAlreadySending = true;
+            AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) =>
+            {
+                isAlreadySending = false;
+                if (!t.Result.success)
+                {
+                    Debug.LogError("Failed to send analytics: " + t.Result.error);
+                }
+            });
+        }
+
+        void SendClientMessages(List<ReportableError> errors, List<ActivePackage> activePackages)
+        {
+            var message = new AirshipAnalyticsClientDto
+            {
+                activePackages = activePackages,
+                errors = errors,
+                gameId = AnalyticsRecorder.startupConfig.Value.GameBundleId,
+                gameVersionId = AnalyticsRecorder.startupConfig.Value.GamePublishVersion,
+                serverId = this.serverBootstrap.serverContext.serverId,
+            };
+            var json = JsonUtility.ToJson(message);
+
+            if (isAlreadySending) return;
+
+            isAlreadySending = true;
+            AnalyticsServiceClient.SendClientAnalytics(message).ContinueWith((t) =>
+            {
+                isAlreadySending = false;
+                if (!t.Result.success)
+                {
+                    Debug.LogError("Failed to send analytics: " + t.Result.error);
+                }
+            });
+        }
+
 
         void SendMessages()
         {
@@ -34,36 +80,22 @@ namespace Code.Analytics
                 // Perform your action here
                 var errors = AnalyticsRecorder.GetAndClearErrors();
                 if (errors.Count <= 0) return;
-                Debug.Log($"Flushing {errors.Count} errors!");
-                var activePackages = AnalyticsRecorder.startupConfig.Value.packages.Select(p => new ActivePackage
+                var activePackages = AnalyticsRecorder.startupConfig.Value.packages
+                .Where(p => !p.game) // Only report real packages, the game is added as a "package" so we need to filter it out
+                .Select(p => new ActivePackage
                 {
                     name = p.id,
                     version = p.publishVersionNumber,
                 }).ToList();
-                var message = new AirshipAnalyticsServerDto
+                if (RunCore.IsServer())
                 {
-                    activePackages = activePackages,
-                    errors = errors,
-                    gameVersionId = AnalyticsRecorder.startupConfig.Value.GameAssetVersion,
-                };
-                var json = JsonUtility.ToJson(message);
-                Debug.Log(json);
-
-                if (isAlreadySending)
+                    SendServerMessages(errors, activePackages);
+                }
+                else
                 {
-                    Debug.Log("Analytics forwarder is already sending. Skipping.");
-                    return;
+                    SendClientMessages(errors, activePackages);
                 }
 
-                isAlreadySending = true;
-                AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) =>
-                {
-                    isAlreadySending = false;
-                    if (!t.Result.success)
-                    {
-                        Debug.LogError("Failed to send analytics: " + t.Result.error);
-                    }
-                });
             }
             finally
             {

@@ -30,4 +30,19 @@ namespace Code.Platform.Shared {
         public List<ReportableError> errors;
 
     }
+
+
+    [Serializable]
+    public class AirshipAnalyticsClientDto {
+        public string gameId;
+        // The version id of the game, e.g. 123
+        public string gameVersionId;
+        // The id of the currently connected server
+        public string serverId;
+        // The list of active packages currently installed on the server
+        public List<ActivePackage> activePackages;
+        // The list of lua errors that have occurred on the server
+        public List<ReportableError> errors;
+
+    }
 }
