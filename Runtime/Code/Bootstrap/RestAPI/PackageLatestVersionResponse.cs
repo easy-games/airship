@@ -12,4 +12,5 @@ public class PackageVersionResponse {
 public class Package {
     public int assetVersionNumber;
     public int codeVersionNumber;
+    public int publishVersionNumber;
 }
