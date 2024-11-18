@@ -181,7 +181,7 @@ namespace Luau {
             scriptPath = (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
             
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-            scriptPathByTypeNameCache.TryAdd(typeName, scriptPath);
+            scriptPathByTypeNameCache.Add(typeName, scriptPath);
 #endif
             return scriptPath;
         }
@@ -202,7 +202,7 @@ namespace Luau {
 
             if (childPathNormalized == parentPathNormalized) {
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-                inheritanceChecks.TryAdd((childPath, parentPath), true);
+                inheritanceChecks.Add((childPath, parentPath), true);
 #endif
                 return true;
             };
@@ -210,7 +210,7 @@ namespace Luau {
             var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.Equals(parentPathNormalized, StringComparison.OrdinalIgnoreCase));
             if (extendsMeta == null) {
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-                inheritanceChecks.TryAdd((childPath, parentPath), false);
+                inheritanceChecks.Add((childPath, parentPath), false);
 #endif
                 return false;
             }
@@ -218,7 +218,7 @@ namespace Luau {
             var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPathNormalized);
 
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-            inheritanceChecks.TryAdd((childPath, parentPath), isExtending);
+            inheritanceChecks.Add((childPath, parentPath), isExtending);
 #endif
             return isExtending;
         }
