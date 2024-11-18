@@ -170,7 +170,7 @@ namespace Luau {
         }
 
         private Dictionary<string, string> scriptPathByTypeNameCache = new();
-        private Dictionary<(string childPath, string parentPath), bool> inheritanceChecks = new();
+        private Dictionary<(string childPath, string parentPath), bool> inheritanceCheckCache = new();
         
         [CanBeNull]
         public string GetScriptPathByTypeName(string typeName) {
@@ -193,7 +193,7 @@ namespace Luau {
         /// <param name="parentPath">The path of the parent script</param>
         /// <returns>True if the child script inherits the parent script</returns>
         public bool Inherits(string childPath, string parentPath) {
-            if (inheritanceChecks.TryGetValue((childPath, parentPath), out var result)) {
+            if (inheritanceCheckCache.TryGetValue((childPath, parentPath), out var result)) {
                 return result;
             }
 
