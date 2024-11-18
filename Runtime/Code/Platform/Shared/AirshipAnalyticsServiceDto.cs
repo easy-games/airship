@@ -22,11 +22,12 @@ namespace Code.Platform.Shared {
 
     [Serializable]
     public class AirshipAnalyticsServerDto {
+        // The version id of the game, e.g. 123
+        public string gameVersionId;
         // The list of active packages currently installed on the server
         public List<ActivePackage> activePackages;
         // The list of lua errors that have occurred on the server
         public List<ReportableError> errors;
-        // The version id of the game, e.g. 123
-        public string gameVersionId;
+
     }
 }

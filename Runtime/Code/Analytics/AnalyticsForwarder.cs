@@ -29,23 +29,20 @@ namespace Code.Analytics
             try
             {
                 isScheduled = false;
-                if (AnalyticsRecorder.startupConfig == null)
-                {
-                    Debug.Log("No startup config");
-                    return;
-                }
+                if (AnalyticsRecorder.startupConfig == null)  return;
 
                 // Perform your action here
                 var errors = AnalyticsRecorder.GetAndClearErrors();
-                if (errors.Count <= 0)
-                {
-                    Debug.Log("No errors to flush");
-                    return;
-                }
+                if (errors.Count <= 0) return;
                 Debug.Log($"Flushing {errors.Count} errors!");
+                var activePackages = AnalyticsRecorder.startupConfig.Value.packages.Select(p => new ActivePackage
+                {
+                    name = p.id,
+                    version = p.publishVersionNumber,
+                }).ToList();
                 var message = new AirshipAnalyticsServerDto
                 {
-                    activePackages = new List<ActivePackage>(),
+                    activePackages = activePackages,
                     errors = errors,
                     gameVersionId = AnalyticsRecorder.startupConfig.Value.GameAssetVersion,
                 };
@@ -62,12 +59,7 @@ namespace Code.Analytics
                 AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) =>
                 {
                     isAlreadySending = false;
-                    Debug.Log("Sent analytics");
-                    if (t.Result.success)
-                    {
-                        Debug.Log("Successfully sent analytics");
-                    }
-                    else
+                    if (!t.Result.success)
                     {
                         Debug.LogError("Failed to send analytics: " + t.Result.error);
                     }

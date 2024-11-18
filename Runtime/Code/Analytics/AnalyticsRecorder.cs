@@ -20,7 +20,6 @@ namespace Code.Analytics {
             }
             var now = DateTime.UtcNow;
             if (logType == LogType.Error) {
-                Debug.Log("Recording error: " + message + " - " + stackTrace);
                 errors.Add(new ReportableError {
                     timestamp = now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture),
                     stackTrace = stackTrace,
