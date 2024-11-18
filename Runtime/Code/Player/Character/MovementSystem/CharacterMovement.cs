@@ -107,6 +107,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 	//Locally tracked variables
 	private float currentSpeed;
+	private Vector3 currentLocalVelocity;
 	private Vector3 lastPos = Vector3.zero;
 	private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 	private Vector3 trackedPosition = Vector3.zero;
@@ -219,6 +220,7 @@ public class CharacterMovement : NetworkBehaviour {
 #region LATEUPDATE
 	//Every frame update the calculated look vector and the visual state of the movement
 	private void LateUpdate(){
+		//Handle the look rotation
 		if (isClient && isOwned) {
 			var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
 			if(lookTarget == Vector3.zero){
@@ -242,27 +244,6 @@ public class CharacterMovement : NetworkBehaviour {
 				graphicTransform.rotation,
 				Quaternion.LookRotation(lookTarget),
 				observerRotationLerpMod * Time.deltaTime);
-		}
-		if (isLocalPlayer || networkAnimator == null) {
-			//Track movement to visually sync animator
-			UpdateAnimationVelocity();
-		}
-	}
-
-	//Update the visual state of the characters velocity
-	private void UpdateAnimationVelocity() {
-		//Update visual state of client character
-		var currentPos = rootTransform.position;
-		trackedDeltaTime += Time.deltaTime;
-		var worldVel = (currentPos - trackedPosition) * (1 / trackedDeltaTime);
-		if (currentPos != trackedPosition || worldVel != lastWorldVel) {
-			lastWorldVel = worldVel;
-			trackedPosition = currentPos;
-			// if(!this.isOwned){
-			// 	Debug.Log("Pos: " + currentPos + " ve: " + lastWorldVel + " time: " + trackedDeltaTime);
-			// }
-			trackedDeltaTime = 0;
-			animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 		}
 	}
 #endregion
@@ -828,7 +809,10 @@ public class CharacterMovement : NetworkBehaviour {
 		// }
 
 		//Replicate the look vector
-		SetLookVector(md.lookVector);
+		SetLookVector(md.lookVector);     
+
+		//Calculate the local velocity for animations ease
+		currentLocalVelocity = graphicTransform.InverseTransformDirection(newVelocity);
 
 		//Fire state change event
 		TrySetState(new CharacterStateSyncData() {
@@ -836,6 +820,7 @@ public class CharacterMovement : NetworkBehaviour {
 			grounded = !inAir || didStepUp,
 			sprinting = isSprinting,
 			crouching = isCrouching,
+			localVelocity = currentLocalVelocity
 		});
 
 		if (didJump){
@@ -1113,6 +1098,7 @@ public class CharacterMovement : NetworkBehaviour {
 		if (oldState.state != data.state) {
 			stateChanged?.Invoke((int)data.state);
 		}
+		
 		animationHelper.SetState(data);
 	}
 	
