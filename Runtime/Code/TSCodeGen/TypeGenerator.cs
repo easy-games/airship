@@ -197,7 +197,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipUniVoiceNetwork),
             typeof(StandaloneFileBrowser),
             typeof(MaterialColorURP),
-            typeof(Mathf),
             typeof(UnityWebRequestTexture),
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
