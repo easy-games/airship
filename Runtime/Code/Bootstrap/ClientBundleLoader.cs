@@ -341,7 +341,7 @@ namespace Code.Bootstrap {
                     continue;
                 }
 
-                packages.Add(new AirshipPackage(packageDoc.id, packageDoc.assetVersion, packageDoc.codeVersion, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+                packages.Add(new AirshipPackage(packageDoc.id, packageDoc.assetVersion, packageDoc.codeVersion, packageDoc.publishVersionNumber, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
             }
 
             var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();

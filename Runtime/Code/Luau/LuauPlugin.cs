@@ -728,4 +728,15 @@ public static class LuauPlugin
 	public static int LuauCountGC(LuauContext context) {
 		return CountGC((int)context);
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int GetLuauPluginVersion(out IntPtr versionPtr);
+	public static string LuauGetLuauPluginVersion() {
+		var len = GetLuauPluginVersion(out var versionPtr);
+		return Marshal.PtrToStringUTF8(versionPtr, len);
+	}
 }

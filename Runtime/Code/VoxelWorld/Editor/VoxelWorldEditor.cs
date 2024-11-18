@@ -52,12 +52,26 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         var positionSet = new HashSet<Vector3Int>() { position };
         if (buildModsEnabled) {
             foreach (var (id, modifier) in placementModifiers) {
-                modifier.OnPlaceVoxels(world, positionSet, num);
+                modifier.OnPlaceVoxels(world, positionSet);
             }
         }
 
         foreach (var pos in positionSet) {
             world.WriteVoxelAtInternal(pos, num);
+        }
+        return positionSet;
+    }
+    
+    public HashSet<Vector3Int> ColorVoxel(VoxelWorld world, Vector3Int position, Color col) {
+        var positionSet = new HashSet<Vector3Int>() { position };
+        if (buildModsEnabled) {
+            foreach (var (id, modifier) in placementModifiers) {
+                modifier.OnPlaceVoxels(world, positionSet);
+            }
+        }
+
+        foreach (var pos in positionSet) {
+            world.ColorVoxelAt(pos, col, false);
         }
         return positionSet;
     }
@@ -166,23 +180,36 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor {
     private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/SurvivalBlockDefines.xml";
+    [NonSerialized]
     GameObject handle = null;
+    [NonSerialized]
     GameObject faceHandle = null;
+    [NonSerialized]
     GameObject raytraceHandle = null;
     
+    [NonSerialized]
     bool mouseOverViewport = false;
+    [NonSerialized]
     bool lastEnabled = false;
+    [NonSerialized]
     bool leftControlDown = false;
+    [NonSerialized]
     bool leftShiftDown = false;
-
+    [NonSerialized]
+    bool draggingSelection = false;
+    [NonSerialized]
     Vector3Int lastPos;
-    
+    [NonSerialized]
     Vector3 lastNormal;
+    [NonSerialized]
     Vector3Int lastNormalPos;
+    [NonSerialized]
     bool validPosition = false;
-
+    [NonSerialized]
     Vector3 placementRotationVector;
+    [NonSerialized]
     VoxelWorld.Flips placementFlip = VoxelWorld.Flips.Flip_0Deg;
+    [NonSerialized]
     bool placementVertical = false;
 
     private VoxelWorldEditor() {
@@ -592,12 +619,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             }
             
             MeshRenderer ren = faceHandle.GetComponent<MeshRenderer>();
-            if (leftControlDown == true) {
+            /*if (leftControlDown == true) {
                 ren.sharedMaterial.SetColor("_Color", new Color(0, 1, 0, 0.25f));
             }
             else {
                 ren.sharedMaterial.SetColor("_Color", new Color(1, 1, 0, 0.25f));
-            }
+            }*/
+            ren.sharedMaterial.SetColor("_Color", new Color(1, 1, 0, 0.25f));
         }
 
     }
@@ -636,11 +664,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 CleanupHandles();
 
             }
-
-            if (leftControlDown == false) {
-                
-                DoMouseMoveEvent(Event.current.mousePosition,  world);
-            }
+ 
+            DoMouseMoveEvent(Event.current.mousePosition,  world);
+           
             UpdateHandlePosition(world);
             SceneView.RepaintAll();
         }
@@ -651,13 +677,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
                 // Create a ray from the mouse position
                 if (validPosition) {
-
                     if (Event.current.shift) {
                         // Remove voxel
                         Vector3Int voxelPos = lastPos;
                         ushort oldValue =
                             world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
-
+                             
                         VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
                         voxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
@@ -671,8 +696,10 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                             lastPos -= VoxelWorld.CardinalVector(lastNormal);
                             lastNormalPos -= VoxelWorld.CardinalVector(lastNormal);
                         }
-                    }
-                    else {
+                    } else if (Event.current.alt) {
+                        ushort voxel = world.GetVoxelAt(lastPos);
+                        world.selectedBlockIndex = VoxelWorld.VoxelDataToBlockId(voxel);;
+                    } else {
                         // Add voxel
                         Vector3Int voxelPos = lastNormalPos;
                         ushort oldValue =
@@ -690,18 +717,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
                             "Add Voxel " + def.definition.name);
 
-                        if (leftControlDown == false) {
-                            //Refresh the gizmo like we just moved the mouse here
-                            DoMouseMoveEvent(Event.current.mousePosition, world);
-                        }
-                        else {
-                            //Move the pos by the normal to continue this "line" of voxels
-                            lastPos += VoxelWorld.CardinalVector(lastNormal);
-                            lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
-                        }
+                         
+                        //Move the pos by the normal to continue this "line" of voxels
+                        lastPos += VoxelWorld.CardinalVector(lastNormal);
+                        lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
+                        
 
                         
                     }
+                    
                 }
 
                 UpdateHandlePosition(world);
@@ -718,8 +742,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 if (validPosition) {
                     var voxelPos = lastPos;
                     var oldColor = world.GetVoxelColorAt(voxelPos);
-                    var newCol = new Color32((byte) (oldColor.r + 10), oldColor.g, oldColor.b, oldColor.a);
-                    world.ColorVoxelAt(voxelPos, newCol, true);
+                    Color newCol;
+                    if (e.shift) {
+                        newCol = new Color32((byte) (Math.Max(oldColor.r + -5, 0)), oldColor.g, oldColor.b, oldColor.a);
+                    } else {
+                        var colIncr = 5;
+                        if (oldColor.r == 0) colIncr = 1; // If just being lightly painted to mark as receiving color
+                        newCol = new Color32((byte) (Math.Min(oldColor.r + colIncr, 255)), oldColor.g, oldColor.b, oldColor.a);
+                    }
+                    VoxelEditManager.Instance.ColorVoxel(world, voxelPos, newCol);
                 }
             }
         }

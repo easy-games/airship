@@ -102,7 +102,8 @@ public class TexturePacker
         textureDesc.sRGB = false;
         textureDesc.autoGenerateMips = false;
         textureDesc.depthBufferBits = 0;
-        
+
+        var activeRt = RenderTexture.active;
         diffuse = new RenderTexture(textureDesc);
         diffuse.anisoLevel = anisoLevel;
         diffuse.filterMode = FilterMode.Trilinear;
@@ -265,6 +266,11 @@ public class TexturePacker
         //print the total time elapsed
         // Debug.Log("Atlas generation took " + (Time.realtimeSinceStartup - startTime) + " seconds");
 
+        RenderTexture.active = activeRt;
+        
+        diffuse.Release();
+        normals.Release();
+        
         Profiler.EndSample();
     }
 

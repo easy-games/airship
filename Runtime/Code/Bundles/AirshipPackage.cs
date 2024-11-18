@@ -15,12 +15,14 @@ namespace Code.Bootstrap {
         public string id;
         public string assetVersion;
         public string codeVersion;
+        public string publishVersionNumber;
         public AirshipPackageType packageType;
 
-        public AirshipPackage(string id, string assetVersion, string codeVersion, AirshipPackageType packageType) {
+        public AirshipPackage(string id, string assetVersion, string codeVersion, string publishVersionNumber, AirshipPackageType packageType) {
             this.id = id;
             this.assetVersion = assetVersion;
             this.codeVersion = codeVersion;
+            this.publishVersionNumber = publishVersionNumber;
             this.packageType = packageType;
         }
 

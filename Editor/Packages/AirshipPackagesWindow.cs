@@ -498,7 +498,7 @@ namespace Editor.Packages {
             }
             sourceAssetsZip.Save(zippedSourceAssetsZipPath);
 
-            if (EditorIntegrationsConfig.instance.buildWithoutUpload || isCoreMaterials) {
+            if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
                 packageUploadProgress.Remove(packageDoc.id);
                 Repaint();
                 Debug.Log("<color=green>Done!</color>");

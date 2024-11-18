@@ -40,6 +40,7 @@ public class WorldSaveFile : ScriptableObject {
         }
     }
 
+    //This is unusable - for some reason it seems to be causing errors
     private void CreateScopedBlockDictionaryFromVoxelWorldTight(VoxelWorld world) {
 
         HashSet<int> UsedIds = new();
@@ -80,7 +81,7 @@ public class WorldSaveFile : ScriptableObject {
     public void CreateFromVoxelWorld(VoxelWorld world) {
 
         // Add used blocks + their ids to file
-        this.CreateScopedBlockDictionaryFromVoxelWorldTight(world);
+        this.CreateScopedBlockDictionaryFromVoxelWorld(world);
 
         var chunks = world.chunks;
         int counter = 0;
@@ -183,11 +184,19 @@ public class WorldSaveFile : ScriptableObject {
             for (int i = 0; i < data.Length; i++) {
                 BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
                 ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
-
-
+                                
                 bool found = blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
-                if (found) {               
-                    writeChunk.readWriteVoxel[i] = ((ushort)(updatedBlockId | extraBits));
+                if (found) {
+
+                    VoxelData vox = ((VoxelData)(updatedBlockId | extraBits));
+
+#if UNITY_EDITOR
+                    //Fix the solid bit - we have to do this in case someone has already placed a bunch of blocks and then changes their solid bit, which is usually only set when the voxel is written
+                    var definition = world.voxelBlocks.GetBlockDefinitionFromBlockId(updatedBlockId);
+                    vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid);
+#endif
+
+                    writeChunk.readWriteVoxel[i] = vox;
                     if (color != null && color.Length > 0) {
                         writeChunk.color[i] = color[i];
                     }

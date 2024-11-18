@@ -3,6 +3,7 @@ public class CharacterStateSyncData {
     public bool grounded = true;
     public bool sprinting = false;
     public bool crouching = false;
+    public Vector3 localVelocity = Vector3.zero;
 
     // override object.Equals
     public override bool Equals(object obj) {
@@ -10,7 +11,8 @@ public class CharacterStateSyncData {
         return this.state == data.state &&
                this.grounded == data.grounded &&
                this.sprinting == data.sprinting &&
-               this.crouching == data.crouching;
+               this.crouching == data.crouching && 
+               this.localVelocity == data.localVelocity;
     }
     public override int GetHashCode() {
         unchecked {
@@ -18,6 +20,7 @@ public class CharacterStateSyncData {
             hashCode = (hashCode * 397) ^ grounded.GetHashCode();
             hashCode = (hashCode * 397) ^ sprinting.GetHashCode();
             hashCode = (hashCode * 397) ^ crouching.GetHashCode();
+            hashCode = (hashCode * 397) ^ localVelocity.GetHashCode();
             return hashCode;
         }
     }

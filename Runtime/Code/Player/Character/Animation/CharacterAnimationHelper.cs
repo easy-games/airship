@@ -202,30 +202,31 @@ public class CharacterAnimationHelper : MonoBehaviour {
             return;
         }
 
-        var newState = syncedState.state;
-        //this.SetVelocity(syncedState.velocity);
-        this.grounded = syncedState.grounded;
-        animator.SetBool("Grounded", grounded);
-        animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
-        animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
-        if(sprintVfx){
-            if (newState == CharacterState.Sprinting) {
-                if (this.IsInParticleDistance()) {
-                    sprintVfx.Play();
+            var newState = syncedState.state;
+            this.grounded = syncedState.grounded;
+            animator.SetBool("Grounded", grounded);
+            animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
+            animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
+            if(sprintVfx){
+                if (newState == CharacterState.Sprinting) {
+                    if (this.IsInParticleDistance()) {
+                        sprintVfx.Play();
+                    }
+                } else {
+                    sprintVfx.Stop();
                 }
-            } else {
-                sprintVfx.Stop();
             }
-        }
 
-        if (this.firstPerson) {
-            animator.SetLayerWeight(0,0);
-        }
+            if (this.firstPerson) {
+                animator.SetLayerWeight(0,0);
+            }
 
-        lastStateTime = Time.time;
-        currentState = newState;
-        //print("Set state: " + currentState);
-    }
+            lastStateTime = Time.time;
+            currentState = newState;
+
+            this.SetVelocity(syncedState.localVelocity);
+            //print("Set state: " + currentState);
+        }
 
     public void TriggerJump(){
         SetTrigger("Jump");

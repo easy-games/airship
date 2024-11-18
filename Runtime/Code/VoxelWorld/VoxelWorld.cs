@@ -19,7 +19,7 @@ using UnityEditor;
 [RequireComponent(typeof(VoxelRollbackManager))]
 public partial class VoxelWorld : MonoBehaviour {
 
-    public const bool runThreaded = false;       //Turn off if you suspect threading problems
+    public const bool runThreaded = true;       //Turn off if you suspect threading problems
     [NonSerialized]
     public bool doVisuals = true;         //Turn on for headless servers
 
@@ -74,11 +74,11 @@ public partial class VoxelWorld : MonoBehaviour {
      
     //Texture atlas/block definitions    
     [HideInInspector] public VoxelBlocks voxelBlocks;
-    [HideInInspector] public int selectedBlockIndex = 1;
+    [NonSerialized][HideInInspector] public int selectedBlockIndex = 1;
 
     //For the editor
-    [HideInInspector] public VoxelData highlightedBlock = 0;
-    [HideInInspector] public Vector3Int highlightedBlockPos = new();
+    [NonSerialized][HideInInspector] public VoxelData highlightedBlock = 0;
+    [NonSerialized][HideInInspector] public Vector3Int highlightedBlockPos = new();
 
     [NonSerialized]
     [HideInInspector]
@@ -110,15 +110,12 @@ public partial class VoxelWorld : MonoBehaviour {
         "270 Deg Vertical"
     };
 
-
     public static Flips[] allFlips = (Flips[])System.Enum.GetValues(typeof(Flips));
-
 
     [HideInInspector] public bool renderingDisabled = false;
 
     //[HideInInspector] private bool debugGrass = false;
-
-    [SerializeField] public bool hasUnsavedChanges = false;
+    [NonSerialized] public bool hasUnsavedChanges = false;
 
     //Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -142,11 +139,47 @@ public partial class VoxelWorld : MonoBehaviour {
         return (voxel & 0x8000) != 0; //15th bit 
     }
 
-    
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static VoxelData SetVoxelSolidBit(VoxelData voxel, bool solid) {
+        //Solid bit is bit 15, toggle it on or off
+        if (solid) {
+            return (ushort)(voxel | 0x8000);
+        }
+        else {
+            return (ushort)(voxel & 0x7FFF);
+        }
+    }
+
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetVoxelFlippedBits(VoxelData voxel) {
         //Flipped bits are the 12th,13th and 14th bits
         return (voxel & 0x7000) >> 12;
+    }
+    
+    public static Quaternion FlipBitsToQuaternion(int flipBits) {
+        var flipEnum = (Flips) flipBits;
+        switch (flipEnum) {
+            case Flips.Flip_0Deg:
+                return Quaternion.identity;
+            case Flips.Flip_90Deg:
+                return Quaternion.Euler(0, 90, 0);
+            case Flips.Flip_180Deg:
+                return Quaternion.Euler(0, 180, 0);
+            case Flips.Flip_270Deg:
+                return Quaternion.Euler(0, 270, 0);
+            case Flips.Flip_0DegVertical:
+                return Quaternion.Euler(0, 0, 180);
+            case Flips.Flip_90DegVertical:
+                return Quaternion.Euler(0, 90, 180);
+            case Flips.Flip_180DegVertical:
+                return Quaternion.Euler(0, 180, 180);
+            case Flips.Flip_270DegVertical:
+                return Quaternion.Euler(0, 270, 180);
+        }
+        return Quaternion.identity;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -228,7 +261,7 @@ public partial class VoxelWorld : MonoBehaviour {
         var affectedChunk = WriteSingleVoxelAt(posInt, voxel, priority);
         if (affectedChunk != null) {
             //Send network update
-            if (RunCore.IsServer() && worldNetworker != null) {
+            if (RunCore.IsServer() && worldNetworker != null && worldNetworker.networkWriteVoxels) {
                 worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
             }
         }
@@ -245,7 +278,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk.GetVoxelAt(voxelPos) == 0) return;
         
         chunk.WriteVoxelColor(voxelPos, color);
-        DirtyMesh(voxelPos, priority);
+        DirtyNeighborMeshes(voxelPos, priority);
     }
     
     public void DamageVoxelAt(Vector3 pos, float damage, bool priority) {
@@ -288,6 +321,14 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         this.WriteVoxelGroupAt(positions, nums, priority);
+    }
+
+    public ushort[] BulkReadVoxels(Vector3[] positions) {
+        var result = new ushort[positions.Length];
+        for (var i = 0; i < positions.Length; i++) {
+            result[i] = ReadVoxelAt(positions[i]);
+        }
+        return result;
     }
 
     public void WriteVoxelGroupAt(Vector3[] positions, double[] nums, bool priority) {
@@ -517,7 +558,7 @@ public partial class VoxelWorld : MonoBehaviour {
         chunks.TryGetValue(chunkKey, out Chunk value);
         if (value == null) {
             return 0;
-        }
+        } 
 
         return value.GetVoxelAt(posi);
     }
@@ -866,6 +907,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private void Awake() {
         doVisuals = RunCore.IsClient() || Application.isEditor;
+        PrepareVoxelWorldGameObject();
     }
 
     public VoxelWorld() {

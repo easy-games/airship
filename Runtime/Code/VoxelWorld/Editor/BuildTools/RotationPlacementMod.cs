@@ -6,7 +6,7 @@ public class RotationPlacementMod : VoxelPlacementModifier {
         return "Rotation Symmetry";
     }
 
-    public override void OnPlaceVoxels(VoxelWorld world, HashSet<Vector3Int> positions, int data) {
+    public override void OnPlaceVoxels(VoxelWorld world, HashSet<Vector3Int> positions) {
         var toAdd = new List<Vector3Int>();
         // For each current placement position rotate it 3 times around center
         foreach (var pos in positions) {

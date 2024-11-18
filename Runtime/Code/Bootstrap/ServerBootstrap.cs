@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using Agones;
 using Agones.Model;
+using Code.Analytics;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
@@ -29,6 +30,7 @@ public struct StartupConfig {
 	[FormerlySerializedAs("GameBundleVersion")] public string GameAssetVersion; // UUID
 	public string GameCodeVersion;
 	public string StartingSceneName;
+	public string GamePublishVersion;
 	public string CdnUrl; // Base url where we download bundles
 	public List<AirshipPackageDocument> packages;
 }
@@ -111,11 +113,14 @@ public class ServerBootstrap : MonoBehaviour
 				AirshipNetworkManager.singleton.StartHost();
 			} else {
 				AirshipNetworkManager.singleton.StartServer();
+				Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
 			}
 		} else {
 			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = 7654;
+
 			AirshipNetworkManager.singleton.StartServer();
+			Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
 		}
 
 		this.Setup();
@@ -201,8 +206,10 @@ public class ServerBootstrap : MonoBehaviour
 				id = this.startupConfig.GameBundleId,
 				assetVersion = this.startupConfig.GameAssetVersion,
 				codeVersion = this.startupConfig.GameCodeVersion,
+				publishVersionNumber = this.startupConfig.GamePublishVersion,
 				game = true
 			});
+			AnalyticsRecorder.InitGame(this.startupConfig);
 
 			// remember, this is being called in local dev env. NOT STAGING!
 			StartCoroutine(LoadWithStartupConfig(null, null));
@@ -234,6 +241,7 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.GameBundleId = annotations["GameId"];
 			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];
 			startupConfig.GameCodeVersion = annotations["GameCodeVersion"];
+			startupConfig.GamePublishVersion = annotations["GamePublishVersion"];
 
 			// print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
@@ -246,6 +254,7 @@ public class ServerBootstrap : MonoBehaviour
 					id = requiredPkg.packageSlug,
 					assetVersion = requiredPkg.assetVersionNumber + "",
 					codeVersion = requiredPkg.codeVersionNumber + "",
+					publishVersionNumber = requiredPkg.publishVersionNumber + "",
 					defaultPackage = true,
 				});
 			}
@@ -349,6 +358,7 @@ public class ServerBootstrap : MonoBehaviour
 					try {
 						package.codeVersion = data.version.package.codeVersionNumber.ToString();
 						package.assetVersion = data.version.package.assetVersionNumber.ToString();
+						package.publishVersionNumber = data.version.package.publishVersionNumber.ToString();
 					} catch (Exception e) {
 						Debug.LogError("Failed to fetch latest version of " + package.id + ": " + e);
 					}
@@ -366,14 +376,16 @@ public class ServerBootstrap : MonoBehaviour
 			id = this.startupConfig.GameBundleId,
 			assetVersion = this.startupConfig.GameAssetVersion,
 			codeVersion = this.startupConfig.GameCodeVersion,
+			publishVersionNumber = this.startupConfig.GamePublishVersion,
 			game = true,
 		});
 
 		Debug.Log("Startup packages:");
 		foreach (var doc in this.startupConfig.packages) {
-			Debug.Log($"	 - id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, game={doc.game},");
+			Debug.Log($"	 - id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, publish={doc.publishVersionNumber}, game={doc.game},");
 		}
 		Debug.Log("  - " + gameCodeZipUrl);
+		AnalyticsRecorder.InitGame(this.startupConfig);
 
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray(), gameCodeZipUrl);
 	}
@@ -385,7 +397,9 @@ public class ServerBootstrap : MonoBehaviour
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
 		foreach (var doc in startupConfig.packages) {
-			packages.Add(new AirshipPackage(doc.id, doc.assetVersion, doc.codeVersion, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+			// print("Loading pkg: " + doc.id);
+			if (doc.id.ToLower() == "@easy/corematerials") continue;
+			packages.Add(new AirshipPackage(doc.id, doc.assetVersion, doc.codeVersion, doc.publishVersionNumber, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
 		}
 
 		// Download bundles over network

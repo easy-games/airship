@@ -146,7 +146,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
             Debug.Log($"@Easy/Core: {versions[0]}");
             List<AirshipPackage> packages = new();
-            packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, "", AirshipPackageType.Package));
             // packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 await this.StartPackageDownload(packages);

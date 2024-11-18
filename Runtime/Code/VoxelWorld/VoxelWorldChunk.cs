@@ -195,18 +195,19 @@ namespace VoxelWorldStuff {
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for (int z = 0; z < chunkSize; z++) {
-                        
-                        BlockId blockId = VoxelWorld.VoxelDataToBlockId(GetLocalVoxelAt(x, y, z));
+
+                        var voxelData = GetLocalVoxelAt(x, y, z);
+                        BlockId blockId = VoxelWorld.VoxelDataToBlockId(voxelData);
                         
                         if (blockId > 0) {
                             var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
                             if (blockDefinition.definition.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
                                 GameObject prefabDef = blockDefinition.definition.prefab;
-                                GameObject prefab = GameObject.Instantiate(prefabDef);
                                 Vector3Int pos = new Vector3Int(x, y, z);
+                                var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
+                                var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
+                                GameObject prefab = GameObject.Instantiate(prefabDef, origin + pos, rot,  obj.transform);
                                 prefab.transform.parent = obj.transform;
-                                prefab.transform.localPosition = origin + pos;
-                                prefab.transform.localRotation = Quaternion.identity;
                                 prefab.transform.localScale = Vector3.one;
 
                                 if (blockDefinition.definition.randomRotation) {
@@ -353,6 +354,10 @@ namespace VoxelWorldStuff {
         public Color32 GetVoxelColorAt(Vector3Int worldPos) {
             var key = WorldPosToVoxelIndex(worldPos);
             var col= color[key];
+            return UIntToColor32(col);
+        }
+
+        private Color32 UIntToColor32(uint col) {
             var r = (byte) ((col & 0xFF000000) >> 24);
             var g = (byte) ((col & 0x00FF0000) >> 16);
             var b = (byte) ((col & 0x0000FF00) >> 8);
@@ -390,6 +395,14 @@ namespace VoxelWorldStuff {
         public UInt16 GetLocalVoxelAt(int localX, int localY, int localZ) {
             int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
             return readWriteVoxel[key];
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Color32 GetLocalColorAt(int localX, int localY, int localZ) {
+            int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
+            var col = color[key];
+            if (col == 0) return default;
+            return UIntToColor32(col);
         }
 
         public void Clear() {
@@ -435,7 +448,7 @@ namespace VoxelWorldStuff {
                     obj.transform.localRotation = Quaternion.identity;
                     obj.transform.localScale = Vector3.one;
                     obj.transform.localPosition = Vector3.zero;
-            
+                    obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                     obj.name = "Chunk";
 
                     renderer = obj.AddComponent<MeshRenderer>();
@@ -481,6 +494,7 @@ namespace VoxelWorldStuff {
 
         private bool DoVisualUpdate(VoxelWorld world) {
             if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true) {
+                LODGroup lodSystem = null;
                 //This runs on the main thread, so we can do unity scene manipulation here (and only here)
                 if (meshProcessor.GetGeometryReady() == true) {
                      
@@ -497,9 +511,10 @@ namespace VoxelWorldStuff {
                         obj.transform.localRotation = Quaternion.identity;
                         obj.transform.localScale = Vector3.one;
                         obj.transform.localPosition = Vector3.zero;
+                        obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
                         
-                        mesh = new Mesh();
+                        if (mesh == null) mesh = new Mesh();
                         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                         filter = obj.AddComponent<MeshFilter>();
@@ -513,6 +528,7 @@ namespace VoxelWorldStuff {
 
                             if (detailGameObjects == null) {
                                 detailGameObjects = new GameObject[3];
+                                
 
                                 detailMeshes = new Mesh[3];
                                 detailFilters = new MeshFilter[3];
@@ -521,6 +537,7 @@ namespace VoxelWorldStuff {
 
                             for (int i = 0; i < 3; i++) {
                                 detailGameObjects[i] = new GameObject();
+                                detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                                 detailGameObjects[i].transform.parent = obj.transform;
 
                                 detailGameObjects[i].transform.localRotation = Quaternion.identity;
@@ -541,26 +558,28 @@ namespace VoxelWorldStuff {
                                 detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
 
                                 detailMeshes[i] = new Mesh();
+                                // Reading that this might cause mesh to not render on some platforms:
+                                // https://docs.unity3d.com/ScriptReference/Mesh-indexFormat.html
                                 detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                                 detailFilters[i].mesh = detailMeshes[i];
-
-
-                                LODGroup lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
-
-                                // Enable crossfade
-                                lodSystem.fadeMode = LODFadeMode.CrossFade;
-                                lodSystem.animateCrossFading = true;
-
-                                // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
-                                LOD[] lods = new LOD[3] {
-                                    new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
-                                    new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
-                                    new LOD(0.0f, new Renderer[] { detailRenderers[2] })
-                                };
-
-                                lodSystem.SetLODs(lods);
                             }
+                            
+                            lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
+
+                            // Enable crossfade
+                            lodSystem.fadeMode = LODFadeMode.CrossFade;
+                            lodSystem.animateCrossFading = true;
+
+                            // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
+                            LOD[] lods = new LOD[3] {
+                                new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
+                                new LOD(0.0f, new Renderer[] { detailRenderers[2] })
+                            };
+
+                            lodSystem.SetLODs(lods);
+                            lodSystem.RecalculateBounds();
                         }
                         else {
                             if (detailGameObjects != null) {
@@ -604,6 +623,12 @@ namespace VoxelWorldStuff {
                 meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, world);
                 meshProcessor = null; //clear it
                 Profiler.EndSample();
+
+                if (lodSystem != null) {
+                    Profiler.BeginSample("RecalculateLodBounds");
+                    lodSystem.RecalculateBounds();
+                    Profiler.EndSample();
+                }
 
                 Profiler.BeginSample("UpdatePropertiesForChunk");
                 materialPropertiesDirty = true;

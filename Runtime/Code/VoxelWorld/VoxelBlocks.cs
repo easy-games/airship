@@ -15,6 +15,7 @@ using UnityEditor;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using UnityEngine.Tilemaps;
+using VoxelWorldStuff;
 
 [LuauAPI]
 public class VoxelBlocks : MonoBehaviour {
@@ -242,11 +243,25 @@ public class VoxelBlocks : MonoBehaviour {
         public Rect topUvs;
         public Rect bottomUvs;
         public Rect sideUvs;
-     
 
+
+        /// <summary>
+        /// Read only! To write to materials use SetMaterial
+        /// </summary>
         public Material[] materials = new Material[6];
-        public Material meshMaterial;
-        //public string meshMaterialName;
+        public int[] materialInstanceIds = new int[6];
+        
+        private Material _meshMaterial;
+
+        public Material meshMaterial {
+            get => _meshMaterial;
+            set {
+                _meshMaterial = value;
+                meshMaterialInstanceId = value.GetInstanceID();
+                MeshProcessor.materialIdToMaterial[meshMaterialInstanceId] = _meshMaterial;
+            }
+        }
+        public int meshMaterialInstanceId;
         
         [CanBeNull]
         public string[] minecraftConversions;
@@ -260,6 +275,17 @@ public class VoxelBlocks : MonoBehaviour {
                 case 4: return topUvs;
                 case 5: return bottomUvs;
             }
+        }
+        
+        [HideFromTS]
+        public void SetMaterial(int index, Material material) {
+            this.materials[index] = material;
+            
+            var instanceId = material.GetInstanceID();
+            this.materialInstanceIds[index] = instanceId;
+
+            // Register material
+            MeshProcessor.materialIdToMaterial[instanceId] = material;
         }
     }
 
@@ -504,6 +530,7 @@ public class VoxelBlocks : MonoBehaviour {
         }
 
         block.meshMaterial = block.definition.meshMaterial;
+        block.meshMaterialInstanceId = block.meshMaterial.GetInstanceID();
         var meshList = new VoxelMeshCopy[(int)QuarterBlockTypes.MAX];
         block.meshContexts.Add(meshList); //Random variation
         //VoxelQuarterBlockMeshDefinition source = block.definition.quarterBlockMesh;
@@ -978,33 +1005,28 @@ public class VoxelBlocks : MonoBehaviour {
         Profiler.BeginSample("CreateMaterials");
         foreach (var blockRec in loadedBlocks) {
             for (int i = 0; i < 6; i++) {
-                blockRec.Value.materials[i] = atlasMaterial;
+                blockRec.Value.SetMaterial(i, atlasMaterial);
             }
 
             Material fullMaterial = blockRec.Value.definition.topTexture.material;
             if (fullMaterial != null) {
-
-                blockRec.Value.materials[0] = fullMaterial;
-                blockRec.Value.materials[1] = fullMaterial;
-                blockRec.Value.materials[2] = fullMaterial;
-                blockRec.Value.materials[3] = fullMaterial;
-                blockRec.Value.materials[4] = fullMaterial;
-                blockRec.Value.materials[5] = fullMaterial;
+                for (var i = 0; i < 6; i++) {
+                    blockRec.Value.SetMaterial(i, fullMaterial);
+                }
             }
 
             if (blockRec.Value.definition.topTexture.material != null) {
-                blockRec.Value.materials[4] = blockRec.Value.definition.topTexture.material;
+                blockRec.Value.SetMaterial(4, blockRec.Value.definition.topTexture.material);
             }
             
             if (blockRec.Value.definition.sideTexture.material != null) {
-                blockRec.Value.materials[0] = blockRec.Value.definition.sideTexture.material;
-                blockRec.Value.materials[1] = blockRec.Value.definition.sideTexture.material;
-                blockRec.Value.materials[2] = blockRec.Value.definition.sideTexture.material;
-                blockRec.Value.materials[3] = blockRec.Value.definition.sideTexture.material;
+                for (var i = 0; i < 4; i++) {
+                    blockRec.Value.SetMaterial(i, blockRec.Value.definition.sideTexture.material);
+                }
             }
 
             if (blockRec.Value.definition.bottomTexture.material != null) {
-                blockRec.Value.materials[5] = blockRec.Value.definition.bottomTexture.material;
+                blockRec.Value.SetMaterial(5, blockRec.Value.definition.bottomTexture.material);
             }
 
             /*
@@ -1192,7 +1214,7 @@ public class VoxelBlocks : MonoBehaviour {
         blockIdLookup.Add(name, blockDef.blockId);
 
         for (int i = 0; i < 6; i++) {
-            blockDef.materials[i] = atlasMaterial;
+            blockDef.SetMaterial(i, atlasMaterial);
         }
 
         return blockDef;
