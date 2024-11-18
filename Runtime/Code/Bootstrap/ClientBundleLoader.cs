@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using Airship.DevConsole;
 using Code.Authentication;
+using Code.Analytics;
 using Luau;
 using Mirror;
 using UnityEngine;
@@ -168,6 +169,7 @@ namespace Code.Bootstrap {
                 }
 
                 this.isFinishedPreparing = true;
+                AnalyticsRecorder.InitGame(data.startupConfig);
                 NetworkClient.Send(new ClientFinishedPreparingMessage());
             }, false);
 
