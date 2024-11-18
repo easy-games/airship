@@ -169,9 +169,21 @@ namespace Luau {
             return path.ToLower().StartsWith("assets/") ? path[7..] : path;
         }
 
+        private Dictionary<string, string> scriptPathByTypeNameCache = new();
+        private Dictionary<(string childPath, string parentPath), bool> inheritanceChecks = new();
+        
         [CanBeNull]
         public string GetScriptPathByTypeName(string typeName) {
-            return (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
+            if (scriptPathByTypeNameCache.TryGetValue(typeName, out var scriptPath)) {
+                return scriptPath;
+            }
+
+            scriptPath = (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
+            
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+            scriptPathByTypeNameCache.TryAdd(typeName, scriptPath);
+#endif
+            return scriptPath;
         }
         
         /// <summary>
@@ -181,17 +193,33 @@ namespace Luau {
         /// <param name="parentPath">The path of the parent script</param>
         /// <returns>True if the child script inherits the parent script</returns>
         public bool Inherits(string childPath, string parentPath) {
-            childPath = StripAssetPrefix(childPath).ToLower();
-            parentPath = StripAssetPrefix(parentPath).ToLower();
+            if (inheritanceChecks.TryGetValue((childPath, parentPath), out var result)) {
+                return result;
+            }
+
+            var childPathNormalized = StripAssetPrefix(childPath).ToLower();
+            var parentPathNormalized = StripAssetPrefix(parentPath).ToLower();
+
+            if (childPathNormalized == parentPathNormalized) {
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+                inheritanceChecks.TryAdd((childPath, parentPath), true);
+#endif
+                return true;
+            };
             
-            if (childPath == parentPath) return true;
-            
-            var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.ToLower() == parentPath);
+            var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.Equals(parentPathNormalized, StringComparison.OrdinalIgnoreCase));
             if (extendsMeta == null) {
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+                inheritanceChecks.TryAdd((childPath, parentPath), false);
+#endif
                 return false;
             }
             
-            var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPath);
+            var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPathNormalized);
+
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+            inheritanceChecks.TryAdd((childPath, parentPath), isExtending);
+#endif
             return isExtending;
         }
 
