@@ -317,12 +317,12 @@ public partial class LuauCore : MonoBehaviour {
                             && propertyObjectRef.GetType() == typeof(Transform)
                         ) {
                             var targetTransform = (Transform)objectReference;
-                            if (IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                            if (IsProtectedScene(targetTransform.gameObject.scene)) {
                                 return LuauError(thread, "[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
                             }
 
                             var valueTransform = (Transform)propertyObjectRef;
-                            if (IsProtectedScene(valueTransform.gameObject.scene.name)) {
+                            if (IsProtectedScene(valueTransform.gameObject.scene)) {
                                 return LuauError(thread, "[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
                             }
                         }
@@ -1019,7 +1019,7 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         //Check to see if this was an event (OnEventname)  
-        if (methodName.ToLower().StartsWith("on") && methodName.Length > 2)
+        if (methodName.StartsWith("on", StringComparison.OrdinalIgnoreCase) && methodName.Length > 2)
         {
             EventInfo eventInfo = type.GetRuntimeEvent(methodName.Substring(2));
             if (eventInfo == null)
@@ -1130,7 +1130,7 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
 
-                if (targetTransform != null && IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                if (targetTransform != null && IsProtectedScene(targetTransform.gameObject.scene)) {
                     return LuauError(thread, $"[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                 }
             } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
@@ -1138,12 +1138,12 @@ public partial class LuauCore : MonoBehaviour {
                     var paramType = parsedData[0].GetType();
                     if (paramType == typeof(GameObject)) {
                         var param = parsedData[0] as GameObject;
-                        if (param != null && IsProtectedScene(param.scene.name)) {
+                        if (param != null && IsProtectedScene(param.scene)) {
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected GameObject \"{param.name}\"");
                         }
                     } else if (paramType == typeof(Component)) {
                         var param = parsedData[0] as Component;
-                        if (param != null && IsProtectedScene(param.gameObject.scene.name)) {
+                        if (param != null && IsProtectedScene(param.gameObject.scene)) {
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected Component \"{param.gameObject.name}\"");
                         }
                     }

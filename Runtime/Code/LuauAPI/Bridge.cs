@@ -372,7 +372,7 @@ public static class Bridge {
     }
 
     public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
-        if (LuauCore.IsProtectedScene(scene.name) && LuauCore.CurrentContext == LuauContext.Game) {
+        if (LuauCore.IsProtectedScene(scene) && LuauCore.CurrentContext == LuauContext.Game) {
             Debug.Log("[Airship] Unable to move gameobject to protected scene.");
             return;
         }
@@ -389,7 +389,7 @@ public static class Bridge {
         List<Scene> scenes = new();
         for (int i = 0; i < SceneManager.sceneCount; i++) {
             Scene scene = SceneManager.GetSceneAt(i);
-            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene.name)) {
+            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene)) {
                 continue;
             }
             scenes.Add(scene);

@@ -511,8 +511,9 @@ public class AirshipComponent : MonoBehaviour {
         }
 #if UNITY_EDITOR
         if (!validatedSceneInGameConfig) {
-            var sceneName = this.gameObject.scene.name;
-            if (!LuauCore.IsProtectedScene(sceneName)) {
+            var scene = this.gameObject.scene;
+            if (!LuauCore.IsProtectedScene(scene)) {
+                var sceneName = scene.name;
                 var gameConfig = GameConfig.Load();
                 if (gameConfig.gameScenes.ToList().Find((s) => ((SceneAsset)s).name == sceneName) == null) {
                     throw new Exception(

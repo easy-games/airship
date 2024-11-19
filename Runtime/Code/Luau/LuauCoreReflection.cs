@@ -950,6 +950,10 @@ public partial class LuauCore : MonoBehaviour
                     if (parameters.Length != (numParameters + 1)) {
                         continue;
                     }
+                    // Faster than GetCustomAttribute (I think) to quickly eliminate this as an option
+                    if (parameters[0].ParameterType != typeof(LuauContext)) {
+                        continue;
+                    }
                     
                     contextAttached = info.GetCustomAttribute<AttachContext>() != null;
                     if (!contextAttached) continue;

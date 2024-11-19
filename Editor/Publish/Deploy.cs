@@ -105,7 +105,7 @@ public class Deploy {
 		}
 
 		foreach (var scene in gameConfig.gameScenes) {
-			if (LuauCore.IsProtectedScene(scene.name)) {
+			if (LuauCore.IsProtectedSceneName(scene.name)) {
 				Debug.LogError($"Game scene name not allowed: {scene.name}");
 				yield break;
 			}
@@ -116,7 +116,7 @@ public class Deploy {
 			}
 		}
 
-		if (LuauCore.IsProtectedScene(gameConfig.startingScene.name)) {
+		if (LuauCore.IsProtectedSceneName(gameConfig.startingScene.name)) {
 			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingScene}");
 			yield break;
 		}
