@@ -37,9 +37,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
             return movement.GetVelocity();
         } 
     }
-#endregion 
 
-#region INIT
+    public override string friendlyName => "PredictedCharacter_"+movement.gameObject.name;
+    #endregion
+
+    #region INIT
     protected override void Awake() {
         tf = transform;
         base.Awake();
@@ -61,7 +63,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 #region PREDICTION
 
     protected override bool NeedsCorrection(CharacterMovementState serverState, CharacterMovementState interpolatedState){
-        return false;
+        return base.NeedsCorrection(serverState, interpolatedState);
     }
 
     public override void SnapTo(CharacterMovementState newState){
@@ -138,14 +140,14 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
         //Save the future inputs
         replayPredictionStates.Clear();
-        for(int i=historyIndex; i < stateHistory.Count; i++){
+        for(int i=historyIndex ; i < stateHistory.Count; i++){
             var nextState = stateHistory[historyIndex];
-            print("Replaying state: " + nextState.timestamp + " jump: " + nextState.currentMoveInput.jump);
+            //print("Replaying state: " + nextState.timestamp + " jump: " + nextState.currentMoveInput.jump);
             //Store the states into a new array
             replayPredictionStates.Add(nextState);
-            //Clear the official history since we will be re writing it
-            stateHistory.Remove(historyIndex);
         }
+        //Clear the official history since we will be re writing it
+        stateHistory.Clear();
 
         //Snap to the servers state
         SnapTo((CharacterMovementState)initialState);

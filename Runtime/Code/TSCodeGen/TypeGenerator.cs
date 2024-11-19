@@ -243,6 +243,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
+            typeof(CharacterMovementState),
             
             // Steam
             typeof(AirshipSteamFriendInfo),

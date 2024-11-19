@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class CharacterStateSyncData {
     public CharacterState state = CharacterState.Idle;
     public bool grounded = true;
@@ -14,6 +16,7 @@ public class CharacterStateSyncData {
                this.crouching == data.crouching && 
                this.localVelocity == data.localVelocity;
     }
+
     public override int GetHashCode() {
         unchecked {
             int hashCode = state.GetHashCode();

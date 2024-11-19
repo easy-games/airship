@@ -26,7 +26,6 @@ public class CharacterMovementState : AirshipPredictedState{
     public float timeSinceBecameGrounded;
     public float timeSinceWasGrounded;
     public float timeSinceJump;
-    public BinaryBlob customData;
 
     public CharacterMovementState(){
     }
