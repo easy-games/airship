@@ -28,6 +28,7 @@ namespace Code.Analytics
                 activePackages = activePackages,
                 errors = errors,
                 gameVersionId = AnalyticsRecorder.startupConfig.Value.GameAssetVersion,
+                playerVersionId = AirshipConst.playerVersion.ToString(),
             };
             var json = JsonUtility.ToJson(message);
 
@@ -54,6 +55,7 @@ namespace Code.Analytics
                 gameId = AnalyticsRecorder.startupConfig.Value.GameBundleId,
                 gameVersionId = AnalyticsRecorder.startupConfig.Value.GamePublishVersion,
                 serverId = this.serverBootstrap.serverContext.serverId,
+                playerVersionId = AirshipConst.playerVersion.ToString(),
             };
             var json = JsonUtility.ToJson(message);
 

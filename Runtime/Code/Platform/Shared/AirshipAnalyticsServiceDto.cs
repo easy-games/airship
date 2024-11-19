@@ -24,6 +24,8 @@ namespace Code.Platform.Shared {
     public class AirshipAnalyticsServerDto {
         // The version id of the game, e.g. 123
         public string gameVersionId;
+        // The player version id of the server
+        public string playerVersionId;
         // The list of active packages currently installed on the server
         public List<ActivePackage> activePackages;
         // The list of lua errors that have occurred on the server
@@ -39,6 +41,8 @@ namespace Code.Platform.Shared {
         public string gameVersionId;
         // The id of the currently connected server
         public string serverId;
+        // The player version id of the client
+        public string playerVersionId;
         // The list of active packages currently installed on the server
         public List<ActivePackage> activePackages;
         // The list of lua errors that have occurred on the server
