@@ -7,6 +7,7 @@ using Code.Bootstrap;
 using Luau;
 using System;
 using Airship.DevConsole;
+using Code.Bundles;
 using JetBrains.Annotations;
 using Mirror;
 #if UNITY_EDITOR
@@ -592,14 +593,24 @@ public class SystemRoot : Singleton<SystemRoot> {
 		DevConsole.AddCommand(Command.Create("luau", "", "Prints info about the Luau plugin", () => {
 			var pluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
 			var bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
-			var server = FindAnyObjectByType<LuauVersionFetcher>();
+			var server = FindAnyObjectByType<AirshipVersionFetcher>();
 			
 			Debug.Log($"CLIENT: {pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
 			if (server != null) {
-				Debug.Log($"SERVER: {server.version} - Bytecode Version: {server.bytecodeVersion.Target} (Min: {server.bytecodeVersion.Min}, Max: {server.bytecodeVersion.Max})");
-				if (pluginVersion != server.version) {
+				Debug.Log($"SERVER: {server.luauPluginVersion} - Bytecode Version: {server.bytecodeVersion.Target} (Min: {server.bytecodeVersion.Min}, Max: {server.bytecodeVersion.Max})");
+				if (pluginVersion != server.luauPluginVersion) {
 					Debug.LogWarning("Luau plugin version mismatch between server and client");
 				}
+			}
+		}));
+
+		DevConsole.AddCommand(Command.Create("version", "", "Prints version git hash", () => {
+			var localVersion = AirshipVersion.GetVersionHash();
+			Debug.Log("Client: #" + localVersion);
+
+			var server = FindAnyObjectByType<AirshipVersionFetcher>();
+			if (server != null) {
+				Debug.Log("Server: #" + server.serverPlayerVersion);
 			}
 		}));
 	}
