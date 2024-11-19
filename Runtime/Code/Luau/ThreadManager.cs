@@ -64,7 +64,7 @@ namespace Luau {
         
         //Keep strong references to all objects created
         private static Dictionary<int, object> s_objectKeys = new();
-        private static Dictionary<object, int> s_reverseObjectKeys = new();
+        public static Dictionary<object, int> s_reverseObjectKeys = new();
         private static HashSet<int> s_cleanUpKeys = new HashSet<int>();
 
         //Debugging
@@ -331,7 +331,10 @@ namespace Luau {
             Profiler.BeginSample("RemoveObjectKeys");
             for (int i = 0; i < numDestroyedGameObjectIds; i++) {
                 var key = listOfDestroyedGameObjectIds.Array[i];
-                s_objectKeys.Remove(key);
+                if (s_objectKeys.TryGetValue(key, out var obj)) {
+                    s_objectKeys.Remove(key);
+                    s_reverseObjectKeys.Remove(obj);
+                }
             }
             Profiler.EndSample();
 
