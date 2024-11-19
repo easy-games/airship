@@ -548,6 +548,17 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 		));
 
+		DevConsole.AddCommand(Command.Create("trackedidentities", "", "Network Identity Leaks", () => {
+			var count = 0;
+			foreach (var entry in ThreadDataManager.s_reverseObjectKeys)
+			{
+				if (entry.Key is NetworkIdentity) {
+					count++;
+				}				
+			}
+			Debug.Log("Total tracked network identities: " + count);
+		}));
+
 		DevConsole.AddCommand(Command.Create<string>(
 			"gc",
 			"",
