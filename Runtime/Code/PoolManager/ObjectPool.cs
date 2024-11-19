@@ -47,13 +47,19 @@ namespace Code.PoolManager
                 lastIndex++;
                 if (lastIndex > list.Count - 1) lastIndex = 0;
 
-                if (list[lastIndex].Used)
+                var c = list[lastIndex];
+                if (c.Used || c.Destroyed)
                 {
                     continue;
                 }
                 else
                 {
-                    container = list[lastIndex];
+                    if (c.Item == null) {
+                        c.Destroyed = true;
+                        continue;
+                    }
+
+                    container = c;
                     break;
                 }
             }
