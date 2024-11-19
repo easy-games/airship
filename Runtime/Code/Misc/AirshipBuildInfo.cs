@@ -202,7 +202,7 @@ namespace Luau {
 
             if (childPathNormalized == parentPathNormalized) {
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-                inheritanceChecks.Add((childPath, parentPath), true);
+                inheritanceCheckCache.Add((childPath, parentPath), true);
 #endif
                 return true;
             };
@@ -210,7 +210,7 @@ namespace Luau {
             var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.Equals(parentPathNormalized, StringComparison.OrdinalIgnoreCase));
             if (extendsMeta == null) {
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-                inheritanceChecks.Add((childPath, parentPath), false);
+                inheritanceCheckCache.Add((childPath, parentPath), false);
 #endif
                 return false;
             }
@@ -218,7 +218,7 @@ namespace Luau {
             var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPathNormalized);
 
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-            inheritanceChecks.Add((childPath, parentPath), isExtending);
+            inheritanceCheckCache.Add((childPath, parentPath), isExtending);
 #endif
             return isExtending;
         }
