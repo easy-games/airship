@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Code.Bundles;
 using Code.Platform.Shared;
 using Code.Platform.Server;
 using Code.Platform.Client;
@@ -28,7 +29,7 @@ namespace Code.Analytics
                 activePackages = activePackages,
                 errors = errors,
                 gameVersionId = AnalyticsRecorder.startupConfig.Value.GameAssetVersion,
-                playerVersionId = AirshipConst.playerVersion.ToString(),
+                playerVersionId = AirshipVersion.GetVersionHash(),
             };
             var json = JsonUtility.ToJson(message);
 
