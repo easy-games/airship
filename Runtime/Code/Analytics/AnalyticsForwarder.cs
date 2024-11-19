@@ -31,8 +31,7 @@ namespace Code.Analytics
             };
             var json = JsonUtility.ToJson(message);
 
-            if (isAlreadySending) return;
-
+#if !UNITY_EDITOR
             isAlreadySending = true;
             AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) =>
             {
@@ -42,6 +41,8 @@ namespace Code.Analytics
                     Debug.LogError("Failed to send analytics: " + t.Result.error);
                 }
             });
+#endif
+
         }
 
         void SendClientMessages(List<ReportableError> errors, List<ActivePackage> activePackages)
@@ -56,8 +57,7 @@ namespace Code.Analytics
             };
             var json = JsonUtility.ToJson(message);
 
-            if (isAlreadySending) return;
-
+#if !UNITY_EDITOR
             isAlreadySending = true;
             AnalyticsServiceClient.SendClientAnalytics(message).ContinueWith((t) =>
             {
@@ -67,6 +67,7 @@ namespace Code.Analytics
                     Debug.LogError("Failed to send analytics: " + t.Result.error);
                 }
             });
+#endif
         }
 
 
@@ -75,7 +76,8 @@ namespace Code.Analytics
             try
             {
                 isScheduled = false;
-                if (AnalyticsRecorder.startupConfig == null)  return;
+                if (AnalyticsRecorder.startupConfig == null) return;
+                if (isAlreadySending) return;
 
                 // Perform your action here
                 var errors = AnalyticsRecorder.GetAndClearErrors();
