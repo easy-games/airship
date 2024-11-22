@@ -85,12 +85,12 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     // manually store last recorded so we can easily check against this
     // without traversing the SortedList.
     protected T lastRecorded {get; private set;}
-    double lastRecordTime;
+    protected double lastRecordTime {get; private set;}
 
     //Mothion Smoothing
-    private float velocityCorrectionThresholdSqr; // ² cached in Awake
-    private float velocitySnapThresholdSqr; // ² cached in Awake
-    private double positionCorrectionThresholdSqr; // ² cached in Awake
+    protected float velocityCorrectionThresholdSqr; // ² cached in Awake
+    protected float velocitySnapThresholdSqr; // ² cached in Awake
+    protected double positionCorrectionThresholdSqr; // ² cached in Awake
     
 #endregion
 
@@ -151,6 +151,8 @@ protected void Log(string message){
         velocitySnapThresholdSqr = velocitySnapThreshold * velocitySnapThreshold;
         velocityCorrectionThresholdSqr = velocityCorrectionThreshold * velocityCorrectionThreshold;
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
+
+        PrintHistory("Starting history");
     }
 
     protected virtual void OnEnable() {
@@ -232,10 +234,6 @@ protected void Log(string message){
             // Adding a buffer margin so that our stored history always remains in the future of recieved server states
             RecordState(NetworkTime.predictedTime + .5);
         }
-
-        protected void AttemptToRecord(){
-            
-        }
 #endregion
 
 
@@ -243,12 +241,13 @@ protected void Log(string message){
 #region PREDICTION
     //If we are in a new state then insert the current state into the history at this specific time
     protected void RecordState(double stateTime) {
-        print("Recording: " + stateTime);
-        lastRecordTime = NetworkTime.time;
-
         // FixedUpdate may run twice in the same frame / NetworkTime.time.
         // for now, simply don't record if already recorded there.
-        if (lastRecorded != null && stateTime == lastRecorded.timestamp) return;
+        if (NetworkTime.time == lastRecordTime) return;
+
+        lastRecordTime = NetworkTime.time;
+
+        //PrintHistory("Recording: " + stateTime);
 
         // keep state history within limit
         if (stateHistory.Count >= stateHistoryLimit)
@@ -265,7 +264,7 @@ protected void Log(string message){
     //Update our rigidbody to match a new snapshot state
     void ApplyState(T snapshotState){
         // Hard snap to the state
-        //Log($"Prediction: snapped {name} into place because velocity {currentVelocity.magnitude:F3} <= {velocitySnapThreshold:F3}");
+        Log("Applying State: " + snapshotState.timestamp);
 
         // apply server state immediately.
         // important to apply velocity as well, instead of Vector3.zero.
@@ -334,10 +333,15 @@ protected void Log(string message){
         // if there's no latency, we may receive a server state for 'now'.
         // sampling would fail, if we haven't recorded anything in a while.
         // to solve this, always record the current state when receiving a server state.
-        RecordState(NetworkTime.predictedTime);
+        double predictedTime = NetworkTime.predictedTime;
+        if(predictedTime > lastRecorded.timestamp + recordInterval/2 
+            && !this.stateHistory.ContainsKey(predictedTime)){
+            RecordState(predictedTime);
+        }
 
         double oldestTime = stateHistory.Values[0].timestamp;
-        double newestTime = stateHistory.Values[stateHistory.Count - 1].timestamp;
+        double newestTime = lastRecorded.timestamp;
+        double timeDifference = serverTimestamp - predictedTime;
 
         // edge case: is the server state newer than the newest state in history?
         // this can happen if client's predictedTime predicts too far ahead of the server.
@@ -346,27 +350,24 @@ protected void Log(string message){
         //
         // for example, when running prediction on the same machine with near zero latency.
         // when applying corrections here, this looks just fine on the local machine.
-        if (newestTime < serverTimestamp) {
+        // Only force if the difference is significant
+        if (timeDifference > .2) {
             // the correction is for a state in the future.
             // force the state to the server
             // TODO maybe we should interpolate this back to 'now'?
             // this can happen a lot when latency is ~0. logging all the time allocates too much and is too slow.
-            double ahead = serverTimestamp - newestTime;
-            Log($"Hard correction because the server is ahead of the client by {ahead.ToString("#.####"):F1} seconds. \n" +
-                $"serverTime={serverTimestamp:F3} localNewestTime={newestTime:F3} predictionTime: {NetworkTime.predictedTime}\n" +
+            Log($"Hard correction because the server is ahead of the client by {timeDifference.ToString("#.####"):F1} seconds. \n" +
+                $"serverTime={serverTimestamp:F3} localNewestTime={newestTime:F3} predictionTime: {predictedTime}\n" +
                 $"local oldestTime={oldestTime:F3} History of size={stateHistory.Count}. \n" +
                 $"This can happen when latency is near zero, and is fine unless it shows jitter.");
             
-            //Only force if the difference is significant
-            if(ahead > .2){
-                var log = "ALL HISTORY: ";
-                for(int i=0; i<stateHistory.Count; i++){
-                    log += "\n state " + i + ": " + stateHistory.Keys[i];
-                }
-                print(log);
-                ApplyState(serverState);
-                return;
+            var log = "ALL HISTORY: ";
+            for(int i=0; i<stateHistory.Count; i++){
+                log += "\n state " + i + ": " + stateHistory.Keys[i];
             }
+            print(log);
+            ApplyState(serverState);
+            return;
         }
 
         T interpolatedState;
@@ -377,7 +378,7 @@ protected void Log(string message){
         // that it doesn't have a recored history to sample from.
         // in that case, we should hard correct the client.
         // otherwise it could be out of sync as long as it's too far behind.
-        if (serverTimestamp < oldestTime) {
+        if (serverTimestamp < oldestTime - .2) {
             // when starting, client may only have 2-3 states in history.
             // it's expected that server states would be behind those 2-3.
             // only show a warning if it's behind the full history limit!
@@ -392,16 +393,19 @@ protected void Log(string message){
             //Continue to the replay below
         }
         // find the two closest client states between timestamp
-        else if (!Sample(stateHistory, serverTimestamp, out T before, out T after, out afterIndex, out double t))
+        else if (!Sample(stateHistory, serverTimestamp, out T before, out T after, out afterIndex, out double delta))
         {
             // something went very wrong. sampling should've worked.
             // hard correct to recover the error.
             Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ t={serverTimestamp:F3} oldest={oldestTime:F3} newest={newestTime:F3}. This should never happen because the timestamp is within history.");
+            if(oldestTime == 0 || newestTime == 0){
+                PrintHistory();
+            }
             ApplyState(serverState);
             return;
         }else{
             // interpolate between them to get the best approximation
-            interpolatedState = (T)before.Interpolate(after, (float)t);
+            interpolatedState = (T)before.Interpolate(after, (float)delta);
         }
 
 
@@ -416,12 +420,18 @@ protected void Log(string message){
 
 
             //Simulate until the end of our history or however long we think we are ahead of the server whicher is longer
-            double finalTime = lastRecorded.timestamp > NetworkTime.predictedTime ? lastRecorded.timestamp : NetworkTime.predictedTime;
+            double finalTime = lastRecorded.timestamp > predictedTime ? lastRecorded.timestamp : predictedTime;
+            double simulationDifference = finalTime - serverTimestamp;
 
-            print("Replaying until: " + finalTime + " which is " + (finalTime - serverTimestamp) + " seconds away");
+            if(simulationDifference > recordInterval){
+                print("Replaying until: " + finalTime + " which is " + simulationDifference + " seconds away");
 
-            //Replay States
-            AirshipPredictionManager.instance.QueueReplay(this, serverState, finalTime - serverTimestamp, afterIndex);
+                //Replay States
+                AirshipPredictionManager.instance.QueueReplay(this, serverState, simulationDifference, afterIndex);
+            }else{
+                //Snap because there isn't a time difference
+                ApplyState(serverState);
+            }
         }
     }
 #endregion
@@ -471,17 +481,25 @@ protected void Log(string message){
         //Let the child class deserialize its data
         T newState = DeserializeState(reader, timestamp);
 
-        print("Deserialize time: " + timestamp + " readerTime: " + serverDeltaTime);
+        //print("Deserialize time: " + timestamp + " readerTime: " + serverDeltaTime);
         // process received state
         try{
             OnReceivedState(timestamp, newState);
         }catch(Exception e){
-            Debug.LogError("Error on recieved state: " + e.Message + " source: " + e.Source);
+            Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
         }
     }
 #endregion
 
 #region HISTORY
+        public void PrintHistory(string additionalMessage = ""){
+            var log = additionalMessage + " CurrentHistory: ";
+            foreach(var state in stateHistory){
+                log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position + " vel: " + state.Value.velocity;
+            }
+            print(log);
+        }
+
         // get the two states closest to a given timestamp.
         // those can be used to interpolate the exact state at that time.
         // => RingBuffer: see prediction_ringbuffer_2 branch, but it's slower!
@@ -491,23 +509,35 @@ protected void Log(string message){
             out T before,
             out T after,
             out int afterIndex,
-            out double t)     // interpolation factor
+            out double delta)     // interpolation factor
         {
             before = default;
             after  = default;
-            t = 0;
+            delta = 0;
             afterIndex = -1;
 
             // can't sample an empty history
             // interpolation needs at least two entries.
             //   can't Lerp(A, A, 1.5). dist(A, A) * 1.5 is always 0.
             if (history.Count < 2) {
+                print("History is too short");
                 return false;
             }
 
             // older than oldest
             if (timestamp < history.Keys[0]) {
+                print("Time is older than our history");
                 return false;
+            }
+
+            var lastIndex = history.Keys.Count-1;
+            if(timestamp >= history.Keys[lastIndex]){
+                print("Time is newer than our history");
+                before = history.Values[lastIndex-1];
+                after = history.Values[lastIndex];
+                afterIndex = lastIndex;
+                delta = 1;
+                return true;
             }
 
             // iterate through the history
@@ -529,7 +559,7 @@ protected void Log(string message){
                     before = value;
                     after = value;
                     afterIndex = index;
-                    t = Mathd.InverseLerp(key, key, timestamp);
+                    delta = Mathd.InverseLerp(key, key, timestamp);
                     return true;
                 }
 
@@ -539,7 +569,7 @@ protected void Log(string message){
                     before = prev.Value;
                     after = value;
                     afterIndex = index;
-                    t = Mathd.InverseLerp(prev.Key, key, timestamp);
+                    delta = Mathd.InverseLerp(prev.Key, key, timestamp);
                     return true;
                 }
 
@@ -548,6 +578,7 @@ protected void Log(string message){
                 index += 1;
             }
 
+            print("Unable to find valid time");
             return false;
         }
 
@@ -562,11 +593,6 @@ protected void Log(string message){
                 stateHistory.Remove(afterIndex);
             }
             stateHistory.Add(correctedState.timestamp, correctedState);
-            // var log = "Cleared states after: " + correctedState.timestamp;
-            // foreach(var state in stateHistory){
-            //     log += "\n State: " + state.Value.timestamp + " pos: " + state.Value.position;
-            // }
-            //print(log);
         }
 #endregion
 

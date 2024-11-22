@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class CharacterStateSyncData {
+public class CharacterAnimationSyncData {
     public CharacterState state = CharacterState.Idle;
     public bool grounded = true;
     public bool sprinting = false;
@@ -9,7 +9,7 @@ public class CharacterStateSyncData {
 
     // override object.Equals
     public override bool Equals(object obj) {
-        CharacterStateSyncData data = (CharacterStateSyncData)obj;
+        CharacterAnimationSyncData data = (CharacterAnimationSyncData)obj;
         return this.state == data.state &&
                this.grounded == data.grounded &&
                this.sprinting == data.sprinting &&

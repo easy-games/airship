@@ -1,4 +1,5 @@
-﻿using Assets.Luau;
+﻿using System;
+using Assets.Luau;
 using UnityEngine;
 
 /// <summary>
@@ -7,7 +8,7 @@ using UnityEngine;
 ///
 /// TS/Luau can use the CustomData interface to write arbitrary data to this stream.
 /// </summary>
-public struct MoveInputData {
+public struct MoveInputData : IEquatable<MoveInputData>{
 	public Vector3 moveDir;
 	public bool jump;
 	public bool crouch;
@@ -22,5 +23,18 @@ public struct MoveInputData {
 		this.sprint = sprint;
 		this.lookVector = lookVector;
 		this.customData = customData;
+	}
+
+    public bool Equals(MoveInputData other) {
+		return moveDir == other.moveDir &&
+			jump == other.jump && 
+			crouch == other.crouch &&
+			sprint == other.sprint; //&& 
+			//lookVector == other.lookVector;
+    }
+
+    // override object.GetHashCode
+    public override readonly int GetHashCode() {
+		return (moveDir, jump, crouch, sprint, lookVector, customData).GetHashCode();
 	}
 }

@@ -19,7 +19,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 #region PRIVATE
     //Cached Values
     private Transform tf; // this component is performance critical. cache .transform getter!
-    private CharacterMovementState currentState;
+    private CharacterMovementState currentState => movement.currentMoveState;
 
     //For the client this stores inputs to use in the replay.
     private List<CharacterMovementState> replayPredictionStates = new List<CharacterMovementState>();
@@ -44,6 +44,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     #region INIT
     protected override void Awake() {
         tf = transform;
+        recordInterval =  Time.fixedDeltaTime;
         base.Awake();
     }
 
@@ -72,7 +73,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     protected override void FixedUpdate() {
-        //This disables the automatic calls to RecordState()
+        // This disables the automatic calls to RecordState()
     }
     
     private void OnSetMovementData(){
@@ -80,32 +81,50 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
             return;
         }
         
-        //The server applys inputs it recieves from the client
-        int lastIndex = recievedInputs.Count-1;
-        if(lastIndex >= 0 && NetworkTime.time >= recievedInputs.Keys[lastIndex]){
-            if(recievedInputs.Values[lastIndex].jump){
-                print("JUMP Applying inputs from client: " + recievedInputs.Keys[lastIndex] + " servertime: " + NetworkTime.time);
-            }
-            //This input should be used
-            movement.SetMoveInputData(recievedInputs.Values[lastIndex]);
-            recievedInputs.RemoveAt(lastIndex);
+        // The server applys inputs it recieves from the client
+        // int lastIndex = recievedInputs.Count-1;
+        // if(lastIndex >= 0 && NetworkTime.time >= recievedInputs.Keys[lastIndex]){
+        //     if(recievedInputs.Values[lastIndex].jump){
+        //         print("JUMP Applying inputs from client: " + recievedInputs.Keys[lastIndex] + " servertime: " + NetworkTime.time);
+        //     }
+        //     //This input should be used
+        //     movement.SetMoveInputData(recievedInputs.Values[lastIndex]);
+        //     recievedInputs.RemoveAt(lastIndex);
+        // }
+
+        if(recievedInputs.Count > 0 && NetworkTime.time >= recievedInputs.Keys[0] - recordInterval){
+            //print("using input: " + recievedInputs.Keys[0] + " at: " + NetworkTime.time + " remaining: " + (recievedInputs.Count-1));
+             //This input should be used
+            movement.SetMoveInputData(recievedInputs.Values[0]);
+            recievedInputs.RemoveAt(0);
         }
     }
 
+    private MoveInputData lastSentInput;
     private void OnMovementEnd(object data, object isReplay){
-        currentState = (CharacterMovementState)data;
-
-        if(!isClientOnly){
+        if((bool)isReplay || !isClientOnly){
             return;
         }
 
-        //Save the state in the history
+        if (onlyRecordChanges && lastRecorded != null &&
+            lastRecorded.currentMoveInput.Equals(currentState.currentMoveInput) &&
+            lastRecorded.position.Equals(currentState.position) &&
+            lastRecorded.velocity.Equals(currentState.velocity)) {
+            //NetworkTime.time - lastRecordTime < recordInterval) {
+                // Log($"FixedUpdate for {name}: taking optimized early return instead of recording state.");
+                return;
+        }
+
+        // Save the state in the history
         RecordState(NetworkTime.predictedTime);
 
-        //Send the inputs to the server
-        if(currentState.currentMoveInput.jump){
-            print("JUMP sending inputs to server: " + NetworkTime.predictedTime);
+        if(lastSentInput.Equals(currentState.currentMoveInput)){
+            // Don't need to send reduntant data
+            return;
         }
+        this.lastSentInput = currentState.currentMoveInput;
+        // Send the inputs to the server
+        // print("Sending input at: " + NetworkTime.predictedTime);
         SetServerInput(NetworkTime.predictedTime, currentState.currentMoveInput);
     }
 
@@ -131,7 +150,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
     public override CharacterMovementState CreateCurrentState(double currentTime){
         // create state to insert
-        return currentState;
+        return new CharacterMovementState(currentState){timestamp = currentTime};
     }
 #endregion 
 
@@ -141,7 +160,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         //Save the future inputs
         replayPredictionStates.Clear();
         for(int i=historyIndex ; i < stateHistory.Count; i++){
-            var nextState = stateHistory[historyIndex];
+            var nextState = stateHistory.Values[historyIndex];
             //print("Replaying state: " + nextState.timestamp + " jump: " + nextState.currentMoveInput.jump);
             //Store the states into a new array
             replayPredictionStates.Add(nextState);
@@ -159,7 +178,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override void OnReplayTickStarted(double time) {
-        //Before physics sim 
+        //Before physics sim
 
         //If needed apply the inputs the player issued
         if(replayPredictionStates.Count > 0) {
@@ -172,14 +191,15 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
                 replayPredictionStates.RemoveAt(0);
             }
         }
+
         //Run the movement logic based on the saved input history
-        movement.RunMovementTick();
+        movement.RunMovementTick(true);
     }
 
     public override void OnReplayTickFinished(double time) {
-        //After the physics sim
+        // After the physics sim
         
-        //Save the new history state
+        // Save the new history state
         RecordState(time);
     }
 
@@ -190,11 +210,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override void OnReplayingOthersStarted() {
-        //TODO
+        // TODO
     }
 
     public override void OnReplayingOthersFinished() {
-        //TODO
+        // TODO
     }
 #endregion
 

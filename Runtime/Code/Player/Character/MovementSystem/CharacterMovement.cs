@@ -128,7 +128,7 @@ public class CharacterMovement : NetworkBehaviour {
 	/// This is replicated to observers.
 	/// </summary>
 	[NonSerialized]
-	public CharacterStateSyncData stateSyncData = new CharacterStateSyncData();
+	public CharacterAnimationSyncData stateSyncData = new CharacterAnimationSyncData();
 	[NonSerialized] [SyncVar] public Vector3 lookVector = Vector3.one;		
 #endregion
 
@@ -815,7 +815,7 @@ public class CharacterMovement : NetworkBehaviour {
 		currentLocalVelocity = graphicTransform.InverseTransformDirection(newVelocity);
 
 		//Fire state change event
-		TrySetState(new CharacterStateSyncData() {
+		TrySetState(new CharacterAnimationSyncData() {
 			state = currentMoveState.state,
 			grounded = !inAir || didStepUp,
 			sprinting = isSprinting,
@@ -841,6 +841,8 @@ public class CharacterMovement : NetworkBehaviour {
 		currentMoveState.prevMoveDir = md.moveDir;
 		currentMoveState.prevGrounded = grounded;
 		currentMoveState.prevStepUp = didStepUp;
+		currentMoveState.position = rootPosition;
+		currentMoveState.velocity = newVelocity;
 #endregion
 
 		//Track speed based on position
@@ -904,7 +906,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 #region TS_ACCESS
 
-	public void SetReplicatedState(CharacterStateSyncData oldData, CharacterStateSyncData newData) {
+	public void SetReplicatedState(CharacterAnimationSyncData oldData, CharacterAnimationSyncData newData) {
 		animationHelper.SetState(newData);
 		if(oldData.state != newData.state){
 			this.stateChanged?.Invoke((int)newData.state);
@@ -1052,7 +1054,7 @@ public class CharacterMovement : NetworkBehaviour {
 		this.currentMoveState.isFlying = flyModeEnabled;
 	}
 
-	private void TrySetState(CharacterStateSyncData newStateData) {
+	private void TrySetState(CharacterAnimationSyncData newStateData) {
 		bool isNewState = newStateData.state != this.stateSyncData.state;
 		bool isNewData = !newStateData.Equals(this.stateSyncData);
 
@@ -1078,7 +1080,7 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 	
 	// Called by owner to update the state data. This is then sent to all observers
-	[Command] private void CommandSetStateData(CharacterStateSyncData data){
+	[Command] private void CommandSetStateData(CharacterAnimationSyncData data){
 		this.stateSyncData = data;
 		if (playAnimationOnServer) {
 			ApplyNonLocalStateData(data);
@@ -1087,11 +1089,11 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	[ClientRpc(includeOwner = false)]
-	private void RpcSetStateData(CharacterStateSyncData data) {
+	private void RpcSetStateData(CharacterAnimationSyncData data) {
 		ApplyNonLocalStateData(data);
 	}
 
-	private void ApplyNonLocalStateData(CharacterStateSyncData data) {
+	private void ApplyNonLocalStateData(CharacterAnimationSyncData data) {
 		var oldState = this.stateSyncData;
 		this.stateSyncData = data;
 

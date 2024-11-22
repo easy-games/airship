@@ -103,7 +103,7 @@ public class CharacterAnimationHelper : MonoBehaviour {
         GetRandomReactionLength();
 
         //Enter default state
-        SetState(new CharacterStateSyncData());
+        SetState(new CharacterAnimationSyncData());
     }
 
     private void OnDisable() {
@@ -197,7 +197,7 @@ public class CharacterAnimationHelper : MonoBehaviour {
         //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
     }
 
-    public void SetState(CharacterStateSyncData syncedState) {
+    public void SetState(CharacterAnimationSyncData syncedState) {
         if (!enabled || !this.gameObject.activeInHierarchy) {
             return;
         }

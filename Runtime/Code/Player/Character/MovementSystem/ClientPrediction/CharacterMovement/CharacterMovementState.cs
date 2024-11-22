@@ -36,6 +36,32 @@ public class CharacterMovementState : AirshipPredictedState{
         this.timestamp = time;
     }
 
+    public CharacterMovementState(CharacterMovementState copyState){
+        this.CopyFrom(copyState);
+    }
+
+    public void CopyFrom(CharacterMovementState copyState){
+        this.timestamp = copyState.timestamp;
+        this.position = copyState.position;
+        this.velocity = copyState.velocity;
+        this.timeSinceJump = copyState.timeSinceJump;
+        this.timeSinceWasGrounded = copyState.timeSinceWasGrounded;
+        this.timeSinceBecameGrounded = copyState.timeSinceBecameGrounded;
+        this.prevState = copyState.prevState;
+        this.state = copyState.state;
+        this.prevGrounded = copyState.prevGrounded;
+        this.prevStepUp = copyState.prevStepUp;
+        this.prevCrouch = copyState.prevCrouch;
+        this.lastGroundedMoveDir = copyState.lastGroundedMoveDir;
+        this.prevMoveDir = copyState.prevMoveDir;
+        this.alreadyJumped = copyState.alreadyJumped;
+        this.airborneFromImpulse = copyState.airborneFromImpulse;
+        this.jumpCount = copyState.jumpCount;
+        this.isFlying = copyState.isFlying;
+        this.inputDisabled = copyState.inputDisabled;
+        this.currentMoveInput = copyState.currentMoveInput;
+    }
+
     public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
         //TODO: make actual interpolation here
         return other;
