@@ -208,7 +208,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
-            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var _);
             
             return AirshipBehaviourHelper.GetAirshipComponentInChildren(context, thread, (GameObject)targetObject, typeName, includeInactive);
         }
@@ -255,12 +255,15 @@ public class GameObjectAPI : BaseLuaAPIClass {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes,
+                parameterDataPtrs, paramaterDataSizes, out _);
+            
             var componentTypeResult =
                 AirshipBehaviourHelper.GetTypeFromTypeName(typeName, context, thread, out var componentType);
             if (componentTypeResult != 1) return componentTypeResult;
             
             var gameObject = (GameObject)targetObject;
-            var unityChildComponent = gameObject.GetComponentInChildren(componentType);
+            var unityChildComponent = gameObject.GetComponentInChildren(componentType, includeInactive);
             LuauCore.WritePropertyToThread(thread, unityChildComponent, unityChildComponent.GetType());
             return 1;
         }
@@ -269,12 +272,15 @@ public class GameObjectAPI : BaseLuaAPIClass {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes,
+                parameterDataPtrs, paramaterDataSizes, out _);
+
             var componentTypeResult =
                 AirshipBehaviourHelper.GetTypeFromTypeName(typeName, context, thread, out var componentType);
             if (componentTypeResult != 1) return componentTypeResult;
             
             var gameObject = (GameObject)targetObject;
-            var unityParentComponent = gameObject.GetComponentInParent(componentType);
+            var unityParentComponent = gameObject.GetComponentInParent(componentType, includeInactive);
 
             if (unityParentComponent != null) {
                 LuauCore.WritePropertyToThread(thread, unityParentComponent, unityParentComponent.GetType());
