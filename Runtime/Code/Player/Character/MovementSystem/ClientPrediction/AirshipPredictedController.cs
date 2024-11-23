@@ -130,7 +130,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     //Do we need to correct this state?
     protected virtual bool NeedsCorrection(T serverState, T interpolatedState){
-        print("Correction distance: " + Vector3.SqrMagnitude(serverState.position - interpolatedState.position));
+        print("Correction distance: " + Vector3.Magnitude(serverState.position - interpolatedState.position));
         return Vector3.SqrMagnitude(serverState.position - interpolatedState.position) >= positionCorrectionThresholdSqr;
     }
 #endregion
@@ -210,6 +210,20 @@ protected void Log(string message){
             // this is cheap, and allows us to keep a dense history.
             if (!isClientOnly) return;
 
+            if(ShouldRecordState()) {
+                // NetworkTime.time is always behind by bufferTime.
+                // prediction aims to be on the exact same server time (immediately).
+                // use predictedTime to record state, otherwise we would record in the past.
+                // Adding a buffer margin so that our stored history always remains in the future of recieved server states
+                RecordState(NetworkTime.predictedTime + .5);
+            }
+        }
+#endregion
+
+
+
+#region PREDICTION
+    protected virtual bool ShouldRecordState(){
             // OPTIMIZATION: RecordState() is expensive because it inserts into a SortedList.
             // only record if state actually changed!
             // risks not having up to date states when correcting,
@@ -220,30 +234,23 @@ protected void Log(string message){
                 // TODO maybe don't reuse the correction thresholds?
                 if ((lastRecorded.position - currentPosition).sqrMagnitude < positionCorrectionThresholdSqr) {
                     // Log($"FixedUpdate for {name}: taking optimized early return instead of recording state.");
-                    return;
+                    return false;
                 }
             }
 
             // instead of recording every fixedupdate, let's record in an interval.
             // we don't want to record every tiny move and correct too hard.
-            if (NetworkTime.time < lastRecordTime + recordInterval) return;
+            if (NetworkTime.time < lastRecordTime + recordInterval) return false;
 
-            // NetworkTime.time is always behind by bufferTime.
-            // prediction aims to be on the exact same server time (immediately).
-            // use predictedTime to record state, otherwise we would record in the past.
-            // Adding a buffer margin so that our stored history always remains in the future of recieved server states
-            RecordState(NetworkTime.predictedTime + .5);
-        }
-#endregion
+            // FixedUpdate may run twice in the same frame / NetworkTime.time.
+            // for now, simply don't record if already recorded there.
+            if (NetworkTime.time == lastRecordTime) return false;
 
+            return true;
+    }
 
-
-#region PREDICTION
     //If we are in a new state then insert the current state into the history at this specific time
     protected void RecordState(double stateTime) {
-        // FixedUpdate may run twice in the same frame / NetworkTime.time.
-        // for now, simply don't record if already recorded there.
-        if (NetworkTime.time == lastRecordTime) return;
 
         lastRecordTime = NetworkTime.time;
 
@@ -317,6 +324,7 @@ protected void Log(string message){
         // if this ever causes issues, feel free to disable it.
         if (Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr &&
             Vector3.SqrMagnitude(serverState.velocity - currentVelocity) < velocityCorrectionThresholdSqr) {
+            //Close enought to not need any adjustments
             //Log($"OnReceivedState for {name}: taking is idle optimized early return!");
             return;
         }
@@ -398,9 +406,7 @@ protected void Log(string message){
             // something went very wrong. sampling should've worked.
             // hard correct to recover the error.
             Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ t={serverTimestamp:F3} oldest={oldestTime:F3} newest={newestTime:F3}. This should never happen because the timestamp is within history.");
-            if(oldestTime == 0 || newestTime == 0){
-                PrintHistory();
-            }
+            PrintHistory();
             ApplyState(serverState);
             return;
         }else{
@@ -411,7 +417,7 @@ protected void Log(string message){
 
         // too far off? then correct it
         if (NeedsCorrection(serverState, interpolatedState)) {
-            Log($"CORRECTION NEEDED FOR {name} @ {serverTimestamp:F3}: client= {interpolatedState.timestamp} + pos: {interpolatedState.position} server= {interpolatedState.timestamp} + pos: {serverState.position}");
+            Log($"CORRECTION NEEDED FOR {name} @ {serverTimestamp:F3}: client= {interpolatedState.timestamp} + pos: {interpolatedState.position} server= {serverState.timestamp} + pos: {serverState.position}");
             if(showGizmos){
                 // show the received correction position + velocity for debugging.
                 // helps to compare with the interpolated/applied correction locally.
@@ -464,27 +470,27 @@ protected void Log(string message){
     public override void OnDeserialize(NetworkReader reader, bool initialState) {        
         // deserialize data
         // we want to know the time on the server when this was sent, which is remoteTimestamp.
-        double timestamp = NetworkClient.connection.remoteTimeStamp;
+        double serverTimestamp = NetworkClient.connection.remoteTimeStamp;
         double serverDeltaTime = reader.ReadFloat();
 
         // server sends state at the end of the frame.
         // parse and apply the server's delta time to our timestamp.
         // otherwise we see noticeable resets that seem off by one frame.
-        timestamp += serverDeltaTime;
+        serverTimestamp += serverDeltaTime;
 
         // however, adding yet one more frame delay gives much(!) better results.
         // we don't know why yet, so keep this as an option for now.
         // possibly because client captures at the beginning of the frame,
         // with physics happening at the end of the frame?
-        if (oneFrameAhead) timestamp += serverDeltaTime;
+        if (oneFrameAhead) serverTimestamp += serverDeltaTime;
 
         //Let the child class deserialize its data
-        T newState = DeserializeState(reader, timestamp);
+        T newState = DeserializeState(reader, serverTimestamp);
 
         //print("Deserialize time: " + timestamp + " readerTime: " + serverDeltaTime);
         // process received state
         try{
-            OnReceivedState(timestamp, newState);
+            OnReceivedState(serverTimestamp, newState);
         }catch(Exception e){
             Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
         }
@@ -526,8 +532,17 @@ protected void Log(string message){
 
             // older than oldest
             if (timestamp < history.Keys[0]) {
-                print("Time is older than our history");
-                return false;
+                if(timestamp >= history.Keys[0]-.2) {
+                    //Barely off so can still use the key
+                    before = history.Values[0];
+                    after = history.Values[0];
+                    afterIndex = 1;
+                    delta = 0;
+                return true;
+                }else{
+                    print("Time is older than our history");
+                    return false;
+                }
             }
 
             var lastIndex = history.Keys.Count-1;
@@ -541,9 +556,6 @@ protected void Log(string message){
             }
 
             // iterate through the history
-            // TODO this needs to be faster than O(N)
-            //      search around that area.
-            //      should be O(1) most of the time, unless sampling was off.
             int index = 0; // manually count when iterating. easier than for-int loop.
             KeyValuePair<double, T> prev = new KeyValuePair<double, T>();
 

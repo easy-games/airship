@@ -14,6 +14,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     [Header("References")]
     public CharacterMovement movement;
 
+    [Header("Variables")]
+    public bool pauseOnReplay = false;
+
 #endregion
 
 #region PRIVATE
@@ -63,13 +66,12 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
 #region PREDICTION
 
-    protected override bool NeedsCorrection(CharacterMovementState serverState, CharacterMovementState interpolatedState){
-        return base.NeedsCorrection(serverState, interpolatedState);
-    }
-
-    public override void SnapTo(CharacterMovementState newState){
-        print("Snapping Movement To: " + newState.timestamp);
-        movement.ForceToNewMoveState(newState);
+    //For history
+    protected override bool ShouldRecordState(){
+        if(lastRecorded != null && lastRecorded.Equals(currentState)){
+            return true;
+        }
+        return base.ShouldRecordState();
     }
 
     protected override void FixedUpdate() {
@@ -154,9 +156,18 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 #endregion 
 
-#region REPLAY
+#region REPLAY    
+    protected override bool NeedsCorrection(CharacterMovementState serverState, CharacterMovementState interpolatedState){
+        return base.NeedsCorrection(serverState, interpolatedState);
+    }
+
+    public override void SnapTo(CharacterMovementState newState){
+        print("Snapping Movement To: " + newState.timestamp);
+        movement.ForceToNewMoveState(newState);
+    }
 
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
+        PrintHistory("REPLAY STARTED");
         //Save the future inputs
         replayPredictionStates.Clear();
         for(int i=historyIndex ; i < stateHistory.Count; i++){
@@ -168,11 +179,16 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         //Clear the official history since we will be re writing it
         stateHistory.Clear();
 
+
         //Snap to the servers state
-        SnapTo((CharacterMovementState)initialState);
+        var movementState = (CharacterMovementState)initialState;
+        SnapTo(movementState);
+        movement.transform.position = movementState.position;
+        stateHistory.Add(movementState.timestamp, movementState);
+        PrintHistory("SNAPPED TO INITIAL STATE CLEARED");
         if(showGizmos){
             //Replay Position and velocity
-            GizmoUtils.DrawSphere(currentPosition, .4f, Color.blue, 4, gizmoDuration);
+            GizmoUtils.DrawSphere(currentPosition, .4f, clientColor, 4, gizmoDuration);
             GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, clientColor, gizmoDuration);
         }
     }
@@ -198,14 +214,26 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
     public override void OnReplayTickFinished(double time) {
         // After the physics sim
-        
-        // Save the new history state
-        RecordState(time);
+        if(showGizmos){
+            //Replay Position and velocity
+            GizmoUtils.DrawSphere(currentPosition, .1f, clientColor, 4, gizmoDuration);
+            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, clientColor, gizmoDuration);
+        }
+        if(lastRecorded == null || !lastRecorded.Equals(currentState)){
+            // Save the new history state
+            RecordState(time);
+        }
     }
 
     public override void OnReplayFinished(AirshipPredictedState initialState) {
+        PrintHistory("REPLAY FINISHED");
         if(showGizmos){
+            GizmoUtils.DrawSphere(currentPosition, .4f, Color.green, 4, gizmoDuration);
             GizmoUtils.DrawLine(initialState.position, currentPosition, Color.green, gizmoDuration);
+        }
+
+        if(pauseOnReplay){
+            Debug.Break();
         }
     }
 

@@ -170,7 +170,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 		//Have to manualy control the flow of data
 		if(networkTransform){	
-			if(isServerOnly){
+			if(isServerOnly) {
 				networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ServerToClient : SyncDirection.ClientToServer;
 			}else {
 				networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
@@ -205,7 +205,7 @@ public class CharacterMovement : NetworkBehaviour {
 		//Apply inputs
 		SetMoveInputData(newState.currentMoveInput);
 
-		this.currentMoveState = newState;
+		this.currentMoveState = new CharacterMovementState(newState);
 		
 		// apply the state to the Rigidbody instantly
         rigidbody.position = newState.position;

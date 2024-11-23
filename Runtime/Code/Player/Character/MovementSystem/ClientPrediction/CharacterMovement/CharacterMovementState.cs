@@ -1,3 +1,4 @@
+using System;
 using Assets.Luau;
 using UnityEngine;
 
@@ -9,7 +10,7 @@ public enum CharacterState {
     Crouching = 4,
 }
 
-public class CharacterMovementState : AirshipPredictedState{
+public class CharacterMovementState : AirshipPredictedState, IEquatable<CharacterMovementState>{
 	public MoveInputData currentMoveInput = new MoveInputData();
     public bool inputDisabled = false;
     public bool isFlying = false;
@@ -64,6 +65,19 @@ public class CharacterMovementState : AirshipPredictedState{
 
     public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
         //TODO: make actual interpolation here
-        return other;
+        return new CharacterMovementState(this);
+    }
+
+    public bool Equals(CharacterMovementState other) {
+        return currentMoveInput.Equals(other.currentMoveInput) &&
+            velocity == other.velocity &&
+            position == other.position &&
+            state == other.state &&
+            inputDisabled == other.inputDisabled &&
+            isFlying == other.isFlying &&
+            jumpCount == other.jumpCount &&
+            airborneFromImpulse == other.airborneFromImpulse &&
+            alreadyJumped == other.alreadyJumped &&
+            prevMoveDir == other.prevMoveDir;
     }
 }

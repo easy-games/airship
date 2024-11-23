@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using HandlebarsDotNet.ObjectDescriptors;
 using Mirror;
@@ -290,7 +291,7 @@ public class AirshipPredictionManager : MonoBehaviour {
             replayData.replayController.OnReplayTickStarted(time);
 
             //Run the simulation in the scene
-            //Physics.Simulate((float)simulationDuration);
+            Physics.Simulate((float)simulationDuration);
 
             //Replay ticked callback
             replayData.replayController.OnReplayTickFinished(time);
