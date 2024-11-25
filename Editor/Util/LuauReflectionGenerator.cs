@@ -180,13 +180,21 @@ namespace Editor.Util {
 					
 					writer.WriteStartElement("cls");
 					writer.WriteAttributeString("n", t.Name);
+					
+					var baseType = t.BaseType;
+					if (baseType != null && baseType != typeof(object)) {
+						writer.WriteAttributeString("base", baseType.Name);
+					}
 						
 					var methods = t.GetMethods();
 					foreach (var method in methods) {
-						if (method.DeclaringType != t) continue;
+						if (method.DeclaringType != t || !method.IsPublic || method.IsSpecialName) continue;
 						writer.WriteStartElement("method");
 						writer.WriteAttributeString("n", method.Name);
 						writer.WriteAttributeString("ret", method.ReturnType.Name);
+						if (method.IsStatic) {
+							writer.WriteAttributeString("static", "true");
+						}
 						var parameters = method.GetParameters();
 						foreach (var parameter in parameters) {
 							writer.WriteStartElement("param");
@@ -200,6 +208,30 @@ namespace Editor.Util {
 						}
 						writer.WriteEndElement();
 					}
+
+					var fields = t.GetFields();
+					foreach (var field in fields) {
+						if (field.DeclaringType != t || !field.IsPublic) continue;
+						writer.WriteStartElement("field");
+						writer.WriteAttributeString("n", field.Name);
+						writer.WriteAttributeString("t", field.FieldType.Name);
+						if (field.IsStatic) {
+							writer.WriteAttributeString("static", "true");
+						}
+						writer.WriteEndElement();
+					}
+
+					var properties = t.GetProperties();
+					foreach (var property in properties) {
+						if (property.DeclaringType != t) continue;
+						writer.WriteStartElement("property");
+						writer.WriteAttributeString("n", property.Name);
+						writer.WriteAttributeString("t", property.PropertyType.Name);
+						if (property.IsStatic()) {
+							writer.WriteAttributeString("static", "true");
+						}
+						writer.WriteEndElement();
+					}
 					
 					writer.WriteEndElement();
 				}
@@ -207,7 +239,7 @@ namespace Editor.Util {
 			
 			writer.WriteEndElement();
 			
-			Debug.Log($"Luau Reflection File: <a href=\"#\" file=\"out://{filepath}\">{filepath}</a>");
+			Debug.Log($"Luau Reflection File: <a href=\"{filepath}\">{filepath}</a>");
 		}
 	}
 }
