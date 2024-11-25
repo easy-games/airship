@@ -11,13 +11,13 @@ public class ColliderAPI : BaseLuaAPIClass
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
 
         if (methodName == "Raycast" && numParameters == 2) {
             Ray ray = LuauCore.GetParameterAsRay(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
             float distance = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
 
             Collider target = (Collider)targetObject;
             if (target.Raycast(ray, out RaycastHit hitInfo, distance)) {
@@ -28,7 +28,7 @@ public class ColliderAPI : BaseLuaAPIClass
             return 1;
         }
 
-        return base.OverrideMemberMethod(context, thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        return base.OverrideMemberMethod(context, thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
     }
 
     public override Type[] GetDescendantTypes() {

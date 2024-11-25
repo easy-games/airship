@@ -90,12 +90,12 @@ public class GameObjectAPI : BaseLuaAPIClass {
         return -1;
     }
 
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
         if (methodName == "Create") {
             string name = "lua_created_gameobject";
             if (numParameters >= 1) {
                 name = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
             }
             var go = new GameObject(name);
             LuauCore.WritePropertyToThread(thread, go, typeof(GameObject));
@@ -105,12 +105,12 @@ public class GameObjectAPI : BaseLuaAPIClass {
             string name = "lua_created_gameobject";
 
             var pos = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
 
             if (numParameters >= 2)
             {
                 name = LuauCore.GetParameterAsString(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
             }
             var go = new GameObject(name);
             go.transform.position = pos;
@@ -118,7 +118,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             return 1;
         }
         if (methodName == "DestroyImmediate") {
-            GameObject go = (GameObject)LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, thread);
+            GameObject go = (GameObject)LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, thread);
             if (go)
             {
                 Object.DestroyImmediate(go);
@@ -144,7 +144,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
 #endif
         
         if (methodName == "FindObjectsByType") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: FindObjectsByType takes a string parameter");
@@ -155,10 +155,10 @@ public class GameObjectAPI : BaseLuaAPIClass {
             var findObjectsInactive = FindObjectsInactive.Exclude;
             var useFindObjectsInactive = false;
             if (numParameters == 2) {
-                sortMode = (FindObjectsSortMode)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                sortMode = (FindObjectsSortMode)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             } else if (numParameters == 3) {
                 useFindObjectsInactive = true;
-                findObjectsInactive = (FindObjectsInactive)LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                findObjectsInactive = (FindObjectsInactive)LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             } else {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: FindObjectsByType expected 1 or 2 parameters");
@@ -181,7 +181,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         return -1;
     }
 
-    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
 #if AIRSHIP_PLAYER
         if (methodName == "CompareTag") {
             var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
@@ -191,72 +191,72 @@ public class GameObjectAPI : BaseLuaAPIClass {
 #endif
         
         if (methodName == "GetAirshipComponent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
             return AirshipBehaviourHelper.GetAirshipComponent(context, thread, (GameObject)targetObject, typeName);
         }
 
         if (methodName == "GetAirshipComponents") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
             return AirshipBehaviourHelper.GetAirshipComponents(context, thread, (GameObject)targetObject, typeName);
         }
 
         if (methodName == "GetAirshipComponentInChildren") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
-            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var _);
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out var _);
             
             return AirshipBehaviourHelper.GetAirshipComponentInChildren(context, thread, (GameObject)targetObject, typeName, includeInactive);
         }
         
         if (methodName == "GetAirshipComponentInParent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
-            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out var exists);
             
             return AirshipBehaviourHelper.GetAirshipComponentInParent(context, thread, (GameObject)targetObject, typeName, includeInactive);
         }
         
         if (methodName == "GetAirshipComponentsInParent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
-            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out var exists);
             
             return AirshipBehaviourHelper.GetAirshipComponentsInParent(context, thread, (GameObject)targetObject, typeName, includeInactive);
         }
 
         if (methodName == "GetAirshipComponentsInChildren") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
-            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out var exists);
 
             return AirshipBehaviourHelper.GetAirshipComponentsInChildren(context, thread, (GameObject)targetObject, typeName, includeInactive);
         }
 
         if (methodName == "AddAirshipComponent") {
-            var componentName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var componentName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             return AirshipBehaviourHelper.AddAirshipComponent(context, thread, (GameObject)targetObject, componentName);
         }
 
         if (methodName == "GetComponent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
         }
 
         if (methodName == "GetComponentInChildren") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes,
-                parameterDataPtrs, paramaterDataSizes, out _);
+                parameterDataPtrs, parameterDataSizes, out _);
             
             var componentTypeResult =
                 AirshipBehaviourHelper.GetTypeFromTypeName(typeName, context, thread, out var componentType);
@@ -269,11 +269,11 @@ public class GameObjectAPI : BaseLuaAPIClass {
         }
 
         if (methodName == "GetComponentInParent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes,
-                parameterDataPtrs, paramaterDataSizes, out _);
+                parameterDataPtrs, parameterDataSizes, out _);
 
             var componentTypeResult =
                 AirshipBehaviourHelper.GetTypeFromTypeName(typeName, context, thread, out var componentType);
@@ -293,7 +293,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         }
 
         if (methodName == "GetComponents") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var componentTypeResult =
@@ -307,7 +307,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         }
         
         if (methodName == "GetComponentIfExists") {
-            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentIfExists takes a parameter");
@@ -337,7 +337,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         }
         
         if (methodName == "GetComponentsInChildren") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
@@ -361,7 +361,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         }
         
         if (methodName == "GetComponentsInParent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInParent takes a string parameter.");
@@ -385,7 +385,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         }
 
         if (methodName == "AddComponent") {
-            string param0 = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            string param0 = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             if (param0 == null)
             {
@@ -423,7 +423,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             }
 
            
-            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             ThreadDataManager.SetOnUpdateHandle(context, thread, handle, gameObject);
@@ -444,7 +444,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             }
 
             
-            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             ThreadDataManager.SetOnLateUpdateHandle(context, thread, handle, gameObject);
@@ -464,7 +464,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             }
 
             
-            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             ThreadDataManager.SetOnFixedUpdateHandle(context, thread, handle, gameObject);
@@ -482,7 +482,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
 
         if(methodName == "SetLayerRecursive") {
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
-            int layer = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            int layer = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             SetLayerRecursive(gameObject.transform, layer);
             return 0;
         }

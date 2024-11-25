@@ -311,25 +311,19 @@ public partial class LuauCore : MonoBehaviour
         return eventType;
     }
 
-    static private object[] UnrollPodObjects(IntPtr thread, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs)
-    {
-        object[] podObjects = new object[numParameters];
-        for (int j = 0; j < numParameters; j++)
-        {
-            if (parameterDataPODTypes[j] == (int)PODTYPE.POD_OBJECT)
-            {
-                int[] intData = new int[1];
+    private static object[] UnrollPodObjects(IntPtr thread, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs) {
+        var podObjects = new object[numParameters];
+        for (var j = 0; j < numParameters; j++) {
+            if (parameterDataPODTypes[j] == (int)PODTYPE.POD_OBJECT) {
+                var intData = new int[1];
                 Marshal.Copy(parameterDataPtrs[j], intData, 0, 1);
                 int instanceId = intData[0];
                 podObjects[j] = ThreadDataManager.GetObjectReference(thread, instanceId);
-            }
-            else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_COMPONENT) {
+            } else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_COMPONENT) {
                 var ptr = parameterDataPtrs[j];
                 var componentRef = Marshal.PtrToStructure<AirshipComponentRef>(ptr);
                 podObjects[j] = componentRef.AsUnityComponent();
-            }
-            else
-            {
+            } else {
                 podObjects[j] = null;
             }
         }
@@ -648,7 +642,7 @@ public partial class LuauCore : MonoBehaviour
         return false;
     }
 
-    private static bool ParseParameterData(IntPtr thread, int numParameters, IntPtr[] intPtrs, int[] podTypes, ParameterInfo[] methodParameters, int[] sizes, object[] podObjects, bool usingAttachedContext, out object[] parsedData) {
+    private static bool ParseParameterData(IntPtr thread, int numParameters, ArraySegment<IntPtr> intPtrs, ArraySegment<int> podTypes, ParameterInfo[] methodParameters, ArraySegment<int> sizes, object[] podObjects, bool usingAttachedContext, out object[] parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
         parsedData = new object[numParametersIncludingContext];
@@ -924,7 +918,7 @@ public partial class LuauCore : MonoBehaviour
 
 
     private static HashSet<MethodInfo> _methodsUsedTest = new();
-    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext)
+    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, ArraySegment<int> podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext)
     {
         nameFound = false;
         countFound = false;
@@ -1053,7 +1047,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, int[] podTypes, object[] podObjects, bool contextAttached) {
+    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, ArraySegment<int> podTypes, object[] podObjects, bool contextAttached) {
         for (int i = 0; i < numParameters; i++) {
             var paramIndex = i;
             if (contextAttached) paramIndex += 1; // Because 0'th param should be context
@@ -1188,17 +1182,14 @@ public partial class LuauCore : MonoBehaviour
     }
 
     //Generalized utility version - move these!
-    static public string GetParameterAsString(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
-    {
-        if (paramIndex >= numParameters)
-        {
+    public static string GetParameterAsString(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        if (paramIndex >= numParameters) {
             return null;
         }
-        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_STRING)
-        {
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_STRING) {
             return null;
         }
-        return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], paramaterDataSizes[paramIndex]);
+        return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], parameterDataSizes[paramIndex]);
     }
 
     // public static AirshipComponent GetParameterAsAirshipComponent(int paramIndex, int numParameters, int[] parameterDataPODTypes,
@@ -1217,7 +1208,7 @@ public partial class LuauCore : MonoBehaviour
         return dataPodType == PODTYPE.POD_STRING ? PtrToStringUTF8NullTerminated(dataPtr) : null;
     }
 
-    static public bool GetParameterAsBool(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] parameterDataSizes, out bool exists) {
+    public static bool GetParameterAsBool(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes, out bool exists) {
         if (paramIndex >= numParameters) {
             exists = false;
             return false;
@@ -1232,23 +1223,18 @@ public partial class LuauCore : MonoBehaviour
         return NewBoolFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    static public Vector3 GetParameterAsVector3(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
-    {
-        if (paramIndex >= numParameters)
-        {
+    public static Vector3 GetParameterAsVector3(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        if (paramIndex >= numParameters) {
             return Vector3.zero;
         }
-        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_VECTOR3)
-        {
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_VECTOR3) {
             return Vector3.zero;
         }
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
     
-    static public Ray GetParameterAsRay(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
-    {
-        if (paramIndex >= numParameters)
-        {
+    public static Ray GetParameterAsRay(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        if (paramIndex >= numParameters) {
             return new Ray();
         }
         if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_RAY) {
@@ -1257,229 +1243,199 @@ public partial class LuauCore : MonoBehaviour
         return NewRayFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    public static Color GetParameterAsColor(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
-    {
-        if (paramIndex >= numParameters)
-        {
+    public static Color GetParameterAsColor(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        if (paramIndex >= numParameters) {
             return Color.white;
         }
-        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_COLOR)
-        {
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_COLOR) {
             return Color.white;
         }
         return NewColorFromPointer(parameterDataPtrs[paramIndex]);
     }
-    public static Quaternion GetParameterAsQuaternion(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
-    {
-        if (paramIndex >= numParameters)
-        {
+    public static Quaternion GetParameterAsQuaternion(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        if (paramIndex >= numParameters) {
             return Quaternion.identity;
         }
-        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_QUATERNION)
-        {
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_QUATERNION) {
             return Quaternion.identity;
         }
         return NewQuaternionFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    public static Vector2 GetParameterAsVector2(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null) {
+    public static Vector2 GetParameterAsVector2(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
         if (paramIndex >= numParameters || parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_VECTOR2) {
             return Vector2.zero;
         }
         return NewVector2FromPointer(parameterDataPtrs[paramIndex]);
     }
-    static public float GetParameterAsFloat(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
-    {
-        if (paramIndex >= numParameters)
-        {
+    public static float GetParameterAsFloat(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        if (paramIndex >= numParameters) {
             return 0;
         }
-        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_DOUBLE)
-        {
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_DOUBLE) {
             return 0;
         }
         return NewFloatFromPointer(parameterDataPtrs[paramIndex]);
     }
-    static public int GetParameterAsInt(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
-    {
-        if (paramIndex >= numParameters)
-        {
+    public static int GetParameterAsInt(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        if (paramIndex >= numParameters) {
             return 0;
         }
         if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_DOUBLE
             && parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_INT32
-            && parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_LUAFUNCTION)
-        {
+            && parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_LUAFUNCTION) {
             return 0;
         }
 
         return NewIntFromPointer(parameterDataPtrs[paramIndex]);
     }
- 
-    static public object GetParameterAsObject(int paramIndex,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes, IntPtr thread)
-    {
-        if (paramIndex >= numParameters)
-        {
+
+    private static readonly int[] ObjectParamIntData = new int[1];
+    public static object GetParameterAsObject(int paramIndex,  int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes, IntPtr thread) {
+        if (paramIndex >= numParameters) {
             return null;
         }
-        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_OBJECT)
-        {
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_OBJECT) {
             return null;
         }
-        int[] intData = new int[1];
-        Marshal.Copy(parameterDataPtrs[paramIndex], intData, 0, 1);
-        int propertyInstanceId = intData[0];
+        // var intData = new int[1];
+        Marshal.Copy(parameterDataPtrs[paramIndex], ObjectParamIntData, 0, 1);
+        var propertyInstanceId = ObjectParamIntData[0];
         
         //int instanceId = NewIntFromPointer(parameterDataPtrs[paramIndex]);
         return ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
     }
- 
-    static float NewFloatFromPointer(IntPtr data)
-    {
-        double[] doubles = new double[1];
-        Marshal.Copy(data, doubles, 0, 1);
-        return (float)doubles[0];
+
+    private static readonly double[] DoubleData = new double[1];
+    private static float NewFloatFromPointer(IntPtr data) {
+        // double[] doubles = new double[1];
+        Marshal.Copy(data, DoubleData, 0, 1);
+        return (float)DoubleData[0];
     }
 
-    static int NewIntFromPointer(IntPtr data)
-    {
-        double[] doubles = new double[1];
-        Marshal.Copy(data, doubles, 0, 1);
-        return (int)doubles[0];
+    private static int NewIntFromPointer(IntPtr data) {
+        // double[] doubles = new double[1];
+        Marshal.Copy(data, DoubleData, 0, 1);
+        return (int)DoubleData[0];
     }
 
-    static bool NewBoolFromPointer(IntPtr data) {
-        double[] doubles = new double[1];
-        Marshal.Copy(data, doubles, 0, 1);
-        return doubles[0] != 0;
+    private static bool NewBoolFromPointer(IntPtr data) {
+        // double[] doubles = new double[1];
+        Marshal.Copy(data, DoubleData, 0, 1);
+        return DoubleData[0] != 0;
     }
 
-    static Vector3 NewVector3FromPointer(IntPtr data)
-    {
-        float[] floats = new float[3];
-        Marshal.Copy(data, floats, 0, 3);
-        return new Vector3(floats[0], floats[1], floats[2]);
+    private static readonly float[] VectorData = new float[4];
+    private static Vector3 NewVector3FromPointer(IntPtr data) {
+        // float[] floats = new float[3];
+        Marshal.Copy(data, VectorData, 0, 3);
+        return new Vector3(VectorData[0], VectorData[1], VectorData[2]);
     }
-    public static int Vector3Size()
-    {
+    public static int Vector3Size() {
         return 4 * 3;
     }
 
-    static Assets.Luau.BinaryBlob NewBinaryBlobFromPointer(IntPtr data, int size)
-    {
-        byte[] bytes = new byte[size];
+    private static Assets.Luau.BinaryBlob NewBinaryBlobFromPointer(IntPtr data, int size) {
+        var bytes = new byte[size];
         Marshal.Copy(data, bytes, 0, size);
         return new Assets.Luau.BinaryBlob(bytes);
     }
 
-    public static Ray NewRayFromPointer(IntPtr data)
-    {
-        float[] floats = new float[6];
-        Marshal.Copy(data, floats, 0, 6);
-        Vector3 origin = new Vector3(floats[0], floats[1], floats[2]);
-        Vector3 direction = new Vector3(floats[3], floats[4], floats[5]);
+    private static readonly float[] RayData = new float[6]; 
+    public static Ray NewRayFromPointer(IntPtr data) {
+        // float[] floats = new float[6];
+        Marshal.Copy(data, RayData, 0, 6);
+        var origin = new Vector3(RayData[0], RayData[1], RayData[2]);
+        var direction = new Vector3(RayData[3], RayData[4], RayData[5]);
         return new Ray(origin, direction);
     }
-    public static int RaySize()
-    {
+    public static int RaySize() {
         return 6 * sizeof(float);
     }
 
-    public static Color NewColorFromPointer(IntPtr data)
-    {
-        float[] floats = new float[4];
-        Marshal.Copy(data, floats, 0, 4);
-        return new Color(floats[0], floats[1], floats[2], floats[3]);
+    public static Color NewColorFromPointer(IntPtr data) {
+        // float[] floats = new float[4];
+        Marshal.Copy(data, VectorData, 0, 4);
+        return new Color(VectorData[0], VectorData[1], VectorData[2], VectorData[3]);
     }
-    public static int ColorSize()
-    {
+    public static int ColorSize() {
         return 4 * sizeof(float);
     }
 
-    public static Matrix4x4 NewMatrixFromPointer(IntPtr data)
-    {
-        float[] floats = new float[16];
-        Marshal.Copy(data, floats, 0, 16);
-        return new Matrix4x4(new Vector4(floats[0], floats[1], floats[2], floats[3]), new Vector4(floats[4], floats[5], floats[6], floats[7]), new Vector4(floats[8], floats[9], floats[10], floats[11]), new Vector4(floats[12], floats[13], floats[14], floats[15]));
+    private static readonly float[] MatrixData = new float[16];
+    public static Matrix4x4 NewMatrixFromPointer(IntPtr data) {
+        // float[] floats = new float[16];
+        Marshal.Copy(data, MatrixData, 0, 16);
+        return new Matrix4x4(
+            new Vector4(MatrixData[0], MatrixData[1], MatrixData[2], MatrixData[3]),
+            new Vector4(MatrixData[4], MatrixData[5], MatrixData[6], MatrixData[7]),
+            new Vector4(MatrixData[8], MatrixData[9], MatrixData[10], MatrixData[11]),
+            new Vector4(MatrixData[12], MatrixData[13], MatrixData[14], MatrixData[15])
+        );
     }
-    public static int MatrixSize()
-    {
+    public static int MatrixSize() {
         return 16 * sizeof(float);
     }
 
-    public static Plane NewPlaneFromPointer(IntPtr data)
-    {
-        float[] floats = new float[4];
-        Marshal.Copy(data, floats, 0, 4);
-        return new Plane(new Vector3(floats[0], floats[1], floats[2]), floats[3]);
+    public static Plane NewPlaneFromPointer(IntPtr data) {
+        // float[] floats = new float[4];
+        Marshal.Copy(data, VectorData, 0, 4);
+        return new Plane(new Vector3(VectorData[0], VectorData[1], VectorData[2]), VectorData[3]);
     }
-    public static int PlaneSize()
-    {
+    public static int PlaneSize() {
         return 4 * sizeof(float);
     }
 
-    public static Quaternion NewQuaternionFromPointer(IntPtr data)
-    {
-        float[] floats = new float[4];
-        Marshal.Copy(data, floats, 0, 4);
-        return new Quaternion(floats[0], floats[1], floats[2], floats[3]);
+    public static Quaternion NewQuaternionFromPointer(IntPtr data) {
+        // float[] floats = new float[4];
+        Marshal.Copy(data, VectorData, 0, 4);
+        return new Quaternion(VectorData[0], VectorData[1], VectorData[2], VectorData[3]);
     }
-    public static int QuaternionSize()
-    {
+    public static int QuaternionSize() {
         return 4 * sizeof(float);
     }
 
     public static Vector2 NewVector2FromPointer(IntPtr data) {
-        var floats = new float[2];
-        Marshal.Copy(data, floats, 0, 2);
-        return new Vector2(floats[0], floats[1]);
+        // var floats = new float[2];
+        Marshal.Copy(data, VectorData, 0, 2);
+        return new Vector2(VectorData[0], VectorData[1]);
     }
-    public static int Vector2Size()
-    {
+    public static int Vector2Size() {
         return 2 * sizeof(float);
     }
     
     public static Vector4 NewVector4FromPointer(IntPtr data) {
-        var floats = new float[4];
-        Marshal.Copy(data, floats, 0, 4);
-        return new Vector4(floats[0], floats[1], floats[2], floats[3]);
+        // var floats = new float[4];
+        Marshal.Copy(data, VectorData, 0, 4);
+        return new Vector4(VectorData[0], VectorData[1], VectorData[2], VectorData[3]);
     }
-    public static int Vector4Size()
-    {
+    public static int Vector4Size() {
         return 4 * sizeof(float);
     }
 
-    public static string PtrToStringUTF8(IntPtr nativePtr, int size)
-    {
-        unsafe
-        {
-            return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out ulong hash);
+    private static string PtrToStringUTF8(IntPtr nativePtr, int size) {
+        unsafe {
+            return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out var hash);
         }
     }
 
-    public static string PtrToStringUTF8(IntPtr nativePtr, int size, out ulong hash)
-    {
-        unsafe
-        {
+    private static string PtrToStringUTF8(IntPtr nativePtr, int size, out ulong hash) {
+        unsafe {
             return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out hash);
         }
     }
 
-    public static string PtrToStringUTF8NullTerminated(IntPtr nativePtr)
-    {
-        unsafe
-        {
-            int size = 0;
+    private static string PtrToStringUTF8NullTerminated(IntPtr nativePtr) {
+        unsafe {
+            var size = 0;
             var b = (byte*)nativePtr.ToPointer();
-            while (size < 1024*1024) //Caps at 1mb just in case
-            {
-                if (b[size] == 0)
-                {
+            while (size < 1024*1024) { //Caps at 1mb just in case
+                if (b[size] == 0) {
                     break;
                 }
                 size++;
             }
-            return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out ulong hash);
+            return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out var hash);
         }
     }
 }

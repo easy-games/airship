@@ -9,13 +9,13 @@ public class CharacterControllerAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
 
         if (methodName == "Raycast" && numParameters == 2) {
             Ray ray = LuauCore.GetParameterAsRay(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
             float distance = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
 
             CharacterController target = (CharacterController)targetObject;
             if (target.Raycast(ray, out RaycastHit hitInfo, distance)) {
@@ -26,6 +26,6 @@ public class CharacterControllerAPI : BaseLuaAPIClass {
             return 1;
         }
 
-        return base.OverrideMemberMethod(context, thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        return base.OverrideMemberMethod(context, thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
     }
 }
