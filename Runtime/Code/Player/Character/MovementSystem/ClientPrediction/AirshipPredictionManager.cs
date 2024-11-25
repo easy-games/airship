@@ -113,6 +113,10 @@ public class AirshipPredictionManager : MonoBehaviour {
 
 #region UPDATE
     private void Update() {
+        if(!smoothRigidbodies){
+            return;
+        }
+        
         if(Physics.simulationMode != SimulationMode.Script){
             return;
         }
@@ -173,8 +177,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     void PhysicsManager::InterpolateBodies(PhysicsSceneHandle handle)
     */
     public void InterpolateBodies(){
-        return;
-        if(lastSimulationDuration == 0){
+        if(!smoothRigidbodies || lastSimulationDuration == 0){
             return;
         }
         float interpolationTime = Mathf.Clamp01((Time.time - lastSimulationTime) / lastSimulationDuration);

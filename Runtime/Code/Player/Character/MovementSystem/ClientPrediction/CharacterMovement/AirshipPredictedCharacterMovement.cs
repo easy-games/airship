@@ -46,18 +46,24 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
     #region INIT
     protected override void Awake() {
+        AirshipPredictionManager.instance.StartPrediction();
+
         tf = transform;
         recordInterval =  Time.fixedDeltaTime;
+
         base.Awake();
+        
     }
 
     protected override void OnEnable() {
+        AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
         base.OnEnable();
         movement.OnSetCustomData += OnSetMovementData;
         movement.OnEndMove += OnMovementEnd;
     }
 
     protected override void OnDisable() {
+        AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
         base.OnDisable();
         movement.OnSetCustomData -= OnSetMovementData;
         movement.OnEndMove -= OnMovementEnd;
@@ -167,7 +173,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
-        PrintHistory("REPLAY STARTED");
         //Save the future inputs
         replayPredictionStates.Clear();
         for(int i=historyIndex ; i < stateHistory.Count; i++){
@@ -185,7 +190,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         SnapTo(movementState);
         movement.transform.position = movementState.position;
         stateHistory.Add(movementState.timestamp, movementState);
-        PrintHistory("SNAPPED TO INITIAL STATE CLEARED");
         if(showGizmos){
             //Replay Position and velocity
             GizmoUtils.DrawSphere(currentPosition, .4f, clientColor, 4, gizmoDuration);

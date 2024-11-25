@@ -130,8 +130,11 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     //Do we need to correct this state?
     protected virtual bool NeedsCorrection(T serverState, T interpolatedState){
-        print("Correction distance: " + Vector3.Magnitude(serverState.position - interpolatedState.position));
-        return Vector3.SqrMagnitude(serverState.position - interpolatedState.position) >= positionCorrectionThresholdSqr;
+        bool needsCorrection = Vector3.SqrMagnitude(serverState.position - interpolatedState.position) >= positionCorrectionThresholdSqr;
+        if(needsCorrection){
+            print("Correction distance: " + Vector3.Magnitude(serverState.position - interpolatedState.position));
+        }
+        return needsCorrection;
     }
 #endregion
 
@@ -368,12 +371,7 @@ protected void Log(string message){
                 $"serverTime={serverTimestamp:F3} localNewestTime={newestTime:F3} predictionTime: {predictedTime}\n" +
                 $"local oldestTime={oldestTime:F3} History of size={stateHistory.Count}. \n" +
                 $"This can happen when latency is near zero, and is fine unless it shows jitter.");
-            
-            var log = "ALL HISTORY: ";
-            for(int i=0; i<stateHistory.Count; i++){
-                log += "\n state " + i + ": " + stateHistory.Keys[i];
-            }
-            print(log);
+            PrintHistory();
             ApplyState(serverState);
             return;
         }
@@ -435,7 +433,7 @@ protected void Log(string message){
                 //Replay States
                 AirshipPredictionManager.instance.QueueReplay(this, serverState, simulationDifference, afterIndex);
             }else{
-                //Snap because there isn't a time difference
+                //Snap because there isn't a time difference (shoudld just be in shared mode)
                 ApplyState(serverState);
             }
         }

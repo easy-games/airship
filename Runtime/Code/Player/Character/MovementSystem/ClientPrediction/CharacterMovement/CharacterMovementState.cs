@@ -64,8 +64,10 @@ public class CharacterMovementState : AirshipPredictedState, IEquatable<Characte
     }
 
     public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
-        //TODO: make actual interpolation here
-        return new CharacterMovementState(this);
+        return new CharacterMovementState(delta <=.5f ? this : (CharacterMovementState)other) { 
+            position = Vector3.Lerp(this.position, other.position, delta), 
+            velocity = Vector3.Lerp(this.velocity, other.velocity, delta)
+        };
     }
 
     public bool Equals(CharacterMovementState other) {
