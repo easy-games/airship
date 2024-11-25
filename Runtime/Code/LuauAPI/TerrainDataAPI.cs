@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
 using UnityEngine;
 
 [LuauAPI]
@@ -10,10 +9,10 @@ public class TerrainDataAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
 
         if (methodName == "RemoveTree" && numParameters == 1) {
-            int index = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            int index = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             TerrainData terrainData = (TerrainData)targetObject;
             var trees = new List<TreeInstance>(terrainData.treeInstances);
             trees.RemoveAt(index);

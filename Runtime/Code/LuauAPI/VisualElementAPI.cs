@@ -16,11 +16,11 @@ public class VisualElementAPI : BaseLuaAPIClass
         return new Type[] { typeof(UnityEngine.UIElements.TemplateContainer) };
     }
 
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName,int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName,int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes)
     {
         return -1;
     }
-    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes)
     {
         //Single element version
         if (methodName == "Q")
@@ -32,12 +32,12 @@ public class VisualElementAPI : BaseLuaAPIClass
                 return 0;
             }
             
-            string visualName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            string visualName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             string[] visualClasses = null;
             if (numParameters == 2) {
                 visualClasses = new string[1] {
                     LuauCore.GetParameterAsString(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes)
+                        parameterDataSizes)
                 };
             }
             VisualElement visual = (VisualElement)targetObject;
@@ -65,7 +65,7 @@ public class VisualElementAPI : BaseLuaAPIClass
                 return 0;
             }
            
-            string visualName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            string visualName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             VisualElement visual = (VisualElement)targetObject;
             object returnValue = visual.Query(visualName).Build().ToList().ToArray();
 

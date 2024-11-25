@@ -25,6 +25,9 @@ public partial class LuauCore : MonoBehaviour {
     public static LuauContext CurrentContext = LuauContext.Game;
 
     private static LuauPlugin.PrintCallback printCallback_holder = printf;
+
+    private const int MaxParameters = 20;
+    private const int MaxParsedObjects = 100;
     
     private LuauPlugin.ComponentSetEnabledCallback componentSetEnabledCallback_holder;
     private LuauPlugin.GetPropertyCallback getPropertyCallback_holder;
@@ -925,50 +928,57 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     
-    //When a lua object wants to call a method..
+    private static IntPtr[] _parameterDataPtrs = new IntPtr[MaxParameters];
+    private static int[] _parameterDataSizes = new int[MaxParameters];
+    private static int[] _parameterDataPODTypes = new int[MaxParameters];
+    
+    // When a lua object wants to call a method
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
+        Profiler.BeginSample("LuauCore.CallMethod");
         CurrentContext = context;
         
         // if (s_shutdown) return 0;
         Marshal.WriteInt32(shouldYield, 0);
-        if (!IsReady) return 0;
+        if (!IsReady) {
+            Profiler.EndSample();
+            return 0;
+        }
 
-        string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
-        string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
+        var methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
+        var staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
         
-        LuauCore instance = LuauCore.CoreInstance;
+        var instance = LuauCore.CoreInstance;
 
-        System.Object reflectionObject = null;
+        object reflectionObject = null;
         Type type = null;
 
         //Cast/marshal parameter data
-        IntPtr[] parameterDataPtrs = new IntPtr[numParameters];
-        Marshal.Copy(firstParameterData, parameterDataPtrs, 0, numParameters);
-        int[] paramaterDataSizes = new int[numParameters];
-        Marshal.Copy(firstParameterSize, paramaterDataSizes, 0, numParameters);
-        int[] parameterDataPODTypes = new int[numParameters];
-        Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
+        Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
+        Marshal.Copy(firstParameterSize, _parameterDataSizes, 0, numParameters);
+        Marshal.Copy(firstParameterType, _parameterDataPODTypes, 0, numParameters);
+
+        var parameterDataPtrs = new ArraySegment<IntPtr>(_parameterDataPtrs, 0, numParameters);
+        var parameterDataSizes = new ArraySegment<int>(_parameterDataSizes, 0, numParameters);
+        var parameterDataPODTypes = new ArraySegment<int>(_parameterDataPODTypes, 0, numParameters);
         
         //This detects STATIC classobjects only - live objects do not report the className
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
-        if (staticClassApi != null)
-        {
+        if (staticClassApi != null) {
             type = staticClassApi.GetAPIType();
             //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-            int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-            if (retValue >= 0)
-            {
+            int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            if (retValue >= 0) {
+                Profiler.EndSample();
                 return retValue;
             }
         }
 
-        if (type == null)
-        {
+        if (type == null) {
             reflectionObject = ThreadDataManager.GetObjectReference(thread, instanceId);
 
-            if (reflectionObject == null)
-            {
+            if (reflectionObject == null) {
+                Profiler.EndSample();
                 return LuauError(thread, $"Error: InstanceId not currently available for {instanceId} {methodName} {staticClassName} ({LuaThreadToString(thread)})");
             }
             
@@ -984,19 +994,22 @@ public partial class LuauCore : MonoBehaviour {
                     if (type == typeof(GameObject)) {
                         var target = (GameObject) reflectionObject;
                         if (IsAccessBlocked(context, target)) {
+                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
                         if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
+                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     }
                 }
 
                 int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
-                    parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                    parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 if (retValue >= 0) {
+                    Profiler.EndSample();
                     return retValue;
                 }
             }
@@ -1004,17 +1017,19 @@ public partial class LuauCore : MonoBehaviour {
         
         // Check for IsA call:
         if (methodName == "IsA") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             
             var t = ReflectionList.AttemptGetTypeFromString(typeName);
 
             if (t == null) {
+                Profiler.EndSample();
                 return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
             }
 
             var isA = t.IsAssignableFrom(type);
             WritePropertyToThread(thread, isA, typeof(bool));
 
+            Profiler.EndSample();
             return 1;
         }
 
@@ -1036,17 +1051,20 @@ public partial class LuauCore : MonoBehaviour {
             if (eventInfo != null) {
                 //There is an event
                 if (numParameters != 1) {
+                    Profiler.EndSample();
                     return LuauError(thread, $"Error: {methodName} takes 1 parameter (a function!)");
                 }
                 if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
+                    Profiler.EndSample();
                     return LuauError(thread, $"Error: {methodName} parameter must be a function");
                 }
 
-                int handle = GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                int handle = GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 ParameterInfo[] eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
 
                 foreach (ParameterInfo param in eventInfoParams) {
                     if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false && param.ParameterType.IsEnum == false) {
+                        Profiler.EndSample();
                         return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                     }
                 }
@@ -1073,6 +1091,7 @@ public partial class LuauCore : MonoBehaviour {
                 // print("added eventConnection (" + eventConnections.Count + "): " + methodName);
 
                 LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
+                Profiler.EndSample();
                 return 1;
             }
         }
@@ -1083,13 +1102,15 @@ public partial class LuauCore : MonoBehaviour {
         ParameterInfo[] finalParameters = null;
         MethodInfo finalMethod = null;
 
-        object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
+        var podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
 
         Profiler.BeginSample("LuauCore.FindMethod");
         FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext, out var attachContext);
         Profiler.EndSample();
 
         if (finalMethod == null) {
+            Profiler.EndSample();
+            
             if (insufficientContext) {
 #if AIRSHIP_INTERNAL
                 return LuauError(thread, $"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
@@ -1107,12 +1128,13 @@ public partial class LuauCore : MonoBehaviour {
             return LuauError(thread, "Error: Failed to get method");
         }
 
-        object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, attachContext, out parsedData);
+        // object[] parsedData = null;
+        var success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, parameterDataSizes, podObjects, attachContext, out var parsedData);
         if (attachContext) {
             parsedData[0] = context;
         }
         if (success == false) {
+            Profiler.EndSample();
             return LuauError(thread, $"Error: Unable to parse parameters for {type.Name} {finalMethod.Name}");
         }
 
@@ -1131,6 +1153,7 @@ public partial class LuauCore : MonoBehaviour {
                 }
 
                 if (targetTransform != null && IsProtectedScene(targetTransform.gameObject.scene)) {
+                    Profiler.EndSample();
                     return LuauError(thread, $"[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                 }
             } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
@@ -1139,11 +1162,13 @@ public partial class LuauCore : MonoBehaviour {
                     if (paramType == typeof(GameObject)) {
                         var param = parsedData[0] as GameObject;
                         if (param != null && IsProtectedScene(param.scene)) {
+                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected GameObject \"{param.name}\"");
                         }
                     } else if (paramType == typeof(Component)) {
                         var param = parsedData[0] as Component;
                         if (param != null && IsProtectedScene(param.gameObject.scene)) {
+                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected Component \"{param.gameObject.name}\"");
                         }
                     }
@@ -1151,12 +1176,14 @@ public partial class LuauCore : MonoBehaviour {
             } else if (methodName == "SetParent" && type == typeof(Transform)) {
                 var callingTransform = reflectionObject as Transform;
                 if (callingTransform != null && IsAccessBlocked(context, callingTransform.gameObject)) {
+                    Profiler.EndSample();
                     return LuauError(thread, $"[Airship] Access denied when trying set parent of a transform inside a protected scene \"{callingTransform.gameObject.scene.name}\"");
                 }
 
                 if (parsedData[0] != null && parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
                     if (targetTransform != null && IsAccessBlocked(context, targetTransform.gameObject)) {
+                        Profiler.EndSample();
                         return LuauError(thread, $"[Airship] Access denied when trying set parent to a transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                     }
                 }
@@ -1185,21 +1212,28 @@ public partial class LuauCore : MonoBehaviour {
                                                        typeof(Task<>))) {
             var ret = InvokeMethodAsync(context, thread, type, finalMethod, invokeObj, parsedData, out var shouldYieldBool);
             if (ret == -1) {
+                Profiler.EndSample();
                 return ret;
             }
             Marshal.WriteInt32(shouldYield, shouldYieldBool ? 1 : 0);
+            Profiler.EndSample();
             return returnCount;
         }
 
+        Profiler.BeginSample("LuauCore.InvokeMethod");
         try {
-            returnValue = finalMethod.Invoke(invokeObj, parsedData);
+            returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
         } catch (TargetInvocationException e) {
+            Profiler.EndSample();
             return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException.Message);
         } catch (Exception e) {
+            Profiler.EndSample();
             return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.Message);
         }
+        Profiler.EndSample();
 
-        WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData);
+        WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData.Array);
+        Profiler.EndSample();
         return returnCount;
     }
 
@@ -1237,12 +1271,13 @@ public partial class LuauCore : MonoBehaviour {
         Type type = null;
 
         //Cast/marshal parameter data
-        IntPtr[] parameterDataPtrs = new IntPtr[numParameters];
-        Marshal.Copy(firstParameterData, parameterDataPtrs, 0, numParameters);
-        int[] paramaterDataSizes = new int[numParameters];
-        Marshal.Copy(firstParameterSize, paramaterDataSizes, 0, numParameters);
-        int[] parameterDataPODTypes = new int[numParameters];
-        Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
+        Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
+        Marshal.Copy(firstParameterSize, _parameterDataSizes, 0, numParameters);
+        Marshal.Copy(firstParameterType, _parameterDataPODTypes, 0, numParameters);
+
+        var parameterDataPtrs = new ArraySegment<IntPtr>(_parameterDataPtrs, 0, numParameters);
+        var parameterDataSizes = new ArraySegment<int>(_parameterDataSizes, 0, numParameters);
+        var parameterDataPODTypes = new ArraySegment<int>(_parameterDataPODTypes, 0, numParameters);
         
         //This detects STATIC classobjects only - live objects do not report the className
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
@@ -1255,18 +1290,18 @@ public partial class LuauCore : MonoBehaviour {
         type = staticClassApi.GetAPIType();
         // !!! This could be broken
         //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
         if (retValue >= 0)
         {
             return retValue;
         }
         
-        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
     }
 
-    private static int InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters, out bool shouldYield) {
+    private static int InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, ArraySegment<object> parameters, out bool shouldYield) {
         try {
-            var task = (Task)method.Invoke(obj, parameters);
+            var task = (Task)method.Invoke(obj, parameters.Array);
             var awaitingTask = new AwaitingTask {
                 Thread = thread,
                 Task = task,

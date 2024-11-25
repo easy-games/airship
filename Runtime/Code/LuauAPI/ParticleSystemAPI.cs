@@ -3,18 +3,15 @@ using Luau;
 using UnityEngine;
 
 [LuauAPI]
-public class ParticleSystemAPI : BaseLuaAPIClass
-{
-    public override Type GetAPIType()
-    {
+public class ParticleSystemAPI : BaseLuaAPIClass {
+    public override Type GetAPIType() {
         return typeof(ParticleSystem);
     }
 
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes,
-        IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters,
+        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes)
     {
-        if (methodName == "MakeEmitParams")
-        {
+        if (methodName == "MakeEmitParams") {
             var emitParams = new ParticleSystem.EmitParams();
             LuauCore.WritePropertyToThread(thread, emitParams, typeof(ParticleSystem.EmitParams));
             return 1;
@@ -24,7 +21,7 @@ public class ParticleSystemAPI : BaseLuaAPIClass
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes)
     {
         
         if (methodName == "EmitAtPosition")
@@ -32,15 +29,15 @@ public class ParticleSystemAPI : BaseLuaAPIClass
             if (numParameters == 2)
             {
                 int amount = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
                 Vector3 pos = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
 
                 var emitParams = new ParticleSystem.EmitParams();
                 emitParams.position = pos;
                 emitParams.applyShapeToPosition = true;
 
-                Debug.Log("Emitting!");
+                // Debug.Log("Emitting!");
                 var system = (ParticleSystem)targetObject;
                 system.Emit(emitParams, amount);
 

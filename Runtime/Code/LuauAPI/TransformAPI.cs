@@ -16,65 +16,65 @@ public class TransformAPI : BaseLuaAPIClass {
         object targetObject,
         string methodName,
         int numParameters,
-        int[] parameterDataPODTypes,
-        IntPtr[] parameterDataPtrs,
-        int[] paramaterDataSizes) 
+        ArraySegment<int> parameterDataPODTypes,
+        ArraySegment<IntPtr> parameterDataPtrs,
+        ArraySegment<int> parameterDataSizes) 
     {
         if (methodName == "GetAirshipComponent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
             return AirshipBehaviourHelper.GetAirshipComponent(context, thread, ((Transform)targetObject).gameObject, typeName);
         }
 
         if (methodName == "GetAirshipComponents") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
             return AirshipBehaviourHelper.GetAirshipComponents(context, thread, ((Transform)targetObject).gameObject, typeName);
         }
 
         if (methodName == "GetAirshipComponentInChildren") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
-            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out var exists);
             
             return AirshipBehaviourHelper.GetAirshipComponentInChildren(context, thread, ((Transform)targetObject).gameObject, typeName, includeInactive);
         }
 
         if (methodName == "GetAirshipComponentsInChildren") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
             
-            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out var exists);
 
             return AirshipBehaviourHelper.GetAirshipComponentsInChildren(context, thread, ((Transform)targetObject).gameObject, typeName, includeInactive);
         }
 
         if (methodName == "AddAirshipComponent") {
-            var componentName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var componentName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             return AirshipBehaviourHelper.AddAirshipComponent(context, thread, ((Transform)targetObject).gameObject, componentName);
         }
         
         if (methodName == "GetComponent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
         }
 
         if (methodName == "GetComponentInChildren") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
         }
 
         if (methodName == "GetComponentInParent") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
         }
 
         if (methodName == "GetComponents") {
-            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var t = (Transform)targetObject;
@@ -91,7 +91,7 @@ public class TransformAPI : BaseLuaAPIClass {
         }
 
         if (methodName == "GetComponentIfExists") {
-            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentIfExists takes a parameter");
@@ -119,7 +119,7 @@ public class TransformAPI : BaseLuaAPIClass {
         
         if (methodName == "GetComponentsInChildren") {
             Transform t = (Transform)targetObject;
-            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
@@ -140,7 +140,7 @@ public class TransformAPI : BaseLuaAPIClass {
         
         if (methodName == "GetComponentsInParent") {
             Transform t = (Transform)targetObject;
-            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInParent takes a string parameter.");
@@ -163,9 +163,9 @@ public class TransformAPI : BaseLuaAPIClass {
             switch (numParameters) {
                 case 2: {
                     var axis = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes);
+                        parameterDataSizes);
                     var relativeTo = (Space)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
 
                     var t = (Transform)targetObject;
                     t.Rotate(axis, relativeTo);
@@ -173,11 +173,11 @@ public class TransformAPI : BaseLuaAPIClass {
                 }
                 case 3: {
                     var axis = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes);
+                        parameterDataSizes);
                     var angle = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes);
+                        parameterDataSizes);
                     var relativeTo = (Space)LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
 
                     var t = (Transform)targetObject;
                     t.Rotate(axis, angle, relativeTo);
@@ -185,13 +185,13 @@ public class TransformAPI : BaseLuaAPIClass {
                 }
                 case 4: {
                     var axisX = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes);
+                        parameterDataSizes);
                     var axisY = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes);
+                        parameterDataSizes);
                     var axisZ = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes);
+                        parameterDataSizes);
                     var relativeTo = (Space)LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
 
                     var t = (Transform)targetObject;
                     t.Rotate(axisX, axisY, axisZ, relativeTo);
@@ -202,9 +202,9 @@ public class TransformAPI : BaseLuaAPIClass {
 
         if (methodName == "ClampRotationY" && numParameters == 2) {
             float targetY = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
             float maxAngle = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
 
             //Clamp the rotation so the spine doesn't appear broken
             Transform t = (Transform)targetObject;
