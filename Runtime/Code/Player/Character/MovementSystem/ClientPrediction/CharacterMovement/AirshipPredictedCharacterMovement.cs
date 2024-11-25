@@ -111,6 +111,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     private MoveInputData lastSentInput;
     private void OnMovementEnd(object data, object isReplay){
         if((bool)isReplay || !isClientOnly){
+            if((bool)isReplay){
+                print("Ignoring movement end");
+            }
             return;
         }
 
@@ -122,6 +125,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
                 // Log($"FixedUpdate for {name}: taking optimized early return instead of recording state.");
                 return;
         }
+        print("Movement end: " + NetworkTime.predictedTime + " moveDir: " + currentState.currentMoveInput.moveDir);
 
         // Save the state in the history
         RecordState(NetworkTime.predictedTime);
@@ -173,11 +177,13 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
+        print("Replay start: " + initialState.timestamp);
         //Save the future inputs
         replayPredictionStates.Clear();
         for(int i=historyIndex ; i < stateHistory.Count; i++){
-            var nextState = stateHistory.Values[historyIndex];
-            //print("Replaying state: " + nextState.timestamp + " jump: " + nextState.currentMoveInput.jump);
+            var nextState = stateHistory.Values[i];
+           //print("Replaying state: " + nextState.timestamp + " jump: " + nextState.currentMoveInput.jump);
+
             //Store the states into a new array
             replayPredictionStates.Add(nextState);
         }
@@ -187,7 +193,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
         //Snap to the servers state
         var movementState = (CharacterMovementState)initialState;
+        
         SnapTo(movementState);
+         
         movement.transform.position = movementState.position;
         stateHistory.Add(movementState.timestamp, movementState);
         if(showGizmos){
@@ -204,9 +212,10 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         if(replayPredictionStates.Count > 0) {
             var futureState = replayPredictionStates[0];
             if(time >= futureState.timestamp) {
-                if(futureState.currentMoveInput.jump){
-                    print("JUMP Replaying inputs: " + futureState.timestamp + " at: " + time);
-                }
+                // if(futureState.currentMoveInput.jump){
+                //     print("JUMP Replaying inputs: " + futureState.timestamp + " at: " + time);
+                // }
+                print("Replay Tick: " + time + " moveDir: " + futureState.currentMoveInput.moveDir);
                 movement.SetMoveInputData(futureState.currentMoveInput);
                 replayPredictionStates.RemoveAt(0);
             }
@@ -230,7 +239,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override void OnReplayFinished(AirshipPredictedState initialState) {
-        PrintHistory("REPLAY FINISHED");
+        print("Replay ended: " + initialState.timestamp);
+        //PrintHistory("REPLAY FINISHED");
         if(showGizmos){
             GizmoUtils.DrawSphere(currentPosition, .4f, Color.green, 4, gizmoDuration);
             GizmoUtils.DrawLine(initialState.position, currentPosition, Color.green, gizmoDuration);

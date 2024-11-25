@@ -344,11 +344,13 @@ protected void Log(string message){
         // if there's no latency, we may receive a server state for 'now'.
         // sampling would fail, if we haven't recorded anything in a while.
         // to solve this, always record the current state when receiving a server state.
-        double predictedTime = NetworkTime.predictedTime;
-        if(predictedTime > lastRecorded.timestamp + recordInterval/2 
-            && !this.stateHistory.ContainsKey(predictedTime)){
-            RecordState(predictedTime);
-        }
+         double predictedTime = NetworkTime.predictedTime;
+
+        //This shouldn't be need in Airship because we are controlling the FixedUpdate loop and recording again will just record redundant data
+        // if(predictedTime > lastRecorded.timestamp + recordInterval/2 
+        //     && !this.stateHistory.ContainsKey(predictedTime)){
+        //     RecordState(predictedTime);
+        // }
 
         double oldestTime = stateHistory.Values[0].timestamp;
         double newestTime = lastRecorded.timestamp;
@@ -423,19 +425,19 @@ protected void Log(string message){
             }
 
 
-            //Simulate until the end of our history or however long we think we are ahead of the server whicher is longer
-            double finalTime = lastRecorded.timestamp > predictedTime ? lastRecorded.timestamp : predictedTime;
+            //Simulate until the end of our history
+            double finalTime = lastRecorded.timestamp;
             double simulationDifference = finalTime - serverTimestamp;
 
-            if(simulationDifference > recordInterval){
+            //if(simulationDifference > recordInterval){
                 print("Replaying until: " + finalTime + " which is " + simulationDifference + " seconds away");
 
                 //Replay States
                 AirshipPredictionManager.instance.QueueReplay(this, serverState, simulationDifference, afterIndex);
-            }else{
-                //Snap because there isn't a time difference (shoudld just be in shared mode)
-                ApplyState(serverState);
-            }
+            // }else{
+            //     //Snap because there isn't a time difference (shoudld just be in shared mode)
+            //     ApplyState(serverState);
+            // }
         }
     }
 #endregion

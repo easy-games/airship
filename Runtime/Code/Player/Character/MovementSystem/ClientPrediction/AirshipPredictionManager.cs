@@ -1,9 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
-using HandlebarsDotNet.ObjectDescriptors;
 using Mirror;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class AirshipPredictionManager : MonoBehaviour {
     private static AirshipPredictionManager _instance = null;
@@ -113,10 +110,7 @@ public class AirshipPredictionManager : MonoBehaviour {
 
 #region UPDATE
     private void Update() {
-        if(!smoothRigidbodies){
-            return;
-        }
-        
+
         if(Physics.simulationMode != SimulationMode.Script){
             return;
         }
@@ -141,6 +135,10 @@ public class AirshipPredictionManager : MonoBehaviour {
             //Simulate the physics
             physicsTimer -= Time.fixedDeltaTime;
             Physics.Simulate(Time.fixedDeltaTime);
+
+            if(!smoothRigidbodies){
+                continue;
+            }
 
             //Save timeing data every X frames
             simI++;
@@ -218,7 +216,7 @@ public class AirshipPredictionManager : MonoBehaviour {
             return;
         }
 
-        Debug.Log("Queue replay: " + replayController.friendlyName);
+        //Debug.Log("Queue replay: " + replayController.friendlyName);
 
         //TODO let predicted objects queue replay data and then do the replay simulations all together
         //So if you have 10 predicted rigidbodies they can share replay simulations
