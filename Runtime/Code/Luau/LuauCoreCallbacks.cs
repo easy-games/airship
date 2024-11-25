@@ -945,12 +945,12 @@ public partial class LuauCore : MonoBehaviour {
             return 0;
         }
 
-        string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
-        string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
+        var methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
+        var staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
         
-        LuauCore instance = LuauCore.CoreInstance;
+        var instance = LuauCore.CoreInstance;
 
-        System.Object reflectionObject = null;
+        object reflectionObject = null;
         Type type = null;
 
         //Cast/marshal parameter data
