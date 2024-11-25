@@ -311,27 +311,28 @@ public partial class LuauCore : MonoBehaviour
         return eventType;
     }
 
-    private static object[] UnrollPodObjects(IntPtr thread, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs) {
-        var podObjects = new object[numParameters];
+    private static readonly object[] UnrolledPodObjects = new object[MaxParameters];
+    private static readonly int[] UnrolledPodTypeData = new int[1];
+    private static ArraySegment<object> UnrollPodObjects(IntPtr thread, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs) {
+        // var podObjects = new object[numParameters];
         for (var j = 0; j < numParameters; j++) {
             if (parameterDataPODTypes[j] == (int)PODTYPE.POD_OBJECT) {
-                var intData = new int[1];
-                Marshal.Copy(parameterDataPtrs[j], intData, 0, 1);
-                int instanceId = intData[0];
-                podObjects[j] = ThreadDataManager.GetObjectReference(thread, instanceId);
+                // var intData = new int[1];
+                Marshal.Copy(parameterDataPtrs[j], UnrolledPodTypeData, 0, 1);
+                var instanceId = UnrolledPodTypeData[0];
+                UnrolledPodObjects[j] = ThreadDataManager.GetObjectReference(thread, instanceId);
             } else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_COMPONENT) {
                 var ptr = parameterDataPtrs[j];
                 var componentRef = Marshal.PtrToStructure<AirshipComponentRef>(ptr);
-                podObjects[j] = componentRef.AsUnityComponent();
+                UnrolledPodObjects[j] = componentRef.AsUnityComponent();
             } else {
-                podObjects[j] = null;
+                UnrolledPodObjects[j] = null;
             }
         }
-        return podObjects;
+        return new ArraySegment<object>(UnrolledPodObjects, 0, numParameters);
     }
 
-    static private int RunConstructor(IntPtr thread, Type type, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
-    {
+    private static int RunConstructor(IntPtr thread, Type type, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> paramaterDataSizes) {
 
         ConstructorInfo[] constructors = type.GetConstructors();
 
@@ -344,7 +345,7 @@ public partial class LuauCore : MonoBehaviour
             return 1;
         }
 
-        object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
+        var podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
         FindConstructor(type, constructors, numParameters, parameterDataPODTypes, podObjects, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor);
 
         if (finalConstructor == null)
@@ -380,7 +381,7 @@ public partial class LuauCore : MonoBehaviour
         return 1;
     }
 
-    static public unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
+    public static unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
         if (value == null) {
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
             return true;
@@ -642,7 +643,7 @@ public partial class LuauCore : MonoBehaviour
         return false;
     }
 
-    private static bool ParseParameterData(IntPtr thread, int numParameters, ArraySegment<IntPtr> intPtrs, ArraySegment<int> podTypes, ParameterInfo[] methodParameters, ArraySegment<int> sizes, object[] podObjects, bool usingAttachedContext, out object[] parsedData) {
+    private static bool ParseParameterData(IntPtr thread, int numParameters, ArraySegment<IntPtr> intPtrs, ArraySegment<int> podTypes, ParameterInfo[] methodParameters, ArraySegment<int> sizes, ArraySegment<object> podObjects, bool usingAttachedContext, out object[] parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
         parsedData = new object[numParametersIncludingContext];
@@ -917,8 +918,8 @@ public partial class LuauCore : MonoBehaviour
     }
 
 
-    private static HashSet<MethodInfo> _methodsUsedTest = new();
-    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, ArraySegment<int> podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext)
+    // private static HashSet<MethodInfo> _methodsUsedTest = new();
+    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext)
     {
         nameFound = false;
         countFound = false;
@@ -1020,7 +1021,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, int[] podTypes, object[] podObjects, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor)
+    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor)
     {
         countFound = false;
         finalParameters = null;
@@ -1047,7 +1048,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, ArraySegment<int> podTypes, object[] podObjects, bool contextAttached) {
+    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, bool contextAttached) {
         for (int i = 0; i < numParameters; i++) {
             var paramIndex = i;
             if (contextAttached) paramIndex += 1; // Because 0'th param should be context

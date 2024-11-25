@@ -1028,6 +1028,7 @@ public partial class LuauCore : MonoBehaviour {
             var isA = t.IsAssignableFrom(type);
             WritePropertyToThread(thread, isA, typeof(bool));
 
+            Profiler.EndSample();
             return 1;
         }
 
@@ -1100,7 +1101,7 @@ public partial class LuauCore : MonoBehaviour {
         ParameterInfo[] finalParameters = null;
         MethodInfo finalMethod = null;
 
-        object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
+        var podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
 
         Profiler.BeginSample("LuauCore.FindMethod");
         FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext, out var attachContext);
@@ -1210,6 +1211,7 @@ public partial class LuauCore : MonoBehaviour {
                                                        typeof(Task<>))) {
             var ret = InvokeMethodAsync(context, thread, type, finalMethod, invokeObj, parsedData, out var shouldYieldBool);
             if (ret == -1) {
+                Profiler.EndSample();
                 return ret;
             }
             Marshal.WriteInt32(shouldYield, shouldYieldBool ? 1 : 0);
