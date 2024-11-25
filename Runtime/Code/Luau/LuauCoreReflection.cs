@@ -363,18 +363,16 @@ public partial class LuauCore : MonoBehaviour
 
             return 0;
         }
-
-        object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, false, out parsedData);
-        if (success == false)
-        {
+        
+        var success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, false, out var parsedData);
+        if (success == false) {
             ThreadDataManager.Error(thread);
             Debug.LogError("Error: Unable to parse parameters for " + type.Name + " constructor.");
             return 0;
         }
 
         //We have parameters
-        System.Object returnValue = finalConstructor.Invoke(parsedData);
+        var returnValue = finalConstructor.Invoke(parsedData.Array);
 
         //Push this onto the stack
         WritePropertyToThread(thread, returnValue, type);
@@ -643,7 +641,8 @@ public partial class LuauCore : MonoBehaviour
         return false;
     }
 
-    private static bool ParseParameterData(IntPtr thread, int numParameters, ArraySegment<IntPtr> intPtrs, ArraySegment<int> podTypes, ParameterInfo[] methodParameters, ArraySegment<int> sizes, ArraySegment<object> podObjects, bool usingAttachedContext, out object[] parsedData) {
+    private static readonly object[] ParsedObjectsData = new object[MaxParameters];
+    private static bool ParseParameterData(IntPtr thread, int numParameters, ArraySegment<IntPtr> intPtrs, ArraySegment<int> podTypes, ParameterInfo[] methodParameters, ArraySegment<int> sizes, ArraySegment<object> podObjects, bool usingAttachedContext, out ArraySegment<object> parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
         parsedData = new object[numParametersIncludingContext];

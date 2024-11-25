@@ -27,6 +27,7 @@ public partial class LuauCore : MonoBehaviour {
     private static LuauPlugin.PrintCallback printCallback_holder = printf;
 
     private const int MaxParameters = 20;
+    private const int MaxParsedObjects = 100;
     
     private LuauPlugin.ComponentSetEnabledCallback componentSetEnabledCallback_holder;
     private LuauPlugin.GetPropertyCallback getPropertyCallback_holder;
@@ -928,7 +929,7 @@ public partial class LuauCore : MonoBehaviour {
     
     
     private static IntPtr[] _parameterDataPtrs = new IntPtr[MaxParameters];
-    private static int[] _paramaterDataSizes = new int[MaxParameters];
+    private static int[] _parameterDataSizes = new int[MaxParameters];
     private static int[] _parameterDataPODTypes = new int[MaxParameters];
     
     // When a lua object wants to call a method
@@ -954,11 +955,11 @@ public partial class LuauCore : MonoBehaviour {
 
         //Cast/marshal parameter data
         Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
-        Marshal.Copy(firstParameterSize, _paramaterDataSizes, 0, numParameters);
+        Marshal.Copy(firstParameterSize, _parameterDataSizes, 0, numParameters);
         Marshal.Copy(firstParameterType, _parameterDataPODTypes, 0, numParameters);
 
         var parameterDataPtrs = new ArraySegment<IntPtr>(_parameterDataPtrs, 0, numParameters);
-        var parameterDataSizes = new ArraySegment<int>(_paramaterDataSizes, 0, numParameters);
+        var parameterDataSizes = new ArraySegment<int>(_parameterDataSizes, 0, numParameters);
         var parameterDataPODTypes = new ArraySegment<int>(_parameterDataPODTypes, 0, numParameters);
         
         //This detects STATIC classobjects only - live objects do not report the className
@@ -1127,8 +1128,8 @@ public partial class LuauCore : MonoBehaviour {
             return LuauError(thread, "Error: Failed to get method");
         }
 
-        object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, parameterDataSizes, podObjects, attachContext, out parsedData);
+        // object[] parsedData = null;
+        var success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, parameterDataSizes, podObjects, attachContext, out var parsedData);
         if (attachContext) {
             parsedData[0] = context;
         }
@@ -1221,7 +1222,7 @@ public partial class LuauCore : MonoBehaviour {
 
         Profiler.BeginSample("LuauCore.InvokeMethod");
         try {
-            returnValue = finalMethod.Invoke(invokeObj, parsedData);
+            returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
         } catch (TargetInvocationException e) {
             Profiler.EndSample();
             return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException.Message);
@@ -1231,7 +1232,7 @@ public partial class LuauCore : MonoBehaviour {
         }
         Profiler.EndSample();
 
-        WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData);
+        WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData.Array);
         Profiler.EndSample();
         return returnCount;
     }
@@ -1270,12 +1271,13 @@ public partial class LuauCore : MonoBehaviour {
         Type type = null;
 
         //Cast/marshal parameter data
-        IntPtr[] parameterDataPtrs = new IntPtr[numParameters];
-        Marshal.Copy(firstParameterData, parameterDataPtrs, 0, numParameters);
-        int[] paramaterDataSizes = new int[numParameters];
-        Marshal.Copy(firstParameterSize, paramaterDataSizes, 0, numParameters);
-        int[] parameterDataPODTypes = new int[numParameters];
-        Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
+        Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
+        Marshal.Copy(firstParameterSize, _parameterDataSizes, 0, numParameters);
+        Marshal.Copy(firstParameterType, _parameterDataPODTypes, 0, numParameters);
+
+        var parameterDataPtrs = new ArraySegment<IntPtr>(_parameterDataPtrs, 0, numParameters);
+        var parameterDataSizes = new ArraySegment<int>(_parameterDataSizes, 0, numParameters);
+        var parameterDataPODTypes = new ArraySegment<int>(_parameterDataPODTypes, 0, numParameters);
         
         //This detects STATIC classobjects only - live objects do not report the className
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
@@ -1288,18 +1290,18 @@ public partial class LuauCore : MonoBehaviour {
         type = staticClassApi.GetAPIType();
         // !!! This could be broken
         //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
         if (retValue >= 0)
         {
             return retValue;
         }
         
-        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
     }
 
-    private static int InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters, out bool shouldYield) {
+    private static int InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, ArraySegment<object> parameters, out bool shouldYield) {
         try {
-            var task = (Task)method.Invoke(obj, parameters);
+            var task = (Task)method.Invoke(obj, parameters.Array);
             var awaitingTask = new AwaitingTask {
                 Thread = thread,
                 Task = task,
