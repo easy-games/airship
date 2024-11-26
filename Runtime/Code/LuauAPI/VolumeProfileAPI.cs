@@ -17,14 +17,21 @@ public class VolumeProfileAPI : BaseLuaAPIClass {
         ArraySegment<int> parameterDataPODTypes,
         ArraySegment<IntPtr> parameterDataPtrs,
         ArraySegment<int> parameterDataSizes) {
+        var target = (VolumeProfile)targetObject;
+
         if (methodName == "GetDepthOfField") {
-            var target = (VolumeProfile)targetObject;
             if (target.TryGet<DepthOfField>(out var dof)) {
                 LuauCore.WritePropertyToThread(thread, dof, typeof(DepthOfField));
                 return 1;
             }
 
             return 0;
+        }
+
+        if (methodName == "GetVolumeComponents") {
+            var results = target.components.ToArray();
+            LuauCore.WritePropertyToThread(thread, results, typeof(VolumeComponent[]));
+            return 1;
         }
 
         return -1;

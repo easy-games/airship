@@ -2,6 +2,7 @@
 using Code.Player.Character.API;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Code.Player.Character {
     [LuauAPI]
