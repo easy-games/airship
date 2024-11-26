@@ -87,6 +87,7 @@ public class CharacterMovement : NetworkBehaviour {
 	public RaycastHit groundedRaycastHit {get; private set;}
 	public bool isGrounded {get; private set;}
 	public bool isSprinting {get; private set;}
+	public bool isCrouching {get; private set;}
 	public bool disableInput {
 		get { return currentMoveState.inputDisabled;} 
 		set {currentMoveState.inputDisabled = value;}
@@ -482,7 +483,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 #region CROUCH
 		// Prevent falling off blocks while crouching
-		var isCrouching = groundedState == CharacterState.Crouching;
+		this.isCrouching = groundedState == CharacterState.Crouching;
 		if (moveData.preventFallingWhileCrouching && !currentMoveState.prevStepUp && isCrouching && isMoving && grounded ) {
 			var posInMoveDirection = rootPosition + normalizedMoveDir * 0.2f;
 			var (groundedInMoveDirection, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
@@ -1096,6 +1097,10 @@ public class CharacterMovement : NetworkBehaviour {
 	private void ApplyNonLocalStateData(CharacterAnimationSyncData data) {
 		var oldState = this.stateSyncData;
 		this.stateSyncData = data;
+		this.currentLocalVelocity = data.localVelocity;
+		this.isGrounded = data.grounded;
+		this.isCrouching = data.crouching;
+		this.isSprinting = data.sprinting;
 
 		if (oldState.state != data.state) {
 			stateChanged?.Invoke((int)data.state);
