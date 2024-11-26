@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [LuauAPI]
 public class CharacterAnimationHelper : MonoBehaviour {

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using Airship.DevConsole;
 using Code.Authentication;
+using Code.Analytics;
 using Luau;
 using Mirror;
 using UnityEngine;
@@ -96,8 +97,8 @@ namespace Code.Bootstrap {
                 }
             }, false);
             NetworkServer.RegisterHandler<ClientFinishedPreparingMessage>((conn, data) => {
-                var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
-                if (LuauCore.IsProtectedScene(sceneName)) {
+                var sceneName = serverBootstrap.startupConfig.StartingSceneName;
+                if (LuauCore.IsProtectedSceneName(sceneName)) {
                     Debug.LogError("Invalid starting scene name: " + sceneName);
                     conn.Disconnect();
                     return;
@@ -114,7 +115,7 @@ namespace Code.Bootstrap {
 
                 // Validate scene name
                 var sceneName = this.serverBootstrap.startupConfig.StartingSceneName;
-                if (LuauCore.IsProtectedScene(sceneName)) {
+                if (LuauCore.IsProtectedSceneName(sceneName)) {
                     Debug.LogError("Invalid starting scene name: " + sceneName + ". The name of this scene is not allowed.");
                     conn.Send(new KickMessage() {
                         reason = "Invalid starting scene name: " + sceneName + ". The name of this scene is not allowed. Report this to the game developer.",
@@ -168,6 +169,7 @@ namespace Code.Bootstrap {
                 }
 
                 this.isFinishedPreparing = true;
+                AnalyticsRecorder.InitGame(data.startupConfig);
                 NetworkClient.Send(new ClientFinishedPreparingMessage());
             }, false);
 

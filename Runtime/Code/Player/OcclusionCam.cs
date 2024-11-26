@@ -38,36 +38,18 @@ public class OcclusionCam : MonoBehaviour {
 	public void BumpForOcclusion(Vector3 attachToPos, int mask) {
 		var t = transform;
 		var camPos = t.position;
-		var nearClip = targetCamera.nearClipPlane;
 
 		var distance = Vector3.Distance(camPos, attachToPos);
-		var newDistance = distance;
 		var adjusted = false;
 
-		// Scan corners of viewport:
-		for (var x = 0; x <= 1; x++) {
-			var wx = t.right * ((x - 0.5f) * _projectionX);
-			for (var y = 0; y <= 1; y++) {
-				var wy = t.up * ((y - 0.5f) * _projectionY);
-
-				var origin = attachToPos + (wx + wy) * nearClip;
-				var viewportPos = targetCamera.ViewportPointToRay(new Vector3(x, y, 0)).origin;
-				var diff = viewportPos - origin;
-
-				// Raycast outward from origin toward the camera:
-				if (!Physics.Raycast(origin, diff.normalized, out var hit, diff.magnitude, mask, QueryTriggerInteraction.Ignore)) continue;
-				adjusted = true;
-
-				// Set new distance if closer than previous:
-				var distFromOrigin = Vector3.Distance(hit.point, origin) - nearClip;
-				if (distFromOrigin < newDistance) {
-					newDistance = distFromOrigin;
-				}
-			}
+		var diff = camPos - attachToPos;
+		var boxHalfExtents = new Vector3(_projectionX * 0.05f, _projectionY * 0.05f, 0f);
+		if (!Physics.BoxCast(attachToPos,
+			    boxHalfExtents, diff, out var hitInfo, t.rotation, distance,
+			    mask, QueryTriggerInteraction.Ignore)) {
+			return;
 		}
-		if (!adjusted) return;
-
-		// Bump camera forward to be in front of the occluding object:
-		t.position += t.forward * (distance - newDistance);
+		
+		t.position = attachToPos + diff.normalized * hitInfo.distance;
 	}
 }

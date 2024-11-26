@@ -162,7 +162,7 @@ namespace Editor.Packages {
                         });
 
                         menu.AddItem(new GUIContent("Redownload"), false, () => {
-                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion, package.publishVersionNumber));
                         });
 
                         // Remove button is disabled for core packages
@@ -761,7 +761,7 @@ namespace Editor.Packages {
         
         public static bool IsModifyingPackages => activeDownloads.Count > 0 || activeRemovals.Count > 0;
         
-        public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
+        public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion, string publishVersionNumber) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
                 Debug.Log("Tried to download package while download is in progress. Skipping.");
                 yield break;
@@ -876,11 +876,13 @@ namespace Editor.Packages {
                  if (existingPackageDoc != null) {
                      existingPackageDoc.codeVersion = codeVersion;
                      existingPackageDoc.assetVersion = assetVersion;
+                     existingPackageDoc.publishVersionNumber = publishVersionNumber;
                  } else {
                      var packageDoc = new AirshipPackageDocument() {
                          id = packageId,
                          codeVersion = codeVersion,
-                         assetVersion = assetVersion
+                         assetVersion = assetVersion,
+                         publishVersionNumber = publishVersionNumber,
                      };
                      gameConfig.packages.Add(packageDoc);
                  }
@@ -1029,7 +1031,7 @@ namespace Editor.Packages {
 
             // Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
             request.Dispose();
-            yield return DownloadPackage(packageId, version.package.codeVersionNumber + "", version.package.assetVersionNumber + "");
+            yield return DownloadPackage(packageId, version.package.codeVersionNumber + "", version.package.assetVersionNumber + "", version.package.publishNumber + "");
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {

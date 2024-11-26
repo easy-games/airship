@@ -76,8 +76,10 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         // If we ever want to load a different definition file specified by server this will
         // need to be swapped to an rpc. But right now we always load the definition file attached
         // to the VW.
-        SetupClientVoxelWorld();
-        
+        if (!RunCore.IsServer()) { // Don't run in shared
+            SetupClientVoxelWorld();
+        }
+
         this.replicationTimer.Start();
         // print($"VoxelWorldNetworker.OnStartClient. Spawned on net after {this.spawnTimer.ElapsedMilliseconds}ms");
         // world.FullWorldUpdate();

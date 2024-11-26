@@ -194,7 +194,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipUniVoiceNetwork),
             typeof(StandaloneFileBrowser),
             typeof(MaterialColorURP),
-            typeof(Mathf),
             typeof(UnityWebRequestTexture),
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
@@ -208,6 +207,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(DepthOfField),
             typeof(Volume),
             typeof(DepthOfFieldMode),
+            typeof(LensDistortion),
+            typeof(Vignette),
 
             // Mirror
             typeof(NetworkServer),

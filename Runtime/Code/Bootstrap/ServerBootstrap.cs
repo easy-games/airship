@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Serialization;
 using Agones;
 using Agones.Model;
 using Code.Analytics;
@@ -358,7 +359,7 @@ public class ServerBootstrap : MonoBehaviour
 					try {
 						package.codeVersion = data.version.package.codeVersionNumber.ToString();
 						package.assetVersion = data.version.package.assetVersionNumber.ToString();
-						package.publishVersionNumber = data.version.package.publishVersionNumber.ToString();
+						package.publishVersionNumber = data.version.package.publishNumber.ToString();
 					} catch (Exception e) {
 						Debug.LogError("Failed to fetch latest version of " + package.id + ": " + e);
 					}

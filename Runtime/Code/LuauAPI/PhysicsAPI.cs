@@ -26,13 +26,13 @@ public class PhysicsAPI : BaseLuaAPIClass
         }
     }
     
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName,  int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
         if (methodName is "Raycast" or "EasyRaycast") {
             //ray.origin, ray.direction, 1000, -1
             if (numParameters >= 3 && numParameters <= 5) {
-                Vector3 start = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-                Vector3 dir = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-                float distance = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                Vector3 start = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                Vector3 dir = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                float distance = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
                 bool hit;
                 RaycastHit hitInfo;
@@ -42,13 +42,13 @@ public class PhysicsAPI : BaseLuaAPIClass
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance);
                 } else if (numParameters == 4) {
                     // 4 params
-                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask);
                 } else {
                     // 5 params
-                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                     QueryTriggerInteraction queryTriggerInteraction = (QueryTriggerInteraction) LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                        paramaterDataSizes);
+                        parameterDataSizes);
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask, queryTriggerInteraction);
                 }
                 
@@ -61,11 +61,11 @@ public class PhysicsAPI : BaseLuaAPIClass
                 case 3: {
                     // origin, radius, direction
                     var origin = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var radius = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var direction = LuauCore.GetParameterAsVector3(2, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
 
                     var hit = Physics.SphereCast(origin, radius, direction, out var hitInfo);
                     return WriteRaycastResultToThread(thread, hit, hitInfo);
@@ -73,13 +73,13 @@ public class PhysicsAPI : BaseLuaAPIClass
                 case 4: {
                     // origin, radius, direction, maxDistance
                     var origin = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var radius = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var direction = LuauCore.GetParameterAsVector3(2, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var maxDistance = LuauCore.GetParameterAsFloat(3, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
 
                     var hit = Physics.SphereCast(origin, radius, direction, out var hitInfo, maxDistance);
                     return WriteRaycastResultToThread(thread, hit, hitInfo);
@@ -87,15 +87,15 @@ public class PhysicsAPI : BaseLuaAPIClass
                 case 5: {
                     // origin, radius, direction, maxDistance, layerMask
                     var origin = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var radius = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var direction = LuauCore.GetParameterAsVector3(2, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var maxDistance = LuauCore.GetParameterAsFloat(3, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
                     var layerMask = LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes,
-                        parameterDataPtrs, paramaterDataSizes);
+                        parameterDataPtrs, parameterDataSizes);
 
                     var hit = Physics.SphereCast(origin, radius, direction, out var hitInfo, maxDistance, layerMask);
                     return WriteRaycastResultToThread(thread, hit, hitInfo);
@@ -106,16 +106,16 @@ public class PhysicsAPI : BaseLuaAPIClass
         
         if (methodName == "BoxCast") {
             Vector3 center = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
             Vector3 halfExtents = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
             Vector3 direction = LuauCore.GetParameterAsVector3(2, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
 
             Quaternion orientation;
             if (numParameters >= 4) {
                 orientation = LuauCore.GetParameterAsQuaternion(3, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
             } else {
                 orientation = Quaternion.identity;
             }
@@ -123,7 +123,7 @@ public class PhysicsAPI : BaseLuaAPIClass
             float maxDistance;
             if (numParameters >= 5) {
                 maxDistance = LuauCore.GetParameterAsFloat(4, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
             } else {
                 maxDistance = Mathf.Infinity;
             }
@@ -131,7 +131,7 @@ public class PhysicsAPI : BaseLuaAPIClass
             int layerMask;
             if (numParameters >= 6) {
                 layerMask = LuauCore.GetParameterAsInt(5, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
             } else {
                 layerMask = Physics.DefaultRaycastLayers;
             }
@@ -139,7 +139,7 @@ public class PhysicsAPI : BaseLuaAPIClass
             QueryTriggerInteraction queryTriggerInteraction;
             if (numParameters >= 7) {
                 queryTriggerInteraction = (QueryTriggerInteraction) LuauCore.GetParameterAsInt(6, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
             } else {
                 queryTriggerInteraction = QueryTriggerInteraction.UseGlobal;
             }
@@ -162,11 +162,10 @@ public class PhysicsAPI : BaseLuaAPIClass
         if (methodName is "RaycastLegacy") {
             //ray.origin, ray.direction, 1000, -1
 
-            if (numParameters == 3 || numParameters == 4)
-            {
-                Vector3 start = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-                Vector3 dir = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-                float distance = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (numParameters == 3 || numParameters == 4) {
+                Vector3 start = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                Vector3 dir = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                float distance = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
                 bool hit;
                 RaycastHit hitInfo;
@@ -176,7 +175,7 @@ public class PhysicsAPI : BaseLuaAPIClass
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance);
                 } else {
                     // 4 params (mask)
-                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask);
                 }
 
@@ -189,11 +188,9 @@ public class PhysicsAPI : BaseLuaAPIClass
             }
         }
 
-        if (methodName == "InvertMask")
-        {
-            if (numParameters == 1)
-            {
-                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        if (methodName == "InvertMask") {
+            if (numParameters == 1) {
+                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
                 return 1;
             }

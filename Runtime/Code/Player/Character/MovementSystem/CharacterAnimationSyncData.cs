@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[LuauAPI]
 public class CharacterAnimationSyncData {
     public CharacterState state = CharacterState.Idle;
     public bool grounded = true;

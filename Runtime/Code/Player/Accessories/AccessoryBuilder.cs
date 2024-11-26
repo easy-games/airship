@@ -36,6 +36,11 @@ public class AccessoryBuilder : MonoBehaviour
 
     }
 
+    private void OnDestroy() {
+        // Manually release mesh combiner (in case Luau is holding a reference to this AccessoryBuilder)
+        meshCombiner = null;
+    }
+
     private void Start() {
         if(!enabled){
             return;
