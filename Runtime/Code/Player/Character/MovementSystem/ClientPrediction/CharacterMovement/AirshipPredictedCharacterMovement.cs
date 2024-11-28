@@ -27,6 +27,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     //For the client this stores inputs to use in the replay.
     private List<CharacterMovementState> replayPredictionStates = new List<CharacterMovementState>();
     private SortedList<double, MoveInputData> recievedInputs = new SortedList<double, MoveInputData>();
+
+    private MoveInputData lastSentInput;
 #endregion
 
 #region GETTERS
@@ -49,7 +51,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         AirshipPredictionManager.instance.StartPrediction();
 
         tf = transform;
-        recordInterval =  Time.fixedDeltaTime;
+        recordInterval = Time.fixedDeltaTime;
 
         base.Awake();
         
@@ -90,65 +92,50 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
         
         // The server applys inputs it recieves from the client
-        // int lastIndex = recievedInputs.Count-1;
-        // if(lastIndex >= 0 && NetworkTime.time >= recievedInputs.Keys[lastIndex]){
-        //     if(recievedInputs.Values[lastIndex].jump){
-        //         print("JUMP Applying inputs from client: " + recievedInputs.Keys[lastIndex] + " servertime: " + NetworkTime.time);
-        //     }
-        //     //This input should be used
-        //     movement.SetMoveInputData(recievedInputs.Values[lastIndex]);
-        //     recievedInputs.RemoveAt(lastIndex);
-        // }
-
-        if(recievedInputs.Count > 0 && NetworkTime.time >= recievedInputs.Keys[0] - recordInterval){
-            //print("using input: " + recievedInputs.Keys[0] + " at: " + NetworkTime.time + " remaining: " + (recievedInputs.Count-1));
+        // Only if the time is past the inputs state time with a margin of the record interval 
+        if(recievedInputs.Count > 0 && NetworkTime.time > recievedInputs.Keys[0] - recordInterval){
+            print("using input: " + recievedInputs.Keys[0] + " at: " + NetworkTime.time + " moveDir: " + recievedInputs.Values[0].moveDir);
              //This input should be used
             movement.SetMoveInputData(recievedInputs.Values[0]);
             recievedInputs.RemoveAt(0);
         }
     }
-
-    private MoveInputData lastSentInput;
+    
     private void OnMovementEnd(object data, object isReplay){
         if((bool)isReplay || !isClientOnly){
-            if((bool)isReplay){
-                print("Ignoring movement end");
-            }
             return;
         }
 
-        if (onlyRecordChanges && lastRecorded != null &&
-            lastRecorded.currentMoveInput.Equals(currentState.currentMoveInput) &&
-            lastRecorded.position.Equals(currentState.position) &&
-            lastRecorded.velocity.Equals(currentState.velocity)) {
+        var newInput = currentState.currentMoveInput;
+        var isInputChanged =  lastRecorded == null || !lastRecorded.currentMoveInput.Equals(newInput);
+
+        if (onlyRecordChanges && !isInputChanged && lastRecorded != null &&
+            Vector3.SqrMagnitude(lastRecorded.position - currentState.position) >= positionCorrectionThresholdSqr &&
+            Vector3.SqrMagnitude(lastRecorded.velocity - currentState.velocity) >= velocityCorrectionThresholdSqr) {
             //NetworkTime.time - lastRecordTime < recordInterval) {
                 // Log($"FixedUpdate for {name}: taking optimized early return instead of recording state.");
                 return;
         }
-        print("Movement end: " + NetworkTime.predictedTime + " moveDir: " + currentState.currentMoveInput.moveDir);
 
         // Save the state in the history
         RecordState(NetworkTime.predictedTime);
 
-        if(lastSentInput.Equals(currentState.currentMoveInput)){
-            // Don't need to send reduntant data
-            return;
+        if(isInputChanged){
+            // Update state on server if its a new input state
+            this.lastSentInput = newInput;
+            
+            // Send the inputs to the server
+            print("Sending input at: " + NetworkTime.predictedTime + " moveDir: " + this.lastSentInput.moveDir);
+            SetServerInput(NetworkTime.predictedTime, this.lastSentInput);
         }
-        this.lastSentInput = currentState.currentMoveInput;
-        // Send the inputs to the server
-        // print("Sending input at: " + NetworkTime.predictedTime);
-        SetServerInput(NetworkTime.predictedTime, currentState.currentMoveInput);
     }
 
 	[Command]
 	//Sync the move input data to the server
 	private void SetServerInput(double timeStamp, MoveInputData moveData){
-        //print("recieved inputs from: " + timeStamp + " current time: " + NetworkTime.time);
-        if(timeStamp > NetworkTime.time){
-            var diff = Mathf.Abs((float)(NetworkTime.time - timeStamp));
-            if(diff > .1f){
-                Debug.LogWarning("Recieved inputs from client that are in the past by " + diff + " seconds");
-            }
+        print("recieved inputs. Time diff: " + (timeStamp - NetworkTime.time) + " from: " + timeStamp + " current time: " + NetworkTime.time);
+        if(timeStamp >= NetworkTime.time + recordInterval){
+            Debug.LogWarning("Recieved inputs from client that are in the past by " + (timeStamp - NetworkTime.time) + " seconds");
         }
 
         //Store this input sorted by time
@@ -198,11 +185,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
          
         movement.transform.position = movementState.position;
         stateHistory.Add(movementState.timestamp, movementState);
-        if(showGizmos){
-            //Replay Position and velocity
-            GizmoUtils.DrawSphere(currentPosition, .4f, clientColor, 4, gizmoDuration);
-            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, clientColor, gizmoDuration);
-        }
     }
 
     public override void OnReplayTickStarted(double time) {
@@ -229,8 +211,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         // After the physics sim
         if(showGizmos){
             //Replay Position and velocity
-            GizmoUtils.DrawSphere(currentPosition, .1f, clientColor, 4, gizmoDuration);
-            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity, clientColor, gizmoDuration);
+            GizmoUtils.DrawSphere(currentPosition, .05f, clientColor, 4, gizmoDuration);
+            GizmoUtils.DrawLine(currentPosition, currentPosition+currentVelocity * .1f, clientColor, gizmoDuration);
         }
         if(lastRecorded == null || !lastRecorded.Equals(currentState)){
             // Save the new history state
@@ -242,7 +224,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         print("Replay ended: " + initialState.timestamp);
         //PrintHistory("REPLAY FINISHED");
         if(showGizmos){
-            GizmoUtils.DrawSphere(currentPosition, .4f, Color.green, 4, gizmoDuration);
+            GizmoUtils.DrawSphere(currentPosition, .1f, Color.green, 4, gizmoDuration);
             GizmoUtils.DrawLine(initialState.position, currentPosition, Color.green, gizmoDuration);
         }
 

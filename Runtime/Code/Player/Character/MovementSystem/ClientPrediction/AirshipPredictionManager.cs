@@ -62,7 +62,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     private float currentSimulationTime = 0;
     private int simI = 0;
     private int simFrames = 4;
-    private bool smoothRigidbodies = false;
+    private bool smoothRigidbodies = true;
 
 #region PUBLIC API
     public void StartPrediction(){
@@ -188,9 +188,9 @@ public class AirshipPredictionManager : MonoBehaviour {
                 Quaternion.Lerp(rigidData.lastRotation, rigidData.currentRotation, interpolationTime)
                 );
 
-            GizmoUtils.DrawSphere(
-                Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime),
-                .25f, new Color(interpolationTime,.2f,1-interpolationTime), 4, 4);
+            // GizmoUtils.DrawSphere(
+            //     Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime),
+            //     .25f, new Color(interpolationTime,.2f,1-interpolationTime), 4, 4);
         }
     }
 
@@ -255,7 +255,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     }
 
     private void Replay(ReplayData replayData){
-        // //Let any other objects disable while this replays
+        //Let any other objects disable while this replays
         foreach(var kvp in replayObjects){
             if(kvp.Key == replayData.replayController.guid){
                 continue;
@@ -273,7 +273,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         Debug.Log("Starting replay: " + replayData.replayController.friendlyName);
 
         //Simulate physics for the duration of the replay
-        while(time < finalTime) {
+        while(time <= finalTime) {
             //Move the rigidbody based on the saved inputs (impulses)
             //If no inputs then just resimulate with its current velocity
             //TODO
@@ -283,9 +283,10 @@ public class AirshipPredictionManager : MonoBehaviour {
             //TODO maybe make a bool so this is optional?
 
             //Simulate 1 physics step
-            simulationDuration =  Time.fixedDeltaTime;
+            simulationDuration = Time.fixedDeltaTime;
             time += simulationDuration;
 
+            //Replay to the end of the simulation
             //simulationDuration = finalTime - time;
 
             //Replay ticked callback

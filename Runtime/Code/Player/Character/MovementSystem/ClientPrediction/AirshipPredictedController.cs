@@ -43,7 +43,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     public int checkReconcileEveryNthFrame = 4;
 
     [Tooltip("Applying server corrections one frame ahead gives much better results. We don't know why yet, so this is an option for now.")]
-    public bool oneFrameAhead = true;
+    public int serverSerializationOffset = 1;
 
     [Tooltip("Correction threshold in meters. For example, 0.1 means that if the client is off by more than 10cm, it gets corrected.")]
     public double positionCorrectionThreshold = 0.10;
@@ -91,6 +91,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     protected float velocityCorrectionThresholdSqr; // ² cached in Awake
     protected float velocitySnapThresholdSqr; // ² cached in Awake
     protected double positionCorrectionThresholdSqr; // ² cached in Awake
+    private double finalReplayTime = 0;
     
 #endregion
 
@@ -254,7 +255,6 @@ protected void Log(string message){
 
     //If we are in a new state then insert the current state into the history at this specific time
     protected void RecordState(double stateTime) {
-
         lastRecordTime = NetworkTime.time;
 
         //PrintHistory("Recording: " + stateTime);
@@ -269,6 +269,8 @@ protected void Log(string message){
 
         // manually remember last inserted state for faster .Last comparisons
         lastRecorded = newState;
+
+        //print("Recording State: " + stateTime + " vel: " + newState.velocity);
     }
 
     //Update our rigidbody to match a new snapshot state
@@ -292,13 +294,20 @@ protected void Log(string message){
 
     // process a received server state.
     // compares it against our history and applies corrections if needed.
+    // serverTimestamp is the same value as serverState.timestamp
     protected void OnReceivedState(double serverTimestamp, T serverState) {
 
         // correction requires at least 2 existing states for 'before' and 'after'.
         // if we don't have two yet, drop this state and try again next time once we recorded more.
         if (stateHistory.Count < 2) return;
         
-        //print("RECIEVED STATE: " + timestamp);
+        //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
+
+        if(finalReplayTime > 0 && finalReplayTime < serverTimestamp){
+            finalReplayTime = -1;
+            GizmoUtils.DrawBox(serverState.position, Quaternion.identity, new Vector3(.04f, .04f, .04f), Color.white, gizmoDuration);
+        }
+        
 
         // DO NOT SYNC SLEEPING! this cuts benchmark performance in half(!!!)
         // color code remote sleeping objects to debug objects coming to rest
@@ -330,13 +339,6 @@ protected void Log(string message){
             //Close enought to not need any adjustments
             //Log($"OnReceivedState for {name}: taking is idle optimized early return!");
             return;
-        }
-
-        //Render server state
-        if(this.showGizmos){
-            //Recieved server position
-            GizmoUtils.DrawBox(serverState.position, Quaternion.identity, 
-                new Vector3(.1f, .1f, .1f), serverColor, gizmoDuration);
         }
 
         // we only capture state every 'interval' milliseconds.
@@ -380,6 +382,7 @@ protected void Log(string message){
 
         T interpolatedState;
         int afterIndex;
+        double stateDelta = 0;
 
         // edge case: is the state older than the oldest state in history?
         // this can happen if the client gets so far behind the server
@@ -401,7 +404,7 @@ protected void Log(string message){
             //Continue to the replay below
         }
         // find the two closest client states between timestamp
-        else if (!Sample(stateHistory, serverTimestamp, out T before, out T after, out afterIndex, out double delta))
+        else if (!Sample(stateHistory, serverTimestamp, out T before, out T after, out afterIndex, out stateDelta))
         {
             // something went very wrong. sampling should've worked.
             // hard correct to recover the error.
@@ -411,35 +414,48 @@ protected void Log(string message){
             return;
         }else{
             // interpolate between them to get the best approximation
-            interpolatedState = (T)before.Interpolate(after, (float)delta);
+            interpolatedState = (T)before.Interpolate(after, (float)stateDelta);
         }
 
 
         // too far off? then correct it
         if (NeedsCorrection(serverState, interpolatedState)) {
-            Log($"CORRECTION NEEDED FOR {name} @ {serverTimestamp:F3}: client= {interpolatedState.timestamp} + pos: {interpolatedState.position} server= {serverState.timestamp} + pos: {serverState.position}");
+            Log($"CORRECTION NEEDED FOR {name} @ {serverTimestamp:F3} delta {stateDelta}: client= {interpolatedState.timestamp} + pos: {interpolatedState.position} server= {serverState.timestamp} + pos: {serverState.position}");
             if(showGizmos){
                 // show the received correction position + velocity for debugging.
                 // helps to compare with the interpolated/applied correction locally.
                 GizmoUtils.DrawLine(serverState.position, serverState.position + serverState.velocity * 0.1f, Color.white, gizmoDuration);
+
+                //Recieved server position
+                GizmoUtils.DrawBox(serverState.position, Quaternion.identity, 
+                    new Vector3(.1f, .1f, .1f), serverColor, gizmoDuration);
+
+                //Current client position
+                GizmoUtils.DrawSphere(currentPosition, .08f, Color.red, 4, gizmoDuration);
+                GizmoUtils.DrawLine(currentPosition, currentPosition + currentVelocity * 0.1f, Color.red, gizmoDuration);
+
+                //Client position at the this timestamp
+                GizmoUtils.DrawSphere(interpolatedState.position, .08f, Color.red, 4, gizmoDuration);
+                GizmoUtils.DrawLine(interpolatedState.position, interpolatedState.position + interpolatedState.velocity * 0.1f, Color.red, gizmoDuration);
             }
 
 
             //Simulate until the end of our history
-            double finalTime = lastRecorded.timestamp;
-            double simulationDifference = finalTime - serverTimestamp;
+            finalReplayTime = lastRecorded.timestamp;
+            double simulationDifference = finalReplayTime - serverTimestamp;
 
-            //if(simulationDifference > recordInterval){
-                print("Replaying until: " + finalTime + " which is " + simulationDifference + " seconds away");
+            if(simulationDifference > recordInterval){
+                print("Replaying until: " + finalReplayTime + " which is " + simulationDifference + " seconds away");
 
                 //Replay States
                 AirshipPredictionManager.instance.QueueReplay(this, serverState, simulationDifference, afterIndex);
-            // }else{
-            //     //Snap because there isn't a time difference (shoudld just be in shared mode)
-            //     ApplyState(serverState);
-            // }
+            }else{
+                //Snap because there isn't a time difference (shoudld just be in shared mode)
+                ApplyState(serverState);
+            }
         }
     }
+
 #endregion
 
 
@@ -476,13 +492,13 @@ protected void Log(string message){
         // server sends state at the end of the frame.
         // parse and apply the server's delta time to our timestamp.
         // otherwise we see noticeable resets that seem off by one frame.
-        serverTimestamp += serverDeltaTime;
+        //serverTimestamp += serverDeltaTime;
 
         // however, adding yet one more frame delay gives much(!) better results.
         // we don't know why yet, so keep this as an option for now.
         // possibly because client captures at the beginning of the frame,
         // with physics happening at the end of the frame?
-        if (oneFrameAhead) serverTimestamp += serverDeltaTime;
+        serverTimestamp += serverSerializationOffset * recordInterval;
 
         //Let the child class deserialize its data
         T newState = DeserializeState(reader, serverTimestamp);
@@ -525,7 +541,7 @@ protected void Log(string message){
             // can't sample an empty history
             // interpolation needs at least two entries.
             //   can't Lerp(A, A, 1.5). dist(A, A) * 1.5 is always 0.
-            if (history.Count < 2) {
+            if (history.Count <= 2) {
                 print("History is too short");
                 return false;
             }
