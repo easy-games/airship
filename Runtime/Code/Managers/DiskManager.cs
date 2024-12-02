@@ -5,7 +5,7 @@ using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Code.Managers {
-    [LuauAPI]
+    [LuauAPI(LuauContext.Protected)]
     public class DiskManager : Singleton<DiskManager> {
         [CanBeNull]
         public static async Task<string> ReadFileAsync(string path) {
