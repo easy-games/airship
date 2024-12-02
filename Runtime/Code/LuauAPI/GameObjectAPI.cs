@@ -264,7 +264,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             
             var gameObject = (GameObject)targetObject;
             var unityChildComponent = gameObject.GetComponentInChildren(componentType, includeInactive);
-            LuauCore.WritePropertyToThread(thread, unityChildComponent, unityChildComponent.GetType());
+            LuauCore.WritePropertyToThread(thread, unityChildComponent, unityChildComponent != null ? unityChildComponent.GetType() : null);
             return 1;
         }
 
