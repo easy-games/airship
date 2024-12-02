@@ -728,8 +728,9 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         var gch = GCHandle.Alloc(this.scriptFile.m_bytes, GCHandleType.Pinned); //Ok
+        var nativeCodegen = scriptFile.HasDirective("native");
 
-        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
+        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, nativeCodegen);
 
         Marshal.FreeCoTaskMem(filenameStr);
         gch.Free();
