@@ -97,9 +97,9 @@ namespace Code.Health
                         return;
                     }
 
-                    if (context.ToLower() == "client") {
+                    if (context.Equals("client", StringComparison.OrdinalIgnoreCase)) {
                         StartProfiling(d, null);
-                    } else if (context.ToLower() == "server") {
+                    } else if (context.Equals("server", StringComparison.OrdinalIgnoreCase)) {
                         Debug.Log("Starting a server profile, view server console to monitor progress.");
                         NetworkClient.Send(new StartServerProfileMessage { DurationSecs = d });
                     }

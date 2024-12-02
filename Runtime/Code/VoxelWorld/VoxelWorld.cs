@@ -929,18 +929,12 @@ public partial class VoxelWorld : MonoBehaviour {
         }*/
           
 #endif
-
-        if (!Application.isPlaying) {
-            if (this.voxelWorldFile != null) {
-                this.LoadWorldFromSaveFile(this.voxelWorldFile);
-            }
-        }
+        
 
         if (Application.isPlaying && this.autoLoad) {
             if (voxelWorldFile != null) {
                 this.LoadWorldFromSaveFile(voxelWorldFile);
             }
-            
             return;
         }
 

@@ -7,6 +7,8 @@ using Luau;
 using System.Threading;
 using UnityEngine.Profiling;
 using System.Collections;
+using System.Linq;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -80,6 +82,11 @@ public partial class LuauCore : MonoBehaviour {
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
     private static Type actionType = typeof(Action);
 
+    private static readonly string[] protectedScenesNames = {
+        "corescene", "mainmenu", "login", "disconnected", "airshipupdateapp"
+    };
+    private static HashSet<int> protectedSceneHandles = new HashSet<int>();
+
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;
 
@@ -139,6 +146,7 @@ public partial class LuauCore : MonoBehaviour {
 
         initialized = true;
 
+        SetupProtectedSceneHandleListener();
         SetupReflection();
         CreateCallbacks();
 
@@ -203,6 +211,26 @@ public partial class LuauCore : MonoBehaviour {
         return true;
     }
 
+    private void SetupProtectedSceneHandleListener() {
+        for (var i = 0; i < SceneManager.sceneCount; i++) {
+            var scene = SceneManager.GetSceneAt(i);
+            RegisterPossiblyProtectedScene(scene);
+        }
+
+        SceneManager.sceneLoaded += (scene, mode) => {
+            RegisterPossiblyProtectedScene(scene);
+        };
+        SceneManager.sceneUnloaded += scene => {
+            protectedSceneHandles.Remove(scene.handle);
+        };
+    }
+
+    private void RegisterPossiblyProtectedScene(Scene scene) {
+        if (IsProtectedSceneName(scene.name)) {
+            protectedSceneHandles.Add(scene.handle);
+        }
+    }
+
     private IEnumerator InvokeOnInitializedNextFrame() {
         yield return null;
         OnInitialized?.Invoke();
@@ -251,6 +279,7 @@ public partial class LuauCore : MonoBehaviour {
         _awaitingTasks.Clear();
         eventConnections.Clear();
         propertyGetCache.Clear();
+        protectedSceneHandles.Clear();
     }
 
     public static void ResetContext(LuauContext context) {
@@ -320,7 +349,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
-        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene.name)) {
+        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene)) {
             if (gameObject.transform.parent?.name is "GameReadAccess" || gameObject.transform.parent?.parent?.name is "GameReadAccess") {
                 return false;
             }
@@ -331,9 +360,22 @@ public partial class LuauCore : MonoBehaviour {
         return false;
     }
 
-    public static bool IsProtectedScene(string sceneName) {
+    public static bool IsProtectedScene(Scene scene) {
+        return protectedSceneHandles.Contains(scene.handle);
+    }
+
+    /// <summary>
+    /// Unless you only have scene name you should use IsProtectedScene
+    /// </summary>
+    public static bool IsProtectedSceneName(string sceneName) {
         if (string.IsNullOrEmpty(sceneName)) return false;
-        return sceneName.ToLower() is "corescene" or "mainmenu" or "login" or "disconnected" or "airshipupdateapp";
+
+        foreach (var protectedSceneName in protectedScenesNames) {
+            if (protectedSceneName.Equals(sceneName, StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void Update() {

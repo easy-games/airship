@@ -13,14 +13,19 @@ namespace Code.Analytics {
             AnalyticsRecorder.startupConfig = config;
         }
 
+        public static void Reset() {
+            errors.Clear();
+            AnalyticsRecorder.startupConfig = null;
+        }
+
         public static void RecordLogMessageToAnalytics(string message, string stackTrace, LogType logType) {
             if (startupConfig == null) {
                 // Currently we are only reporting errors at a game level
                 return;
             }
+
             var now = DateTime.UtcNow;
             if (logType == LogType.Error) {
-                Debug.Log("Recording error: " + message + " - " + stackTrace);
                 errors.Add(new ReportableError {
                     timestamp = now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture),
                     stackTrace = stackTrace,

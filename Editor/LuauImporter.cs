@@ -38,6 +38,44 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         public long DataSize;
         public bool Compiled;
     }
+
+    private static Dictionary<string, string> ParseLuauDirectives(string source) {
+        Dictionary<string, string> directives = null;
+        
+        var len = source.Length;
+        for (var i = 0; i < len - 3; i++) {
+            // Ensure line starts with "--!"
+            if (source[i] != '-' || source[i + 1] != '-' || source[i + 2] != '!') {
+                break;
+            }
+            i += 3;
+
+            var start = i;
+            
+            // Find end of line:
+            for (; i < len; i++) {
+                if (source[i] == '\n' || (i < len - 1 && source[i] == '\r' && source[i + 1] == '\n')) {
+                    break;
+                }
+            }
+
+            var directive = source.Substring(start, i - start);
+            var directiveData = directive.Split(' ', 2);
+            if (directiveData.Length == 0 || directiveData[0] == string.Empty) {
+                Debug.LogWarning($"Unknown Luau directive: {directive}");
+                continue;
+            }
+
+            directives ??= new Dictionary<string, string>();
+            if (directiveData.Length == 1) {
+                directives.Add(directiveData[0], string.Empty);
+            } else {
+                directives.Add(directiveData[0], directiveData[1].Trim());
+            }
+        }
+
+        return directives;
+    }
     
     public static void ReimportAllLuau() {
         AssetDatabase.Refresh();
@@ -78,6 +116,19 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(assetPath); //Ok
         IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
+
+        // Parse and store Luau directives:
+        var directives = ParseLuauDirectives(data);
+        if (directives != null) {
+            subAsset.m_directives = new string[directives.Count];
+            subAsset.m_directiveValues = new string[directives.Count];
+            var directiveIdx = 0;
+            foreach (var (k, v) in directives) {
+                subAsset.m_directives[directiveIdx] = k;
+                subAsset.m_directiveValues[directiveIdx] = v;
+                directiveIdx++;
+            }
+        }
 
         // Compile
         StopwatchCompile.Start();

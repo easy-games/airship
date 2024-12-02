@@ -10,14 +10,13 @@ public class LayerMaskAPI : BaseLuaAPIClass
         return typeof(LayerMask);
     }
 
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes,
-        IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
         if (methodName == "GetMask") {
             string[] layerNames = new string[numParameters];
             var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
             for (int i = 0; i < numParameters; i++) {
                 string name = LuauCore.GetParameterAsString(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
 
                 // Map game layer name to normalized airship-player layer name.
                 if (gameConfig && !Application.isEditor) {
@@ -37,7 +36,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
         if (methodName == "InvertMask") {
             if (numParameters == 1)
             {
-                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
                 LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
                 return 1;
@@ -47,7 +46,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
         if (methodName == "NameToLayer") {
             if (numParameters == 1) {
                 var name = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    paramaterDataSizes);
+                    parameterDataSizes);
 
                 // Map game layer name to normalized airship-player layer name.
                 var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();

@@ -1,6 +1,7 @@
 using Code.Player.Character.API;
 using UnityEngine;
 
+[LuauAPI]
 public class CharacterStateData {
     public CharacterState state = CharacterState.Idle;
     public bool grounded = true;

@@ -932,7 +932,7 @@ private void OnEnable() {
 
 		public void SetReplicatedState(CharacterStateData oldData, CharacterStateData newData) {
 			animationHelper.SetState(newData);
-			if(oldData.state != newData.state){
+			if (oldData.state != newData.state){
 				this.stateChanged?.Invoke((int)newData.state);
 			}
 		}
@@ -1125,6 +1125,7 @@ private void OnEnable() {
 		private void ApplyNonLocalStateData(CharacterStateData data) {
 			var oldState = this.stateData;
 			this.stateData = data;
+			this.grounded = data.grounded;
 
 			if (oldState.state != data.state) {
 				stateChanged?.Invoke((int)data.state);

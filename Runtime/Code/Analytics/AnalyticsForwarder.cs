@@ -1,57 +1,112 @@
 using System.Collections.Generic;
 using System.Linq;
+using Code.Bundles;
 using Code.Platform.Shared;
 using Code.Platform.Server;
+using Code.Platform.Client;
 using UnityEngine;
 
-namespace Code.Analytics {
-    public class AnalyticsForwarder : MonoBehaviour {
+namespace Code.Analytics
+{
+    public class AnalyticsForwarder : MonoBehaviour
+    {
         private float minInterval = 10f;
         private float maxInterval = 15f;
         private bool isScheduled = false;
+        private bool isAlreadySending = false;
+        private ServerBootstrap serverBootstrap;
 
         void Start()
         {
-            if (!RunCore.IsServer()) {
-                return;
-            }
-            Debug.Log("Starting Analytics Forwarder");
-            // Start the first action with a randomized initial delay
+            this.serverBootstrap = FindObjectOfType<ServerBootstrap>();
             ScheduleNextAction();
         }
 
-        void SendMessages()
+        void SendServerMessages(List<ReportableError> errors, List<ActivePackage> activePackages)
         {
-            if (AnalyticsRecorder.startupConfig == null) {
-                Debug.Log("No startup config");
-                return;
-            }
-            isScheduled = false;
-            // Perform your action here
-            var errors = AnalyticsRecorder.GetAndClearErrors();
-            if (errors.Count <= 0) {
-                Debug.Log("No errors to flush");
-                return;
-            }
-            Debug.Log($"Flushing {errors.Count} errors!");
-            var message = new AirshipAnalyticsServerDto {
-                activePackages = new List<ActivePackage>(),
+            var message = new AirshipAnalyticsServerDto
+            {
+                activePackages = activePackages,
                 errors = errors,
                 gameVersionId = AnalyticsRecorder.startupConfig.Value.GameAssetVersion,
+                playerVersionId = AirshipVersion.GetVersionHash(),
             };
             var json = JsonUtility.ToJson(message);
-            Debug.Log(json);
-            AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) => {
-                Debug.Log("Sent analytics");
-                if (t.Result.success) {
-                    Debug.Log("Successfully sent analytics");
-                } else {
+
+#if !UNITY_EDITOR
+            isAlreadySending = true;
+            AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) =>
+            {
+                isAlreadySending = false;
+                if (!t.Result.success)
+                {
                     Debug.LogError("Failed to send analytics: " + t.Result.error);
                 }
             });
+#endif
 
-            // Schedule the next action with a new jittered delay
-            ScheduleNextAction();
+        }
+
+        void SendClientMessages(List<ReportableError> errors, List<ActivePackage> activePackages)
+        {
+            var message = new AirshipAnalyticsClientDto
+            {
+                activePackages = activePackages,
+                errors = errors,
+                gameId = AnalyticsRecorder.startupConfig.Value.GameBundleId,
+                gameVersionId = AnalyticsRecorder.startupConfig.Value.GamePublishVersion,
+                serverId = this.serverBootstrap.serverContext.serverId,
+                playerVersionId = AirshipConst.playerVersion.ToString(),
+            };
+            var json = JsonUtility.ToJson(message);
+
+#if !UNITY_EDITOR
+            isAlreadySending = true;
+            AnalyticsServiceClient.SendClientAnalytics(message).ContinueWith((t) =>
+            {
+                isAlreadySending = false;
+                if (!t.Result.success)
+                {
+                    Debug.LogError("Failed to send analytics: " + t.Result.error);
+                }
+            });
+#endif
+        }
+
+
+        void SendMessages()
+        {
+            try
+            {
+                isScheduled = false;
+                if (AnalyticsRecorder.startupConfig == null) return;
+                if (isAlreadySending) return;
+
+                // Perform your action here
+                var errors = AnalyticsRecorder.GetAndClearErrors();
+                if (errors.Count <= 0) return;
+                var activePackages = AnalyticsRecorder.startupConfig.Value.packages
+                .Where(p => !p.game) // Only report real packages, the game is added as a "package" so we need to filter it out
+                .Select(p => new ActivePackage
+                {
+                    name = p.id,
+                    version = p.publishVersionNumber,
+                }).ToList();
+                if (RunCore.IsServer())
+                {
+                    SendServerMessages(errors, activePackages);
+                }
+                else
+                {
+                    SendClientMessages(errors, activePackages);
+                }
+
+            }
+            finally
+            {
+                ScheduleNextAction();
+            }
+
         }
 
         void ScheduleNextAction()

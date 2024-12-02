@@ -6,6 +6,8 @@ namespace Code.PoolManager
 
         public bool Used { get; private set; }
 
+        public bool Destroyed;
+
         public void Consume()
         {
             Used = true;
