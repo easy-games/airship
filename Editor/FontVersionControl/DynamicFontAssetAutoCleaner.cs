@@ -41,7 +41,6 @@ namespace TMProDynamicDataCleaner.Editor
                     if (fontAsset.atlasPopulationMode != AtlasPopulationMode.Dynamic)
                         continue;
 
-                    Debug.Log("Clearing font asset data at!~! " + path);
                     fontAsset.ClearFontAssetData(setAtlasSizeToZero: true);
                 }
             }
