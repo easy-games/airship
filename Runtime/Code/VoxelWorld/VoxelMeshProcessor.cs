@@ -1568,7 +1568,7 @@ namespace VoxelWorldStuff {
             meshFilter.sharedMesh = theMesh;
             return obj;
         }
- 
+        
         private static bool ContextPlacePipeBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, Color32 col) {
             //get surrounding data
             VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];
