@@ -25,6 +25,9 @@ public class AutoSceneRedirect {
     }
 
     private static void HandleRedirectBasedOnActiveScene(Scene scene) {
+        #if AIRSHIP_PLAYER
+        return;
+        #endif
         var gameConfig = GameConfig.Load();
         if (gameConfig == null) return;
 
@@ -51,6 +54,9 @@ public class AutoSceneRedirect {
 
     private static void PlayModeStateChanged(PlayModeStateChange state) {
         if (disableSceneRedirect) return;
+#if AIRSHIP_PLAYER
+        return;
+#endif
 
         if (state == PlayModeStateChange.EnteredPlayMode) {
             if (AirshipPackageAutoUpdater.isCoreUpdateAvailable) {
