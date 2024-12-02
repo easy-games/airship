@@ -270,6 +270,14 @@ namespace Airship.Editor {
                     EditorGUILayout.ObjectField("Declaration File", declaration, typeof(DeclarationFile));
                     GUI.enabled = true;
                 }
+
+                if (item.m_directives != null && item.m_directiveValues != null && item.m_directives.Length > 0 && item.m_directives.Length == item.m_directiveValues.Length) {
+                    EditorGUILayout.Space(10);
+                    GUILayout.Label("Directives", EditorStyles.boldLabel);
+                    for (var i = 0; i < item.m_directives.Length; i++) {
+                        EditorGUILayout.LabelField(item.m_directives[i], item.m_directiveValues[i], scriptTextMono);
+                    }
+                }
                 
                 DrawSourceText();
             }
