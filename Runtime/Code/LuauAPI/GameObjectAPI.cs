@@ -130,14 +130,14 @@ public class GameObjectAPI : BaseLuaAPIClass {
 #if AIRSHIP_PLAYER
         if (methodName == "FindWithTag" || methodName == "FindGameObjectWithTag") {
             var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
             var result = FindWithTag(context, thread, tag);
             if (result != -1) return result;
         }
 
         if (methodName == "FindGameObjectsWithTag") {
             var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                paramaterDataSizes);
+                parameterDataSizes);
             var result = FindGameObjectsWithTag(context, thread, tag);
             if (result != -1) return result;
         }
@@ -184,7 +184,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
 #if AIRSHIP_PLAYER
         if (methodName == "CompareTag") {
-            var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var tag = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             var compareTagResult = CompareTag(context, thread, (GameObject)targetObject, tag);
             if (compareTagResult != -1) return compareTagResult;
         }
