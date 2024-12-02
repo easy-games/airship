@@ -1444,7 +1444,7 @@ namespace VoxelWorldStuff {
         //Local on the left, world on the right
         static List<Tuple<string, string>> shaderPairs = new List<Tuple<string, string>>
         {
-            Tuple.Create("Shader Graphs/TriplanarSmoothstepLocalURP", "Shader Graphs/TriplanarSmoothstepWorldURP")
+            Tuple.Create("TriplanarSmoothstepLocalURP", "TriplanarSmoothstepWorldURP")
         };
 
         /// <summary>
