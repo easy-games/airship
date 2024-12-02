@@ -38,14 +38,16 @@ namespace Code.Http.Public {
                 return new HttpResponse() {
                     success = false,
                     error = req.error,
-                    statusCode = (int)req.responseCode
+                    statusCode = (int)req.responseCode,
+                    headers = req.GetResponseHeaders()
                 };
             }
 
             return new HttpResponse() {
                 success = true,
                 data = req.downloadHandler.text,
-                statusCode = (int)req.responseCode
+                statusCode = (int)req.responseCode,
+                headers = req.GetResponseHeaders()
             };
 
 
@@ -104,7 +106,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -114,7 +117,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    error = error.Response,
+                    headers = error.Request.Request.GetResponseHeaders()
                 });
             });
 
@@ -145,7 +149,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -155,7 +160,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    error = error.Response,
+                    headers = error.Request.Request.GetResponseHeaders()
                 });
             });
 
@@ -187,7 +193,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -197,7 +204,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    error = error.Response,
+                    headers = error.Request.Request.GetResponseHeaders()
                 });
             });
 
@@ -236,7 +244,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -246,7 +255,8 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    error = error.Response,
+                    headers = error.Request.Request.GetResponseHeaders()
                 });
             });
 
