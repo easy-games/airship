@@ -74,17 +74,8 @@ public class CharacterRig : MonoBehaviour {
     public Transform GetSlotTransform(AccessorySlot slot)
     {
         switch (slot){
-                case AccessorySlot.Hands:
-                case AccessorySlot.RightHand:
-                    return heldItemR;
-                case AccessorySlot.LeftHand:
-                    return heldItemL;
-                case AccessorySlot.Torso:
-                case AccessorySlot.TorsoInner:
-                case AccessorySlot.TorsoOuter:
-                    return spine;
-                case AccessorySlot.Backpack:
-                    return spineChest;
+                
+                //HEAD
                 case AccessorySlot.Head:
                 case AccessorySlot.Hair:
                 case AccessorySlot.Face:
@@ -94,12 +85,45 @@ public class CharacterRig : MonoBehaviour {
                 case AccessorySlot.Neck:
                     return neck;
                 case AccessorySlot.Waist:
+
+                //TORSO
+                case AccessorySlot.Torso:
+                case AccessorySlot.TorsoInner:
+                case AccessorySlot.TorsoOuter:
+                    return spine;
+                case AccessorySlot.Backpack:
+                    return spineChest;
+
+                //ARMS
+                case AccessorySlot.Hands:
+                case AccessorySlot.RightHand:
+                    return heldItemR;
+                case AccessorySlot.LeftHand:
+                    return heldItemL;
+                case AccessorySlot.LeftArmUpper:
+                    return upperArmL;
+                case AccessorySlot.LeftArmLower:
+                    return forearmL;
+                case AccessorySlot.RightArmUpper:
+                    return upperArmR;
+                case AccessorySlot.RightArmLower:
+                    return forearmR;
+
+                //LEGS
                 case AccessorySlot.Legs:
+                case AccessorySlot.Feet:
                     return hips;
+                case AccessorySlot.LeftLegUpper:
+                    return thighL;
+                case AccessorySlot.LeftLegLower:
+                    return shinL;
+                case AccessorySlot.RightLegUpper:
+                    return thighL;
+                case AccessorySlot.RightLegLower:
+                    return shinL;
                 case AccessorySlot.LeftFoot:
                     return footL;
                 case AccessorySlot.RightFoot:
-                case AccessorySlot.Feet:
                     return footR;
                 case AccessorySlot.Root:
                     return transform;
