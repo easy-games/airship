@@ -364,7 +364,8 @@ public class VoxelBlocks : MonoBehaviour {
     /// </summary>
     /// <param name="string">Any string that mostly matches the block name eg: "GRASS"</param>
     /// <returns>The block id</returns>
-    public BlockId SearchForBlockIdByString(string stringId) {
+    public BlockId 
+        SearchForBlockIdByString(string stringId) {
 
         foreach (var block in this.loadedBlocks) {
             if (block.Value.blockTypeId.Contains(stringId, StringComparison.OrdinalIgnoreCase)) {

@@ -1444,7 +1444,7 @@ namespace VoxelWorldStuff {
         //Local on the left, world on the right
         static List<Tuple<string, string>> shaderPairs = new List<Tuple<string, string>>
         {
-            Tuple.Create("Shader Graphs/TriplanarSmoothstepLocalURP", "Shader Graphs/TriplanarSmoothstepWorldURP")
+            Tuple.Create("TriplanarSmoothstepLocalURP", "TriplanarSmoothstepWorldURP")
         };
 
         /// <summary>
@@ -1568,7 +1568,7 @@ namespace VoxelWorldStuff {
             meshFilter.sharedMesh = theMesh;
             return obj;
         }
- 
+        
         private static bool ContextPlacePipeBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, Color32 col) {
             //get surrounding data
             VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];

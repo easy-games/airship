@@ -21,6 +21,9 @@ namespace Editor {
         }
 
         private static void OpenSceneOncePackagesDownloaded() {
+            #if AIRSHIP_PLAYER
+            return;
+            #endif
             // Wait for initial download of core packages
             if (AirshipPackageAutoUpdater.RequiresPackageDownloads(_gameConfig)) {
                 return;
