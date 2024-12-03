@@ -26,7 +26,7 @@ public class AccessoryCollectionTools {
                 var go = AssetDatabase.LoadAssetAtPath<GameObject>(relativePath);
                 if(go != null){
                     var acc = go.GetComponent<AccessoryComponent>();
-                    if (acc != null) {
+                    if (acc != null && acc.enabled) {
                         //Debug.Log("Found Accessory: " + relativePath);
                         accs.Add(acc);
                     }
