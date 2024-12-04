@@ -55,8 +55,8 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         }
     }
 
-    public override AirshipPredictedRigidbodyState CreateCurrentState(double currentTime) {
-        return new AirshipPredictedRigidbodyState(currentTime, rigid.position, rigid.rotation, rigid.velocity, rigid.angularVelocity);
+    public override AirshipPredictedRigidbodyState CreateCurrentState(int currentTick) {
+        return new AirshipPredictedRigidbodyState(currentTick, rigid.position, rigid.rotation, rigid.velocity, rigid.angularVelocity);
     }
 
     public override void SnapTo(AirshipPredictedRigidbodyState newState){
@@ -137,12 +137,12 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         }
     }
 
-    public override void OnReplayTickStarted(double time){
+    public override void OnReplayTickStarted(int tick){
         //TODO
         //run any input changes on this rigibodys
     }
 
-    public override void OnReplayTickFinished(double time){
+    public override void OnReplayTickFinished(int tick){
         if(showGizmos){
             //Replay Position and velocity
             GizmoUtils.DrawSphere(currentPosition, .2f, clientColor, 4, gizmoDuration);
@@ -152,7 +152,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         //print("Replay tick: " + time);
         
         //Save the new history state
-        RecordState(time);
+        RecordState(GetTime(tick));
     }
 
     public override void OnReplayFinished(AirshipPredictedState initialState){
@@ -184,7 +184,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     }
 
     public override AirshipPredictedRigidbodyState DeserializeState(NetworkReader reader, double timestamp) {
-        return new AirshipPredictedRigidbodyState(timestamp, 
+        return new AirshipPredictedRigidbodyState(GetTick(timestamp), 
             reader.ReadVector3(), 
             reader.ReadVector4().ConvertToQuaternion(), 
             reader.ReadVector3(), 

@@ -24,12 +24,12 @@ public class AirshipPredictionManager : MonoBehaviour {
     internal class ReplayData{
         public IPredictedReplay replayController;
         public AirshipPredictedState initialState;
-        public double duration;
+        public int endingTick;
         public int afterIndex;
-        public ReplayData(IPredictedReplay replayController, AirshipPredictedState initialState, double duration, int afterIndex){
+        public ReplayData(IPredictedReplay replayController, AirshipPredictedState initialState, int endingTick, int afterIndex){
             this.replayController = replayController;
             this.initialState = initialState;
-            this.duration = duration;
+            this.endingTick = endingTick;
             this.afterIndex = afterIndex;
         }
     }
@@ -68,6 +68,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     public void StartPrediction(){
         Physics.simulationMode = SimulationMode.Script;
         debugging = false;
+        this.physicsTimer = 0;
     }
 
     public void StopPrediction(){
@@ -198,7 +199,7 @@ public class AirshipPredictionManager : MonoBehaviour {
 
 #region REPLAYING
 
-    public void QueueReplay(IPredictedReplay replayController, AirshipPredictedState initialState, double duration, int afterIndex){
+    public void QueueReplay(IPredictedReplay replayController, AirshipPredictedState initialState, int endingTick, int afterIndex) {
         if(replayController == null){
             Debug.LogError("Trying to queue replay without a controller");
             return;
@@ -207,11 +208,11 @@ public class AirshipPredictionManager : MonoBehaviour {
             Debug.LogError("Trying to queue replay without an initial state");
             return;
         }
-        if(duration <= 0){
+        if(endingTick < initialState.tick){
             Debug.LogError("Trying to queue a replay with a negative duration");
             return;
         }
-        if(pendingReplays.ContainsKey(initialState.timestamp)){
+        if(pendingReplays.ContainsKey(initialState.tick)){
             Debug.LogError("Trying to queue a timestamp that already exists");
             return;
         }
@@ -226,7 +227,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         //pendingReplays.Clear();
 
         //Just replay this
-        Replay(new ReplayData(replayController, initialState, duration, afterIndex));
+        Replay(new ReplayData(replayController, initialState, endingTick, afterIndex));
     }
 
     private void StartReplays(){
@@ -266,37 +267,28 @@ public class AirshipPredictionManager : MonoBehaviour {
         //Replay started callback
         replayData.replayController.OnReplayStarted(replayData.initialState, replayData.afterIndex);
 
-        double time = replayData.initialState.timestamp;
-        double simulationDuration;
-        double finalTime = time+replayData.duration;
+        int tick = replayData.initialState.tick;
+        int finalTick = tick + replayData.endingTick;
 
         Debug.Log("Starting replay: " + replayData.replayController.friendlyName);
 
         //Simulate physics for the duration of the replay
-        while(time <= finalTime) {
-            //Move the rigidbody based on the saved inputs (impulses)
-            //If no inputs then just resimulate with its current velocity
+        while(tick <= finalTick) {
             //TODO
-
             //Move all other dynamic rigidbodies to their saved states at this time
-            //TODO
             //TODO maybe make a bool so this is optional?
 
             //Simulate 1 physics step
-            simulationDuration = Time.fixedDeltaTime;
-            time += simulationDuration;
-
-            //Replay to the end of the simulation
-            //simulationDuration = finalTime - time;
+            tick ++;
 
             //Replay ticked callback
-            replayData.replayController.OnReplayTickStarted(time);
+            replayData.replayController.OnReplayTickStarted(tick);
 
             //Run the simulation in the scene
-            Physics.Simulate((float)simulationDuration);
+            Physics.Simulate((float)Time.fixedDeltaTime);
 
             //Replay ticked callback
-            replayData.replayController.OnReplayTickFinished(time);
+            replayData.replayController.OnReplayTickFinished(tick);
         }
 
         print("Replay finished");
@@ -319,8 +311,8 @@ public interface IPredictedReplay {
     public abstract string friendlyName{get;}
     public abstract float guid {get;}
     public abstract void OnReplayStarted(AirshipPredictedState initialState, int historyIndex);
-    public abstract void OnReplayTickStarted(double time);
-    public abstract void OnReplayTickFinished(double time);
+    public abstract void OnReplayTickStarted(int tick);
+    public abstract void OnReplayTickFinished(int tick);
     public abstract void OnReplayFinished(AirshipPredictedState initialState);
 
     public abstract void OnReplayingOthersStarted();

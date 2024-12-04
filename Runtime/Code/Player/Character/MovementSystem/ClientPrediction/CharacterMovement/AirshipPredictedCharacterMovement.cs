@@ -94,7 +94,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         // The server applys inputs it recieves from the client
         // Only if the time is past the inputs state time with a margin of the record interval 
         if(recievedInputs.Count > 0 && NetworkTime.time > recievedInputs.Keys[0] - recordInterval){
-            print("using input: " + recievedInputs.Keys[0] + " at: " + NetworkTime.time + " moveDir: " + recievedInputs.Values[0].moveDir);
+            print("using input: " + recievedInputs.Keys[0] + " at: " + GetTick(NetworkTime.time) + " moveDir: " + recievedInputs.Values[0].moveDir);
              //This input should be used
             movement.SetMoveInputData(recievedInputs.Values[0]);
             recievedInputs.RemoveAt(0);
@@ -118,6 +118,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
 
         // Save the state in the history
+        print("Movement Time: " + NetworkTime.time + " predictedTime: " + NetworkTime.predictedTime);
         RecordState(NetworkTime.predictedTime);
 
         if(isInputChanged){
@@ -125,7 +126,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
             this.lastSentInput = newInput;
             
             // Send the inputs to the server
-            print("Sending input at: " + NetworkTime.predictedTime + " moveDir: " + this.lastSentInput.moveDir);
+            print("Sending input at: " + GetTick(NetworkTime.predictedTime) + " moveDir: " + this.lastSentInput.moveDir);
             SetServerInput(NetworkTime.predictedTime, this.lastSentInput);
         }
     }
@@ -133,7 +134,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 	[Command]
 	//Sync the move input data to the server
 	private void SetServerInput(double timeStamp, MoveInputData moveData){
-        print("recieved inputs. Time diff: " + (timeStamp - NetworkTime.time) + " from: " + timeStamp + " current time: " + NetworkTime.time);
+        print("recieved inputs. Time diff: " + (timeStamp - NetworkTime.time) + " from: " + GetTick(timeStamp) + " current time: " + GetTick(NetworkTime.time));
         if(timeStamp >= NetworkTime.time + recordInterval){
             Debug.LogWarning("Recieved inputs from client that are in the past by " + (timeStamp - NetworkTime.time) + " seconds");
         }
@@ -147,9 +148,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
 	}
 
-    public override CharacterMovementState CreateCurrentState(double currentTime){
+    public override CharacterMovementState CreateCurrentState(int currentTick){
         // create state to insert
-        return new CharacterMovementState(currentState){timestamp = currentTime};
+        return new CharacterMovementState(currentState){tick = currentTick};
     }
 #endregion 
 
@@ -159,12 +160,12 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override void SnapTo(CharacterMovementState newState){
-        print("Snapping Movement To: " + newState.timestamp);
+        print("Snapping Movement To: " + newState.tick);
         movement.ForceToNewMoveState(newState);
     }
 
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
-        print("Replay start: " + initialState.timestamp);
+        print("Replay start: " + initialState.tick);
         //Save the future inputs
         replayPredictionStates.Clear();
         for(int i=historyIndex ; i < stateHistory.Count; i++){
@@ -184,20 +185,20 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         SnapTo(movementState);
          
         movement.transform.position = movementState.position;
-        stateHistory.Add(movementState.timestamp, movementState);
+        stateHistory.Add(movementState.tick, movementState);
     }
 
-    public override void OnReplayTickStarted(double time) {
+    public override void OnReplayTickStarted(int tick) {
         //Before physics sim
 
         //If needed apply the inputs the player issued
         if(replayPredictionStates.Count > 0) {
             var futureState = replayPredictionStates[0];
-            if(time >= futureState.timestamp) {
+            if(tick >= futureState.tick) {
                 // if(futureState.currentMoveInput.jump){
                 //     print("JUMP Replaying inputs: " + futureState.timestamp + " at: " + time);
                 // }
-                print("Replay Tick: " + time + " moveDir: " + futureState.currentMoveInput.moveDir);
+                print("Replay Tick: " + tick + " moveDir: " + futureState.currentMoveInput.moveDir);
                 movement.SetMoveInputData(futureState.currentMoveInput);
                 replayPredictionStates.RemoveAt(0);
             }
@@ -207,7 +208,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         movement.RunMovementTick(true);
     }
 
-    public override void OnReplayTickFinished(double time) {
+    public override void OnReplayTickFinished(int tick) {
         // After the physics sim
         if(showGizmos){
             //Replay Position and velocity
@@ -216,12 +217,12 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
         if(lastRecorded == null || !lastRecorded.Equals(currentState)){
             // Save the new history state
-            RecordState(time);
+            RecordState(GetTime(tick));
         }
     }
 
     public override void OnReplayFinished(AirshipPredictedState initialState) {
-        print("Replay ended: " + initialState.timestamp);
+        print("Replay ended: " + initialState.tick);
         //PrintHistory("REPLAY FINISHED");
         if(showGizmos){
             GizmoUtils.DrawSphere(currentPosition, .1f, Color.green, 4, gizmoDuration);
@@ -249,7 +250,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override CharacterMovementState DeserializeState(NetworkReader reader, double timestamp) {
-        var state = new CharacterMovementState(timestamp, reader.ReadVector3(), reader.ReadVector3());
+        var state = new CharacterMovementState(GetTick(timestamp), reader.ReadVector3(), reader.ReadVector3());
         return state;
     }
     #endregion

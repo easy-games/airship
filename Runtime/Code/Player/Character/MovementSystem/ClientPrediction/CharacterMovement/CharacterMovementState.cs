@@ -31,10 +31,10 @@ public class CharacterMovementState : AirshipPredictedState, IEquatable<Characte
     public CharacterMovementState(){
     }
     
-    public CharacterMovementState(double time, Vector3 pos, Vector3 vel){
+    public CharacterMovementState(int tick, Vector3 pos, Vector3 vel){
         this.position = pos;
         this.velocity = vel;
-        this.timestamp = time;
+        this.tick = tick;
     }
 
     public CharacterMovementState(CharacterMovementState copyState){
@@ -42,7 +42,7 @@ public class CharacterMovementState : AirshipPredictedState, IEquatable<Characte
     }
 
     public void CopyFrom(CharacterMovementState copyState){
-        this.timestamp = copyState.timestamp;
+        this.tick = copyState.tick;
         this.position = copyState.position;
         this.velocity = copyState.velocity;
         this.timeSinceJump = copyState.timeSinceJump;
@@ -63,12 +63,12 @@ public class CharacterMovementState : AirshipPredictedState, IEquatable<Characte
         this.currentMoveInput = copyState.currentMoveInput;
     }
 
-    public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
-        return new CharacterMovementState(delta <=.5f ? this : (CharacterMovementState)other) { 
-            position = Vector3.Lerp(this.position, other.position, delta), 
-            velocity = Vector3.Lerp(this.velocity, other.velocity, delta)
-        };
-    }
+    // public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
+    //     return new CharacterMovementState(delta <=.5f ? this : (CharacterMovementState)other) { 
+    //         position = Vector3.Lerp(this.position, other.position, delta), 
+    //         velocity = Vector3.Lerp(this.velocity, other.velocity, delta)
+    //     };
+    // }
 
     public bool Equals(CharacterMovementState other) {
         return currentMoveInput.Equals(other.currentMoveInput) &&
