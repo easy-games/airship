@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using UnityEngine;
-
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System.Runtime.CompilerServices;
-using UnityEditor.Rendering;
 using UnityEngine.Profiling;
+using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace VoxelWorldStuff {
     public enum SurfaceBits : byte {
@@ -26,6 +25,7 @@ namespace VoxelWorldStuff {
     // 000000000000     000         0
 
     public class Chunk {
+        private static Material simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Simple Lit"));
         
         private static readonly Vector3Int[] searchOffsets =
         {
@@ -95,6 +95,7 @@ namespace VoxelWorldStuff {
         private Mesh[] detailMeshes;
         private MeshFilter[] detailFilters;
         private MeshRenderer[] detailRenderers;
+        private MeshRenderer shadowRenderer;
         
 
         private GameObject parent;
@@ -515,7 +516,7 @@ namespace VoxelWorldStuff {
                         obj.name = "Chunk";
                         
                         if (mesh == null) mesh = new Mesh();
-                        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
+                        // mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                         filter = obj.AddComponent<MeshFilter>();
                         filter.mesh = mesh;
@@ -556,30 +557,40 @@ namespace VoxelWorldStuff {
 
                                 detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
                                 detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
+                                detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
 
                                 detailMeshes[i] = new Mesh();
-                                // Reading that this might cause mesh to not render on some platforms:
-                                // https://docs.unity3d.com/ScriptReference/Mesh-indexFormat.html
-                                detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
+                                // detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                                 detailFilters[i].mesh = detailMeshes[i];
                             }
                             
+                            // Setup lod'd shadows
+                            var shadowGo = new GameObject("ShadowCaster", typeof(MeshFilter), typeof(MeshRenderer));
+                            var shadowFilter = shadowGo.GetComponent<MeshFilter>();
+                            shadowFilter.mesh = detailMeshes[1]; // DetailMeshFar is our shadow mesh -- should make this configurable
+                            shadowRenderer = shadowGo.GetComponent<MeshRenderer>();
+                            shadowRenderer.sharedMaterial = simpleLitMaterial;
+                            shadowRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly; // Only cast shadows (invisible)
+                            shadowRenderer.staticShadowCaster = true;
+                            shadowGo.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+                            shadowGo.transform.parent = obj.transform;
+                            
+                            
                             lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
 
                             // Enable crossfade
-                            lodSystem.fadeMode = LODFadeMode.CrossFade;
-                            lodSystem.animateCrossFading = true;
+                            lodSystem.fadeMode = LODFadeMode.None;
+                            lodSystem.animateCrossFading = false;
 
                             // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
                             LOD[] lods = new LOD[3] {
-                                new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
-                                new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
+                                new LOD(0.55f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                new LOD(0.01f, new Renderer[] { detailRenderers[1] }),
                                 new LOD(0.0f, new Renderer[] { detailRenderers[2] })
                             };
 
                             lodSystem.SetLODs(lods);
-                            lodSystem.RecalculateBounds();
                         }
                         else {
                             if (detailGameObjects != null) {
@@ -620,13 +631,14 @@ namespace VoxelWorldStuff {
                 }
 
                 Profiler.BeginSample("FinalizeMesh");
-                meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, world);
+                meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, shadowRenderer, world);
                 meshProcessor = null; //clear it
                 Profiler.EndSample();
 
                 if (lodSystem != null) {
                     Profiler.BeginSample("RecalculateLodBounds");
                     lodSystem.RecalculateBounds();
+                    lodSystem.localReferencePoint = chunkKey * chunkSize + (chunkSize / 2.0f) * Vector3.one; 
                     Profiler.EndSample();
                 }
 
@@ -670,6 +682,9 @@ namespace VoxelWorldStuff {
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void OnStartup() {
+            // Reset simple lit material
+            Object.Destroy(simpleLitMaterial);
+            simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Simple Lit"));
             Array.Clear(lightsPositions, 0, lightsPositions.Length);
             Array.Clear(lightColors, 0, lightColors.Length);
             Array.Clear(lightRadius, 0, lightRadius.Length);
