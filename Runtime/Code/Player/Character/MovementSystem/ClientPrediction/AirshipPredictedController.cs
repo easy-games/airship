@@ -643,15 +643,15 @@ protected void Log(string message){
     }
 
     public int GetTick(double time){
-        // var rounded = (float)time / this.recordInterval;
-        // //Because time isn't a perfectly synced number it can be off by a tiny margin. 
-        // //We know it means the next tick even it its technicaly under by a small amount
-        // if((float)time - (this.recordInterval * rounded) > .8f){
-        //     return Mathf.CeilToInt(rounded);
-        // }else{
-        //     return Mathf.FloorToInt(rounded);
-        // }
-        return Mathf.RoundToInt((float)time / this.recordInterval);
+        var rounded = (float)time / this.recordInterval;
+        //Because time isn't a perfectly synced number it can be off by a tiny margin. 
+        //We know it means the next tick even it its technicaly under by a small amount
+        if((float)time - (this.recordInterval * rounded) > .75f){
+            return Mathf.CeilToInt(rounded);
+        }else{
+            return Mathf.FloorToInt(rounded);
+        }
+        //return Mathf.RoundToInt((float)time / this.recordInterval);
     }
 
     public double GetTime(int tick){
