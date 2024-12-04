@@ -25,7 +25,9 @@ namespace VoxelWorldStuff {
     // 000000000000     000         0
 
     public class Chunk {
+        #if !UNITY_SERVER
         private static Material simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Simple Lit"));
+        #endif
         
         private static readonly Vector3Int[] searchOffsets =
         {
@@ -570,7 +572,9 @@ namespace VoxelWorldStuff {
                             var shadowFilter = shadowGo.GetComponent<MeshFilter>();
                             shadowFilter.mesh = detailMeshes[1]; // DetailMeshFar is our shadow mesh -- should make this configurable
                             shadowRenderer = shadowGo.GetComponent<MeshRenderer>();
+                            #if !UNITY_SERVER
                             shadowRenderer.sharedMaterial = simpleLitMaterial;
+                            #endif
                             shadowRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly; // Only cast shadows (invisible)
                             shadowRenderer.staticShadowCaster = true;
                             shadowGo.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
@@ -682,9 +686,11 @@ namespace VoxelWorldStuff {
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void OnStartup() {
+            #if !UNITY_SERVER
             // Reset simple lit material
             Object.Destroy(simpleLitMaterial);
             simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Simple Lit"));
+            #endif
             Array.Clear(lightsPositions, 0, lightsPositions.Length);
             Array.Clear(lightColors, 0, lightColors.Length);
             Array.Clear(lightRadius, 0, lightRadius.Length);
