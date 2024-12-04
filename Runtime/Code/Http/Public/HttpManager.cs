@@ -43,6 +43,15 @@ namespace Code.Http.Public {
                 };
             }
 
+            if (req.result == UnityWebRequest.Result.ConnectionError) {
+                return new HttpResponse() {
+                    success = false,
+                    error = req.error,
+                    statusCode = (int)req.responseCode,
+                    headers = req.GetResponseHeaders()
+                };
+            }
+
             return new HttpResponse() {
                 success = true,
                 data = req.downloadHandler.text,
@@ -106,7 +115,7 @@ namespace Code.Http.Public {
 
             RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = res.StatusCode < 300,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
@@ -119,7 +128,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = 0,
-                    error = error.Response,
+                    error = error.Message,
                     headers = {}
                 });
             });
@@ -150,7 +159,7 @@ namespace Code.Http.Public {
 
             RestClient.Delete(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = res.StatusCode < 300,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
@@ -163,7 +172,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = 0,
-                    error = error.Response,
+                    error = error.Message,
                     headers = {}
                 });
             });
@@ -195,7 +204,7 @@ namespace Code.Http.Public {
 
             RestClient.Patch(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = res.StatusCode < 300,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
@@ -208,7 +217,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = 0,
-                    error = error.Response,
+                    error = error.Message,
                     headers = {}
                 });
             });
@@ -217,7 +226,7 @@ namespace Code.Http.Public {
         }
 
         private static void LogRequestError(string url, RequestException error) {
-            Debug.LogError(url + " " + error + " " + error.Response);
+            Debug.LogError(url + " " + error + " " + error.Message);
         }
 
         public static Task<HttpResponse> PutAsync(string url, string data) {
@@ -247,7 +256,7 @@ namespace Code.Http.Public {
 
             RestClient.Put(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = res.StatusCode < 300,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
@@ -260,7 +269,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = 0,
-                    error = error.Response,
+                    error = error.Message,
                     headers = {}
                 });
             });
