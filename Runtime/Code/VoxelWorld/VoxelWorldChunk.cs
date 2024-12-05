@@ -26,7 +26,7 @@ namespace VoxelWorldStuff {
 
     public class Chunk {
         #if !UNITY_SERVER
-        private static Material simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Simple Lit"));
+        private static Material simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Lit"));
         #endif
         
         private static readonly Vector3Int[] searchOffsets =
@@ -689,7 +689,7 @@ namespace VoxelWorldStuff {
             #if !UNITY_SERVER
             // Reset simple lit material
             Object.Destroy(simpleLitMaterial);
-            simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Simple Lit"));
+            simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Lit"));
             #endif
             Array.Clear(lightsPositions, 0, lightsPositions.Length);
             Array.Clear(lightColors, 0, lightColors.Length);
