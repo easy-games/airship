@@ -1466,8 +1466,10 @@ namespace VoxelWorldStuff {
                 Profiler.EndSample();
                 
                 // Release TemporaryMeshData, we should no longer need it
-                TemporaryMeshPool.Release(temporaryMeshData);
-                temporaryMeshData = null;
+                if (temporaryMeshData != null) {
+                    TemporaryMeshPool.Release(temporaryMeshData);
+                    temporaryMeshData = null;
+                }
 
                 readOnlyColor.Dispose(); // Dispose early
 
