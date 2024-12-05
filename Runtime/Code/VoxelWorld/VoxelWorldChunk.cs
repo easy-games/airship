@@ -589,7 +589,7 @@ namespace VoxelWorldStuff {
 
                             // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
                             LOD[] lods = new LOD[3] {
-                                new LOD(0.55f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                new LOD(0.4f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
                                 new LOD(0.01f, new Renderer[] { detailRenderers[1] }),
                                 new LOD(0.0f, new Renderer[] { detailRenderers[2] })
                             };
@@ -641,7 +641,8 @@ namespace VoxelWorldStuff {
 
                 if (lodSystem != null) {
                     Profiler.BeginSample("RecalculateLodBounds");
-                    lodSystem.RecalculateBounds();
+                    // lodSystem.RecalculateBounds();
+                    lodSystem.size = (chunkSize / 2.0f) * 1.732f; // cube radius * sqrt(3)
                     lodSystem.localReferencePoint = chunkKey * chunkSize + (chunkSize / 2.0f) * Vector3.one; 
                     Profiler.EndSample();
                 }
