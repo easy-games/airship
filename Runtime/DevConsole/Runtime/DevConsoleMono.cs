@@ -1383,20 +1383,16 @@ namespace Airship.DevConsole
             }
         }
 
-        private void LateUpdate()
-        {
-            if (!ConsoleIsEnabled)
-            {
+        private void LateUpdate() {
+            if (!ConsoleIsEnabled) {
                 return;
             }
 
             // Update fps display
-            if (_isDisplayingFps)
-            {
+            if (_isDisplayingFps) {
                 _fpsDeltaTime += (Time.unscaledDeltaTime - _fpsDeltaTime) * 0.1f;
                 _fpsElapsed += Time.deltaTime;
-                if (_fpsElapsed > 1.0f / FpsUpdateRate)
-                {
+                if (_fpsElapsed > 1.0f / FpsUpdateRate) {
                     // Calculate fps values
                     _fpsMs = _fpsDeltaTime * 1000f;
                     _fps = Mathf.RoundToInt(1.0f / _fpsDeltaTime);
@@ -1404,36 +1400,25 @@ namespace Airship.DevConsole
 
                     // Determine colour
                     _fpsTextColour = Color.white;
-                    if (Application.targetFrameRate == -1 && _fps >= 60 || Application.targetFrameRate != -1 && _fps >= Application.targetFrameRate)
-                    {
+                    if (Application.targetFrameRate == -1 && _fps >= 60 || Application.targetFrameRate != -1 && _fps >= Application.targetFrameRate) {
                         _fpsTextColour = Color.green;
-                    }
-                    else if (_fps < 10)
-                    {
+                    } else if (_fps < 10) {
                         _fpsTextColour = Color.red;
-                    }
-                    else if (_fps < 30 && (Application.targetFrameRate > 30 || Application.targetFrameRate == -1))
-                    {
+                    } else if (_fps < 30 && (Application.targetFrameRate > 30 || Application.targetFrameRate == -1)) {
                         _fpsTextColour = Color.yellow;
                     }
                 }
             }
 
             // Check bindings (as long as the input field or any other object isn't focused!)
-            if (BindingsIsEnabled && !_inputField.isFocused && (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null))
-            {
-                try
-                {
-                    foreach (InputKey key in _bindings.Keys)
-                    {
-                        if (GetKeyDown(key))
-                        {
+            if (BindingsIsEnabled && !_inputField.isFocused && (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null)) {
+                try {
+                    foreach (InputKey key in _bindings.Keys) {
+                        if (GetKeyDown(key)) {
                             RunCommand(_bindings[key]);
                         }
                     }
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     LogError($"Checking bindings failed with an exception: {e.Message}");
                 }
             }
@@ -1475,47 +1460,36 @@ namespace Airship.DevConsole
             }
 
             // Check if the developer console toggle key was pressed
-            if (ConsoleToggleKey.HasValue && (!ConsoleIsShowing || (!_inputField.isFocused || InputText.Length <= 1)) && GetKeyDown(ConsoleToggleKey.Value))
-            {
+            if (ConsoleToggleKey.HasValue && (!ConsoleIsShowing || (!_inputField.isFocused || InputText.Length <= 1)) && GetKeyDown(ConsoleToggleKey.Value)) {
                 ToggleConsole();
                 return;
             }
 
-            if (!ConsoleIsShowing)
-            {
+            if (!ConsoleIsShowing) {
                 return;
             }
 
-            if (_inputField.isFocused)
-            {
+            if (_inputField.isFocused) {
                 // Allow cycling through command suggestions using the UP and DOWN arrows
-                if (_commandStringSuggestions != null && _commandStringSuggestions.Length > 0)
-                {
-                    if (GetKeyDown(UpArrowKey))
-                    {
+                if (_commandStringSuggestions != null && _commandStringSuggestions.Length > 0) {
+                    if (GetKeyDown(UpArrowKey)) {
                         CycleCommandSuggestions(1);
-                    }
-                    else if (GetKeyDown(DownArrowKey))
-                    {
+                    } else if (GetKeyDown(DownArrowKey)) {
                         CycleCommandSuggestions(-1);
                     }
                 }
 
                 // Allow cycling through command history using the UP and DOWN arrows
-                else
-                {
+                else {
                     // Reset the command history index if the input text is blank
-                    if (string.IsNullOrEmpty(InputText) && _commandHistoryIndex != -1)
-                    {
+                    if (string.IsNullOrEmpty(InputText) && _commandHistoryIndex != -1) {
                         _commandHistoryIndex = -1;
                     }
 
-                    if (GetKeyDown(UpArrowKey))
-                    {
+                    if (GetKeyDown(UpArrowKey)) {
                         CycleCommandHistory(1);
                     }
-                    else if (GetKeyDown(DownArrowKey))
-                    {
+                    else if (GetKeyDown(DownArrowKey)) {
                         CycleCommandHistory(-1);
                     }
                 }
