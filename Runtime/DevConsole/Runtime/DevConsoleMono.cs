@@ -920,13 +920,16 @@ namespace Airship.DevConsole
         #region Log methods
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false)
-        {
+        internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false) {
             Profiler.BeginSample("DevConsole.Log");
+            var list = StoredLogText[context];
+            if (list.Count >= 100) {
+                list.RemoveAt(99);
+            }
             if (prepend) {
-                StoredLogText[context].Add($"{message}\n" + StoredLogText[context]);
+                list.Add($"{message}\n");
             } else {
-                StoredLogText[context].Add($"\n{message}");
+                list.Add($"\n{message}");
             }
             Profiler.EndSample();
         }
@@ -1424,40 +1427,43 @@ namespace Airship.DevConsole
             }
 
             // Add log instances for the stored logs and then clear stored logs.
-            foreach (var pair in StoredLogText) {
-                if (pair.Value.Count == 0) continue;
+            if (ConsoleIsShowing) {
+                foreach (var pair in StoredLogText) {
+                    if (pair.Value.Count == 0) continue;
 
-                if (ConsoleIsShowing && this.activeContext == pair.Key) {
-                    const float scrollPerc = 0.001f;
-                    var scrollView = this.activeContext == LogContext.Client
-                        ? clientLogScrollView
-                        : serverLogScrollView;
-                    if (_pretendScrollAtBottom || scrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(scrollView.verticalNormalizedPosition, scrollPerc))
-                    {
-                        _scrollToBottomNextFrame = true;
-                    }
-
-                    Profiler.BeginSample("Console.ProcessLogText");
-
-                    const int maxPerTick = 5;
-                    if (pair.Value.Count > maxPerTick) {
-                        for (int i = 0; i < maxPerTick; i++) {
-                            ProcessLogText(pair.Value[i], pair.Key);
+                    if (this.activeContext == pair.Key) {
+                        const float scrollPerc = 0.001f;
+                        var scrollView = this.activeContext == LogContext.Client
+                            ? clientLogScrollView
+                            : serverLogScrollView;
+                        if (_pretendScrollAtBottom || scrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(scrollView.verticalNormalizedPosition, scrollPerc))
+                        {
+                            _scrollToBottomNextFrame = true;
                         }
-                        pair.Value.RemoveRange(0, maxPerTick);
-                    } else {
-                        foreach (var logText in pair.Value) {
-                            ProcessLogText(logText, pair.Key);
-                        }
-                        pair.Value.Clear();
-                    }
-                    Profiler.EndSample();
 
-                    Profiler.BeginSample("Console.RebuildLayout");
-                    RebuildLayout(pair.Key);
-                    Profiler.EndSample();
+                        Profiler.BeginSample("Console.ProcessLogText");
+
+                        const int maxPerTick = 5;
+                        if (pair.Value.Count > maxPerTick) {
+                            for (int i = 0; i < maxPerTick; i++) {
+                                ProcessLogText(pair.Value[i], pair.Key);
+                            }
+                            pair.Value.RemoveRange(0, maxPerTick);
+                        } else {
+                            foreach (var logText in pair.Value) {
+                                ProcessLogText(logText, pair.Key);
+                            }
+                            pair.Value.Clear();
+                        }
+                        Profiler.EndSample();
+
+                        Profiler.BeginSample("Console.RebuildLayout");
+                        RebuildLayout(pair.Key);
+                        Profiler.EndSample();
+                    }
                 }
             }
+
 
             // Check if the developer console toggle key was pressed
             if (ConsoleToggleKey.HasValue && (!ConsoleIsShowing || (!_inputField.isFocused || InputText.Length <= 1)) && GetKeyDown(ConsoleToggleKey.Value)) {
