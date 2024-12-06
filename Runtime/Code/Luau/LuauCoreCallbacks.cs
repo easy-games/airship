@@ -40,6 +40,7 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.YieldCallback yieldCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
     private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
+    private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
     
 
     private struct AwaitingTask
@@ -86,6 +87,7 @@ public partial class LuauCore : MonoBehaviour {
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
         componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
         toggleProfilerCallback_holder = new LuauPlugin.ToggleProfilerCallback(ToggleProfilerCallback);
+        isObjectDestroyedCallback_holder = new LuauPlugin.IsObjectDestroyedCallback(IsObjectDestroyedCallback);
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -203,6 +205,11 @@ public partial class LuauCore : MonoBehaviour {
                 Profiler.BeginSample($"{componentName}");
             }
         }
+    }
+
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.IsObjectDestroyedCallback))]
+    static int IsObjectDestroyedCallback(int instanceId) {
+        return ThreadDataManager.IsGameObjectReferenceDestroyed(instanceId) ? 1 : 0;
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
