@@ -26,7 +26,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
     //For the client this stores inputs to use in the replay.
     private List<CharacterMovementState> replayPredictionStates = new List<CharacterMovementState>();
-    private SortedList<double, MoveInputData> recievedInputs = new SortedList<double, MoveInputData>();
+    private SortedList<int, MoveInputData> recievedInputs = new SortedList<int, MoveInputData>();
 
     private MoveInputData lastSentInput;
 #endregion
@@ -82,8 +82,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         return base.ShouldRecordState();
     }
 
-    protected override void FixedUpdate() {
+    protected override void OnPhysicsTick() {
         // This disables the automatic calls to RecordState()
+        //base.OnPhysicsTick();
+        serverTick++;
+        predictedTick++;
     }
     
     private void OnSetMovementData(){
@@ -93,8 +96,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         
         // The server applys inputs it recieves from the client
         // Only if the time is past the inputs state time with a margin of the record interval 
-        if(recievedInputs.Count > 0 && NetworkTime.time > recievedInputs.Keys[0] - recordInterval){
-            print("using input: " + recievedInputs.Keys[0] + " at: " + GetTick(NetworkTime.time) + " moveDir: " + recievedInputs.Values[0].moveDir);
+        if(recievedInputs.Count > 0 && serverTick >= recievedInputs.Keys[0]){
+            print("using input: " + recievedInputs.Keys[0] + " at: " + serverTick + " moveDir: " + recievedInputs.Values[0].moveDir);
              //This input should be used
             movement.SetMoveInputData(recievedInputs.Values[0]);
             recievedInputs.RemoveAt(0);
@@ -112,35 +115,33 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         if (onlyRecordChanges && !isInputChanged && lastRecorded != null &&
             Vector3.SqrMagnitude(lastRecorded.position - currentState.position) >= positionCorrectionThresholdSqr &&
             Vector3.SqrMagnitude(lastRecorded.velocity - currentState.velocity) >= velocityCorrectionThresholdSqr) {
-            //NetworkTime.time - lastRecordTime < recordInterval) {
-                // Log($"FixedUpdate for {name}: taking optimized early return instead of recording state.");
                 return;
         }
 
         // Save the state in the history
-        print("Movement Time: " + NetworkTime.time + " predictedTime: " + NetworkTime.predictedTime);
-        RecordState(NetworkTime.predictedTime);
+        //print("Movement Tick: " + serverTick + " predictedTime: " + predictedTick);
+        RecordState(predictedTick);
 
         if(isInputChanged){
             // Update state on server if its a new input state
             this.lastSentInput = newInput;
             
             // Send the inputs to the server
-            print("Sending input at: " + GetTick(NetworkTime.predictedTime) + " moveDir: " + this.lastSentInput.moveDir);
-            SetServerInput(NetworkTime.predictedTime, this.lastSentInput);
+            print("Sending input at: " + predictedTick + " moveDir: " + this.lastSentInput.moveDir);
+            SetServerInput(predictedTick, this.lastSentInput);
         }
     }
 
 	[Command]
 	//Sync the move input data to the server
-	private void SetServerInput(double timeStamp, MoveInputData moveData){
-        print("recieved inputs. Time diff: " + (timeStamp - NetworkTime.time) + " from: " + GetTick(timeStamp) + " current time: " + GetTick(NetworkTime.time));
-        if(timeStamp >= NetworkTime.time + recordInterval){
-            Debug.LogWarning("Recieved inputs from client that are in the past by " + (timeStamp - NetworkTime.time) + " seconds");
+	private void SetServerInput(int tick, MoveInputData moveData){
+        print("recieved inputs. From: " + tick + " current time: " + serverTick);
+        if(tick < serverTick){
+            Debug.LogWarning("Recieved inputs from client that are in the past by " + (tick - serverTick) + " ticks");
         }
 
         //Store this input sorted by time
-        recievedInputs.Add(timeStamp, moveData);
+        recievedInputs.Add(tick, moveData);
 
         // keep state history within limit
         if(recievedInputs.Count > this.stateHistoryLimit){
@@ -179,11 +180,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         stateHistory.Clear();
 
 
-        //Snap to the servers state
+        //Snap to the initial state
         var movementState = (CharacterMovementState)initialState;
-        
         SnapTo(movementState);
-         
         movement.transform.position = movementState.position;
         stateHistory.Add(movementState.tick, movementState);
     }
@@ -217,12 +216,15 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
         if(lastRecorded == null || !lastRecorded.Equals(currentState)){
             // Save the new history state
-            RecordState(GetTime(tick));
+            RecordState(tick);
         }
+        print("tick finished: " + tick);
+        predictedTick = tick;
     }
 
     public override void OnReplayFinished(AirshipPredictedState initialState) {
         print("Replay ended: " + initialState.tick);
+        serverTick = initialState.tick;
         //PrintHistory("REPLAY FINISHED");
         if(showGizmos){
             GizmoUtils.DrawSphere(currentPosition, .1f, Color.green, 4, gizmoDuration);
@@ -249,8 +251,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         writer.WriteVector3(movement.GetVelocity());
     }
 
-    public override CharacterMovementState DeserializeState(NetworkReader reader, double timestamp) {
-        var state = new CharacterMovementState(GetTick(timestamp), reader.ReadVector3(), reader.ReadVector3());
+    public override CharacterMovementState DeserializeState(NetworkReader reader, int tick) {
+        var state = new CharacterMovementState(tick, reader.ReadVector3(), reader.ReadVector3());
         return state;
     }
     #endregion

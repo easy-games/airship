@@ -1,6 +1,7 @@
 ﻿using System;
 using Assets.Luau;
 using Mirror;
+using Steamworks;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -179,16 +180,27 @@ public class CharacterMovement : NetworkBehaviour {
 		}
 		//print("Refreshed auth: " + hasAuth);
 	}
+	
 	private void OnEnable() {
+		print("Enabled Character Movement");
 		this.physics = new CharacterPhysics(this);
 		this.currentMoveState.inputDisabled = false;
 		this.currentMoveState.isFlying = false;
 		this.mainCollider.enabled = true;
+		if(isServerAuth){
+		print("ATTACHED CALLBACK");
+			AirshipPredictionManager.OnPhysicsTick += OnPhysicsTick;
+		}
 	}
 
 	private void OnDisable() {
+		print("Disabled Character Movement");
 		// EntityManager.Instance.RemoveEntity(this);
 		this.mainCollider.enabled = false;
+		if(isServerAuth){
+		print("REMOVED CALLBACK");
+			AirshipPredictionManager.OnPhysicsTick -= OnPhysicsTick;
+		}
 	}
 #endregion
 
@@ -253,13 +265,21 @@ public class CharacterMovement : NetworkBehaviour {
 	//Every Physics tick we process the move data
 	private void FixedUpdate() {	
 		// Observers don't calculate moves
-		if(!hasMovementAuth || (isServerOnly && !isServerAuth)) {
+		if(isServerAuth || !hasMovementAuth || (isServerOnly && !isServerAuth)) {
 			return;
 		}
 		RunMovementTick();
 	}
+	
+	private void OnPhysicsTick(){
+		RunMovementTick();
+	}
 
 	public void RunMovementTick(bool isReplay = false){
+		if(!gameObject){
+			print("THIS HAS BEEN DESTROYED");
+			return;
+		}
 		//Update the movement state of the character	
 		currentMoveState.currentMoveInput = BuildMoveData();
 		OnBeginMove?.Invoke(currentMoveState, isReplay);

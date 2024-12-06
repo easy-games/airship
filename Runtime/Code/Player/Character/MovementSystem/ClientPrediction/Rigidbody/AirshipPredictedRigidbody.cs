@@ -152,7 +152,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         //print("Replay tick: " + time);
         
         //Save the new history state
-        RecordState(GetTime(tick));
+        RecordState(tick);
     }
 
     public override void OnReplayFinished(AirshipPredictedState initialState){
@@ -183,8 +183,8 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         writer.WriteVector3(rigid.angularVelocity);
     }
 
-    public override AirshipPredictedRigidbodyState DeserializeState(NetworkReader reader, double timestamp) {
-        return new AirshipPredictedRigidbodyState(GetTick(timestamp), 
+    public override AirshipPredictedRigidbodyState DeserializeState(NetworkReader reader, int tick) {
+        return new AirshipPredictedRigidbodyState(tick, 
             reader.ReadVector3(), 
             reader.ReadVector4().ConvertToQuaternion(), 
             reader.ReadVector3(), 

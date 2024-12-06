@@ -44,6 +44,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     [Tooltip("Applying server corrections one frame ahead gives much better results. We don't know why yet, so this is an option for now.")]
     public int serverSerializationOffset = 1;
+    public int replayTickOffset = 0;
 
     [Tooltip("Correction threshold in meters. For example, 0.1 means that if the client is off by more than 10cm, it gets corrected.")]
     public float positionCorrectionThreshold = 0.10f;
@@ -61,6 +62,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     
 
     [Header("Debugging")]
+    public bool smoothRigidbodies = true;
     [Tooltip("Draw gizmos. Shows server position and client position")]
     public bool showLogs = false;
 
@@ -79,27 +81,22 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
 
 #region PRIVATE
+    protected int serverTick = 0;
+    protected int predictedTick = 0;
 
     //State History
     protected readonly SortedList<int, T> stateHistory = new SortedList<int, T>();
     // manually store last recorded so we can easily check against this
     // without traversing the SortedList.
     protected T lastRecorded {get; private set;}
-    protected double lastRecordTime {get; private set;}
+    protected double lastRecordedTime {get; private set;}
+    private int lastRecordedTick = 0;
 
     //Mothion Smoothing
     protected float velocityCorrectionThresholdSqr; // ² cached in Awake
     protected float velocitySnapThresholdSqr; // ² cached in Awake
     protected float positionCorrectionThresholdSqr; // ² cached in Awake
-    private double finalReplayTime = 0;
     
-#endregion
-
-
-#region EVENTS
-    private Action OnBeginPrediction;
-    private Action OnEndPrediction;
-
 #endregion
 
 
@@ -110,7 +107,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     public abstract void SnapTo(T newState);
     public abstract T CreateCurrentState(int currentTick);
     public abstract void SerializeState(NetworkWriter writer);
-    public abstract T DeserializeState(NetworkReader reader, double timestamp);
+    public abstract T DeserializeState(NetworkReader reader, int tick);
 
     public abstract void OnReplayStarted(AirshipPredictedState initialState, int historyIndex);
     public abstract void OnReplayTickStarted(int tick);
@@ -161,10 +158,12 @@ protected void Log(string message){
 
     protected virtual void OnEnable() {
         AirshipPredictionManager.instance.RegisterPredictedObject(this);
+        AirshipPredictionManager.OnPhysicsTick += OnPhysicsTick;
     }
 
     protected virtual void OnDisable() {
         AirshipPredictionManager.instance.UnRegisterPredictedObject(this);
+        AirshipPredictionManager.OnPhysicsTick -= OnPhysicsTick;
     }
 
     protected override void OnValidate() {
@@ -182,6 +181,7 @@ protected void Log(string message){
 
 #region SERVER
         protected virtual void Update() {
+            AirshipPredictionManager.SmoothRigidbodies = this.smoothRigidbodies;
             if (!isServer){
                 return;
             }
@@ -209,7 +209,8 @@ protected void Log(string message){
 #region CLIENT
         
         //Record history states
-        protected virtual void FixedUpdate() {
+        protected virtual void OnPhysicsTick() {
+            serverTick++;
             // on clients (not host) we record the current state every FixedUpdate.
             // this is cheap, and allows us to keep a dense history.
             if (!isClientOnly) return;
@@ -218,7 +219,7 @@ protected void Log(string message){
                 // NetworkTime.time is always behind by bufferTime.
                 // prediction aims to be on the exact same server time (immediately).
                 // use predictedTime to record state, otherwise we would record in the past.
-                RecordState(NetworkTime.predictedTime);
+                RecordState(serverTick);
             }
         }
 #endregion
@@ -243,18 +244,18 @@ protected void Log(string message){
 
             // instead of recording every fixedupdate, let's record in an interval.
             // we don't want to record every tiny move and correct too hard.
-            if (NetworkTime.time < lastRecordTime + recordInterval) return false;
+            if (NetworkTime.time < lastRecordedTime + recordInterval) return false;
 
             // FixedUpdate may run twice in the same frame / NetworkTime.time.
             // for now, simply don't record if already recorded there.
-            if (NetworkTime.time == lastRecordTime) return false;
+            if (NetworkTime.time == lastRecordedTime) return false;
 
             return true;
     }
 
     //If we are in a new state then insert the current state into the history at this specific time
-    protected void RecordState(double stateTime) {
-        lastRecordTime = NetworkTime.time;
+    protected void RecordState(int stateTick) {
+        lastRecordedTime = NetworkTime.time;
 
         //PrintHistory("Recording: " + stateTime);
 
@@ -262,21 +263,20 @@ protected void Log(string message){
         if (stateHistory.Count >= stateHistoryLimit)
             stateHistory.RemoveAt(0);
 
-
-        var tick = GetTick(stateTime);
         //Debug.Log("Record State: " + stateTime + " tick: " + tick);
 
-        var newState = CreateCurrentState(tick);
+        var newState = CreateCurrentState(stateTick);
 
-        if(stateHistory.ContainsKey(tick)){
-            Debug.LogWarning("Trying to Record a state that has already been recorded: " + stateTime + " tick: " + tick);
+        if(stateHistory.ContainsKey(stateTick)){
+            Debug.LogWarning("Trying to Record a state that has already been recorded: " + stateTick);
         } else{
             // add state to history
-            stateHistory.Add(tick, newState);
+            stateHistory.Add(stateTick, newState);
         }
 
         // manually remember last inserted state for faster .Last comparisons
         lastRecorded = newState;
+        lastRecordedTick = stateTick;
 
         //print("Recording State: " + stateTime + " vel: " + newState.velocity);
     }
@@ -285,6 +285,7 @@ protected void Log(string message){
     void ApplyState(T snapshotState){
         // Hard snap to the state
         Log("Applying State: " + snapshotState.tick);
+        serverTick = snapshotState.tick;
 
         // apply server state immediately.
         // important to apply velocity as well, instead of Vector3.zero.
@@ -297,13 +298,13 @@ protected void Log(string message){
         // clear history and insert the exact state we just applied.
         // this makes future corrections more accurate.
         stateHistory.Clear();
-        stateHistory.Add(GetTick(snapshotState.tick), snapshotState);
+        stateHistory.Add(snapshotState.tick, snapshotState);
     }
 
     // process a received server state.
     // compares it against our history and applies corrections if needed.
     // serverTimestamp is the same value as serverState.timestamp
-    protected void OnReceivedState(double serverTimestamp, T serverState) {
+    protected void OnReceivedState(int serverTick, T serverState) {
 
         // correction requires at least 2 existing states for 'before' and 'after'.
         // if we don't have two yet, drop this state and try again next time once we recorded more.
@@ -311,8 +312,7 @@ protected void Log(string message){
         
         //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
 
-        if(finalReplayTime > 0 && finalReplayTime < serverTimestamp){
-            finalReplayTime = -1;
+        if(lastRecordedTick > 0 && lastRecordedTick < serverTick){
             GizmoUtils.DrawBox(serverState.position, Quaternion.identity, new Vector3(.04f, .04f, .04f), Color.white, gizmoDuration);
         }
         
@@ -354,7 +354,6 @@ protected void Log(string message){
         // if there's no latency, we may receive a server state for 'now'.
         // sampling would fail, if we haven't recorded anything in a while.
         // to solve this, always record the current state when receiving a server state.
-         double predictedTime = NetworkTime.predictedTime;
 
         //This shouldn't be need in Airship because we are controlling the FixedUpdate loop and recording again will just record redundant data
         // if(predictedTime > lastRecorded.timestamp + recordInterval/2 
@@ -363,8 +362,6 @@ protected void Log(string message){
         // }
 
         int oldestTick = stateHistory.Values[0].tick;
-        int newestTick = lastRecorded.tick;
-        int serverTick = GetTick(serverTimestamp);
 
         // edge case: is the server state newer than the newest state in history?
         // this can happen if client's predictedTime predicts too far ahead of the server.
@@ -374,13 +371,13 @@ protected void Log(string message){
         // for example, when running prediction on the same machine with near zero latency.
         // when applying corrections here, this looks just fine on the local machine.
         // Only force if the difference is significant
-        if (serverTick > newestTick) {
+        if (serverTick > lastRecordedTick) {
             // the correction is for a state in the future.
             // force the state to the server
             // TODO maybe we should interpolate this back to 'now'?
             // this can happen a lot when latency is ~0. logging all the time allocates too much and is too slow.
             Log($"Hard correction because the server is ahead of the client\n" +
-                $"serverTime={serverTick:F3} localNewestTick={newestTick:F3} predictionTime: {predictedTime}\n" +
+                $"serverTime={serverTick:F3} locallastRecordTick={lastRecordedTick:F3} predictionTime: {predictedTick}\n" +
                 $"local oldestTick={oldestTick:F3} History of size={stateHistory.Count}. \n" +
                 $"This can happen when latency is near zero, and is fine unless it shows jitter.");
             PrintHistory();
@@ -401,7 +398,7 @@ protected void Log(string message){
             // it's expected that server states would be behind those 2-3.
             // only show a warning if it's behind the full history limit!
             if (stateHistory.Count >= stateHistoryLimit)
-                Debug.LogWarning($"Hard correcting client object {name} because the client is too far behind the server. History of size={stateHistory.Count} @ t={serverTimestamp:F3} oldest={oldestTick:F3} newest={newestTick:F3}. This would cause the client to be out of sync as long as it's behind.");
+                Debug.LogWarning($"Hard correcting client object {name} because the client is too far behind the server. History of size={stateHistory.Count} oldest={oldestTick:F3} newest={lastRecordedTick}. This would cause the client to be out of sync as long as it's behind.");
 
             Log("serverState is older than our history. Server: " + serverTick + " oldest tick: " + stateHistory.Keys[0]);
             //Add a history element before everything to replay from
@@ -416,7 +413,7 @@ protected void Log(string message){
         }else {
             // something went very wrong. sampling should've worked.
             // hard correct to recover the error.
-            Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ t={serverTimestamp:F3} oldest={oldestTick:F3} newest={newestTick:F3}. This should never happen because the timestamp is within history.");
+            Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ oldest={oldestTick:F3} newest={lastRecordedTick}. This should never happen because the timestamp is within history.");
             PrintHistory();
             ApplyState(serverState);
             return;
@@ -425,7 +422,7 @@ protected void Log(string message){
 
         // too far off? then correct it
         if (NeedsCorrection(serverState, clientState)) {
-            Log($"CORRECTION NEEDED FOR {name} @ {serverTimestamp:F3} client= {clientState.tick} + pos: {clientState.position} server= {serverState.tick} + pos: {serverState.position}");
+            Log($"CORRECTION NEEDED FOR {name} client= {clientState.tick} + pos: {clientState.position} server= {serverState.tick} + pos: {serverState.position}");
             if(showGizmos){
                 // show the received correction position + velocity for debugging.
                 // helps to compare with the interpolated/applied correction locally.
@@ -446,16 +443,13 @@ protected void Log(string message){
 
 
             //Simulate until the end of our history
-            finalReplayTime = GetTime(lastRecorded.tick);
-            double simulationDifference = finalReplayTime - serverTimestamp;
-
-            if(simulationDifference > recordInterval){
-                print("Replaying until tick: " + finalReplayTime + " which is " + simulationDifference + " seconds away");
+            if(lastRecordedTick > serverTick){
+                print("Replaying until tick: " + lastRecordedTick + " which is " + ((serverTick - lastRecordedTick) * syncInterval) + " seconds away");
 
                 //Replay States
-                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick, afterIndex);
+                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick + replayTickOffset, afterIndex);
             }else{
-                //Snap because there isn't a time difference (shoudld just be in shared mode)
+                //Snap because there isn't a time difference (should just be in shared mode)
                 ApplyState(serverState);
             }
         }
@@ -470,18 +464,8 @@ protected void Log(string message){
     // reliable for now.
     // TODO we should use the one from FixedUpdate
     public override void OnSerialize(NetworkWriter writer, bool initialState) {
-        // Time.time was at the beginning of this frame.
-        // NetworkLateUpdate->Broadcast->OnSerialize is at the end of the frame.
-        // as result, client should use this to correct the _next_ frame.
-        // otherwise we see noticeable resets that seem off by one frame.
-        //
-        // to solve this, we can send the current deltaTime.
-        // server is technically supposed to be at a fixed frame rate, but this can vary.
-        // sending server's current deltaTime is the safest option.
-        // client then applies it on top of remoteTimestamp.
-        //Saves just the time changed this frame rather than the double timestamp
-        writer.WriteFloat(Time.deltaTime);
-        //TODO: Why can't I just pass the timestamp??? Instead of this delta offset thing ^
+        //Pass what tick we sent this on
+        writer.WriteInt(serverTick);
 
         //Let the child class serialize its data
         SerializeState(writer);
@@ -492,7 +476,10 @@ protected void Log(string message){
         // deserialize data
         // we want to know the time on the server when this was sent, which is remoteTimestamp.
         double serverTimestamp = NetworkClient.connection.remoteTimeStamp;
-        double serverDeltaTime = reader.ReadFloat();
+        serverTick = reader.ReadInt();
+        var offset = math.max(0, NetworkTime.predictedTime - NetworkTime.time);
+        predictedTick = serverTick +  GetTick(offset);
+        //print("GOT server tick: " + serverTick + " predictedTick: " + predictedTick + " offset: " + offset +  " offsetTime: " + NetworkTime.predictionErrorUnadjusted);
 
         // server sends state at the end of the frame.
         // parse and apply the server's delta time to our timestamp.
@@ -503,15 +490,15 @@ protected void Log(string message){
         // we don't know why yet, so keep this as an option for now.
         // possibly because client captures at the beginning of the frame,
         // with physics happening at the end of the frame?
-        serverTimestamp += serverSerializationOffset * recordInterval;
+        serverTick += serverSerializationOffset;
 
         //Let the child class deserialize its data
-        T newState = DeserializeState(reader, serverTimestamp);
+        T newState = DeserializeState(reader, serverTick);
 
         //print("Deserialize time: " + timestamp + " readerTime: " + serverDeltaTime);
         // process received state
         try{
-            OnReceivedState(serverTimestamp, newState);
+            OnReceivedState(serverTick, newState);
         }catch(Exception e){
             Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
         }
@@ -643,15 +630,8 @@ protected void Log(string message){
     }
 
     public int GetTick(double time){
-        var rounded = (float)time / this.recordInterval;
-        //Because time isn't a perfectly synced number it can be off by a tiny margin. 
-        //We know it means the next tick even it its technicaly under by a small amount
-        if((float)time - (this.recordInterval * rounded) > .75f){
-            return Mathf.CeilToInt(rounded);
-        }else{
-            return Mathf.FloorToInt(rounded);
-        }
-        //return Mathf.RoundToInt((float)time / this.recordInterval);
+        //print("Getting tick. Time: " + time + " interval: " + this.recordInterval + " rounded: " + Mathf.RoundToInt((float)time / this.recordInterval));
+        return Mathf.RoundToInt((float)time / this.recordInterval);
     }
 
     public double GetTime(int tick){

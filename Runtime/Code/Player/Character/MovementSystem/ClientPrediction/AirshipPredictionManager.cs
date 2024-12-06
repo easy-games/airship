@@ -1,8 +1,14 @@
+using System;
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 
 public class AirshipPredictionManager : MonoBehaviour {
+    public static double PhysicsTime {get; private set;} = 0;
+    public static bool SmoothRigidbodies = true;
+
+    public static Action OnPhysicsTick;
+
     private static AirshipPredictionManager _instance = null;
 
     public static AirshipPredictionManager instance {
@@ -62,7 +68,6 @@ public class AirshipPredictionManager : MonoBehaviour {
     private float currentSimulationTime = 0;
     private int simI = 0;
     private int simFrames = 4;
-    private bool smoothRigidbodies = true;
 
 #region PUBLIC API
     public void StartPrediction(){
@@ -78,10 +83,6 @@ public class AirshipPredictionManager : MonoBehaviour {
     public void EnabledDebugMode(){
         debugging = true;
         readyToTick = false;
-    }
-
-    public void SetRigidbodySmoothing(bool smoothingOn){
-        smoothRigidbodies = smoothingOn;
     }
 
     public void DisableDebugMode(){
@@ -136,12 +137,15 @@ public class AirshipPredictionManager : MonoBehaviour {
             //Simulate the physics
             physicsTimer -= Time.fixedDeltaTime;
             Physics.Simulate(Time.fixedDeltaTime);
+            PhysicsTime += Time.fixedDeltaTime;
 
-            if(!smoothRigidbodies){
+            OnPhysicsTick?.Invoke();
+
+            if(!SmoothRigidbodies){
                 continue;
             }
 
-            //Save timeing data every X frames
+            //RIGID SMOOTHING: Save timeing data every X frames
             simI++;
             if(simI >= simFrames){
                 simI = 0;
@@ -176,7 +180,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     void PhysicsManager::InterpolateBodies(PhysicsSceneHandle handle)
     */
     public void InterpolateBodies(){
-        if(!smoothRigidbodies || lastSimulationDuration == 0){
+        if(!SmoothRigidbodies || lastSimulationDuration == 0){
             return;
         }
         float interpolationTime = Mathf.Clamp01((Time.time - lastSimulationTime) / lastSimulationDuration);
@@ -188,6 +192,7 @@ public class AirshipPredictionManager : MonoBehaviour {
                 Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime), 
                 Quaternion.Lerp(rigidData.lastRotation, rigidData.currentRotation, interpolationTime)
                 );
+            rigidData.graphicsHolder.position = Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime);
 
             // GizmoUtils.DrawSphere(
             //     Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime),
@@ -268,9 +273,9 @@ public class AirshipPredictionManager : MonoBehaviour {
         replayData.replayController.OnReplayStarted(replayData.initialState, replayData.afterIndex);
 
         int tick = replayData.initialState.tick;
-        int finalTick = tick + replayData.endingTick;
+        int finalTick = replayData.endingTick;
 
-        Debug.Log("Starting replay: " + replayData.replayController.friendlyName);
+        Debug.Log("Replaying " + replayData.replayController.friendlyName + " from: " + replayData.initialState.tick + " to: " + replayData.endingTick);
 
         //Simulate physics for the duration of the replay
         while(tick <= finalTick) {
