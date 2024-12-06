@@ -23,6 +23,7 @@ public static class LuauPlugin
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate void ToggleProfilerCallback(int componentId, IntPtr str, int strLen);
+	public delegate int IsObjectDestroyedCallback(int instanceId);
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
@@ -34,11 +35,32 @@ public static class LuauPlugin
 		CreateThread
 	}
 
+	// Must match BytecodeVersion struct in Plugin.cpp
 	[StructLayout(LayoutKind.Sequential)]
 	public struct LuauBytecodeVersion {
 		public int Min;
 		public int Max;
 		public int Target;
+	}
+
+	// Must match PluginStartup struct in LuauManager.h
+	[StructLayout(LayoutKind.Sequential)]
+	public struct LuauPluginStartup {
+		public GetPropertyCallback getPropertyCallback;
+		public SetPropertyCallback setPropertyCallback;
+		public CallMethodCallback callMethodCallback;
+		public ObjectGCCallback objectGcCallback;
+		public RequireCallback requireCallback;
+		public RequirePathCallback requirePathCallback;
+		public ConstructorCallback constructorCallback;
+		public YieldCallback yieldCallback;
+		public ToStringCallback toStringCallback;
+		public ToggleProfilerCallback toggleProfilerCallback;
+		public IsObjectDestroyedCallback isObjectDestroyedCallback;
+		
+		public IntPtr staticList;
+		public int staticCount;
+		public int isServer;
 	}
 	
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
@@ -115,12 +137,10 @@ public static class LuauPlugin
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern bool Startup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, ConstructorCallback constructorCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback, ToStringCallback toStringCallback, ToggleProfilerCallback toggleProfilerCallback);
-	public static bool LuauStartup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, ConstructorCallback constructorCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback, ToStringCallback toStringCallback, ToggleProfilerCallback toggleProfilerCallback) {
+	private static extern bool Startup(LuauPluginStartup pluginStartup);
+	public static bool LuauStartup(LuauPluginStartup pluginStartup) {
         ThreadSafetyCheck();
-        
-        bool returnValue = Startup(getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, constructorCallback, stringArray, stringCount, requirePathCallback, yieldCallback, toStringCallback, toggleProfilerCallback);
-        return returnValue;
+        return Startup(pluginStartup);
     }
 	
 #if UNITY_IPHONE

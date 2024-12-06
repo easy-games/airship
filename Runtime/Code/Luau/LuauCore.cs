@@ -180,18 +180,22 @@ public partial class LuauCore : MonoBehaviour {
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
         LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
         LuauPlugin.LuauStartup(
-            getPropertyCallback_holder,
-            setPropertyCallback_holder,
-            callMethodCallback_holder,
-            objectGCCallback_holder,
-            requireCallback_holder,
-            constructorCallback_holder,
-            stringAddresses.AddrOfPinnedObject(),
-            stringCount,
-            requirePathCallback_holder,
-            yieldCallback_holder,
-            toStringCallback_holder,
-            toggleProfilerCallback_holder
+            new LuauPlugin.LuauPluginStartup {
+                getPropertyCallback = getPropertyCallback_holder,
+                setPropertyCallback = setPropertyCallback_holder,
+                callMethodCallback = callMethodCallback_holder,
+                objectGcCallback = objectGCCallback_holder,
+                requireCallback = requireCallback_holder,
+                requirePathCallback = requirePathCallback_holder,
+                constructorCallback = constructorCallback_holder,
+                yieldCallback = yieldCallback_holder,
+                toStringCallback = toStringCallback_holder,
+                toggleProfilerCallback = toggleProfilerCallback_holder,
+                isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
+                staticList = stringAddresses.AddrOfPinnedObject(),
+                staticCount = stringCount,
+                isServer = RunCore.IsServer() ? 1 : 0,
+            }
         );
 
         // Force states to open:
@@ -332,10 +336,6 @@ public partial class LuauCore : MonoBehaviour {
         endOfFrameCoroutine = StartCoroutine(RunAtVeryEndOfFrame());
         
 #if UNITY_EDITOR
-        // Print out Luau bytecode version
-        // var version = LuauPlugin.LuauGetBytecodeVersion();
-        // Debug.Log($"Luau Bytecode Version (Target: {version.Target} | Min: {version.Min} | Max: {version.Max})");
-
         EditorApplication.pauseStateChanged += OnPauseStateChanged;
 #endif
     }
