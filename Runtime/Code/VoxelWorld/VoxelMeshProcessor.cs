@@ -1358,6 +1358,8 @@ namespace VoxelWorldStuff {
                         handles[i] = jobHandle;
                     }
                     JobHandle.CompleteAll(handles); // Wait for jobs to complete
+                    handles.Dispose();
+                    
                     for (var i = 0; i < 3; i++) {
                         detailMeshData[i].colorsCount = detailMeshData[i].verticesCount;
                     }
