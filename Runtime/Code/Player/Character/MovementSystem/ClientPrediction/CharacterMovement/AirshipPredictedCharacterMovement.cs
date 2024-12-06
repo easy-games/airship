@@ -97,7 +97,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         // The server applys inputs it recieves from the client
         // Only if the time is past the inputs state time with a margin of the record interval 
         if(recievedInputs.Count > 0 && serverTick >= recievedInputs.Keys[0]){
-            print("using input: " + recievedInputs.Keys[0] + " at: " + serverTick + " moveDir: " + recievedInputs.Values[0].moveDir);
+            if(showLogs){
+                print("using input: " + recievedInputs.Keys[0] + " at: " + serverTick + " moveDir: " + recievedInputs.Values[0].moveDir);
+            }
              //This input should be used
             movement.SetMoveInputData(recievedInputs.Values[0]);
             recievedInputs.RemoveAt(0);
@@ -127,7 +129,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
             this.lastSentInput = newInput;
             
             // Send the inputs to the server
-            print("Sending input at: " + predictedTick + " moveDir: " + this.lastSentInput.moveDir);
+            if(showLogs){
+                print("Sending input at: " + predictedTick + " moveDir: " + this.lastSentInput.moveDir);
+            }
             SetServerInput(predictedTick, this.lastSentInput);
         }
     }
@@ -135,7 +139,9 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 	[Command]
 	//Sync the move input data to the server
 	private void SetServerInput(int tick, MoveInputData moveData){
-        print("recieved inputs. From: " + tick + " current time: " + serverTick);
+        if(showLogs){
+            print("recieved inputs. From: " + tick + " current time: " + serverTick);
+        }
         if(tick < serverTick){
             Debug.LogWarning("Recieved inputs from client that are in the past by " + (tick - serverTick) + " ticks");
         }
@@ -167,12 +173,16 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     public override void SnapTo(CharacterMovementState newState){
-        print("Snapping Movement To: " + newState.tick);
+        if(showLogs){
+            print("Snapping Movement To: " + newState.tick);
+        }
         movement.ForceToNewMoveState(newState);
     }
 
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
-        print("Replay start: " + initialState.tick);
+        if(showLogs){
+            print("Replay start: " + initialState.tick);
+        }
         //Save the future inputs
         replayPredictionStates.Clear();
         for(int i=historyIndex ; i < stateHistory.Count; i++){
@@ -203,7 +213,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
                 // if(futureState.currentMoveInput.jump){
                 //     print("JUMP Replaying inputs: " + futureState.timestamp + " at: " + time);
                 // }
-                print("Replay Tick: " + tick + " moveDir: " + futureState.currentMoveInput.moveDir);
                 movement.SetMoveInputData(futureState.currentMoveInput);
                 replayPredictionStates.RemoveAt(0);
             }
@@ -224,12 +233,16 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
             // Save the new history state
             RecordState(tick);
         }
-        print("tick finished: " + tick);
+        if(showLogs){
+            print("tick finished: " + tick);
+        }
         predictedTick = tick;
     }
 
     public override void OnReplayFinished(AirshipPredictedState initialState) {
-        print("Replay ended: " + initialState.tick);
+        if(showLogs){
+         print("Replay ended. initial tick: " + initialState.tick);
+        }
         serverTick = initialState.tick;
         //PrintHistory("REPLAY FINISHED");
         if(showGizmos){

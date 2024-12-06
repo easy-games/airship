@@ -129,7 +129,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     //Do we need to correct this state?
     protected virtual bool NeedsCorrection(T serverState, T interpolatedState){
         bool needsCorrection = Vector3.SqrMagnitude(serverState.position - interpolatedState.position) >= positionCorrectionThresholdSqr;
-        if(needsCorrection){
+        if(showLogs && needsCorrection){
             print("Correction distance: " + Vector3.Magnitude(serverState.position - interpolatedState.position));
         }
         return needsCorrection;
@@ -177,6 +177,10 @@ protected void Log(string message){
         // then we can maybe relax this a bit.
         syncInterval = 0;
     }
+
+    protected bool IsObserver(){
+        return isClient && !isOwned;
+    }
 #endregion
 
 #region SERVER
@@ -211,9 +215,10 @@ protected void Log(string message){
         //Record history states
         protected virtual void OnPhysicsTick() {
             serverTick++;
+            predictedTick++;
             // on clients (not host) we record the current state every FixedUpdate.
             // this is cheap, and allows us to keep a dense history.
-            if (!isClientOnly) return;
+            if (!isClientOnly || IsObserver()) return;
 
             if(ShouldRecordState()) {
                 // NetworkTime.time is always behind by bufferTime.
@@ -305,6 +310,10 @@ protected void Log(string message){
     // compares it against our history and applies corrections if needed.
     // serverTimestamp is the same value as serverState.timestamp
     protected void OnReceivedState(int serverTick, T serverState) {
+        if(IsObserver()){
+            SnapTo(serverState);
+            return;
+        }
 
         // correction requires at least 2 existing states for 'before' and 'after'.
         // if we don't have two yet, drop this state and try again next time once we recorded more.
@@ -444,7 +453,9 @@ protected void Log(string message){
 
             //Simulate until the end of our history
             if(lastRecordedTick > serverTick){
-                print("Replaying until tick: " + lastRecordedTick + " which is " + ((serverTick - lastRecordedTick) * syncInterval) + " seconds away");
+                if(showLogs){
+                    print("Replaying until tick: " + lastRecordedTick + " which is " + ((serverTick - lastRecordedTick) * syncInterval) + " seconds away");
+                }
 
                 //Replay States
                 AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick + replayTickOffset, afterIndex);
@@ -588,7 +599,7 @@ protected void Log(string message){
                 index += 1;
             }
 
-            print("Unable to find valid time");
+            Debug.LogWarning("Unable to find valid time");
             return false;
         }
 

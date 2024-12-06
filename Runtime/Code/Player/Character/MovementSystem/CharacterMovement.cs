@@ -111,10 +111,7 @@ public class CharacterMovement : NetworkBehaviour {
 	private float currentSpeed;
 	private Vector3 currentLocalVelocity;
 	private Vector3 lastPos = Vector3.zero;
-	private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
-	private Vector3 trackedPosition = Vector3.zero;
 	private Vector3 impulseVelocity;
-	private float trackedDeltaTime = 0;
 	private float forwardMargin = .05f;
 	private BinaryBlob queuedCustomData = null;
 
@@ -166,7 +163,7 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	private void RefreshAuthority(){
-		Debug.Log("ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
+		Debug.Log(gameObject.name + " Auth Change. ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
 		//Only the owner can control
 		hasMovementAuth = isOwned || (isServer && (netIdentity.connectionToClient == null || isServerAuth));
 
@@ -178,27 +175,27 @@ public class CharacterMovement : NetworkBehaviour {
 				networkTransform.syncDirection = hasMovementAuth ? SyncDirection.ClientToServer : SyncDirection.ServerToClient;
 			}
 		}
+
+		//Observers are kinematic rigidbodies
+		rigidbody.isKinematic = IsObserver();
+
 		//print("Refreshed auth: " + hasAuth);
 	}
 	
 	private void OnEnable() {
-		print("Enabled Character Movement");
 		this.physics = new CharacterPhysics(this);
 		this.currentMoveState.inputDisabled = false;
 		this.currentMoveState.isFlying = false;
 		this.mainCollider.enabled = true;
 		if(isServerAuth){
-		print("ATTACHED CALLBACK");
 			AirshipPredictionManager.OnPhysicsTick += OnPhysicsTick;
 		}
 	}
 
 	private void OnDisable() {
-		print("Disabled Character Movement");
 		// EntityManager.Instance.RemoveEntity(this);
 		this.mainCollider.enabled = false;
 		if(isServerAuth){
-		print("REMOVED CALLBACK");
 			AirshipPredictionManager.OnPhysicsTick -= OnPhysicsTick;
 		}
 	}
@@ -259,14 +256,22 @@ public class CharacterMovement : NetworkBehaviour {
 	//Every Physics tick we process the move data
 	private void FixedUpdate() {	
 		// Observers don't calculate moves
-		if(isServerAuth || !hasMovementAuth || (isServerOnly && !isServerAuth)) {
+		if(isServerAuth || IsObserver()) {
 			return;
 		}
 		RunMovementTick();
 	}
 	
 	private void OnPhysicsTick(){
+		// Observers don't calculate moves
+		if(IsObserver()) {
+			return;
+		}
 		RunMovementTick();
+	}
+
+	private bool IsObserver(){
+		return !hasMovementAuth || (isServerOnly && !isServerAuth);
 	}
 
 	public void RunMovementTick(bool isReplay = false){
