@@ -125,13 +125,13 @@ public class CharacterMovement : NetworkBehaviour {
 	private bool crouchInput;
 #endregion
 
-#region SYNC VARS
+#region SYNC DATA
 	/// <summary>
 	/// This is replicated to observers.
 	/// </summary>
 	[NonSerialized]
 	public CharacterAnimationSyncData stateSyncData = new CharacterAnimationSyncData();
-	[NonSerialized] [SyncVar] public Vector3 lookVector = Vector3.one;		
+	public Vector3 lookVector {get; private set;} = Vector3.one;		
 #endregion
 
 #region INIT
@@ -241,12 +241,6 @@ public class CharacterMovement : NetworkBehaviour {
 			}
 			//Instantly rotate for owner
 			airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
-			//Notify the server of the new rotation periodically
-			//Not doing now that look vector is sync var
-			// if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
-			// 	lastServerUpdateTime = Time.time;
-			// 	SetServerLookVector(this.lookVector);
-			// }
 		} else {
 			//Tween to rotation
 			var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
@@ -829,9 +823,6 @@ public class CharacterMovement : NetworkBehaviour {
 		// 	print("LANDED! prevVel: " + currentVelocity + " newVel: " + newVelocity);
 		// }
 
-		//Replicate the look vector
-		SetLookVector(md.lookVector);     
-
 		//Calculate the local velocity for animations ease
 		currentLocalVelocity = graphicTransform.InverseTransformDirection(newVelocity);
 
@@ -841,7 +832,8 @@ public class CharacterMovement : NetworkBehaviour {
 			grounded = !inAir || didStepUp,
 			sprinting = isSprinting,
 			crouching = isCrouching,
-			localVelocity = currentLocalVelocity
+			localVelocity = currentLocalVelocity,
+			lookVector = lookVector,
 		});
 
 		if (didJump){
@@ -1121,17 +1113,13 @@ public class CharacterMovement : NetworkBehaviour {
 		this.isGrounded = data.grounded;
 		this.isCrouching = data.crouching;
 		this.isSprinting = data.sprinting;
+		this.lookVector = data.lookVector;
 
 		if (oldState.state != data.state) {
 			stateChanged?.Invoke((int)data.state);
 		}
 		
 		animationHelper.SetState(data);
-	}
-	
-	//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-	[Command] private void SetServerLookVector(Vector3 value) {
-		this.lookVector = value;
 	}
 
 	private void TriggerJump(){

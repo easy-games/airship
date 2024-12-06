@@ -188,10 +188,10 @@ public class AirshipPredictionManager : MonoBehaviour {
         //TODO: Sort the rigidbodies by depth (how deep in heirarchy?) so that we update nested rigidbodies in the correct order
         foreach(var kvp in currentTrackedRigidbodies){
             var rigidData = kvp.Value;
-            rigidData.graphicsHolder.SetPositionAndRotation(
-                Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime), 
-                Quaternion.Lerp(rigidData.lastRotation, rigidData.currentRotation, interpolationTime)
-                );
+            // rigidData.graphicsHolder.SetPositionAndRotation(
+            //     Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime), 
+            //     Quaternion.Lerp(rigidData.lastRotation, rigidData.currentRotation, interpolationTime)
+            //     );
             rigidData.graphicsHolder.position = Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime);
 
             // GizmoUtils.DrawSphere(

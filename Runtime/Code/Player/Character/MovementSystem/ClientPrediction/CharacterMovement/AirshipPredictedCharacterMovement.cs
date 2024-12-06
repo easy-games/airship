@@ -140,6 +140,12 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
             Debug.LogWarning("Recieved inputs from client that are in the past by " + (tick - serverTick) + " ticks");
         }
 
+        //If there is already a value here, overwrite it
+        if(recievedInputs.ContainsKey(tick)){
+            Debug.LogWarning("Overwriting input from client at tick: " + tick);
+            recievedInputs.Remove(tick);
+        }
+
         //Store this input sorted by time
         recievedInputs.Add(tick, moveData);
 

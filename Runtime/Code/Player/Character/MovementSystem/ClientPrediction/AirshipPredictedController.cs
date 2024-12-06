@@ -475,10 +475,14 @@ protected void Log(string message){
     public override void OnDeserialize(NetworkReader reader, bool initialState) {        
         // deserialize data
         // we want to know the time on the server when this was sent, which is remoteTimestamp.
-        double serverTimestamp = NetworkClient.connection.remoteTimeStamp;
+        //double serverTimestamp = NetworkClient.connection.remoteTimeStamp;
+
+        //Get server tick
         serverTick = reader.ReadInt();
+
+        //Calculate the estimated predicted tick. But don't go into the past if we have already predicted further
         var offset = math.max(0, NetworkTime.predictedTime - NetworkTime.time);
-        predictedTick = serverTick +  GetTick(offset);
+        predictedTick = Mathf.Max(serverTick +  GetTick(offset), predictedTick);
         //print("GOT server tick: " + serverTick + " predictedTick: " + predictedTick + " offset: " + offset +  " offsetTime: " + NetworkTime.predictionErrorUnadjusted);
 
         // server sends state at the end of the frame.
