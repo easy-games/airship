@@ -177,7 +177,11 @@ public class CharacterMovement : NetworkBehaviour {
 		}
 
 		//Observers are kinematic rigidbodies
-		rigidbody.isKinematic = IsObserver();
+		var isKinematic = IsObserver();
+		if(isKinematic){
+			rigidbody.interpolation = RigidbodyInterpolation.None;
+		}
+		rigidbody.isKinematic = isKinematic;
 
 		//print("Refreshed auth: " + hasAuth);
 	}
