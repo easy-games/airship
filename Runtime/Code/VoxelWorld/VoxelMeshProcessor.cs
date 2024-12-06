@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 
 using VoxelData = System.UInt16;
@@ -11,11 +12,10 @@ using Assets.Airship.VoxelRenderer;
 using UnityEngine;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
-using Random = System.Random;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine.Rendering;
 
 namespace VoxelWorldStuff {
     [LuauAPI]
@@ -72,7 +72,7 @@ namespace VoxelWorldStuff {
         const int paddedChunkSize = chunkSize + 2;
 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        NativeArray<Color32> readOnlyColor = new (paddedChunkSize * paddedChunkSize * paddedChunkSize, Allocator.Persistent);
+        NativeArray<Color32> readOnlyColor = new (paddedChunkSize * paddedChunkSize * paddedChunkSize, Allocator.Domain);
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         public Dictionary<ushort, float> readOnlyDamageMap = new();
         
@@ -108,21 +108,21 @@ namespace VoxelWorldStuff {
             /// </summary>
             public Dictionary<int, SubMesh> subMeshes = new();
 
-            public NativeArray<Vector3> vertices = new(capacity, Allocator.Persistent);
+            public NativeArray<Vector3> vertices = new(capacity, Allocator.Domain);
             public int verticesCount = 0;
 
-            public NativeArray<byte> isColored = new(capacity / 8, Allocator.Persistent);
+            public NativeArray<byte> isColored = new(capacity / 8, Allocator.Domain);
 
-            public NativeArray<Color32> colors = new(capacity, Allocator.Persistent);
+            public NativeArray<Color32> colors = new(capacity, Allocator.Domain);
             public int colorsCount = 0;
 
-            public NativeArray<Vector3> normals = new(capacity, Allocator.Persistent);
+            public NativeArray<Vector3> normals = new(capacity, Allocator.Domain);
             public int normalsCount = 0;
 
-            public NativeArray<Vector2> uvs = new(capacity, Allocator.Persistent);
+            public NativeArray<Vector2> uvs = new(capacity, Allocator.Domain);
             public int uvsCount = 0;
 
-            public NativeArray<Vector2> damageUvs = new(capacity, Allocator.Persistent);
+            public NativeArray<Vector2> damageUvs = new(capacity, Allocator.Domain);
             public int damageUvsCount = 0;
         }
         
@@ -137,7 +137,7 @@ namespace VoxelWorldStuff {
                 var colorBit = (byte)(1 << (i % 8));
                 var isVertColored = (IsColored[i / 8] & colorBit) > 0;
                 if (!isVertColored) {
-                    Colors[i] = new Color32();
+                    Colors[i] = default;
                     return;
                 }
 
@@ -777,7 +777,7 @@ namespace VoxelWorldStuff {
         }
         
         private static NativeArray<T> Resize<T>(NativeArray<T> array, int newSize) where T : struct {
-            NativeArray<T> newArray = new NativeArray<T>(newSize, Allocator.Persistent);
+            NativeArray<T> newArray = new NativeArray<T>(newSize, Allocator.Domain);
             int copyLength = Math.Min(newSize, array.Length);
             NativeArray<T>.Copy(array, newArray, copyLength);
             array.Dispose();
@@ -898,6 +898,7 @@ namespace VoxelWorldStuff {
             target.normalsCount += count;
             
             
+            /*
             if (lerps == null) {
                 if (mesh.srcColors != null && mesh.srcColors.Length > 0) {
                     NativeArray<Color32>.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
@@ -914,6 +915,7 @@ namespace VoxelWorldStuff {
                     target.colors[target.colorsCount++] = new Color32(dx, dy, dz, 255);
                 }
             }
+            */
             
             return count;
         }
@@ -965,9 +967,9 @@ namespace VoxelWorldStuff {
                 if (detailMeshData == null) {
                     //create the detail meshes if needed
                     detailMeshData = new TemporaryMeshData[3];
-                    detailMeshData[0] = new TemporaryMeshData();
-                    detailMeshData[1] = new TemporaryMeshData();
-                    detailMeshData[2] = new TemporaryMeshData();
+                    detailMeshData[0] = TemporaryMeshPool.Rent();
+                    detailMeshData[1] = TemporaryMeshPool.Rent();
+                    detailMeshData[2] = TemporaryMeshPool.Rent();
                 }
 
                 for (int i = 0; i < 3; i++) {
@@ -1096,6 +1098,7 @@ namespace VoxelWorldStuff {
                             continue;
                         }
 
+                        var lodOffset = 0; // How much do we offset lod index for default placement. 
                         switch (block.definition.contextStyle) {
                             case VoxelBlocks.ContextStyle.Prefab:
                                 continue;
@@ -1105,8 +1108,10 @@ namespace VoxelWorldStuff {
                                 }
                             break;
                             case VoxelBlocks.ContextStyle.QuarterBlocks:
-                                if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin, damageUv, voxelColor) == true) {
-                                    continue;
+                                InitDetailMeshes();
+                                lodOffset = 1;
+                                if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, detailMeshData[0], world, origin, damageUv, voxelColor) == true) {
+                                    // don't continue; we'll place a normal block in lod mesh
                                 }
                             break;
                             case VoxelBlocks.ContextStyle.GreedyMeshingTiles:
@@ -1175,18 +1180,18 @@ namespace VoxelWorldStuff {
                             }
                             
                             //Grass etc                           
-                            if (!ReferenceEquals(block.definition.staticMeshLOD1, null)) {
+                            if (!ReferenceEquals(block.definition.staticMeshLOD1, null) || lodOffset > 0) {
                                 //Init the detail meshes now
                                 InitDetailMeshes();
                                 
                                 if (block.mesh != null && block.mesh.lod0 != null) {
-                                    EmitMesh(block, block.mesh.lod0, detailMeshData[0], world, origin, rotation, flip, damageUv, voxelColor);
+                                    EmitMesh(block, block.mesh.lod0, detailMeshData[0 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor);
 
-                                    if (block.mesh.lod1 != null) {
-                                        EmitMesh(block, block.mesh.lod1, detailMeshData[1], world, origin, rotation, flip, damageUv, voxelColor);
+                                    if (block.mesh.lod1 != null && lodOffset <= 1) {
+                                        EmitMesh(block, block.mesh.lod1, detailMeshData[1 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor);
                                     }
-                                    if (block.mesh.lod2 != null) {
-                                        EmitMesh(block, block.mesh.lod2, detailMeshData[2], world, origin, rotation, flip, damageUv, voxelColor);
+                                    if (block.mesh.lod2 != null && lodOffset <= 0) {
+                                        EmitMesh(block, block.mesh.lod2, detailMeshData[2 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor);
                                     }
                                 }
                                 
@@ -1204,7 +1209,11 @@ namespace VoxelWorldStuff {
                         }
 
                      
-                        //Add regular cube Faces
+                        // Add regular cube Faces
+                        // If we are doing an lod write use a detail mesh instead of temporaryMeshData
+                        // (this is for the lod variant of quarter blocks for example)
+                        var faceMeshData = lodOffset > 0 ? detailMeshData[lodOffset] : temporaryMeshData; 
+                        var isColored = voxelColor.r != 0 || voxelColor.g != 0 || voxelColor.b != 0 || voxelColor.a != 0;
                         for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
                             //Vector3Int check = origin + faceChecks[faceIndex];
                             //VoxelData other = world.ReadVoxelAtInternal(check);
@@ -1218,29 +1227,35 @@ namespace VoxelWorldStuff {
                             BlockId otherBlockIndex = VoxelWorld.VoxelDataToBlockId(other);
 
                             bool solid = VoxelWorld.VoxelIsSolid(other);
-                            if (otherBlockIndex == 59) {
-                                solid = false;
-                            }
 
                             //Figure out if we're meant to generate a face. 
                             //If we're facing something nonsolid that isn't the same as us (eg: glass faces dont build internally)
                             if (solid == false && otherBlockIndex != blockIndex) {
                                 Rect uvRect = block.GetUvsForFace(faceIndex);
 
-                                int faceMatId = block.materialInstanceIds[faceIndex];
-                                temporaryMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
+                                int faceMatId = lodOffset == 0 ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
+                                faceMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
                                 if (subMesh == null) {
                                     subMesh = new SubMesh(faceMatId);
-                                    temporaryMeshData.subMeshes[faceMatId] = subMesh;
+                                    faceMeshData.subMeshes[faceMatId] = subMesh;
                                 }
 
                                 int faceAxis = faceAxisForFace[faceIndex];
                                 Vector3 normal = normalForFace[faceIndex];
 
-                                int vertexCount = temporaryMeshData.verticesCount;
+                                int vertexCount = faceMeshData.verticesCount;
                                 for (int j = 0; j < 4; j++) {
-                                    temporaryMeshData.vertices[temporaryMeshData.verticesCount++] = srcVertices[(faceIndex * 4) + j] + origin;
-                                    temporaryMeshData.normals[temporaryMeshData.normalsCount++] = srcNormals[faceIndex];
+                                    faceMeshData.vertices[faceMeshData.verticesCount++] = srcVertices[(faceIndex * 4) + j] + origin;
+                                    faceMeshData.normals[faceMeshData.normalsCount++] = srcNormals[faceIndex];
+                                    
+                                    // Mark as colored
+                                    var isColoredIndex = (faceMeshData.verticesCount - 1) / 8;
+                                    if (isColored) {
+                                        // One bit represents whether this is a colored vertex (hence the bit shifting)
+                                        faceMeshData.isColored[isColoredIndex] |= (byte) (1 << ((faceMeshData.verticesCount - 1) % 8));
+                                    } else {
+                                        faceMeshData.isColored[isColoredIndex] &= (byte) ~(1 << ((faceMeshData.verticesCount - 1) % 8));
+                                    }
                                 }
 
                                 //UV gen
@@ -1250,12 +1265,12 @@ namespace VoxelWorldStuff {
                                     uv.x = uv.x * uvRect.width + uvRect.xMin;
                                     uv.y = uv.y * uvRect.height + uvRect.yMin;
 
-                                    temporaryMeshData.uvs[temporaryMeshData.uvsCount++] = uv;
+                                    faceMeshData.uvs[faceMeshData.uvsCount++] = uv;
                                 }
 
                                 //Damage gen
                                 for (int j = 0; j < 4; j++) {
-                                    temporaryMeshData.damageUvs[temporaryMeshData.damageUvsCount++] = damageUv;
+                                    faceMeshData.damageUvs[faceMeshData.damageUvsCount++] = damageUv;
                                 }                             
 
                                 //Do occlusions
@@ -1283,7 +1298,7 @@ namespace VoxelWorldStuff {
                                         col.g = g;
                                         //shade[j] = col.r < 255;
 
-                                        temporaryMeshData.colors[temporaryMeshData.colorsCount++] = col;
+                                        faceMeshData.colors[faceMeshData.colorsCount++] = col;
                                     }
                                     
                                     //See if opposite corners are shaded      0--1        0--1
@@ -1314,18 +1329,41 @@ namespace VoxelWorldStuff {
             if (true) {   
                 var s = Stopwatch.StartNew();
                 Profiler.BeginSample("ColorMesh");
+
+                // Single job for non-LOD'd chunks
+                if (!hasDetailMeshes) {
+                    var parallelColorJob = new ParallelColorJob {
+                        Vertices = temporaryMeshData.vertices,
+                        IsColored = temporaryMeshData.isColored,
+                        ReadonlyColor = readOnlyColor,
+                        ChunkKey = chunk.chunkKey,
+                        Colors = temporaryMeshData.colors,
+                    };
+                    var jobHandle = parallelColorJob.Schedule(temporaryMeshData.colors.Length, 64);
+                    jobHandle.Complete(); // Wait for job to complete
+                    temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
+                } else {
+                    // One job for each detail mesh (for LOD'd chunks)
+                    var handles = new NativeArray<JobHandle>(3, Allocator.TempJob);
+                    for (var i = 0; i < 3; i++) {
+                        var meshData = detailMeshData[i];
+                        var parallelColorJob = new ParallelColorJob {
+                            Vertices = meshData.vertices,
+                            IsColored = meshData.isColored,
+                            ReadonlyColor = readOnlyColor,
+                            ChunkKey = chunk.chunkKey,
+                            Colors = meshData.colors,
+                        };
+                        var jobHandle = parallelColorJob.Schedule(meshData.colors.Length, 64);
+                        handles[i] = jobHandle;
+                    }
+                    JobHandle.CompleteAll(handles); // Wait for jobs to complete
+                    for (var i = 0; i < 3; i++) {
+                        detailMeshData[i].colorsCount = detailMeshData[i].verticesCount;
+                    }
+                }
                 
-                var parallelColorJob = new ParallelColorJob() {
-                    Vertices = temporaryMeshData.vertices,
-                    IsColored = temporaryMeshData.isColored,
-                    ReadonlyColor = readOnlyColor,
-                    ChunkKey = chunk.chunkKey,
-                    Colors = temporaryMeshData.colors,
-                };
-                var jobHandle = parallelColorJob.Schedule(temporaryMeshData.colors.Length, 64);
-                jobHandle.Complete(); // Wait for job to complete
                 
-                temporaryMeshData.colorsCount = temporaryMeshData.verticesCount;
                 Profiler.EndSample();
             }
             lastMeshUpdateDuration = (int)((DateTime.Now - startMeshProcessingTime).TotalMilliseconds);
@@ -1370,16 +1408,24 @@ namespace VoxelWorldStuff {
             }
 
             Profiler.BeginSample("ConstructMesh");
+            
+            // Reading that this might cause mesh to not render on some platforms:
+            // https://docs.unity3d.com/ScriptReference/Mesh-indexFormat.html
+            var totalTriCount = tempMesh.subMeshes.Values.Aggregate(0, (acc, submesh) => acc + submesh.triangles.Count);
+            if (totalTriCount >= (ushort.MaxValue - 1)) mesh.indexFormat = IndexFormat.UInt32;
+            
             mesh.subMeshCount = tempMesh.subMeshes.Count;
-            mesh.SetVertices(tempMesh.vertices);
-            mesh.SetUVs(0, tempMesh.uvs);
-            mesh.SetUVs(1, tempMesh.damageUvs);
-            mesh.SetColors(tempMesh.colors);
-            mesh.SetNormals(tempMesh.normals);
+            if (tempMesh.verticesCount > 0) {
+                mesh.SetVertices(tempMesh.vertices, 0, tempMesh.verticesCount, MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetUVs(0, tempMesh.uvs, 0, tempMesh.uvsCount);
+                mesh.SetUVs(1, tempMesh.damageUvs, 0, tempMesh.damageUvsCount);
+                mesh.SetColors(tempMesh.colors, 0, tempMesh.colorsCount);
+                mesh.SetNormals(tempMesh.normals, 0, tempMesh.normalsCount);
+            }
 
             int meshWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values) {
-                mesh.SetTriangles(subMeshRec.triangles, meshWrite);
+                mesh.SetTriangles(subMeshRec.triangles, 0, subMeshRec.triangles.Count, meshWrite, false);
                 meshWrite++;
             }
 
@@ -1406,10 +1452,12 @@ namespace VoxelWorldStuff {
             Profiler.EndSample();
            
             renderer.sharedMaterials = mats;
+            Profiler.BeginSample("RecalculateBounds");
             mesh.RecalculateBounds();
+            Profiler.EndSample();
         }
 
-        public void FinalizeMesh(GameObject obj, Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, VoxelWorld world) {
+        public void FinalizeMesh(GameObject obj, Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, Renderer shadowRenderer, VoxelWorld world) {
             if (GetGeometryReady() == true) {
 
                 //Updates both the geometry and baked lighting
@@ -1418,15 +1466,33 @@ namespace VoxelWorldStuff {
                 Profiler.EndSample();
                 
                 // Release TemporaryMeshData, we should no longer need it
-                TemporaryMeshPool.Release(temporaryMeshData);
-                temporaryMeshData = null;
+                if (temporaryMeshData != null) {
+                    TemporaryMeshPool.Release(temporaryMeshData);
+                    temporaryMeshData = null;
+                }
+
+                readOnlyColor.Dispose(); // Dispose early
 
                 if (detailMeshes != null) {
                     for (int i = 0; i < 3; i++) {
                         Profiler.BeginSample("FinalizeMeshDetail");
                         
                         CreateUnityMeshFromTemporaryMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, false);
+                        // Release temp data
+                        TemporaryMeshPool.Release(detailMeshData[i]);
+                        detailMeshData[i] = null;
                         Profiler.EndSample();
+                        
+                        // Hacky -- right now LOD1 is our shadow mesh
+                        if (i == 1) {
+                            var subMeshCount = detailMeshes[i].subMeshCount;
+                            // Fill in each sub mesh material with first set material (simple lit) 
+                            var mats = new Material[subMeshCount];
+                            for (var s = 0; s < subMeshCount; s++) {
+                                mats[s] = shadowRenderer.sharedMaterial;
+                            }
+                            shadowRenderer.sharedMaterials = mats;
+                        }
                     }
                 }
 
