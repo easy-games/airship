@@ -113,6 +113,20 @@ namespace Luau {
             return id;
         }
 
+        public static bool IsGameObjectReferenceDestroyed(int instanceId) {
+            var res = s_objectKeys.TryGetValue(instanceId, out var value);
+            
+            if (ReferenceEquals(value, null)) {
+                return true;
+            }
+            
+            if (value is UnityEngine.Object go) {
+                return go == null;
+            }
+
+            return true;
+        }
+
         public static object GetObjectReference(IntPtr thread, int instanceId, bool preventTrace = false, bool preventLogIfNull = false) {
             if (instanceId == -1) {
                 return null;
