@@ -989,6 +989,14 @@ public partial class LuauCore : MonoBehaviour {
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
             if (valueTypeAPI != null) {
+                // Destroyed protection
+                if (type.IsSubclassOf(typeof(UnityEngine.Object))) {
+                    if ((Object) reflectionObject == null) {
+                        return LuauError(thread,
+                            $"Attempt to call method {type.Name}.{methodName} but the object is already destroyed. You may need to check if the object is undefined before calling this method.");
+                    }
+                }
+                
                 // Scene Protection
                 if (context != LuauContext.Protected) {
                     if (type == typeof(GameObject)) {
