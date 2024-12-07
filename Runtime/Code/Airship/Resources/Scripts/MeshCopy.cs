@@ -1,14 +1,9 @@
 using System.Collections.Generic;
-using UnityEngine;
-using System;
+using Airship;
 using Code.Player.Accessories;
-using UnityEngine.Rendering;
+using UnityEngine;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
-namespace Airship {
+namespace Code.Airship.Resources.Scripts {
 
     //This class exists because we cannot manipulate actual UnityEngine.Meshs in a thread
     //So we copy and cache assets here first

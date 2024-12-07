@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Code.Player.Accessories;
 using UnityEditor;
 using UnityEngine;
 
