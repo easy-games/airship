@@ -398,7 +398,7 @@ public class VoxelBlocks : MonoBehaviour {
 
     //Destructor
     ~VoxelBlocks() {
-        atlas.Dispose();
+        atlas?.Dispose();
     }
 
     private void Clear() {

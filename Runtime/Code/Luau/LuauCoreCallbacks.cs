@@ -194,12 +194,21 @@ public partial class LuauCore : MonoBehaviour {
             Profiler.EndSample();
             return;
         }
+        // Not tagged to component
+        if (componentId < -1) {
+            if (strLen > 0) {
+                // No need to free strPtr -- it is stack allocated
+                var str = PtrToStringUTF8(strPtr, strLen);
+                Profiler.BeginSample($"{str}");
+                return;
+            }
+        }
+        
 
         if (AirshipComponent.componentIdToScriptName.TryGetValue(componentId, out var componentName)) {
             if (strLen > 0) {
                 var str = PtrToStringUTF8(strPtr, strLen);
                 Profiler.BeginSample($"{componentName}{str}");
-                LuauPlugin.LuauFreeString(strPtr);
             }
             else {
                 Profiler.BeginSample($"{componentName}");
