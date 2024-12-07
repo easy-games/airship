@@ -27,6 +27,7 @@ public class CharacterMovementState : AirshipPredictedState, IEquatable<Characte
     public float timeSinceBecameGrounded;
     public float timeSinceWasGrounded;
     public float timeSinceJump;
+    public BinaryBlob customData;
 
     public CharacterMovementState(){
     }
@@ -61,6 +62,7 @@ public class CharacterMovementState : AirshipPredictedState, IEquatable<Characte
         this.isFlying = copyState.isFlying;
         this.inputDisabled = copyState.inputDisabled;
         this.currentMoveInput = copyState.currentMoveInput;
+        this.customData = copyState.customData;
     }
 
     // public override AirshipPredictedState Interpolate(AirshipPredictedState other, float delta) {
