@@ -56,17 +56,16 @@ public class CharacterRig : MonoBehaviour {
     [NonSerialized]
     public Renderer[] baseMeshes; //All skin based Meshes (not face decal)
 
-    private void Awake(){
+    private void Awake() {
         List<Renderer> meshes = new List<Renderer>();
-        if(bodyMesh != null){
-            meshes.Add(bodyMesh);
+        if (bodyMesh != null) {
+            meshes.Add(this.bodyMesh);
         }
-        if (armsMesh != null)
-        {
-            meshes.Add(armsMesh);
+        if (armsMesh != null) {
+            meshes.Add(this.armsMesh);
         }
         if (headMesh != null){
-            meshes.Add(headMesh);
+            meshes.Add(this.headMesh);
         }
         baseMeshes = meshes.ToArray();   
     }

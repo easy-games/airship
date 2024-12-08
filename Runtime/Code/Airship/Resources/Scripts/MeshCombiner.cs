@@ -2,8 +2,10 @@
 using UnityEngine;
 using System.Threading;
 using System;
+using System.Diagnostics;
 using System.IO;
 using UnityEngine.Profiling;
+using Debug = UnityEngine.Debug;
 
 
 #if UNITY_EDITOR
@@ -12,6 +14,11 @@ using UnityEditor;
 
 namespace Airship {
 
+    class MeshCombinerCache {
+        public Mesh mesh;
+        public MeshCopy finalSkinnedMesh;
+    }
+
     //You build up a MeshCombiner by submitting assets to it
     //It then contains a list of MeshCopyReferences, which can be enabled/disabled or have other operations
     //performed on them
@@ -19,10 +26,12 @@ namespace Airship {
     [LuauAPI]
     public class MeshCombiner : MonoBehaviour {
         private static bool runThreaded = true;
-        private static bool debugText = false;
+        private static bool debugText = true;
         public static readonly string MeshCombineSkinnedName = "MeshCombinerSkinned";
         public static readonly string MeshCombineStaticName = "MeshCombinerStatic";
-        
+
+        private static Dictionary<string, MeshCombinerCache> meshCache = new();
+
         [SerializeField]
         public GameObject baseMesh;
 
@@ -41,12 +50,24 @@ namespace Airship {
         public List<MeshCopyReference> sourceReferences = new List<MeshCopyReference>();
 
         [NonSerialized]
-        Dictionary<string, Matrix4x4> allBindPoses = new();
+        private Dictionary<string, Matrix4x4> allBindPoses = new();
+
+        public string cacheId = "";
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        [HideFromTS]
+        public static void OnLoad() {
+            meshCache.Clear();
+        }
+
+        public static void RemoveMeshCache(string cacheId) {
+            meshCache.Remove(cacheId);
+        }
 
         public override string ToString() {
-            string value = "";
+            string value = "Mesh Combiner. Meshes: ";
             foreach (var copy in sourceReferences) {
-                value += copy.ToString() + "\n";
+                value += "  - " + copy.ToString() + "\n";
             }
             return value;
         }
@@ -108,6 +129,7 @@ namespace Airship {
 
             public void LoadMeshCopy() {
                 if (transform == null) {
+                    print("load with asset path: " + assetPath);
                     meshCopy = MeshCopy.Load(assetPath, true).ToArray();
                 }
                 else {
@@ -126,8 +148,8 @@ namespace Airship {
 
         [NonSerialized]
         private MeshCopy finalSkinnedMesh = new MeshCopy();
-        [NonSerialized]
-        private MeshCopy finalStaticMesh = new MeshCopy();
+        // [NonSerialized]
+        // private MeshCopy finalStaticMesh = new MeshCopy();
 
         private MeshCopyReference[] readOnlySourceReferences;
         [NonSerialized]
@@ -142,9 +164,9 @@ namespace Airship {
         public Action OnCombineComplete;
 
 
-        public float finalVertCount => finalStaticMesh.vertices.Count;
+        // public float finalVertCount => finalStaticMesh.vertices.Count;
         public float finalSkinnedVertCount => finalSkinnedMesh.vertices.Count;
-        public float finalMaterialCount => finalStaticMesh.subMeshes.Count;
+        // public float finalMaterialCount => finalStaticMesh.subMeshes.Count;
         public float finalSkinnedMaterialCount => finalSkinnedMesh.subMeshes.Count;
         public float finalSkinnedBonesCount => finalSkinnedMesh.bones.Count;
 
@@ -171,20 +193,16 @@ namespace Airship {
         }
 
 
-        void WalkBones(MeshCopy mesh, Transform currentBone) {
+        private void WalkBones(MeshCopy mesh, Transform currentBone) {
             // Add the current bone to the dictionary
-
             string boneName = currentBone.name;
-
-            if (mesh.boneMappings.ContainsKey(boneName) == false) {
-
-                if (allBindPoses.ContainsKey(boneName) == true) {
-
+            if (!mesh.boneMappings.ContainsKey(boneName)) {
+                if (allBindPoses.TryGetValue(boneName, out var pose)) {
                     int boneIndex = mesh.bones.Count;
                     mesh.bones.Add(currentBone);
                     mesh.boneMappings.Add(boneName, boneIndex);
                     mesh.boneNames.Add(boneName);
-                    mesh.bindPoses.Add(allBindPoses[boneName]); 
+                    mesh.bindPoses.Add(pose);
                 }
             }
 
@@ -194,14 +212,12 @@ namespace Airship {
             }
         }
 
-        void GetBindPoses(Transform currentBone, Matrix4x4 localToWorldMatrix) {
+        private void GetBindPoses(Transform currentBone, Matrix4x4 localToWorldMatrix) {
             // Add the current bone to the dictionary
 
             string boneName = currentBone.name;
-            if (allBindPoses.ContainsKey(boneName) == false) {
-                allBindPoses.Add(boneName, currentBone.worldToLocalMatrix * localToWorldMatrix);
-            }
-            
+            allBindPoses.TryAdd(boneName, currentBone.worldToLocalMatrix * localToWorldMatrix);
+
             // Recursively walk through each child bone
             foreach (Transform childBone in currentBone) {
                 GetBindPoses(childBone, localToWorldMatrix);
@@ -217,10 +233,6 @@ namespace Airship {
         public void StartMeshUpdate() {
             if (pendingUpdate == false || runningUpdate) {
                 return;
-            }
-
-            if (debugText == true) {
-                Debug.Log("Starting Mesh Update");
             }
 
             pendingUpdate = false;
@@ -242,30 +254,30 @@ namespace Airship {
             }
 
             //Create the new meshes
-            finalSkinnedMesh = new MeshCopy();
-            finalSkinnedMesh.skinnedMesh = true;
+            finalSkinnedMesh = new MeshCopy {
+                skinnedMesh = true
+            };
 
-            finalStaticMesh = new MeshCopy();
-            finalStaticMesh.skinnedMesh = false;
+            // finalStaticMesh = new MeshCopy {
+            //     skinnedMesh = false
+            // };
 
             //Walk the rootSkeleton and add all the bones to finalSkinnedMesh
             if (rootBone != null) {
-                if (allBindPoses.Count == 0) {
-                    GetBindPoses(rootBone, rootBone.localToWorldMatrix);
-                }
-                WalkBones(finalSkinnedMesh, rootBone);
+                // if (allBindPoses.Count == 0) {
+                //     this.GetBindPoses(rootBone, rootBone.localToWorldMatrix);
+                // }
+                this.WalkBones(finalSkinnedMesh, rootBone);
             }
 
             //Kick off a thread
 #pragma warning disable CS0162
             if (runThreaded) {
                 ThreadPool.QueueUserWorkItem(ThreadedUpdateMeshWrapper, this);
-            }
-            else {
+            } else {
                 ThreadedUpdateMesh(this);
             }
 #pragma warning restore CS0162
-
         }
 
         public void ThreadedUpdateMeshWrapper(System.Object state) {
@@ -282,9 +294,9 @@ namespace Airship {
         }
 
         public void ThreadedUpdateMesh(System.Object state) {
-            int startTime = System.DateTime.Now.Millisecond;
+            var st = Stopwatch.StartNew();
 
-            //Build a bodyMask for the body
+            // Build a bodyMask for the body
             int bodyMask = 0;
             foreach (MeshCopyReference meshCopyReference in readOnlySourceReferences) {
                 if (meshCopyReference.enabled == true) {
@@ -293,10 +305,8 @@ namespace Airship {
                     }
                 }
             }
-            
 
             foreach (MeshCopyReference meshCopyReference in readOnlySourceReferences) {
-
                 if (meshCopyReference.enabled == false) {
                     // print("meshCopyReference.enabld = false " + meshCopyReference.name);
                     continue;
@@ -327,22 +337,23 @@ namespace Airship {
                         }
 
                         //Print the difference
-                        if (debugText == true) {
-                            if (numFaces != afterFaces) {
-                                Debug.Log("Deleted " + (numFaces - afterFaces) + " faces from " + meshCopyReference.name);
-                            }
-                            else {
-                                Debug.Log("Deleted 0 faces from " + meshCopyReference.name);
-                            }
-                        }
+                        // if (debugText == true) {
+                        //     if (numFaces != afterFaces) {
+                        //         Debug.Log("Deleted " + (numFaces - afterFaces) + " faces from " + meshCopyReference.name);
+                        //     }
+                        //     else {
+                        //         Debug.Log("Deleted 0 faces from " + meshCopyReference.name);
+                        //     }
+                        // }
                     }
                     //Add the mesh
                     if (unpackedMeshCopy.skinnedMesh == true) {
                         finalSkinnedMesh.MergeMeshCopy(unpackedMeshCopy);
                     }
-                    else {
-                        finalStaticMesh.MergeMeshCopy(unpackedMeshCopy);
-                    }
+                    // else {
+                    //     Debug.LogWarning("Doing static mesh combine! If you see this, please tell Luke.");
+                    //     finalStaticMesh.MergeMeshCopy(unpackedMeshCopy);
+                    // }
 
                 }
                 skinnedMeshBounds = finalSkinnedMesh.CalculateBoundsFromVertexData();
@@ -351,18 +362,18 @@ namespace Airship {
             finalSkinnedMesh.RepackVertices();
 
             newMeshReadyToUse = true;
-            if (debugText == true) {
-                Debug.Log("MeshCombiner: Merge (threaded): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
+            if (debugText) {
+                Debug.Log($"MeshCombiner: Merge (threaded): {st.ElapsedMilliseconds} ms");
             }
         }
 
-        public void UpdateMesh() {
+        private void UpdateMeshMainThread() {
             if (newMeshReadyToUse == false) {
                 return;
             }
             newMeshReadyToUse = false;
 
-            int startTime = System.DateTime.Now.Millisecond;
+            var st = Stopwatch.StartNew();
 
             //find our MeshCombiner gameObject child
             GameObject meshCombinerGameObjectStatic = null;
@@ -392,138 +403,94 @@ namespace Airship {
 
             //If they don't exist, create the combined mesh holders
             if (meshCombinerGameObjectSkinned == null) {
-                meshCombinerGameObjectSkinned = new GameObject(MeshCombineSkinnedName);
-                meshCombinerGameObjectSkinned.transform.parent = transform;
-
-                meshCombinerGameObjectSkinned.transform.localPosition = Vector3.zero;
-                meshCombinerGameObjectSkinned.transform.localRotation = Quaternion.Euler(0, 0, 0);
-                meshCombinerGameObjectSkinned.transform.localScale = Vector3.one;
-                meshCombinerGameObjectSkinned.layer = gameObject.layer;
-                meshCombinerGameObjectSkinned.hideFlags = HideFlags.DontSave;
+                meshCombinerGameObjectSkinned = new GameObject(MeshCombineSkinnedName) {
+                    transform = {
+                        parent = transform,
+                        localPosition = Vector3.zero,
+                        localRotation = Quaternion.Euler(0, 0, 0),
+                        localScale = Vector3.one
+                    },
+                    layer = gameObject.layer,
+                    hideFlags = HideFlags.DontSave
+                };
             }
             if (meshCombinerGameObjectStatic == null) {
-                meshCombinerGameObjectStatic = new GameObject(MeshCombineStaticName);
-                meshCombinerGameObjectStatic.transform.parent = transform;
+                meshCombinerGameObjectStatic = new GameObject(MeshCombineStaticName) {
+                    transform = {
+                        parent = transform,
+                        localPosition = Vector3.zero,
+                        localRotation = Quaternion.Euler(0, 0, 0),
+                        localScale = Vector3.one
+                    }
+                };
 
-                meshCombinerGameObjectStatic.transform.localPosition = Vector3.zero;
-                meshCombinerGameObjectStatic.transform.localRotation = Quaternion.Euler(0, 0, 0);
-                meshCombinerGameObjectStatic.transform.localScale = Vector3.one;
                 meshCombinerGameObjectSkinned.layer = gameObject.layer;
                 meshCombinerGameObjectStatic.hideFlags = HideFlags.DontSave;
             }
 
-            //Do static mesh
-            if (true) {
-                combinedStaticMeshFilter = meshCombinerGameObjectStatic.GetComponent<MeshFilter>();
-                if (combinedStaticMeshFilter == null) {
-                    combinedStaticMeshFilter = meshCombinerGameObjectStatic.AddComponent<MeshFilter>();
-                }
-
-                combinedStaticMeshRenderer = meshCombinerGameObjectStatic.GetComponent<MeshRenderer>();
-                if (combinedStaticMeshRenderer == null) {
-                    combinedStaticMeshRenderer = meshCombinerGameObjectStatic.AddComponent<MeshRenderer>();
-                }
-
-                //Apply meshes
-                Mesh mesh = new Mesh();
-                mesh.name = $"{MeshCombineStaticName}Mesh";
-                //Copy out of finalMesh
-                mesh.SetVertices(finalStaticMesh.vertices);
-                //more
-                mesh.SetUVs(0, finalStaticMesh.uvs);
-                mesh.SetUVs(1, finalStaticMesh.uvs2);
-
-                mesh.SetNormals(finalStaticMesh.normals);
-                mesh.SetTangents(finalStaticMesh.tangents);
-                mesh.SetColors(finalStaticMesh.colors);
-
-                //Create subMeshes
-                mesh.subMeshCount = finalStaticMesh.subMeshes.Count;
-                for (int i = 0; i < finalStaticMesh.subMeshes.Count; i++) {
-                    mesh.SetTriangles(finalStaticMesh.subMeshes[i].triangles, i);
-                }
-
-                //Create an extra sub mesh for rendering a full body material
-                if(createOverlayMesh){
-                    var subMeshCount = mesh.subMeshCount;
-                    mesh.subMeshCount = subMeshCount +1;
-                    mesh.SetTriangles(mesh.triangles, subMeshCount);
-                }
-
-                //Copy the materials to the renderer
-                Material[] finalMaterials = new Material[finalStaticMesh.subMeshes.Count];
-                for (int i = 0; i < finalStaticMesh.subMeshes.Count; i++) {
-                    finalMaterials[i] = finalStaticMesh.subMeshes[i].material;
-                }
-                combinedStaticMeshRenderer.sharedMaterials = finalMaterials;
-
-                combinedStaticMeshFilter.sharedMesh = mesh;
-            }
-
-            if (true) {
-                //Same thing, but for skinned meshes
+            {
+                // Update skinned mesh
                 combinedSkinnedMeshRenderer = meshCombinerGameObjectSkinned.GetComponent<SkinnedMeshRenderer>();
                 if (combinedSkinnedMeshRenderer == null) {
                     combinedSkinnedMeshRenderer = meshCombinerGameObjectSkinned.AddComponent<SkinnedMeshRenderer>();
                 }
 
-                //Apply meshes
-                Mesh mesh = new Mesh();
-                mesh.name = $"{MeshCombineSkinnedName}Mesh";
+                Mesh mesh;
+                if (!string.IsNullOrEmpty(this.cacheId) && meshCache.TryGetValue(this.cacheId, out var cache)) {
+                    var dupeSt = Stopwatch.StartNew();
+                    mesh = Instantiate(cache.mesh);
+                    // this.finalSkinnedMesh = cache.finalSkinnedMesh;
+                    Debug.Log($"Duplicated cached mesh ({this.cacheId}) in {dupeSt.Elapsed.TotalMilliseconds} ms");
+                } else {
+                    var meshSt = Stopwatch.StartNew();
 
-                //Copy out of finalMesh
-                mesh.SetVertices(finalSkinnedMesh.vertices);
-                if (finalSkinnedMesh.vertices.Count == finalSkinnedMesh.boneWeights.Count) {
-                    mesh.boneWeights = finalSkinnedMesh.boneWeights.ToArray();
+                    //Apply mesh
+                    mesh = new Mesh {
+                        name = $"{MeshCombineSkinnedName}Mesh"
+                    };
+
+                    //Copy out of finalMesh
+                    mesh.SetVertices(finalSkinnedMesh.vertices);
+                    if (finalSkinnedMesh.vertices.Count == finalSkinnedMesh.boneWeights.Count) {
+                        mesh.boneWeights = finalSkinnedMesh.boneWeights.ToArray();
+                    } else {
+                        Debug.LogError($"Mismatch bone weights verts: {finalSkinnedMesh.vertices.Count} weights: {finalSkinnedMesh.boneWeights.Count}");
+                    }
+
+                    mesh.SetUVs(0, finalSkinnedMesh.uvs);
+                    mesh.SetUVs(1, finalSkinnedMesh.uvs2);
+                    mesh.SetNormals(finalSkinnedMesh.normals);
+                    mesh.SetTangents(finalSkinnedMesh.tangents);
+                    mesh.SetColors(finalSkinnedMesh.colors);
+
+                    // Create subMeshes
+                    mesh.subMeshCount = finalSkinnedMesh.subMeshes.Count;
+                    for (int i = 0; i < finalSkinnedMesh.subMeshes.Count; i++) {
+                        mesh.SetTriangles(finalSkinnedMesh.subMeshes[i].triangles, i);
+                    }
+
+                    // Create an extra sub mesh for rendering a full body material
+                    if (createOverlayMesh) {
+                        var subMeshCount = mesh.subMeshCount;
+                        mesh.subMeshCount = subMeshCount + 1;
+                        mesh.SetTriangles(mesh.triangles, subMeshCount);
+                    }
+
+                    if (!string.IsNullOrEmpty(this.cacheId)) {
+                        print("Set mesh cache: " + this.cacheId);
+                        meshCache[this.cacheId] = new MeshCombinerCache() {
+                            mesh = mesh,
+                            finalSkinnedMesh = finalSkinnedMesh,
+                        };
+                    }
+                    Debug.Log("Copy mesh time: " + meshSt.Elapsed.TotalMilliseconds + " ms");
                 }
-                else {
-                    Debug.LogError($"Mismatch bone weights verts: {finalSkinnedMesh.vertices.Count} weights: {finalSkinnedMesh.boneWeights.Count}");
-                }
 
-                mesh.SetUVs(0, finalSkinnedMesh.uvs);
-                mesh.SetUVs(1, finalSkinnedMesh.uvs2);
-
-                mesh.SetNormals(finalSkinnedMesh.normals);
-                mesh.SetTangents(finalSkinnedMesh.tangents);
-
-                mesh.SetColors(finalSkinnedMesh.colors);
-
-                //Create subMeshes
-                mesh.subMeshCount = finalSkinnedMesh.subMeshes.Count;
-                for (int i = 0; i < finalSkinnedMesh.subMeshes.Count; i++) {
-                    mesh.SetTriangles(finalSkinnedMesh.subMeshes[i].triangles, i);
-                }
-
-                //Create an extra sub mesh for rendering a full body material
-                if(createOverlayMesh){
-                    var subMeshCount = mesh.subMeshCount;
-                    mesh.subMeshCount = subMeshCount +1;
-                    mesh.SetTriangles(mesh.triangles, subMeshCount);
-                }
-
-                //Copy the materials to the renderer
+                // Copy the materials to the renderer
                 Material[] finalMaterials = new Material[finalSkinnedMesh.subMeshes.Count];
                 for (int i = 0; i < finalSkinnedMesh.subMeshes.Count; i++) {
                     finalMaterials[i] = finalSkinnedMesh.subMeshes[i].material;
-
                 }
-
-
-
-                /*
-                //Clone it because we might want to change things about it
-                finalMaterials[i] = new Material(finalSkinnedMesh.subMeshes[i].material);
-
-                if (finalSkinnedMesh.subMeshes[i].batchableMaterialData != null) {
-
-                    finalMaterials[i] = new Material(Shader.Find("Shader Graphs/VertexColorURP"));
-
-                    finalMaterials[i].SetColor("_BaseColor", Color.white);
-
-                }
-                else {
-                    finalMaterials[i] = new Material(finalSkinnedMesh.subMeshes[i].material);
-                */
 
                 combinedSkinnedMeshRenderer.sharedMaterials = finalMaterials;
                 combinedSkinnedMeshRenderer.sharedMesh = mesh;
@@ -532,29 +499,22 @@ namespace Airship {
                 combinedSkinnedMeshRenderer.rootBone = finalSkinnedMesh.rootBone;
                 combinedSkinnedMeshRenderer.localBounds = skinnedMeshBounds;
 
-                //if theres instancing data on the materials, do that
-                Renderer renderer = combinedSkinnedMeshRenderer;
-
+                // If theres instancing data on the materials, do that
                 MaterialColorURP matColor = meshCombinerGameObjectSkinned.GetComponent<MaterialColorURP>();
-                if (matColor == null) {
-                    matColor = meshCombinerGameObjectSkinned.AddComponent<MaterialColorURP>();
-                }
-                matColor.Clear();
-
-                matColor.DoUpdate(); //Forces it to re-add everything
-                matColor.InitializeColorsFromCurrentMaterials();
-
-                for (int i = 0; i < finalSkinnedMesh.subMeshes.Count; i++) {
-
-                    if (finalSkinnedMesh.subMeshes[i].batchableMaterialData != null) {
-                        MaterialColorURP.ColorSetting setting = matColor.colorSettings[i];
-                        if (setting != null) {
-                            setting.baseColor = finalSkinnedMesh.subMeshes[i].batchableMaterialData.color;
+                if (matColor != null) {
+                    var matColorSt = Stopwatch.StartNew();
+                    matColor.RefreshVariables();
+                    for (int i = 0; i < finalSkinnedMesh.subMeshes.Count; i++) {
+                        if (finalSkinnedMesh.subMeshes[i].batchableMaterialData != null) {
+                            MaterialColorURP.ColorSetting setting = matColor.colorSettings[i];
+                            if (setting != null) {
+                                setting.baseColor = finalSkinnedMesh.subMeshes[i].batchableMaterialData.color;
+                            }
                         }
                     }
-
+                    matColor.DoUpdate();
+                    Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
                 }
-                matColor.DoUpdate();
 
                 /*
                 int savingsCount = 0;
@@ -583,12 +543,12 @@ namespace Airship {
                         savingsCount += subMesh.batchableMaterialData.Count - 1;
                     }
                 }*/
-                if (debugText == true) {
-                    Debug.Log("MeshCombiner: Finalize (mainthread): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
+                if (debugText) {
+                    Debug.Log($"[{this.gameObject.GetInstanceID()}] MeshCombiner: Finalize (main thread): {st.Elapsed.TotalMilliseconds} ms");
                 }
             }
 
-            //Disable renderers we combined
+            // Disable renderers we combined
             foreach (MeshCopyReference reference in readOnlySourceReferences) {
                 if (reference.transform) {
                     MeshRenderer meshRenderer = reference.transform.gameObject.GetComponent<MeshRenderer>();
@@ -602,18 +562,12 @@ namespace Airship {
                 }
             }
 
-            //we're all done
-            if (debugText == true) {
-                Debug.Log("all done");
-            }
+            // We're all done
             runningUpdate = false;
             OnCombineComplete?.Invoke();
         }
 
         public void Dirty() {
-            if (debugText == true) {
-                Debug.Log("Processing pendingUpdate:" + pendingUpdate + " runningUpdate:" + runningUpdate);
-            }
             pendingUpdate = true;
         }
 
@@ -621,16 +575,12 @@ namespace Airship {
         //update in editor
         private void Update() {
             StartMeshUpdate();
-            UpdateMesh();
+            UpdateMeshMainThread();
         }
 
 #if UNITY_EDITOR
         [InitializeOnLoadMethod]
         private static void OnScriptsReloaded() {
-            if (debugText == true) {
-                Debug.Log("Scripts reloaded");
-            }
-
             //Go through and reload all of the MeshCopyReferences 
             MeshCombiner[] meshCombiners = GameObject.FindObjectsOfType<MeshCombiner>();
             foreach (MeshCombiner meshCombiner in meshCombiners) {
@@ -666,7 +616,6 @@ namespace Airship {
         }
 
         internal void BuildReferencesFromBaseMesh() {
-
             if (baseMesh == null) {
                 Debug.LogWarning("Base mesh is null");
                 return;
@@ -705,11 +654,10 @@ namespace Airship {
                 }
             }
             if (debugText == true) {
-                Debug.Log("MeshCombiner: Setup (mainthread): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
+                // Debug.Log($"[{this.gameObject.GetInstanceID()}] MeshCombiner: Setup (main thread): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
 
                 //Print this go name
-                Debug.Log("MeshCombiner: " + gameObject.name + " has " + sourceReferences.Count + " references");
-
+                // Debug.Log("MeshCombiner: " + gameObject.name + " has " + sourceReferences.Count + " references");
             }
         }
 
@@ -763,7 +711,6 @@ namespace Airship {
             
 
             if (GUILayout.Button("Initialize From BaseMesh")) {
-
                 meshCombinerScript.BuildReferencesFromBaseMesh();
                 meshCombinerScript.CombineMesh();
             }
@@ -773,8 +720,6 @@ namespace Airship {
 
             serializedObject.ApplyModifiedProperties();
 
-            EditorGUILayout.LabelField("Static Verts: " + meshCombinerScript.finalVertCount);
-            EditorGUILayout.LabelField("Static Materials: " + meshCombinerScript.finalMaterialCount);
             EditorGUILayout.LabelField("Skinned Verts: " + meshCombinerScript.finalSkinnedVertCount);
             EditorGUILayout.LabelField("Skinned Materials: " + meshCombinerScript.finalSkinnedMaterialCount);
             EditorGUILayout.LabelField("Skinned Bones: " + meshCombinerScript.finalSkinnedBonesCount);

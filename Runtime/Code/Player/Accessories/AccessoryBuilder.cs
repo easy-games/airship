@@ -17,7 +17,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     public CharacterRig rig;
 
-    [SerializeField] private MeshCombiner meshCombiner;
+    [SerializeField] public MeshCombiner meshCombiner;
     public bool firstPerson;
 
     private Dictionary<AccessorySlot, ActiveAccessory> _activeAccessories = new Dictionary<AccessorySlot, ActiveAccessory>();
@@ -59,6 +59,7 @@ public class AccessoryBuilder : MonoBehaviour
     private void OnEnable() {
         //print("AccessoryBuilder OnEnable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete += OnMeshCombineCompleted;
+        print(meshCombiner);
 
         // update list of accessories
         var accessoryComponents = rig.transform.GetComponentsInChildren<AccessoryComponent>();
@@ -110,6 +111,7 @@ public class AccessoryBuilder : MonoBehaviour
     /// </summary>
     public void RemoveAllAccessories(bool rebuildMeshImmediately = true) {
         foreach (var pair in _activeAccessories) {
+            if (pair.Value.rootTransform == null) continue;
             if (Application.isPlaying) {
                 Destroy(pair.Value.rootTransform.gameObject);
             } else {
@@ -390,32 +392,29 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void TryCombineMeshes() {
-        if (meshCombiner.enabled && Application.isPlaying) {
-            //COMBINE MESHES
-            meshCombiner.sourceReferences.Clear();
+        if (this.meshCombiner.enabled && Application.isPlaying) {
+            this.meshCombiner.sourceReferences.Clear();
             
-            //BODY
+            // Add body meshes as source references on mesh combiner
             if (rig.baseMeshes != null) {
                 foreach (var ren in rig.baseMeshes) {
-                    //Debug.Log("BaseMesh Add: " + ren.gameObject.name);D
                     meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                     ren.gameObject.SetActive(false);
                 }
             }
 
-            //ACCESSORIES
+            // Accessories
             var meshCombinedAcc = false;
 
             foreach (var kvp in _activeAccessories) {
                 var acc = kvp.Value.AccessoryComponent;
-                //Debug.Log("Adding accessory: " + acc.name);
                 
                 if (ShouldCombine(acc) == false) {
                     //Debug.Log("Skipping: " + acc.name);
                     continue;
                 }
 
-                //Map static objects to bones
+                // Map static objects to bones
                 if (!acc.skinnedToCharacter) {
                     
                     var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
@@ -429,18 +428,17 @@ public class AccessoryBuilder : MonoBehaviour
                 }
                     
                 foreach (var ren in kvp.Value.renderers) {
-                    
                     meshCombinedAcc = false;
                     if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
                             acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && !firstPerson) {
-                        //VISIBLE IN THIRD PERSON
+                        // Visible in third person
                         meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                         meshCombinedAcc = true;
                     }
 
                     if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FirstPerson ||
                             acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && firstPerson) {
-                        //VISIBLE IN FIRST PERSON
+                        // Visible in first person
                         meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                         meshCombinedAcc = true;
                     }
@@ -454,7 +452,6 @@ public class AccessoryBuilder : MonoBehaviour
                     }
                 }
             }
-
 
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
             meshCombiner.LoadMeshCopies();
