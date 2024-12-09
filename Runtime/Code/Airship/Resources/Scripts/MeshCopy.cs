@@ -1,23 +1,18 @@
 using System.Collections.Generic;
-using UnityEngine;
-using System;
+using Airship;
 using Code.Player.Accessories;
-using UnityEngine.Rendering;
+using UnityEngine;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+namespace Code.Airship.Resources.Scripts {
 
-namespace Airship {
-
-    //This class exists because we cannot manipulate actual UnityEngine.Meshs in a thread
-    //So we copy and cache assets here first
+    /// <summary>
+    /// This class exists because we cannot manipulate actual Meshes in a thread.
+    /// So we copy and cache assets here first.
+    /// </summary>
     public class MeshCopy {
         public class SubMesh {
             public List<int> triangles = new();
-
             public Material material = null;
-
             public BatchableMaterialData batchableMaterialData;
 
             public SubMesh ManualClone() {
@@ -42,11 +37,9 @@ namespace Airship {
 
             public BatchableMaterialData() {
                 this.color = Color.white;
-
             }
             public BatchableMaterialData(Color color) {
                 this.color = color;
-
             }
 
             // Explicitly providing a cloning method which creates a new instance with modified properties
@@ -420,52 +413,6 @@ namespace Airship {
             return copy;
         }
 
-
-        //Spin through the surface and build new vertex data
-        public MeshCopy ManualCloneUnpackedFat() {
-            //Todo: this could be greatly optimized - it only exists because the submesh triangles that are reaching this point
-            //potentially share vertices that need unique vertex colors. Preprocess them out!
-
-            MeshCopy copy = new MeshCopy();
-
-            foreach (SubMesh subMesh in subMeshes) {
-                SubMesh newSubMesh = subMesh.ManualCloneNoTris();
-                copy.subMeshes.Add(newSubMesh);
-
-                foreach (int index in subMesh.triangles) {
-                    newSubMesh.triangles.Add(copy.vertices.Count);
-
-                    //Unpack all the structs
-                    copy.vertices.Add(vertices[index]);
-                    copy.normals.Add(normals[index]);
-                    copy.tangents.Add(tangents[index]);
-                    copy.uvs.Add(uvs[index]);
-                    copy.uvs2.Add(uvs2[index]);
-
-                    copy.colors.Add(colors[index]);
-                    if (boneWeights.Count > 0) {
-                        copy.boneWeights.Add(boneWeights[index]);
-                    }
-                }
-            }
-            copy.rootBone = rootBone;
-            copy.bones = new List<Transform>(bones);
-            copy.boneNames = new List<string>(boneNames);
-            copy.boneMappings = new Dictionary<string, int>(boneMappings);
-            copy.bindPoses = new List<Matrix4x4>(bindPoses);
-
-            copy.sourceTransform = sourceTransform;
-            copy.localToWorld = localToWorld;
-            copy.worldToLocal = worldToLocal;
-
-            copy.extraMeshTransform = extraMeshTransform;
-
-            copy.skinnedMesh = skinnedMesh;
-            copy.invertedMesh = invertedMesh;
-
-            return copy;
-        }
-
         public Bounds CalculateBoundsFromVertexData() {
             Bounds bounds = new Bounds();
             foreach (Vector3 vertex in vertices) {
@@ -673,20 +620,20 @@ namespace Airship {
 
         }
 
-        public static Transform FindChildByName(Transform parent, string name) {
-            foreach (Transform child in parent) {
-                if (child.name == name) {
-                    return child;
-                }
-
-                Transform result = FindChildByName(child, name);
-                if (result != null) {
-                    return result;
-                }
-            }
-
-            return null;
-        }
+        // public static Transform FindChildByName(Transform parent, string name) {
+        //     foreach (Transform child in parent) {
+        //         if (child.name == name) {
+        //             return child;
+        //         }
+        //
+        //         Transform result = FindChildByName(child, name);
+        //         if (result != null) {
+        //             return result;
+        //         }
+        //     }
+        //
+        //     return null;
+        // }
 
         public void MergeMeshCopy(MeshCopy source) {
             //Take the contents of another meshCopy and absorb it
@@ -705,19 +652,19 @@ namespace Airship {
             }
 
             if (isFirstMesh == true) {
-                rootBone = source.rootBone;
-                sourceTransform = source.sourceTransform;
-                localToWorld = source.localToWorld;
-                worldToLocal = source.worldToLocal;
+                this.rootBone = source.rootBone;
+                this.sourceTransform = source.sourceTransform;
+                this.localToWorld = source.localToWorld;
+                this.worldToLocal = source.worldToLocal;
             }
 
             int currentVertexCount = vertices.Count;
-            vertices.AddRange(source.vertices);
-            normals.AddRange(source.normals);
-            tangents.AddRange(source.tangents);
-            uvs.AddRange(source.uvs);
-            uvs2.AddRange(source.uvs2);
-            colors.AddRange(source.colors);
+            this.vertices.AddRange(source.vertices);
+            this.normals.AddRange(source.normals);
+            this.tangents.AddRange(source.tangents);
+            this.uvs.AddRange(source.uvs);
+            this.uvs2.AddRange(source.uvs2);
+            this.colors.AddRange(source.colors);
 
             //this thing is parented to bones, but didn't provide any itself
             //Eg: a sword in righthand
@@ -749,7 +696,7 @@ namespace Airship {
                 dontTransform = true;
             }
 
-            if (skinnedMesh && source.bones.Count > 0) {
+            if (this.skinnedMesh && source.bones.Count > 0) {
                 //when merging skinned meshes, all vertices are in the local space of their host SkinnedRenderer
                 //This means we need to transform them into the space of the "Host" skinned renderer, the one where the bindPoses matrixes are coming from
 
@@ -952,7 +899,44 @@ namespace Airship {
             return true;
         }*/
 
-        public static List<MeshCopy> Load(Transform transform, bool showError) {
+        public static List<MeshCopy> LoadActiveAccessory(ActiveAccessory activeAccessory) {
+            List<MeshCopy> results = new();
+            if (activeAccessory.meshRenderers.Length > 0) {
+                int i = 0;
+                foreach (var meshRenderer in activeAccessory.meshRenderers) {
+                    Debug.Log("Loading mesh renderer: " + meshRenderer.gameObject.name);
+                    MeshCopy meshCopy = new MeshCopy(activeAccessory.meshFilters[i].sharedMesh, meshRenderer.sharedMaterials, meshRenderer.transform);
+
+                    MaterialColorURP matColor = meshRenderer.gameObject.GetComponent<MaterialColorURP>();
+                    if (matColor) {
+                        meshCopy.ExtractMaterialColor(meshRenderer.gameObject, matColor);
+                    }
+
+                    results.Add(meshCopy);
+                    i++;
+                }
+            } else if (activeAccessory.skinnedMeshRenderers.Length > 0) {
+                foreach (var skinnedMeshRenderer in activeAccessory.skinnedMeshRenderers) {
+                    Debug.Log("Loading skinned mesh renderer: " + skinnedMeshRenderer.gameObject.name);
+                    //See if theres a MaterialColor on this gameObject
+                    MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinnedMeshRenderer.gameObject.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
+
+                    MaterialColorURP matColor = skinnedMeshRenderer.gameObject.GetComponent<MaterialColorURP>();
+                    if (matColor) {
+                        meshCopy.ExtractMaterialColor(skinnedMeshRenderer.gameObject, matColor);
+                    }
+
+                    //Grab their bone masks
+                    meshCopy.bodyMask = activeAccessory.AccessoryComponent.bodyMask;
+
+                    results.Add(meshCopy);
+                }
+            }
+
+            return results;
+        }
+
+        public static List<MeshCopy> LoadSlow(Transform transform) {
             List<MeshCopy> results = new List<MeshCopy>();
 
             GameObject instance = transform.gameObject;
@@ -962,59 +946,15 @@ namespace Airship {
             return results;
         }
 
-        public static List<MeshCopy> Load(string assetPath, bool showError) {
-            int startTime = System.DateTime.Now.Millisecond;
-
-            List<MeshCopy> results = new();
-
-            UnityEngine.Object asset = AssetBridge.Instance.LoadAssetInternal<UnityEngine.Object>(assetPath + ".prefab", false);
-
-            if (asset == null) {
-                asset = AssetBridge.Instance.LoadAssetInternal<UnityEngine.Object>(assetPath + ".FBX", false);
-            }
-
-            if (asset == null && showError == true) {
-                Debug.LogError("Failed to load asset at path: " + assetPath);
-                return results;
-            }
-
-            if (asset is Mesh) {
-                Mesh mesh = asset as Mesh;
-                Material[] mats = new Material[0];
-                MeshCopy meshCopy = new MeshCopy(mesh, mats, null, null);
-                results.Add(meshCopy);
-                Debug.Log("Load Time taken on mainthread: " + (System.DateTime.Now.Millisecond - startTime));
-                return results;
-            }
-
-            if (asset is GameObject) {
-                // Instantiate the prefab
-                GameObject instance = GameObject.Instantiate((GameObject)asset);
-
-                //Recursively interate over all child gameObjects
-                GetMeshes(instance, results);
-
-                if (Application.isPlaying == true) {
-                    GameObject.Destroy(instance);
-                }
-                else {
-                    GameObject.DestroyImmediate(instance);
-                }
-                Debug.Log("Load Time taken on mainthread: " + (System.DateTime.Now.Millisecond - startTime));
-                return results;
-            }
-            Debug.Log("Load Time taken on mainthread: " + (System.DateTime.Now.Millisecond - startTime));
-            return results;
-        }
-
         //Recursively get all filters and materials
         private static void GetMeshes(GameObject gameObject, List<MeshCopy> results) {
             if (gameObject.name == MeshCombiner.MeshCombineSkinnedName) {
                 return;
             }
-            if (gameObject.name == MeshCombiner.MeshCombineStaticName) {
-                return;
-            }
+            // if (gameObject.name == MeshCombiner.MeshCombineStaticName) {
+            //     return;
+            // }
+            Debug.Log("Made it here: " + gameObject.name);
 
             //Get the mesh filter
             MeshFilter filter = gameObject.GetComponent<MeshFilter>();
@@ -1058,7 +998,7 @@ namespace Airship {
             }
         }
 
-        public void ExtractMaterialColor(GameObject obj, MaterialColorURP matColor) {
+        private void ExtractMaterialColor(GameObject obj, MaterialColorURP matColor) {
             //Apply the material color
             for (int i = 0; i < subMeshes.Count; i++) {
                 var colorData = matColor.colorSettings[i];

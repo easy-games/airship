@@ -1,9 +1,12 @@
 using Code.Player.Accessories;
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public struct ActiveAccessory {
+public class ActiveAccessory {
     public AccessoryComponent AccessoryComponent;
     public Transform rootTransform;
     public GameObject[] gameObjects;
-    public Renderer[] renderers;
+    public MeshRenderer[] meshRenderers;
+    public SkinnedMeshRenderer[] skinnedMeshRenderers;
+    public MeshFilter[] meshFilters;
 }
