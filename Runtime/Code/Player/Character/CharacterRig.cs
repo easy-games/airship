@@ -53,6 +53,11 @@ public class CharacterRig : MonoBehaviour {
 	public Transform heldItemL;
 	public Transform heldItemR;
 
+    [Header("Color")] public MaterialColorURP headColor;
+    public MaterialColorURP bodyColor;
+    public MaterialColorURP armsColor;
+    public MaterialColorURP viewmodelArmsColor;
+
     [NonSerialized]
     public Renderer[] baseMeshes; //All skin based Meshes (not face decal)
 

@@ -14,6 +14,7 @@ namespace Code.Airship.Resources.Scripts {
         [SerializeField][CanBeNull] public ActiveAccessory activeAccessory;
 
         [SerializeField] public SkinnedMeshRenderer skinnedMeshRenderer;
+        [SerializeField] public MaterialColorURP matColor;
 
         [NonSerialized] public MeshCopy[] meshCopies = null;
 
@@ -31,9 +32,10 @@ namespace Code.Airship.Resources.Scripts {
             this.transform = activeAccessory.rootTransform;
         }
 
-        public MeshCopyReference(SkinnedMeshRenderer skinnedMeshRenderer) {
+        public MeshCopyReference(SkinnedMeshRenderer skinnedMeshRenderer, MaterialColorURP matColor) {
             this.skinnedMeshRenderer = skinnedMeshRenderer;
             this.transform = skinnedMeshRenderer.transform;
+            this.matColor = matColor;
         }
 
         public MeshCopyReference ManualClone() {
@@ -59,10 +61,7 @@ namespace Code.Airship.Resources.Scripts {
         public void LoadMeshCopiesAsBaseMesh() {
             this.meshCopies = new MeshCopy[1];
             this.meshCopies[0] = new MeshCopy(this.skinnedMeshRenderer.sharedMesh, this.skinnedMeshRenderer.sharedMaterials, this.transform, this.skinnedMeshRenderer.bones, this.skinnedMeshRenderer.rootBone);
-
-            if (this.transform.TryGetComponent<MaterialColorURP>(out var matColor)) {
-                this.meshCopies[0].ExtractMaterialColor(matColor);
-            }
+            this.meshCopies[0].ExtractMaterialColor(this.matColor);
         }
     }
 }

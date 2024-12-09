@@ -34,9 +34,9 @@ namespace Airship {
     [ExecuteInEditMode]
     [LuauAPI]
     public class MeshCombiner : MonoBehaviour {
-        private static bool runThreaded = false;
-        private static bool debugText = true;
-        private static bool useCache = true;
+        private static bool runThreaded = true;
+        private static bool debugText = false;
+        private static bool useCache = false;
         public static readonly string MeshCombineSkinnedName = "CombinedMeshRenderer";
 
         [SerializeField]
@@ -110,9 +110,9 @@ namespace Airship {
             // this.sourceReferences.RemoveRange(3, this.sourceReferences.Count - 3);
 
             // add base meshes
-            this.sourceReferences.Add(new MeshCopyReference(this.rig.headMesh));
-            this.sourceReferences.Add(new MeshCopyReference(this.rig.bodyMesh));
-            this.sourceReferences.Add(new MeshCopyReference(this.rig.armsMesh));
+            this.sourceReferences.Add(new MeshCopyReference(this.rig.headMesh, this.rig.headColor));
+            this.sourceReferences.Add(new MeshCopyReference(this.rig.bodyMesh, this.rig.bodyColor));
+            this.sourceReferences.Add(new MeshCopyReference(this.rig.armsMesh, this.rig.armsColor));
         }
 
         private void WalkBones(MeshCopy mesh, Transform currentBone) {
@@ -390,7 +390,7 @@ namespace Airship {
                         Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
                     }
                 }
-                
+
                 /*
                 int savingsCount = 0;
                 for (int i = 0; i < renderer.sharedMaterials.Length; i++) {
@@ -420,19 +420,17 @@ namespace Airship {
                 }*/
             }
 
-            // Disable renderers we combined
-            // var disableSt = Stopwatch.StartNew();
-            foreach (MeshCopyReference reference in this.sourceReferences) {
-                if (reference.activeAccessory != null) {
-                    foreach (var activeAccessoryRenderer in reference.activeAccessory.renderers) {
-                        activeAccessoryRenderer.enabled = false;
-                    }
-                } else {
-                    // base mesh
-                    reference.transform.gameObject.SetActive(false);
-                }
-            }
-            // Debug.Log("disable time: " + disableSt.Elapsed.TotalMilliseconds + " ms");
+            // // Disable renderers we combined
+            // foreach (MeshCopyReference reference in this.sourceReferences) {
+            //     if (reference.activeAccessory != null) {
+            //         foreach (var activeAccessoryRenderer in reference.activeAccessory.renderers) {
+            //             activeAccessoryRenderer.enabled = false;
+            //         }
+            //     } else {
+            //         // base mesh
+            //         reference.transform.gameObject.SetActive(false);
+            //     }
+            // }
 
             if (debugText) {
                 Debug.Log($"[{this.gameObject.GetInstanceID()}] MeshCombiner: Finalize (main thread): {st.Elapsed.TotalMilliseconds} ms");
@@ -443,7 +441,7 @@ namespace Airship {
             this.OnCombineComplete?.Invoke();
         }
 
-        public void Dirty() {
+        private void Dirty() {
             pendingUpdate = true;
         }
 
@@ -500,6 +498,11 @@ namespace Airship {
         }
 
         public void CombineMeshes() {
+            // Disable renderers we will combine
+            this.rig.headMesh.gameObject.SetActive(false);
+            this.rig.bodyMesh.gameObject.SetActive(false);
+            this.rig.armsMesh.gameObject.SetActive(false);
+
             Dirty();
         }
 

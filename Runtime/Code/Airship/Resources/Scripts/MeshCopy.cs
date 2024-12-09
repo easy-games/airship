@@ -933,74 +933,69 @@ namespace Code.Airship.Resources.Scripts {
             return results;
         }
 
-        public void LoadAsBaseMesh(SkinnedMeshRenderer skinnedMeshRenderer) {
-            this.bones.AddRange(skinnedMeshRenderer.bones);
-            this.rootBone = skinnedMeshRenderer.rootBone;
-        }
-
-        [Obsolete]
-        public static List<MeshCopy> LoadSlow(Transform transform) {
-            List<MeshCopy> results = new List<MeshCopy>();
-
-            GameObject instance = transform.gameObject;
-
-            GetMeshesSlow(instance, results);
-
-            return results;
-        }
-
-        //Recursively get all filters and materials
-        [Obsolete]
-        private static void GetMeshesSlow(GameObject gameObject, List<MeshCopy> results) {
-            if (gameObject.name == MeshCombiner.MeshCombineSkinnedName) {
-                return;
-            }
-            // if (gameObject.name == MeshCombiner.MeshCombineStaticName) {
-            //     return;
-            // }
-            Debug.Log("Made it here: " + gameObject.name);
-
-            //Get the mesh filter
-            MeshFilter filter = gameObject.GetComponent<MeshFilter>();
-            MeshRenderer renderer = gameObject.GetComponent<MeshRenderer>();
-
-            if (filter != null && renderer != null) {
-                //See if theres a MaterialColor on this gameObject
-                MeshCopy meshCopy = new MeshCopy(filter.sharedMesh, renderer.sharedMaterials, gameObject.transform);
-
-                MaterialColorURP matColor = gameObject.GetComponent<MaterialColorURP>();
-                if (matColor) {
-                    meshCopy.ExtractMaterialColor(matColor);
-                }
-
-                results.Add(meshCopy);
-            }
-
-            SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
-            if (skinnedMeshRenderer) {
-                //See if theres a MaterialColor on this gameObject
-                MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, gameObject.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
-
-                MaterialColorURP matColor = gameObject.GetComponent<MaterialColorURP>();
-                if (matColor) {
-                    meshCopy.ExtractMaterialColor(matColor);
-                }
-
-                //Grab their bone masks
-                AccessoryComponent accessoryComponent = gameObject.GetComponent<AccessoryComponent>();
-                if (accessoryComponent) {
-                    meshCopy.bodyMask = accessoryComponent.bodyMask;
-                }
-
-                results.Add(meshCopy);
-            }
-
-
-            //Get the children
-            foreach (Transform child in gameObject.transform) {
-                GetMeshesSlow(child.gameObject, results);
-            }
-        }
+        // [Obsolete]
+        // public static List<MeshCopy> LoadSlow(Transform transform) {
+        //     List<MeshCopy> results = new List<MeshCopy>();
+        //
+        //     GameObject instance = transform.gameObject;
+        //
+        //     GetMeshesSlow(instance, results);
+        //
+        //     return results;
+        // }
+        //
+        // //Recursively get all filters and materials
+        // [Obsolete]
+        // private static void GetMeshesSlow(GameObject gameObject, List<MeshCopy> results) {
+        //     if (gameObject.name == MeshCombiner.MeshCombineSkinnedName) {
+        //         return;
+        //     }
+        //     // if (gameObject.name == MeshCombiner.MeshCombineStaticName) {
+        //     //     return;
+        //     // }
+        //     Debug.Log("Made it here: " + gameObject.name);
+        //
+        //     //Get the mesh filter
+        //     MeshFilter filter = gameObject.GetComponent<MeshFilter>();
+        //     MeshRenderer renderer = gameObject.GetComponent<MeshRenderer>();
+        //
+        //     if (filter != null && renderer != null) {
+        //         //See if theres a MaterialColor on this gameObject
+        //         MeshCopy meshCopy = new MeshCopy(filter.sharedMesh, renderer.sharedMaterials, gameObject.transform);
+        //
+        //         MaterialColorURP matColor = gameObject.GetComponent<MaterialColorURP>();
+        //         if (matColor) {
+        //             meshCopy.ExtractMaterialColor(matColor);
+        //         }
+        //
+        //         results.Add(meshCopy);
+        //     }
+        //
+        //     SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
+        //     if (skinnedMeshRenderer) {
+        //         //See if theres a MaterialColor on this gameObject
+        //         MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, gameObject.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
+        //
+        //         MaterialColorURP matColor = gameObject.GetComponent<MaterialColorURP>();
+        //         if (matColor) {
+        //             meshCopy.ExtractMaterialColor(matColor);
+        //         }
+        //
+        //         //Grab their bone masks
+        //         AccessoryComponent accessoryComponent = gameObject.GetComponent<AccessoryComponent>();
+        //         if (accessoryComponent) {
+        //             meshCopy.bodyMask = accessoryComponent.bodyMask;
+        //         }
+        //
+        //         results.Add(meshCopy);
+        //     }
+        //
+        //
+        //     //Get the children
+        //     foreach (Transform child in gameObject.transform) {
+        //         GetMeshesSlow(child.gameObject, results);
+        //     }
+        // }
 
         public void ExtractMaterialColor(MaterialColorURP matColor) {
             //Apply the material color
