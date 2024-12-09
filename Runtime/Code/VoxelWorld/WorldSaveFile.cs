@@ -61,23 +61,18 @@ public class WorldSaveFile : ScriptableObject {
 
             // Read colors:
             var numColors = reader.ReadUInt32();
-            // var colors = new uint[numColors];
             for (uint j = 0; j < numColors; j++) {
                 var c = reader.ReadUInt32();
-                // colors[j] = c;
                 colors.Add(c);
             }
 
             // Read voxel data:
             var numVoxelData = reader.ReadUInt32();
-            // var voxelData = new VoxelData[numVoxelData];
             for (uint j = 0; j < numVoxelData; j++) {
                 var d = reader.ReadUInt16();
-                // voxelData[j] = d;
                 voxelData.Add(d);
             }
 
-            // return new SaveChunk(key, voxelData, colors);
             return key;
         }
     }
@@ -317,9 +312,6 @@ public class WorldSaveFile : ScriptableObject {
                 Profiler.EndSample();
                 
                 counter += 1;
-                // var key = chunk.key;
-                // var data = chunk.data;
-                // var color = chunk.color;
                 
                 // loadedChunks.Add(chunk);
                 Profiler.BeginSample("LoadChunkIntoVoxelWorld");
@@ -329,13 +321,10 @@ public class WorldSaveFile : ScriptableObject {
             
             Profiler.EndSample();
         } else {
+            // Old, non-compressed data version:
             foreach (var chunk in chunks) {
                 counter += 1;
-                var key = chunk.key;
-                var data = chunk.data;
-                var color = chunk.color;
-
-                LoadChunkIntoVoxelWorld(world, blockRemapping, key, data, color);
+                LoadChunkIntoVoxelWorld(world, blockRemapping, chunk.key, chunk.data, chunk.color);
             }
         }
 
