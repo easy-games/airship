@@ -163,7 +163,9 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	private void RefreshAuthority(){
-		Debug.Log(gameObject.name + " Auth Change. ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
+		if(useExtraLogging){
+			Debug.Log(gameObject.name + " Auth Change. ServerOnly: " + isServerOnly + " is client: " + isClient + " is owned: " + isOwned +  " auth: " + authority + " CONNECTION: " + netIdentity?.connectionToClient?.address);
+		}
 		//Only the owner can control
 		hasMovementAuth = isOwned || (isServer && (netIdentity.connectionToClient == null || isServerAuth));
 
