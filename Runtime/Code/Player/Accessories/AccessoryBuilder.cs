@@ -535,7 +535,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public SkinnedMeshRenderer GetCombinedSkinnedMesh() {
-        return meshCombiner.combinedSkinnedMeshRenderer;
+        return meshCombiner.outputSkinnedMeshRenderers[0];
     }
 
     //Event from MeshCombine component
@@ -545,7 +545,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     private void OnCombineComplete(bool usedMeshCombiner) {
         //Mesh Combine Complete
-        OnMeshCombined?.Invoke(usedMeshCombiner, meshCombiner.combinedSkinnedMeshRenderer, meshCombiner.combinedSkinnedMeshRenderer);
+        OnMeshCombined?.Invoke(usedMeshCombiner, meshCombiner.outputSkinnedMeshRenderers[0], meshCombiner.outputSkinnedMeshRenderers[0]);
     }
 
     public Renderer[] GetAllAccessoryMeshes() {
@@ -557,7 +557,7 @@ public class AccessoryBuilder : MonoBehaviour
             }
         }
 
-        renderers.Add(meshCombiner.combinedSkinnedMeshRenderer);
+        renderers.Add(meshCombiner.outputSkinnedMeshRenderers[0]);
         // if (meshCombiner.combinedSkinnedMeshRenderer) renderers.Add(meshCombiner.combinedStaticMeshRenderer);
 
         return renderers.ToArray();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [LuauAPI]
 [ExecuteInEditMode]
@@ -11,6 +12,10 @@ public class CharacterRig : MonoBehaviour {
     public SkinnedMeshRenderer armsMesh;
     public SkinnedMeshRenderer headMesh;
 	public Renderer faceMesh;
+
+    public SkinnedMeshRenderer[] bodyMeshLOD;
+    public SkinnedMeshRenderer[] armsMeshLOD;
+    public SkinnedMeshRenderer[] headMeshLOD;
 
 	[Header("Root")]
 	public Transform rigHolder;

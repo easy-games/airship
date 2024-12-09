@@ -61,7 +61,7 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         }
     }
 
-    private async Task DownloadUserOutfit(AccessoryBuilder builder){
+    private async Task DownloadUserOutfit(AccessoryBuilder builder) {
         Debug.Log("Starting download");
         downloading = true;
         await builder.AddOutfitFromUserId(builder.currentUserId);
@@ -69,7 +69,7 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         downloading = false;
     }
 
-    private async Task DownloadUsernameOutfit(AccessoryBuilder builder){
+    private async Task DownloadUsernameOutfit(AccessoryBuilder builder) {
         Debug.Log("Starting download");
         downloading = true;
         await builder.EquipOutfitFromUsername(builder.currentUserName);
