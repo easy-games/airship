@@ -1,4 +1,5 @@
 using System;
+using Airship;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -11,6 +12,8 @@ namespace Code.Airship.Resources.Scripts {
         [SerializeField] public Transform transform = null;
         [SerializeField] public bool maskThisMesh = false;
         [SerializeField][CanBeNull] public ActiveAccessory activeAccessory;
+
+        [SerializeField] public SkinnedMeshRenderer skinnedMeshRenderer;
 
         [NonSerialized] public MeshCopy[] meshCopies = null;
 
@@ -28,6 +31,11 @@ namespace Code.Airship.Resources.Scripts {
             this.transform = activeAccessory.rootTransform;
         }
 
+        public MeshCopyReference(SkinnedMeshRenderer skinnedMeshRenderer) {
+            this.skinnedMeshRenderer = skinnedMeshRenderer;
+            this.transform = skinnedMeshRenderer.transform;
+        }
+
         public MeshCopyReference ManualClone() {
             MeshCopyReference output = new MeshCopyReference(this.transform) {
                 enabled = this.enabled
@@ -43,11 +51,17 @@ namespace Code.Airship.Resources.Scripts {
             return output;
         }
 
-        public void LoadMeshCopies() {
-            if (this.activeAccessory != null) {
-                this.meshCopies = MeshCopy.LoadActiveAccessory(activeAccessory).ToArray();
-            } else {
-                this.meshCopies = MeshCopy.LoadSlow(this.transform).ToArray();
+        public void LoadMeshCopiesByAccessory() {
+            this.meshCopies = MeshCopy.LoadActiveAccessory(activeAccessory).ToArray();
+            // this.meshCopies = MeshCopy.LoadSlow(this.transform).ToArray();
+        }
+
+        public void LoadMeshCopiesAsBaseMesh() {
+            this.meshCopies = new MeshCopy[1];
+            this.meshCopies[0] = new MeshCopy(this.skinnedMeshRenderer.sharedMesh, this.skinnedMeshRenderer.sharedMaterials, this.transform, this.skinnedMeshRenderer.bones, this.skinnedMeshRenderer.rootBone);
+
+            if (this.transform.TryGetComponent<MaterialColorURP>(out var matColor)) {
+                this.meshCopies[0].ExtractMaterialColor(matColor);
             }
         }
     }

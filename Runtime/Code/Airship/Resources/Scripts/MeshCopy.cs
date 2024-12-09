@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Airship;
 using Code.Player.Accessories;
@@ -907,7 +908,7 @@ namespace Code.Airship.Resources.Scripts {
                     MeshCopy meshCopy = new MeshCopy(activeAccessory.meshFilters[i].sharedMesh, meshRenderer.sharedMaterials, meshRenderer.transform);
 
                     if (meshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
-                        meshCopy.ExtractMaterialColor(meshRenderer.gameObject, matColor);
+                        meshCopy.ExtractMaterialColor(matColor);
                     }
 
                     results.Add(meshCopy);
@@ -919,7 +920,7 @@ namespace Code.Airship.Resources.Scripts {
                     MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinnedMeshRenderer.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
 
                     if (skinnedMeshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
-                        meshCopy.ExtractMaterialColor(skinnedMeshRenderer.gameObject, matColor);
+                        meshCopy.ExtractMaterialColor(matColor);
                     }
 
                     //Grab their bone masks
@@ -932,18 +933,25 @@ namespace Code.Airship.Resources.Scripts {
             return results;
         }
 
+        public void LoadAsBaseMesh(SkinnedMeshRenderer skinnedMeshRenderer) {
+            this.bones.AddRange(skinnedMeshRenderer.bones);
+            this.rootBone = skinnedMeshRenderer.rootBone;
+        }
+
+        [Obsolete]
         public static List<MeshCopy> LoadSlow(Transform transform) {
             List<MeshCopy> results = new List<MeshCopy>();
 
             GameObject instance = transform.gameObject;
 
-            GetMeshes(instance, results);
+            GetMeshesSlow(instance, results);
 
             return results;
         }
 
         //Recursively get all filters and materials
-        private static void GetMeshes(GameObject gameObject, List<MeshCopy> results) {
+        [Obsolete]
+        private static void GetMeshesSlow(GameObject gameObject, List<MeshCopy> results) {
             if (gameObject.name == MeshCombiner.MeshCombineSkinnedName) {
                 return;
             }
@@ -962,7 +970,7 @@ namespace Code.Airship.Resources.Scripts {
 
                 MaterialColorURP matColor = gameObject.GetComponent<MaterialColorURP>();
                 if (matColor) {
-                    meshCopy.ExtractMaterialColor(gameObject, matColor);
+                    meshCopy.ExtractMaterialColor(matColor);
                 }
 
                 results.Add(meshCopy);
@@ -975,7 +983,7 @@ namespace Code.Airship.Resources.Scripts {
 
                 MaterialColorURP matColor = gameObject.GetComponent<MaterialColorURP>();
                 if (matColor) {
-                    meshCopy.ExtractMaterialColor(gameObject, matColor);
+                    meshCopy.ExtractMaterialColor(matColor);
                 }
 
                 //Grab their bone masks
@@ -990,18 +998,17 @@ namespace Code.Airship.Resources.Scripts {
 
             //Get the children
             foreach (Transform child in gameObject.transform) {
-                GetMeshes(child.gameObject, results);
+                GetMeshesSlow(child.gameObject, results);
             }
         }
 
-        private void ExtractMaterialColor(GameObject obj, MaterialColorURP matColor) {
+        public void ExtractMaterialColor(MaterialColorURP matColor) {
             //Apply the material color
             for (int i = 0; i < subMeshes.Count; i++) {
                 var colorData = matColor.colorSettings[i];
                 if (colorData != null) {
                     SubMesh subMesh = subMeshes[i];
                     subMesh.batchableMaterialData = new BatchableMaterialData(colorData.baseColor);
-
                 }
             }
         }

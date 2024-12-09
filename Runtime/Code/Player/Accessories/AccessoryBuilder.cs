@@ -434,7 +434,7 @@ public class AccessoryBuilder : MonoBehaviour
                 //     new[] { ren.transform.GetComponent<MeshFilter>() }
                 // );
                 // meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
-                ren.gameObject.SetActive(false);
+                // ren.gameObject.SetActive(false);
             }
 
             // Accessories

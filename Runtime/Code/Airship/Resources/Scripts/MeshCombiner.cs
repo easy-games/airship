@@ -36,6 +36,7 @@ namespace Airship {
     public class MeshCombiner : MonoBehaviour {
         private static bool runThreaded = false;
         private static bool debugText = true;
+        private static bool useCache = true;
         public static readonly string MeshCombineSkinnedName = "CombinedMeshRenderer";
 
         [SerializeField]
@@ -106,11 +107,12 @@ namespace Airship {
 
         public void ClearSourceReferences() {
             this.sourceReferences.Clear();
+            // this.sourceReferences.RemoveRange(3, this.sourceReferences.Count - 3);
 
-            // add base mesh
-            foreach (var ren in this.rig.baseMeshes) {
-                this.sourceReferences.Add(new MeshCopyReference(ren.transform));
-            }
+            // add base meshes
+            this.sourceReferences.Add(new MeshCopyReference(this.rig.headMesh));
+            this.sourceReferences.Add(new MeshCopyReference(this.rig.bodyMesh));
+            this.sourceReferences.Add(new MeshCopyReference(this.rig.armsMesh));
         }
 
         private void WalkBones(MeshCopy mesh, Transform currentBone) {
@@ -155,8 +157,10 @@ namespace Airship {
                 return;
             }
 
-            if (!string.IsNullOrEmpty(this.cacheId) && meshCache.TryGetValue(this.cacheId, out var cache)) {
-                print("Skipping threaded because we have cache: " + this.cacheId);
+            if (useCache && !string.IsNullOrEmpty(this.cacheId) && meshCache.TryGetValue(this.cacheId, out var cache)) {
+                if (debugText) {
+                    print("Skipping threaded because we have cache: " + this.cacheId);
+                }
                 this.pendingUpdate = false;
                 this.runningUpdate = false;
                 this.newMeshReadyToUse = true;
@@ -192,7 +196,10 @@ namespace Airship {
             // Walk the rootSkeleton and add all the bones to finalSkinnedMesh
             this.WalkBones(this.finalSkinnedMesh, this.rootBone);
 
-            Debug.Log("[MeshCombiner] First half main thread time: " + st.Elapsed.TotalMilliseconds + "ms");
+            if (debugText) {
+                Debug.Log("[MeshCombiner] First half main thread time: " + st.Elapsed.TotalMilliseconds + "ms");
+            }
+
 
             // Kick off a thread
 // #pragma warning disable CS0162
@@ -299,14 +306,16 @@ namespace Airship {
             {
                 // Update output skinned mesh
                 Mesh mesh;
-                if (!string.IsNullOrEmpty(this.cacheId) && meshCache.TryGetValue(this.cacheId, out MeshCombinerCache cache)) {
+                if (useCache && !string.IsNullOrEmpty(this.cacheId) && meshCache.TryGetValue(this.cacheId, out MeshCombinerCache cache)) {
                     var dupeSt = Stopwatch.StartNew();
                     mesh = Instantiate(cache.mesh);
                     this.finalSkinnedMesh = cache.finalSkinnedMesh;
                     this.finalSkinnedMesh.rootBone = this.rootBone;
                     this.skinnedMeshBounds = cache.skinnedMeshBounds;
                     this.WalkBones(this.finalSkinnedMesh, this.rootBone);
-                    Debug.Log($"Duplicated cached mesh ({this.cacheId}) in {dupeSt.Elapsed.TotalMilliseconds} ms");
+                    if (debugText) {
+                        Debug.Log($"Duplicated cached mesh ({this.cacheId}) in {dupeSt.Elapsed.TotalMilliseconds} ms");
+                    }
                 } else {
                     var meshSt = Stopwatch.StartNew();
 
@@ -343,10 +352,12 @@ namespace Airship {
                     }
 
                     if (!string.IsNullOrEmpty(this.cacheId)) {
-                        print("Set mesh cache: " + this.cacheId);
                         meshCache[this.cacheId] = new MeshCombinerCache(mesh, this.finalSkinnedMesh, this.skinnedMeshBounds);
                     }
-                    Debug.Log("Copy mesh time: " + meshSt.Elapsed.TotalMilliseconds + " ms");
+
+                    if (debugText) {
+                        Debug.Log("Copy mesh time: " + meshSt.Elapsed.TotalMilliseconds + " ms");
+                    }
                 }
 
                 // Copy the materials to the renderer
@@ -375,10 +386,11 @@ namespace Airship {
                         }
                     }
                     this.materialColorURP.DoUpdate();
-                    Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
+                    if (debugText) {
+                        Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
+                    }
                 }
-
-
+                
                 /*
                 int savingsCount = 0;
                 for (int i = 0; i < renderer.sharedMaterials.Length; i++) {
@@ -411,13 +423,13 @@ namespace Airship {
             // Disable renderers we combined
             // var disableSt = Stopwatch.StartNew();
             foreach (MeshCopyReference reference in this.sourceReferences) {
-                if (reference.transform) {
-                    if(reference.transform.gameObject.TryGetComponent<MeshRenderer>(out var meshRenderer)) {
-                        meshRenderer.enabled = false;
+                if (reference.activeAccessory != null) {
+                    foreach (var activeAccessoryRenderer in reference.activeAccessory.renderers) {
+                        activeAccessoryRenderer.enabled = false;
                     }
-                    if (reference.transform.gameObject.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer)) {
-                        skinnedMeshRenderer.enabled = false;
-                    }
+                } else {
+                    // base mesh
+                    reference.transform.gameObject.SetActive(false);
                 }
             }
             // Debug.Log("disable time: " + disableSt.Elapsed.TotalMilliseconds + " ms");
@@ -455,18 +467,28 @@ namespace Airship {
 
         public void CombineMesh() {
             //reload sourceMeshes
-            foreach (MeshCopyReference reference in sourceReferences) {
-                reference.LoadMeshCopies();
-            }
-            Dirty();
+            // foreach (MeshCopyReference reference in sourceReferences) {
+            //     reference.LoadMeshCopies();
+            // }
+            // Dirty();
         }
 
         public void LoadMeshCopies() {
-            var st = Stopwatch.StartNew();
+            var stAccessories = Stopwatch.StartNew();
+            var stBase = Stopwatch.StartNew();
             foreach (MeshCopyReference reference in this.sourceReferences) {
-                reference.LoadMeshCopies();
+                if (reference.activeAccessory != null) {
+                    stAccessories.Start();
+                    stBase.Stop();
+                    reference.LoadMeshCopiesByAccessory();
+                } else {
+                    stAccessories.Stop();
+                    stBase.Start();
+                    reference.LoadMeshCopiesAsBaseMesh();
+                }
             }
-            Debug.Log("LoadMeshCopies time: " + st.Elapsed.TotalMilliseconds + " ms");
+
+            Debug.Log($"LoadMeshCopies {stBase.Elapsed.TotalMilliseconds + stAccessories.Elapsed.TotalMilliseconds} ms (base: " + stBase.Elapsed.TotalMilliseconds + " ms" + ", accessories: " + stAccessories.Elapsed.TotalMilliseconds + " ms)");
         }
 
         public void RemoveBone(string boneName) {

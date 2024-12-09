@@ -9,7 +9,7 @@ public class CharacterRig : MonoBehaviour {
     [Header("Meshes")]
 	public SkinnedMeshRenderer bodyMesh;
     public SkinnedMeshRenderer armsMesh;
-    public Renderer headMesh;
+    public SkinnedMeshRenderer headMesh;
 	public Renderer faceMesh;
 
 	[Header("Root")]
