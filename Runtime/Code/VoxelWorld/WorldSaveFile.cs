@@ -1,6 +1,6 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
@@ -26,10 +26,59 @@ public class WorldSaveFile : ScriptableObject {
         public Vector3Int key;
         public VoxelData[] data;
         public uint[] color;
+        
         public SaveChunk(Vector3Int key, VoxelData[] data, uint[] color) {
             this.key = key;
             this.data = data;
             this.color = color;
+        }
+
+        public void Serialize(BinaryWriter writer, ushort version) {
+            // Write key:
+            writer.Write(key.x);
+            writer.Write(key.y);
+            writer.Write(key.z);
+            
+            // Write colors:
+            writer.Write((uint)color.Length);
+            foreach (var c in color) {
+                writer.Write(c);
+            }
+            
+            // Write voxel data:
+            writer.Write((uint)data.Length);
+            foreach (var d in data) {
+                writer.Write(d);
+            }
+        }
+
+        public static Vector3Int Deserialize(BinaryReader reader, ushort version, List<VoxelData> voxelData, List<uint> colors) {
+            // Read key:
+            var x = reader.ReadInt32();
+            var y = reader.ReadInt32();
+            var z = reader.ReadInt32();
+            var key = new Vector3Int(x, y, z);
+
+            // Read colors:
+            var numColors = reader.ReadUInt32();
+            // var colors = new uint[numColors];
+            for (uint j = 0; j < numColors; j++) {
+                var c = reader.ReadUInt32();
+                // colors[j] = c;
+                colors.Add(c);
+            }
+
+            // Read voxel data:
+            var numVoxelData = reader.ReadUInt32();
+            // var voxelData = new VoxelData[numVoxelData];
+            for (uint j = 0; j < numVoxelData; j++) {
+                var d = reader.ReadUInt16();
+                // voxelData[j] = d;
+                voxelData.Add(d);
+            }
+
+            // return new SaveChunk(key, voxelData, colors);
+            return key;
         }
     }
 
@@ -154,6 +203,8 @@ public class WorldSaveFile : ScriptableObject {
         }
         
         // Serialize:
+        Profiler.BeginSample("CompressVoxelWorldChunks");
+        
         using var memStream = new MemoryStream();
         using var writer = new BinaryWriter(memStream);
         
@@ -161,34 +212,16 @@ public class WorldSaveFile : ScriptableObject {
         const ushort version = 1;
         writer.Write(version);
         
+        // Serialize chunks:
         writer.Write((uint)savedChunks.Count);
         foreach (var chunk in savedChunks) {
-            // Write key:
-            writer.Write(chunk.key.x);
-            writer.Write(chunk.key.y);
-            writer.Write(chunk.key.z);
-            
-            // Write colors:
-            writer.Write((uint)chunk.color.Length);
-            foreach (var c in chunk.color) {
-                writer.Write(c);
-            }
-            
-            // Write voxel data:
-            writer.Write((uint)chunk.data.Length);
-            foreach (var d in chunk.data) {
-                writer.Write(d);
-            }
+            chunk.Serialize(writer, version);
         }
         
         // Compress:
-        using var compressedStream = new MemoryStream();
-        using var compressor = new DeflateStream(compressedStream, CompressionMode.Compress);
-        memStream.Flush();
-        memStream.Seek(0, SeekOrigin.Begin);
-        memStream.CopyTo(compressor);
-        compressor.Close();
-        chunksCompressed = compressedStream.ToArray();
+        chunksCompressed = VoxelCompressUtil.CompressToByteArray(memStream);
+        
+        Profiler.EndSample();
 
         Debug.Log($"Saved {counter} chunks to {name} (raw: {FormatDataSize(memStream.Length)}) (compressed: {FormatDataSize(chunksCompressed.Length)})");
     }
@@ -205,6 +238,37 @@ public class WorldSaveFile : ScriptableObject {
             }
         }
         return null;
+    }
+
+    private void LoadChunkIntoVoxelWorld(VoxelWorld world, Dictionary<BlockId, BlockId> blockRemapping, Vector3Int key, IList<VoxelData> data, IList<uint> color) {
+        VoxelWorldStuff.Chunk writeChunk = VoxelWorld.CreateChunk(key);
+        writeChunk.SetWorld(world);
+
+        for (int i = 0; i < data.Count; i++) {
+            BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
+            ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
+                                
+            bool found = blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
+            if (found) {
+
+                VoxelData vox = ((VoxelData)(updatedBlockId | extraBits));
+
+#if UNITY_EDITOR
+                //Fix the solid bit - we have to do this in case someone has already placed a bunch of blocks and then changes their solid bit, which is usually only set when the voxel is written
+                var definition = world.voxelBlocks.GetBlockDefinitionFromBlockId(updatedBlockId);
+                vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid);
+#endif
+
+                writeChunk.readWriteVoxel[i] = vox;
+                if (color != null && color.Count > 0) {
+                    writeChunk.color[i] = color[i];
+                }
+            } else {
+                Debug.LogWarning(
+                    $"Warning: Block {fileBlockId} not found in world block definitions - Replacing with air.");
+            }
+        }
+        world.chunks[key] = writeChunk;
     }
 
     public void LoadIntoVoxelWorld(VoxelWorld world) {
@@ -231,85 +295,50 @@ public class WorldSaveFile : ScriptableObject {
             }
         }
 
-        var loadedChunks = chunks;
-
         // If compressed data is available, use that instead:
         if (chunksCompressed.Length > 0) {
-            loadedChunks = new List<SaveChunk>();
+            Profiler.BeginSample("DecompressVoxelWorldChunks");
             
             // Decompress and deserialize chunks:
-            using var compressedStream = new MemoryStream(chunksCompressed);
-            using var decompressedStream = new MemoryStream();
-            using var decompressor = new DeflateStream(compressedStream, CompressionMode.Decompress);
-            decompressor.CopyTo(decompressedStream);
-            decompressor.Close();
+            Profiler.BeginSample("Decompress");
+            using var decompressedStream = VoxelCompressUtil.DecompressToMemoryStream(chunksCompressed);
+            Profiler.EndSample();
 
-            decompressedStream.Seek(0, SeekOrigin.Begin);
             var reader = new BinaryReader(decompressedStream);
             var version = reader.ReadUInt16();
             var numChunks = reader.ReadUInt32();
+            var data = new List<VoxelData>();
+            var color = new List<uint>();
             for (uint i = 0; i < numChunks; i++) {
-                // Read key:
-                var x = reader.ReadInt32();
-                var y = reader.ReadInt32();
-                var z = reader.ReadInt32();
-                var key = new Vector3Int(x, y, z);
+                Profiler.BeginSample("Deserialize");
+                data.Clear();
+                color.Clear();
+                var key = SaveChunk.Deserialize(reader, version, data, color);
+                Profiler.EndSample();
+                
+                counter += 1;
+                // var key = chunk.key;
+                // var data = chunk.data;
+                // var color = chunk.color;
+                
+                // loadedChunks.Add(chunk);
+                Profiler.BeginSample("LoadChunkIntoVoxelWorld");
+                LoadChunkIntoVoxelWorld(world, blockRemapping, key, data, color);
+                Profiler.EndSample();
+            }
+            
+            Profiler.EndSample();
+        } else {
+            foreach (var chunk in chunks) {
+                counter += 1;
+                var key = chunk.key;
+                var data = chunk.data;
+                var color = chunk.color;
 
-                // Read colors:
-                var numColors = reader.ReadUInt32();
-                var colors = new uint[numColors];
-                for (uint j = 0; j < numColors; j++) {
-                    var c = reader.ReadUInt32();
-                    colors[j] = c;
-                }
-
-                // Read voxel data:
-                var numVoxelData = reader.ReadUInt32();
-                var voxelData = new VoxelData[numVoxelData];
-                for (uint j = 0; j < numVoxelData; j++) {
-                    var d = reader.ReadUInt16();
-                    voxelData[j] = d;
-                }
-
-                loadedChunks.Add(new SaveChunk(key, voxelData, colors));
+                LoadChunkIntoVoxelWorld(world, blockRemapping, key, data, color);
             }
         }
 
-        foreach (var chunk in loadedChunks) {
-            counter += 1;
-            var key = chunk.key;
-            var data = chunk.data;
-            var color = chunk.color;
-
-            VoxelWorldStuff.Chunk writeChunk = VoxelWorld.CreateChunk(key);
-            writeChunk.SetWorld(world);
-
-            for (int i = 0; i < data.Length; i++) {
-                BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
-                ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
-                                
-                bool found = blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
-                if (found) {
-
-                    VoxelData vox = ((VoxelData)(updatedBlockId | extraBits));
-
-#if UNITY_EDITOR
-                    //Fix the solid bit - we have to do this in case someone has already placed a bunch of blocks and then changes their solid bit, which is usually only set when the voxel is written
-                    var definition = world.voxelBlocks.GetBlockDefinitionFromBlockId(updatedBlockId);
-                    vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid);
-#endif
-
-                    writeChunk.readWriteVoxel[i] = vox;
-                    if (color != null && color.Length > 0) {
-                        writeChunk.color[i] = color[i];
-                    }
-                } else {
-                    Debug.LogWarning(
-                        $"Warning: Block {fileBlockId} not found in world block definitions - Replacing with air.");
-                }
-            }
-            world.chunks[key] = writeChunk;
-        }
         Debug.Log("[Voxel World]: Loaded " + counter + " chunks.");
 
 
