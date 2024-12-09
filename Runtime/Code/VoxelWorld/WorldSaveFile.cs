@@ -7,7 +7,7 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
 
-[System.Serializable]
+[Serializable]
 [LuauAPI]
 public class WorldSaveFile : ScriptableObject {
     public List<SaveChunk> chunks = new List<SaveChunk>();
@@ -15,13 +15,13 @@ public class WorldSaveFile : ScriptableObject {
 
     public byte[] chunksCompressed;
 
-    [System.Serializable]
+    [Serializable]
     public struct BlockIdToScopedName {
         public BlockId id;
         public string name;
     }
 
-    [System.Serializable]
+    [Serializable]
     public struct SaveChunk {
         public Vector3Int key;
         public VoxelData[] data;
@@ -271,7 +271,7 @@ public class WorldSaveFile : ScriptableObject {
 
         //Todo: Load lighting settings
         world.chunks.Clear();
-        int counter = 0;
+        var counter = 0;
 
         Dictionary<BlockId, BlockId> blockRemapping = new();
 
@@ -292,28 +292,29 @@ public class WorldSaveFile : ScriptableObject {
 
         // If compressed data is available, use that instead:
         if (chunksCompressed.Length > 0) {
-            Profiler.BeginSample("DecompressVoxelWorldChunks");
+            Profiler.BeginSample("ReadVoxelWorldChunks");
             
             // Decompress and deserialize chunks:
-            Profiler.BeginSample("Decompress");
+            Profiler.BeginSample("DecompressChunks");
             using var decompressedStream = VoxelCompressUtil.DecompressToMemoryStream(chunksCompressed);
             Profiler.EndSample();
 
             var reader = new BinaryReader(decompressedStream);
             var version = reader.ReadUInt16();
             var numChunks = reader.ReadUInt32();
+            
             var data = new List<VoxelData>();
             var color = new List<uint>();
             for (uint i = 0; i < numChunks; i++) {
-                Profiler.BeginSample("Deserialize");
                 data.Clear();
                 color.Clear();
+                
+                Profiler.BeginSample("Deserialize");
                 var key = SaveChunk.Deserialize(reader, version, data, color);
                 Profiler.EndSample();
                 
                 counter += 1;
                 
-                // loadedChunks.Add(chunk);
                 Profiler.BeginSample("LoadChunkIntoVoxelWorld");
                 LoadChunkIntoVoxelWorld(world, blockRemapping, key, data, color);
                 Profiler.EndSample();
@@ -328,15 +329,14 @@ public class WorldSaveFile : ScriptableObject {
             }
         }
 
-        Debug.Log("[Voxel World]: Loaded " + counter + " chunks.");
-
-
+        Debug.Log($"[Voxel World]: Loaded {counter} chunks");
+        
         Profiler.EndSample();
     }
 
     public SaveChunk[] GetChunks() {
         // TODO: Build the chunks from the serialized data
-        Debug.LogWarning("GetChunks may not return any data if the data is serialized");
+        Debug.LogWarning("[Voxel World]: GetChunks may not return any data if the data is serialized");
         return this.chunks.ToArray();
     }
 
