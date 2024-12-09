@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Player;
+using UnityEngine;
 
 namespace UnityEditor.Build.Pipeline.Utilities
 {
@@ -101,7 +102,11 @@ namespace UnityEditor.Build.Pipeline.Utilities
             {
                 // For each dependency, add just the main representation as a reference
                 var representations = ContentBuildInterface.GetPlayerAssetRepresentations(dependency.guid, target);
-                collectedImmediateReferences.Add(representations.First());
+                if (representations.Length > 0) {
+                    collectedImmediateReferences.Add(representations.First());
+                } else {
+                    Debug.Log("Failed on guid: " + dependency.guid + ", filePath: " + dependency.filePath);
+                }
             }
             collectedImmediateReferences.UnionWith(encounteredDependencies);
             return collectedImmediateReferences.ToArray();
