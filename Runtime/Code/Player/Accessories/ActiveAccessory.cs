@@ -8,5 +8,6 @@ public class ActiveAccessory {
     public GameObject[] gameObjects;
     public MeshRenderer[] meshRenderers;
     public SkinnedMeshRenderer[] skinnedMeshRenderers;
+    public Renderer[] renderers;
     public MeshFilter[] meshFilters;
 }

@@ -59,12 +59,15 @@ public class AccessoryBuilder : MonoBehaviour
     private ActiveAccessory MakeActiveAccessoryFromAlreadyInstantiatedAccessory(AccessoryComponent accessoryComponent) {
         MeshRenderer[] meshRenderers;
         SkinnedMeshRenderer[] skinnedMeshRenderers;
+        Renderer[] renderers;
         if (accessoryComponent.skinnedToCharacter) {
             meshRenderers = Array.Empty<MeshRenderer>();
             skinnedMeshRenderers = accessoryComponent.GetComponentsInChildren<SkinnedMeshRenderer>();
+            renderers = skinnedMeshRenderers;
         } else {
             meshRenderers = accessoryComponent.GetComponentsInChildren<MeshRenderer>();
             skinnedMeshRenderers = Array.Empty<SkinnedMeshRenderer>();
+            renderers = meshRenderers;
         }
 
         MeshFilter[] meshFilters = accessoryComponent.GetComponentsInChildren<MeshFilter>();
@@ -86,6 +89,7 @@ public class AccessoryBuilder : MonoBehaviour
             meshRenderers = meshRenderers,
             skinnedMeshRenderers = skinnedMeshRenderers,
             meshFilters = meshFilters,
+            renderers = renderers,
         };
         return activeAccessory;
     }
@@ -186,7 +190,6 @@ public class AccessoryBuilder : MonoBehaviour
     public ActiveAccessory AddSingleAccessory(AccessoryComponent accessoryTemplate, bool rebuildMeshImmediately) {
         return AddAccessories(new[] { accessoryTemplate }, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
     }
-
 
     [HideInInspector]
     public AccessoryOutfit currentOutfit;
@@ -316,6 +319,7 @@ public class AccessoryBuilder : MonoBehaviour
 
             MeshRenderer[] meshRenderers;
             SkinnedMeshRenderer[] skinnedMeshRenderers;
+            Renderer[] renderers;
 
             GameObject[] gameObjects;
             GameObject newAccessoryObj;
@@ -325,6 +329,7 @@ public class AccessoryBuilder : MonoBehaviour
                 newAccessoryObj = Instantiate(accessoryTemplate.gameObject, rig.transform);
                 skinnedMeshRenderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
                 meshRenderers = Array.Empty<MeshRenderer>();
+                renderers = skinnedMeshRenderers;
                 if (skinnedMeshRenderers.Length == 0) {
                     Debug.LogError("Accessory is marked as skinned but has no SkinnedMeshRenderers on it: " + accessoryTemplate.name);
                 }
@@ -335,6 +340,7 @@ public class AccessoryBuilder : MonoBehaviour
                 newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
                 meshRenderers = newAccessoryObj.GetComponentsInChildren<MeshRenderer>();
                 skinnedMeshRenderers = Array.Empty<SkinnedMeshRenderer>();
+                renderers = meshRenderers;
             }
             MeshFilter[] meshFilters = newAccessoryObj.GetComponentsInChildren<MeshFilter>();
 
@@ -356,6 +362,7 @@ public class AccessoryBuilder : MonoBehaviour
                 meshRenderers = meshRenderers,
                 skinnedMeshRenderers = skinnedMeshRenderers,
                 meshFilters = meshFilters,
+                renderers = renderers,
             };
             addedAccessories.Add(activeAccessory);
             activeAccessories[accessoryTemplate.accessorySlot] = activeAccessory;
@@ -456,13 +463,11 @@ public class AccessoryBuilder : MonoBehaviour
 
                 this.meshCombiner.AddSourceReference(activeAccessory);
 
-                List<Renderer> allRenderers = new List<Renderer>(activeAccessory.skinnedMeshRenderers);
-                allRenderers.AddRange(activeAccessory.meshRenderers);
                 foreach (var ren in activeAccessory.skinnedMeshRenderers) {
                     ren.rootBone = rig.bodyMesh.rootBone;
                     ren.bones = rig.bodyMesh.bones;
                 }
-                foreach (var ren in allRenderers) {
+                foreach (var ren in activeAccessory.renderers) {
                     isCombined = false;
                     if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
                             acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && !firstPerson) {

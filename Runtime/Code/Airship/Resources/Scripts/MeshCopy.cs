@@ -89,11 +89,11 @@ namespace Code.Airship.Resources.Scripts {
 
 
         //Runs on the main thread. Probably a great source of caching and optimisations
-        public MeshCopy(Mesh mesh, Material[] materials, Transform hostTransform = null, Transform[] skinnedBones = null, Transform skinnedRootBone = null, bool warn = true) {
-            if (mesh == null) {
-                Debug.LogWarning("Null mesh on mesh copy");
-                return;
-            }
+        public MeshCopy(Mesh mesh, Material[] materials, Transform hostTransform, Transform[] skinnedBones = null, Transform skinnedRootBone = null, bool warn = true) {
+            // if (mesh == null) {
+            //     Debug.LogWarning("Null mesh on mesh copy");
+            //     return;
+            // }
 
             //See if we have tangent data, otherwise build it
             if (mesh.tangents.Length == 0) {
@@ -236,7 +236,7 @@ namespace Code.Airship.Resources.Scripts {
                 rootBone = skinnedRootBone;
             }
 
-            int instancePropertyID = Shader.PropertyToID("_BaseColor");
+            // int instancePropertyID = Shader.PropertyToID("_BaseColor");
 
             for (int i = 0; i < mesh.subMeshCount; i++) {
                 SubMesh subMesh = new();
@@ -904,11 +904,9 @@ namespace Code.Airship.Resources.Scripts {
             if (activeAccessory.meshRenderers.Length > 0) {
                 int i = 0;
                 foreach (var meshRenderer in activeAccessory.meshRenderers) {
-                    Debug.Log("Loading mesh renderer: " + meshRenderer.gameObject.name);
                     MeshCopy meshCopy = new MeshCopy(activeAccessory.meshFilters[i].sharedMesh, meshRenderer.sharedMaterials, meshRenderer.transform);
 
-                    MaterialColorURP matColor = meshRenderer.gameObject.GetComponent<MaterialColorURP>();
-                    if (matColor) {
+                    if (meshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
                         meshCopy.ExtractMaterialColor(meshRenderer.gameObject, matColor);
                     }
 
@@ -917,12 +915,10 @@ namespace Code.Airship.Resources.Scripts {
                 }
             } else if (activeAccessory.skinnedMeshRenderers.Length > 0) {
                 foreach (var skinnedMeshRenderer in activeAccessory.skinnedMeshRenderers) {
-                    Debug.Log("Loading skinned mesh renderer: " + skinnedMeshRenderer.gameObject.name);
                     //See if theres a MaterialColor on this gameObject
-                    MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinnedMeshRenderer.gameObject.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
+                    MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinnedMeshRenderer.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
 
-                    MaterialColorURP matColor = skinnedMeshRenderer.gameObject.GetComponent<MaterialColorURP>();
-                    if (matColor) {
+                    if (skinnedMeshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
                         meshCopy.ExtractMaterialColor(skinnedMeshRenderer.gameObject, matColor);
                     }
 
