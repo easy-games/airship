@@ -190,9 +190,14 @@ public class AccessoryBuilder : MonoBehaviour
     [HideInInspector]
     public AccessoryOutfit currentOutfit;
     public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
+        return this.EquipAccessoryOutfit(outfit, rebuildMeshImmediately, false);
+    }
+
+    [HideFromTS]
+    public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately, bool forceSkinColor) {
         this.currentOutfit = outfit;
-        SetSkinColor(outfit.skinColor, false);
-        if(outfit.faceDecal?.decalTexture) SetFaceTexture(outfit.faceDecal.decalTexture);
+        if (forceSkinColor || outfit.forceSkinColor) SetSkinColor(outfit.skinColor, false);
+        if (outfit.faceDecal?.decalTexture) SetFaceTexture(outfit.faceDecal.decalTexture);
         return AddAccessories(outfit.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
     }
 

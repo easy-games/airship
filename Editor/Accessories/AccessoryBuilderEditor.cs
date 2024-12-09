@@ -24,7 +24,7 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         if (GUILayout.Button("Equip Referenced Outfit")) {
             if(builder.currentOutfit != null){
                 Debug.Log("Equipping outfit " + builder.currentOutfit.name);
-                builder.EquipAccessoryOutfit(builder.currentOutfit, true);
+                builder.EquipAccessoryOutfit(builder.currentOutfit, true, true);
             }
         }
         
