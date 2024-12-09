@@ -486,7 +486,9 @@ namespace Airship {
                 }
             }
 
-            Debug.Log($"LoadMeshCopies {stBase.Elapsed.TotalMilliseconds + stAccessories.Elapsed.TotalMilliseconds} ms (base: " + stBase.Elapsed.TotalMilliseconds + " ms" + ", accessories: " + stAccessories.Elapsed.TotalMilliseconds + " ms)");
+            if (debugText) {
+                Debug.Log($"LoadMeshCopies {stBase.Elapsed.TotalMilliseconds + stAccessories.Elapsed.TotalMilliseconds} ms (base: " + stBase.Elapsed.TotalMilliseconds + " ms" + ", accessories: " + stAccessories.Elapsed.TotalMilliseconds + " ms)");
+            }
         }
 
         public void RemoveBone(string boneName) {

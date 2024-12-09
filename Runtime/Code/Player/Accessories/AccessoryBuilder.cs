@@ -42,18 +42,14 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void Start() {
-        if(!enabled){
-            return;
-        }
-        
         //Have to do it here instead of OnEnable so everything gets initialized
-        if(currentOutfit){
-            // print("Loading avatar current outfit: " + this.gameObject.name);
-            var pendingOutfit = currentOutfit;
-            //Apply outfit skin if provided
-            RemoveClothingAccessories(false);
-            EquipAccessoryOutfit(pendingOutfit, true);
-        }
+        // if (currentOutfit){
+        //     // print("Loading avatar current outfit: " + this.gameObject.name);
+        //     var pendingOutfit = currentOutfit;
+        //     //Apply outfit skin if provided
+        //     RemoveClothingAccessories(false);
+        //     EquipAccessoryOutfit(pendingOutfit, true);
+        // }
     }
 
     private ActiveAccessory MakeActiveAccessoryFromAlreadyInstantiatedAccessory(AccessoryComponent accessoryComponent) {
@@ -195,7 +191,7 @@ public class AccessoryBuilder : MonoBehaviour
     public AccessoryOutfit currentOutfit;
     public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
         this.currentOutfit = outfit;
-        if (outfit.forceSkinColor) SetSkinColor(outfit.skinColor, false);
+        SetSkinColor(outfit.skinColor, false);
         if(outfit.faceDecal?.decalTexture) SetFaceTexture(outfit.faceDecal.decalTexture);
         return AddAccessories(outfit.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
     }

@@ -363,7 +363,7 @@ namespace Editor.Accessories {
         }
 
         private void SaveCurrentAccessory() {
-            if(!_referenceAccessoryComponent){
+            if (!_referenceAccessoryComponent) {
                 Debug.LogError("Trying to save with an empty accessory component");
                 return;
             }
