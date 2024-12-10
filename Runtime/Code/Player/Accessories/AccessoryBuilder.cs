@@ -22,6 +22,8 @@ public class AccessoryBuilder : MonoBehaviour
 
     private Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new Dictionary<AccessorySlot, ActiveAccessory>();
 
+    [NonSerialized] private Color skinColor;
+
     //EVENTS
     /// <summary>
     /// Called whenever the accessory builder combines the mesh
@@ -418,16 +420,22 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately = true) {
-        SetMeshColor(rig.bodyMesh, color);
-        SetMeshColor(rig.headMesh, color);
-        SetMeshColor(rig.armsMesh, color);
-
+        this.skinColor = color;
+        // foreach (var mesh in this.rig.bodyMeshLOD) {
+        //     SetMeshColor(mesh, color);
+        // }
+        // foreach (var mesh in this.rig.armsMeshLOD) {
+        //     SetMeshColor(mesh, color);
+        // }
+        // foreach (var mesh in this.rig.headMeshLOD) {
+        //     SetMeshColor(mesh, color);
+        // }
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
     private void SetMeshColor(Renderer ren, Color color) {
         var mat = ren.gameObject.GetComponent<MaterialColorURP>();
-        if(mat){
+        if (mat) {
             var colors = mat.colorSettings;
             colors[0].baseColor = color;
             mat.colorSettings = colors;
@@ -532,7 +540,7 @@ public class AccessoryBuilder : MonoBehaviour
             }
 
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
-            meshCombiner.CombineMeshes();
+            meshCombiner.CombineMeshes(this.skinColor);
         } else {
             // print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();

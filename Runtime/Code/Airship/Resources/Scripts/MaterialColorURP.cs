@@ -150,7 +150,6 @@ public class MaterialColorURP : MonoBehaviour {
             ren.SetPropertyBlock(null, i);
         }
 
-
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             Material mat = ren.sharedMaterials[i];
             if (mat == null) {
