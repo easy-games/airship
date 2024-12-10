@@ -318,55 +318,83 @@ public class AccessoryBuilder : MonoBehaviour
                 RemoveAccessorySlot(accessoryTemplate.accessorySlot, false);
             }
 
-            MeshRenderer[] meshRenderers;
-            SkinnedMeshRenderer[] skinnedMeshRenderers;
-            Renderer[] renderers;
-
-            GameObject[] gameObjects;
-            GameObject newAccessoryObj;
-            if (accessoryTemplate.skinnedToCharacter) {
-                //Anything for skinned meshes connected to the main character
-                //Create the prefab at the root of the rig
-                newAccessoryObj = Instantiate(accessoryTemplate.gameObject, rig.transform);
-                skinnedMeshRenderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
-                meshRenderers = Array.Empty<MeshRenderer>();
-                renderers = skinnedMeshRenderers;
-                if (skinnedMeshRenderers.Length == 0) {
-                    Debug.LogError("Accessory is marked as skinned but has no SkinnedMeshRenderers on it: " + accessoryTemplate.name);
+            var lods = new List<ActiveAccessory>();
+            for (int lodLevel = 0; lodLevel < 2; lodLevel++) {
+                if (lodLevel - 1 >= accessoryTemplate.meshLods.Count) {
+                    break;
                 }
-            } else {
-                //Anything for static meshes
-                var parent = rig.GetSlotTransform(accessoryTemplate.accessorySlot);
-                //Create the prefab on the joint
-                newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
-                meshRenderers = newAccessoryObj.GetComponentsInChildren<MeshRenderer>();
-                skinnedMeshRenderers = Array.Empty<SkinnedMeshRenderer>();
-                renderers = meshRenderers;
+                // static mesh lods not supported yet.
+                if (!accessoryTemplate.skinnedToCharacter && lodLevel > 0) continue;
+
+                MeshRenderer[] meshRenderers;
+                SkinnedMeshRenderer[] skinnedMeshRenderers;
+                Renderer[] renderers;
+
+                GameObject[] gameObjects;
+                GameObject newAccessoryObj;
+                if (accessoryTemplate.skinnedToCharacter) {
+                    // Anything for skinned meshes connected to the main character
+                    // Create the prefab at the root of the rig
+                    newAccessoryObj = Instantiate(accessoryTemplate.gameObject, rig.transform);
+                    skinnedMeshRenderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
+                    meshRenderers = Array.Empty<MeshRenderer>();
+                    renderers = skinnedMeshRenderers;
+                    if (lodLevel > 0) {
+                        newAccessoryObj.name = $"{accessoryTemplate.gameObject.name} (LOD {lodLevel})";
+                        skinnedMeshRenderers[0].sharedMesh = accessoryTemplate.meshLods[lodLevel - 1];
+                    }
+
+                    if (skinnedMeshRenderers.Length == 0) {
+                        Debug.LogError("Accessory is marked as skinned but has no SkinnedMeshRenderers on it: " + accessoryTemplate.name);
+                    }
+                } else {
+                    // Anything for static meshes
+                    var parent = rig.GetSlotTransform(accessoryTemplate.accessorySlot);
+                    // Create the prefab on the joint
+                    newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
+                    meshRenderers = newAccessoryObj.GetComponentsInChildren<MeshRenderer>();
+                    skinnedMeshRenderers = Array.Empty<SkinnedMeshRenderer>();
+                    renderers = meshRenderers;
+                }
+                MeshFilter[] meshFilters = newAccessoryObj.GetComponentsInChildren<MeshFilter>();
+
+                // Remove (Clone) from name
+                if (lodLevel == 0) {
+                    newAccessoryObj.name = accessoryTemplate.gameObject.name;
+                }
+
+                // Collect game object references
+                var goList = new List<GameObject>();
+                for (var i = 0; i < meshRenderers.Length; i++) {
+                    goList.Add(meshRenderers[i].gameObject);
+                    meshRenderers[i].gameObject.layer = gameObject.layer;
+                }
+
+                // Any type of renderer
+                var activeAccessory = new ActiveAccessory {
+                    AccessoryComponent = newAccessoryObj.GetComponent<AccessoryComponent>(),
+                    rootTransform = newAccessoryObj.transform,
+                    gameObjects = goList.ToArray(),
+                    meshRenderers = meshRenderers,
+                    skinnedMeshRenderers = skinnedMeshRenderers,
+                    meshFilters = meshFilters,
+                    renderers = renderers,
+                    lodLevel = lodLevel,
+                    maxLodLevel = accessoryTemplate.meshLods.Count,
+                    lods = Array.Empty<ActiveAccessory>(),
+                };
+                if (lodLevel == 0) {
+                    addedAccessories.Add(activeAccessory);
+                    activeAccessories[accessoryTemplate.accessorySlot] = activeAccessory;
+                } else {
+                    // LOD accessories exist in memory but don't get added to the activeAccessories list.
+                    // They are only immediately used to generate mesh information.
+                    // They are cleaned up because each lod is added
+                    // to the lods list in LOD0 active accessory.
+                    lods.Add(activeAccessory);
+                }
             }
-            MeshFilter[] meshFilters = newAccessoryObj.GetComponentsInChildren<MeshFilter>();
-
-            //Remove (Clone) from name
-            newAccessoryObj.name = accessoryTemplate.gameObject.name;
-
-            //Collect game object references
-            gameObjects = new GameObject[meshRenderers.Length];
-            for (var i = 0; i < meshRenderers.Length; i++) {
-                gameObjects[i] = meshRenderers[i].gameObject;
-                meshRenderers[i].gameObject.layer = gameObject.layer;
-            }
-
-            //Any type of renderer
-            var activeAccessory = new ActiveAccessory {
-                AccessoryComponent = newAccessoryObj.GetComponent<AccessoryComponent>(),
-                rootTransform = newAccessoryObj.transform,
-                gameObjects = gameObjects,
-                meshRenderers = meshRenderers,
-                skinnedMeshRenderers = skinnedMeshRenderers,
-                meshFilters = meshFilters,
-                renderers = renderers,
-            };
-            addedAccessories.Add(activeAccessory);
-            activeAccessories[accessoryTemplate.accessorySlot] = activeAccessory;
+            activeAccessories[accessoryTemplate.accessorySlot].lods = lods.ToArray();
         }
 
         if (rebuildMeshImmediately) {
@@ -468,6 +496,14 @@ public class AccessoryBuilder : MonoBehaviour
                     ren.rootBone = rig.bodyMesh.rootBone;
                     ren.bones = rig.bodyMesh.bones;
                 }
+
+                foreach (var lod in activeAccessory.lods) {
+                    foreach (var ren in lod.skinnedMeshRenderers) {
+                        ren.rootBone = rig.bodyMesh.rootBone;
+                        ren.bones = rig.bodyMesh.bones;
+                    }
+                }
+
                 foreach (var ren in activeAccessory.renderers) {
                     isCombined = false;
                     if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
@@ -487,6 +523,11 @@ public class AccessoryBuilder : MonoBehaviour
                     }
 
                     ren.gameObject.SetActive(!isCombined);
+                }
+                foreach (var lod in activeAccessory.lods) {
+                    foreach (var ren in lod.skinnedMeshRenderers) {
+                        ren.gameObject.SetActive(false);
+                    }
                 }
             }
 

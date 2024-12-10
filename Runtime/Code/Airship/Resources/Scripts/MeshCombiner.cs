@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Threading;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using Code.Airship.Resources.Scripts;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
@@ -75,7 +76,7 @@ namespace Airship {
             meshCache.Clear();
         }
 
-        public int lodCount => this.rig.armsMeshLOD.Length;
+        public int lodCount = 3;
 
         // Used by TS
         public static void RemoveMeshCache(string cacheId) {
@@ -97,8 +98,18 @@ namespace Airship {
         }
 
         public void AddSourceReference(ActiveAccessory activeAccessory) {
-            foreach (var lodSourceRef in this.sourceReferences) {
-                lodSourceRef.Add(new MeshCopyReference(activeAccessory));
+            for (int lodLevel = 0; lodLevel < this.lodCount; lodLevel++) {
+                var lodSourceRef = this.sourceReferences[lodLevel];
+
+                if (lodLevel == 0 || activeAccessory.lods.Length == 0) {
+                    lodSourceRef.Add(new MeshCopyReference(activeAccessory));
+                } else {
+                    if (activeAccessory.lods.Length > lodLevel - 1) {
+                        lodSourceRef.Add(new MeshCopyReference(activeAccessory.lods[lodLevel - 1]));
+                    } else {
+                        lodSourceRef.Add(new MeshCopyReference(activeAccessory.lods.Last()));
+                    }
+                }
             }
         }
 

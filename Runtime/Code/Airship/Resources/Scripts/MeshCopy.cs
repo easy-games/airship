@@ -752,6 +752,7 @@ namespace Code.Airship.Resources.Scripts {
                         }
                     }
 
+                    // Debug.Log("doing bones: " + source.sourceTransform.name);
                     foreach (BoneWeight weight in source.boneWeights) {
                         BoneWeight newWeight = weight;
                         newWeight.boneIndex0 = boneRemappings[newWeight.boneIndex0];
