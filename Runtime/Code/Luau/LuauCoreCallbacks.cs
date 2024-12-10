@@ -1249,10 +1249,10 @@ public partial class LuauCore : MonoBehaviour {
             returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
         } catch (TargetInvocationException e) {
             Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException.Message);
+            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException);
         } catch (Exception e) {
             Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.Message);
+            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
         }
         Profiler.EndSample();
 

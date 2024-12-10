@@ -291,7 +291,7 @@ public class WorldSaveFile : ScriptableObject {
         }
 
         // If compressed data is available, use that instead:
-        if (chunksCompressed.Length > 0) {
+        if (chunksCompressed != null && chunksCompressed.Length > 0) {
             Profiler.BeginSample("ReadVoxelWorldChunks");
             
             // Decompress and deserialize chunks:
