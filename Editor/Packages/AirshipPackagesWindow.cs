@@ -30,7 +30,8 @@ using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
 
 namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
-        private static Dictionary<string, float> urlUploadProgress = new();
+        private static Dictionary<string, long> urlUploadProgress = new();
+        private static long uploadSizeBytes = 0; 
         private static Dictionary<string, double> packageUpdateStartTime = new();
         private static string addPackageError = "";
 
@@ -563,6 +564,7 @@ namespace Editor.Packages {
             var split = packageDoc.id.Split("/");
             var orgScope = split[0].ToLower();
             var packageIdOnly = split[1];
+            uploadSizeBytes = 0;
             var uploadList = new List<IEnumerator>() {
 			    UploadSingleGameFile(urls.source, zippedSourceAssetsZipPath, packageDoc, true),
                 UploadSingleGameFile(urls.code, codeZipPath, packageDoc, true),
@@ -604,7 +606,7 @@ namespace Editor.Packages {
 
 		    // track progress
 		    bool finishedUpload = false;
-		    float totalProgress = 0;
+		    long totalProgress = 0;
 		    long prevCheckTime = 0;
 		    while (!finishedUpload) {
 			    long diff = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - prevCheckTime;
@@ -620,7 +622,6 @@ namespace Editor.Packages {
 			    prevCheckTime = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000);
 
 			    totalProgress = 0;
-			    finishedUpload = true;
                 foreach (var pair in urlUploadProgress) {
                     if (float.IsNaN(pair.Value)) {
                         Debug.LogError("Upload progress was NaN.");
@@ -631,14 +632,17 @@ namespace Editor.Packages {
                         Debug.LogError("Upload failed.");
                         yield break;
                     }
-
-                    if (pair.Value < 1) {
-					    finishedUpload = false;
-				    }
+                    
 				    totalProgress += pair.Value;
 			    }
-			    totalProgress /= urlUploadProgress.Count;
-			    Debug.Log("Upload Progress: " + Math.Floor(totalProgress * 100) + "%");
+
+                finishedUpload = totalProgress == uploadSizeBytes;
+			    var uploadPercent = (totalProgress * 100) / uploadSizeBytes;
+
+                var uploadSizeMb = Math.Round(uploadSizeBytes / (1000.0d * 1000), 1);
+                var uploadProgressMb = Math.Round(totalProgress / (1_000_000f), 1);
+                // Debug.Log(totalProgress);
+			    Debug.Log($"Upload Progress: " + uploadPercent + $"% ({uploadProgressMb}/{uploadSizeMb}mb)");
             }
 
 		    Debug.Log("Completed upload. Finalizing publish...");
@@ -734,6 +738,7 @@ namespace Editor.Packages {
                 urlUploadProgress[url] = -2;
                 yield break;
             }
+            uploadSizeBytes += bytes.Length;
 
             List<IMultipartFormSection> formData = new();
             formData.Add(new MultipartFormFileSection(
@@ -744,10 +749,10 @@ namespace Editor.Packages {
 
             using var req = UnityWebRequest.Put(url, bytes);
             req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
-            yield return req.SendWebRequest();
+            req.SendWebRequest();
 
             while (!req.isDone) {
-                urlUploadProgress[url] = req.uploadProgress;
+                urlUploadProgress[url] = (long) req.uploadedBytes;
                 yield return new WaitForSecondsRealtime(0.5f);
             }
 
@@ -756,7 +761,7 @@ namespace Editor.Packages {
                 urlUploadProgress[url] = -2;
             }
 
-            urlUploadProgress[url] = 1;
+            urlUploadProgress[url] = bytes.Length;
         }
         
         public static bool IsModifyingPackages => activeDownloads.Count > 0 || activeRemovals.Count > 0;
