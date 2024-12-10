@@ -72,8 +72,11 @@ namespace Luau {
         private static bool s_debugging = false;
 
         public static int GetOrCreateObjectId(System.Object obj) {
-            bool found = s_reverseObjectKeys.TryGetValue(obj, out int key);
+            var found = s_reverseObjectKeys.TryGetValue(obj, out int key);
             if (found) {
+                if (s_cleanUpKeys.Contains(key)) {
+                    s_cleanUpKeys.Remove(key);
+                }
                 return key;
             }
 
