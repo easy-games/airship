@@ -714,7 +714,6 @@ namespace Editor.Packages {
         }
 
         private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {
-            urlUploadProgress[url] = 0;
             var gameConfig = GameConfig.Load();
             var buildFolder = Path.Join(AssetBridge.PackagesPath,
                 $"{packageDoc.id}_vLocalBuild");
@@ -726,7 +725,6 @@ namespace Editor.Packages {
 
             if (!File.Exists(bundleFilePath)) {
                 Debug.Log("Bundle file did not exist. Skipping. Path: " + bundleFilePath);
-                urlUploadProgress[url] = 1;
                 yield break;
             }
 
@@ -738,6 +736,7 @@ namespace Editor.Packages {
                 urlUploadProgress[url] = -2;
                 yield break;
             }
+            urlUploadProgress[url] = 0;
             uploadSizeBytes += bytes.Length;
 
             List<IMultipartFormSection> formData = new();
