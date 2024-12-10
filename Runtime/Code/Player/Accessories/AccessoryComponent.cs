@@ -117,6 +117,8 @@ namespace Code.Player.Accessories {
         [SerializeField]
         public List<Mesh> meshLods = new();
 
+        [SerializeField] public MaterialColorURP[] matColors;
+
         [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
         [Obsolete]
         public bool canMeshCombine = false;
@@ -158,6 +160,10 @@ namespace Code.Player.Accessories {
 #else
             return this.serverClassId;
 #endif
+        }
+
+        private void OnValidate() {
+            this.matColors = GetComponentsInChildren<MaterialColorURP>();
         }
 
         public void Copy(AccessoryComponent other) {

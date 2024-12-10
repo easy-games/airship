@@ -18,7 +18,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
 
     private void OnEnable() {
         var accessoryComponent = (AccessoryComponent)target;
-        foldout = accessoryComponent.bodyMask > 0;
+        this.foldout = accessoryComponent.bodyMask > 0;
     }
 
     [MenuItem("Airship/Avatar/Generate Avatar Items On Server")]
@@ -120,18 +120,29 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
     }
 
     public static void GenerateLODs(AccessoryComponent target) {
-        Mesh sourceMesh;
-        if (target.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer)) {
-            sourceMesh = skinnedMeshRenderer.sharedMesh;
-        } else if (target.TryGetComponent<MeshFilter>(out var meshFilter)) {
-            sourceMesh = meshFilter.sharedMesh;
-        } else {
-            Debug.LogError("Must have a MeshFilter or SkinnedMeshRenderer attached to generate LODs.");
+        Mesh sourceMesh = null;
+
+        if (target.GetComponentsInChildren<MeshFilter>().Length > 1) {
+            Debug.LogError("Generate LODs only works with one MeshFilter.");
+            return;
+        }
+        if (target.GetComponentsInChildren<MeshRenderer>().Length > 1) {
+            Debug.LogError("Generate LODs only works with one MeshRenderer.");
             return;
         }
 
+        SkinnedMeshRenderer skinnedMeshRenderer = target.GetComponentInChildren<SkinnedMeshRenderer>();
+        if (skinnedMeshRenderer) {
+            sourceMesh = skinnedMeshRenderer.sharedMesh;
+        }
         if (sourceMesh == null) {
-            Debug.LogError("Missing mesh.");
+            MeshFilter meshFilter = target.GetComponentInChildren<MeshFilter>();
+            if (meshFilter) {
+                sourceMesh = meshFilter.sharedMesh;
+            }
+        }
+        if (sourceMesh == null) {
+            Debug.LogError("Must have a MeshFilter or SkinnedMeshRenderer attached with mesh assigned to generate LODs.");
             return;
         }
 
@@ -180,7 +191,74 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         }
 
         MakeLOD(1, 0.3f);
-        MakeLOD(2, 0.03f);
+        MakeLOD(2, 0.06f);
+
+        if (!target.skinnedToCharacter) {
+            var renderer = target.GetComponentInChildren<Renderer>();
+
+            // setup LOD group
+            LODGroup lodGroup = renderer.gameObject.GetComponent<LODGroup>();
+            if (lodGroup == null) {
+                lodGroup = renderer.gameObject.AddComponent<LODGroup>();
+
+                float[] screenSizes = new[] { 0.20f, 0.05f, 0.0029f };
+                var newLods = new List<LOD>();
+                GameObject lod0 = new GameObject($"LOD 0") {
+                    transform = {
+                        parent = renderer.transform,
+                        localPosition = Vector3.zero,
+                        localRotation = Quaternion.identity,
+                        localScale = Vector3.one,
+                    }
+                };
+                {
+                    // Setup LOD0
+                    if (renderer is MeshRenderer meshRenderer) {
+                        var meshFilter = meshRenderer.GetComponent<MeshFilter>();
+                        var newMeshFilter = lod0.AddComponent<MeshFilter>();
+                        newMeshFilter.sharedMesh = meshFilter.sharedMesh;
+
+                        var newRenderer = lod0.AddComponent<MeshRenderer>();
+                        newRenderer.sharedMaterials = renderer.sharedMaterials;
+
+                        if (renderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
+                            var newMatColor = lod0.AddComponent<MaterialColorURP>();
+                            newMatColor.CopyFrom(matColor);
+                            DestroyImmediate(matColor);
+                        }
+                        DestroyImmediate(renderer);
+                        DestroyImmediate(meshFilter);
+
+                        LOD lod = new LOD(screenSizes[0], new Renderer[]{ newRenderer });
+                        newLods.Add(lod);
+                    }
+                }
+
+                for (int i = 1; i <= 2; i++) {
+                    var newGO = Instantiate(lod0, lod0.transform.parent);
+                    newGO.name = $"LOD {i}";
+
+                    var meshFilter = newGO.GetComponentInChildren<MeshFilter>();
+                    meshFilter.sharedMesh = target.meshLods[i - 1];
+
+                    LOD lod = new LOD(screenSizes[i], newGO.GetComponentsInChildren<Renderer>());
+                    newLods.Add(lod);
+                }
+
+                // Destroy old renderers
+                foreach (var existingLOD in lodGroup.GetLODs()) {
+                    foreach (var r in existingLOD.renderers) {
+                        if (r) {
+                            DestroyImmediate(r);
+                        }
+                    }
+                }
+
+                lodGroup.SetLODs(newLods.ToArray());
+            }
+        }
+
+        EditorUtility.SetDirty(target);
     }
 
     public override void OnInspectorGUI() {
@@ -236,14 +314,12 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
 
         // Start a foldout
         EditorGUILayout.Space();
-        foldout = EditorGUILayout.Foldout(foldout, "Hide Body Parts");
-
-        if (foldout) {
+        this.foldout = EditorGUILayout.Foldout(this.foldout, "Hide Body Parts");
+        if (this.foldout) {
             EditorGUI.indentLevel++;
 
             // Show bools for all the hide bits
-            var accessoryComponent = (AccessoryComponent)target;
-            int hideBits = accessoryComponent.bodyMask;
+            int hideBits = myTarget.bodyMask;
 
             // Display them based on the sort order in BodyMaskInspectorData
             foreach (var maskData in AccessoryComponent.BodyMaskInspectorDatas) {
@@ -263,9 +339,9 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
                 }
             }
 
-            if (hideBits != accessoryComponent.bodyMask) {
-                accessoryComponent.bodyMask = hideBits;
-                EditorUtility.SetDirty(accessoryComponent);
+            if (hideBits != myTarget.bodyMask) {
+                myTarget.bodyMask = hideBits;
+                EditorUtility.SetDirty(myTarget);
             }
 
             EditorGUI.indentLevel--;
@@ -282,17 +358,21 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
     }
 
     #if AIRSHIP_INTERNAL
-    [MenuItem("Airship/Internal/Generate All Accessory LODs")]
+    [MenuItem("Airship/Internal/Generate Skinned Accessory LODs")]
     public static void GenerateLODsForAllAccessories() {
         var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(
             "Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset"
         );
-        Debug.Log($"Generating LODs for {collection.accessories.Length} accessories...");
+
+        Debug.Log($"Generating LODs...");
         var st = Stopwatch.StartNew();
+        int counter = 0;
         foreach (var accessory in collection.accessories) {
+            if (!accessory.skinnedToCharacter) continue;
             GenerateLODs(accessory);
+            counter++;
         }
-        Debug.Log($"<color=green>Finished generating LODs in {st.ElapsedMilliseconds} ms!");
+        Debug.Log($"<color=green>Finished generating {counter} LODs in {st.ElapsedMilliseconds} ms!</color>");
     }
     #endif
 }

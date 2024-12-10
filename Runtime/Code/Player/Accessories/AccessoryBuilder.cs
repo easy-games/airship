@@ -471,24 +471,24 @@ public class AccessoryBuilder : MonoBehaviour
 
             foreach (var pair in activeAccessories) {
                 var activeAccessory = pair.Value;
-                var acc = pair.Value.AccessoryComponent;
+                var accessoryComponent = pair.Value.AccessoryComponent;
 
-                if (ShouldCombine(acc) == false) {
+                if (!accessoryComponent.skinnedToCharacter) {
                     //Debug.Log("Skipping: " + acc.name);
                     continue;
                 }
 
                 // Map static objects to bones
-                if (!acc.skinnedToCharacter) {
-                    var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
-                    if (boneMap == null) boneMap = acc.gameObject.AddComponent<MeshCombinerBone>();
-
-                    boneMap.boneName = acc.gameObject.transform.parent.name;
-
-                    boneMap.scale = acc.transform.localScale;
-                    boneMap.rotationOffset = acc.transform.localEulerAngles;
-                    boneMap.positionOffset = acc.transform.localPosition;
-                }
+                // if (!accessoryComponent.skinnedToCharacter) {
+                    // var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
+                    // if (boneMap == null) boneMap = acc.gameObject.AddComponent<MeshCombinerBone>();
+                    //
+                    // boneMap.boneName = acc.gameObject.transform.parent.name;
+                    //
+                    // boneMap.scale = acc.transform.localScale;
+                    // boneMap.rotationOffset = acc.transform.localEulerAngles;
+                    // boneMap.positionOffset = acc.transform.localPosition;
+                // }
 
                 this.meshCombiner.AddSourceReference(activeAccessory);
 
@@ -506,16 +506,16 @@ public class AccessoryBuilder : MonoBehaviour
 
                 foreach (var ren in activeAccessory.renderers) {
                     isCombined = false;
-                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
-                            acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && !firstPerson) {
+                    if ((accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
+                            accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.Both) && !firstPerson) {
                         // Visible in third person
                         // this.meshCombiner.AddSourceReference(activeAccessory);
                         // meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                         isCombined = true;
                     }
 
-                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FirstPerson ||
-                            acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && firstPerson) {
+                    if ((accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.FirstPerson ||
+                            accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.Both) && firstPerson) {
                         // Visible in first person
                         // this.meshCombiner.AddSourceReference(activeAccessory);
                         // meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
@@ -534,7 +534,6 @@ public class AccessoryBuilder : MonoBehaviour
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
             meshCombiner.CombineMeshes();
         } else {
-            //MAP ITEMS TO RIG
             // print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();
             OnCombineComplete(false);
@@ -542,18 +541,17 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void MapAccessoriesToRig(){
-        if (activeAccessories == null){
-            Debug.LogError("No active accessories but trying to map them?");
-            return;
-        }
-        if (rig.armsMesh == null){
-            Debug.LogError("Missing armsMesh on rig. armsMesh is a required reference");
-            return;
-        }
-        foreach (var pair in activeAccessories) {
+        foreach (var pair in this.activeAccessories) {
             foreach (var ren in pair.Value.skinnedMeshRenderers) {
                 ren.rootBone = rig.armsMesh.rootBone;
                 ren.bones = rig.armsMesh.bones;
+            }
+
+            foreach (var lod in pair.Value.lods) {
+                foreach (var ren in lod.skinnedMeshRenderers) {
+                    ren.rootBone = rig.bodyMesh.rootBone;
+                    ren.bones = rig.bodyMesh.bones;
+                }
             }
         }
     }

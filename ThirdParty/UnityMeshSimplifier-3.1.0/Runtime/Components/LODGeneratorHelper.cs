@@ -132,7 +132,7 @@ namespace UnityMeshSimplifier
 
             levels = new LODLevel[]
             {
-                new LODLevel(0.5f, 1f)
+                new LODLevel(0.20f, 1f)
                 {
                     CombineMeshes = false,
                     CombineSubMeshes = false,
@@ -143,7 +143,7 @@ namespace UnityMeshSimplifier
                     LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
                     ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes,
                 },
-                new LODLevel(0.17f, 0.65f)
+                new LODLevel(0.05f, 0.3f)
                 {
                     CombineMeshes = true,
                     CombineSubMeshes = false,
@@ -154,7 +154,7 @@ namespace UnityMeshSimplifier
                     LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
                     ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Simple
                 },
-                new LODLevel(0.02f, 0.4225f)
+                new LODLevel(0.0029f, 0.06f)
                 {
                     CombineMeshes = true,
                     CombineSubMeshes = true,
