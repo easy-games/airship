@@ -33,6 +33,8 @@ public class CharacterAnimationHelper : MonoBehaviour {
     [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
     public float idleRectionLength = 3;
 
+    public bool isSkidding {get; private set;} = false;
+
     private float nextIdleReactionLength = 0;
     private AnimatorOverrideController animatorOverride;
     private CharacterState currentState = CharacterState.Idle;
@@ -162,7 +164,8 @@ public class CharacterAnimationHelper : MonoBehaviour {
         
         if(grounded){
             lastGroundedTime = Time.time;
-            animator.SetBool("Skidding", currentSpeed >= skiddingSpeed);
+            isSkidding = currentSpeed >= skiddingSpeed;
+            animator.SetBool("Skidding", isSkidding);
             animator.SetBool("Airborne", false);
         }else{
             animator.SetBool("Skidding", false);

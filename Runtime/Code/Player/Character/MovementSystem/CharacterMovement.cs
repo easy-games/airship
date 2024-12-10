@@ -2,6 +2,7 @@
 using Assets.Luau;
 using Mirror;
 using Steamworks;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -27,6 +28,7 @@ public class CharacterMovement : NetworkBehaviour {
 	public bool useExtraLogging = false;
 
 	[Header("Visual Variables")]
+	public bool autoCalibrateSkiddingSpeed = true;
 	public float observerRotationLerpMod = 1;
 	[Tooltip("If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
 	public bool playAnimationOnServer = true;
@@ -141,7 +143,7 @@ public class CharacterMovement : NetworkBehaviour {
 		if(this.physics == null){
 			this.physics = new CharacterPhysics(this);
 		}
-		if(this.animationHelper){
+		if(this.animationHelper && autoCalibrateSkiddingSpeed){
 			this.animationHelper.skiddingSpeed = this.moveData.sprintSpeed + .5f;
 		}
 	}
@@ -312,10 +314,6 @@ public class CharacterMovement : NetworkBehaviour {
 		var deltaTime = Time.fixedDeltaTime;
 		var isImpulsing = impulseVelocity != Vector3.zero;
 		var rootPosition = this.rigidbody.transform.position;
-		var normalizedMoveDir = md.moveDir.normalized;
-		var characterMoveVelocity = Vector3.zero;
-		characterMoveVelocity.x = normalizedMoveDir.x;
-		characterMoveVelocity.z = normalizedMoveDir.z;
 
 		//Ground checks
 		var (grounded, groundHit, detectedGround) = physics.CheckIfGrounded(rootPosition, newVelocity * deltaTime, md.moveDir);
@@ -356,6 +354,8 @@ public class CharacterMovement : NetworkBehaviour {
 		var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 
 		var canStand = physics.CanStand();
+		var normalizedMoveDir = Vector3.ClampMagnitude(md.moveDir, 1);
+		var characterMoveVelocity = normalizedMoveDir;
 #endregion
 
 		if (currentMoveState.inputDisabled) {
