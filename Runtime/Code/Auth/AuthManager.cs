@@ -55,7 +55,7 @@ public class AuthManager {
       var body = $"grantType=refresh_token&refresh_token={refreshToken}";
       var req = UnityWebRequest.PostWwwForm("https://securetoken.googleapis.com/v1/token?key=" + AirshipApp.firebaseApiKey + "&" + body, "");
       req.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-      await req.SendWebRequest();
+      await req.SendProxyRequest();
       if (req.result == UnityWebRequest.Result.ProtocolError) {
          Debug.LogError(req.error);
          return null;

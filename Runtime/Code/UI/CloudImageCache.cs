@@ -153,7 +153,7 @@ namespace Code.UI {
             //Download the image
             UnityWebRequest request = UnityWebRequestProxyHelper.ApplyProxySettings(UnityWebRequestTexture.GetTexture(targetUrl));
             Print("Sending web request");
-            yield return request.SendWebRequest();
+            yield return request.SendProxyRequest();
             Print("Web request sent");
             if (request.result != UnityWebRequest.Result.Success) {
                 //Failed Request

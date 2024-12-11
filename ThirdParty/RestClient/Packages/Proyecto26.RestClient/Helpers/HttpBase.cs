@@ -95,7 +95,7 @@ namespace Proyecto26
             IsNetworkError = request.isNetworkError;
             IsHttpError = request.isHttpError;
 #endif
-            return new RequestException(options, request.error, IsHttpError, IsNetworkError, request.responseCode, options.ParseResponseBody ? request.downloadHandler.text : "body not parsed");
+            return new RequestException(options, request.error, IsHttpError, IsNetworkError, request.responseCode, options.ParseResponseBody ? request.downloadHandler.text : "body not parsed", request);
         }
 
         public static void DebugLog(bool debugEnabled, object message, bool isError)

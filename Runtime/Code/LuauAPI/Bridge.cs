@@ -419,7 +419,7 @@ public static class Bridge {
 
     public static async Task<Texture2D> DownloadTexture2DYielding(string url) {
         var www = UnityWebRequestProxyHelper.ApplyProxySettings(UnityWebRequestTexture.GetTexture(url));
-        await www.SendWebRequest();
+        await www.SendProxyRequest();
 
         if (www.result != UnityWebRequest.Result.Success) {
             if (www.responseCode == 404) {

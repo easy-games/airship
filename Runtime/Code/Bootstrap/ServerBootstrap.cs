@@ -331,7 +331,7 @@ public class ServerBootstrap : MonoBehaviour
 		var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(url));
 		var gameConfigPath = Path.Combine(Application.persistentDataPath, "Games", startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
-		yield return request.SendWebRequest();
+		yield return request.SendProxyRequest();
 		if (request.result != UnityWebRequest.Result.Success) {
 			Debug.LogError($"Failed to download gameConfig.json. url={url}, message={request.error}");
 			Debug.Log("Retrying in 1s...");

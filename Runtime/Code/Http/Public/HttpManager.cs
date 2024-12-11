@@ -32,7 +32,7 @@ namespace Code.Http.Public {
             foreach (var kvp in options.Headers) {
                 req.SetRequestHeader(kvp.Key, kvp.Value);
             }
-            await UnityWebRequestProxyHelper.ApplyProxySettings(req).SendWebRequest();
+            await req.ApplyAndSendProxyRequest();
 
             if (req.result == UnityWebRequest.Result.ProtocolError) {
                 return new HttpResponse() {
@@ -100,7 +100,7 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+            UnityWebRequestProxyHelper.ProxyPost(options).Then((res) => {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
@@ -141,7 +141,7 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Delete(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+            UnityWebRequestProxyHelper.ProxyDelete(options).Then((res) => {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
@@ -183,7 +183,7 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Patch(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+            UnityWebRequestProxyHelper.ProxyPatch(options).Then((res) => {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
@@ -232,7 +232,7 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Put(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+            UnityWebRequestProxyHelper.ProxyPut(options).Then((res) => {
                 task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,

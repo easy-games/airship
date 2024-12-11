@@ -171,14 +171,14 @@ namespace Code.Authentication {
                 serverBootstrap.OnGameServerChange(gameServer);
             }
 
-            RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
+            UnityWebRequestProxyHelper.ProxyPost(new RequestHelper {
                 Uri = AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + userIdToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }
 
-            })).Then((res) => {
+            }).Then((res) => {
                 // print($"[Transfer Packet] userIdToken: {userIdToken}, packet response: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);

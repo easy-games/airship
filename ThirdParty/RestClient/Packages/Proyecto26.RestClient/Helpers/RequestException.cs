@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine.Networking;
 
 namespace Proyecto26
 {
@@ -46,16 +47,26 @@ namespace Proyecto26
             set { _response = value; }
         }
 
+        private UnityWebRequest _unityWebRequest;
+
+        public UnityWebRequest unityWebRequest
+        {
+            get { return _unityWebRequest; }
+            set { _unityWebRequest = value; }
+        }
+
+
         public RequestException() { }
 
         public RequestException(string message): base(message) { }
 
-        public RequestException(RequestHelper request, string message, bool isHttpError, bool isNetworkError, long statusCode, string response) : base(message) {
+        public RequestException(RequestHelper request, string message, bool isHttpError, bool isNetworkError, long statusCode, string response, UnityWebRequest unityRequest) : base(message) {
             _request = request;
             _isHttpError = isHttpError;
             _isNetworkError = isNetworkError;
             _statusCode = statusCode;
             _response = response;
+            _unityWebRequest = unityRequest;
         }
     }
 }
