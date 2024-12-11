@@ -1098,7 +1098,7 @@ public class VoxelBlocks : MonoBehaviour {
 
             }*/
         }
-        Profiler.EndSample();
+        // Profiler.EndSample();
     }
 
     //Fix a voxel value up with its solid mask bit

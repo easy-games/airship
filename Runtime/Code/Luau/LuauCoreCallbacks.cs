@@ -218,7 +218,7 @@ public partial class LuauCore : MonoBehaviour {
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.IsObjectDestroyedCallback))]
     static int IsObjectDestroyedCallback(int instanceId) {
-        return ThreadDataManager.IsGameObjectReferenceDestroyed(instanceId) ? 1 : 0;
+        return ThreadDataManager.IsUnityObjectReferenceDestroyed(instanceId) ? 1 : 0;
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
@@ -1253,8 +1253,9 @@ public partial class LuauCore : MonoBehaviour {
         } catch (Exception e) {
             Profiler.EndSample();
             return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
+        } finally {
+            Profiler.EndSample();
         }
-        Profiler.EndSample();
 
         WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData.Array);
         Profiler.EndSample();

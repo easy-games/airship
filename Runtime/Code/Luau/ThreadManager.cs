@@ -116,7 +116,7 @@ namespace Luau {
             return id;
         }
 
-        public static bool IsGameObjectReferenceDestroyed(int instanceId) {
+        public static bool IsUnityObjectReferenceDestroyed(int instanceId) {
             var res = s_objectKeys.TryGetValue(instanceId, out var value);
             
             if (ReferenceEquals(value, null)) {
@@ -310,8 +310,15 @@ namespace Luau {
             }
         }
 
+        private static float lastPrint = -10000;
         public static void RunEndOfFrame() {
+            float now = Time.unscaledTime;
+            if ((now - lastPrint) > 1) {
+                lastPrint = now;
+                Debug.Log($"Objects tracked: {s_objectKeys.Count}");
+            }
             //turn the list of s_objectKeys into a list of ints
+            /*
             int numGameObjectIds = s_objectKeys.Count;
             int numDestroyedGameObjectIds = 0;
 
@@ -322,13 +329,13 @@ namespace Luau {
             }
             int index = 0;
             Profiler.BeginSample("ListDestroyedObjects");
-            foreach (var kvp in s_objectKeys) {
-                listOfGameObjectIds.Array[index] = kvp.Key;
-                if (kvp.Value is UnityEngine.Object unityObj && unityObj == null) {
+            foreach (var (id, obj) in s_objectKeys) {
+                listOfGameObjectIds.Array[index] = id;
+                if (obj is UnityEngine.Object unityObj && unityObj == null) {
                     if (s_debugging) {
-                        Debug.Log("Destroyed GameObject: " + kvp.Key);
+                        Debug.Log("Destroyed GameObject: " + id);
                     }
-                    listOfDestroyedGameObjectIds.Array[numDestroyedGameObjectIds++] = kvp.Key;
+                    listOfDestroyedGameObjectIds.Array[numDestroyedGameObjectIds++] = id;
                 }
                 index++;
             }
@@ -354,6 +361,7 @@ namespace Luau {
                 }
             }
             Profiler.EndSample();
+            */
 
             // Temporary removal process:
             s_removalList.Clear();
