@@ -82,17 +82,17 @@ namespace Code.Http.Internal {
         }
 
         private static string GetHeaders(string additionalHeaders = "") {
+            var internalHeader = RunCore.IsInternal() ? "x-airship-ignore-rate-limit=true":"";
             #if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode) {
-                return $"Authorization=Bearer {editorAuthToken},{additionalHeaders}";
+                return $"Authorization=Bearer {editorAuthToken},{additionalHeaders},{internalHeader}";
             }
             #endif
-            
             if (RunCore.IsClient()) {
-                return $"Authorization=Bearer {authToken},{additionalHeaders}";
+                return $"Authorization=Bearer {authToken},{additionalHeaders},{internalHeader}";
             } else {
                 var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
-                return $"Authorization=Bearer {serverBootstrap.airshipJWT},{additionalHeaders}";
+                return $"Authorization=Bearer {serverBootstrap.airshipJWT},{additionalHeaders},{internalHeader}";
             }
         }
 
