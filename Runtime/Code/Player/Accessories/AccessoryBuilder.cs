@@ -332,7 +332,7 @@ public class AccessoryBuilder : MonoBehaviour
         // Add accessories:
         foreach (var accessoryTemplate in accessoryTemplates) {
             if (this.firstPerson) {
-                if (!this.firstPersonAllowedSlots.Contains(accessoryTemplate.accessorySlot)) {
+                if (accessoryTemplate.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson || !this.firstPersonAllowedSlots.Contains(accessoryTemplate.accessorySlot)) {
                     // print("ignoring " + accessoryTemplate.gameObject.name + " on slot " + accessoryTemplate.accessorySlot);
                     continue;
                 }
