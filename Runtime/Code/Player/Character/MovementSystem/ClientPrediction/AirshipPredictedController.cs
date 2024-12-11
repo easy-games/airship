@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Mirror;
 using Unity.Mathematics;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
 // PredictedController is based off of:
@@ -232,6 +233,11 @@ protected void Log(string message){
 
 
 #region PREDICTION
+    private bool forceReplay = false;
+    public void ForceReplay(){
+        forceReplay = true;
+    }
+
     protected virtual bool ShouldRecordState(){
             // OPTIMIZATION: RecordState() is expensive because it inserts into a SortedList.
             // only record if state actually changed!
@@ -318,6 +324,18 @@ protected void Log(string message){
         // correction requires at least 2 existing states for 'before' and 'after'.
         // if we don't have two yet, drop this state and try again next time once we recorded more.
         if (stateHistory.Count < 2) return;
+
+        if(forceReplay){
+            forceReplay = false;
+            int forcedIndex;
+            if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
+                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick + replayTickOffset, forcedIndex);
+                return;
+            } else {
+                // something went very wrong. sampling should've worked.
+                Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
+            }
+        }
         
         //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
 
@@ -417,7 +435,7 @@ protected void Log(string message){
             //Continue to the replay below
         }
         // find the two closest client states between timestamp
-        else if (Sample(stateHistory, serverTick, out T before, out T after, out afterIndex)) {
+        else if (Sample(stateHistory, serverTick, out T before, out afterIndex)) {
             clientState = before;
         }else {
             // something went very wrong. sampling should've worked.
@@ -536,11 +554,9 @@ protected void Log(string message){
             SortedList<int, T> history,
             int tick, // current server time
             out T before,
-            out T after,
             out int afterIndex)
         {
             before = default;
-            after  = default;
             afterIndex = -1;
 
             // can't sample an empty history
@@ -561,7 +577,6 @@ protected void Log(string message){
             if(tick >= history.Keys[lastIndex]){
                 print("Time is newer than our history");
                 before = history.Values[lastIndex-1];
-                after = history.Values[lastIndex];
                 afterIndex = lastIndex;
                 return true;
             }
@@ -580,7 +595,6 @@ protected void Log(string message){
                 if (tick == key)
                 {
                     before = value;
-                    after = value;
                     afterIndex = index;
                     return true;
                 }
@@ -589,7 +603,6 @@ protected void Log(string message){
                 if (key > tick)
                 {
                     before = prev.Value;
-                    after = value;
                     afterIndex = index;
                     return true;
                 }
