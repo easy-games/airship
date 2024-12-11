@@ -1,9 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
@@ -66,6 +68,10 @@ namespace VoxelWorldStuff {
 
         private bool geometryDirty = true;
         private bool geometryDirtyPriorityUpdate = false;
+        /// <summary>
+        /// This is true if the chunk has been built once
+        /// </summary>
+        private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
  
         public Camera currentCamera = null;
                 
@@ -463,6 +469,7 @@ namespace VoxelWorldStuff {
                 //Fill the collision out
                 VoxelWorldCollision.MakeCollision(this);
                 geometryDirty = false;
+                SetLoaded();
                 return true;
             }
 
@@ -671,8 +678,25 @@ namespace VoxelWorldStuff {
             //Note this is not cleared while there is still a processing mesh (earlier in this method) because it makes sure the mesh always captures new updates
             geometryDirty = false;
             geometryDirtyPriorityUpdate = false;
+            SetLoaded();
 
             return true;
+        }
+
+        /// <summary>
+        /// This gets marked as true once the chunk has done its first build
+        /// </summary>
+        public bool IsLoaded() {
+            return loadedTask.Task.IsCompleted;
+        }
+
+        public async Task WaitForLoaded() {
+            if (loadedTask.Task.IsCompleted) return;
+            await loadedTask.Task;
+        }
+
+        private void SetLoaded() {
+            loadedTask.TrySetResult(true);
         }
 
         public static bool TestAABBSphere(Bounds aabb, Vector3 sphereCenter, float sphereRadius) {
