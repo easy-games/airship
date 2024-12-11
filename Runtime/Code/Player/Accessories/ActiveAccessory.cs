@@ -1,3 +1,4 @@
+using System;
 using Code.Player.Accessories;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -13,6 +14,10 @@ public class ActiveAccessory {
     public Renderer[] renderers;
     public MeshFilter[] meshFilters;
     public ActiveAccessory[] lods;
+
+    public ActiveAccessory() {
+        this.lods = Array.Empty<ActiveAccessory>();
+    }
 
     // public MeshRenderer[] meshRenderersLOD1;
     // public SkinnedMeshRenderer[] skinnedMeshRenderersLOD1;

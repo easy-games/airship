@@ -54,7 +54,7 @@ namespace Code.Airship.Resources.Scripts {
         }
 
         public void LoadMeshCopiesByAccessory() {
-            this.meshCopies = MeshCopy.LoadActiveAccessory(activeAccessory).ToArray();
+            this.meshCopies = MeshCopy.LoadActiveAccessory(this.activeAccessory).ToArray();
             // this.meshCopies = MeshCopy.LoadSlow(this.transform).ToArray();
         }
 
