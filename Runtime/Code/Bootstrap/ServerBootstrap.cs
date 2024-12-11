@@ -104,7 +104,16 @@ public class ServerBootstrap : MonoBehaviour
 #if UNITY_EDITOR
 			port = AirshipEditorNetworkConfig.instance.portOverride;
 #endif
-			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
+			var transportOrLatencySim = AirshipNetworkManager.singleton.transport;
+			if (transportOrLatencySim is LatencySimulation latencySim) {
+				transportOrLatencySim = latencySim.wrap as KcpTransport;
+			}
+
+			if (transportOrLatencySim is not KcpTransport transport) {
+				Debug.LogError("Transport is not of type KcpTransport.");
+				return;
+			}
+			
 			transport.port = port;
 
 			if (RunCore.IsClient()) {
