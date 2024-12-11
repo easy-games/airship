@@ -550,15 +550,31 @@ public class AccessoryBuilder : MonoBehaviour
 
     private void MapAccessoriesToRig(){
         foreach (var pair in this.activeAccessories) {
+            if(pair.Value == null){
+                Debug.LogWarning("Null value in active accessories on: " + gameObject.name);
+                continue;
+            }
             foreach (var ren in pair.Value.skinnedMeshRenderers) {
+                if(ren){
                 ren.rootBone = rig.armsMesh.rootBone;
                 ren.bones = rig.armsMesh.bones;
+                }
             }
 
+            if(pair.Value.lods == null){
+                continue;
+            }
+            
             foreach (var lod in pair.Value.lods) {
+                if(lod == null){
+                    Debug.LogWarning("Null LOD in active accessories on: " + gameObject.name);
+                    continue;
+                }
                 foreach (var ren in lod.skinnedMeshRenderers) {
-                    ren.rootBone = rig.bodyMesh.rootBone;
-                    ren.bones = rig.bodyMesh.bones;
+                    if(ren){
+                        ren.rootBone = rig.bodyMesh.rootBone;
+                        ren.bones = rig.bodyMesh.bones;
+                    }
                 }
             }
         }
