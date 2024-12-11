@@ -22,6 +22,8 @@ public class AccessoryBuilder : MonoBehaviour
 
     private Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new Dictionary<AccessorySlot, ActiveAccessory>();
 
+    [NonSerialized] private Color skinColor;
+
     //EVENTS
     /// <summary>
     /// Called whenever the accessory builder combines the mesh
@@ -418,16 +420,22 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately = true) {
-        SetMeshColor(rig.bodyMesh, color);
-        SetMeshColor(rig.headMesh, color);
-        SetMeshColor(rig.armsMesh, color);
-
+        this.skinColor = color;
+        // foreach (var mesh in this.rig.bodyMeshLOD) {
+        //     SetMeshColor(mesh, color);
+        // }
+        // foreach (var mesh in this.rig.armsMeshLOD) {
+        //     SetMeshColor(mesh, color);
+        // }
+        // foreach (var mesh in this.rig.headMeshLOD) {
+        //     SetMeshColor(mesh, color);
+        // }
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
     private void SetMeshColor(Renderer ren, Color color) {
         var mat = ren.gameObject.GetComponent<MaterialColorURP>();
-        if(mat){
+        if (mat) {
             var colors = mat.colorSettings;
             colors[0].baseColor = color;
             mat.colorSettings = colors;
@@ -471,24 +479,24 @@ public class AccessoryBuilder : MonoBehaviour
 
             foreach (var pair in activeAccessories) {
                 var activeAccessory = pair.Value;
-                var acc = pair.Value.AccessoryComponent;
+                var accessoryComponent = pair.Value.AccessoryComponent;
 
-                if (ShouldCombine(acc) == false) {
+                if (!accessoryComponent.skinnedToCharacter) {
                     //Debug.Log("Skipping: " + acc.name);
                     continue;
                 }
 
                 // Map static objects to bones
-                if (!acc.skinnedToCharacter) {
-                    var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
-                    if (boneMap == null) boneMap = acc.gameObject.AddComponent<MeshCombinerBone>();
-
-                    boneMap.boneName = acc.gameObject.transform.parent.name;
-
-                    boneMap.scale = acc.transform.localScale;
-                    boneMap.rotationOffset = acc.transform.localEulerAngles;
-                    boneMap.positionOffset = acc.transform.localPosition;
-                }
+                // if (!accessoryComponent.skinnedToCharacter) {
+                    // var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
+                    // if (boneMap == null) boneMap = acc.gameObject.AddComponent<MeshCombinerBone>();
+                    //
+                    // boneMap.boneName = acc.gameObject.transform.parent.name;
+                    //
+                    // boneMap.scale = acc.transform.localScale;
+                    // boneMap.rotationOffset = acc.transform.localEulerAngles;
+                    // boneMap.positionOffset = acc.transform.localPosition;
+                // }
 
                 this.meshCombiner.AddSourceReference(activeAccessory);
 
@@ -506,16 +514,16 @@ public class AccessoryBuilder : MonoBehaviour
 
                 foreach (var ren in activeAccessory.renderers) {
                     isCombined = false;
-                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
-                            acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && !firstPerson) {
+                    if ((accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson ||
+                            accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.Both) && !firstPerson) {
                         // Visible in third person
                         // this.meshCombiner.AddSourceReference(activeAccessory);
                         // meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                         isCombined = true;
                     }
 
-                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FirstPerson ||
-                            acc.visibilityMode == AccessoryComponent.VisibilityMode.Both) && firstPerson) {
+                    if ((accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.FirstPerson ||
+                            accessoryComponent.visibilityMode == AccessoryComponent.VisibilityMode.Both) && firstPerson) {
                         // Visible in first person
                         // this.meshCombiner.AddSourceReference(activeAccessory);
                         // meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
@@ -532,9 +540,8 @@ public class AccessoryBuilder : MonoBehaviour
             }
 
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
-            meshCombiner.CombineMeshes();
+            meshCombiner.CombineMeshes(this.skinColor);
         } else {
-            //MAP ITEMS TO RIG
             // print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();
             OnCombineComplete(false);
@@ -542,18 +549,17 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void MapAccessoriesToRig(){
-        if (activeAccessories == null){
-            Debug.LogError("No active accessories but trying to map them?");
-            return;
-        }
-        if (rig.armsMesh == null){
-            Debug.LogError("Missing armsMesh on rig. armsMesh is a required reference");
-            return;
-        }
-        foreach (var pair in activeAccessories) {
+        foreach (var pair in this.activeAccessories) {
             foreach (var ren in pair.Value.skinnedMeshRenderers) {
                 ren.rootBone = rig.armsMesh.rootBone;
                 ren.bones = rig.armsMesh.bones;
+            }
+
+            foreach (var lod in pair.Value.lods) {
+                foreach (var ren in lod.skinnedMeshRenderers) {
+                    ren.rootBone = rig.bodyMesh.rootBone;
+                    ren.bones = rig.bodyMesh.bones;
+                }
             }
         }
     }

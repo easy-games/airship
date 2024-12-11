@@ -84,6 +84,14 @@ public class MaterialColorURP : MonoBehaviour {
         DoUpdate();
     }
 
+    public void CopyFrom(MaterialColorURP other) {
+        this.RefreshVariables();
+        for (int i = 0; i < other.colorSettings.Count; i++) {
+            this.colorSettings[i].baseColor = other.colorSettings[i].baseColor;
+        }
+        this.DoUpdate();
+    }
+
     public void SetColorOnAll(Color newColor){
         foreach (var colorSetting in colorSettings) {
             colorSetting.baseColor = newColor;
@@ -141,7 +149,6 @@ public class MaterialColorURP : MonoBehaviour {
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             ren.SetPropertyBlock(null, i);
         }
-
 
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             Material mat = ren.sharedMaterials[i];

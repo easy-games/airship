@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -8,6 +9,7 @@ using BlockId = System.UInt16;
 using Unity.Mathematics;
 
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Assets.Luau;
 
 #if UNITY_EDITOR
@@ -953,6 +955,17 @@ public partial class VoxelWorld : MonoBehaviour {
                 GenerateWorld(false);
             }
         }*/
+    }
+
+    /// <summary>
+    /// Waits until the chunk containing the passed in position loads. Returns
+    /// immediately if the chunk is already loaded.
+    /// </summary>
+    public async Task WaitForChunkToLoad(Vector3 voxel) {
+        var chunk = GetChunkByVoxel(voxel);
+        if (chunk == null) return;
+        
+        await chunk.WaitForLoaded();
     }
 
     private void RegenerateMissingChunkGeometry() {

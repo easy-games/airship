@@ -39,7 +39,7 @@ namespace Airship {
 
         [SerializeField] public List<SkinnedMeshRenderer> outputSkinnedMeshRenderers;
 
-        [SerializeField] public MaterialColorURP materialColorURP;
+        [SerializeField] public MaterialColorURP[] baseMeshMatColors;
 
         private static Dictionary<string, MeshCombinerCache> meshCache = new();
 
@@ -70,12 +70,15 @@ namespace Airship {
 
         [NonSerialized] public string cacheId = "";
 
+        private Color skinColor = Color.gray;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         [HideFromTS]
         public static void OnLoad() {
             meshCache.Clear();
         }
 
+        [NonSerialized]
         public int lodCount = 3;
 
         // Used by TS
@@ -119,9 +122,10 @@ namespace Airship {
                 lodSourceRef.Clear();
 
                 // add base meshes
-                lodSourceRef.Add(new MeshCopyReference(this.rig.headMeshLOD[lodLevel], this.rig.headColor));
-                lodSourceRef.Add(new MeshCopyReference(this.rig.bodyMeshLOD[lodLevel], this.rig.bodyColor));
-                lodSourceRef.Add(new MeshCopyReference(this.rig.armsMeshLOD[lodLevel], this.rig.armsColor));
+                var matColor = this.baseMeshMatColors[lodLevel];
+                lodSourceRef.Add(new MeshCopyReference(this.rig.headMeshLOD[lodLevel], matColor));
+                lodSourceRef.Add(new MeshCopyReference(this.rig.bodyMeshLOD[lodLevel], matColor));
+                lodSourceRef.Add(new MeshCopyReference(this.rig.armsMeshLOD[lodLevel], matColor));
 
                 lodLevel++;
             }
@@ -396,23 +400,27 @@ namespace Airship {
                 outputSkinnedMeshRenderer.rootBone = finalSkinnedMeshCopy.rootBone;
                 outputSkinnedMeshRenderer.localBounds = this.skinnedMeshBounds;
 
-                {
-                    // Skin color
-                    var matColorSt = Stopwatch.StartNew();
-                    this.materialColorURP.RefreshVariables();
-                    for (int i = 0; i < finalSkinnedMeshCopy.subMeshes.Count; i++) {
-                        if (finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData != null) {
-                            MaterialColorURP.ColorSetting setting = this.materialColorURP.colorSettings[i];
-                            if (setting != null) {
-                                setting.baseColor = finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData.color;
-                            }
-                        }
-                    }
-                    this.materialColorURP.DoUpdate();
-                    if (debugText) {
-                        Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
-                    }
-                }
+                // {
+                //     // Skin color
+                //     var matColorSt = Stopwatch.StartNew();
+                //     this.materialColorURP.RefreshVariables();
+                //     for (int i = 0; i < finalSkinnedMeshCopy.subMeshes.Count; i++) {
+                //         if (finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData != null) {
+                //             MaterialColorURP.ColorSetting setting = this.materialColorURP.colorSettings[i];
+                //             if (setting != null) {
+                //                 setting.baseColor = finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData.color;
+                //             }
+                //         }
+                //     }
+                //     this.materialColorURP.DoUpdate();
+                //     if (debugText) {
+                //         Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
+                //     }
+                // }
+                var matColor = this.baseMeshMatColors[lodLevel];
+                matColor.RefreshVariables();
+                matColor.colorSettings[0].baseColor = this.skinColor;
+                matColor.DoUpdate();
 
                 // Default other LODs to disabled.
                 // if (lodLevel > 0) {
@@ -444,14 +452,14 @@ namespace Airship {
         [InitializeOnLoadMethod]
         private static void OnScriptsReloaded() {
             //Go through and reload all of the MeshCopyReferences 
-            MeshCombiner[] meshCombiners = GameObject.FindObjectsOfType<MeshCombiner>();
-            foreach (MeshCombiner meshCombiner in meshCombiners) {
-                meshCombiner.CombineMesh();
-            }
+            // MeshCombiner[] meshCombiners = GameObject.FindObjectsOfType<MeshCombiner>();
+            // foreach (MeshCombiner meshCombiner in meshCombiners) {
+            //     meshCombiner.CombineMesh(this.skinColor);
+            // }
         }
 #endif
 
-        public void CombineMesh() {
+        public void CombineMesh(Color skinColor) {
             //reload sourceMeshes
             // foreach (MeshCopyReference reference in sourceReferences) {
             //     reference.LoadMeshCopies();
@@ -482,7 +490,9 @@ namespace Airship {
             }
         }
 
-        public void CombineMeshes() {
+        public void CombineMeshes(Color skinColor) {
+            this.skinColor = skinColor;
+
             // Disable renderers we will combine
             this.rig.headMesh.gameObject.SetActive(false);
             this.rig.bodyMesh.gameObject.SetActive(false);

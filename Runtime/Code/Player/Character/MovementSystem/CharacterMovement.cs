@@ -1,8 +1,6 @@
 ﻿using System;
 using Assets.Luau;
 using Mirror;
-using Steamworks;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -301,6 +299,11 @@ public class CharacterMovement : NetworkBehaviour {
 
 		var customData = queuedCustomData;
 		queuedCustomData = null;
+		
+		if (currentMoveState.inputDisabled) {
+			//Zero out inputs
+			return new MoveInputData(Vector3.zero, false, false, false, lookVector, customData);
+		}
 
 		return new MoveInputData(moveDirInput, jumpInput, crouchInput, sprintInput, this.lookVector, customData);
 	}
@@ -354,18 +357,10 @@ public class CharacterMovement : NetworkBehaviour {
 		var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 
 		var canStand = physics.CanStand();
-		var normalizedMoveDir = Vector3.ClampMagnitude(md.moveDir, 1);
-		var characterMoveVelocity = normalizedMoveDir;
 #endregion
 
-		if (currentMoveState.inputDisabled) {
-			//Zero out inputs
-			md.moveDir = Vector3.zero;
-			md.crouch = false;
-			md.jump = false;
-			md.lookVector = lookVector;
-			md.sprint = false;
-		}
+		var normalizedMoveDir = Vector3.ClampMagnitude(md.moveDir, 1);
+		var characterMoveVelocity = normalizedMoveDir;
 
 #region GRAVITY
 		if(moveData.useGravity){

@@ -908,9 +908,9 @@ namespace Code.Airship.Resources.Scripts {
                 foreach (var meshRenderer in activeAccessory.meshRenderers) {
                     MeshCopy meshCopy = new MeshCopy(activeAccessory.meshFilters[i].sharedMesh, meshRenderer.sharedMaterials, meshRenderer.transform);
 
-                    if (meshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
-                        meshCopy.ExtractMaterialColor(matColor);
-                    }
+                    // if (meshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
+                    //     meshCopy.ExtractMaterialColor(matColor);
+                    // }
 
                     results.Add(meshCopy);
                     i++;
@@ -920,9 +920,9 @@ namespace Code.Airship.Resources.Scripts {
                     //See if theres a MaterialColor on this gameObject
                     MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinnedMeshRenderer.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
 
-                    if (skinnedMeshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
-                        meshCopy.ExtractMaterialColor(matColor);
-                    }
+                    // if (skinnedMeshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
+                    //     meshCopy.ExtractMaterialColor(matColor);
+                    // }
 
                     //Grab their bone masks
                     meshCopy.bodyMask = activeAccessory.AccessoryComponent.bodyMask;
@@ -1000,13 +1000,14 @@ namespace Code.Airship.Resources.Scripts {
 
         public void ExtractMaterialColor(MaterialColorURP matColor) {
             //Apply the material color
-            for (int i = 0; i < subMeshes.Count; i++) {
-                var colorData = matColor.colorSettings[i];
-                if (colorData != null) {
-                    SubMesh subMesh = subMeshes[i];
-                    subMesh.batchableMaterialData = new BatchableMaterialData(colorData.baseColor);
-                }
-            }
+            // for (int i = 0; i < subMeshes.Count; i++) {
+            //     var colorData = matColor.colorSettings[i];
+            //     if (colorData != null) {
+            //         SubMesh subMesh = subMeshes[i];
+            //         subMesh.batchableMaterialData = new BatchableMaterialData(colorData.baseColor);
+            //         Debug.Log("Extracted color " + colorData.baseColor + ". name: " + this.sourceTransform.gameObject.name, this.sourceTransform.gameObject);
+            //     }
+            // }
         }
 
 
