@@ -17,7 +17,7 @@ public class PickUsernamePage : MonoBehaviour {
     public TMP_Text responseTxt;
     public Color enabledBtnColor;
     public Color disableBtnColor;
-    public string usernameTakenText = "Username & tag is unavailable.";
+    [NonSerialized] public string usernameTakenText = "Username is unavailable.";
     public float checkUsernameCooldown = 0.1f;
     public float checkUsernameInputDelay = 0.15f;
     public bool slideUpWhileInputting = false;
