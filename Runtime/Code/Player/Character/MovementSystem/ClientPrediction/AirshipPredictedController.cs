@@ -184,7 +184,7 @@ protected void Log(string message){
     }
 #endregion
 
-#region SERVER
+#region UPDATE
         protected virtual void Update() {
             AirshipPredictionManager.SmoothRigidbodies = this.smoothRigidbodies;
             if (!isServer){
@@ -210,8 +210,6 @@ protected void Log(string message){
             // always set dirty to always serialize in next sync interval.
             SetDirty();
         }
-#endregion
-#region CLIENT
         
         //Record history states
         protected virtual void OnPhysicsTick() {

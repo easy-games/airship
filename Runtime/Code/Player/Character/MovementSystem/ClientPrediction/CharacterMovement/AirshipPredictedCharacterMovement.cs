@@ -93,7 +93,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         if(isServerOnly){
             // The server applys inputs it recieves from the client
             // Only if the time is past the inputs state time with a margin of the record interval 
-            if(recievedInputs.Count > 0 && serverTick >= recievedInputs.Keys[0]){
+            // Minus 1 because the tick describes the time the inputs were already used
+            if(recievedInputs.Count > 0 && serverTick >= recievedInputs.Keys[0]-1){
                 if(showLogs){
                     print("using input: " + recievedInputs.Keys[0] + " at: " + serverTick + " moveDir: " + recievedInputs.Values[0].moveDir);
                 }
@@ -104,6 +105,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
     }
     
+    //Record the state of the object after the physics sim and the inputs that brought it to that point
     private void OnMovementEnd(object data, object isReplay){
         if((bool)isReplay){
             return;
