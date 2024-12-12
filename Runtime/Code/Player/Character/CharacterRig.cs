@@ -12,6 +12,7 @@ public class CharacterRig : MonoBehaviour {
     public SkinnedMeshRenderer armsMesh;
     public SkinnedMeshRenderer headMesh;
 	public Renderer faceMesh;
+    public SkinnedMeshRenderer viewmodelArmsMesh;
 
     public SkinnedMeshRenderer[] bodyMeshLOD;
     public SkinnedMeshRenderer[] armsMeshLOD;

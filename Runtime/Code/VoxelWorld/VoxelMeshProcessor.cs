@@ -1473,9 +1473,9 @@ namespace VoxelWorldStuff {
                     temporaryMeshData = null;
                 }
 
-                readOnlyColor.Dispose(); // Dispose early
+                if (readOnlyColor.IsCreated) readOnlyColor.Dispose(); // Dispose early
 
-                if (detailMeshes != null) {
+                if (hasDetailMeshes) {
                     for (int i = 0; i < 3; i++) {
                         Profiler.BeginSample("FinalizeMeshDetail");
                         

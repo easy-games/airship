@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using Code.Airship.Resources.Scripts;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 
 
@@ -39,7 +40,7 @@ namespace Airship {
 
         [SerializeField] public List<SkinnedMeshRenderer> outputSkinnedMeshRenderers;
 
-        [SerializeField] public MaterialColorURP[] baseMeshMatColors = new MaterialColorURP[0];
+        [FormerlySerializedAs("baseMeshMatColors")] [SerializeField] public MaterialColorURP[] outputBaseMeshMatColors;
 
         private static Dictionary<string, MeshCombinerCache> meshCache = new();
 
@@ -53,6 +54,8 @@ namespace Airship {
         public List<Transform> hiddenSurfaces = new();
 
         [NonSerialized] private List<List<MeshCopyReference>> sourceReferences = new();
+
+        public bool firstPerson;
 
         [SerializeField] public CharacterRig rig;
 
@@ -78,8 +81,7 @@ namespace Airship {
             meshCache.Clear();
         }
 
-        [NonSerialized]
-        public int lodCount = 3;
+        public int lodCount => this.outputSkinnedMeshRenderers.Count;
 
         // Used by TS
         public static void RemoveMeshCache(string cacheId) {
@@ -117,16 +119,26 @@ namespace Airship {
         }
 
         public void ClearSourceReferences() {
+            if (this.firstPerson) {
+                if (this.sourceReferences.Count == 0) {
+                    this.sourceReferences.Add(new List<MeshCopyReference>());
+                }
+                var lodSourceRef = this.sourceReferences[0];
+                lodSourceRef.Clear();
+                lodSourceRef.Add(new MeshCopyReference(this.rig.viewmodelArmsMesh, this.rig.viewmodelArmsColor));
+                return;
+            }
+
             int lodLevel = 0;
             foreach (var lodSourceRef in this.sourceReferences) {
                 lodSourceRef.Clear();
 
-                if(lodLevel >= this.baseMeshMatColors.Length){
+                if(lodLevel >= this.outputBaseMeshMatColors.Length){
                     break;
                 }
 
                 // add base meshes
-                var matColor = this.baseMeshMatColors[lodLevel];
+                var matColor = this.outputBaseMeshMatColors[lodLevel];
                 lodSourceRef.Add(new MeshCopyReference(this.rig.headMeshLOD[lodLevel], matColor));
                 lodSourceRef.Add(new MeshCopyReference(this.rig.bodyMeshLOD[lodLevel], matColor));
                 lodSourceRef.Add(new MeshCopyReference(this.rig.armsMeshLOD[lodLevel], matColor));
@@ -422,10 +434,10 @@ namespace Airship {
                 //     }
                 // }
 
-                if(lodLevel >= this.baseMeshMatColors.Length){
+                if(lodLevel >= this.outputBaseMeshMatColors.Length){
                     continue;
                 }
-                var matColor = this.baseMeshMatColors[lodLevel];
+                var matColor = this.outputBaseMeshMatColors[lodLevel];
                 matColor.RefreshVariables();
                 matColor.colorSettings[0].baseColor = this.skinColor;
                 matColor.DoUpdate();
@@ -502,9 +514,13 @@ namespace Airship {
             this.skinColor = skinColor;
 
             // Disable renderers we will combine
-            this.rig.headMesh.gameObject.SetActive(false);
-            this.rig.bodyMesh.gameObject.SetActive(false);
-            this.rig.armsMesh.gameObject.SetActive(false);
+            if (this.firstPerson) {
+                this.rig.viewmodelArmsMesh.gameObject.SetActive(false);
+            } else {
+                this.rig.headMesh.gameObject.SetActive(false);
+                this.rig.bodyMesh.gameObject.SetActive(false);
+                this.rig.armsMesh.gameObject.SetActive(false);
+            }
 
             Dirty();
         }
