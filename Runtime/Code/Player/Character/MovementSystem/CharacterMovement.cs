@@ -302,10 +302,10 @@ public class CharacterMovement : NetworkBehaviour {
 		
 		if (currentMoveState.inputDisabled) {
 			//Zero out inputs
-			return new MoveInputData(Vector3.zero, false, false, false, lookVector, impulseVelocity, customData);
+			return new MoveInputData(Vector3.zero, false, false, false, lookVector, customData);
 		}
 
-		return new MoveInputData(moveDirInput, jumpInput, crouchInput, sprintInput, lookVector, impulseVelocity, customData);
+		return new MoveInputData(moveDirInput, jumpInput, crouchInput, sprintInput, lookVector, customData);
 	}
 #endregion
 
@@ -315,7 +315,7 @@ public class CharacterMovement : NetworkBehaviour {
 		var newVelocity = currentVelocity;
 		var isIntersecting = IsIntersectingWithBlock();
 		var deltaTime = Time.fixedDeltaTime;
-		var isImpulsing = md.impulseVelocity != Vector3.zero;
+		var isImpulsing = impulseVelocity != Vector3.zero;
 		var rootPosition = this.rigidbody.transform.position;
 
 		//Ground checks
@@ -885,6 +885,9 @@ public class CharacterMovement : NetworkBehaviour {
 		if(hasMovementAuth){
 			//Teleport Locally
 			TeleportInternal(position, lookVector);
+			if(isServerAuth && isServerOnly){
+				this.predictedMovement.ForceReplay();
+			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client to teleport
 			RpcTeleport(base.connectionToClient, position, lookVector);
@@ -953,7 +956,6 @@ public class CharacterMovement : NetworkBehaviour {
 		sprintInput = data.sprint;
 		jumpInput = data.jump;
 		lookVector = data.lookVector;
-		impulseVelocity = data.impulseVelocity;
 	}
 
 	public void AddImpulse(Vector3 impulse){
@@ -967,6 +969,9 @@ public class CharacterMovement : NetworkBehaviour {
 		if (hasMovementAuth) {
 			//Locally
 			SetImpulseInternal(impulse);
+			if(isServerAuth && isServerOnly){
+				this.predictedMovement.ForceReplay();
+			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client
 			RpcSetImpulse(base.connectionToClient, impulse);

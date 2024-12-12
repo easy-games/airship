@@ -14,30 +14,27 @@ public struct MoveInputData : IEquatable<MoveInputData>{
 	public bool crouch;
 	public bool sprint;
 	public Vector3 lookVector;
-	public Vector3 impulseVelocity;
 	public BinaryBlob customData;
 
-	public MoveInputData(Vector3 moveDir, bool jump, bool crouch, bool sprint, Vector3 lookVector, Vector3 impulseVelocity, BinaryBlob customData) {
+	public MoveInputData(Vector3 moveDir, bool jump, bool crouch, bool sprint, Vector3 lookVector, BinaryBlob customData) {
 		this.moveDir = moveDir;
 		this.jump = jump;
 		this.crouch = crouch;
 		this.sprint = sprint;
 		this.lookVector = lookVector;
 		this.customData = customData;
-		this.impulseVelocity = impulseVelocity;
 	}
 
     public bool Equals(MoveInputData other) {
 		return moveDir == other.moveDir &&
 			jump == other.jump && 
 			crouch == other.crouch &&
-			sprint == other.sprint &&
-			impulseVelocity == other.impulseVelocity;//&& 
+			sprint == other.sprint;//&& 
 			//lookVector == other.lookVector;
     }
 
     // override object.GetHashCode
     public override readonly int GetHashCode() {
-		return (moveDir, jump, crouch, sprint, lookVector, impulseVelocity, customData).GetHashCode();
+		return (moveDir, jump, crouch, sprint, lookVector, customData).GetHashCode();
 	}
 }
