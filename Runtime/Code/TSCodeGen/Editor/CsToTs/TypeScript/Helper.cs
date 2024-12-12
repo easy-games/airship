@@ -409,6 +409,8 @@ namespace CsToTs.TypeScript {
             // Load the UnityEngine XML documentation file
             #if UNITY_EDITOR_WIN
             string localXMLPath = "Data\\Managed\\UnityEngine.xml";
+            #elif UNITY_EDITOR_LINUX
+            string localXMLPath = "Data/Managed/UnityEngine.xml";
             #else
             string localXMLPath = "Unity.app/Contents/Managed/UnityEngine.xml";
             #endif
