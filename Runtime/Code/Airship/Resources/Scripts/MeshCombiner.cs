@@ -133,6 +133,10 @@ namespace Airship {
             foreach (var lodSourceRef in this.sourceReferences) {
                 lodSourceRef.Clear();
 
+                if(lodLevel >= this.outputBaseMeshMatColors.Length){
+                    break;
+                }
+
                 // add base meshes
                 var matColor = this.outputBaseMeshMatColors[lodLevel];
                 lodSourceRef.Add(new MeshCopyReference(this.rig.headMeshLOD[lodLevel], matColor));
@@ -429,6 +433,10 @@ namespace Airship {
                 //         Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
                 //     }
                 // }
+
+                if(lodLevel >= this.outputBaseMeshMatColors.Length){
+                    continue;
+                }
                 var matColor = this.outputBaseMeshMatColors[lodLevel];
                 matColor.RefreshVariables();
                 matColor.colorSettings[0].baseColor = this.skinColor;
