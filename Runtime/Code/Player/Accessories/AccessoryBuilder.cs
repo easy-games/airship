@@ -463,7 +463,7 @@ public class AccessoryBuilder : MonoBehaviour
             this.meshCombiner.ClearSourceReferences();
             
             // Add body meshes as source references on mesh combiner
-            foreach (var ren in rig.baseMeshes) {
+            // foreach (var ren in rig.baseMeshes) {
                 // this.meshCombiner.AddSourceReference(
                 //     ren.transform,
                 //     Array.Empty<MeshRenderer>(),
@@ -472,7 +472,7 @@ public class AccessoryBuilder : MonoBehaviour
                 // );
                 // meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                 // ren.gameObject.SetActive(false);
-            }
+            // }
 
             // Accessories
             var isCombined = false;
@@ -564,7 +564,7 @@ public class AccessoryBuilder : MonoBehaviour
             if(pair.Value.lods == null){
                 continue;
             }
-            
+
             foreach (var lod in pair.Value.lods) {
                 if(lod == null){
                     Debug.LogWarning("Null LOD in active accessories on: " + gameObject.name);

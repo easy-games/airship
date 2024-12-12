@@ -39,7 +39,7 @@ namespace Airship {
 
         [SerializeField] public List<SkinnedMeshRenderer> outputSkinnedMeshRenderers;
 
-        [SerializeField] public MaterialColorURP[] baseMeshMatColors;
+        [SerializeField] public MaterialColorURP[] baseMeshMatColors = new MaterialColorURP[0];
 
         private static Dictionary<string, MeshCombinerCache> meshCache = new();
 
@@ -120,6 +120,10 @@ namespace Airship {
             int lodLevel = 0;
             foreach (var lodSourceRef in this.sourceReferences) {
                 lodSourceRef.Clear();
+
+                if(lodLevel >= this.baseMeshMatColors.Length){
+                    break;
+                }
 
                 // add base meshes
                 var matColor = this.baseMeshMatColors[lodLevel];
@@ -417,6 +421,10 @@ namespace Airship {
                 //         Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
                 //     }
                 // }
+
+                if(lodLevel >= this.baseMeshMatColors.Length){
+                    continue;
+                }
                 var matColor = this.baseMeshMatColors[lodLevel];
                 matColor.RefreshVariables();
                 matColor.colorSettings[0].baseColor = this.skinColor;
