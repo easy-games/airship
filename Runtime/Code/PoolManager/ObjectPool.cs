@@ -48,20 +48,23 @@ namespace Code.PoolManager
                 if (lastIndex > list.Count - 1) lastIndex = 0;
 
                 var c = list[lastIndex];
-                if (c.Used || c.Destroyed)
-                {
-                    continue;
-                }
-                else
-                {
-                    if (c.Item == null) {
+                if (c.Used || c.Destroyed) continue;
+
+                // Unity object specific check
+                if (c.Item is UnityEngine.Object o) {
+                    if (o == null) {
                         c.Destroyed = true;
                         continue;
-                    }
-
-                    container = c;
-                    break;
+                    } 
                 }
+                
+                if (c.Item == null) {
+                    c.Destroyed = true;
+                    continue;
+                }
+
+                container = c;
+                break;
             }
 
             if (container == null)
