@@ -75,7 +75,7 @@ public class ClientNetworkConnector : MonoBehaviour {
             var scene = SceneManager.GetActiveScene();
             if (scene.name == "CoreScene") {
                 this.reconnectAttempt++;
-                if (this.reconnectAttempt >= 5) {
+                if (this.reconnectAttempt >= 10) {
                     Debug.Log("Ran out of reconnect attempts. Cancelling connect.");
                     TransferManager.Instance.NetworkClient_OnDisconnected();
                     return;

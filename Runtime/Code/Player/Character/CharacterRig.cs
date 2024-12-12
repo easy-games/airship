@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [LuauAPI]
 [ExecuteInEditMode]
@@ -9,8 +10,13 @@ public class CharacterRig : MonoBehaviour {
     [Header("Meshes")]
 	public SkinnedMeshRenderer bodyMesh;
     public SkinnedMeshRenderer armsMesh;
-    public Renderer headMesh;
+    public SkinnedMeshRenderer headMesh;
 	public Renderer faceMesh;
+    public SkinnedMeshRenderer viewmodelArmsMesh;
+
+    public SkinnedMeshRenderer[] bodyMeshLOD;
+    public SkinnedMeshRenderer[] armsMeshLOD;
+    public SkinnedMeshRenderer[] headMeshLOD;
 
 	[Header("Root")]
 	public Transform rigHolder;
@@ -53,20 +59,24 @@ public class CharacterRig : MonoBehaviour {
 	public Transform heldItemL;
 	public Transform heldItemR;
 
+    [Header("Color")] public MaterialColorURP headColor;
+    public MaterialColorURP bodyColor;
+    public MaterialColorURP armsColor;
+    public MaterialColorURP viewmodelArmsColor;
+
     [NonSerialized]
     public Renderer[] baseMeshes; //All skin based Meshes (not face decal)
 
-    private void Awake(){
+    private void Awake() {
         List<Renderer> meshes = new List<Renderer>();
-        if(bodyMesh != null){
-            meshes.Add(bodyMesh);
+        if (bodyMesh != null) {
+            meshes.Add(this.bodyMesh);
         }
-        if (armsMesh != null)
-        {
-            meshes.Add(armsMesh);
+        if (armsMesh != null) {
+            meshes.Add(this.armsMesh);
         }
         if (headMesh != null){
-            meshes.Add(headMesh);
+            meshes.Add(this.headMesh);
         }
         baseMeshes = meshes.ToArray();   
     }

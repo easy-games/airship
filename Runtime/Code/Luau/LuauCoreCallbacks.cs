@@ -40,6 +40,7 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.YieldCallback yieldCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
     private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
+    private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
     
 
     private struct AwaitingTask
@@ -86,6 +87,7 @@ public partial class LuauCore : MonoBehaviour {
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
         componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
         toggleProfilerCallback_holder = new LuauPlugin.ToggleProfilerCallback(ToggleProfilerCallback);
+        isObjectDestroyedCallback_holder = new LuauPlugin.IsObjectDestroyedCallback(IsObjectDestroyedCallback);
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -192,17 +194,31 @@ public partial class LuauCore : MonoBehaviour {
             Profiler.EndSample();
             return;
         }
+        // Not tagged to component
+        if (componentId < -1) {
+            if (strLen > 0) {
+                // No need to free strPtr -- it is stack allocated
+                var str = PtrToStringUTF8(strPtr, strLen);
+                Profiler.BeginSample($"{str}");
+                return;
+            }
+        }
+        
 
         if (AirshipComponent.componentIdToScriptName.TryGetValue(componentId, out var componentName)) {
             if (strLen > 0) {
                 var str = PtrToStringUTF8(strPtr, strLen);
                 Profiler.BeginSample($"{componentName}{str}");
-                LuauPlugin.LuauFreeString(strPtr);
             }
             else {
                 Profiler.BeginSample($"{componentName}");
             }
         }
+    }
+
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.IsObjectDestroyedCallback))]
+    static int IsObjectDestroyedCallback(int instanceId) {
+        return ThreadDataManager.IsGameObjectReferenceDestroyed(instanceId) ? 1 : 0;
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
@@ -989,6 +1005,14 @@ public partial class LuauCore : MonoBehaviour {
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
             if (valueTypeAPI != null) {
+                // Destroyed protection
+                if (type.IsSubclassOf(typeof(UnityEngine.Object))) {
+                    if ((Object) reflectionObject == null) {
+                        return LuauError(thread,
+                            $"Attempt to call method {type.Name}.{methodName} but the object is already destroyed. You may need to check if the object is undefined before calling this method.");
+                    }
+                }
+                
                 // Scene Protection
                 if (context != LuauContext.Protected) {
                     if (type == typeof(GameObject)) {
@@ -1225,10 +1249,10 @@ public partial class LuauCore : MonoBehaviour {
             returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
         } catch (TargetInvocationException e) {
             Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException.Message);
+            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException);
         } catch (Exception e) {
             Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.Message);
+            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
         }
         Profiler.EndSample();
 

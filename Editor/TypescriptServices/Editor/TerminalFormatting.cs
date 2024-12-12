@@ -5,8 +5,12 @@ using System.Text.RegularExpressions;
 using Airship.Editor;
 using UnityEngine;
 
-public class ConsoleFormatting {
+public static class ConsoleFormatting {
     public static string LinkWithLineAndColumn(string link, string text, int line, int column) {
+        if (string.IsNullOrEmpty(text)) {
+            return "unknown";
+        }
+        
         var resultingString = $"<a href='#' file='{link}' line='{line}' col='{column}'>{text}</a>";
 
         if (line != -1 && column != -1 && line != 0 && column != 0) {
@@ -16,15 +20,15 @@ public class ConsoleFormatting {
         return resultingString;
     }
 
-    public static string Number(int value) {
+    private static string Number(int value) {
         return $"<color=#e5a03b>{value}</color>";
     }
     
-    public static string Red(string value) {
+    private static string Red(string value) {
         return $"<color=#e05f67>{value}</color>";
     }
     
-    public static string ErrorCode(int value) {
+    private static string ErrorCode(int value) {
         return $"<color=#8e8e8e>TS{value}</color>";
     }
 
@@ -32,7 +36,7 @@ public class ConsoleFormatting {
         if (pretty) {
             var link = $"{item.Project.Directory}{Path.DirectorySeparatorChar}{item.FileLocation}".Replace(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
+            
             var message = LinkWithLineAndColumn(link, item.FileLocation, item.LineAndColumn.Line, item.LineAndColumn.Column);
 
             if (item.ProblemType == TypescriptProblemType.Error) {

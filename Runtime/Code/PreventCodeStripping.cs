@@ -1,3 +1,4 @@
+using Airship;
 using Code.Player.Character;
 using UnityEngine;
 
@@ -21,5 +22,6 @@ public class PreventCodeStripping : MonoBehaviour
         animationHelper.PlayAnimation(null, CharacterAnimationHelper.CharacterAnimationLayer.OVERRIDE_1, 1f);
 
         ReflectionCameraScript cam = null;
+        MeshCombiner.RemoveMeshCache("");
     }
 }

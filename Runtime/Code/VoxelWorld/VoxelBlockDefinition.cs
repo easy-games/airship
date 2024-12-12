@@ -199,6 +199,13 @@ public class VoxelBlockDefinitionEditor : Editor {
         block.description = EditorGUILayout.TextField("Description", block.description);
         block.contextStyle = (VoxelBlocks.ContextStyle)EditorGUILayout.EnumPopup("Context Style", block.contextStyle);
 
+        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
+            block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
+            
+            SerializedProperty quarterBlockMeshesProp = serializedObject.FindProperty("quarterBlockMeshes");
+            EditorGUILayout.PropertyField(quarterBlockMeshesProp, new GUIContent("QuarterBlock Meshes"), true);
+        }
+        
         if (block.contextStyle == VoxelBlocks.ContextStyle.Block) {
             ShowDrawerForTextureSetProperty("Top Texture", "topTexture", block);
             ShowDrawerForTextureSetProperty("Side Texture", "sideTexture", block);
@@ -267,12 +274,6 @@ public class VoxelBlockDefinitionEditor : Editor {
             block.emissive = EditorGUILayout.FloatField("Emissive", block.emissive);
             block.brightness = EditorGUILayout.FloatField("Brightness", block.brightness);
 
-        }
-        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
-            block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
-            
-            SerializedProperty quarterBlockMeshesProp = serializedObject.FindProperty("quarterBlockMeshes");
-            EditorGUILayout.PropertyField(quarterBlockMeshesProp, new GUIContent("QuarterBlock Meshes"), true);
         }
         if (block.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
             block.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab", block.prefab, typeof(GameObject), false);

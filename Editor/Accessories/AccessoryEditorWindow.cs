@@ -345,8 +345,11 @@ namespace Editor.Accessories {
             allAccessories.Sort((a,b)=>{
                 return a.gameObject.name.CompareTo(b.gameObject.name);
             });
-            
-            OnAccessorySelectionChanged(_listPane.selectedItems);
+
+            if (_listPane != null) {
+                OnAccessorySelectionChanged(_listPane.selectedItems);
+            }
+
             //BuildScene(_referenceAccessoryComponent);
         }
 
@@ -360,7 +363,7 @@ namespace Editor.Accessories {
         }
 
         private void SaveCurrentAccessory() {
-            if(!_referenceAccessoryComponent){
+            if (!_referenceAccessoryComponent) {
                 Debug.LogError("Trying to save with an empty accessory component");
                 return;
             }

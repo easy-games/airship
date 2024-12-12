@@ -920,13 +920,16 @@ namespace Airship.DevConsole
         #region Log methods
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false)
-        {
+        internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false) {
             Profiler.BeginSample("DevConsole.Log");
+            var list = StoredLogText[context];
+            if (list.Count >= 100) {
+                list.RemoveAt(99);
+            }
             if (prepend) {
-                StoredLogText[context].Add($"{message}\n" + StoredLogText[context]);
+                list.Add($"{message}\n");
             } else {
-                StoredLogText[context].Add($"\n{message}");
+                list.Add($"\n{message}");
             }
             Profiler.EndSample();
         }
@@ -1383,20 +1386,16 @@ namespace Airship.DevConsole
             }
         }
 
-        private void LateUpdate()
-        {
-            if (!ConsoleIsEnabled)
-            {
+        private void LateUpdate() {
+            if (!ConsoleIsEnabled) {
                 return;
             }
 
             // Update fps display
-            if (_isDisplayingFps)
-            {
+            if (_isDisplayingFps) {
                 _fpsDeltaTime += (Time.unscaledDeltaTime - _fpsDeltaTime) * 0.1f;
                 _fpsElapsed += Time.deltaTime;
-                if (_fpsElapsed > 1.0f / FpsUpdateRate)
-                {
+                if (_fpsElapsed > 1.0f / FpsUpdateRate) {
                     // Calculate fps values
                     _fpsMs = _fpsDeltaTime * 1000f;
                     _fps = Mathf.RoundToInt(1.0f / _fpsDeltaTime);
@@ -1404,118 +1403,99 @@ namespace Airship.DevConsole
 
                     // Determine colour
                     _fpsTextColour = Color.white;
-                    if (Application.targetFrameRate == -1 && _fps >= 60 || Application.targetFrameRate != -1 && _fps >= Application.targetFrameRate)
-                    {
+                    if (Application.targetFrameRate == -1 && _fps >= 60 || Application.targetFrameRate != -1 && _fps >= Application.targetFrameRate) {
                         _fpsTextColour = Color.green;
-                    }
-                    else if (_fps < 10)
-                    {
+                    } else if (_fps < 10) {
                         _fpsTextColour = Color.red;
-                    }
-                    else if (_fps < 30 && (Application.targetFrameRate > 30 || Application.targetFrameRate == -1))
-                    {
+                    } else if (_fps < 30 && (Application.targetFrameRate > 30 || Application.targetFrameRate == -1)) {
                         _fpsTextColour = Color.yellow;
                     }
                 }
             }
 
             // Check bindings (as long as the input field or any other object isn't focused!)
-            if (BindingsIsEnabled && !_inputField.isFocused && (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null))
-            {
-                try
-                {
-                    foreach (InputKey key in _bindings.Keys)
-                    {
-                        if (GetKeyDown(key))
-                        {
+            if (BindingsIsEnabled && !_inputField.isFocused && (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null)) {
+                try {
+                    foreach (InputKey key in _bindings.Keys) {
+                        if (GetKeyDown(key)) {
                             RunCommand(_bindings[key]);
                         }
                     }
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     LogError($"Checking bindings failed with an exception: {e.Message}");
                 }
             }
 
             // Add log instances for the stored logs and then clear stored logs.
-            foreach (var pair in StoredLogText) {
-                if (pair.Value.Count == 0) continue;
+            if (ConsoleIsShowing) {
+                foreach (var pair in StoredLogText) {
+                    if (pair.Value.Count == 0) continue;
 
-                if (ConsoleIsShowing && this.activeContext == pair.Key) {
-                    const float scrollPerc = 0.001f;
-                    var scrollView = this.activeContext == LogContext.Client
-                        ? clientLogScrollView
-                        : serverLogScrollView;
-                    if (_pretendScrollAtBottom || scrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(scrollView.verticalNormalizedPosition, scrollPerc))
-                    {
-                        _scrollToBottomNextFrame = true;
-                    }
-
-                    Profiler.BeginSample("Console.ProcessLogText");
-
-                    const int maxPerTick = 5;
-                    if (pair.Value.Count > maxPerTick) {
-                        for (int i = 0; i < maxPerTick; i++) {
-                            ProcessLogText(pair.Value[i], pair.Key);
+                    if (this.activeContext == pair.Key) {
+                        const float scrollPerc = 0.001f;
+                        var scrollView = this.activeContext == LogContext.Client
+                            ? clientLogScrollView
+                            : serverLogScrollView;
+                        if (_pretendScrollAtBottom || scrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(scrollView.verticalNormalizedPosition, scrollPerc))
+                        {
+                            _scrollToBottomNextFrame = true;
                         }
-                        pair.Value.RemoveRange(0, maxPerTick);
-                    } else {
-                        foreach (var logText in pair.Value) {
-                            ProcessLogText(logText, pair.Key);
-                        }
-                        pair.Value.Clear();
-                    }
-                    Profiler.EndSample();
 
-                    Profiler.BeginSample("Console.RebuildLayout");
-                    RebuildLayout(pair.Key);
-                    Profiler.EndSample();
+                        Profiler.BeginSample("Console.ProcessLogText");
+
+                        const int maxPerTick = 5;
+                        if (pair.Value.Count > maxPerTick) {
+                            for (int i = 0; i < maxPerTick; i++) {
+                                ProcessLogText(pair.Value[i], pair.Key);
+                            }
+                            pair.Value.RemoveRange(0, maxPerTick);
+                        } else {
+                            foreach (var logText in pair.Value) {
+                                ProcessLogText(logText, pair.Key);
+                            }
+                            pair.Value.Clear();
+                        }
+                        Profiler.EndSample();
+
+                        Profiler.BeginSample("Console.RebuildLayout");
+                        RebuildLayout(pair.Key);
+                        Profiler.EndSample();
+                    }
                 }
             }
 
+
             // Check if the developer console toggle key was pressed
-            if (ConsoleToggleKey.HasValue && (!ConsoleIsShowing || (!_inputField.isFocused || InputText.Length <= 1)) && GetKeyDown(ConsoleToggleKey.Value))
-            {
+            if (ConsoleToggleKey.HasValue && (!ConsoleIsShowing || (!_inputField.isFocused || InputText.Length <= 1)) && GetKeyDown(ConsoleToggleKey.Value)) {
                 ToggleConsole();
                 return;
             }
 
-            if (!ConsoleIsShowing)
-            {
+            if (!ConsoleIsShowing) {
                 return;
             }
 
-            if (_inputField.isFocused)
-            {
+            if (_inputField.isFocused) {
                 // Allow cycling through command suggestions using the UP and DOWN arrows
-                if (_commandStringSuggestions != null && _commandStringSuggestions.Length > 0)
-                {
-                    if (GetKeyDown(UpArrowKey))
-                    {
+                if (_commandStringSuggestions != null && _commandStringSuggestions.Length > 0) {
+                    if (GetKeyDown(UpArrowKey)) {
                         CycleCommandSuggestions(1);
-                    }
-                    else if (GetKeyDown(DownArrowKey))
-                    {
+                    } else if (GetKeyDown(DownArrowKey)) {
                         CycleCommandSuggestions(-1);
                     }
                 }
 
                 // Allow cycling through command history using the UP and DOWN arrows
-                else
-                {
+                else {
                     // Reset the command history index if the input text is blank
-                    if (string.IsNullOrEmpty(InputText) && _commandHistoryIndex != -1)
-                    {
+                    if (string.IsNullOrEmpty(InputText) && _commandHistoryIndex != -1) {
                         _commandHistoryIndex = -1;
                     }
 
-                    if (GetKeyDown(UpArrowKey))
-                    {
+                    if (GetKeyDown(UpArrowKey)) {
                         CycleCommandHistory(1);
                     }
-                    else if (GetKeyDown(DownArrowKey))
-                    {
+                    else if (GetKeyDown(DownArrowKey)) {
                         CycleCommandHistory(-1);
                     }
                 }

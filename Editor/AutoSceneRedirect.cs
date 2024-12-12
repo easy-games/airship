@@ -70,9 +70,7 @@ public class AutoSceneRedirect {
         var gameConfig = GameConfig.Load();
         if (gameConfig == null) return;
 
-        Debug.Log("Core.1");
         if (Array.Find(gameConfig.gameScenes, obj => ((SceneAsset)obj).name == sceneName) != null) {
-            Debug.Log("Core.2 " + sceneName);
             ServerBootstrap.editorStartingSceneIntent = sceneName;
         } else {
             ServerBootstrap.editorStartingSceneIntent = "";

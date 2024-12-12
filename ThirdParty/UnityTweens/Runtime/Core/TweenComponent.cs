@@ -396,6 +396,7 @@ namespace ElRaccoone.Tweens.Core {
     /// <returns>The current Tween.</returns>
     internal Tween<DriverValueType> Finalize (DriverValueType valueTo, float duration) {
       if (this.gameObject.activeInHierarchy == false) {
+        // Debug.LogWarning("Tried to use NativeTween on an inactive GameObject: " + this.gameObject.name + ". The tween has immediately cancelled.", this.gameObject);
         this.Decommission ();
       } else {
         this.duration = duration;

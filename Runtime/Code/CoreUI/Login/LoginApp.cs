@@ -164,7 +164,9 @@ public class LoginApp : MonoBehaviour {
            return;
         }
 
-        if (selfRes.data.Length == 0) {
+        // print("self response: " + selfRes.data);
+
+        if (selfRes.data.Length == 0 || selfRes.data == "{}") {
            loading = false;
            RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
            return;

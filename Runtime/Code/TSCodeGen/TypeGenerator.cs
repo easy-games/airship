@@ -9,7 +9,6 @@ using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Http.Public;
-using Code.Player.Character.API;
 using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
@@ -38,7 +37,6 @@ using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
-using Code.Player.Human.Net;
 using Mirror;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -123,7 +121,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterController),
             typeof(TrailRenderer),
             typeof(WindowCore),
-            typeof(CharacterMoveModifier),
             typeof(MaterialColorURP),
             typeof(MaterialColorURP.ColorSetting),
             typeof(MainMenuLoadingScreen),
@@ -247,6 +244,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
+            typeof(CharacterMovementState),
             
             // Steam
             typeof(AirshipSteamFriendInfo),

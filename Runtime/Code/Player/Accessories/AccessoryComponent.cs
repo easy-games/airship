@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Accessories {
     [LuauAPI]
@@ -111,7 +114,13 @@ namespace Code.Player.Accessories {
         public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
 
+        [SerializeField]
+        public List<Mesh> meshLods = new();
+
+        [SerializeField] public MaterialColorURP[] matColors;
+
         [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
+        [Obsolete]
         public bool canMeshCombine = false;
 
         //Array of (bones?) that get hidden on body mesh when this accessory is worn
@@ -151,6 +160,10 @@ namespace Code.Player.Accessories {
 #else
             return this.serverClassId;
 #endif
+        }
+
+        private void OnValidate() {
+            this.matColors = GetComponentsInChildren<MaterialColorURP>();
         }
 
         public void Copy(AccessoryComponent other) {

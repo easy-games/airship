@@ -24,7 +24,7 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         if (GUILayout.Button("Equip Referenced Outfit")) {
             if(builder.currentOutfit != null){
                 Debug.Log("Equipping outfit " + builder.currentOutfit.name);
-                builder.EquipAccessoryOutfit(builder.currentOutfit, true);
+                builder.EquipAccessoryOutfit(builder.currentOutfit, true, true);
             }
         }
         
@@ -61,7 +61,7 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         }
     }
 
-    private async Task DownloadUserOutfit(AccessoryBuilder builder){
+    private async Task DownloadUserOutfit(AccessoryBuilder builder) {
         Debug.Log("Starting download");
         downloading = true;
         await builder.AddOutfitFromUserId(builder.currentUserId);
@@ -69,7 +69,7 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         downloading = false;
     }
 
-    private async Task DownloadUsernameOutfit(AccessoryBuilder builder){
+    private async Task DownloadUsernameOutfit(AccessoryBuilder builder) {
         Debug.Log("Starting download");
         downloading = true;
         await builder.EquipOutfitFromUsername(builder.currentUserName);

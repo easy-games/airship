@@ -9,6 +9,7 @@ using UnityEngine;
 
 [ExecuteInEditMode]
 [LuauAPI]
+[RequireComponent(typeof(Renderer))]
 public class MaterialColorURP : MonoBehaviour {
 
     [Serializable]
@@ -17,7 +18,6 @@ public class MaterialColorURP : MonoBehaviour {
 
         [NonSerialized]
         public String reference = "";
-
 
         public ColorSetting(Color baseColor) {
             this.baseColor = baseColor;
@@ -84,6 +84,14 @@ public class MaterialColorURP : MonoBehaviour {
         DoUpdate();
     }
 
+    public void CopyFrom(MaterialColorURP other) {
+        this.RefreshVariables();
+        for (int i = 0; i < other.colorSettings.Count; i++) {
+            this.colorSettings[i].baseColor = other.colorSettings[i].baseColor;
+        }
+        this.DoUpdate();
+    }
+
     public void SetColorOnAll(Color newColor){
         foreach (var colorSetting in colorSettings) {
             colorSetting.baseColor = newColor;
@@ -92,10 +100,6 @@ public class MaterialColorURP : MonoBehaviour {
     }
 
     public ColorSetting GetColorSettingByMaterial(Material mat) {
-
-        if (ren == null) {
-            return null;
-        }
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             if (ren.sharedMaterials[i] == mat) {
                 return colorSettings[i];
@@ -107,6 +111,10 @@ public class MaterialColorURP : MonoBehaviour {
     }
 
     public void InitializeColorsFromCurrentMaterials() {
+        if (this.ren == null) {
+            this.ren = GetComponent<Renderer>();
+        }
+
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             ColorSetting setting = colorSettings[i];
             var material = ren.sharedMaterials[i];
@@ -123,12 +131,11 @@ public class MaterialColorURP : MonoBehaviour {
 
 
     public void DoUpdate() {
+        if (this.ren == null) {
+            this.ren = GetComponent<Renderer>();
+        }
 
         RefreshVariables();
-
-        if (ren == null) {
-            return;
-        }
 
         //Make sure cachedBlocks is the same size as ren.shadredMAterials
         while (cachedBlocks.Count < ren.sharedMaterials.Length) {
@@ -142,7 +149,6 @@ public class MaterialColorURP : MonoBehaviour {
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             ren.SetPropertyBlock(null, i);
         }
-
 
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             Material mat = ren.sharedMaterials[i];
@@ -168,16 +174,10 @@ public class MaterialColorURP : MonoBehaviour {
         }
     }
 
-    private void RefreshVariables() {
-        //Loop through each material assigned to the renderer on this gameObject
-        if (ren == null) {
-            ren = GetComponent<Renderer>();
-        }
-        if (ren == null) {
-            return;
-        }
-
-        //match the colorSettings to materials
+    [HideFromTS]
+    public void RefreshVariables() {
+        // Loop through each material assigned to the renderer on this gameObject
+        // match the colorSettings to materials
         if (colorSettings.Count < ren.sharedMaterials.Length) {
             for (int i = colorSettings.Count; i < ren.sharedMaterials.Length; i++) {
                 colorSettings.Add(new ColorSetting(Color.white));
@@ -192,9 +192,7 @@ public class MaterialColorURP : MonoBehaviour {
     public void Clear() {
         colorSettings.Clear();
         cachedBlocks.Clear();
-        ren = null;
     }
-
 }
 
 #if UNITY_EDITOR
