@@ -901,7 +901,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 	private void TeleportInternal(Vector3 pos, Vector3 lookVector){
 		this.rigidbody.position = pos;
-		this.lookVector = lookVector;
+		SetLookVector(lookVector);
 	}
 
 	public void SetVelocity(Vector3 velocity) {
