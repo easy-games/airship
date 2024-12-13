@@ -208,11 +208,8 @@ public class CharacterMovement : NetworkBehaviour {
 #endregion
 
 #region HELPERS
-	private void SnapToY(float newY, bool forceSnap){
-		if(useExtraLogging){
-			print("Snapping to Y: " + newY);
-		}
-		var newPos = this.rigidbody.transform.position;
+	private void SnapToY(float newY){
+		var newPos = this.rigidbody.position;
 		newPos.y = newY;
 		this.rigidbody.position = newPos;
 	}
@@ -338,7 +335,7 @@ public class CharacterMovement : NetworkBehaviour {
 				((!currentMoveState.prevGrounded && this.moveData.colliderGroundOffset > 0) || 
 					//Snap if we always snap to ground
 					(moveData.alwaysSnapToGround && !currentMoveState.prevStepUp && !isImpulsing))){
-				this.SnapToY(groundHit.point.y, true);
+				this.SnapToY(groundHit.point.y);
 				newVelocity.y = 0;
 			}
 		} else{
@@ -667,7 +664,7 @@ public class CharacterMovement : NetworkBehaviour {
 				//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 			}
 			if(useExtraLogging && characterMoveVelocity.y < 0){
-				print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+				//print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
 			}
 
 		}
@@ -740,7 +737,7 @@ public class CharacterMovement : NetworkBehaviour {
 		var dirDot = Mathf.Max(moveData.minAccelerationDelta, Mathf.Clamp01((1-rawMoveDot)*2));
 		
 		if(useExtraLogging){
-			print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 		}
 
 		if(currentMoveState.isFlying){
@@ -784,7 +781,7 @@ public class CharacterMovement : NetworkBehaviour {
 			didStepUp = hitStepUp;
 			var oldPos = rootPosition;
 			if(pointOnRamp.y > oldPos.y){
-				SnapToY(pointOnRamp.y, true);
+				SnapToY(pointOnRamp.y);
 				//airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
 			}
 			//print("STEPPED UP. Vel before: " + newVelocity);
@@ -866,7 +863,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 		//Track speed based on position
 		if(useExtraLogging){
-			print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
+			//print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
 		}
 		lastPos = rootPosition;
 	}
@@ -879,7 +876,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 	public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
 		if (useExtraLogging) {
-			print("Teleporting to: " + position);
+			print("Teleporting to: " + position + " hasMovementAuth: " + hasMovementAuth);
 		}
 
 		if(hasMovementAuth){
@@ -900,7 +897,10 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	private void TeleportInternal(Vector3 pos, Vector3 lookVector){
-		this.rigidbody.position = pos;
+		if (useExtraLogging) {
+			print("Teleporting internal: " + pos);
+		}
+		this.rigidbody.MovePosition(pos);
 		SetLookVector(lookVector);
 	}
 
