@@ -28,6 +28,7 @@ namespace Code.RemoteConsole {
         /// </summary>
         /// <param name="args"></param>
         private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
+            if (!DevConsole.console.loggingEnabled) return;
             DevConsole.console.OnLogMessageReceived(args.message, args.stackTrace, args.logType, LogContext.Server, args.time);
         }
 

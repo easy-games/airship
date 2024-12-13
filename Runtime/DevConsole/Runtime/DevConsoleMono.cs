@@ -222,6 +222,8 @@ namespace Airship.DevConsole
         /// </summary>
         private bool _init = false;
 
+        public bool loggingEnabled = false;
+
         #region Input fields
 
         /// <summary>
@@ -1187,6 +1189,8 @@ namespace Airship.DevConsole
         /// <param name="_"></param>
         /// <param name="type"></param>
         public void OnLogMessageReceived(string logString, string stackTrace, LogType type, LogContext context = LogContext.Client, string time = "", bool prepend = false) {
+            if (!this.loggingEnabled) return;
+
             if (string.IsNullOrEmpty(time)) {
                 time = DateTime.Now.ToString("HH:mm:ss");
             }
@@ -1626,7 +1630,7 @@ namespace Airship.DevConsole
 
         private void OnDestroy()
         {
-            SavePreferences();
+            // SavePreferences();
         }
 
         #endregion
@@ -1740,6 +1744,16 @@ namespace Airship.DevConsole
                     RunCommand($"help {_previousCommand}");
                 }
             ));
+
+            AddCommand(Command.Create("enable", "", "Enables console logging. Console logging may cause lag.", () => {
+                this.loggingEnabled = true;
+                this.Log("<color=green>Console logging has been enabled.</color> Disable by typing \"disable\"");
+            }));
+
+            AddCommand(Command.Create("disable", "", "Disables console logging", () => {
+                this.loggingEnabled = false;
+                this.Log("<color=red>Console logging has been disabled.</color>");
+            }));
 
             AddCommand(Command.Create<string>(
                 "enum",
@@ -3726,7 +3740,7 @@ namespace Airship.DevConsole
         /// </summary>
         private void LoadPreferences()
         {
-            DevConsoleData.Load();
+            // DevConsoleData.Load();
 
             // ConsoleToggleKey = DevConsoleData.GetObject(PrefConsoleToggleKey, (InputKey?)DefaultToggleKey);
             _bindings = DevConsoleData.GetObject(PrefBindings, new Dictionary<InputKey, string>());
