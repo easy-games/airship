@@ -267,14 +267,14 @@ public class CharacterMovement : NetworkBehaviour {
 	
 	private void OnPhysicsTick(){
 		// Observers don't calculate moves
-		if(IsObserver()) {
+		if(!isServerAuth || IsObserver() || !enabled) {
 			return;
 		}
 		RunMovementTick();
 	}
 
 	private bool IsObserver(){
-		return !hasMovementAuth || (isServerOnly && !isServerAuth);
+		return !hasMovementAuth;// || (isServerOnly && !isServerAuth);
 	}
 
 	public void RunMovementTick(bool isReplay = false){
@@ -1087,10 +1087,12 @@ public class CharacterMovement : NetworkBehaviour {
 		// If new value in the state
 		if (isNewData) {
 			this.stateSyncData = newStateData;
-			if(isClientOnly && hasMovementAuth){
-				CommandSetStateData(newStateData);
-			} else if (isServerOnly && hasMovementAuth){
-				RpcSetStateData(newStateData);
+			if(hasMovementAuth){
+				if(isClientOnly){
+					CommandSetStateData(newStateData);
+				} else if (isServerOnly){
+					RpcSetStateData(newStateData);
+				}
 			}
 		}
 
