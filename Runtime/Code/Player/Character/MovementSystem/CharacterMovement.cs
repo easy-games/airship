@@ -956,6 +956,7 @@ public class CharacterMovement : NetworkBehaviour {
 		sprintInput = data.sprint;
 		jumpInput = data.jump;
 		lookVector = data.lookVector;
+		SetCustomData(data.customData);
 	}
 
 	public void AddImpulse(Vector3 impulse){
