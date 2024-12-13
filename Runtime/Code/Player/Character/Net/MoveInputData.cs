@@ -29,7 +29,9 @@ public struct MoveInputData : IEquatable<MoveInputData>{
 		return moveDir == other.moveDir &&
 			jump == other.jump && 
 			crouch == other.crouch &&
-			sprint == other.sprint;//&& 
+			sprint == other.sprint &&
+			((customData == null && other.customData == null) ||
+				(customData != null && customData.Equals(other.customData)));//&& 
 			//lookVector == other.lookVector;
     }
 
