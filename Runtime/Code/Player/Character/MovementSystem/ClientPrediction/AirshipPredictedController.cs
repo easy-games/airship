@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Mirror;
 using Unity.Mathematics;
-using UnityEditor.PackageManager;
 using UnityEngine;
 
 // PredictedController is based off of:
