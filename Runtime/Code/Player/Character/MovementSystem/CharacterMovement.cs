@@ -120,6 +120,9 @@ public class CharacterMovement : NetworkBehaviour {
 	private Vector3 moveDirInput;
 	private bool sprintInput;
 	private bool crouchInput;
+
+	//Prediction
+	private bool queueReplay = false;
 #endregion
 
 #region SYNC DATA
@@ -286,7 +289,14 @@ public class CharacterMovement : NetworkBehaviour {
 		currentMoveState.currentMoveInput = BuildMoveData();
 		OnBeginMove?.Invoke(currentMoveState, isReplay);
 		Move(currentMoveState.currentMoveInput);
+
+		//Queue after a movement tick so we have the updated position and velocity
+		if(isServerOnly && queueReplay){
+			predictedMovement.ForceReplay();
+		}
+
 		OnEndMove?.Invoke(currentMoveState, isReplay);
+
 	}
 
 	//Compile the inputs and custom data into one struct
@@ -883,7 +893,7 @@ public class CharacterMovement : NetworkBehaviour {
 			//Teleport Locally
 			TeleportInternal(position, lookVector);
 			if(isServerAuth && isServerOnly){
-				this.predictedMovement.ForceReplay();
+				this.queueReplay = true;
 			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client to teleport
@@ -971,7 +981,7 @@ public class CharacterMovement : NetworkBehaviour {
 			//Locally
 			SetImpulseInternal(impulse);
 			if(isServerAuth && isServerOnly){
-				this.predictedMovement.ForceReplay();
+				this.queueReplay = true;
 			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client
@@ -998,6 +1008,14 @@ public class CharacterMovement : NetworkBehaviour {
 	public void SetLookVector(Vector3 lookVector) {
 		OnNewLookVector?.Invoke(lookVector);
 		SetLookVectorRecurring(lookVector);
+		if(isServerOnly){
+			RpcSetLookVector(this.connectionToClient, lookVector);
+		}
+	}
+
+	[TargetRpc]
+	private void RpcSetLookVector(NetworkConnection conn, Vector3 lookVector) {
+		this.SetLookVector(lookVector);
 	}
 
 	/// <summary>
