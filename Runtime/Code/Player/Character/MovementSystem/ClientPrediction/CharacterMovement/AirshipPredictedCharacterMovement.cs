@@ -58,14 +58,18 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     protected override void OnEnable() {
-        AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
+        if(this.smoothRigidbody){
+            AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
+        }
         base.OnEnable();
         movement.OnSetCustomData += OnSetMovementData;
         movement.OnEndMove += OnMovementEnd;
     }
 
     protected override void OnDisable() {
-        AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
+        if(this.smoothRigidbody){
+            AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
+        }
         base.OnDisable();
         movement.OnSetCustomData -= OnSetMovementData;
         movement.OnEndMove -= OnMovementEnd;

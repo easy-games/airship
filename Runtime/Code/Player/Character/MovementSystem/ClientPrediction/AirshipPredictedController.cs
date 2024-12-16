@@ -62,7 +62,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     
 
     [Header("Debugging")]
-    public bool smoothRigidbodies = true;
+    public bool smoothRigidbody = true;
     [Tooltip("Draw gizmos. Shows server position and client position")]
     public bool showLogs = false;
 
@@ -185,7 +185,6 @@ protected void Log(string message){
 
 #region UPDATE
         protected virtual void Update() {
-            AirshipPredictionManager.SmoothRigidbodies = this.smoothRigidbodies;
             if (!isServer){
                 return;
             }
