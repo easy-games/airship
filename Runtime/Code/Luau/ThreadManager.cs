@@ -310,13 +310,7 @@ namespace Luau {
             }
         }
 
-        private static float lastPrint = -10000;
         public static void RunEndOfFrame() {
-            float now = Time.unscaledTime;
-            if ((now - lastPrint) > 1) {
-                lastPrint = now;
-                Debug.Log($"Objects tracked: {s_objectKeys.Count}");
-            }
             //turn the list of s_objectKeys into a list of ints
             /*
             int numGameObjectIds = s_objectKeys.Count;
