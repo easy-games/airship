@@ -1,3 +1,5 @@
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Proyecto26;
 using UnityEngine;
@@ -7,6 +9,7 @@ namespace Code.Http.Public {
     [LuauAPI]
     public class HttpManager {
         public static bool loggingEnabled = false;
+        private static SemaphoreSlim _semaphore = new SemaphoreSlim(50);
 
         public static void SetLoggingEnabled(bool val) {
             loggingEnabled = val;
@@ -27,38 +30,64 @@ namespace Code.Http.Public {
                     }
                 }
             }
-            
+
+            try
+            {
+                await _semaphore.WaitAsync(TimeSpan.FromMinutes(1));
+            }
+            catch (OperationCanceledException)
+            {
+                return new HttpResponse()
+                {
+                    success = false,
+                    statusCode = 0,
+                    error = "Request Throttled: Timeout waiting for request to be scheduled",
+                    headers = { }
+                };
+            }
+
             using var req = UnityWebRequest.Get(url);
-            foreach (var kvp in options.Headers) {
-                req.SetRequestHeader(kvp.Key, kvp.Value);
-            }
-            await UnityWebRequestProxyHelper.ApplyProxySettings(req).SendWebRequest();
 
-            if (req.result == UnityWebRequest.Result.ProtocolError) {
-                return new HttpResponse() {
-                    success = false,
-                    error = req.error,
+            try
+            {
+                foreach (var kvp in options.Headers)
+                {
+                    req.SetRequestHeader(kvp.Key, kvp.Value);
+                }
+                await UnityWebRequestProxyHelper.ApplyProxySettings(req).SendWebRequest();
+
+                if (req.result == UnityWebRequest.Result.ProtocolError)
+                {
+                    return new HttpResponse()
+                    {
+                        success = false,
+                        error = req.error,
+                        statusCode = (int)req.responseCode,
+                        headers = req.GetResponseHeaders()
+                    };
+                }
+
+                if (req.result == UnityWebRequest.Result.ConnectionError)
+                {
+                    return new HttpResponse()
+                    {
+                        success = false,
+                        error = req.error,
+                        statusCode = (int)req.responseCode,
+                        headers = req.GetResponseHeaders()
+                    };
+                }
+
+                return new HttpResponse()
+                {
+                    success = true,
+                    data = req.downloadHandler.text,
                     statusCode = (int)req.responseCode,
                     headers = req.GetResponseHeaders()
                 };
+            } finally {
+                _semaphore.Release();
             }
-
-            if (req.result == UnityWebRequest.Result.ConnectionError) {
-                return new HttpResponse() {
-                    success = false,
-                    error = req.error,
-                    statusCode = (int)req.responseCode,
-                    headers = req.GetResponseHeaders()
-                };
-            }
-
-            return new HttpResponse() {
-                success = true,
-                data = req.downloadHandler.text,
-                statusCode = (int)req.responseCode,
-                headers = req.GetResponseHeaders()
-            };
-
 
             // RestClient.Get(options).Then((res) => {
             //     task.SetResult(new HttpResponse() {
@@ -113,24 +142,40 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
-                task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    statusCode = (int)res.StatusCode,
-                    headers = res.Headers
-                });
-            }).Catch((err) => {
-                var error = err as RequestException;
-                if (loggingEnabled) {
-                    LogRequestError(url, error);
+            // The things we do for promises
+            _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
+            {
+                if (waitTask.IsFaulted || waitTask.IsCanceled)
+                {
+                    // Handle the semaphore timeout or exception
+                    task.SetResult(new HttpResponse
+                    {
+                        success = false,
+                        statusCode = 0,
+                        error = "Request Throttled: Timeout waiting for request to be scheduled",
+                        headers = {}
+                    });
+                    return;
                 }
-                task.SetResult(new HttpResponse() {
-                    success = false,
-                    statusCode = 0,
-                    error = error.Message,
-                    headers = {}
-                });
+                RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+                    task.SetResult(new HttpResponse() {
+                        success = 200 <= res.StatusCode && res.StatusCode < 300,
+                        data = res.Text,
+                        statusCode = (int)res.StatusCode,
+                        headers = res.Headers
+                    });
+                }).Catch((err) => {
+                    var error = err as RequestException;
+                    if (loggingEnabled) {
+                        LogRequestError(url, error);
+                    }
+                    task.SetResult(new HttpResponse() {
+                        success = false,
+                        statusCode = 0,
+                        error = error.Message,
+                        headers = {}
+                    });
+                }).Finally(() => _semaphore.Release());
             });
 
             return task.Task;
@@ -157,24 +202,44 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Delete(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
-                task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    statusCode = (int)res.StatusCode,
-                    headers = res.Headers
-                });
-            }).Catch((err) => {
-                var error = err as RequestException;
-                if (loggingEnabled) {
-                    LogRequestError(url, error);
+            _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
+            {
+                if (waitTask.IsFaulted || waitTask.IsCanceled)
+                {
+                    // Handle the semaphore timeout or exception
+                    task.SetResult(new HttpResponse
+                    {
+                        success = false,
+                        statusCode = 0,
+                        error = "Request Throttled: Timeout waiting for request to be scheduled",
+                        headers = { }
+                    });
+                    return;
                 }
-                task.SetResult(new HttpResponse() {
-                    success = false,
-                    statusCode = 0,
-                    error = error.Message,
-                    headers = {}
-                });
+                RestClient.Delete(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) =>
+                {
+                    task.SetResult(new HttpResponse()
+                    {
+                        success = 200 <= res.StatusCode && res.StatusCode < 300,
+                        data = res.Text,
+                        statusCode = (int)res.StatusCode,
+                        headers = res.Headers
+                    });
+                }).Catch((err) =>
+                {
+                    var error = err as RequestException;
+                    if (loggingEnabled)
+                    {
+                        LogRequestError(url, error);
+                    }
+                    task.SetResult(new HttpResponse()
+                    {
+                        success = false,
+                        statusCode = 0,
+                        error = error.Message,
+                        headers = { }
+                    });
+                }).Finally(() => _semaphore.Release());
             });
 
             return task.Task;
@@ -202,24 +267,44 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Patch(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
-                task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    statusCode = (int)res.StatusCode,
-                    headers = res.Headers
-                });
-            }).Catch((err) => {
-                var error = err as RequestException;
-                if (loggingEnabled) {
-                    LogRequestError(url, error);
+            _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
+            {
+                if (waitTask.IsFaulted || waitTask.IsCanceled)
+                {
+                    // Handle the semaphore timeout or exception
+                    task.SetResult(new HttpResponse
+                    {
+                        success = false,
+                        statusCode = 0,
+                        error = "Request Throttled: Timeout waiting for request to be scheduled",
+                        headers = { }
+                    });
+                    return;
                 }
-                task.SetResult(new HttpResponse() {
-                    success = false,
-                    statusCode = 0,
-                    error = error.Message,
-                    headers = {}
-                });
+                RestClient.Patch(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) =>
+                {
+                    task.SetResult(new HttpResponse()
+                    {
+                        success = 200 <= res.StatusCode && res.StatusCode < 300,
+                        data = res.Text,
+                        statusCode = (int)res.StatusCode,
+                        headers = res.Headers
+                    });
+                }).Catch((err) =>
+                {
+                    var error = err as RequestException;
+                    if (loggingEnabled)
+                    {
+                        LogRequestError(url, error);
+                    }
+                    task.SetResult(new HttpResponse()
+                    {
+                        success = false,
+                        statusCode = 0,
+                        error = error.Message,
+                        headers = { }
+                    });
+                }).Finally(() => _semaphore.Release());
             });
 
             return task.Task;
@@ -254,24 +339,44 @@ namespace Code.Http.Public {
                 }
             }
 
-            RestClient.Put(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
-                task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    statusCode = (int)res.StatusCode,
-                    headers = res.Headers
-                });
-            }).Catch((err) => {
-                var error = err as RequestException;
-                if (loggingEnabled) {
-                    LogRequestError(options.Uri, error);
+            _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
+            {
+                if (waitTask.IsFaulted || waitTask.IsCanceled)
+                {
+                    // Handle the semaphore timeout or exception
+                    task.SetResult(new HttpResponse
+                    {
+                        success = false,
+                        statusCode = 0,
+                        error = "Request Throttled: Timeout waiting for request to be scheduled",
+                        headers = { }
+                    });
+                    return;
                 }
-                task.SetResult(new HttpResponse() {
-                    success = false,
-                    statusCode = 0,
-                    error = error.Message,
-                    headers = {}
-                });
+                RestClient.Put(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) =>
+                {
+                    task.SetResult(new HttpResponse()
+                    {
+                        success = 200 <= res.StatusCode && res.StatusCode < 300,
+                        data = res.Text,
+                        statusCode = (int)res.StatusCode,
+                        headers = res.Headers
+                    });
+                }).Catch((err) =>
+                {
+                    var error = err as RequestException;
+                    if (loggingEnabled)
+                    {
+                        LogRequestError(options.Uri, error);
+                    }
+                    task.SetResult(new HttpResponse()
+                    {
+                        success = false,
+                        statusCode = 0,
+                        error = error.Message,
+                        headers = { }
+                    });
+                }).Finally(() => _semaphore.Release());
             });
 
             return task.Task;
