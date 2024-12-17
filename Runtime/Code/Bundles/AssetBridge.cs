@@ -79,8 +79,10 @@ public class AssetBridge : IAssetBridge
 	/// Used by TS.
 	/// C# should use <see cref="LoadAssetInternal{T}" />
 	/// </summary>
-	public Object LoadAsset(string path)
-	{
+	public Object LoadAsset(string path) {
+		if (path.EndsWith(".sprite")) {
+			return LoadAssetInternal<Sprite>(path.Replace(".sprite", ""));
+		}
 		return LoadAssetInternal<Object>(path);
 	}
 
