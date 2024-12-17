@@ -86,8 +86,10 @@ public class AssetBridge : IAssetBridge
 		return LoadAssetInternal<Object>(path);
 	}
 
-	public Object LoadAssetIfExists(string path)
-	{
+	public Object LoadAssetIfExists(string path) {
+		if (path.EndsWith(".sprite")) {
+			return LoadAssetInternal<Sprite>(path.Replace(".sprite", ""), false);
+		}
 		return LoadAssetInternal<Object>(path, false);
 	}
 
