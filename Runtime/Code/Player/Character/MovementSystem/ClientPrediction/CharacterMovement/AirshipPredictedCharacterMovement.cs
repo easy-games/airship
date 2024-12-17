@@ -250,6 +250,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         if(showLogs){
          print("Replay ended. initial tick: " + initialState.tick);
         }
+        predictedTick++;
         serverTick = initialState.tick;
         //PrintHistory("REPLAY FINISHED");
         if(showGizmos){

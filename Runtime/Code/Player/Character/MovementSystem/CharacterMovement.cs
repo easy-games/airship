@@ -293,6 +293,7 @@ public class CharacterMovement : NetworkBehaviour {
 		//Queue after a movement tick so we have the updated position and velocity
 		if(isServerOnly && queueReplay){
 			predictedMovement.ForceReplay();
+			queueReplay = false;
 		}
 
 		OnEndMove?.Invoke(currentMoveState, isReplay);

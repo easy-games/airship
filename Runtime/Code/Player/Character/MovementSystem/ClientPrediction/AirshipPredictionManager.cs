@@ -272,7 +272,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         //Replay started callback
         replayData.replayController.OnReplayStarted(replayData.initialState, replayData.afterIndex);
 
-        int tick = replayData.initialState.tick;
+        int tick = replayData.initialState.tick + 1;
         int finalTick = replayData.endingTick;
 
         Debug.Log("Replaying " + replayData.replayController.friendlyName + " from: " + replayData.initialState.tick + " to: " + replayData.endingTick);
@@ -284,7 +284,6 @@ public class AirshipPredictionManager : MonoBehaviour {
             //TODO maybe make a bool so this is optional?
 
             //Simulate 1 physics step
-            tick ++;
 
             //Replay ticked callback
             replayData.replayController.OnReplayTickStarted(tick);
@@ -294,6 +293,9 @@ public class AirshipPredictionManager : MonoBehaviour {
 
             //Replay ticked callback
             replayData.replayController.OnReplayTickFinished(tick);
+
+            //Incriment tick
+            tick ++;
         }
 
         print("Replay finished");
