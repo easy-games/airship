@@ -357,6 +357,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   redirectTarget: {fileID: 0}
+  ignoreDrag: 0
 --- !u!1 &7307277244357059459
 GameObject:
   m_ObjectHideFlags: 0
