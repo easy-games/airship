@@ -9,7 +9,10 @@ namespace Code.Http.Public {
     [LuauAPI]
     public class HttpManager {
         public static bool loggingEnabled = false;
-        private static SemaphoreSlim _semaphore = new SemaphoreSlim(50);
+        // We utilize a semaphore to limit the maximum number of http requests that are made from a server / client at a time.
+        // We limit this here in HttpManager since this class is directly exposed to game servers.
+        // It is also used indirectly on clients (through InternalHttpManager) in the protected context to call Airship Platform services on behalf of clients
+        private static SemaphoreSlim _semaphore = new SemaphoreSlim(RunCore.IsServer() ? 75 : 25);
 
         public static void SetLoggingEnabled(bool val) {
             loggingEnabled = val;
@@ -33,6 +36,7 @@ namespace Code.Http.Public {
 
             try
             {
+                // Try to acquire the semaphore, waiting for a maximum of 1 minute
                 await _semaphore.WaitAsync(TimeSpan.FromMinutes(1));
             }
             catch (OperationCanceledException)
@@ -142,12 +146,11 @@ namespace Code.Http.Public {
                 }
             }
 
-            // The things we do for promises
+            // Try to acquire the semaphore, waiting for a maximum of 1 minute
             _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
             {
                 if (waitTask.IsFaulted || waitTask.IsCanceled)
                 {
-                    // Handle the semaphore timeout or exception
                     task.SetResult(new HttpResponse
                     {
                         success = false,
@@ -202,6 +205,7 @@ namespace Code.Http.Public {
                 }
             }
 
+            // Try to acquire the semaphore, waiting for a maximum of 1 minute
             _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
             {
                 if (waitTask.IsFaulted || waitTask.IsCanceled)
@@ -267,6 +271,7 @@ namespace Code.Http.Public {
                 }
             }
 
+            // Try to acquire the semaphore, waiting for a maximum of 1 minute
             _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
             {
                 if (waitTask.IsFaulted || waitTask.IsCanceled)
@@ -339,6 +344,7 @@ namespace Code.Http.Public {
                 }
             }
 
+            // Try to acquire the semaphore, waiting for a maximum of 1 minute
             _semaphore.WaitAsync(TimeSpan.FromMinutes(1)).ContinueWith(waitTask =>
             {
                 if (waitTask.IsFaulted || waitTask.IsCanceled)
