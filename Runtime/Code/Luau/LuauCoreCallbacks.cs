@@ -783,10 +783,6 @@ public partial class LuauCore : MonoBehaviour {
             if (cacheData != null) {
                 Type t = cacheData.Value.t;
                 try {
-                    Profiler.BeginSample("Test");
-                    Profiler.EndSample();
-                    // Profiler.BeginSample("Prop" + cacheData.Value.propertyInfo.PropertyType.Name);
-                    // Profiler.EndSample();
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
                         Profiler.EndSample();
