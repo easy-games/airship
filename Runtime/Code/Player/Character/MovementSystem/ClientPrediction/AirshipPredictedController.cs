@@ -321,21 +321,24 @@ protected void Log(string message){
 
         if(forceReplay){
             int forcedIndex;
-            if(stateHistory.Count < 2){
+            if(stateHistory.Count <= 2){
+                //Shouldn't this be apply state so it actually saves into the history?
+                //ApplyState(serverState);
                 SnapTo(serverState);
                 return;
             } else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
-                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick + replayTickOffset, forcedIndex);
+                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, forcedIndex);
                 return;
             } else {
                 // something went very wrong. sampling should've worked.
                 Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
+                PrintHistory();
             }
         }
 
         // correction requires at least 2 existing states for 'before' and 'after'.
         // if we don't have two yet, drop this state and try again next time once we recorded more.
-        if (stateHistory.Count < 2) return;
+        if (stateHistory.Count <= 2) return;
         
         //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
 
@@ -476,7 +479,7 @@ protected void Log(string message){
                 }
 
                 //Replay States
-                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick + replayTickOffset, afterIndex);
+                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, afterIndex);
             }else{
                 //Snap because there isn't a time difference (should just be in shared mode)
                 ApplyState(serverState);
