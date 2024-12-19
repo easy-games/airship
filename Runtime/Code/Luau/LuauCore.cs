@@ -284,6 +284,8 @@ public partial class LuauCore : MonoBehaviour {
         eventConnections.Clear();
         propertyGetCache.Clear();
         protectedSceneHandles.Clear();
+        _cache.Clear();
+        writeMethodFunctions.Clear();
     }
 
     public static void ResetContext(LuauContext context) {
@@ -354,7 +356,7 @@ public partial class LuauCore : MonoBehaviour {
                 return false;
             }
 
-            return true;
+            return false;
         }
 
         return false;
@@ -383,7 +385,9 @@ public partial class LuauCore : MonoBehaviour {
             return;
         }
         
+        Profiler.BeginSample("BeginFrameLogic");
         LuauPlugin.LuauRunBeginFrameLogic();
+        Profiler.EndSample();
 
         // List<CallbackRecord> runBuffer = m_currentBuffer;
         // if (m_currentBuffer == m_pendingCoroutineResumesA) {
@@ -414,7 +418,9 @@ public partial class LuauCore : MonoBehaviour {
         //
         // // Run airship component update methods
         // LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
+        Profiler.BeginSample("UpdateAll");
         LuauState.UpdateAll();
+        Profiler.EndSample();
     }
 
     public void LateUpdate() {

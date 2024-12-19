@@ -157,10 +157,10 @@ namespace Code.Health
 
         public void StartProfiling(int durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             // TODO check that sender is game dev
-            if (Profiler.enabled) {
-                Debug.LogWarning("Profiler is already running.");
-                return;
-            }
+            // if (Profiler.enabled) {
+            //     Debug.LogWarning("Profiler is already running.");
+            //     return;
+            // }
 
             var date = DateTime.Now.ToString("MM-dd-yyyy h.mm.ss");
             var fileName = RunCore.IsClient() ?  $"Client-Profile-{date}.raw" :  $"Server-Profile-{date}.raw";
