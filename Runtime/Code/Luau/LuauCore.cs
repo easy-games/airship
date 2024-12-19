@@ -385,7 +385,9 @@ public partial class LuauCore : MonoBehaviour {
             return;
         }
         
+        Profiler.BeginSample("BeginFrameLogic");
         LuauPlugin.LuauRunBeginFrameLogic();
+        Profiler.EndSample();
 
         // List<CallbackRecord> runBuffer = m_currentBuffer;
         // if (m_currentBuffer == m_pendingCoroutineResumesA) {
@@ -416,7 +418,9 @@ public partial class LuauCore : MonoBehaviour {
         //
         // // Run airship component update methods
         // LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
+        Profiler.BeginSample("UpdateAll");
         LuauState.UpdateAll();
+        Profiler.EndSample();
     }
 
     public void LateUpdate() {
