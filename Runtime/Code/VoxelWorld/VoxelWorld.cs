@@ -299,6 +299,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
         Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel);
+        DamageVoxelAt(posInt, 0.0f, false);
         if (affectedChunk != null) {
             //Adding voxels to history stack for playback
             BeforeVoxelPlaced?.Invoke(voxel, posInt);
