@@ -184,7 +184,9 @@ public class CharacterMovement : NetworkBehaviour {
 		//Observers are kinematic rigidbodies
 		var isKinematic = IsObserver();
 		if(isKinematic){
+			//Have to disable these or you will get an error when setting to kinematic
 			rigidbody.interpolation = RigidbodyInterpolation.None;
+			rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 		}
 		rigidbody.isKinematic = isKinematic;
 
@@ -498,8 +500,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 		if (didJump) {
 			currentMoveState.timeSinceJump = 0f;
-		} else
-		{
+		} else {
 			currentMoveState.timeSinceJump = Math.Min(currentMoveState.timeSinceJump + deltaTime, 100f);
 		}
 
