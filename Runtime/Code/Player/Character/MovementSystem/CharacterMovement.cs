@@ -902,6 +902,18 @@ public class CharacterMovement : NetworkBehaviour {
 		}
 	}
 
+	public void TeleportWithoutReconcile(Vector3 position) {
+		TeleportAndLookWithoutReconcile(position, isOwned ? lookVector : lookVector);
+	}
+
+	public void TeleportAndLookWithoutReconcile(Vector3 position, Vector3 lookVector) {
+		if(isServerAuth && isServerOnly){
+			TeleportInternal(position, lookVector);
+		}else{
+			this.TeleportAndLook(position, lookVector);
+		}
+	}
+
 	[TargetRpc]
 	private void RpcTeleport(NetworkConnection conn, Vector3 pos, Vector3 lookVector) {
 		this.TeleportInternal(pos, lookVector);
@@ -978,6 +990,9 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	public void SetImpulse(Vector3 impulse){
+		if(useExtraLogging){
+			print("setting impulse: " + impulse + " at tick: " + this.predictedMovement?.GetCurrentTick());
+		}
 		if (hasMovementAuth) {
 			//Locally
 			SetImpulseInternal(impulse);
@@ -987,6 +1002,20 @@ public class CharacterMovement : NetworkBehaviour {
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client
 			RpcSetImpulse(base.connectionToClient, impulse);
+		}else if (isClientOnly){
+			Debug.LogError("Trying to set impulse on client without authority");
+		}
+	}
+
+	public void AddImpulseWithoutReconcile(Vector3 impulse){
+		SetImpulseWithoutReconcile(this.impulseVelocity + impulse);
+	}
+
+	public void SetImpulseWithoutReconcile(Vector3 impulse){
+		if(isServerAuth && isServerOnly){
+			SetImpulseInternal(impulse);
+		}else{
+			SetImpulse(impulse);
 		}
 	}
 

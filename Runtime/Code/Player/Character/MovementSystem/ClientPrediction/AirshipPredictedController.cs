@@ -212,7 +212,11 @@ protected void Log(string message){
         //Record history states
         protected virtual void OnPhysicsTick() {
             serverTick++;
-            predictedTick++;
+            if(this.isServer){
+                predictedTick = serverTick;
+            }else{
+                predictedTick++;
+            }
             // on clients (not host) we record the current state every FixedUpdate.
             // this is cheap, and allows us to keep a dense history.
             if (!isClientOnly || IsObserver()) return;
@@ -294,7 +298,7 @@ protected void Log(string message){
     void ApplyState(T snapshotState){
         // Hard snap to the state
         Log("Applying State: " + snapshotState.tick);
-        serverTick = snapshotState.tick;
+        SetServerTick(snapshotState.tick);
 
         // apply server state immediately.
         // important to apply velocity as well, instead of Vector3.zero.
@@ -507,6 +511,13 @@ protected void Log(string message){
         SerializeState(writer);
     }
 
+    private void SetServerTick(int tick){
+        serverTick = tick;
+        //Calculate the estimated predicted tick. But don't go into the past if we have already predicted further
+        var offset = NetworkTime.predictedTime - NetworkTime.time;
+        predictedTick = Mathf.Max(serverTick + math.max(1, GetTick(offset)), predictedTick);
+    }
+
     // read the server's state, compare with client state & correct if necessary.
     public override void OnDeserialize(NetworkReader reader, bool initialState) {        
         // deserialize data
@@ -514,14 +525,11 @@ protected void Log(string message){
         //double serverTimestamp = NetworkClient.connection.remoteTimeStamp;
 
         //Get server tick
-        serverTick = reader.ReadInt();
+        SetServerTick(reader.ReadInt());
 
         //Must we replay?
         var forceReplay = reader.ReadBool();
 
-        //Calculate the estimated predicted tick. But don't go into the past if we have already predicted further
-        var offset = math.max(0, NetworkTime.predictedTime - NetworkTime.time);
-        predictedTick = Mathf.Max(serverTick +  GetTick(offset), predictedTick);
         //print("GOT server tick: " + serverTick + " predictedTick: " + predictedTick + " offset: " + offset +  " offsetTime: " + NetworkTime.predictionErrorUnadjusted);
 
         // server sends state at the end of the frame.
@@ -670,6 +678,10 @@ protected void Log(string message){
     public int GetTick(double time){
         //print("Getting tick. Time: " + time + " interval: " + this.recordInterval + " rounded: " + Mathf.RoundToInt((float)time / this.recordInterval));
         return Mathf.RoundToInt((float)time / this.recordInterval);
+    }
+
+    public int GetCurrentTick(){
+        return predictedTick;
     }
 
     public double GetTime(int tick){
