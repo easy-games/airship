@@ -71,8 +71,6 @@ public class VoxelBlockDefinition : ScriptableObject {
     public VoxelBlocks.CollisionType collisionType = VoxelBlocks.CollisionType.Solid;
 
     public bool randomRotation = false; //Object gets flipped on the x or z axis "randomly" (always the same per coordinate)
-
-    public string minecraftIds = ""; //For automatic conversion from minecraft maps
 }
 
 #if UNITY_EDITOR
@@ -304,8 +302,6 @@ public class VoxelBlockDefinitionEditor : Editor {
         block.randomRotation = EditorGUILayout.Toggle("Random Rotation", block.randomRotation);
 
         block.rotatedPlacement = EditorGUILayout.Toggle("Rotated Placement", block.rotatedPlacement);
-
-        block.minecraftIds = EditorGUILayout.TextField("Minecraft Ids", block.minecraftIds);
         
         serializedObject.ApplyModifiedProperties();
 

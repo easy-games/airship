@@ -56,9 +56,11 @@ namespace VoxelWorldStuff {
             {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++)
                 {
-                    for (int z = 0; z < VoxelWorld.chunkSize; z++)
-                    {
-                        if (!IsVoxelUsed(x, y, z, used) && src.GetLocalVoxelAt(x, y, z) > 0) {
+                    for (int z = 0; z < VoxelWorld.chunkSize; z++) {
+                        var voxelAtPos = src.GetLocalVoxelAt(x, y, z);
+                        if (!IsVoxelUsed(x, y, z, used) && voxelAtPos > 0) {
+                            if (src.world.GetCollisionType(voxelAtPos) != VoxelBlocks.CollisionType.Solid) continue; // No collision for this block
+                            
                             //grow a box from this point
                             Vector3Int size = new Vector3Int(1, 1, 1);
                             Vector3Int origin = new Vector3Int(x, y, z);
@@ -167,6 +169,8 @@ namespace VoxelWorldStuff {
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
                     var voxelAt = src.GetLocalVoxelAt(xx, yy, zz);
+                    
+                    if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
                 }
@@ -186,8 +190,9 @@ namespace VoxelWorldStuff {
                     int zz = origin.z + z;
 
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
-
                     var voxelAt = src.GetLocalVoxelAt(xx, yy, zz);
+                    
+                    if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
                 }
@@ -215,6 +220,8 @@ namespace VoxelWorldStuff {
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
                     var voxelAt = src.GetLocalVoxelAt(xx, yy, zz);
+                    
+                    if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
                 }

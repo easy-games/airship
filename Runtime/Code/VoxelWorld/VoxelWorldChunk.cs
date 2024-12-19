@@ -427,7 +427,7 @@ namespace VoxelWorldStuff {
             if (col == 0) return default;
             return UIntToColor32(col);
         }
-
+        
         public void Clear() {
             if (obj != null) {
                 colliders.Clear();
