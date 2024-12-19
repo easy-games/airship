@@ -990,7 +990,9 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	public void SetImpulse(Vector3 impulse){
-		print("setting impulse: " + impulse + " at tick: " + this.predictedMovement.GetCurrentTick());
+		if(useExtraLogging){
+			print("setting impulse: " + impulse + " at tick: " + this.predictedMovement?.GetCurrentTick());
+		}
 		if (hasMovementAuth) {
 			//Locally
 			SetImpulseInternal(impulse);
