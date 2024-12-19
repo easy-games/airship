@@ -337,8 +337,6 @@ public class CharacterMovement : NetworkBehaviour {
 		this.groundedRaycastHit = groundHit;
 
 		if(grounded){
-			//Reset airborne impulse
-			currentMoveState.airborneFromImpulse = false;
 
 			//Store this move dir
 			currentMoveState.lastGroundedMoveDir = md.moveDir;
@@ -347,10 +345,13 @@ public class CharacterMovement : NetworkBehaviour {
 			if(newVelocity.y < 1  && 
 				((!currentMoveState.prevGrounded && this.moveData.colliderGroundOffset > 0) || 
 					//Snap if we always snap to ground
-					(moveData.alwaysSnapToGround && !currentMoveState.prevStepUp && !isImpulsing))){
+					(moveData.alwaysSnapToGround && !currentMoveState.prevStepUp && !isImpulsing && !currentMoveState.airborneFromImpulse))){
 				this.SnapToY(groundHit.point.y);
 				newVelocity.y = 0;
 			}
+
+			//Reset airborne impulse
+			currentMoveState.airborneFromImpulse = false;
 		} else{
 			//While in the air how much control do we have over our direction?
 			md.moveDir = Vector3.Lerp(currentMoveState.lastGroundedMoveDir, md.moveDir, moveData.inAirDirectionalControl);
@@ -924,6 +925,7 @@ public class CharacterMovement : NetworkBehaviour {
 		if (useExtraLogging) {
 			print("Teleporting internal: " + pos);
 		}
+		currentMoveState.airborneFromImpulse = true;
 		this.rigidbody.MovePosition(pos);
 		SetLookVector(lookVector);
 	}
