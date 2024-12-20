@@ -311,52 +311,6 @@ namespace Luau {
         }
 
         public static void RunEndOfFrame() {
-            //turn the list of s_objectKeys into a list of ints
-            /*
-            int numGameObjectIds = s_objectKeys.Count;
-            int numDestroyedGameObjectIds = 0;
-
-            // Resize arrays if necessary
-            if (numGameObjectIds > listOfGameObjectIds.Array.Length) {
-                listOfGameObjectIds.Resize(numGameObjectIds);
-                listOfDestroyedGameObjectIds.Resize(numGameObjectIds);
-            }
-            int index = 0;
-            Profiler.BeginSample("ListDestroyedObjects");
-            foreach (var (id, obj) in s_objectKeys) {
-                listOfGameObjectIds.Array[index] = id;
-                if (obj is UnityEngine.Object unityObj && unityObj == null) {
-                    if (s_debugging) {
-                        Debug.Log("Destroyed GameObject: " + id);
-                    }
-                    listOfDestroyedGameObjectIds.Array[numDestroyedGameObjectIds++] = id;
-                }
-                index++;
-            }
-            Profiler.EndSample();
-
-            try {
-                IntPtr pointerToObjectsHandle = listOfGameObjectIds.AddrOfPinnedObject();
-                IntPtr pointerToDestroyedObjectsHandle = listOfDestroyedGameObjectIds.AddrOfPinnedObject();
-                
-                Profiler.BeginSample("LuauRunEndFrameLogic");
-                LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
-            } finally {
-                // No need to free handles here, as they are managed within the PinnedArray class.
-                Profiler.EndSample();
-            }
-
-            Profiler.BeginSample("RemoveObjectKeys");
-            for (int i = 0; i < numDestroyedGameObjectIds; i++) {
-                var key = listOfDestroyedGameObjectIds.Array[i];
-                if (s_objectKeys.TryGetValue(key, out var obj)) {
-                    s_objectKeys.Remove(key);
-                    s_reverseObjectKeys.Remove(obj);
-                }
-            }
-            Profiler.EndSample();
-            */
-
             // Temporary removal process:
             s_removalList.Clear();
             

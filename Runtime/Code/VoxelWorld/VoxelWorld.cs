@@ -732,7 +732,6 @@ public partial class VoxelWorld : MonoBehaviour {
         VoxelData grass = voxelBlocks.SearchForBlockIdByString("GRASS");
 
         for (int x = -64; x < 64; x++) {
-            //  for (int z = -127; z < 127; z++)
             for (int z = -64; z < 64; z++) {
                 WriteVoxelAtInternal(new Vector3Int(x, 0, z), grass);
             }
