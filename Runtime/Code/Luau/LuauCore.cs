@@ -424,13 +424,23 @@ public partial class LuauCore : MonoBehaviour {
         // runBuffer.Clear();
 
         Profiler.BeginSample("TryResumeAsyncTasks");
-        TryResumeAsyncTasks();
-        Profiler.EndSample();
+        try {
+            TryResumeAsyncTasks();
+        } catch (Exception err) {
+            Debug.LogError(err);
+        } finally {
+            Profiler.EndSample();
+        }
 
         //Run all pending callbacks
         Profiler.BeginSample("InvokeUpdate");
-        ThreadDataManager.InvokeUpdate();
-        Profiler.EndSample();
+        try {
+            ThreadDataManager.InvokeUpdate();
+        } catch (Exception err) {
+            Debug.LogError(err);
+        } finally {
+            Profiler.EndSample();
+        }
         
         // Profiler.BeginSample("RunTaskScheduler");
         // LuauPlugin.LuauRunTaskScheduler();

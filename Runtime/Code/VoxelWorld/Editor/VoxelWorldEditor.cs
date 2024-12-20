@@ -309,7 +309,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
     public override void OnInspectorGUI() {
         VoxelWorld world = (VoxelWorld)target;
-
+        
         //Add a field for voxelBlocks
         world.voxelBlocks = (VoxelBlocks)EditorGUILayout.ObjectField("Voxel Blocks", world.voxelBlocks, typeof(VoxelBlocks), true);
         //Add big divider
@@ -378,6 +378,10 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (GUILayout.Button("Generate Full World")) {
             world.GenerateWorld();
             world.FillRandomTerrain();
+        }
+        if (GUILayout.Button("Generate Flat World")) {
+            world.GenerateWorld();
+            world.FillFlatGround();
         }
         if (GUILayout.Button("Generate Empty World")) {
             world.GenerateWorld();
@@ -454,7 +458,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
         
         if (GUI.changed) {
-           
             EditorUtility.SetDirty(world);
             // Trigger a repaint
             world.FullWorldUpdate();
