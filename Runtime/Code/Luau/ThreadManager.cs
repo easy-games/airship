@@ -311,6 +311,8 @@ namespace Luau {
         }
 
         public static void RunEndOfFrame() {
+            LuauPlugin.LuauRunEndFrameLogic();
+            
             // Temporary removal process:
             s_removalList.Clear();
             
