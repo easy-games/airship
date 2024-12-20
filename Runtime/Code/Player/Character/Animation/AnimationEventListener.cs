@@ -32,11 +32,16 @@ public class AnimationEventListener : MonoBehaviour {
 
     private bool CanMessage(string key){
         bool canMessage = false;
+        
         if(lastMessageTime.TryGetValue(key, out float lastTime)){
             if(Time.time - lastTime > this.minRepeatMessageTime){
                 canMessage = true;
             }
         }
+        else {
+            canMessage = true;
+        }
+
         lastMessageTime[key] = Time.time;
         return canMessage;
     }

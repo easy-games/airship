@@ -62,7 +62,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     
 
     [Header("Debugging")]
-    public bool smoothRigidbodies = true;
+    public bool smoothRigidbody = true;
     [Tooltip("Draw gizmos. Shows server position and client position")]
     public bool showLogs = false;
 
@@ -183,9 +183,8 @@ protected void Log(string message){
     }
 #endregion
 
-#region SERVER
+#region UPDATE
         protected virtual void Update() {
-            AirshipPredictionManager.SmoothRigidbodies = this.smoothRigidbodies;
             if (!isServer){
                 return;
             }
@@ -209,13 +208,15 @@ protected void Log(string message){
             // always set dirty to always serialize in next sync interval.
             SetDirty();
         }
-#endregion
-#region CLIENT
         
         //Record history states
         protected virtual void OnPhysicsTick() {
             serverTick++;
-            predictedTick++;
+            if(this.isServer){
+                predictedTick = serverTick;
+            }else{
+                predictedTick++;
+            }
             // on clients (not host) we record the current state every FixedUpdate.
             // this is cheap, and allows us to keep a dense history.
             if (!isClientOnly || IsObserver()) return;
@@ -232,6 +233,13 @@ protected void Log(string message){
 
 
 #region PREDICTION
+    private bool forceNextReplay = false;
+    public void ForceReplay(){
+        if(isServerOnly){
+            forceNextReplay = true;
+        }
+    }
+
     protected virtual bool ShouldRecordState(){
             // OPTIMIZATION: RecordState() is expensive because it inserts into a SortedList.
             // only record if state actually changed!
@@ -290,7 +298,7 @@ protected void Log(string message){
     void ApplyState(T snapshotState){
         // Hard snap to the state
         Log("Applying State: " + snapshotState.tick);
-        serverTick = snapshotState.tick;
+        SetServerTick(snapshotState.tick);
 
         // apply server state immediately.
         // important to apply velocity as well, instead of Vector3.zero.
@@ -309,15 +317,32 @@ protected void Log(string message){
     // process a received server state.
     // compares it against our history and applies corrections if needed.
     // serverTimestamp is the same value as serverState.timestamp
-    protected void OnReceivedState(int serverTick, T serverState) {
+    protected void OnReceivedState(int serverTick, T serverState, bool forceReplay) {
         if(IsObserver()){
             SnapTo(serverState);
             return;
         }
 
+        if(forceReplay){
+            int forcedIndex;
+            if(stateHistory.Count <= 2){
+                //Shouldn't this be apply state so it actually saves into the history?
+                //ApplyState(serverState);
+                SnapTo(serverState);
+                return;
+            } else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
+                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, forcedIndex);
+                return;
+            } else {
+                // something went very wrong. sampling should've worked.
+                Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
+                PrintHistory();
+            }
+        }
+
         // correction requires at least 2 existing states for 'before' and 'after'.
         // if we don't have two yet, drop this state and try again next time once we recorded more.
-        if (stateHistory.Count < 2) return;
+        if (stateHistory.Count <= 2) return;
         
         //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
 
@@ -417,7 +442,7 @@ protected void Log(string message){
             //Continue to the replay below
         }
         // find the two closest client states between timestamp
-        else if (Sample(stateHistory, serverTick, out T before, out T after, out afterIndex)) {
+        else if (Sample(stateHistory, serverTick, out T before, out afterIndex)) {
             clientState = before;
         }else {
             // something went very wrong. sampling should've worked.
@@ -458,7 +483,7 @@ protected void Log(string message){
                 }
 
                 //Replay States
-                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick + replayTickOffset, afterIndex);
+                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, afterIndex);
             }else{
                 //Snap because there isn't a time difference (should just be in shared mode)
                 ApplyState(serverState);
@@ -478,8 +503,19 @@ protected void Log(string message){
         //Pass what tick we sent this on
         writer.WriteInt(serverTick);
 
+        //Pass a bool to signify if client MUST replay
+        writer.WriteBool(forceNextReplay);
+        forceNextReplay = false;
+
         //Let the child class serialize its data
         SerializeState(writer);
+    }
+
+    private void SetServerTick(int tick){
+        serverTick = tick;
+        //Calculate the estimated predicted tick. But don't go into the past if we have already predicted further
+        var offset = NetworkTime.predictedTime - NetworkTime.time;
+        predictedTick = Mathf.Max(serverTick + math.max(1, GetTick(offset)), predictedTick);
     }
 
     // read the server's state, compare with client state & correct if necessary.
@@ -489,11 +525,11 @@ protected void Log(string message){
         //double serverTimestamp = NetworkClient.connection.remoteTimeStamp;
 
         //Get server tick
-        serverTick = reader.ReadInt();
+        SetServerTick(reader.ReadInt());
 
-        //Calculate the estimated predicted tick. But don't go into the past if we have already predicted further
-        var offset = math.max(0, NetworkTime.predictedTime - NetworkTime.time);
-        predictedTick = Mathf.Max(serverTick +  GetTick(offset), predictedTick);
+        //Must we replay?
+        var forceReplay = reader.ReadBool();
+
         //print("GOT server tick: " + serverTick + " predictedTick: " + predictedTick + " offset: " + offset +  " offsetTime: " + NetworkTime.predictionErrorUnadjusted);
 
         // server sends state at the end of the frame.
@@ -513,7 +549,7 @@ protected void Log(string message){
         //print("Deserialize time: " + timestamp + " readerTime: " + serverDeltaTime);
         // process received state
         try{
-            OnReceivedState(serverTick, newState);
+            OnReceivedState(serverTick, newState, forceReplay);
         }catch(Exception e){
             Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
         }
@@ -536,32 +572,29 @@ protected void Log(string message){
             SortedList<int, T> history,
             int tick, // current server time
             out T before,
-            out T after,
             out int afterIndex)
         {
             before = default;
-            after  = default;
             afterIndex = -1;
 
             // can't sample an empty history
             // interpolation needs at least two entries.
             //   can't Lerp(A, A, 1.5). dist(A, A) * 1.5 is always 0.
             if (history.Count <= 2) {
-                print("History is too short");
+                this.Log("History is too short");
                 return false;
             }
 
             // older than oldest
             if (tick < history.Keys[0]) {
-                print("Time is older than our history");
+                this.Log("Time is older than our history");
                 return false;
             }
 
             var lastIndex = history.Keys.Count-1;
             if(tick >= history.Keys[lastIndex]){
-                print("Time is newer than our history");
+                this.Log("Time is newer than our history");
                 before = history.Values[lastIndex-1];
-                after = history.Values[lastIndex];
                 afterIndex = lastIndex;
                 return true;
             }
@@ -580,7 +613,6 @@ protected void Log(string message){
                 if (tick == key)
                 {
                     before = value;
-                    after = value;
                     afterIndex = index;
                     return true;
                 }
@@ -589,7 +621,6 @@ protected void Log(string message){
                 if (key > tick)
                 {
                     before = prev.Value;
-                    after = value;
                     afterIndex = index;
                     return true;
                 }
@@ -647,6 +678,10 @@ protected void Log(string message){
     public int GetTick(double time){
         //print("Getting tick. Time: " + time + " interval: " + this.recordInterval + " rounded: " + Mathf.RoundToInt((float)time / this.recordInterval));
         return Mathf.RoundToInt((float)time / this.recordInterval);
+    }
+
+    public int GetCurrentTick(){
+        return predictedTick;
     }
 
     public double GetTime(int tick){

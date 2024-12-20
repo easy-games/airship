@@ -34,12 +34,16 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     }
 
     protected new void OnEnable() {
-        AirshipPredictionManager.instance.RegisterRigidbody(this.rigid, this.graphicsHolder);
+        if(this.smoothRigidbody){
+            AirshipPredictionManager.instance.RegisterRigidbody(this.rigid, this.graphicsHolder);
+        }
         base.OnEnable();
     }
 
     protected new void OnDisable() {
-        AirshipPredictionManager.instance.UnRegisterRigidbody(this.rigid);
+        if(this.smoothRigidbody){
+            AirshipPredictionManager.instance.UnRegisterRigidbody(this.rigid);
+        }
         base.OnDisable();
     }
 

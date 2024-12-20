@@ -5,11 +5,14 @@ using System;
 using System.Collections;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Airship.DevConsole;
+using Assets.Luau;
 using Code.Luau;
 using UnityEngine;
 using Luau;
+using NUnit.Framework;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
@@ -378,268 +381,338 @@ public partial class LuauCore : MonoBehaviour
         WritePropertyToThread(thread, returnValue, type);
         return 1;
     }
+    
+    public static Dictionary<Type, Delegate> writeMethodFunctions = new ();
 
-    public static unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
-        if (value == null) {
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+    /// <summary>
+    /// This will not work if passed in type is not a value type
+    /// </summary>
+    public static unsafe bool FastWriteValuePropertyToThread<T>(IntPtr thread, T value) {
+        var genericType = typeof(T);
+        if (writeMethodFunctions.TryGetValue(genericType, out var f)) {
+            ((Action<IntPtr, T>) f)(thread, value);
             return true;
         }
+        
+        var genericName = genericType.Name;
+        // Find write property function for this type
+        var methodName = $"WritePropertyToThread{genericName}";
+        Debug.Log("Checking for " + methodName);
+        var mi = typeof(LuauCore).GetMethod(methodName); // ex: WritePropertyToThreadVector3
 
-        if (t == stringType) {
-            byte[] str = System.Text.Encoding.UTF8.GetBytes((string)value);
-            var allocation = GCHandle.Alloc(str, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, allocation.AddrOfPinnedObject(),
-                str.Length);
-            allocation.Free();
-            return true;
+        if (mi == null) {
+            // If this error throws it likely means:
+            // 1. If type is a value type (int / Vector3, not an object) then we should probably implement
+            // the linked function name in this file.
+            // 2. If the type is an object whatever is calling FastWriteValuePropertyToThread should instead be calling
+            // WritePropertyToThread.
+            throw new ArgumentException($"No implemented function '{methodName}' type={genericName}");
         }
+        
+        var method = new DynamicMethod(
+            name: $"Write{typeof(T).Name}Property",
+            returnType: typeof(void),
+            parameterTypes: new[] { typeof(IntPtr), typeof(T) },
+            restrictedSkipVisibility: true);
 
-        if (t == intType || t.IsEnum) {
-            System.Int32 integer = (System.Int32)value;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
-                0); // 0, because we know how big an intPtr is
-            return true;
-        }
+        ILGenerator il = method.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldarg_1);
+        il.EmitCall(OpCodes.Call, mi, null);
+        il.Emit(OpCodes.Ret);
 
-        if (t == uIntType) {
-            UInt32 uintVal = (UInt32)value;
-            System.Int32 integer = unchecked((int)uintVal);
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
-                0); // 0, because we know how big an intPtr is
-            return true;
-        }
-        if (t == longType) {
-            Int64 intVal = (Int64)value;
-            System.Int32 integer = unchecked((int)intVal);
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
-                0); // 0, because we know how big an intPtr is
-            return true;
-        }
-
-        if (t == vector3Type) {
-            Vector3 vec = (Vector3)value;
-            LuauPlugin.LuauPushVector3ToThread(thread, vec.x, vec.y, vec.z);
-            return true;
-        }
-
-        if (t == vector3IntType) {
-            Vector3 vec = Vector3Int.FloorToInt((Vector3Int)value);
-            LuauPlugin.LuauPushVector3ToThread(thread, vec.x, vec.y, vec.z);
-            return true;
-        }
-
-        if (t == boolType) {
-            if ((bool)value == true) {
-
-                int fixedValue = 1;
-                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue),
-                    0); // 0, because we know how big an intPtr is
-                return true;
-            }
-            else {
-                int fixedValue = 0;
-                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue),
-                    0); // 0, because we know how big an intPtr is
-                return true;
-            }
-
-        }
-
-        if (t == doubleType) {
-            double number = (double)value;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number),
-                0); // 0, because we know how big an intPtr is
-            return true;
-        }
-
-        if (t == floatType) {
-            double number = (float)value;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number),
-                0); // 0, because we know how big an intPtr is
-            return true;
-        }
-
-        if (t == ushortType) {
-            double number = (ushort)value;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number),
-                0); // 0, because we know how big an intPtr is
-            return true;
-        }
-
-        if (t == rayType) {
-            Ray ray = (Ray)value;
-            float[] rayData = new float[6];
-            rayData[0] = ray.origin.x;
-            rayData[1] = ray.origin.y;
-            rayData[2] = ray.origin.z;
-            rayData[3] = ray.direction.x;
-            rayData[4] = ray.direction.y;
-            rayData[5] = ray.direction.z;
-
-            //woof. maybe make something that can eat 6 parameters akin to LuauPushVector3ToThread
-            var gch = GCHandle.Alloc(rayData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RAY, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        if (t == colorType) {
-            Color color = (Color)value;
-            float[] colorData = new float[4];
-            colorData[0] = color.r;
-            colorData[1] = color.g;
-            colorData[2] = color.b;
-            colorData[3] = color.a;
-
-            var gch = GCHandle.Alloc(colorData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_COLOR, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-            return true;
-        }
-
-        if (t == binaryBlobType) {
-            Assets.Luau.BinaryBlob blob = (Assets.Luau.BinaryBlob)value;
-
-            var gch = GCHandle.Alloc(blob.m_data, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, gch.AddrOfPinnedObject(),
-                (int)blob.m_dataSize); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        if (t == quaternionType) {
-            Quaternion quat = (Quaternion)value;
-            float[] quatData = new float[4];
-            quatData[0] = quat.x;
-            quatData[1] = quat.y;
-            quatData[2] = quat.z;
-            quatData[3] = quat.w;
-
-            var gch = GCHandle.Alloc(quatData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_QUATERNION, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        if (t == vector2Type) {
-            var vec = (Vector2)value;
-            var vecData = new float[2];
-            vecData[0] = vec.x;
-            vecData[1] = vec.y;
-
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        if (t == vector2IntType) {
-            Vector2 vec = Vector2Int.FloorToInt((Vector2Int)value);
-            var vecData = new float[2];
-            vecData[0] = vec.x;
-            vecData[1] = vec.y;
-
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        if (t == vector4Type) {
-            var vec = (Vector4)value;
-            var vecData = new float[4];
-            vecData[0] = vec.x;
-            vecData[1] = vec.y;
-            vecData[2] = vec.z;
-            vecData[3] = vec.w;
-
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR4, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        if (t == planeType) {
-            Plane plane = (Plane)value;
-            float[] planeData = new float[4];
-            planeData[0] = plane.normal.x;
-            planeData[1] = plane.normal.y;
-            planeData[2] = plane.normal.z;
-            planeData[3] = plane.distance;
-
-            var gch = GCHandle.Alloc(planeData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_PLANE, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        if (t == matrixType) {
-            Matrix4x4 mat = (Matrix4x4)value;
-            float[] matData = new float[16];
-            matData[0] = mat.m00;
-            matData[1] = mat.m01;
-            matData[2] = mat.m02;
-            matData[3] = mat.m03;
-            matData[4] = mat.m10;
-            matData[5] = mat.m11;
-            matData[6] = mat.m12;
-            matData[7] = mat.m13;
-            matData[8] = mat.m20;
-            matData[9] = mat.m21;
-            matData[10] = mat.m22;
-            matData[11] = mat.m23;
-            matData[12] = mat.m30;
-            matData[13] = mat.m31;
-            matData[14] = mat.m32;
-            matData[15] = mat.m33;
-
-
-            var gch = GCHandle.Alloc(matData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_MATRIX, gch.AddrOfPinnedObject(),
-                0); // 0, because we know how big an intPtr is
-            gch.Free();
-
-            return true;
-        }
-
-        //This has to go dead last ////////////////////////////////////////
-        if (t == systemObjectType || t.IsSubclassOf(systemObjectType)) {
-            /*
-             * Unity sometimes returns a dummy object instead of "null" for nice console prints.
-             * We need to manually cast to a UnityEngine.Object and check for null.
-             */
-            if (value is UnityEngine.Object) {
-                UnityEngine.Object go = (UnityEngine.Object)value;
-                if (go == null) {
-                    LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
-                    return true;
-                }
-            }
-
-            int objectInstanceId = ThreadDataManager.AddObjectReference(thread, value);
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_OBJECT, new IntPtr(value: &objectInstanceId),
-                0); //size == 0, intptr size known.
-            return true;
-        } //NO! Dont add anything here ///////////////////////
-
-        ThreadDataManager.Error(thread);
-        Debug.LogError("Attempted to write parameter of type " + t.ToString() + " and can't currently handle it.");
-        return false;
+        var funcType = typeof(Action<IntPtr, T>);
+        var writePropertyDelegate = (Action<IntPtr, T>)method.CreateDelegate(funcType);
+        writeMethodFunctions[genericType] = writePropertyDelegate;
+        writePropertyDelegate(thread, value);
+        return true;
     }
+    
+    // Called from WriteProperty
+    public static unsafe void WritePropertyToThreadVector3(IntPtr thread, Vector3 value) {
+        LuauPlugin.LuauPushVector3ToThread(thread, value.x, value.y, value.z);
+    }
+    
+    // Called from WriteProperty
+    public static unsafe void WritePropertyToThreadQuaternion(IntPtr thread, Quaternion quat) {
+        float* quatData = stackalloc float[4];
+        quatData[0] = quat.x;
+        quatData[1] = quat.y;
+        quatData[2] = quat.z;
+        quatData[3] = quat.w;
+        
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_QUATERNION, new IntPtr(quatData),
+            0); // 0, because we know how big an intPtr is
+    }
+    
+    // Called from WriteProperty
+    public static unsafe void WritePropertyToThreadInt32(IntPtr thread, int value) {
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value),
+            0); // 0, because we know how big an intPtr is
+    }
+    
+    // Called from WriteProperty
+    public static unsafe void WritePropertyToThreadSingle(IntPtr thread, float value) {
+        double number = value;
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number),
+            0); // 0, because we know how big an intPtr is
+    }
+    
+    // Called from WriteProperty
+    public static unsafe void WritePropertyToThreadDouble(IntPtr thread, double value) {
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value),
+            0); // 0, because we know how big an intPtr is
+    }
+
+     public static unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
+         if (value == null) {
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+             return true;
+         }
+
+         if (t == stringType) {
+             byte[] str = System.Text.Encoding.UTF8.GetBytes((string)value);
+             var allocation = GCHandle.Alloc(str, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, allocation.AddrOfPinnedObject(),
+                 str.Length);
+             allocation.Free();
+             return true;
+         }
+
+         if (t == intType) {
+             WritePropertyToThreadInt32(thread, (int) value);
+             return true;
+         }
+
+         if (t.IsEnum) {
+             System.Int32 integer = (System.Int32)value;
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
+                 0); // 0, because we know how big an intPtr is
+             return true;
+         }
+
+         if (t == uIntType) {
+             UInt32 uintVal = (UInt32)value;
+             System.Int32 integer = unchecked((int)uintVal);
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
+                 0); // 0, because we know how big an intPtr is
+             return true;
+         }
+         if (t == longType) {
+             Int64 intVal = (Int64)value;
+             System.Int32 integer = unchecked((int)intVal);
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
+                 0); // 0, because we know how big an intPtr is
+             return true;
+         }
+
+         if (t == vector3Type) {
+             WritePropertyToThreadVector3(thread, (Vector3) value);
+             return true;
+         }
+
+         if (t == vector3IntType) {
+             Vector3 vec = Vector3Int.FloorToInt((Vector3Int)value);
+             LuauPlugin.LuauPushVector3ToThread(thread, vec.x, vec.y, vec.z);
+             return true;
+         }
+
+         if (t == boolType) {
+             if ((bool)value == true) {
+
+                 int fixedValue = 1;
+                 LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue),
+                     0); // 0, because we know how big an intPtr is
+                 return true;
+             }
+             else {
+                 int fixedValue = 0;
+                 LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue),
+                     0); // 0, because we know how big an intPtr is
+                 return true;
+             }
+
+         }
+
+         if (t == doubleType) {
+             WritePropertyToThreadDouble(thread, (double) value);
+             return true;
+         }
+
+         if (t == floatType) {
+             WritePropertyToThreadSingle(thread, (float) value);
+             return true;
+         }
+
+         if (t == ushortType) {
+             double number = (ushort)value;
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number),
+                 0); // 0, because we know how big an intPtr is
+             return true;
+         }
+
+         if (t == rayType) {
+             Ray ray = (Ray)value;
+             float[] rayData = new float[6];
+             rayData[0] = ray.origin.x;
+             rayData[1] = ray.origin.y;
+             rayData[2] = ray.origin.z;
+             rayData[3] = ray.direction.x;
+             rayData[4] = ray.direction.y;
+             rayData[5] = ray.direction.z;
+
+             //woof. maybe make something that can eat 6 parameters akin to LuauPushVector3ToThread
+             var gch = GCHandle.Alloc(rayData, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RAY, gch.AddrOfPinnedObject(),
+                 0); // 0, because we know how big an intPtr is
+             gch.Free();
+
+             return true;
+         }
+
+         if (t == colorType) {
+             Color color = (Color)value;
+             float[] colorData = new float[4];
+             colorData[0] = color.r;
+             colorData[1] = color.g;
+             colorData[2] = color.b;
+             colorData[3] = color.a;
+
+             var gch = GCHandle.Alloc(colorData, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_COLOR, gch.AddrOfPinnedObject(),
+                 0); // 0, because we know how big an intPtr is
+             gch.Free();
+             return true;
+         }
+
+         if (t == binaryBlobType) {
+             Assets.Luau.BinaryBlob blob = (Assets.Luau.BinaryBlob)value;
+
+             var gch = GCHandle.Alloc(blob.m_data, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, gch.AddrOfPinnedObject(),
+                 (int)blob.m_dataSize); // 0, because we know how big an intPtr is
+             gch.Free();
+
+             return true;
+         }
+
+         if (t == quaternionType) {
+             WritePropertyToThreadQuaternion(thread, (Quaternion) value);
+             return true;
+         }
+
+         if (t == vector2Type) {
+             var vec = (Vector2)value;
+             var vecData = new float[2];
+             vecData[0] = vec.x;
+             vecData[1] = vec.y;
+
+             var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(),
+                 0); // 0, because we know how big an intPtr is
+             gch.Free();
+
+             return true;
+         }
+
+         if (t == vector2IntType) {
+             Vector2 vec = Vector2Int.FloorToInt((Vector2Int)value);
+             var vecData = new float[2];
+             vecData[0] = vec.x;
+             vecData[1] = vec.y;
+
+             var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(),
+                 0); // 0, because we know how big an intPtr is
+             gch.Free();
+
+             return true;
+         }
+
+         if (t == vector4Type) {
+             var vec = (Vector4)value;
+             var vecData = new float[4];
+             vecData[0] = vec.x;
+             vecData[1] = vec.y;
+             vecData[2] = vec.z;
+             vecData[3] = vec.w;
+
+             var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR4, gch.AddrOfPinnedObject(),
+                 0); // 0, because we know how big an intPtr is
+             gch.Free();
+
+             return true;
+         }
+
+         if (t == planeType) {
+             Plane plane = (Plane)value;
+             float[] planeData = new float[4];
+             planeData[0] = plane.normal.x;
+             planeData[1] = plane.normal.y;
+             planeData[2] = plane.normal.z;
+             planeData[3] = plane.distance;
+
+             var gch = GCHandle.Alloc(planeData, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_PLANE, gch.AddrOfPinnedObject(),
+                 0); // 0, because we know how big an intPtr is
+             gch.Free();
+
+             return true;
+         }
+
+         if (t == matrixType) {
+             Matrix4x4 mat = (Matrix4x4)value;
+             float[] matData = new float[16];
+             matData[0] = mat.m00;
+             matData[1] = mat.m01;
+             matData[2] = mat.m02;
+             matData[3] = mat.m03;
+             matData[4] = mat.m10;
+             matData[5] = mat.m11;
+             matData[6] = mat.m12;
+             matData[7] = mat.m13;
+             matData[8] = mat.m20;
+             matData[9] = mat.m21;
+             matData[10] = mat.m22;
+             matData[11] = mat.m23;
+             matData[12] = mat.m30;
+             matData[13] = mat.m31;
+             matData[14] = mat.m32;
+             matData[15] = mat.m33;
+
+             var gch = GCHandle.Alloc(matData, GCHandleType.Pinned); //Ok
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_MATRIX, gch.AddrOfPinnedObject(),
+                 0); // 0, because we know how big an intPtr is
+             gch.Free();
+
+             return true;
+         }
+
+         //This has to go dead last ////////////////////////////////////////
+         if (t == systemObjectType || t.IsSubclassOf(systemObjectType)) {
+             /*
+              * Unity sometimes returns a dummy object instead of "null" for nice console prints.
+              * We need to manually cast to a UnityEngine.Object and check for null.
+              */
+             if (value is UnityEngine.Object) {
+                 UnityEngine.Object go = (UnityEngine.Object)value;
+                 if (go == null) {
+                     LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+                     return true;
+                 }
+             }
+
+             int objectInstanceId = ThreadDataManager.AddObjectReference(thread, value);
+             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_OBJECT, new IntPtr(value: &objectInstanceId),
+                 0); //size == 0, intptr size known.
+             return true;
+         } //NO! Dont add anything here ///////////////////////
+
+         ThreadDataManager.Error(thread);
+         Debug.LogError("Attempted to write parameter of type " + t.ToString() + " and can't currently handle it.");
+         return false;
+     }
 
     private static readonly object[] ParsedObjectsData = new object[MaxParameters];
     private static bool ParseParameterData(IntPtr thread, int numParameters, ArraySegment<IntPtr> intPtrs, ArraySegment<int> podTypes, ParameterInfo[] methodParameters, ArraySegment<int> sizes, ArraySegment<object> podObjects, bool usingAttachedContext, out ArraySegment<object> parsedData) {

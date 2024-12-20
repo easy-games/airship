@@ -18,7 +18,6 @@ public static class LuauPlugin {
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
 	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int RequirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
-	public delegate int YieldCallback(LuauContext context, IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate void ToggleProfilerCallback(int componentId, IntPtr str, int strLen);
@@ -51,7 +50,6 @@ public static class LuauPlugin {
 		public RequireCallback requireCallback;
 		public RequirePathCallback requirePathCallback;
 		public ConstructorCallback constructorCallback;
-		public YieldCallback yieldCallback;
 		public ToStringCallback toStringCallback;
 		public ToggleProfilerCallback toggleProfilerCallback;
 		public IsObjectDestroyedCallback isObjectDestroyedCallback;

@@ -62,8 +62,6 @@ public class AirshipComponent : MonoBehaviour {
     [HideInInspector]
     public string m_shortFileName;
     private byte[] m_fileContents;
-
-    private List<IntPtr> m_pendingCoroutineResumes = new List<IntPtr>();
     
     [HideInInspector]
     public LuauMetadata m_metadata = new();
@@ -776,56 +774,6 @@ public class AirshipComponent : MonoBehaviour {
         return true;
     }
 
-    public void Update() {
-        if (m_error) {
-            return;
-        }
-
-        //Run any pending coroutines that waiting last frame
-     
-        foreach (IntPtr coroutinePtr in m_pendingCoroutineResumes) {
-            if (coroutinePtr == m_thread) {
-                //This is us, we dont need to resume ourselves here,
-                //just set the flag to do it.
-                m_canResume = true;
-                continue;
-            }
-            
-            ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauPlugin.LuauRunThread(coroutinePtr);
-          
-            if (retValue == -1) {
-                m_canResume = false;
-                m_error = true;
-                break;
-            }
-        }
-        m_pendingCoroutineResumes.Clear();
-
-
-        double time = Time.realtimeSinceStartupAsDouble;
-        if (m_canResume && !m_asyncYield) {
-            ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauCore.CoreInstance.ResumeScript(context, this);
-            if (retValue != 1) {
-                //we hit an error
-                Debug.LogError("ResumeScript hit an error.", gameObject);
-                m_canResume = false;
-            }
-            if (retValue == -1) {
-                m_error = true;
-            }
-
-        }
-
-        // double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
-    }
-
- 
-    public void QueueCoroutineResume(IntPtr thread) {
-        m_pendingCoroutineResumes.Add(thread);
-    }
-
     private void OnEnable() {
         // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
         if (_airshipRewaitForLuauCoreReady) {
@@ -842,6 +790,8 @@ public class AirshipComponent : MonoBehaviour {
                 StartAirshipComponentImmediately();
             }
         }
+        
+        LuauCore.RegisterAirshipComponent(this);
     }
 
     private void OnDisable() {
@@ -862,6 +812,8 @@ public class AirshipComponent : MonoBehaviour {
             _airshipWaitingForLuauCoreReady = false;
             _airshipRewaitForLuauCoreReady = true;
         }
+        
+        LuauCore.UnregisterAirshipComponent(this);
     }
 
     private void OnLuauReset(LuauContext ctx) {

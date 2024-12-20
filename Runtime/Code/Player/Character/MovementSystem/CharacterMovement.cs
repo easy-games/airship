@@ -120,6 +120,9 @@ public class CharacterMovement : NetworkBehaviour {
 	private Vector3 moveDirInput;
 	private bool sprintInput;
 	private bool crouchInput;
+
+	//Prediction
+	private bool queueReplay = false;
 #endregion
 
 #region SYNC DATA
@@ -181,7 +184,9 @@ public class CharacterMovement : NetworkBehaviour {
 		//Observers are kinematic rigidbodies
 		var isKinematic = IsObserver();
 		if(isKinematic){
+			//Have to disable these or you will get an error when setting to kinematic
 			rigidbody.interpolation = RigidbodyInterpolation.None;
+			rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 		}
 		rigidbody.isKinematic = isKinematic;
 
@@ -208,11 +213,8 @@ public class CharacterMovement : NetworkBehaviour {
 #endregion
 
 #region HELPERS
-	private void SnapToY(float newY, bool forceSnap){
-		if(useExtraLogging){
-			print("Snapping to Y: " + newY);
-		}
-		var newPos = this.rigidbody.transform.position;
+	private void SnapToY(float newY){
+		var newPos = this.rigidbody.position;
 		newPos.y = newY;
 		this.rigidbody.position = newPos;
 	}
@@ -270,14 +272,14 @@ public class CharacterMovement : NetworkBehaviour {
 	
 	private void OnPhysicsTick(){
 		// Observers don't calculate moves
-		if(IsObserver()) {
+		if(!isServerAuth || IsObserver() || !enabled) {
 			return;
 		}
 		RunMovementTick();
 	}
 
 	private bool IsObserver(){
-		return !hasMovementAuth || (isServerOnly && !isServerAuth);
+		return !hasMovementAuth;// || (isServerOnly && !isServerAuth);
 	}
 
 	public void RunMovementTick(bool isReplay = false){
@@ -289,7 +291,15 @@ public class CharacterMovement : NetworkBehaviour {
 		currentMoveState.currentMoveInput = BuildMoveData();
 		OnBeginMove?.Invoke(currentMoveState, isReplay);
 		Move(currentMoveState.currentMoveInput);
+
+		//Queue after a movement tick so we have the updated position and velocity
+		if(isServerOnly && queueReplay){
+			predictedMovement.ForceReplay();
+			queueReplay = false;
+		}
+
 		OnEndMove?.Invoke(currentMoveState, isReplay);
+
 	}
 
 	//Compile the inputs and custom data into one struct
@@ -305,7 +315,7 @@ public class CharacterMovement : NetworkBehaviour {
 			return new MoveInputData(Vector3.zero, false, false, false, lookVector, customData);
 		}
 
-		return new MoveInputData(moveDirInput, jumpInput, crouchInput, sprintInput, this.lookVector, customData);
+		return new MoveInputData(moveDirInput, jumpInput, crouchInput, sprintInput, lookVector, customData);
 	}
 #endregion
 
@@ -327,8 +337,6 @@ public class CharacterMovement : NetworkBehaviour {
 		this.groundedRaycastHit = groundHit;
 
 		if(grounded){
-			//Reset airborne impulse
-			currentMoveState.airborneFromImpulse = false;
 
 			//Store this move dir
 			currentMoveState.lastGroundedMoveDir = md.moveDir;
@@ -337,10 +345,13 @@ public class CharacterMovement : NetworkBehaviour {
 			if(newVelocity.y < 1  && 
 				((!currentMoveState.prevGrounded && this.moveData.colliderGroundOffset > 0) || 
 					//Snap if we always snap to ground
-					(moveData.alwaysSnapToGround && !currentMoveState.prevStepUp && !isImpulsing))){
-				this.SnapToY(groundHit.point.y, true);
+					(moveData.alwaysSnapToGround && !currentMoveState.prevStepUp && !isImpulsing && !currentMoveState.airborneFromImpulse))){
+				this.SnapToY(groundHit.point.y);
 				newVelocity.y = 0;
 			}
+
+			//Reset airborne impulse
+			currentMoveState.airborneFromImpulse = false;
 		} else{
 			//While in the air how much control do we have over our direction?
 			md.moveDir = Vector3.Lerp(currentMoveState.lastGroundedMoveDir, md.moveDir, moveData.inAirDirectionalControl);
@@ -490,8 +501,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 		if (didJump) {
 			currentMoveState.timeSinceJump = 0f;
-		} else
-		{
+		} else {
 			currentMoveState.timeSinceJump = Math.Min(currentMoveState.timeSinceJump + deltaTime, 100f);
 		}
 
@@ -667,7 +677,7 @@ public class CharacterMovement : NetworkBehaviour {
 				//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 			}
 			if(useExtraLogging && characterMoveVelocity.y < 0){
-				print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+				//print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
 			}
 
 		}
@@ -740,7 +750,7 @@ public class CharacterMovement : NetworkBehaviour {
 		var dirDot = Mathf.Max(moveData.minAccelerationDelta, Mathf.Clamp01((1-rawMoveDot)*2));
 		
 		if(useExtraLogging){
-			print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 		}
 
 		if(currentMoveState.isFlying){
@@ -784,7 +794,7 @@ public class CharacterMovement : NetworkBehaviour {
 			didStepUp = hitStepUp;
 			var oldPos = rootPosition;
 			if(pointOnRamp.y > oldPos.y){
-				SnapToY(pointOnRamp.y, true);
+				SnapToY(pointOnRamp.y);
 				//airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
 			}
 			//print("STEPPED UP. Vel before: " + newVelocity);
@@ -866,7 +876,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 		//Track speed based on position
 		if(useExtraLogging){
-			print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
+			//print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
 		}
 		lastPos = rootPosition;
 	}
@@ -879,15 +889,30 @@ public class CharacterMovement : NetworkBehaviour {
 
 	public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
 		if (useExtraLogging) {
-			print("Teleporting to: " + position);
+			print("Teleporting to: " + position + " hasMovementAuth: " + hasMovementAuth);
 		}
 
 		if(hasMovementAuth){
 			//Teleport Locally
 			TeleportInternal(position, lookVector);
+			if(isServerAuth && isServerOnly){
+				this.queueReplay = true;
+			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client to teleport
 			RpcTeleport(base.connectionToClient, position, lookVector);
+		}
+	}
+
+	public void TeleportWithoutReconcile(Vector3 position) {
+		TeleportAndLookWithoutReconcile(position, isOwned ? lookVector : lookVector);
+	}
+
+	public void TeleportAndLookWithoutReconcile(Vector3 position, Vector3 lookVector) {
+		if(isServerAuth && isServerOnly){
+			TeleportInternal(position, lookVector);
+		}else{
+			this.TeleportAndLook(position, lookVector);
 		}
 	}
 
@@ -897,8 +922,12 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	private void TeleportInternal(Vector3 pos, Vector3 lookVector){
-		this.rigidbody.position = pos;
-		this.lookVector = lookVector;
+		if (useExtraLogging) {
+			print("Teleporting internal: " + pos);
+		}
+		currentMoveState.airborneFromImpulse = true;
+		this.rigidbody.MovePosition(pos);
+		SetLookVector(lookVector);
 	}
 
 	public void SetVelocity(Vector3 velocity) {
@@ -952,6 +981,8 @@ public class CharacterMovement : NetworkBehaviour {
 		crouchInput = data.crouch;
 		sprintInput = data.sprint;
 		jumpInput = data.jump;
+		lookVector = data.lookVector;
+		SetCustomData(data.customData);
 	}
 
 	public void AddImpulse(Vector3 impulse){
@@ -962,12 +993,32 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	public void SetImpulse(Vector3 impulse){
+		if(useExtraLogging){
+			print("setting impulse: " + impulse + " at tick: " + this.predictedMovement?.GetCurrentTick());
+		}
 		if (hasMovementAuth) {
 			//Locally
 			SetImpulseInternal(impulse);
+			if(isServerAuth && isServerOnly){
+				this.queueReplay = true;
+			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client
 			RpcSetImpulse(base.connectionToClient, impulse);
+		}else if (isClientOnly){
+			Debug.LogError("Trying to set impulse on client without authority");
+		}
+	}
+
+	public void AddImpulseWithoutReconcile(Vector3 impulse){
+		SetImpulseWithoutReconcile(this.impulseVelocity + impulse);
+	}
+
+	public void SetImpulseWithoutReconcile(Vector3 impulse){
+		if(isServerAuth && isServerOnly){
+			SetImpulseInternal(impulse);
+		}else{
+			SetImpulse(impulse);
 		}
 	}
 
@@ -990,6 +1041,14 @@ public class CharacterMovement : NetworkBehaviour {
 	public void SetLookVector(Vector3 lookVector) {
 		OnNewLookVector?.Invoke(lookVector);
 		SetLookVectorRecurring(lookVector);
+		if(isServerOnly){
+			RpcSetLookVector(this.connectionToClient, lookVector);
+		}
+	}
+
+	[TargetRpc]
+	private void RpcSetLookVector(NetworkConnection conn, Vector3 lookVector) {
+		this.SetLookVector(lookVector);
 	}
 
 	/// <summary>
@@ -1080,10 +1139,12 @@ public class CharacterMovement : NetworkBehaviour {
 		// If new value in the state
 		if (isNewData) {
 			this.stateSyncData = newStateData;
-			if(isClientOnly && hasMovementAuth){
-				CommandSetStateData(newStateData);
-			} else if (isServerOnly && hasMovementAuth){
-				RpcSetStateData(newStateData);
+			if(hasMovementAuth){
+				if(isClientOnly){
+					CommandSetStateData(newStateData);
+				} else if (isServerOnly){
+					RpcSetStateData(newStateData);
+				}
 			}
 		}
 

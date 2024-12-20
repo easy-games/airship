@@ -58,14 +58,18 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     protected override void OnEnable() {
-        AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
+        if(this.smoothRigidbody){
+            AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
+        }
         base.OnEnable();
         movement.OnSetCustomData += OnSetMovementData;
         movement.OnEndMove += OnMovementEnd;
     }
 
     protected override void OnDisable() {
-        AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
+        if(this.smoothRigidbody){
+            AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
+        }
         base.OnDisable();
         movement.OnSetCustomData -= OnSetMovementData;
         movement.OnEndMove -= OnMovementEnd;
@@ -90,49 +94,51 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
     
     private void OnSetMovementData(){
-        if(!isServerOnly){
-            return;
-        }
-        
-        // The server applys inputs it recieves from the client
-        // Only if the time is past the inputs state time with a margin of the record interval 
-        if(recievedInputs.Count > 0 && serverTick >= recievedInputs.Keys[0]){
-            if(showLogs){
-                print("using input: " + recievedInputs.Keys[0] + " at: " + serverTick + " moveDir: " + recievedInputs.Values[0].moveDir);
+        if(isServerOnly){
+            // The server applys inputs it recieves from the client
+            // Only if the time is past the inputs state time with a margin of the record interval 
+            // Minus 1 because the tick describes the time the inputs were already used
+            if(recievedInputs.Count > 0 && serverTick >= recievedInputs.Keys[0]-1){
+                if(showLogs){
+                    print("using input: " + recievedInputs.Keys[0] + " at: " + serverTick + " moveDir: " + recievedInputs.Values[0].moveDir);
+                }
+                //This input should be used
+                movement.SetMoveInputData(recievedInputs.Values[0]);
+                recievedInputs.RemoveAt(0);
             }
-             //This input should be used
-            movement.SetMoveInputData(recievedInputs.Values[0]);
-            recievedInputs.RemoveAt(0);
         }
     }
     
+    //Record the state of the object after the physics sim and the inputs that brought it to that point
     private void OnMovementEnd(object data, object isReplay){
-        if((bool)isReplay || !isClientOnly){
+        if((bool)isReplay){
             return;
         }
 
-        var newInput = currentState.currentMoveInput;
-        var isInputChanged =  lastRecorded == null || !lastRecorded.currentMoveInput.Equals(newInput);
+        if(isClientOnly){
+            var newInput = currentState.currentMoveInput;
+            var isInputChanged =  lastRecorded == null || !lastRecorded.currentMoveInput.Equals(newInput);
 
-        if (onlyRecordChanges && !isInputChanged && lastRecorded != null &&
-            Vector3.SqrMagnitude(lastRecorded.position - currentState.position) >= positionCorrectionThresholdSqr &&
-            Vector3.SqrMagnitude(lastRecorded.velocity - currentState.velocity) >= velocityCorrectionThresholdSqr) {
-                return;
-        }
-
-        // Save the state in the history
-        //print("Movement Tick: " + serverTick + " predictedTime: " + predictedTick);
-        RecordState(predictedTick);
-
-        if(isInputChanged){
-            // Update state on server if its a new input state
-            this.lastSentInput = newInput;
-            
-            // Send the inputs to the server
-            if(showLogs){
-                print("Sending input at: " + predictedTick + " moveDir: " + this.lastSentInput.moveDir);
+            if (onlyRecordChanges && !isInputChanged && lastRecorded != null &&
+                Vector3.SqrMagnitude(lastRecorded.position - currentState.position) >= positionCorrectionThresholdSqr &&
+                Vector3.SqrMagnitude(lastRecorded.velocity - currentState.velocity) >= velocityCorrectionThresholdSqr) {
+                    return;
             }
-            SetServerInput(predictedTick, this.lastSentInput);
+
+            // Save the state in the history
+            //print("Movement Tick: " + serverTick + " predictedTime: " + predictedTick);
+            RecordState(predictedTick);
+
+            if(isInputChanged){
+                // Update state on server if its a new input state
+                this.lastSentInput = newInput;
+                
+                // Send the inputs to the server
+                if(showLogs){
+                    print("Sending input at: " + predictedTick + " moveDir: " + this.lastSentInput.moveDir);
+                }
+                SetServerInput(predictedTick, this.lastSentInput);
+            }
         }
     }
 
@@ -165,6 +171,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         // create state to insert
         return new CharacterMovementState(currentState){tick = currentTick};
     }
+
 #endregion 
 
 #region REPLAY    
@@ -243,6 +250,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         if(showLogs){
          print("Replay ended. initial tick: " + initialState.tick);
         }
+        predictedTick++;
         serverTick = initialState.tick;
         //PrintHistory("REPLAY FINISHED");
         if(showGizmos){

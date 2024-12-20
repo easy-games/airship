@@ -56,7 +56,7 @@ namespace VoxelWorldStuff {
         public Dictionary<ushort, float> damageMap = new();
 
         //Currently instantiated prefabs
-        private Dictionary<Vector3Int,GameObject> prefabObjects;
+        private Dictionary<Vector3Int, (GameObject, int)> prefabObjects;
 
         public bool materialPropertiesDirty = true;
 
@@ -155,8 +155,8 @@ namespace VoxelWorldStuff {
             }
             Vector3Int localKey = WorldPosToLocalPos(worldPos);
 
-            if (prefabObjects.ContainsKey(localKey)) {
-                return prefabObjects[localKey];
+            if (prefabObjects.TryGetValue(localKey, out var prefab)) {
+                return prefab.Item1;
             }
             return null;
         }
@@ -171,17 +171,17 @@ namespace VoxelWorldStuff {
             if (Application.isPlaying == false) {
                 foreach (var obj in prefabObjects) {
                
-                    GameObject.DestroyImmediate(obj.Value);
+                    GameObject.DestroyImmediate(obj.Value.Item1);
                 }
             }
             else {
                 foreach (var obj in prefabObjects) {
-                    GameObject.Destroy(obj.Value);
+                    GameObject.Destroy(obj.Value.Item1);
                 }
             }
 #else
             foreach (var obj in prefabObjects) {
-                GameObject.Destroy(obj.Value);
+                GameObject.Destroy(obj.Value.Item1);
             }
 #endif
             
@@ -190,10 +190,10 @@ namespace VoxelWorldStuff {
 
         private void FullInstatiatePrefabsMainThread() {
 
-            ClearPrefabsMainThread();
+            // ClearPrefabsMainThread();
 
             if (prefabObjects == null) {
-                prefabObjects = new Dictionary<Vector3Int, GameObject>();
+                prefabObjects = new Dictionary<Vector3Int, (GameObject, int)>();
             }
 
             if (obj == null) {
@@ -204,29 +204,43 @@ namespace VoxelWorldStuff {
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for (int z = 0; z < chunkSize; z++) {
-
                         var voxelData = GetLocalVoxelAt(x, y, z);
                         BlockId blockId = VoxelWorld.VoxelDataToBlockId(voxelData);
-                        
-                        if (blockId > 0) {
-                            var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
-                            if (blockDefinition.definition.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
-                                GameObject prefabDef = blockDefinition.definition.prefab;
-                                Vector3Int pos = new Vector3Int(x, y, z);
-                                var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
-                                var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
-                                GameObject prefab = GameObject.Instantiate(prefabDef, origin + pos, rot,  obj.transform);
-                                prefab.transform.parent = obj.transform;
-                                prefab.transform.localScale = Vector3.one;
 
-                                if (blockDefinition.definition.randomRotation) {
-                                    float angle = VoxelWorld.HashCoordinates(x,y,z) % 4;
-                                    prefab.transform.localRotation = Quaternion.Euler(0, angle * 90, 0);
-                                }
-                                prefabObjects.Add(pos, prefab);
-                            }
+                        // If this is a new block type destroy the existing prefab
+                        var localChunkPos = new Vector3Int(x, y, z);
+                        if (prefabObjects.TryGetValue(localChunkPos, out var existingPrefab)) {
+                            // Prefab unchanged
+                            if (blockId == existingPrefab.Item2) {
+                                existingPrefab.Item1.transform.parent = obj.transform;
+                                continue;
+                            } 
+                            
+                            prefabObjects.Remove(localChunkPos);
+                            Object.Destroy(existingPrefab.Item1);
                         }
-                      
+
+                        if (blockId == 0) {
+                            continue;
+                        }
+
+                        var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
+                        if (blockDefinition.definition.contextStyle != VoxelBlocks.ContextStyle.Prefab) {
+                            continue;
+                        }
+
+                        GameObject prefabDef = blockDefinition.definition.prefab;
+                        var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
+                        var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
+                        GameObject prefab = GameObject.Instantiate(prefabDef, origin + localChunkPos, rot,  obj.transform);
+                        prefab.transform.parent = obj.transform;
+                        prefab.transform.localScale = Vector3.one;
+
+                        if (blockDefinition.definition.randomRotation) {
+                            float angle = VoxelWorld.HashCoordinates(x,y,z) % 4;
+                            prefab.transform.localRotation = Quaternion.Euler(0, angle * 90, 0);
+                        }
+                        prefabObjects.Add(localChunkPos, (prefab, blockId));
                     }
                 }
             }
@@ -413,7 +427,7 @@ namespace VoxelWorldStuff {
             if (col == 0) return default;
             return UIntToColor32(col);
         }
-
+        
         public void Clear() {
             if (obj != null) {
                 colliders.Clear();
@@ -447,12 +461,19 @@ namespace VoxelWorldStuff {
 
         private bool DoHeadlessUpdate(VoxelWorld world) {
             if (IsGeometryDirty() == true) {
+                var newChunk = new GameObject();
+                
                 if (obj != null) {
+                    // Copy prefabs to new chunk (so we don't destroy them)
+                    foreach (var (pos, prefab) in prefabObjects) {
+                        prefab.Item1.transform.parent = newChunk.transform;
+                    }
+                    
                     Clear();
                 }
 
                 if (obj == null) {
-                    obj = new GameObject();
+                    obj = newChunk;
                     obj.transform.parent = parent.transform;
                     obj.transform.localRotation = Quaternion.identity;
                     obj.transform.localScale = Vector3.one;
@@ -509,13 +530,19 @@ namespace VoxelWorldStuff {
                 if (meshProcessor.GetGeometryReady() == true) {
                      
                     Profiler.BeginSample("ChunkMainThread");
+                    
+                    var newChunk = new GameObject();
                     if (obj != null) {
+                        // Copy prefabs to new chunk (so we don't destroy them)
+                        foreach (var (pos, prefab) in prefabObjects) {
+                            prefab.Item1.transform.parent = newChunk.transform;
+                        }
+                        
                         Clear();
                     }
 
                     if (obj == null) {
-
-                        obj = new GameObject();
+                        obj = newChunk;
                         obj.layer = world.gameObject.layer;
                         obj.transform.parent = parent.transform;
                         obj.transform.localRotation = Quaternion.identity;

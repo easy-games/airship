@@ -332,7 +332,7 @@ public class AccessoryBuilder : MonoBehaviour
         // Add accessories:
         foreach (var accessoryTemplate in accessoryTemplates) {
             if (this.firstPerson) {
-                if (!this.firstPersonAllowedSlots.Contains(accessoryTemplate.accessorySlot)) {
+                if (accessoryTemplate.visibilityMode == AccessoryComponent.VisibilityMode.ThirdPerson || !this.firstPersonAllowedSlots.Contains(accessoryTemplate.accessorySlot)) {
                     // print("ignoring " + accessoryTemplate.gameObject.name + " on slot " + accessoryTemplate.accessorySlot);
                     continue;
                 }
@@ -582,8 +582,14 @@ public class AccessoryBuilder : MonoBehaviour
     private void MapAccessoriesToRig(){
         foreach (var pair in this.activeAccessories) {
             foreach (var ren in pair.Value.skinnedMeshRenderers) {
-                ren.rootBone = rig.armsMesh.rootBone;
-                ren.bones = rig.armsMesh.bones;
+                if(ren){
+                    ren.rootBone = rig.armsMesh.rootBone;
+                    ren.bones = rig.armsMesh.bones;
+                }
+            }
+
+            if(pair.Value.lods == null){
+                continue;
             }
 
             foreach (var lod in pair.Value.lods) {

@@ -4,7 +4,7 @@ using UnityEngine;
 [ExecuteInEditMode]
 public class EasyMotion : MonoBehaviour {
     public EngineRunMode refreshMode = EngineRunMode.EDITOR;
-    public Space transformSpace = Space.World;
+    public Space transformSpace = Space.Self;
     
     [Header("Translation")]
     public bool translate = false;
