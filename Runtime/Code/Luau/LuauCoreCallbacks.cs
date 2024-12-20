@@ -38,7 +38,6 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.RequireCallback requireCallback_holder;
     private LuauPlugin.ConstructorCallback constructorCallback_holder;
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
-    private LuauPlugin.YieldCallback yieldCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
     private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
     private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
@@ -108,7 +107,6 @@ public partial class LuauCore : MonoBehaviour {
         requireCallback_holder = new LuauPlugin.RequireCallback(requireCallback);
         constructorCallback_holder = new LuauPlugin.ConstructorCallback(constructorCallback);
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
-        yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
         componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
         toggleProfilerCallback_holder = new LuauPlugin.ToggleProfilerCallback(ToggleProfilerCallback);
@@ -175,29 +173,6 @@ public partial class LuauCore : MonoBehaviour {
         }
         
         LuauPlugin.LuauFreeString(ptr);
-    }
-
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.YieldCallback))]
-    static int yieldCallback(LuauContext luauContext, IntPtr thread, IntPtr context, IntPtr trace, int traceSize) {
-        CurrentContext = luauContext;
-        
-        var state = LuauState.FromContext(luauContext);
-        state.TryGetScriptBindingFromThread(thread, out var binding);
-
-        var res = LuauCore.PtrToStringUTF8(trace, traceSize);
-        
-        ThreadDataManager.SetThreadYielded(thread, true);
-
-        if (binding != null) {
-            //A luau binding called this, they can resume it
-            binding.QueueCoroutineResume(thread);
-        } else {
-            //we have to resume it
-            // instance.m_currentBuffer.Add(new CallbackRecord(thread, res));
-            state.AddCallbackToBuffer(thread, res);
-        }
-
-        return 0;
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToStringCallback))]

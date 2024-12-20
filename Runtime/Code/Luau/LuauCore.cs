@@ -14,6 +14,7 @@ using UnityEditor;
 #endif
 
 //Singleton
+[RequireComponent(typeof(AirshipComponentUpdater))]
 public partial class LuauCore : MonoBehaviour {
 #if UNITY_EDITOR
     [InitializeOnLoad]
@@ -98,6 +99,8 @@ public partial class LuauCore : MonoBehaviour {
 
     private Dictionary<Type, Dictionary<ulong, PropertyInfo>> unityPropertyAlias = new();
     private Dictionary<Type, Dictionary<ulong, FieldInfo>> unityFieldAlias = new();
+    
+    private AirshipComponentUpdater _airshipComponentUpdater;
 
     private class CallbackRecord {
         public IntPtr callback;
@@ -139,6 +142,22 @@ public partial class LuauCore : MonoBehaviour {
 
     public static LuauState GetInstance(LuauContext context) {
         return LuauState.FromContext(context);
+    }
+
+    public static void RegisterAirshipComponent(AirshipComponent component) {
+        var instance = CoreInstance;
+        if (ReferenceEquals(instance, null)) return;
+        
+        instance._airshipComponentUpdater ??= instance.GetComponent<AirshipComponentUpdater>();
+        instance._airshipComponentUpdater.Register(component);
+    }
+
+    public static void UnregisterAirshipComponent(AirshipComponent component) {
+        var instance = CoreInstance;
+        if (ReferenceEquals(instance, null)) return;
+        
+        instance._airshipComponentUpdater ??= instance.GetComponent<AirshipComponentUpdater>();
+        instance._airshipComponentUpdater.Unregister(component);
     }
 
     public bool CheckSetup() {
@@ -188,7 +207,6 @@ public partial class LuauCore : MonoBehaviour {
                 requireCallback = requireCallback_holder,
                 requirePathCallback = requirePathCallback_holder,
                 constructorCallback = constructorCallback_holder,
-                yieldCallback = yieldCallback_holder,
                 toStringCallback = toStringCallback_holder,
                 toggleProfilerCallback = toggleProfilerCallback_holder,
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
@@ -336,6 +354,8 @@ public partial class LuauCore : MonoBehaviour {
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
         StartCoroutine(PrintReferenceAssemblies());
         endOfFrameCoroutine = StartCoroutine(RunAtVeryEndOfFrame());
+
+        _airshipComponentUpdater = GetComponent<AirshipComponentUpdater>();
         
 #if UNITY_EDITOR
         EditorApplication.pauseStateChanged += OnPauseStateChanged;
