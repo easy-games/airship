@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Assets.Luau;
 using Code.Luau;
 using UnityEngine;
 using UnityEngine.Events;
@@ -349,7 +350,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, propertyObjectRef);
                         } else {
-                            property.SetValue(objectReference, propertyObjectRef);
+                            SetValue<object>(objectReference, propertyObjectRef, property);
                         }
                         return 0;
                     }
@@ -359,6 +360,7 @@ public partial class LuauCore : MonoBehaviour {
 
                 case PODTYPE.POD_VECTOR3: {
                     if (t.IsAssignableFrom(vector3Type)) {
+                        Profiler.BeginSample("AssignVec3");
                         if (field != null) {
                             // Debug.Log(field);
                             Vector3 v = NewVector3FromPointer(propertyData);
@@ -366,8 +368,10 @@ public partial class LuauCore : MonoBehaviour {
                         } else {
                             // Debug.Log(property);
                             Vector3 v = NewVector3FromPointer(propertyData);
-                            property.SetValue(objectReference, v);
+                            SetValue<Vector3>(objectReference, v, property);
+                            // property.SetValue(objectReference, v);
                         }
+                        Profiler.EndSample();
                         return 0;
                     }
                     if (t.IsAssignableFrom(vector3IntType)) {
@@ -378,7 +382,7 @@ public partial class LuauCore : MonoBehaviour {
                         } else {
                             // Debug.Log(property);
                             Vector3 v = NewVector3FromPointer(propertyData);
-                            property.SetValue(objectReference, Vector3Int.FloorToInt(v));
+                            SetValue<Vector3Int>(objectReference, Vector3Int.FloorToInt(v), property);
                         }
                         return 0;
                     }
@@ -393,7 +397,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, val);
                         } else {
-                            property.SetValue(objectReference, val);
+                            SetValue<bool>(objectReference, val, property);
                         }
 
                         return 0;
@@ -410,7 +414,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, (double)doubles[0]);
                         } else {
-                            property.SetValue(objectReference, (double)doubles[0]);
+                            SetValue<double>(objectReference, doubles[0], property);
                         }
 
                         return 0;
@@ -418,7 +422,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, (ushort) doubles[0]);
                         } else {
-                            property.SetValue(objectReference, (ushort) doubles[0]);
+                            SetValue<ushort>(objectReference, (ushort) doubles[0], property);
                         }
 
                         return 0;
@@ -426,34 +430,34 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, (System.Single)doubles[0]);
                         } else {
-                            property.SetValue(objectReference, (System.Single)doubles[0]);
+                            SetValue<float>(objectReference, (System.Single) doubles[0], property);
                         }
                         return 0;
                     } else if (t.IsAssignableFrom(intType) || t.BaseType == enumType || t.IsAssignableFrom(enumType) || t.IsAssignableFrom(byteType)) {
                         if (field != null) {
                             field.SetValue(objectReference, (int)doubles[0]);
                         } else {
-                            property.SetValue(objectReference, (int)doubles[0]);
+                            SetValue<int>(objectReference, (int)doubles[0], property);
                         }
                         return 0;
                     } else if (t.IsAssignableFrom(uIntType)) {
                         if (field != null) {
                             field.SetValue(objectReference, unchecked((int)doubles[0]));
                         } else {
-                            property.SetValue(objectReference, unchecked((int)doubles[0]));
+                            SetValue<uint>(objectReference, unchecked((uint) doubles[0]), property);
                         }
                     } else if (t.IsAssignableFrom(longType)) {
                         if (field != null) {
                             field.SetValue(objectReference, (long)doubles[0]);
                         } else {
-                            property.SetValue(objectReference, (long)doubles[0]);
+                            SetValue<long>(objectReference, (long) doubles[0], property);
                         }
                         return 0;
                     } else if (t.IsAssignableFrom(uLongType)) {
                         if (field != null) {
                             field.SetValue(objectReference, (ulong)doubles[0]);
                         } else {
-                            property.SetValue(objectReference, (ulong)doubles[0]);
+                            SetValue<ulong>(objectReference, (ulong) doubles[0], property);
                         }
                         return 0;
                     }
@@ -467,7 +471,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, dataStr);
                         } else {
-                            property.SetValue(objectReference, dataStr);
+                            SetValue<string>(objectReference, dataStr, property);
                         }
                         return 0;
                     }
@@ -481,7 +485,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, null);
                         } else {
-                            property.SetValue(objectReference, null);
+                            SetValue<object>(objectReference, null, property);
                         }
                         return 0;
                     }
@@ -493,7 +497,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewRayFromPointer(propertyData));
                         } else {
-                            property.SetValue(objectReference, NewRayFromPointer(propertyData));
+                            SetValue<Ray>(objectReference, NewRayFromPointer(propertyData), property);
                         }
                         return 0;
                     }
@@ -505,7 +509,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewColorFromPointer(propertyData));
                         } else {
-                            property.SetValue(objectReference, NewColorFromPointer(propertyData));
+                            SetValue<Color>(objectReference, NewColorFromPointer(propertyData), property);
                         }
                         return 0;
                     }
@@ -517,7 +521,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewPlaneFromPointer(propertyData));
                         } else {
-                            property.SetValue(objectReference, NewPlaneFromPointer(propertyData));
+                            SetValue<Plane>(objectReference, NewPlaneFromPointer(propertyData), property);
                         }
                         return 0;
                     }
@@ -529,7 +533,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
                         } else {
-                            property.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
+                            SetValue<Quaternion>(objectReference, NewQuaternionFromPointer(propertyData), property);
                         }
                         return 0;
                     }
@@ -541,7 +545,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewVector2FromPointer(propertyData));
                         } else {
-                            property.SetValue(objectReference, NewVector2FromPointer(propertyData));
+                            SetValue<Vector2>(objectReference, NewVector2FromPointer(propertyData), property);
                         }
                         return 0;
                     }
@@ -553,7 +557,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewVector4FromPointer(propertyData));
                         } else {
-                            property.SetValue(objectReference, NewVector4FromPointer(propertyData));
+                            SetValue<Vector4>(objectReference, NewVector4FromPointer(propertyData), property);
                         }
                         return 0;
                     }
@@ -565,7 +569,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewMatrixFromPointer(propertyData));
                         } else {
-                            property.SetValue(objectReference, NewMatrixFromPointer(propertyData));
+                            SetValue<Matrix4x4>(objectReference, NewMatrixFromPointer(propertyData), property);
                         }
 
                         return 0;
@@ -578,7 +582,7 @@ public partial class LuauCore : MonoBehaviour {
                         if (field != null) {
                             field.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
                         } else {
-                            property.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
+                            SetValue<BinaryBlob>(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize), property);
                         }
 
                         return 0;
@@ -593,9 +597,6 @@ public partial class LuauCore : MonoBehaviour {
             return LuauError(thread, "Error: InstanceId not currently available. InstanceId=" + instanceId + ", propName=" + propName);
         }
     }
-    
-    private static readonly Dictionary<int, Delegate> _cache = 
-        new Dictionary<int, Delegate>();
 
     private static Func<object, T> CreateGetter<T>(PropertyInfo propertyInfo, object referenceObject) {
         var method = new DynamicMethod(
@@ -629,8 +630,64 @@ public partial class LuauCore : MonoBehaviour {
 
         return (Func<object, T>)method.CreateDelegate(typeof(Func<object, T>));
     }
+    
+    private static readonly Dictionary<(bool, Type, string), Delegate> _propertySetterCache = 
+        new Dictionary<(bool, Type, string), Delegate>();
+    
+    private static Delegate CreateSetter<T>(PropertyInfo propertyInfo, bool isStatic) {
+        var methodParamsTypes = isStatic
+            ? new[] { typeof(T) }
+            : new[] { typeof(object), typeof(T) };
+        
+        var staticStr = isStatic ? "_Static" : "";
+        var method = new DynamicMethod(
+            name: $"Set_{propertyInfo.DeclaringType.Name}_{propertyInfo.Name}{staticStr}",
+            returnType: typeof(void),
+            parameterTypes: methodParamsTypes,
+            restrictedSkipVisibility: true);
+        
+        ILGenerator il = method.GetILGenerator();
+        
+        // Load object instance
+        if (!isStatic) {
+            il.Emit(OpCodes.Ldarg_0);
+        
+            if (propertyInfo.DeclaringType.IsValueType) {
+                il.Emit(OpCodes.Unbox, propertyInfo.DeclaringType);
+            }
+            else {
+                il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
+            }
+        }
+        
+        // Load value to set
+        il.Emit(isStatic ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1); // For static calls arg0 is value
+        
+        // For non generic calls box the value
+        if (propertyInfo.PropertyType.IsValueType && typeof(T) == typeof(object)) {
+            il.Emit(OpCodes.Unbox, propertyInfo.PropertyType);
+        }
+        
+        // Call the setter
+        if (!isStatic) {
+            il.EmitCall(OpCodes.Callvirt, propertyInfo.SetMethod, null);
+        } else {
+            il.EmitCall(OpCodes.Call, propertyInfo.SetMethod, null);
+        }
+        
+        il.Emit(OpCodes.Ret);
+        
+        if (isStatic) {
+            return (Action<T>) method.CreateDelegate(typeof(Action<T>));
+        } else {
+            return (Action<object, T>) method.CreateDelegate(typeof(Action<object, T>));
+        }
+    }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
+        // Simple reflection for now!
+        return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
+        
         var propertyInfo = cacheData.propertyInfo;
         if (!cacheData.HasGetPropertyFunc) {
             cacheData.GetProperty = CreateGetter<T>(propertyInfo, instance);
@@ -639,6 +696,25 @@ public partial class LuauCore : MonoBehaviour {
         }
         return ((Func<object, T>)cacheData.GetProperty)(instance);
     }
+    
+    private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
+        // Simple reflection for now!
+        pi.SetValue(instance, value);
+        return;
+        
+        var staticSet = instance == null;
+        if (!_propertySetterCache.TryGetValue((staticSet, pi.DeclaringType, pi.Name), out var setter)) {
+            setter = CreateSetter<T>(pi, staticSet);
+            _propertySetterCache[(staticSet, pi.DeclaringType, pi.Name)] = setter; 
+        }
+
+        if (staticSet) {
+            ((Action<T>) setter)(value);
+        } else {
+            ((Action<object, T>)setter)(instance, value);
+        }
+    }
+
 
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
@@ -759,10 +835,12 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
+                    /* Disabled for now...
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
                         Profiler.EndSample();
                         return 1;
                     }
+                    */
 
                     var value = GetValue<object>(objectReference, cacheData.Value);
                     if (value != null) {
@@ -812,7 +890,7 @@ public partial class LuauCore : MonoBehaviour {
                     return LuauError(
                         thread,
                         $"Failed reflection when getting property \"{propName}\". Please note that ref types are not supported. " +
-                        e.Message);
+                        e);
                 }
                 catch (Exception e) {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
