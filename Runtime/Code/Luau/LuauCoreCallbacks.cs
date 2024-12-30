@@ -638,20 +638,20 @@ public partial class LuauCore : MonoBehaviour {
         var methodParamsTypes = isStatic
             ? new[] { typeof(T) }
             : new[] { typeof(object), typeof(T) };
-
+        
         var staticStr = isStatic ? "_Static" : "";
         var method = new DynamicMethod(
             name: $"Set_{propertyInfo.DeclaringType.Name}_{propertyInfo.Name}{staticStr}",
             returnType: typeof(void),
             parameterTypes: methodParamsTypes,
             restrictedSkipVisibility: true);
-
+        
         ILGenerator il = method.GetILGenerator();
-
+        
         // Load object instance
         if (!isStatic) {
             il.Emit(OpCodes.Ldarg_0);
-
+        
             if (propertyInfo.DeclaringType.IsValueType) {
                 il.Emit(OpCodes.Unbox, propertyInfo.DeclaringType);
             }
@@ -659,7 +659,7 @@ public partial class LuauCore : MonoBehaviour {
                 il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
             }
         }
-
+        
         // Load value to set
         il.Emit(isStatic ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1); // For static calls arg0 is value
         
@@ -674,9 +674,9 @@ public partial class LuauCore : MonoBehaviour {
         } else {
             il.EmitCall(OpCodes.Call, propertyInfo.SetMethod, null);
         }
-
+        
         il.Emit(OpCodes.Ret);
-
+        
         if (isStatic) {
             return (Action<T>) method.CreateDelegate(typeof(Action<T>));
         } else {
@@ -685,6 +685,9 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
+        // Simple reflection for now!
+        return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
+        
         var propertyInfo = cacheData.propertyInfo;
         if (!cacheData.HasGetPropertyFunc) {
             cacheData.GetProperty = CreateGetter<T>(propertyInfo, instance);
@@ -695,6 +698,10 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
+        // Simple reflection for now!
+        pi.SetValue(instance, value);
+        return;
+        
         var staticSet = instance == null;
         if (!_propertySetterCache.TryGetValue((staticSet, pi.DeclaringType, pi.Name), out var setter)) {
             setter = CreateSetter<T>(pi, staticSet);
@@ -828,10 +835,12 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
+                    /* Disabled for now...
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
                         Profiler.EndSample();
                         return 1;
                     }
+                    */
 
                     var value = GetValue<object>(objectReference, cacheData.Value);
                     if (value != null) {
@@ -881,7 +890,7 @@ public partial class LuauCore : MonoBehaviour {
                     return LuauError(
                         thread,
                         $"Failed reflection when getting property \"{propName}\". Please note that ref types are not supported. " +
-                        e.Message);
+                        e);
                 }
                 catch (Exception e) {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
