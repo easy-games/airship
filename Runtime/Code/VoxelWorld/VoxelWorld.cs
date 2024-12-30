@@ -728,6 +728,19 @@ public partial class VoxelWorld : MonoBehaviour {
         hasUnsavedChanges = true;
     }
 
+    public void FillFlatGround() {
+        VoxelData grass = voxelBlocks.SearchForBlockIdByString("GRASS");
+
+        for (int x = -64; x < 64; x++) {
+            for (int z = -64; z < 64; z++) {
+                WriteVoxelAtInternal(new Vector3Int(x, 0, z), grass);
+            }
+        }
+        RegenerateAllMeshes();
+
+        hasUnsavedChanges = true;
+    }
+
     public void FillSingleBlock() {
         
         VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
@@ -810,13 +823,13 @@ public partial class VoxelWorld : MonoBehaviour {
     
     
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
-        Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
-
         if (this.voxelBlocks == null) {
             //Error
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
         }
+        
+        Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
         float startTime = Time.realtimeSinceStartup;
  
@@ -1082,7 +1095,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 #endif
         if (cam == null) {
-            cam = GameObject.FindObjectOfType<Camera>();
+            cam = GameObject.FindFirstObjectByType<Camera>();
         }
         foreach (var c in chunks) {
             c.Value.currentCamera = cam;
@@ -1223,7 +1236,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
 #if UNITY_EDITOR
     private void OnPlayModeStateChanged(PlayModeStateChange state) {
-        if (state == PlayModeStateChange.EnteredPlayMode) {
+        if (state == PlayModeStateChange.ExitingEditMode && chunks.Count > 0 && hasUnsavedChanges) {
             SaveToFile();
         }
     }

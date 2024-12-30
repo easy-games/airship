@@ -667,15 +667,19 @@ public class AirshipComponent : MonoBehaviour {
         return noExtension;
     }
 
-    public bool CreateThreadFromPath(string fullFilePath, LuauContext context) {
-        SetScriptFromPath(fullFilePath, context);
+    public bool CreateThreadFromPath(string fullFilePath, LuauContext ctx) {
+        if (IsDestroyed()) {
+            return false;
+        }
+        
+        SetScriptFromPath(fullFilePath, ctx);
         if (scriptFile == null) {
             return false;
         }
 
         return CreateThread();
     }
-    
+
     public bool CreateThread() {
         if (m_thread != IntPtr.Zero) {
             return false;
@@ -841,10 +845,12 @@ public class AirshipComponent : MonoBehaviour {
                     InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
                     LuauPlugin.LuauRemoveAirshipComponent(context, m_thread, unityInstanceId, _scriptBindingId);
                 }
-                LuauState.FromContext(context).RemoveThread(m_thread);
-                LuauPlugin.LuauSetThreadDestroyed(m_thread);
-                LuauPlugin.LuauDestroyThread(m_thread);
-                LuauPlugin.LuauUnpinThread(m_thread);
+                if (LuauState.IsContextActive(context)) {
+                    LuauState.FromContext(context).RemoveThread(m_thread);
+                    LuauPlugin.LuauSetThreadDestroyed(m_thread);
+                    LuauPlugin.LuauDestroyThread(m_thread);
+                    LuauPlugin.LuauUnpinThread(m_thread);
+                }
                 AirshipBehaviourRootV2.CleanIdOnDestroy(gameObject, this);
             }
 

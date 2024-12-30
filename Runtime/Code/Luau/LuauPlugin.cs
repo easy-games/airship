@@ -9,8 +9,7 @@ using System.Threading;
 using Luau;
 using Debug = UnityEngine.Debug;
 
-public static class LuauPlugin
-{
+public static class LuauPlugin {
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
 	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
@@ -26,8 +25,7 @@ public static class LuauPlugin
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
-	public enum CurrentCaller
-	{
+	public enum CurrentCaller {
 		None,
 		RunThread,
 		CallMethodOnThread,
@@ -89,16 +87,14 @@ public static class LuauPlugin
 	public static void BeginExecutionCheck(CurrentCaller caller)
 	{
 #if DO_CALL_SAFTEYCHECK
-		if (s_currentlyExecuting == true)
-		{
+		if (s_currentlyExecuting == true) {
             Debug.LogError("LuauPlugin called " + caller + " while a lua thread was still executing " + s_currentCaller);
         }
         s_currentCaller = caller;
 		s_currentlyExecuting = true;
 #endif
 	}
-    public static void EndExecutionCheck()
-    {
+    public static void EndExecutionCheck() {
 #if DO_CALL_SAFTEYCHECK
         s_currentlyExecuting = false;
 		s_currentCaller = CurrentCaller.None;
@@ -215,10 +211,10 @@ public static class LuauPlugin
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    private static extern IntPtr RunEndFrameLogic(IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestroyedGameObjectIds);
-    public static void LuauRunEndFrameLogic(IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestroyedGameObjectIds) {
+    private static extern IntPtr RunEndFrameLogic();
+    public static void LuauRunEndFrameLogic() {
         ThreadSafetyCheck();
-        ThrowIfNotNullPtr(RunEndFrameLogic(listOfGameObjectIds, numGameObjectIds, listOfDestroyedGameObjectIds, numDestroyedGameObjectIds));
+        ThrowIfNotNullPtr(RunEndFrameLogic());
     }
 
 
@@ -239,8 +235,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps);
-	public static void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props)
-	{
+	public static void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length));
 	}
@@ -266,8 +261,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr RemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
-	public static void LuauRemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId)
-	{
+	public static void LuauRemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(RemoveAirshipComponent(context, thread, unityInstanceId, componentId));
 	}
@@ -278,8 +272,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr WriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop);
-	public static void LuauWriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop)
-	{
+	public static void LuauWriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(WriteToAirshipComponent(context, thread, unityInstanceId, componentId, prop));
 	}
@@ -290,8 +283,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr PushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
-	public static void LuauPushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId)
-	{
+	public static void LuauPushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(PushAirshipComponent(context, thread, unityInstanceId, componentId));
 	}
@@ -302,8 +294,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr PushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, [In, Out] int[] componentIds, int nComponents, bool appendToTable);
-	public static void LuauPushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false)
-	{
+	public static void LuauPushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(PushAirshipComponents(context, thread, unityInstanceId, componentIds, componentIds.Length, appendToTable));
 	}
@@ -325,8 +316,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr UpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, int collisionObjId);
-	public static void LuauUpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, int collisionObjId)
-	{
+	public static void LuauUpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, int collisionObjId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(UpdateCollisionAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, collisionObjId));
 	}
@@ -337,8 +327,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr UpdateAllAirshipComponents(LuauContext context, int updateType, float dt);
-	public static void LuauUpdateAllAirshipComponents(LuauContext context, AirshipComponentUpdateType updateType, float dt)
-	{
+	public static void LuauUpdateAllAirshipComponents(LuauContext context, AirshipComponentUpdateType updateType, float dt) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(UpdateAllAirshipComponents(context, (int)updateType, dt));
 	}
@@ -423,8 +412,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
-	public static IntPtr LuauCreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen)
-	{
+	public static IntPtr LuauCreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
 		IntPtr returnValue = CreateThread(context, script, scriptLength, filename, filenameLength, gameObjectId, nativeCodegen);
@@ -438,8 +426,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId);
-	public static IntPtr LuauCreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId)
-	{
+	public static IntPtr LuauCreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId) {
 		ThreadSafetyCheck();
 		IntPtr returnValue = CreateThreadWithCachedModule(context, filename, gameObjectId);
 		EndExecutionCheck();
@@ -452,8 +439,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CacheModuleOnThread(IntPtr thread, string filename);
-	public static void LuauCacheModuleOnThread(IntPtr thread, string filename)
-	{
+	public static void LuauCacheModuleOnThread(IntPtr thread, string filename) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(CacheModuleOnThread(thread, filename));
 		EndExecutionCheck();
@@ -465,8 +451,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr SetThreadDestroyed(IntPtr thread);
-	public static void LuauSetThreadDestroyed(IntPtr thread)
-	{
+	public static void LuauSetThreadDestroyed(IntPtr thread) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(SetThreadDestroyed(thread));
 	}
