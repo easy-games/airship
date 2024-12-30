@@ -302,7 +302,7 @@ public partial class LuauCore : MonoBehaviour {
         eventConnections.Clear();
         propertyGetCache.Clear();
         protectedSceneHandles.Clear();
-        _cache.Clear();
+        _propertySetterCache.Clear();
         writeMethodFunctions.Clear();
     }
 
