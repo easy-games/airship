@@ -8,6 +8,7 @@ using Code.Platform.Shared;
 using Code.Player.Accessories;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 [LuauAPI]
 [ExecuteInEditMode]
@@ -487,6 +488,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void TryCombineMeshes() {
+        Profiler.BeginSample("AB.TryCombineMeshes");
         if (this.meshCombiner.enabled && Application.isPlaying) {
             this.meshCombiner.ClearSourceReferences();
             
@@ -577,6 +579,7 @@ public class AccessoryBuilder : MonoBehaviour
             MapAccessoriesToRig();
             OnCombineComplete(false);
         }
+        Profiler.EndSample();
     }
 
     private void MapAccessoriesToRig(){

@@ -488,6 +488,7 @@ namespace Airship {
         }
 
         public void LoadMeshCopies() {
+            Profiler.BeginSample("MC.LoadMeshCopies");
             var stAccessories = Stopwatch.StartNew();
             var stBase = Stopwatch.StartNew();
             foreach (var lodSourceReferences in this.sourceReferences) {
@@ -508,6 +509,7 @@ namespace Airship {
             if (debugText) {
                 Debug.Log($"LoadMeshCopies {stBase.Elapsed.TotalMilliseconds + stAccessories.Elapsed.TotalMilliseconds} ms (base: " + stBase.Elapsed.TotalMilliseconds + " ms" + ", accessories: " + stAccessories.Elapsed.TotalMilliseconds + " ms)");
             }
+            Profiler.EndSample();
         }
 
         public void CombineMeshes(Color skinColor) {
