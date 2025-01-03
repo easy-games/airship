@@ -850,6 +850,7 @@ public class CharacterMovement : NetworkBehaviour {
 			crouching = isCrouching,
 			localVelocity = currentLocalVelocity,
 			lookVector = lookVector,
+			position = transform.position,
 		});
 
 		if (didJump){
@@ -1134,17 +1135,20 @@ public class CharacterMovement : NetworkBehaviour {
 
 	private void TrySetState(CharacterAnimationSyncData newStateData) {
 		bool isNewState = newStateData.state != this.stateSyncData.state;
-		bool isNewData = !newStateData.Equals(this.stateSyncData);
+		bool isNewData = !newStateData.Equals(this.stateSyncData) || (isServerAuth && stateSyncData.position != newStateData.position);
 
 		// If new value in the state
-		if (isNewData) {
+		if (isNewData ) {
 			this.stateSyncData = newStateData;
 			if(hasMovementAuth){
 				if(isClientOnly){
 					CommandSetStateData(newStateData);
-				} else if (isServerOnly){
-					RpcSetStateData(newStateData);
 				}
+				// Right now the visual state is controlled by the client only
+				// We may want server auth to update the state but that makes observers have even older version of the character
+				//  else if (isServerOnly ){
+				// 	RpcSetStateData(newStateData);
+				// }
 			}
 		}
 
@@ -1180,7 +1184,13 @@ public class CharacterMovement : NetworkBehaviour {
 		this.isGrounded = data.grounded;
 		this.isCrouching = data.crouching;
 		this.isSprinting = data.sprinting;
+
 		this.lookVector = data.lookVector;
+
+		//In server auth we don't sync position with the NetworkTransform so I am doing it here
+		if(this.IsObserver() && isServerAuth){
+			this.rigidbody.position = data.position;
+		}
 
 		if (oldState.state != data.state) {
 			stateChanged?.Invoke((int)data.state);

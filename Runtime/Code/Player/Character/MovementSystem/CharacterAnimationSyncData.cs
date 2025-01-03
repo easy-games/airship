@@ -9,6 +9,9 @@ public class CharacterAnimationSyncData {
     public Vector3 localVelocity = Vector3.zero;
     public Vector3 lookVector = Vector3.zero;
 
+    //Just for observers in predicted mode
+    public Vector3 position = Vector3.zero;
+
     // override object.Equals
     public override bool Equals(object obj) {
         CharacterAnimationSyncData data = (CharacterAnimationSyncData)obj;

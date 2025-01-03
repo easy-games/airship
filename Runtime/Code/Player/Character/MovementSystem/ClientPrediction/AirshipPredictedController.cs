@@ -319,7 +319,7 @@ protected void Log(string message){
     // serverTimestamp is the same value as serverState.timestamp
     protected void OnReceivedState(int serverTick, T serverState, bool forceReplay) {
         if(IsObserver()){
-            SnapTo(serverState);
+            //SnapTo(serverState);
             return;
         }
 

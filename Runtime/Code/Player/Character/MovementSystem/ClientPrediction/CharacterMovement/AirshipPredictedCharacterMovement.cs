@@ -11,11 +11,12 @@ using UnityEngine;
 public class AirshipPredictedCharacterMovement : AirshipPredictedController<CharacterMovementState> {
 
 #region PUBLIC 
-    [Header("References")]
+    public bool pauseOnReplay = false;
+
+    [Header("Character References")]
     public CharacterMovement movement;
 
     [Header("Variables")]
-    public bool pauseOnReplay = false;
 
 #endregion
 
@@ -183,7 +184,15 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         if(showLogs){
             print("Snapping Movement To: " + newState.tick);
         }
-        movement.ForceToNewMoveState(newState);
+        if(IsObserver()){
+            //Observers just sync position. State and look vector are already synced by CharacterMovement
+            movement.rigidbody.position = newState.position;
+            movement.currentMoveState.position = newState.position;
+            movement.currentMoveState.velocity = newState.velocity;
+        }else{
+            //Sync this state into the character movement
+            movement.ForceToNewMoveState(newState);
+        }
     }
 
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){
