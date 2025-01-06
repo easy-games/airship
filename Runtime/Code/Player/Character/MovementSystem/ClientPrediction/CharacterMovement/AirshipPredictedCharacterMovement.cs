@@ -198,7 +198,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
     public override void OnClientForcedReconcile() {
         if(snapPositionOnReconcile){
-            print("Telling prediction to snap");
             //Snap the movement so it doesn't lerp to the forced position
             AirshipPredictionManager.instance.SnapRigidbody(this.movement.rigidbody, 5);
         }

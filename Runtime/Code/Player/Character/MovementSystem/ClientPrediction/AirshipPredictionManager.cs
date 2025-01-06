@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Mirror;
-using UnityEditorInternal;
 using UnityEngine;
 
 public class AirshipPredictionManager : MonoBehaviour {
