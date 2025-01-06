@@ -122,7 +122,7 @@ public class CharacterMovement : NetworkBehaviour {
 	private bool crouchInput;
 
 	//Prediction
-	private bool queueReplay = false;
+	private bool queueForcedReconcile = false;
 #endregion
 
 #region SYNC DATA
@@ -293,9 +293,9 @@ public class CharacterMovement : NetworkBehaviour {
 		Move(currentMoveState.currentMoveInput);
 
 		//Queue after a movement tick so we have the updated position and velocity
-		if(isServerOnly && queueReplay){
-			predictedMovement.ForceReplay();
-			queueReplay = false;
+		if(isServerOnly && queueForcedReconcile){
+			queueForcedReconcile = false;
+			predictedMovement.ForceReconcile();
 		}
 
 		OnEndMove?.Invoke(currentMoveState, isReplay);
@@ -897,7 +897,8 @@ public class CharacterMovement : NetworkBehaviour {
 			//Teleport Locally
 			TeleportInternal(position, lookVector);
 			if(isServerAuth && isServerOnly){
-				this.queueReplay = true;
+				Debug.Log("Queueing Forced Reconcile");
+				this.queueForcedReconcile = true;
 			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client to teleport
@@ -1001,7 +1002,7 @@ public class CharacterMovement : NetworkBehaviour {
 			//Locally
 			SetImpulseInternal(impulse);
 			if(isServerAuth && isServerOnly){
-				this.queueReplay = true;
+				this.queueForcedReconcile = true;
 			}
 		} else if(!isServerAuth && isServerOnly){
 			//Tell client

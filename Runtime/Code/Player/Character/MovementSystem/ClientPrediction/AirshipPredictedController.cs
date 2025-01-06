@@ -42,6 +42,9 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     [Tooltip("Optimization. Reduce the number of reconciles by only reconciling every N frames")]
     public int checkReconcileEveryNthFrame = 4;
 
+    [Tooltip("If true the object will replay after a forced reconcile. If false the object will clear its history and start over from the point of the server")]
+    public bool replayForcedReconciles = false;
+
     [Tooltip("Applying server corrections one frame ahead gives much better results. We don't know why yet, so this is an option for now.")]
     public int serverSerializationOffset = 1;
     public int replayTickOffset = 0;
@@ -119,6 +122,8 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 #endregion
 
 #region VIRTUAL
+    public virtual void OnServerForceReconcile(){}
+    public virtual void OnClientForcedReconcile(){}
     public virtual string friendlyName => "Prediction: " + gameObject.GetInstanceID();
     public virtual float guid => gameObject.GetInstanceID();
 
@@ -233,10 +238,10 @@ protected void Log(string message){
 
 
 #region PREDICTION
-    private bool forceNextReplay = false;
-    public void ForceReplay(){
+    private bool forceNextReconcile = false;
+    public void ForceReconcile(){
         if(isServerOnly){
-            forceNextReplay = true;
+            forceNextReconcile = true;
         }
     }
 
@@ -325,19 +330,26 @@ protected void Log(string message){
 
         if(forceReplay){
             int forcedIndex;
-            if(stateHistory.Count <= 2){
-                //Shouldn't this be apply state so it actually saves into the history?
-                //ApplyState(serverState);
-                SnapTo(serverState);
-                return;
-            } else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
+            if(!replayForcedReconciles || stateHistory.Count <= 2){
+                print("FORCING RECONCILE");
+                stateHistory.Clear();
+                ApplyState(serverState);
+            }
+            // else if(stateHistory.Count <= 2){
+            //     //Shouldn't this be apply state so it actually saves into the history?
+            //     //ApplyState(serverState);
+            //     SnapTo(serverState);
+            // } 
+            else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
+                print("FORCING REPLAY");
                 AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, forcedIndex);
-                return;
             } else {
                 // something went very wrong. sampling should've worked.
                 Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
                 PrintHistory();
             }
+            OnClientForcedReconcile();
+            return;
         }
 
         // correction requires at least 2 existing states for 'before' and 'after'.
@@ -504,8 +516,11 @@ protected void Log(string message){
         writer.WriteInt(serverTick);
 
         //Pass a bool to signify if client MUST replay
-        writer.WriteBool(forceNextReplay);
-        forceNextReplay = false;
+        writer.WriteBool(forceNextReconcile);
+        if(forceNextReconcile){
+            OnServerForceReconcile();
+            forceNextReconcile = false;
+        }
 
         //Let the child class serialize its data
         SerializeState(writer);
@@ -527,8 +542,11 @@ protected void Log(string message){
         //Get server tick
         SetServerTick(reader.ReadInt());
 
-        //Must we replay?
-        var forceReplay = reader.ReadBool();
+        //Must we force to the server?
+        var forceReconcile = reader.ReadBool();
+        if(forceReconcile){
+            OnServerForceReconcile();
+        }
 
         //print("GOT server tick: " + serverTick + " predictedTick: " + predictedTick + " offset: " + offset +  " offsetTime: " + NetworkTime.predictionErrorUnadjusted);
 
@@ -549,7 +567,7 @@ protected void Log(string message){
         //print("Deserialize time: " + timestamp + " readerTime: " + serverDeltaTime);
         // process received state
         try{
-            OnReceivedState(serverTick, newState, forceReplay);
+            OnReceivedState(serverTick, newState, forceReconcile);
         }catch(Exception e){
             Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
         }

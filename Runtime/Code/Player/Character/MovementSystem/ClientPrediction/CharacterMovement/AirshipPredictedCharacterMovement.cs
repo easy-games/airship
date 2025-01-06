@@ -16,7 +16,8 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     [Header("Character References")]
     public CharacterMovement movement;
 
-    [Header("Variables")]
+    [Header("Character Variables")]
+    public bool snapPositionOnReconcile = true;
 
 #endregion
 
@@ -192,6 +193,20 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }else{
             //Sync this state into the character movement
             movement.ForceToNewMoveState(newState);
+        }
+    }
+
+    public override void OnClientForcedReconcile() {
+        if(snapPositionOnReconcile){
+            print("Telling prediction to snap");
+            //Snap the movement so it doesn't lerp to the forced position
+            AirshipPredictionManager.instance.SnapRigidbody(this.movement.rigidbody, 5);
+        }
+    }
+
+    public override void OnServerForceReconcile() {
+        if(!replayForcedReconciles){
+            this.recievedInputs.Clear();
         }
     }
 

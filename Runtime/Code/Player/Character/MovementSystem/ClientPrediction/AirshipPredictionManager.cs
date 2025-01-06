@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Mirror;
+using UnityEditorInternal;
 using UnityEngine;
 
 public class AirshipPredictionManager : MonoBehaviour {
@@ -47,6 +48,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         public Quaternion currentRotation;
         public Vector3 lastPosition;
         public Quaternion lastRotation;
+        public int snapTicks = 0;
 
         public RigidbodyState(Rigidbody rigid, Transform graphicsHolder){
             this.rigid = rigid;
@@ -107,6 +109,12 @@ public class AirshipPredictionManager : MonoBehaviour {
     
     public void UnRegisterRigidbody(Rigidbody rigid) {
         this.currentTrackedRigidbodies.Remove(rigid.GetInstanceID());
+    }
+
+    public void SnapRigidbody(Rigidbody rigid, int numberOfTicks = 1){
+        if(this.currentTrackedRigidbodies.TryGetValue(rigid.GetInstanceID(), out RigidbodyState state)){
+            state.snapTicks = numberOfTicks;
+        }
     }
 #endregion
 
@@ -188,6 +196,12 @@ public class AirshipPredictionManager : MonoBehaviour {
         //TODO: Sort the rigidbodies by depth (how deep in heirarchy?) so that we update nested rigidbodies in the correct order
         foreach(var kvp in currentTrackedRigidbodies){
             var rigidData = kvp.Value;
+            if(rigidData.snapTicks > 0){
+                print("Snapping rigidbody");
+                rigidData.snapTicks--;
+                rigidData.lastPosition = rigidData.currentPosition;
+                rigidData.lastRotation = rigidData.currentRotation;
+            }
             // rigidData.graphicsHolder.SetPositionAndRotation(
             //     Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime), 
             //     Quaternion.Lerp(rigidData.lastRotation, rigidData.currentRotation, interpolationTime)
