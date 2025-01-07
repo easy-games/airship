@@ -46,6 +46,9 @@ public partial class LuauCore : MonoBehaviour {
 
     private struct AwaitingTask
     {
+#if UNITY_EDITOR
+        public string DebugName;
+#endif
         public IntPtr Thread;
         public Task Task;
         public MethodInfo Method;
@@ -1523,6 +1526,9 @@ public partial class LuauCore : MonoBehaviour {
         try {
             var task = (Task)method.Invoke(obj, parameters.Array);
             var awaitingTask = new AwaitingTask {
+#if UNITY_EDITOR
+                DebugName = $"{method.Name} ({method.DeclaringType.FullName})",
+#endif
                 Thread = thread,
                 Task = task,
                 Method = method,
@@ -1589,7 +1595,12 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         if (!immediate) {
-            var result = LuauPlugin.LuauResumeThread(thread, nArgs);
+            var result = -1;
+            try {
+                result = LuauPlugin.LuauResumeThread(thread, nArgs);
+            } catch (LuauException e) {
+                Debug.LogException(e);
+            }
             if (binding != null) {
                 binding.m_asyncYield = false;
                 binding.m_canResume = result == 1;

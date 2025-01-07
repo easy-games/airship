@@ -742,4 +742,14 @@ public static class LuauPlugin {
 		var len = GetLuauPluginVersion(out var versionPtr);
 		return Marshal.PtrToStringUTF8(versionPtr, len);
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void DebugPrintStack(IntPtr thread);
+	public static void LuauDebugPrintStack(IntPtr thread) {
+		DebugPrintStack(thread);
+	}
 }
