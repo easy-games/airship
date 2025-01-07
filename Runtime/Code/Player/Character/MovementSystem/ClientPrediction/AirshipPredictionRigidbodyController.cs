@@ -65,7 +65,6 @@ public class AirshipPredictionRigidbodyController : MonoBehaviour, IPredictedRep
             return;
         }
         waiting = true;
-        print("Stopping this rigidbody");
         this.wasColliding = this.rigid.detectCollisions;
         this.wasKinematic = this.rigid.isKinematic;
         this.pastDetectionMode = this.rigid.collisionDetectionMode;
@@ -78,7 +77,6 @@ public class AirshipPredictionRigidbodyController : MonoBehaviour, IPredictedRep
             return;
         }
         waiting = false;
-        print("Starting this rigidbody back up");
         this.rigid.isKinematic = this.wasKinematic;
         this.rigid.detectCollisions = this.wasColliding;
     }
