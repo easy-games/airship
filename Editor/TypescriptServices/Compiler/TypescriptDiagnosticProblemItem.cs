@@ -113,7 +113,7 @@ namespace Airship.Editor {
 
         private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|TS unity-ts): (.*)");
 
-        internal static TypescriptFileDiagnosticItem FromDiagnosticEvent(CompilerEditorFileDiagnosticEvent diagnosticEvent) {
+        internal static TypescriptFileDiagnosticItem FromDiagnosticEvent(TypescriptProject project, CompilerEditorFileDiagnosticEvent diagnosticEvent) {
             var location = new TypescriptLineAndColumn();
             if (diagnosticEvent.Line.HasValue && diagnosticEvent.Column.HasValue) {
                 location.Line = diagnosticEvent.Line.Value + 1;
@@ -121,7 +121,7 @@ namespace Airship.Editor {
             }
 
             var problemItem = new TypescriptFileDiagnosticItem(
-                TypescriptProjectsService.Project, 
+                project, 
                 diagnosticEvent.FilePath, 
                 diagnosticEvent.Message, 
                 diagnosticEvent.Code ?? -1, 
