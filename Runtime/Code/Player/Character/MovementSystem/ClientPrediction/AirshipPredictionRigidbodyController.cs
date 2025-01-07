@@ -19,6 +19,8 @@ public class AirshipPredictionRigidbodyController : MonoBehaviour, IPredictedRep
     private bool wasKinematic = false;
     private bool wasColliding = false;
     private CollisionDetectionMode pastDetectionMode = CollisionDetectionMode.Discrete;
+    private Vector3 pastVel;
+    private Vector3 pastAngularVel; 
 
     private void Awake() {
         if(!rigid) {
@@ -68,6 +70,10 @@ public class AirshipPredictionRigidbodyController : MonoBehaviour, IPredictedRep
         this.wasColliding = this.rigid.detectCollisions;
         this.wasKinematic = this.rigid.isKinematic;
         this.pastDetectionMode = this.rigid.collisionDetectionMode;
+        this.pastVel = this.rigid.velocity;
+        this.pastAngularVel = this.rigid.angularVelocity;
+        
+        this.rigid.collisionDetectionMode = CollisionDetectionMode.Discrete;
         this.rigid.isKinematic = true;
         this.rigid.detectCollisions = false;
     }
@@ -79,5 +85,8 @@ public class AirshipPredictionRigidbodyController : MonoBehaviour, IPredictedRep
         waiting = false;
         this.rigid.isKinematic = this.wasKinematic;
         this.rigid.detectCollisions = this.wasColliding;
+        this.rigid.collisionDetectionMode = this.pastDetectionMode;
+        this.rigid.velocity = this.pastVel;
+        this.rigid.angularVelocity = this.pastAngularVel;
     }
 }
