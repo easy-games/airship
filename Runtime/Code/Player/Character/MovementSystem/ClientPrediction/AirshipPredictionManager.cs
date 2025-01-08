@@ -8,6 +8,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     public static bool SmoothRigidbodies = true;
 
     public static Action OnPhysicsTick;
+    public static Action<int> OnPreReplayTick;
 
     private static AirshipPredictionManager _instance = null;
 
@@ -236,12 +237,12 @@ public class AirshipPredictionManager : MonoBehaviour {
     }
 
     private void StartReplays(){
-        // //Let any other objects disable while this replays
+        //Let any other objects disable while this replays
         foreach(var kvp in replayObjects){
             kvp.Value.OnReplayingOthersStarted();
         }
         
-        // //Replay all pending replays
+        //Replay all pending replays
         foreach(var kvp in pendingReplays){
             //Make sure this object isn't disabled
             kvp.Value.replayController.OnReplayingOthersFinished();
@@ -283,12 +284,13 @@ public class AirshipPredictionManager : MonoBehaviour {
             //Move all other dynamic rigidbodies to their saved states at this time
             //TODO maybe make a bool so this is optional?
 
-            //Simulate 1 physics step
+            //Generic preperation for a replay
+            OnPreReplayTick?.Invoke(tick);
 
             //Replay ticked callback
             replayData.replayController.OnReplayTickStarted(tick);
 
-            //Run the simulation in the scene
+            //Run the simulation in the scene on step
             Physics.Simulate((float)Time.fixedDeltaTime);
 
             //Replay ticked callback
