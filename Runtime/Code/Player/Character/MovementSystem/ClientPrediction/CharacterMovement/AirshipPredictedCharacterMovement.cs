@@ -32,6 +32,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 #endregion
 
 #region GETTERS
+
     public override Vector3 currentPosition {
         get{
             return tf.position;

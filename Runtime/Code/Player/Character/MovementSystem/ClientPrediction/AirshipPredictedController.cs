@@ -152,8 +152,6 @@ protected void Log(string message){
         velocitySnapThresholdSqr = velocitySnapThreshold * velocitySnapThreshold;
         velocityCorrectionThresholdSqr = velocityCorrectionThreshold * velocityCorrectionThreshold;
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
-
-        PrintHistory("Starting history");
     }
 
     protected virtual void OnEnable() {

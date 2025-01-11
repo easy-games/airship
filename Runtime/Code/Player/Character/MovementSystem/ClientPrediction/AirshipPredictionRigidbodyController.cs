@@ -26,18 +26,17 @@ public class AirshipPredictionRigidbodyController : MonoBehaviour, IPredictedRep
         if(!rigid) {
             rigid = gameObject.GetComponent<Rigidbody>();
         }
-        if(!graphicsHolder) {
-            Debug.LogWarning("Rigidbody is missing graphics holder and won't be smoothed or handled by client side prediction. GameObject: " + gameObject.name);
-        }
     }
     
     private void OnEnable() {
-        if(rigid && graphicsHolder){
-            //Register for rigidbody smoothing
-            AirshipPredictionManager.instance.RegisterRigidbody(rigid, graphicsHolder);
-
+        if(rigid){
             //Listen to replays
             AirshipPredictionManager.instance.RegisterPredictedObject(this);
+            
+            if(graphicsHolder){
+                //Register for rigidbody smoothing
+                AirshipPredictionManager.instance.RegisterRigidbody(rigid, graphicsHolder);
+            }
         }
     }
 

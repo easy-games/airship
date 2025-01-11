@@ -954,6 +954,19 @@ public class CharacterMovement : NetworkBehaviour {
 
 #region TS_ACCESS
 
+	public void SetMovementEnabled(bool isEnabled){
+		this.disableInput = !isEnabled;
+		if(this.networkTransform) {
+			this.networkTransform.enabled = isEnabled;
+		}
+		if(this.predictedMovement) {
+			this.predictedMovement.enabled = false;
+		}
+		this.netIdentity.enabled = isEnabled;
+	}
+
+
+
 	public void SetReplicatedState(CharacterAnimationSyncData oldData, CharacterAnimationSyncData newData) {
 		animationHelper.SetState(newData);
 		if(oldData.state != newData.state){
