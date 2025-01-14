@@ -646,6 +646,16 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern void ResetTimeCache(LuauContext context, int fixedUpdate);
+	public static void LuauResetTimeCache(LuauContext context, bool fixedUpdate) {
+		ResetTimeCache(context, fixedUpdate ? 1 : 0);
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern LuauContext GetContextFromThread(IntPtr thread);
 	public static LuauContext LuauGetContextFromThread(IntPtr thread) {
 		ThreadSafetyCheck();

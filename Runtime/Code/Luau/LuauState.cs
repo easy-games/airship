@@ -168,6 +168,8 @@ namespace Luau {
         }
 
         private void OnUpdate() {
+            LuauPlugin.LuauResetTimeCache(Context, false);
+            
             var runBuffer = _currentBuffer;
             if (_currentBuffer == _pendingCoroutineResumesA) {
                 _currentBuffer = _pendingCoroutineResumesB;
@@ -197,6 +199,7 @@ namespace Luau {
         }
 
         private void OnFixedUpdate() {
+            LuauPlugin.LuauResetTimeCache(Context, true);
             LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipFixedUpdate, Time.fixedDeltaTime);
         }
     }
