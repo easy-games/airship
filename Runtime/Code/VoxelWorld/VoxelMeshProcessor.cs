@@ -1512,7 +1512,7 @@ namespace VoxelWorldStuff {
         //Local on the left, world on the right
         static List<Tuple<string, string>> shaderPairs = new List<Tuple<string, string>>
         {
-            Tuple.Create("TriplanarSmoothstepLocalURP", "TriplanarSmoothstepWorldURP")
+            Tuple.Create("Shader Graphs/TriplanarSmoothstepLocalURP", "Shader Graphs/TriplanarSmoothstepWorldURP")
         };
 
         /// <summary>
@@ -1616,7 +1616,6 @@ namespace VoxelWorldStuff {
 
                 //Swap the shader if its known
                 if (triplanerMode == 2) { //Local
-                    
                     foreach (var shaderSwap in shaderPairs) {
                         if (mat.shader.name == shaderSwap.Item2) {
                             mat.shader = Shader.Find(shaderSwap.Item1);
