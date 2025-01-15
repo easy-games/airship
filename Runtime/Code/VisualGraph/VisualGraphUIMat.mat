@@ -120,7 +120,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _LineThickness: 0.03
-    - _MaxValues: 32
+    - _MaxValues: 64
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
@@ -145,13 +145,13 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BackgroundColor: {r: 0, g: 0, b: 0, a: 0}
-    - _BaseColor: {r: 0.18867922, g: 0.18867922, b: 0.18867922, a: 1}
+    - _BaseColor: {r: 0, g: 0, b: 0, a: 1}
     - _BgColor: {r: 0.1981132, g: 0.1981132, b: 0.1981132, a: 1}
     - _ClipRect: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _LineColorA: {r: 1, g: 0, b: 0, a: 1}
-    - _LineColorB: {r: 0, g: 1, b: 0, a: 0.49019608}
+    - _LineColorB: {r: 0, g: 1, b: 0, a: 1}
     - _LineColorBottom: {r: 1, g: 0, b: 1, a: 1}
     - _LineColorC: {r: 0, g: 0, b: 1, a: 1}
     - _LineColorD: {r: 1, g: 1, b: 1, a: 1}

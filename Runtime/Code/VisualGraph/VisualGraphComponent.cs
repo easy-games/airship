@@ -3,7 +3,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UI;
 
-
+[LuauAPI]
 [ExecuteInEditMode]
 public class VisualGraphComponent : MonoBehaviour {
     [Header("References")]
@@ -19,7 +19,7 @@ public class VisualGraphComponent : MonoBehaviour {
     public bool testGraph = false;
 
     private Texture2D dataTex;
-    private List<float> values = new List<float>();
+    private List<Vector3> values = new List<Vector3>();
     private float lastTestTime = 0;
     public float minValue {get; private set;} = 0;
     public float maxValue {get; private set;} = 1;
@@ -34,14 +34,25 @@ public class VisualGraphComponent : MonoBehaviour {
         if(testGraphOverTime){
             if(Time.time - this.lastTestTime > 1) {
                 this.lastTestTime = Time.time;
-                AddValue(UnityEngine.Random.Range(0f,1f));
+                AddValues(new Vector3(
+                    UnityEngine.Random.Range(0f,1f),
+                    UnityEngine.Random.Range(0f,1f),
+                    UnityEngine.Random.Range(0f,1f)));
             }
         }
         if(testGraph){
             this.InitTexture();
-            values = new List<float>();
+            values = new List<Vector3>();
             for(int i=0; i<this.dataResolution; i++){
-                values.Add((Mathf.Sin(i) + 1) / 2);
+                // values.Add(new Vector3(
+                //     (Mathf.Sin(i) + 1) / 2, 
+                //     (Mathf.Cos(i) + 1) / 2, 
+                //     (Mathf.Tan(i) + 1) / 2));
+                var delta = i/(float)this.dataResolution;
+                values.Add(new Vector3(
+                    delta,
+                    1-delta,
+                    Mathf.Sin(delta)));
                 //values.Add(.5f);
             }
             UpdateMesh();
@@ -59,55 +70,74 @@ public class VisualGraphComponent : MonoBehaviour {
     /// <summary>
     /// Adds a value to the end of the data
     /// </summary>
-    /// <param name="delta"> 0 - 1 value on the graph</param>
-    public void AddValue(float delta){
+    /// <param name="newValue"> 0 - 1 value on the graph</param>
+    public void AddValue(float newValue){
         if(this.values.Count > dataResolution){
             this.values.RemoveAt(0);
         }
-        this.values.Add(delta);
+        this.values.Add(new Vector3(newValue, 0,0));
         UpdateMesh();
     }
 
-    public void UpdateMesh(){
+    /// <summary>
+    /// Adds a value to the end of the data
+    /// </summary>
+    /// <param name="newValue"> 0 - 1 value for A B C lines on the graph</param>
+    public void AddValues(Vector3 newValue){
+        if(this.values.Count > dataResolution){
+            this.values.RemoveAt(0);
+        }
+        this.values.Add(newValue);
+        UpdateMesh();
+    }
+
+    private void Contain(float value){
+        this.minValue = math.min(value, this.minValue);
+        this.maxValue = math.max(value, this.maxValue);
+    }
+
+    public void     UpdateMesh(){
         if(!dataTex){
             InitTexture();
         }
         if(values.Count == 0){
             return;
         }
+
         this.minValue = 0;
         this.maxValue = 1;
         string log = "Visual Graph Values:\n";
         for(int i=0; i<this.values.Count; i++){
-            this.minValue = math.min(this.values[i], this.minValue);
-            this.maxValue = math.max(this.values[i], this.maxValue);
+            this.Contain(this.values[i].x);
+            this.Contain(this.values[i].y);
+            this.Contain(this.values[i].z);
             log+= "Value " + i + ": " + this.values[i] + " \n";
         }
+
         if(logValues){
             print(log);
         }
-        
-        // var maxColors = this.mesh.vertices.Length;
-        // var newColors = new Color[maxColors];
-        // var UVs = this.mesh.uv;
-        // for(int i=0; i<this.mesh.vertices.Length; i++){
-        //     var valueIndex = Mathf.FloorToInt(UVs[i].x * this.maxValues);
-        //     var value = this.values[Mathf.Clamp(valueIndex, 0, this.values.Count-1)];
-        //     newColors[i] = new Color(0,0,0, value);
-        // }
-        // this.mesh.colors = newColors;
-        // this.filter.sharedMesh = this.mesh;
+
         int firstValueIndex = this.dataResolution-this.values.Count;
         for(int i=0; i<this.dataResolution; i++){
             int valueIndex = math.clamp(i-firstValueIndex, 0, this.values.Count-1);
-            this.dataTex.SetPixel(i,1, new Color((this.values[valueIndex]-minValue) / (this.maxValue-minValue),0,0,0));
+            this.dataTex.SetPixel(i,1, new Color(
+                (this.values[valueIndex].x-minValue) / (this.maxValue-minValue),
+                (this.values[valueIndex].y-minValue) / (this.maxValue-minValue),
+                (this.values[valueIndex].z-minValue) / (this.maxValue-minValue)));
         }
         this.dataTex.Apply();
         image.texture = dataTex;
     }
 
-    public void SetLineColor(Color newColor){
-        this.image.material.SetColor("_LineColorA", newColor);
+    public void SetLineColor(Color colorA){
+        this.image.material.SetColor("_LineColorA", colorA);
+    }
+
+    public void SetLineColors(Color colorA, Color colorB, Color colorC){
+        this.image.material.SetColor("_LineColorA", colorA);
+        this.image.material.SetColor("_LineColorB", colorB);
+        this.image.material.SetColor("_LineColorC", colorC);
     }
 
     // private void OnDrawGizmos() {
