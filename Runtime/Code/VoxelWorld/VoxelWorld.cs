@@ -368,7 +368,7 @@ public partial class VoxelWorld : MonoBehaviour {
         return children;
     }
      
-    public GameObject GetPrefabAt(Vector3Int pos) {
+    public GameObject GetPrefabAt(Vector3 pos) {
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out Chunk chunk);
         if (chunk == null) {

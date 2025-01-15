@@ -149,11 +149,11 @@ namespace VoxelWorldStuff {
             return count;
         }
 
-        public GameObject GetPrefabAt(Vector3Int worldPos) {
+        public GameObject GetPrefabAt(Vector3 worldPos) {
             if (prefabObjects == null) {
                 return null;
             }
-            Vector3Int localKey = WorldPosToLocalPos(worldPos);
+            Vector3Int localKey = WorldPosToLocalPos(Vector3Int.FloorToInt(worldPos));
 
             if (prefabObjects.TryGetValue(localKey, out var prefab)) {
                 return prefab.Item1;
