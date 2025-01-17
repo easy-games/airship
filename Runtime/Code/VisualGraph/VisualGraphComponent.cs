@@ -96,7 +96,7 @@ public class VisualGraphComponent : MonoBehaviour {
         this.maxValue = math.max(value, this.maxValue);
     }
 
-    public void     UpdateMesh(){
+    public void UpdateMesh(){
         if(!dataTex){
             InitTexture();
         }
@@ -104,18 +104,24 @@ public class VisualGraphComponent : MonoBehaviour {
             return;
         }
 
-        this.minValue = 0;
-        this.maxValue = 1;
-        string log = "Visual Graph Values:\n";
-        for(int i=0; i<this.values.Count; i++){
-            this.Contain(this.values[i].x);
-            this.Contain(this.values[i].y);
-            this.Contain(this.values[i].z);
-            log+= "Value " + i + ": " + this.values[i] + " \n";
-        }
+        if(this.logValues || this.useAutoRange){
+            if(this.useAutoRange){
+                this.minValue = 0;
+                this.maxValue = 1;
+            }
+            string log = "Visual Graph Values:\n";
+            for(int i=0; i<this.values.Count; i++){
+                if(this.useAutoRange){
+                    this.Contain(this.values[i].x);
+                    this.Contain(this.values[i].y);
+                    this.Contain(this.values[i].z);
+                }
+                log+= "Value " + i + ": " + this.values[i] + " \n";
+            }
 
-        if(logValues){
-            print(log);
+            if(logValues){
+                print(log);
+            }
         }
 
         int firstValueIndex = this.dataResolution-this.values.Count;
@@ -138,6 +144,17 @@ public class VisualGraphComponent : MonoBehaviour {
         this.image.material.SetColor("_LineColorA", colorA);
         this.image.material.SetColor("_LineColorB", colorB);
         this.image.material.SetColor("_LineColorC", colorC);
+    }
+
+    private bool useAutoRange = true;
+    public void SetRange(float minRange, float maxRange){
+        this.minValue = minRange;
+        this.maxValue = maxRange;
+        this.useAutoRange = false;
+    }
+
+    public void ClearRange(){
+        this.useAutoRange = true;
     }
 
     // private void OnDrawGizmos() {
