@@ -517,7 +517,7 @@ public class AirshipComponent : MonoBehaviour {
                 var gameConfig = GameConfig.Load();
                 if (gameConfig.gameScenes.ToList().Find((s) => s.name == sceneName) == null) {
                     throw new Exception(
-                        $"Tried to load AirshipComponent in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
+                        $"Tried to load AirshipComponent ({this.name}) on GameObject ({this.gameObject.name}) in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
                 }
             }
             validatedSceneInGameConfig = true;

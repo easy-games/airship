@@ -573,6 +573,12 @@ namespace Airship.DevConsole
 
             Application.logMessageReceivedThreaded += OnLogMessageCallback;
 
+            SceneManager.activeSceneChanged += (current, next) => {
+                if (next.name == "MainMenu") {
+                    this.loggingEnabled = true;
+                }
+            };
+
             ClearConsole();
             InputText = string.Empty;
             _screenSize = new Vector2Int(Screen.width, Screen.height);
