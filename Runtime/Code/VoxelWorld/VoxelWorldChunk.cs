@@ -574,6 +574,7 @@ namespace VoxelWorldStuff {
 
                             for (int i = 0; i < 3; i++) {
                                 detailGameObjects[i] = new GameObject();
+                                detailGameObjects[i].layer = world.gameObject.layer;
                                 detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                                 detailGameObjects[i].transform.parent = obj.transform;
 

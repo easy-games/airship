@@ -156,12 +156,6 @@ public class ServerBootstrap : MonoBehaviour
 
 	[HideFromTS][LuauAPI(LuauContext.Protected)]
 	public GameServer GetGameServer() {
-		if (this.gameServer.ObjectMeta.Annotations.TryGetValue("GameConfig", out var gc)) {
-			Debug.Log("GetGameServer GameConfig: " + gc);
-		} else {
-			Debug.Log("GetGameServer CameConfig is missing.");
-		}
-
 		return this.gameServer;
 	}
 

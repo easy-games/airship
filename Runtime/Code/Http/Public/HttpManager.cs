@@ -38,14 +38,25 @@ namespace Code.Http.Public {
                 return new HttpResponse() {
                     success = false,
                     error = req.error,
-                    statusCode = (int)req.responseCode
+                    statusCode = (int)req.responseCode,
+                    headers = req.GetResponseHeaders()
+                };
+            }
+
+            if (req.result == UnityWebRequest.Result.ConnectionError) {
+                return new HttpResponse() {
+                    success = false,
+                    error = req.error,
+                    statusCode = (int)req.responseCode,
+                    headers = req.GetResponseHeaders()
                 };
             }
 
             return new HttpResponse() {
                 success = true,
                 data = req.downloadHandler.text,
-                statusCode = (int)req.responseCode
+                statusCode = (int)req.responseCode,
+                headers = req.GetResponseHeaders()
             };
 
 
@@ -83,11 +94,13 @@ namespace Code.Http.Public {
             if (string.IsNullOrEmpty(data)) {
                 options = new RequestHelper {
                     Uri = url,
+                    IgnoreHttpException = true
                 };
             } else {
                 options = new RequestHelper {
                     Uri = url,
-                    BodyString = data
+                    BodyString = data,
+                    IgnoreHttpException = true
                 };
             }
             if (headers != "") {
@@ -102,9 +115,10 @@ namespace Code.Http.Public {
 
             RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = true,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -113,8 +127,9 @@ namespace Code.Http.Public {
                 }
                 task.SetResult(new HttpResponse() {
                     success = false,
-                    statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    statusCode = 0,
+                    error = error.Message,
+                    headers = {}
                 });
             });
 
@@ -130,6 +145,7 @@ namespace Code.Http.Public {
 
             var options = new RequestHelper {
                 Uri = url,
+                IgnoreHttpException = true
             };
             if (headers != "") {
                 var split = headers.Split(",");
@@ -143,9 +159,10 @@ namespace Code.Http.Public {
 
             RestClient.Delete(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = true,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -154,8 +171,9 @@ namespace Code.Http.Public {
                 }
                 task.SetResult(new HttpResponse() {
                     success = false,
-                    statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    statusCode = 0,
+                    error = error.Message,
+                    headers = {}
                 });
             });
 
@@ -171,7 +189,8 @@ namespace Code.Http.Public {
 
             var options = new RequestHelper {
                 Uri = url,
-                BodyString = data
+                BodyString = data,
+                IgnoreHttpException = true
             };
             if (headers != "") {
                 var split = headers.Split(",");
@@ -185,9 +204,10 @@ namespace Code.Http.Public {
 
             RestClient.Patch(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = true,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -196,8 +216,9 @@ namespace Code.Http.Public {
                 }
                 task.SetResult(new HttpResponse() {
                     success = false,
-                    statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    statusCode = 0,
+                    error = error.Message,
+                    headers = {}
                 });
             });
 
@@ -205,7 +226,7 @@ namespace Code.Http.Public {
         }
 
         private static void LogRequestError(string url, RequestException error) {
-            Debug.LogError(url + " " + error + " " + error.Response);
+            Debug.LogError(url + " " + error + " " + error.Message);
         }
 
         public static Task<HttpResponse> PutAsync(string url, string data) {
@@ -216,6 +237,7 @@ namespace Code.Http.Public {
             return PutAsync(new RequestHelper {
                 Uri = url,
                 BodyString = data,
+                IgnoreHttpException = true
             }, headers);
         }
 
@@ -234,9 +256,10 @@ namespace Code.Http.Public {
 
             RestClient.Put(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
                 task.SetResult(new HttpResponse() {
-                    success = true,
+                    success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    statusCode = (int)res.StatusCode
+                    statusCode = (int)res.StatusCode,
+                    headers = res.Headers
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
@@ -245,8 +268,9 @@ namespace Code.Http.Public {
                 }
                 task.SetResult(new HttpResponse() {
                     success = false,
-                    statusCode = (int) error.StatusCode,
-                    error = error.Response
+                    statusCode = 0,
+                    error = error.Message,
+                    headers = {}
                 });
             });
 
