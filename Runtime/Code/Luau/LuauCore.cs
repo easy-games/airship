@@ -371,12 +371,13 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
+        if (gameObject == null) return false;
         if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene)) {
             if (gameObject.transform.parent?.name is "GameReadAccess" || gameObject.transform.parent?.parent?.name is "GameReadAccess") {
                 return false;
             }
 
-            return false;
+            return true;
         }
 
         return false;
