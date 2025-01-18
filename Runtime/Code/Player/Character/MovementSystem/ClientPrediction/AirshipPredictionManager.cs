@@ -103,6 +103,7 @@ public class AirshipPredictionManager : MonoBehaviour {
     }
 
     public void RegisterRigidbody(Rigidbody rigid, Transform graphicsHolder) {
+        rigid.interpolation = RigidbodyInterpolation.None;
         this.currentTrackedRigidbodies.Add(rigid.GetInstanceID(), new RigidbodyState(rigid, graphicsHolder));
     }
     
@@ -247,7 +248,7 @@ public class AirshipPredictionManager : MonoBehaviour {
             //Make sure this object isn't disabled
             kvp.Value.replayController.OnReplayingOthersFinished();
 
-            Debug.Log("Starting replay for: " + kvp.Value.replayController.friendlyName);
+            //Debug.Log("Starting replay for: " + kvp.Value.replayController.friendlyName);
             //Replay Logic
             Replay(kvp.Value);
 
@@ -276,7 +277,7 @@ public class AirshipPredictionManager : MonoBehaviour {
         int tick = replayData.initialState.tick + 1;
         int finalTick = replayData.endingTick;
 
-        Debug.Log("Replaying " + replayData.replayController.friendlyName + " from: " + replayData.initialState.tick + " to: " + replayData.endingTick);
+        //Debug.Log("Replaying " + replayData.replayController.friendlyName + " from: " + replayData.initialState.tick + " to: " + replayData.endingTick);
 
         //Simulate physics for the duration of the replay
         while(tick <= finalTick) {
@@ -300,7 +301,6 @@ public class AirshipPredictionManager : MonoBehaviour {
             tick ++;
         }
 
-        print("Replay finished");
         //Done replaying callback
         replayData.replayController.OnReplayFinished(replayData.initialState);
         
