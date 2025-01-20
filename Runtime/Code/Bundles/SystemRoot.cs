@@ -295,13 +295,17 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 #endif
 
+			print("Wait.1");
 			yield return this.WaitAll(loadLists[0].ToArray());
+			print("Wait.2");
 
 			foreach (var ao in this.extraBundleLoadRequests) {
 				if (!ao.isDone) {
 					yield return ao;
 				}
 			}
+
+			print("Wait.3");
 
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {

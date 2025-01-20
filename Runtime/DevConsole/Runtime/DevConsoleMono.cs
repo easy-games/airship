@@ -222,7 +222,7 @@ namespace Airship.DevConsole
         /// </summary>
         private bool _init = false;
 
-        public bool loggingEnabled = false;
+        public bool loggingEnabled = true;
 
         #region Input fields
 
