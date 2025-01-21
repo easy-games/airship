@@ -43,6 +43,7 @@ public class AirshipNetworkManager : NetworkManager {
 
     public override void OnStopClient() {
         base.OnStopClient();
+        // Debug.Log("OnStopClient");
         this.clientBundleLoader.CleanupClient();
 
         var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
@@ -170,7 +171,7 @@ public class AirshipNetworkManager : NetworkManager {
                     if (isActiveScene) {
                         for (int i = 0; i < SceneManager.sceneCount; i++) {
                             var s = SceneManager.GetSceneAt(i);
-                            if (LuauCore.IsProtectedScene(s.name)) continue;
+                            if (LuauCore.IsProtectedScene(s)) continue;
                             if (s.name == newSceneName) continue;
                             foundNewActiveScene = true;
                             newActiveScene = s;

@@ -8,6 +8,7 @@ public class DisconnectedScreen : MonoBehaviour {
 
     private void Start() {
         this.reasonText.text = CrossSceneState.kickMessage;
+        Cursor.lockState = CursorLockMode.None;
     }
 
     public void ContinueButton_OnClick() {

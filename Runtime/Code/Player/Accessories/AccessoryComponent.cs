@@ -1,13 +1,16 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Accessories {
     [LuauAPI]
     [Icon("Packages/gg.easy.airship/Editor/shirt-outline-icon.png")]
     public class AccessoryComponent : MonoBehaviour {
         public enum VisibilityMode {
-            THIRD_PERSON,
-            FIRST_PERSON,
-            BOTH
+            ThirdPerson,
+            FirstPerson,
+            Both
         }
 
         //must match the bodyMask image that artist UV the body regions to
@@ -108,10 +111,17 @@ namespace Code.Player.Accessories {
         private string serverInstanceId;
 
         public AccessorySlot accessorySlot = AccessorySlot.RightHand;
-        public VisibilityMode visibilityMode = VisibilityMode.BOTH;
+        public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
 
-        public bool canMeshCombine = true;
+        [SerializeField]
+        public List<Mesh> meshLods = new();
+
+        [SerializeField] public MaterialColorURP[] matColors;
+
+        [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
+        [Obsolete]
+        public bool canMeshCombine = false;
 
         //Array of (bones?) that get hidden on body mesh when this accessory is worn
         [HideInInspector]
@@ -150,6 +160,10 @@ namespace Code.Player.Accessories {
 #else
             return this.serverClassId;
 #endif
+        }
+
+        private void OnValidate() {
+            this.matColors = GetComponentsInChildren<MaterialColorURP>();
         }
 
         public void Copy(AccessoryComponent other) {

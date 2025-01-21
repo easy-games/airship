@@ -246,11 +246,6 @@ namespace Cdm.Authentication.OAuth2
             tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", base64AuthString);
             tokenRequest.Content = content;
 
-#if UNITY_EDITOR
-            Debug.Log($"{tokenRequest}");
-            Debug.Log($"{await tokenRequest.Content.ReadAsStringAsync()}");
-#endif
-
             var response = await httpClient.SendAsync(tokenRequest, cancellationToken);
             if (response.IsSuccessStatusCode)
             {

@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-[CreateAssetMenu(fileName = "VoxelBlockDefinition", menuName = "Airship/VoxelBlockDefinition")]
+[CreateAssetMenu(fileName = "VoxelBlockDefinition", menuName = "Airship/VoxelWorld/VoxelBlockDefinition")]
 public class VoxelBlockDefinition : ScriptableObject {
 
     public string blockName = "undefined";
@@ -21,6 +21,14 @@ public class VoxelBlockDefinition : ScriptableObject {
         public Texture2D emissive;
     }
 
+    [System.Serializable]
+    public class MeshSet {
+        public GameObject mesh_LOD0;
+        public GameObject mesh_LOD1;
+        public GameObject mesh_LOD2;
+      
+    }
+
     public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.Block;
     public Material meshMaterial; //Used by quarterBlocks, Pipes, StaticMesh and regular blocks
 
@@ -28,7 +36,9 @@ public class VoxelBlockDefinition : ScriptableObject {
     public TextureSet sideTexture = new();
     public TextureSet bottomTexture = new();
     
-    public VoxelQuarterBlockMeshDefinition quarterBlockMesh;
+    
+    public VoxelQuarterBlockMeshDefinition[] quarterBlockMeshes;
+       
 
     //ContextStyle.Prefab
     public GameObject prefab;
@@ -38,7 +48,17 @@ public class VoxelBlockDefinition : ScriptableObject {
     public GameObject staticMeshLOD1;
     public GameObject staticMeshLOD2;
 
+    
+    //For use with ContextStyle.meshTiles
+    public MeshSet meshTile1x1x1;
+    public MeshSet meshTile2x2x2;
+    public MeshSet meshTile3x3x3;
+    public MeshSet meshTile4x4x4;
+
+
     ///////////////////////////
+
+    public bool rotatedPlacement = false;
 
     public float metallic = 0;
     public float smoothness = 0;
@@ -51,8 +71,6 @@ public class VoxelBlockDefinition : ScriptableObject {
     public VoxelBlocks.CollisionType collisionType = VoxelBlocks.CollisionType.Solid;
 
     public bool randomRotation = false; //Object gets flipped on the x or z axis "randomly" (always the same per coordinate)
-
-    public string minecraftIds = ""; //For automatic conversion from minecraft maps
 }
 
 #if UNITY_EDITOR
@@ -143,6 +161,18 @@ public class VoxelBlockDefinitionEditor : Editor {
         EditorGUILayout.EndHorizontal();
     }
 
+    private VoxelBlockDefinition.MeshSet ShowMeshEditor(VoxelBlockDefinition.MeshSet meshSet, string label) {
+        EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
+        meshSet.mesh_LOD0 = (GameObject)EditorGUILayout.ObjectField("LOD0", meshSet.mesh_LOD0, typeof(GameObject), false);
+        if (meshSet.mesh_LOD0 != null) {
+            meshSet.mesh_LOD1 = (GameObject)EditorGUILayout.ObjectField("LOD1", meshSet.mesh_LOD1, typeof(GameObject), false);
+        }
+        if (meshSet.mesh_LOD1 != null) {
+            meshSet.mesh_LOD2 = (GameObject)EditorGUILayout.ObjectField("LOD2", meshSet.mesh_LOD2, typeof(GameObject), false);
+        }
+        return meshSet;
+    }
+    
     public override void OnInspectorGUI() {
 
         serializedObject.Update(); // Sync serialized object with target object
@@ -167,6 +197,13 @@ public class VoxelBlockDefinitionEditor : Editor {
         block.description = EditorGUILayout.TextField("Description", block.description);
         block.contextStyle = (VoxelBlocks.ContextStyle)EditorGUILayout.EnumPopup("Context Style", block.contextStyle);
 
+        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
+            block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
+            
+            SerializedProperty quarterBlockMeshesProp = serializedObject.FindProperty("quarterBlockMeshes");
+            EditorGUILayout.PropertyField(quarterBlockMeshesProp, new GUIContent("QuarterBlock Meshes"), true);
+        }
+        
         if (block.contextStyle == VoxelBlocks.ContextStyle.Block) {
             ShowDrawerForTextureSetProperty("Top Texture", "topTexture", block);
             ShowDrawerForTextureSetProperty("Side Texture", "sideTexture", block);
@@ -236,10 +273,6 @@ public class VoxelBlockDefinitionEditor : Editor {
             block.brightness = EditorGUILayout.FloatField("Brightness", block.brightness);
 
         }
-        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
-            block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
-            block.quarterBlockMesh = (VoxelQuarterBlockMeshDefinition)EditorGUILayout.ObjectField("QuarterBlock Mesh", block.quarterBlockMesh, typeof(VoxelQuarterBlockMeshDefinition), false);
-        }
         if (block.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
             block.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab", block.prefab, typeof(GameObject), false);
         }
@@ -250,7 +283,17 @@ public class VoxelBlockDefinitionEditor : Editor {
             block.staticMeshLOD2 = (GameObject)EditorGUILayout.ObjectField("LOD2", block.staticMeshLOD2, typeof(GameObject), false);
             EditorGUILayout.HelpBox("LOD1 and LOD2 are optional.", MessageType.Info);
         }
-        
+
+        if (block.contextStyle == VoxelBlocks.ContextStyle.GreedyMeshingTiles) {
+            block.meshMaterial = (Material)EditorGUILayout.ObjectField("Greedy Mesh Material", block.meshMaterial, typeof(Material), false);
+            block.meshTile1x1x1 = ShowMeshEditor(block.meshTile1x1x1, "1x1x1");
+            block.meshTile2x2x2 = ShowMeshEditor(block.meshTile2x2x2, "2x2x2");
+            block.meshTile3x3x3 = ShowMeshEditor(block.meshTile3x3x3, "3x3x3");
+            block.meshTile4x4x4 = ShowMeshEditor(block.meshTile4x4x4, "4x4x4");
+
+            EditorGUILayout.HelpBox("LOD1 and LOD2 are optional.", MessageType.Info);
+        }
+
         //Small gap
         EditorGUILayout.Space();
         block.solid = EditorGUILayout.Toggle("Solid Visibility", block.solid);
@@ -258,7 +301,7 @@ public class VoxelBlockDefinitionEditor : Editor {
 
         block.randomRotation = EditorGUILayout.Toggle("Random Rotation", block.randomRotation);
 
-        block.minecraftIds = EditorGUILayout.TextField("Minecraft Ids", block.minecraftIds);
+        block.rotatedPlacement = EditorGUILayout.Toggle("Rotated Placement", block.rotatedPlacement);
         
         serializedObject.ApplyModifiedProperties();
 

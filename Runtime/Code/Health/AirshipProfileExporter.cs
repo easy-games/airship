@@ -2,26 +2,32 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Airship.DevConsole;
+using Code.Http.Internal;
+using Code.Platform.Shared;
 using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
 
-struct FileIOCreateRequest {
-    public string file;
-    public int maxDownloads;
-    public bool autoDelete;
+struct SignedUrlRequest {
+    public string type;
+    public string name;
+    [CanBeNull]
+    public string note;
+    public string contentType;
+    public long contentLength;
 }
 
 
-struct FileIOCreateResponse {
-    public bool success;
-    public int status;
+struct SignedUrlResponse
+{
+    public string id;
+    public string url;
+}
 
-    public string key;
-    public string name;
-    public string link;
+struct ArtifactDownloadResponse {
+    public string url;
 }
 
 struct ServerProfileRequest {
@@ -30,23 +36,35 @@ struct ServerProfileRequest {
 
 namespace Code.Health
 {
-    public enum AirshipProfileContext {
-        Server,
-        Client,
+    public struct ClientProfileUploadRequest : NetworkMessage
+    {
+        public string logLocation;
+        public string fileName;
+        public float duration;
+        public long contentSize;
     }
     
-    public struct StartProfilingMessage : NetworkMessage {
+    public struct ClientProfileUploadResponse : NetworkMessage
+    {
+        public string logLocation;
+        public string id;
+        public string url;
+    }
+    
+    public struct StartServerProfileMessage : NetworkMessage {
         public int DurationSecs;
     }
 
-    public struct ProfileCompleteMessage : NetworkMessage {
-        public string link;
+    public struct ServerProfileCompleteMessage : NetworkMessage
+    {
+        public string gameId;
+        public string artifactId;
     } 
     
     public class AirshipProfileExporter : MonoBehaviour {
-        public static string fileIOKey = "LGF5JOI.F0YF0ET-N6PMPS6-NWGVZEW-9984TYP"; // TODO throw out this key (it lives in git).
         private static AirshipProfileExporter _instance;
         public static AirshipProfileExporter Instance => _instance;
+        private bool lastProfilerEnabled = false;
 
         private void Awake() {
             if (_instance != null && _instance != this) {
@@ -59,13 +77,15 @@ namespace Code.Health
 
         private void Start() {
             if (RunCore.IsServer()) {
-                NetworkServer.RegisterHandler<StartProfilingMessage>(OnStartProfilingMessage, false);
+                NetworkServer.RegisterHandler<StartServerProfileMessage>(OnStartProfilingMessage, false);
+                NetworkServer.RegisterHandler<ClientProfileUploadRequest>(OnClientUploadRequest, false);
             }
             if (RunCore.IsClient()) {
-                NetworkClient.RegisterHandler<ProfileCompleteMessage>(OnProfileCompleteMessage);
+                NetworkClient.RegisterHandler<ServerProfileCompleteMessage>(OnServerProfileCompleteMessage);
+                NetworkClient.RegisterHandler<ClientProfileUploadResponse>(OnClientUploadResponse);
             }
 
-            DevConsole.AddCommand(Command.Create<AirshipProfileContext, int>(
+            DevConsole.AddCommand(Command.Create<string, int>(
                 "profile", 
                 "",
                 "Starts and uploads a profile. Once complete the download link will be printed.", 
@@ -77,34 +97,74 @@ namespace Code.Health
                         return;
                     }
 
-                    if (context == AirshipProfileContext.Client) {
+                    if (context.Equals("client", StringComparison.OrdinalIgnoreCase)) {
                         StartProfiling(d, null);
-                    } else {
+                    } else if (context.Equals("server", StringComparison.OrdinalIgnoreCase)) {
                         Debug.Log("Starting a server profile, view server console to monitor progress.");
-                        NetworkClient.Send(new StartProfilingMessage { DurationSecs = d });
+                        NetworkClient.Send(new StartServerProfileMessage { DurationSecs = d });
                     }
                 }));
         }
 
-        public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartProfilingMessage msg) {
+        private void Update() {
+            if (Profiler.enabled != lastProfilerEnabled) {
+                lastProfilerEnabled = Profiler.enabled;
+                LuauPlugin.LuauSetProfilerEnabled(Profiler.enabled);
+            }
+        }
+
+        public async void OnClientUploadRequest(NetworkConnectionToClient sender, ClientProfileUploadRequest msg)
+        {
+            var urlData = await this.GetSignedUrl(msg.fileName, msg.duration, msg.contentSize);
+            sender.Send(new ClientProfileUploadResponse
+            {
+                logLocation = msg.logLocation,
+                url = urlData.url,
+                id = urlData.id
+            });
+        }
+
+        public async void OnClientUploadResponse(ClientProfileUploadResponse msg)
+        {
+            this.Upload(new SignedUrlResponse()
+            {
+                id = msg.id,
+                url = msg.url
+            }, msg.logLocation, null);
+        }
+
+        public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartServerProfileMessage msg) {
             // TODO Validate sender is dev
             StartProfiling(msg.DurationSecs, sender);
         }
 
-        public void OnProfileCompleteMessage(ProfileCompleteMessage msg) {
-            Debug.Log($"Profile uploaded: <a href=\"{msg.link}\">{msg.link}</a> (copied to your clipboard)");
-            GUIUtility.systemCopyBuffer = msg.link;
+        public async void OnServerProfileCompleteMessage(ServerProfileCompleteMessage msg)
+        {
+            var downloadUrl =
+                await InternalHttpManager.GetAsync(
+                    $"{AirshipPlatformUrl.contentService}/artifacts/artifact-id/{msg.artifactId}");
+            if (!downloadUrl.success)
+            {
+                Debug.Log($"Profile Uploaded:\n<a href=\"https://create.airship.gg/dashboard/organization/game/artifacts?activeGame={msg.gameId}\">https://create.airship.gg/dashboard/organization/game/artifacts?activeGame={msg.gameId}</a>\n(copied to your clipboard)");
+                return;
+            }
+
+            var data = JsonUtility.FromJson<ArtifactDownloadResponse>(downloadUrl.data);
+            
+            Debug.Log($"Profile uploaded:\n<a href=\"{data.url}\">{data.url}</a>\n(copied to your clipboard)");
+            GUIUtility.systemCopyBuffer = data.url;
         }
 
         public void StartProfiling(int durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             // TODO check that sender is game dev
-            if (Profiler.enabled) {
-                Debug.LogWarning("Profiler is already running.");
-                return;
-            }
+            // if (Profiler.enabled) {
+            //     Debug.LogWarning("Profiler is already running.");
+            //     return;
+            // }
 
             var date = DateTime.Now.ToString("MM-dd-yyyy h.mm.ss");
-            var logPath = Path.Combine(Application.persistentDataPath, $"Profile-{date}.raw");
+            var fileName = RunCore.IsClient() ?  $"Client-Profile-{date}.raw" :  $"Server-Profile-{date}.raw";
+            var logPath = Path.Combine(Application.persistentDataPath, fileName);
             if (File.Exists(logPath)) File.WriteAllText(logPath, "");
 
             Profiler.logFile = logPath;
@@ -112,42 +172,69 @@ namespace Code.Health
             
             Debug.Log($"Starting profiler for {durationSecs} seconds.");
             Profiler.enabled = true;
-            StopProfilingAfterDelay(logPath, durationSecs, profileInitiator);
+            StopProfilingAfterDelay(logPath, fileName, durationSecs, profileInitiator);
         }
 
-        private async void StopProfilingAfterDelay(string logPath, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
+        private async void StopProfilingAfterDelay(string logPath, string fileName, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             await Task.Delay((int)(durationSecs * 1000));
             Profiler.enabled = false;
-            Debug.Log($"Profiling completed. Uploading file...");
-            Upload(logPath, durationSecs, profileInitiator);
+            var info = new FileInfo(logPath);
+            
+            Debug.Log($"Profiling completed. Retrieving upload URL...");
+            if (RunCore.IsClient())
+            {
+                NetworkClient.Send(new ClientProfileUploadRequest
+                {
+                    contentSize = info.Length,
+                    logLocation = logPath,
+                    fileName = fileName
+                });
+            }
+            else
+            {
+                var urlData = await this.GetSignedUrl(fileName, durationSecs, info.Length);
+                Upload(urlData, logPath, profileInitiator);
+            }
         }
 
-        private async void Upload(string logPath, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
+        private async Task<SignedUrlResponse> GetSignedUrl(string fileName, float duration, long length)
+        {
+            var body = new SignedUrlRequest()
+            {
+                type = "MICRO_PROFILE",
+                name = fileName,
+                contentType = "application/octet-stream",
+                contentLength = length
+            };
+            var response = await InternalHttpManager.PostAsync($"{AirshipPlatformUrl.contentService}/artifacts/signed-url", JsonUtility.ToJson(body));
+            if (!response.success)
+            {
+                throw new Exception("Unable to get upload URL for profile.");
+            }
+            return JsonUtility.FromJson<SignedUrlResponse>(response.data);
+        }
+
+        private async void Upload(SignedUrlResponse urlData, string logPath, [CanBeNull] NetworkConnectionToClient profileInitiator)
+        {
+            Debug.Log("Uploading profile to backend...");
             var uploadFilePath = logPath;
-            
-            var form = new WWWForm();
-            form.AddField("title", $"Server Profile ({durationSecs}s)");
-            form.AddField("description", "Learn more: https://docs.airship.gg/optimization/server-profiler");
-            form.AddField("autoDelete", "false");
-            form.AddField("maxDownloads", "100");
-            form.AddField("expires", "1w");
             var fileData = await File.ReadAllBytesAsync(uploadFilePath);
             File.Delete(uploadFilePath);
             
-            form.AddBinaryData("file",  fileData, Path.GetFileName(uploadFilePath));
-            using var www = UnityWebRequest.Post("https://file.io/?expires=1w", form);
-            www.SetRequestHeader("Authorization", "Bearer " + fileIOKey);
+            using var www = UnityWebRequest.Put(urlData.url, fileData);
             MonitorUploadProgress(www);
             await UnityWebRequestProxyHelper.ApplyProxySettings(www).SendWebRequest();
             
-            var resp = JsonUtility.FromJson<FileIOCreateResponse>(www.downloadHandler.text);
+            Debug.Log($"Upload response: {www.downloadHandler.text}");
+            
             if (profileInitiator != null && profileInitiator.isReady) {
-                profileInitiator.Send(new ProfileCompleteMessage { link = resp.link });
+                profileInitiator.Send(new ServerProfileCompleteMessage { artifactId = urlData.id });
             }
-            Debug.Log($"Profile uploaded: <a href=\"{resp.link}\">{resp.link}</a> (copied to your clipboard)");
+            Debug.Log($"Profile uploaded.");
         }
 
-        private async void MonitorUploadProgress(UnityWebRequest req) {
+        private async Task MonitorUploadProgress(UnityWebRequest req) {
+            Debug.Log("Starting upload...");
             var elapsed = 0.0d;
             var timeSinceLastLog = 0.0d;
             try {

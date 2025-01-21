@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -35,13 +36,13 @@ namespace Luau {
 
         private AirshipBehaviourMeta() {}
     }
-
+    
     [Serializable]
     public class AirshipExtendsMeta {
         public string id;
-        public string[] extends;
-        
         public string scriptPath;
+        
+        public string[] extends;
         public string[] extendsScriptPaths;
     }
     
@@ -70,11 +71,9 @@ namespace Luau {
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
             foreach (var pair in metaTop.extends) {
                 var matching = metaTop.behaviours[pair.Key];
+
                 if (matching == null) continue;
                 
-                var meta = new AirshipExtendsMeta();
-                meta.scriptPath = matching.filePath.Replace("\\", "/");
-
                 var extendsPaths = new List<string>();
                 foreach (var extendsPath in pair.Value) {
                     var matchingExtends = metaTop.behaviours[extendsPath];
@@ -82,10 +81,13 @@ namespace Luau {
                     extendsPaths.Add(matchingExtends.filePath);
                 }
 
-                meta.id = pair.Key;
-                meta.extends = pair.Value;
-                
-                meta.extendsScriptPaths = extendsPaths.ToArray();
+                var meta = new AirshipExtendsMeta {
+                    id = pair.Key,
+                    scriptPath = matching.filePath.Replace("\\", "/"),
+                    extends = pair.Value,
+                    extendsScriptPaths = extendsPaths.ToArray()
+                };
+
                 airshipExtendsMetas.Add(meta);
             }
         }
@@ -100,6 +102,20 @@ namespace Luau {
 
         private readonly Dictionary<string, AirshipBehaviourMeta> _classes = new();
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Clear the instance (Editor only)
+        /// </summary>
+        public static void ClearInstance() {
+            _instance = null;
+        }
+        
+        /// <summary>
+        /// Edit-time global for where the asbuildinfo is located
+        /// </summary>
+        public static string PrimaryAssetPath => $"Assets/{BundlePath}";
+#endif
+        
         public static AirshipBuildInfo Instance {
             get {
                 if (_instance != null) {
@@ -153,9 +169,21 @@ namespace Luau {
             return path.ToLower().StartsWith("assets/") ? path[7..] : path;
         }
 
+        private Dictionary<string, string> scriptPathByTypeNameCache = new();
+        private Dictionary<(string childPath, string parentPath), bool> inheritanceCheckCache = new();
+        
         [CanBeNull]
         public string GetScriptPathByTypeName(string typeName) {
-            return (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
+            if (scriptPathByTypeNameCache.TryGetValue(typeName, out var scriptPath)) {
+                return scriptPath;
+            }
+
+            scriptPath = (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
+            
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+            scriptPathByTypeNameCache.Add(typeName, scriptPath);
+#endif
+            return scriptPath;
         }
         
         /// <summary>
@@ -165,17 +193,33 @@ namespace Luau {
         /// <param name="parentPath">The path of the parent script</param>
         /// <returns>True if the child script inherits the parent script</returns>
         public bool Inherits(string childPath, string parentPath) {
-            childPath = StripAssetPrefix(childPath).ToLower();
-            parentPath = StripAssetPrefix(parentPath).ToLower();
+            if (inheritanceCheckCache.TryGetValue((childPath, parentPath), out var result)) {
+                return result;
+            }
+
+            var childPathNormalized = StripAssetPrefix(childPath).ToLower();
+            var parentPathNormalized = StripAssetPrefix(parentPath).ToLower();
+
+            if (childPathNormalized == parentPathNormalized) {
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+                inheritanceCheckCache.Add((childPath, parentPath), true);
+#endif
+                return true;
+            };
             
-            if (childPath == parentPath) return true;
-            
-            var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.ToLower() == parentPath);
+            var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.Equals(parentPathNormalized, StringComparison.OrdinalIgnoreCase));
             if (extendsMeta == null) {
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+                inheritanceCheckCache.Add((childPath, parentPath), false);
+#endif
                 return false;
             }
             
-            var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPath);
+            var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPathNormalized);
+
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+            inheritanceCheckCache.Add((childPath, parentPath), isExtending);
+#endif
             return isExtending;
         }
 

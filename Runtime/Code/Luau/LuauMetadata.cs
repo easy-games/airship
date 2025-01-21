@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -87,9 +88,16 @@ namespace Luau {
         public int unityInstanceId;
         public int airshipComponentId;
 
+        public AirshipComponentRef() {}
+        
         public AirshipComponentRef(int unityInstanceId, int airshipComponentId) {
             this.airshipComponentId = airshipComponentId;
             this.unityInstanceId = unityInstanceId;
+        }
+
+        public AirshipComponent AsUnityComponent() {
+            var component = AirshipBehaviourRootV2.GetComponent(unityInstanceId, airshipComponentId);
+            return component;
         }
     }
     
@@ -394,7 +402,7 @@ namespace Luau {
                         obj = 0.0f;
                         break;
                     }
-                    float.TryParse(serializedObjectValue, out var value);
+                    float.TryParse(serializedObjectValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var value);
                     obj = value;
                     break;
                 }
@@ -404,7 +412,7 @@ namespace Luau {
                         obj = 0;
                         break;
                     }
-                    int.TryParse(serializedObjectValue, out var value);
+                    int.TryParse(serializedObjectValue, NumberStyles.Integer, CultureInfo.InvariantCulture,  out var value);
                     obj = value;
                     break;
                 }
@@ -435,8 +443,7 @@ namespace Luau {
                 case AirshipComponentPropertyType.AirshipComponent: {
                     if (objectRef is AirshipComponent scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
-                        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-                        if (airshipComponent == null) {
+                        if (!AirshipBehaviourRootV2.HasId(gameObject)) {
                             // See if it just needs to be started first:
                             var foundAny = false;
                             foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
@@ -445,14 +452,14 @@ namespace Luau {
                             }
                         
                             // Retry getting AirshipBehaviourRoot:
-                            if (foundAny) {
-                                airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-                            }
+                            // if (foundAny) {
+                                // airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                            // }
                         }
 
-                        if (airshipComponent != null) {
+                        if (AirshipBehaviourRootV2.HasId(gameObject)) {
                             // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
-                            var unityInstanceId = airshipComponent.Id;
+                            var unityInstanceId = AirshipBehaviourRootV2.GetId(gameObject);
                             var targetComponentId = scriptBinding.GetAirshipComponentId();
 
                             obj = new AirshipComponentRef(unityInstanceId, targetComponentId);

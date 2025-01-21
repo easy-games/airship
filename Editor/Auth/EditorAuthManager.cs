@@ -27,6 +27,11 @@ namespace Editor.Auth {
         public string slugProperCase;
     }
     [Serializable]
+    public struct GameResponse {
+        public GameDto game;
+    }
+
+    [Serializable]
     public struct GameDto {
         public string slug;
         public string slugProperCase;
@@ -68,16 +73,23 @@ namespace Editor.Auth {
         public static Action<User> localUserChanged;
         public static EditorAuthSignInStatus signInStatus = EditorAuthSignInStatus.LOADING;
         private static TaskCompletionSource<EditorAuthSignInStatus> signInTcs = new();
+        private static DateTime lastRefreshTime;
         
         static EditorAuthManager() {
             AuthManager.authed += GetSelf;
             AuthManager.authed += async () => {
                 StartAutoRefreshAuthTimer();
             };
-            RefreshAuth();
+            CheckAndRefreshAuth();
         }
 
-        private static void RefreshAuth() {
+        private static void CheckAndRefreshAuth() {
+            if (DateTime.UtcNow - lastRefreshTime < TimeSpan.FromMinutes(25)) {
+                StartAutoRefreshAuthTimer();
+                return;
+            }
+            lastRefreshTime = DateTime.UtcNow;
+            
             var authSave = AuthManager.GetSavedAccount();
             if (authSave == null) {
                 signInStatus = EditorAuthSignInStatus.SIGNED_OUT;
@@ -100,15 +112,18 @@ namespace Editor.Auth {
         }
 
         private static async Task StartAutoRefreshAuthTimer() {
-            await Task.Delay(1000 * 60 * 25); // 25 mins
-            RefreshAuth();
+            // Check every 10 seconds in case computer fell asleep (relying on timeSinceLastAuth)
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            CheckAndRefreshAuth();
         } 
         
         private static void GetSelf() {
             var self = InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users/self").ContinueWith((t) => {
                 if (t.Result.data == null) return;
                 
-                localUser = JsonUtility.FromJson<User>(t.Result.data);
+                localUser = JsonUtility.FromJson<TransferUserResponse>(t.Result.data).user;
+                if (localUser == null) return;
+
                 signInStatus = EditorAuthSignInStatus.SIGNED_IN;
                 localUserChanged.Invoke(localUser);
                 signInTcs.SetResult(signInStatus);
@@ -179,8 +194,8 @@ namespace Editor.Auth {
             if (!res.success) return null;
             if (res.data.Length == 0) return null; // No response = fail
             
-            var gameDto = JsonConvert.DeserializeObject<GameDto>(res.data);
-            return gameDto;
+            var gameResponse = JsonConvert.DeserializeObject<GameResponse>(res.data);
+            return gameResponse.game;
         }
     }
 }

@@ -26,18 +26,20 @@ public class UploadInfo {
 	public float uploadProgressPercent;
 	public float uploadedBytes;
 	public float sizeBytes;
+	public bool isComplete;
 	public AirshipPlatform? platform;
 }
 
 public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 	private static GameDto activeDeployTarget;
+	public const ulong MAX_UPLOAD_KB = 500_000;
 
 	public static void DeployToStaging()
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
 		// build the game.
-		NetworkPrefabManager.WriteAllCollections();
+		// NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new() {
 			// AirshipPlatform.iOS,
@@ -72,7 +74,7 @@ public class Deploy {
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
 		// build the game.
-		NetworkPrefabManager.WriteAllCollections();
+		// NetworkPrefabManager.WriteAllCollections();
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
@@ -103,13 +105,18 @@ public class Deploy {
 		}
 
 		foreach (var scene in gameConfig.gameScenes) {
-			if (LuauCore.IsProtectedScene(scene.name)) {
+			if (LuauCore.IsProtectedSceneName(scene.name)) {
 				Debug.LogError($"Game scene name not allowed: {scene.name}");
+				yield break;
+			}
+
+			if (scene.name.Contains(" ")) {
+				Debug.LogError("Scenes are not allowed to have spaces in their name. Please fix: \"" + scene.name + "\"");
 				yield break;
 			}
 		}
 
-		if (LuauCore.IsProtectedScene(gameConfig.startingScene.name)) {
+		if (LuauCore.IsProtectedSceneName(gameConfig.startingScene.name)) {
 			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingScene}");
 			yield break;
 		}
@@ -177,8 +184,8 @@ public class Deploy {
 		}
 		
 		// code.zip
-		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+		AirshipEditorUtil.EnsureDirectory(Path.Join("bundles", "uploads"));
+		var codeZipPath = Path.Join("bundles", "uploads", "code.zip");
 		{
 			var st = Stopwatch.StartNew();
 			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
@@ -250,7 +257,9 @@ public class Deploy {
 
 		// Save gameConfig.json so we can upload it
 		var gameConfigJson = gameConfig.ToJson();
-		var gameConfigPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", "gameConfig.json");
+		var gameConfigParentPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild");
+		Directory.CreateDirectory(gameConfigParentPath);
+		var gameConfigPath = Path.Combine(gameConfigParentPath, "gameConfig.json");
 		File.WriteAllText(gameConfigPath, gameConfigJson);
 
 		var urls = deploymentDto.urls;
@@ -338,7 +347,7 @@ public class Deploy {
 					EditorUtility.ClearProgressBar();
 					yield break;
 				}
-				if (uploadInfo.uploadProgressPercent < 1) {
+				if (!uploadInfo.isComplete) {
 					finishedUpload = false;
 				}
 
@@ -346,12 +355,15 @@ public class Deploy {
 				totalProgress += uploadInfo.uploadProgressPercent * (uploadInfo.sizeBytes / totalSize);
 			}
 
+			/*
 			bool cancelled = EditorUtility.DisplayCancelableProgressBar("Publishing game", $"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}", totalProgress);
 			if (cancelled) {
 				Debug.Log("Publish cancelled.");
 				EditorUtility.ClearProgressBar();
 				yield break;
 			}
+			*/
+			Debug.Log($"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}");
 			yield return null;
 		}
 		EditorUtility.ClearProgressBar();
@@ -365,36 +377,62 @@ public class Deploy {
 
 		// Complete deployment
 		{
-			// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
-			UnityWebRequest req = UnityWebRequest.Post(
-				$"{AirshipPlatformUrl.deploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
-					new CompleteGameDeploymentDto() {
-						gameId = gameConfig.gameId,
-						gameVersionId = deploymentDto.version.gameVersionId,
-						uploadedFileIds = new [] {
-							// "Linux_shared_resources",
-							"Mac_shared_resources",
-							"Windows_shared_resources",
-							// "iOS_shared_resources",
+			int attemptNum = 0;
+			while (attemptNum < 5) {
+				// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
+				UnityWebRequest req = UnityWebRequest.Post(
+					$"{AirshipPlatformUrl.deploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
+						new CompleteGameDeploymentDto() {
+							gameId = gameConfig.gameId,
+							gameVersionId = deploymentDto.version.gameVersionId,
+							uploadedFileIds = new [] {
+								// "Linux_shared_resources",
+								"Mac_shared_resources",
+								"Windows_shared_resources",
+								// "iOS_shared_resources",
 
-							// "Linux_shared_scenes",
-							"Mac_shared_scenes",
-							"Windows_shared_scenes",
-							// "iOS_shared_scenes",
-						},
-					}), "application/json");
-			req.SetRequestHeader("Authorization", "Bearer " + devKey);
-			yield return req.SendWebRequest();
-			while (!req.isDone) {
-				yield return null;
-			}
+								// "Linux_shared_scenes",
+								"Mac_shared_scenes",
+								"Windows_shared_scenes",
+								// "iOS_shared_scenes",
+							},
+						}), "application/json");
+				req.SetRequestHeader("Authorization", "Bearer " + devKey);
+				yield return req.SendWebRequest();
+				while (!req.isDone) {
+					yield return null;
+				}
 
-			if (req.result != UnityWebRequest.Result.Success) {
-				Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
-				yield break;
+				if (req.result == UnityWebRequest.Result.Success) {
+					break;
+				} else {
+					Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
+					if (req.responseCode == 400) {
+						// don't retry on 400
+						yield break;
+					}
+
+                    if (attemptNum == 4) {
+	                    // Out of retry attempts so we end it here.
+                    	yield break;
+                    }
+
+                    // Wait one second and try again.
+                    int waitTime = 1;
+                    if (attemptNum >= 3) {
+	                    waitTime = 3;
+                    }
+                    Debug.Log($"Retrying in {waitTime}s...");
+                    attemptNum++;
+                    yield return new WaitForSeconds(waitTime);
+				}
 			}
 		}
+
 		var slug = activeDeployTarget.slug;
+		if (slug == null) {
+			slug = activeDeployTarget.id;
+		}
 		if (slug != null) {
 			string gameLink;
 			#if AIRSHIP_STAGING
@@ -430,8 +468,18 @@ public class Deploy {
 		var bytes = File.ReadAllBytes(bundleFilePath);
 		uploadInfo.sizeBytes = bytes.Length;
 
+		ulong sizeKb = (ulong)uploadInfo.sizeBytes / 1_000;
+		if (sizeKb > MAX_UPLOAD_KB) {
+			Debug.LogError($"Game bundle {filePath} is greater than max size (500mb). You can reduce file size by lowering max texture size. For more help on reducing file size, visit: https://docs.airship.gg/optimization/reducing-bundle-size");
+			if (uploadProgress.TryGetValue(url, out var p)) {
+				p.failed = true;
+			}
+
+			yield break;
+		}
+
 		var req = UnityWebRequest.Put(url, bytes);
-		req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
+		req.SetRequestHeader("x-goog-content-length-range", "0,500000000");
 		yield return req.SendWebRequest();
 
 		while (!req.isDone) {
@@ -450,6 +498,7 @@ public class Deploy {
 
 		if (uploadProgress.TryGetValue(url, out var progress)) {
 			progress.uploadProgressPercent = 1;
+			progress.isComplete = true;
 		}
 	}
 

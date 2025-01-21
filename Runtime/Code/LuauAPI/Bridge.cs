@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,26 +14,64 @@ using UnityEngine.UI;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [LuauAPI][Preserve]
-public static class Bridge
-{
-    public static Vector2 MakeVector2(float x, float y)
-    {
-        return new Vector2(x, y);
+public static class Bridge {
+
+#region CREATION
+    //RENDER TEXTURES
+    public static RenderTexture MakeDefaultRenderTexture(int width, int height){
+        RenderTextureDescriptor descriptor = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 8, 0) {
+            sRGB = false,
+            autoGenerateMips = false,
+            useMipMap = false
+        };
+        return new RenderTexture(descriptor);
     }
 
-    public static Sprite MakeSprite(Texture2D texture2D)
-    {
+    //TEXTURES
+    public static Texture2D MakeDefaultTexture2D(int width, int height){
+        return new Texture2D(width, height);
+    }
+
+    public static Texture2D MakeTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear){
+        return new Texture2D(width, height, format, mipChain, linear);
+    }
+
+    //SPRITES
+    public static Sprite MakeDefaultSprite(Texture2D texture){
+        return Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height),
+            new Vector2(0.5f, 0.5f), 100.0f);
+    }
+
+    public static Sprite MakeSprite(Texture2D texture2D) {
         return Sprite.Create(texture2D, new Rect(0.0f, 0.0f, texture2D.width, texture2D.height),
             new Vector2(0.5f, 0.5f), 100.0f);
     }
 
+    public static Sprite MakeSprite(Texture2D texture, Rect rect, Vector2 pivot, float pixelsPerUnit){
+        return Sprite.Create(texture, rect, pivot, pixelsPerUnit);
+    }
+
+    //RENDERERS
+    public static void ClearMaterial(Renderer ren, int materialI){
+        ren.materials[materialI] = null;
+    }
+    
+    public static void ClearAllMaterials(Renderer ren){
+        for(int i=0; i<ren.materials.Length; i++){
+            ren.materials[i] = null;
+        }
+    }
+
+    // MATERIAL PROPERTY BLOCK
     public static MaterialPropertyBlock MakeMaterialPropertyBlock() {
         return new MaterialPropertyBlock();
     }
 
+    //MESH
     public static Mesh MakeMesh() {
         return new Mesh();
     }
+#endregion
     
     public static float GetAverageFPS()
     {
@@ -44,14 +81,6 @@ public static class Bridge
     public static float GetCurrentFPS()
     {
         return GraphyManager.Instance.CurrentFPS;
-    }
-
-    public static Vector3 Lerp(Vector3 start, Vector3 goal, float alpha) {
-        return Vector3.Lerp(start, goal, alpha);
-    }
-
-    public static Vector3 Slerp(Vector3 start, Vector3 goal, float alpha) {
-        return Vector3.Slerp(start, goal, alpha);
     }
 
     public static float GetMonoRam() {
@@ -343,7 +372,7 @@ public static class Bridge
     }
 
     public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
-        if (LuauCore.IsProtectedScene(scene.name) && LuauCore.CurrentContext == LuauContext.Game) {
+        if (LuauCore.IsProtectedScene(scene) && LuauCore.CurrentContext == LuauContext.Game) {
             Debug.Log("[Airship] Unable to move gameobject to protected scene.");
             return;
         }
@@ -360,7 +389,7 @@ public static class Bridge
         List<Scene> scenes = new();
         for (int i = 0; i < SceneManager.sceneCount; i++) {
             Scene scene = SceneManager.GetSceneAt(i);
-            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene.name)) {
+            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene)) {
                 continue;
             }
             scenes.Add(scene);

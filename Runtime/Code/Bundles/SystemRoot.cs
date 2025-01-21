@@ -7,6 +7,8 @@ using Code.Bootstrap;
 using Luau;
 using System;
 using Airship.DevConsole;
+using Code.Bundles;
+using JetBrains.Annotations;
 using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -30,146 +32,70 @@ public class SystemRoot : Singleton<SystemRoot> {
 	public string currentCoreVersion = "";
 	public string currentCoreMaterialsVersion = "";
 
+	public List<AssetBundleCreateRequest> extraBundleLoadRequests = new();
+	public static bool startedLoadingExtraBundle = false;
+	public static bool preWarmedCoreShaders = false;
+	public AssetBundle coreMaterialsAssetBundle;
+
 	private void Awake() {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
-
-		DevConsole.AddCommand(Command.Create<string>(
-			"scripts",
-			"",
-			"Lists all scripts loaded from code.zip",
-			Parameter.Create("package", "A package name or \"game\""),
-			(packageName) => {
-				if (packageName.ToLower() == "game") {
-					foreach (var b in this.loadedAssetBundles) {
-						if (b.Value.airshipPackage.packageType == AirshipPackageType.Game) {
-							if (this.luauFiles.TryGetValue(b.Value.airshipPackage.id, out var gameScripts)) {
-								int counter = 0;
-								print(b.Value.airshipPackage.id + ":");
-								foreach (var scriptPair in gameScripts) {
-									Debug.Log("  - " + scriptPair.Key);
-									counter++;
-								}
-								Debug.Log($"Listed {counter} scripts.");
-								return;
-							}
-						}
-					}
-					Debug.LogError("There are no games loaded.");
-					return;
-				}
-
-				if (!this.luauFiles.TryGetValue(packageName, out var pair)) {
-					DevConsole.LogError($"Unable to find package named \"{packageName}\". All available packages:");
-					foreach (var packagePair in this.luauFiles) {
-						if (packagePair.Key.StartsWith("@")) {
-							Debug.Log($"  - {packagePair.Key}");
-						}
-					}
-					return;
-				}
-
-				int counter2 = 0;
-				print(packageName + ":");
-				foreach (var scriptPair in pair) {
-					Debug.Log("  - " + scriptPair.Key);
-					counter2++;
-				}
-				Debug.Log($"Listed {counter2} scripts.");
-			},
-			() => {
-				int counter = 0;
-				foreach (var pair in this.luauFiles) {
-					print(pair.Key + ":");
-					foreach (var scriptPair in pair.Value) {
-						Debug.Log("  - " + scriptPair.Key);
-						counter++;
-					}
-				}
-				Debug.Log($"Listed {counter} scripts in {this.luauFiles.Count} bundles.");
-			}
-		));
-
-		DevConsole.AddCommand(Command.Create("bundles", "", "view loaded asset bundles", () => {
-			int i = 1;
-			foreach (var pair in this.loadedAssetBundles) {
-				Debug.Log($"{i}. {pair.Key}");
-				i++;
-			}
-		}));
-
-		DevConsole.AddCommand(Command.Create("clearcodecache", "", "Clears all code.zip caches", () => {
-			var path = Path.Join(Application.persistentDataPath, "Scripts");
-			if (Directory.Exists(path)) {
-				Directory.Delete(path, true);
-			}
-
-			print("Successfully cleared code.zip cache.");
-		}));
-
-		DevConsole.AddCommand(Command.Create<bool>(
-			"cachecode",
-			"",
-			"Toggles code.zip caching",
-			Parameter.Create("enabled", ""),
-			(val) => {
-				this.codeZipCacheEnabled = val;
-				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
-			}, () => {
-				this.codeZipCacheEnabled = !this.codeZipCacheEnabled;
-				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
-			}
-		));
-
-		DevConsole.AddCommand(Command.Create<string>(
-			"gc",
-			"",
-			"Luau GC",
-			Parameter.Create("state", "Options: full, step, off"),
-			(val) => {
-				val = val.ToLower();
-				switch (val) {
-					case "full":
-						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Full);
-						Debug.Log("Luau per-frame GC set to FULL");
-						break;
-					case "step":
-						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Step);
-						Debug.Log("Luau per-frame GC set to STEP");
-						break;
-					case "off":
-						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Off);
-						Debug.Log("Luau per-frame GC set to OFF");
-						break;
-					default:
-						Debug.Log($"Invalid Luau GC state: \"{val}\"");
-						break;
-				}
-			},
-			() => {
-				var gcKbGame = LuauPlugin.LuauCountGC(LuauContext.Game);
-				var gcKbProtected = LuauPlugin.LuauCountGC(LuauContext.Protected);
-				var gcKb = gcKbGame + gcKbProtected;
-				Debug.Log($"Luau GC: [Game: {gcKbGame} KB] [Protected: {gcKbProtected} KB] [Total: {gcKb} KB]");
-			}
-		));
 	}
 
 	private void Start() {
+		this.RegisterCommands();
+
+#if AIRSHIP_PLAYER
+		this.LoadExtraBundle();
+#endif
+	}
+
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+	private static void OnReload() {
+		startedLoadingExtraBundle = false;
+		preWarmedCoreShaders = false;
+	}
+
+	private async void LoadExtraBundle() {
+		if (startedLoadingExtraBundle) return;
+		startedLoadingExtraBundle = true;
+
 		// debug: load extra bundles folder
-		// var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
-		// if (Directory.Exists(extraBundlesDir)) {
-		// 	string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
-		// 	foreach (var path in bundlePaths) {
-		// 		Debug.Log("Loading extra asset bundle: " + Path.GetFileName(path));
-		// 		try {
-		//
-		// 		} catch (Exception e) {
-		//
-		// 		}
-		// 		AssetBundle.LoadFromFile(path);
-		// 	}
-		// }
+		var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
+		if (Directory.Exists(extraBundlesDir)) {
+			string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
+			foreach (var path in bundlePaths) {
+				var fileName = Path.GetFileName(path);
+				// Ignore ".DS_Store"
+				if (fileName.StartsWith(".")) continue;
+
+				Debug.Log("Loading extra asset bundle: " + fileName);
+				var st = Stopwatch.StartNew();
+				startedLoadingExtraBundle = true;
+
+				var ao = AssetBundle.LoadFromFileAsync(path);
+				this.extraBundleLoadRequests.Add(ao);
+				await ao;
+				Debug.Log($"Loaded extra asset bundle {fileName} in {st.ElapsedMilliseconds}ms");
+			}
+		}
+
+		// CoreMaterials
+		{
+			var platform = AirshipPlatformUtil.GetLocalPlatform();
+			if (platform == AirshipPlatform.Linux) {
+				platform = AirshipPlatform.Windows;
+			}
+			var path = Path.Join(Application.streamingAssetsPath, "ShippedBundles", $"CoreMaterials_{platform}/@easy/corematerials_shared/resources");
+			if (File.Exists(path)) {
+				var st = Stopwatch.StartNew();
+				var ao = AssetBundle.LoadFromFileAsync(path);
+				this.extraBundleLoadRequests.Add(ao);
+				await ao;
+				this.coreMaterialsAssetBundle = ao.assetBundle;
+				Debug.Log($"Loaded CoreMaterials bundle in {st.ElapsedMilliseconds} ms.");
+			}
+		}
 	}
 
 	public bool IsUsingBundles() {
@@ -224,10 +150,13 @@ public class SystemRoot : Singleton<SystemRoot> {
 				unloadList.Add(loadedPair.Key);
 			}
 		}
+
+		var enums = new List<IEnumerator>();
 		foreach (var bundleId in unloadList) {
 			var loadedBundle = this.loadedAssetBundles[bundleId];
-			this.UnloadBundle(loadedBundle);
+			enums.Add(this.UnloadBundleAsync(loadedBundle));
 		}
+		yield return this.WaitAll(enums.ToArray());
 
 		// code.zip
 		bool openCodeZips = RunCore.IsServer() || compileLuaOnClient;
@@ -322,7 +251,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 			foreach (var package in packages) {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
-
 			}
 			// foreach (var package in packages) {
 			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
@@ -351,18 +279,55 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// 	this.networkCollectionIdCounter++;
 			// }
 
-			#if AIRSHIP_PLAYER
-			Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
-			int i = 1;
-			foreach (var pair in NetworkClient.prefabs) {
-				if (pair.Value != null) {
-					Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
-					i++;
+#if AIRSHIP_PLAYER || true
+			try {
+				Debug.Log("Scanning network prefabs...");
+				Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
+				int i = 1;
+				foreach (var pair in NetworkClient.prefabs) {
+					if (pair.Value != null) {
+						Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
+						i++;
+					}
+				}
+			} catch (Exception e) {
+				Debug.LogException(e);
+			}
+#endif
+
+			print("Wait.1");
+			yield return this.WaitAll(loadLists[0].ToArray());
+			print("Wait.2");
+
+			foreach (var ao in this.extraBundleLoadRequests) {
+				if (!ao.isDone) {
+					yield return ao;
 				}
 			}
-			#endif
 
-			yield return this.WaitAll(loadLists[0].ToArray());
+			print("Wait.3");
+
+			// Shader Variant Collections
+			if (!preWarmedCoreShaders && RunCore.IsClient()) {
+				preWarmedCoreShaders = true;
+				while (!this.coreMaterialsAssetBundle) {
+					yield return null;
+				}
+				string[] collections = new[] {
+					"MainMenu",
+					// "RacingGame",
+				};
+				foreach (var collectionName in collections) {
+					var path = $"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants".ToLower();
+					var shaderVariants = this.coreMaterialsAssetBundle.LoadAssetAsync<ShaderVariantCollection>(path);
+					yield return shaderVariants;
+					if (shaderVariants != null) {
+						var st = Stopwatch.StartNew();
+						(shaderVariants.asset as ShaderVariantCollection).WarmUp();
+						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");
+					}
+				}
+			}
 		} else {
 			if (NetworkClient.isConnected) {
 #if UNITY_EDITOR
@@ -379,7 +344,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 						}
 					}
 				}
+				#if AIRSHIP_INTERNAL
 				Debug.Log($"[Airship]: Registered network prefabs in {st.ElapsedMilliseconds} ms.");
+				#endif
 #endif
 			}
 		}
@@ -392,19 +359,32 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 		}
 
-#if AIRSHIP_PLAYER || true
+#if AIRSHIP_PLAYER
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + " ms.");
 #endif
 	}
 
-	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
+	public IEnumerator UnloadBundleAsync(LoadedAssetBundle loadedBundle) {
 		Debug.Log($"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}");
-		// this.ClearLuauFiles(loadedBundle.airshipPackage.id);
-		loadedBundle.assetBundle.Unload(true);
+		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
+
+		if (this.luauFiles.TryGetValue(loadedBundle.bundleId, out var files)) {
+			int count = files.Count;
+			foreach (var s in files.Values) {
+				Object.Destroy(s);
+			}
+			this.luauFiles.Remove(loadedBundle.bundleId);
+			Debug.Log($"Unloaded {count} script files.");
+		}
+
+		var ao = loadedBundle.assetBundle.UnloadAsync(true);
+		while (!ao.isDone) {
+			yield return null;
+		}
+
 		loadedBundle.assetBundle = null;
 		var key = SystemRoot.GetLoadedAssetBundleKey(loadedBundle.airshipPackage, loadedBundle.assetBundleFile);
 		loadedAssetBundles.Remove(key);
-		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
 	}
 
 	public void AddLuauFile(string packageKey, AirshipScript br) {
@@ -482,5 +462,171 @@ public class SystemRoot : Singleton<SystemRoot> {
 		if (doNetworkPrefabLoading) { // InstanceFinder.IsOffline && RunCore.IsClient()
 			yield return networkNetworkPrefabLoader.RegisterNetworkObjects(assetBundle, netCollectionId);
 		}
+	}
+
+	private void RegisterCommands() {
+		DevConsole.AddCommand(Command.Create<string>(
+			"scripts",
+			"",
+			"Lists all scripts loaded from code.zip",
+			Parameter.Create("package", "A package name or \"game\""),
+			(packageName) => {
+				if (packageName.ToLower() == "game") {
+					foreach (var b in this.loadedAssetBundles) {
+						if (b.Value.airshipPackage.packageType == AirshipPackageType.Game) {
+							if (this.luauFiles.TryGetValue(b.Value.airshipPackage.id, out var gameScripts)) {
+								int counter = 0;
+								print(b.Value.airshipPackage.id + ":");
+								foreach (var scriptPair in gameScripts) {
+									Debug.Log("  - " + scriptPair.Key);
+									counter++;
+								}
+								Debug.Log($"Listed {counter} scripts.");
+								return;
+							}
+						}
+					}
+					Debug.LogError("There are no games loaded.");
+					return;
+				}
+
+				if (!this.luauFiles.TryGetValue(packageName, out var pair)) {
+					DevConsole.LogError($"Unable to find package named \"{packageName}\". All available packages:");
+					foreach (var packagePair in this.luauFiles) {
+						if (packagePair.Key.StartsWith("@")) {
+							Debug.Log($"  - {packagePair.Key}");
+						}
+					}
+					return;
+				}
+
+				int counter2 = 0;
+				print(packageName + ":");
+				foreach (var scriptPair in pair) {
+					Debug.Log("  - " + scriptPair.Key);
+					counter2++;
+				}
+				Debug.Log($"Listed {counter2} scripts.");
+			},
+			() => {
+				int counter = 0;
+				foreach (var pair in this.luauFiles) {
+					print(pair.Key + ":");
+					foreach (var scriptPair in pair.Value) {
+						Debug.Log("  - " + scriptPair.Key);
+						counter++;
+					}
+				}
+				Debug.Log($"Listed {counter} scripts in {this.luauFiles.Count} bundles.");
+			}
+		));
+
+		DevConsole.AddCommand(Command.Create("bundles", "", "view loaded asset bundles", () => {
+			int i = 1;
+			foreach (var pair in this.loadedAssetBundles) {
+				Debug.Log($"{i}. {pair.Key}");
+				i++;
+			}
+		}));
+
+		DevConsole.AddCommand(Command.Create("delcode", "", "Clears all code.zip caches", () => {
+			var path = Path.Join(Application.persistentDataPath, "Scripts");
+			if (Directory.Exists(path)) {
+				Directory.Delete(path, true);
+			}
+
+			print("Successfully cleared code.zip cache.");
+		}));
+
+		DevConsole.AddCommand(Command.Create<bool>(
+			"cachecode",
+			"",
+			"Toggles code.zip caching",
+			Parameter.Create("enabled", ""),
+			(val) => {
+				this.codeZipCacheEnabled = val;
+				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
+			}, () => {
+				this.codeZipCacheEnabled = !this.codeZipCacheEnabled;
+				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
+			}
+		));
+
+		DevConsole.AddCommand(Command.Create("trackedidentities", "", "Network Identity Leaks", () => {
+			var count = 0;
+			foreach (var entry in ThreadDataManager.s_reverseObjectKeys)
+			{
+				if (entry.Key is NetworkIdentity) {
+					count++;
+				}				
+			}
+			Debug.Log("Total tracked network identities: " + count);
+		}));
+
+		DevConsole.AddCommand(Command.Create<string>(
+			"gc",
+			"",
+			"Luau GC",
+			Parameter.Create("state", "Options: full, step, off"),
+			(val) => {
+				val = val.ToLower();
+				switch (val) {
+					case "full":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Full);
+						Debug.Log("Luau per-frame GC set to FULL");
+						break;
+					case "step":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Step);
+						Debug.Log("Luau per-frame GC set to STEP");
+						break;
+					case "off":
+						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Off);
+						Debug.Log("Luau per-frame GC set to OFF");
+						break;
+					default:
+						Debug.Log($"Invalid Luau GC state: \"{val}\"");
+						break;
+				}
+			},
+			() => {
+				var gcKbGame = LuauPlugin.LuauCountGC(LuauContext.Game);
+				var gcKbProtected = LuauPlugin.LuauCountGC(LuauContext.Protected);
+				var gcKb = gcKbGame + gcKbProtected;
+				Debug.Log($"Luau GC: [Game: {gcKbGame} KB] [Protected: {gcKbProtected} KB] [Total: {gcKb} KB]");
+			}
+		));
+
+		DevConsole.AddCommand(Command.Create("delpackages", "", "Clears all package caches", () => {
+			var path = Path.Join(Application.persistentDataPath, "Packages");
+			if (Directory.Exists(path)) {
+				Directory.Delete(path, true);
+			}
+
+			print("Successfully deleted package cache.");
+		}));
+
+		DevConsole.AddCommand(Command.Create("luau", "", "Prints info about the Luau plugin", () => {
+			var pluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
+			var bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
+			var server = FindAnyObjectByType<AirshipVersionFetcher>();
+			
+			Debug.Log($"CLIENT: {pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
+			if (server != null) {
+				Debug.Log($"SERVER: {server.luauPluginVersion} - Bytecode Version: {server.bytecodeVersion.Target} (Min: {server.bytecodeVersion.Min}, Max: {server.bytecodeVersion.Max})");
+				if (pluginVersion != server.luauPluginVersion) {
+					Debug.LogWarning("Luau plugin version mismatch between server and client");
+				}
+			}
+		}));
+
+		DevConsole.AddCommand(Command.Create("version", "", "Prints version git hash", () => {
+			var localVersion = AirshipVersion.GetVersionHash();
+			Debug.Log("Client: #" + localVersion);
+
+			var server = FindAnyObjectByType<AirshipVersionFetcher>();
+			if (server != null) {
+				Debug.Log("Server: #" + server.serverPlayerVersion);
+			}
+		}));
 	}
 }

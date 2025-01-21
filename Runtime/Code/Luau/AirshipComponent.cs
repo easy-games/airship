@@ -29,6 +29,7 @@ public class AirshipComponent : MonoBehaviour {
     #endif
     private const bool ElevateToProtectedWithinCoreScene = true;
     
+    public static Dictionary<int, string> componentIdToScriptName = new();
     private static int _scriptBindingIdGen;
     
     public AirshipScript scriptFile;
@@ -61,8 +62,6 @@ public class AirshipComponent : MonoBehaviour {
     [HideInInspector]
     public string m_shortFileName;
     private byte[] m_fileContents;
-
-    private List<IntPtr> m_pendingCoroutineResumes = new List<IntPtr>();
     
     [HideInInspector]
     public LuauMetadata m_metadata = new();
@@ -73,7 +72,7 @@ public class AirshipComponent : MonoBehaviour {
 
     private bool _isAirshipComponent;
 
-    private AirshipBehaviourRoot _airshipBehaviourRoot;
+    // private AirshipBehaviourRoot _airshipBehaviourRoot;
     private bool _airshipComponentEnabled = false;
     private bool _airshipReadyToStart = false;
     private bool _airshipScheduledToStart = false;
@@ -90,7 +89,7 @@ public class AirshipComponent : MonoBehaviour {
     public static IAssetBridge AssetBridge;
 
     public static bool validatedSceneInGameConfig = false;
-
+    
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void OnLoad() {
         validatedSceneInGameConfig = false;
@@ -127,6 +126,12 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         return script;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnReload() {
+        _scriptBindingIdGen = 0;
+        componentIdToScriptName.Clear();
     }
 
     public void Error() {
@@ -197,6 +202,8 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
+ 
+
         m_metadata.name = scriptFile.m_metadata.name;
 
         // Add missing properties or reconcile existing ones:
@@ -239,6 +246,13 @@ public class AirshipComponent : MonoBehaviour {
             serializedProperty.refPath = property.refPath;
         }
         
+        _isAirshipComponent = true;
+        
+        // // Need to recompile
+        // if (scriptFile.HasFileChanged) {
+        //     return;
+        // }
+        
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
         var seenProperties = new HashSet<string>();
@@ -258,13 +272,10 @@ public class AirshipComponent : MonoBehaviour {
                 m_metadata.properties.Remove(serializedProperty);
             }
         }
-
-        _isAirshipComponent = true;
     }
 
     private void WriteChangedComponentProperties() {
-        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-        if (airshipComponent == null || m_thread == IntPtr.Zero) return;
+        if (!AirshipBehaviourRootV2.HasId(gameObject) || m_thread == IntPtr.Zero) return;
         
         foreach (var property in m_metadata.properties) {
             // If all value data is unchanged skip this write
@@ -275,7 +286,7 @@ public class AirshipComponent : MonoBehaviour {
                 itemObjectRefs = (UnityEngine.Object[]) property.items.objectRefs.Clone(),
                 itemSerializedObjects = (string[]) property.items.serializedItems.Clone()
             };
-            property.WriteToComponent(m_thread, airshipComponent.Id, _scriptBindingId);
+            property.WriteToComponent(m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId);
         }
     }
 
@@ -306,7 +317,7 @@ public class AirshipComponent : MonoBehaviour {
         }
         
         // Fetch from Luau plugin & cache the result:
-        var hasMethod = LuauPlugin.LuauHasAirshipMethod(context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType);
+        var hasMethod = LuauPlugin.LuauHasAirshipMethod(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, updateType);
         _hasAirshipUpdateMethods.Add(updateType, hasMethod);
         
         return hasMethod;
@@ -353,11 +364,9 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void InitializeAirshipReference(IntPtr thread) {
-        _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
-        
         // Warmup the component first, creating a reference table
         var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(transform);
-        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, transformInstanceId);
+        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, transformInstanceId);
     }
 
     private void InitializeAndAwakeAirshipComponent(IntPtr thread, bool usingExistingThread) {
@@ -410,7 +419,9 @@ public class AirshipComponent : MonoBehaviour {
         }
 
 
-        LuauPlugin.LuauInitializeAirshipComponent(context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos);
+        LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, propertyDtos);
+        // Set enabled property
+        LuauPlugin.LuauSetAirshipComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, enabled);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
@@ -493,21 +504,26 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void Awake() {
+        LuauCore.onResetInstance += OnLuauReset;
+        
+        if (scriptFile != null) {
+            componentIdToScriptName[_scriptBindingId] = scriptFile.name;
+        }
 #if UNITY_EDITOR
         if (!validatedSceneInGameConfig) {
-            var sceneName = this.gameObject.scene.name;
-            if (!LuauCore.IsProtectedScene(sceneName)) {
+            var scene = this.gameObject.scene;
+            if (!LuauCore.IsProtectedScene(scene)) {
+                var sceneName = scene.name;
                 var gameConfig = GameConfig.Load();
-                if (gameConfig.gameScenes.ToList().Find((s) => ((SceneAsset)s).name == sceneName) == null) {
+                if (gameConfig.gameScenes.ToList().Find((s) => s.name == sceneName) == null) {
                     throw new Exception(
-                        $"Tried to load AirshipComponent in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
+                        $"Tried to load AirshipComponent ({this.name}) on GameObject ({this.gameObject.name}) in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
                 }
             }
             validatedSceneInGameConfig = true;
         }
 #endif
         LuauCore.CoreInstance.CheckSetup();
-        LuauCore.onResetInstance += OnLuauReset;
 
         ScriptingEntryPoint.InvokeOnLuauStartup();
 
@@ -651,15 +667,19 @@ public class AirshipComponent : MonoBehaviour {
         return noExtension;
     }
 
-    public bool CreateThreadFromPath(string fullFilePath, LuauContext context) {
-        SetScriptFromPath(fullFilePath, context);
+    public bool CreateThreadFromPath(string fullFilePath, LuauContext ctx) {
+        if (IsDestroyed()) {
+            return false;
+        }
+        
+        SetScriptFromPath(fullFilePath, ctx);
         if (scriptFile == null) {
             return false;
         }
 
         return CreateThread();
     }
-    
+
     public bool CreateThread() {
         if (m_thread != IntPtr.Zero) {
             return false;
@@ -711,8 +731,9 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         var gch = GCHandle.Alloc(this.scriptFile.m_bytes, GCHandleType.Pinned); //Ok
+        var nativeCodegen = scriptFile.HasDirective("native");
 
-        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
+        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, nativeCodegen);
 
         Marshal.FreeCoTaskMem(filenameStr);
         gch.Free();
@@ -753,59 +774,7 @@ public class AirshipComponent : MonoBehaviour {
         return true;
     }
 
-    public void Update() {
-        if (m_error) {
-            return;
-        }
-
-        //Run any pending coroutines that waiting last frame
-     
-        foreach (IntPtr coroutinePtr in m_pendingCoroutineResumes) {
-            if (coroutinePtr == m_thread) {
-                //This is us, we dont need to resume ourselves here,
-                //just set the flag to do it.
-                m_canResume = true;
-                continue;
-            }
-            
-            ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauPlugin.LuauRunThread(coroutinePtr);
-          
-            if (retValue == -1) {
-                m_canResume = false;
-                m_error = true;
-                break;
-            }
-        }
-        m_pendingCoroutineResumes.Clear();
-
-
-        double time = Time.realtimeSinceStartupAsDouble;
-        if (m_canResume && !m_asyncYield) {
-            ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauCore.CoreInstance.ResumeScript(context, this);
-            if (retValue != 1) {
-                //we hit an error
-                Debug.LogError("ResumeScript hit an error.", gameObject);
-                m_canResume = false;
-            }
-            if (retValue == -1) {
-                m_error = true;
-            }
-
-        }
-
-        // double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
-    }
-
- 
-    public void QueueCoroutineResume(IntPtr thread) {
-        m_pendingCoroutineResumes.Add(thread);
-    }
-
     private void OnEnable() {
-        // LuauCore.onResetInstance += OnLuauReset;
-        
         // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
         if (_airshipRewaitForLuauCoreReady) {
             _airshipRewaitForLuauCoreReady = false;
@@ -814,16 +783,25 @@ public class AirshipComponent : MonoBehaviour {
         }
         
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && IsReadyToStart()) {
+            LuauPlugin.LuauSetAirshipComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, true);
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
             if (_airshipReadyToStart && !_airshipStarted) {
                 StartAirshipComponentImmediately();
             }
         }
+        
+        LuauCore.RegisterAirshipComponent(this);
     }
 
     private void OnDisable() {
         if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && IsReadyToStart()) {
+            
+            // Ensure the thread hasn't been destroyed
+            if (m_thread != IntPtr.Zero) {
+                LuauPlugin.LuauSetAirshipComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, false);
+            }
+            
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
         }
@@ -834,6 +812,8 @@ public class AirshipComponent : MonoBehaviour {
             _airshipWaitingForLuauCoreReady = false;
             _airshipRewaitForLuauCoreReady = true;
         }
+        
+        LuauCore.UnregisterAirshipComponent(this);
     }
 
     private void OnLuauReset(LuauContext ctx) {
@@ -854,9 +834,10 @@ public class AirshipComponent : MonoBehaviour {
         
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
-                if (_isAirshipComponent && _airshipBehaviourRoot != null) {
-                    var unityInstanceId = _airshipBehaviourRoot.Id;
+                if (_isAirshipComponent && AirshipBehaviourRootV2.HasId(gameObject)) {
+                    var unityInstanceId = AirshipBehaviourRootV2.GetId(gameObject);
                     if (_airshipComponentEnabled) {
+                        LuauPlugin.LuauSetAirshipComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, false);
                         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
                         _airshipComponentEnabled = false;
                     }
@@ -864,10 +845,13 @@ public class AirshipComponent : MonoBehaviour {
                     InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
                     LuauPlugin.LuauRemoveAirshipComponent(context, m_thread, unityInstanceId, _scriptBindingId);
                 }
-                LuauState.FromContext(context).RemoveThread(m_thread);
-                LuauPlugin.LuauSetThreadDestroyed(m_thread);
-                LuauPlugin.LuauDestroyThread(m_thread);
-                LuauPlugin.LuauUnpinThread(m_thread);
+                if (LuauState.IsContextActive(context)) {
+                    LuauState.FromContext(context).RemoveThread(m_thread);
+                    LuauPlugin.LuauSetThreadDestroyed(m_thread);
+                    LuauPlugin.LuauDestroyThread(m_thread);
+                    LuauPlugin.LuauUnpinThread(m_thread);
+                }
+                AirshipBehaviourRootV2.CleanIdOnDestroy(gameObject, this);
             }
 
             m_thread = IntPtr.Zero;
@@ -956,7 +940,7 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, 0, true);
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, updateType, 0, true);
     }
 
     private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object collision) {
@@ -965,9 +949,31 @@ public class AirshipComponent : MonoBehaviour {
         }
         
         var collisionObjId = ThreadDataManager.AddObjectReference(m_thread, collision);
-        LuauPlugin.LuauUpdateCollisionAirshipComponent(context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, collisionObjId);
+        LuauPlugin.LuauUpdateCollisionAirshipComponent(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, updateType, collisionObjId);
     }
-    
+
+    private IEnumerator SetEnabledAtEndOfFrame(bool nextEnabled) {
+        yield return new WaitForEndOfFrame();
+        base.enabled = nextEnabled;
+    }
+
+    /// <summary>
+    /// The enabled state of this AirshipComponent
+    /// </summary>
+    // ReSharper disable once InconsistentNaming
+    public bool enabled {
+        get => base.enabled;
+        // because of Luau, we need to defer it until end of frame
+        set {
+            if (Application.isPlaying) {
+                StartCoroutine(SetEnabledAtEndOfFrame(value));
+            }
+            else {
+                base.enabled = value;
+            }
+        }
+    }
+
     public void SetScript(AirshipScript script, bool attemptStartup = false) {
         scriptFile = script;
         

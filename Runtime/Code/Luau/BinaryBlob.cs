@@ -8,7 +8,7 @@ using static LuauCore;
 namespace Assets.Luau
 {
     [Serializable]
-    public class BinaryBlob
+    public class BinaryBlob : IEquatable<BinaryBlob>
     {
         public BinaryBlob() {
             m_data = new byte[] { };
@@ -327,5 +327,8 @@ namespace Assets.Luau
  
         }
 
+        public bool Equals(BinaryBlob other) {
+            return this.m_dataSize == other?.m_dataSize;
+        }
     }
 }

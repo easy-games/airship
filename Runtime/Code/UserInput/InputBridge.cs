@@ -21,6 +21,8 @@ public class InputBridge : Singleton<InputBridge> {
 	public event MouseButtonDelegate leftMouseButtonPressEvent;
 	public event MouseButtonDelegate rightMouseButtonPressEvent;
 	public event MouseButtonDelegate middleMouseButtonPressEvent;
+	public event MouseButtonDelegate backMouseButtonPressEvent;
+	public event MouseButtonDelegate forwardMouseButtonPressEvent;
 	
 	public delegate void MouseScrollDelegate(object scrollAmount);
 	public event MouseScrollDelegate mouseScrollEvent;
@@ -65,6 +67,14 @@ public class InputBridge : Singleton<InputBridge> {
 		return Mouse.current?.middleButton.isPressed ?? false;
 	}
 	
+	public bool IsForwardMouseButtonDown() {
+		return Mouse.current?.forwardButton.isPressed ?? false;
+	}
+
+	public bool IsBackMouseButtonDown() {
+		return Mouse.current?.backButton.isPressed ?? false;
+	}
+
 	public Vector2 GetMousePosition() {
 		return Mouse.current?.position.value ?? Touchscreen.current?.position.value ?? Vector2.zero;
 	}
@@ -157,6 +167,12 @@ public class InputBridge : Singleton<InputBridge> {
 						break;
 					case MouseButton.Right:
 						rightMouseButtonPressEvent?.Invoke(down);
+						break;
+					case MouseButton.Back:
+						backMouseButtonPressEvent?.Invoke(down);
+						break;
+					case MouseButton.Forward:
+						forwardMouseButtonPressEvent?.Invoke(down);
 						break;
 				}
 			};

@@ -14,7 +14,11 @@ namespace Code.UI {
         private bool swallowMouseWheelScrolls = true;
         private bool isMouseOver = false;
 
+        public bool ignoreDrag = false;
+
         public void OnBeginDrag(PointerEventData eventData) {
+            if (this.ignoreDrag) return;
+            
             this.isDragging = true;
             if (redirectTarget) {
                 redirectTarget.OnBeginDrag(eventData);
@@ -22,12 +26,16 @@ namespace Code.UI {
         }
 
         public void OnDrag(PointerEventData eventData) {
+            if (this.ignoreDrag) return;
+            
             if (redirectTarget) {
                 redirectTarget.OnDrag(eventData);
             }
         }
 
         public void OnEndDrag(PointerEventData eventData) {
+            if (this.ignoreDrag) return;
+            
             this.isDragging = false;
             if (redirectTarget) {
                 redirectTarget.OnEndDrag(eventData);

@@ -442,10 +442,10 @@ using Object = UnityEngine.Object;
             [CanBeNull] 
             private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, TypescriptCompilerBuildArguments buildArguments, string message) {
                 if (string.IsNullOrEmpty(message)) return null;
+                if (project == null) return null;
+                
                 var result = new CompilerEmitResult();
-                // var id = package.Name;
                 var prefix = $"<color=#8e8e8e>TS</color>";
-                //
                 
                 if (message.StartsWith("{")) {
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
@@ -468,14 +468,14 @@ using Object = UnityEngine.Object;
                         }
                         
                         project.ClearAllProblems();
-                        // TypescriptServicesStatusWindow.Reload();
                     } else if (jsonData.Event == CompilerEventType.FileDiagnostic) {
                         var arguments = jsonData.Arguments.ToObject<CompilerEditorFileDiagnosticEvent>();
 
-                        var problemItem = TypescriptFileDiagnosticItem.FromDiagnosticEvent(arguments);
+                        var problemItem = TypescriptFileDiagnosticItem.FromDiagnosticEvent(project, arguments);
                         project.AddProblemItem("", problemItem);
 
                         switch (problemItem.ProblemType) {
+                            case TypescriptProblemType.Fatal:
                             case TypescriptProblemType.Error:
                                 Debug.LogError(@$"{prefix} {ConsoleFormatting.GetProblemItemString(problemItem)}");
                                 break;
@@ -612,7 +612,7 @@ using Object = UnityEngine.Object;
                         }
                     }
                     catch (Exception e) {
-                        Debug.LogError($"Got {e.GetType().Name}: {e.Message}");
+                        Debug.LogException(e);
                     }
                 };
 

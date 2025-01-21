@@ -7,11 +7,14 @@ using Luau;
 using System.Threading;
 using UnityEngine.Profiling;
 using System.Collections;
+using System.Linq;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 //Singleton
+[RequireComponent(typeof(AirshipComponentUpdater))]
 public partial class LuauCore : MonoBehaviour {
 #if UNITY_EDITOR
     [InitializeOnLoad]
@@ -40,6 +43,7 @@ public partial class LuauCore : MonoBehaviour {
         POD_VECTOR2 = 14,
         POD_VECTOR4 = 15,
         POD_FLOAT = 16,
+        POD_AIRSHIP_COMPONENT = 17,
     };
 
     public static bool s_shutdown = false;
@@ -54,6 +58,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type longType = System.Type.GetType("System.Int64");
     private static Type uLongType = System.Type.GetType("System.UInt64");
     private static Type boolType = System.Type.GetType("System.Boolean");
+    private static Type componentType = typeof(Component);
     private static Type floatType = System.Type.GetType("System.Single");
 
     private static Type ushortType = System.Type.GetType("System.UInt16");
@@ -79,6 +84,11 @@ public partial class LuauCore : MonoBehaviour {
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
     private static Type actionType = typeof(Action);
 
+    private static readonly string[] protectedScenesNames = {
+        "corescene", "mainmenu", "login", "disconnected", "airshipupdateapp"
+    };
+    private static HashSet<int> protectedSceneHandles = new HashSet<int>();
+
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;
 
@@ -90,6 +100,8 @@ public partial class LuauCore : MonoBehaviour {
 
     private Dictionary<Type, Dictionary<ulong, PropertyInfo>> unityPropertyAlias = new();
     private Dictionary<Type, Dictionary<ulong, FieldInfo>> unityFieldAlias = new();
+    
+    private AirshipComponentUpdater _airshipComponentUpdater;
 
     private class CallbackRecord {
         public IntPtr callback;
@@ -133,11 +145,28 @@ public partial class LuauCore : MonoBehaviour {
         return LuauState.FromContext(context);
     }
 
+    public static void RegisterAirshipComponent(AirshipComponent component) {
+        var instance = CoreInstance;
+        if (ReferenceEquals(instance, null)) return;
+        
+        instance._airshipComponentUpdater ??= instance.GetComponent<AirshipComponentUpdater>();
+        instance._airshipComponentUpdater.Register(component);
+    }
+
+    public static void UnregisterAirshipComponent(AirshipComponent component) {
+        var instance = CoreInstance;
+        if (ReferenceEquals(instance, null)) return;
+        
+        instance._airshipComponentUpdater ??= instance.GetComponent<AirshipComponentUpdater>();
+        instance._airshipComponentUpdater.Unregister(component);
+    }
+
     public bool CheckSetup() {
         if (initialized) return false;
 
         initialized = true;
 
+        SetupProtectedSceneHandleListener();
         SetupReflection();
         CreateCallbacks();
 
@@ -169,19 +198,24 @@ public partial class LuauCore : MonoBehaviour {
 
         //Debug.Log("Starting Luau DLL");
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
+        LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
         LuauPlugin.LuauStartup(
-            getPropertyCallback_holder,
-            setPropertyCallback_holder,
-            callMethodCallback_holder,
-            objectGCCallback_holder,
-            requireCallback_holder,
-            constructorCallback_holder,
-            stringAddresses.AddrOfPinnedObject(),
-            stringCount,
-            requirePathCallback_holder,
-            yieldCallback_holder,
-            toStringCallback_holder,
-            toCsArrayCallback_holder
+            new LuauPlugin.LuauPluginStartup {
+                getPropertyCallback = getPropertyCallback_holder,
+                setPropertyCallback = setPropertyCallback_holder,
+                callMethodCallback = callMethodCallback_holder,
+                objectGcCallback = objectGCCallback_holder,
+                requireCallback = requireCallback_holder,
+                requirePathCallback = requirePathCallback_holder,
+                constructorCallback = constructorCallback_holder,
+                toStringCallback = toStringCallback_holder,
+                toCsArrayCallback = toCsArrayCallback_holder,
+                toggleProfilerCallback = toggleProfilerCallback_holder,
+                isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
+                staticList = stringAddresses.AddrOfPinnedObject(),
+                staticCount = stringCount,
+                isServer = RunCore.IsServer() ? 1 : 0,
+            }
         );
 
         // Force states to open:
@@ -199,6 +233,26 @@ public partial class LuauCore : MonoBehaviour {
         StartCoroutine(InvokeOnInitializedNextFrame());
         
         return true;
+    }
+
+    private void SetupProtectedSceneHandleListener() {
+        for (var i = 0; i < SceneManager.sceneCount; i++) {
+            var scene = SceneManager.GetSceneAt(i);
+            RegisterPossiblyProtectedScene(scene);
+        }
+
+        SceneManager.sceneLoaded += (scene, mode) => {
+            RegisterPossiblyProtectedScene(scene);
+        };
+        SceneManager.sceneUnloaded += scene => {
+            protectedSceneHandles.Remove(scene.handle);
+        };
+    }
+
+    private void RegisterPossiblyProtectedScene(Scene scene) {
+        if (IsProtectedSceneName(scene.name)) {
+            protectedSceneHandles.Add(scene.handle);
+        }
     }
 
     private IEnumerator InvokeOnInitializedNextFrame() {
@@ -249,6 +303,9 @@ public partial class LuauCore : MonoBehaviour {
         _awaitingTasks.Clear();
         eventConnections.Clear();
         propertyGetCache.Clear();
+        protectedSceneHandles.Clear();
+        _propertySetterCache.Clear();
+        writeMethodFunctions.Clear();
     }
 
     public static void ResetContext(LuauContext context) {
@@ -299,12 +356,10 @@ public partial class LuauCore : MonoBehaviour {
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
         StartCoroutine(PrintReferenceAssemblies());
         endOfFrameCoroutine = StartCoroutine(RunAtVeryEndOfFrame());
+
+        _airshipComponentUpdater = GetComponent<AirshipComponentUpdater>();
         
 #if UNITY_EDITOR
-        // Print out Luau bytecode version
-        // var version = LuauPlugin.LuauGetBytecodeVersion();
-        // Debug.Log($"Luau Bytecode Version (Target: {version.Target} | Min: {version.Min} | Max: {version.Max})");
-
         EditorApplication.pauseStateChanged += OnPauseStateChanged;
 #endif
     }
@@ -318,7 +373,8 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
-        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene.name)) {
+        if (gameObject == null) return false;
+        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene)) {
             if (gameObject.transform.parent?.name is "GameReadAccess" || gameObject.transform.parent?.parent?.name is "GameReadAccess") {
                 return false;
             }
@@ -329,9 +385,22 @@ public partial class LuauCore : MonoBehaviour {
         return false;
     }
 
-    public static bool IsProtectedScene(string sceneName) {
+    public static bool IsProtectedScene(Scene scene) {
+        return protectedSceneHandles.Contains(scene.handle);
+    }
+
+    /// <summary>
+    /// Unless you only have scene name you should use IsProtectedScene
+    /// </summary>
+    public static bool IsProtectedSceneName(string sceneName) {
         if (string.IsNullOrEmpty(sceneName)) return false;
-        return sceneName.ToLower() is "corescene" or "mainmenu" or "login" or "disconnected" or "airshipupdateapp";
+
+        foreach (var protectedSceneName in protectedScenesNames) {
+            if (protectedSceneName.Equals(sceneName, StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void Update() {
@@ -339,7 +408,9 @@ public partial class LuauCore : MonoBehaviour {
             return;
         }
         
+        Profiler.BeginSample("BeginFrameLogic");
         LuauPlugin.LuauRunBeginFrameLogic();
+        Profiler.EndSample();
 
         // List<CallbackRecord> runBuffer = m_currentBuffer;
         // if (m_currentBuffer == m_pendingCoroutineResumesA) {
@@ -356,13 +427,23 @@ public partial class LuauCore : MonoBehaviour {
         // runBuffer.Clear();
 
         Profiler.BeginSample("TryResumeAsyncTasks");
-        TryResumeAsyncTasks();
-        Profiler.EndSample();
+        try {
+            TryResumeAsyncTasks();
+        } catch (Exception err) {
+            Debug.LogError(err);
+        } finally {
+            Profiler.EndSample();
+        }
 
         //Run all pending callbacks
         Profiler.BeginSample("InvokeUpdate");
-        ThreadDataManager.InvokeUpdate();
-        Profiler.EndSample();
+        try {
+            ThreadDataManager.InvokeUpdate();
+        } catch (Exception err) {
+            Debug.LogError(err);
+        } finally {
+            Profiler.EndSample();
+        }
         
         // Profiler.BeginSample("RunTaskScheduler");
         // LuauPlugin.LuauRunTaskScheduler();
@@ -370,7 +451,9 @@ public partial class LuauCore : MonoBehaviour {
         //
         // // Run airship component update methods
         // LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
+        Profiler.BeginSample("UpdateAll");
         LuauState.UpdateAll();
+        Profiler.EndSample();
     }
 
     public void LateUpdate() {

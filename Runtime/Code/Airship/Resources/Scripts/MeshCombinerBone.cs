@@ -33,11 +33,6 @@ namespace Airship {
                 }
             }
         }
-
-        // Update is called once per frame
-        void Update() {
-
-        }
     }
 }
 #if UNITY_EDITOR
@@ -91,7 +86,8 @@ public class MeshCombinerBoneEditor : UnityEditor.Editor {
             //Find the parent MeshCombiner
             Airship.MeshCombiner meshCombiner = myTarget != null ? myTarget.GetComponentInParent<Airship.MeshCombiner>() : null;
             if (meshCombiner) {
-                meshCombiner.CombineMesh();
+                // todo: wtf is this?
+                // meshCombiner.CombineMesh();
             }
             
             EditorUtility.SetDirty(myTarget);

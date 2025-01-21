@@ -30,7 +30,8 @@ using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
 
 namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
-        private static Dictionary<string, float> urlUploadProgress = new();
+        private static Dictionary<string, long> urlUploadProgress = new();
+        private static long uploadSizeBytes = 0; 
         private static Dictionary<string, double> packageUpdateStartTime = new();
         private static string addPackageError = "";
 
@@ -69,7 +70,7 @@ namespace Editor.Packages {
             "Server/Scenes"
         };
 
-        [MenuItem("Airship/Packages")]
+        [MenuItem("Airship/Airship Packages")]
         public static void ShowWindow() {
             var window = EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
             window.minSize = new Vector2(430, 550);
@@ -119,9 +120,16 @@ namespace Editor.Packages {
 #endif
             GUILayout.Space(10);
 
+            if (this.gameConfig == null || this.gameConfig.packages == null) {
+                EditorGUILayout.LabelField("Invalid GameConfig reference.");
+                return;
+            }
+
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
+
+                bool isCoreMaterials = package.id.ToLower() == "@easy/corematerials";
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(package.id.Split("/")[1], new GUIStyle(GUI.skin.label) { fixedWidth = 150, fontStyle = FontStyle.Bold});
@@ -132,13 +140,13 @@ namespace Editor.Packages {
                         GUILayout.FlexibleSpace();
                         GUILayout.BeginVertical(GUILayout.Width(120));
                         if (GUILayout.Button("Publish Code")) {
-                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false, isCoreMaterials));
                         }
                         if (GUILayout.Button("Publish All")) {
                             // Make sure we generate and write all `NetworkPrefabCollection`s before we
                             // build the package.
-                            NetworkPrefabManager.WriteAllCollections();
-                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
+                            // NetworkPrefabManager.WriteAllCollections();
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true, isCoreMaterials));
                         }
                         GUILayout.EndVertical();
                         GUILayout.FlexibleSpace();
@@ -155,7 +163,7 @@ namespace Editor.Packages {
                         });
 
                         menu.AddItem(new GUIContent("Redownload"), false, () => {
-                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion, package.publishVersionNumber));
                         });
 
                         // Remove button is disabled for core packages
@@ -306,7 +314,18 @@ namespace Editor.Packages {
             GUILayout.EndScrollView();
         }
 
-        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
+        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets, bool isCoreMaterials) {
+            var confirmTitle = "Package Publish";
+            var confirmMessage = $"You are about to publish {packageDoc.id}.";
+            #if AIRSHIP_INTERNAL
+                confirmTitle = $"{currentEnvironment} Publish";
+                confirmMessage = $"You are about to publish {packageDoc.id} to {currentEnvironment}.";
+            #endif
+            var okWithPublish = EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Publish", "Cancel");
+            if (!okWithPublish) {
+                yield break;
+            }
+            
             List<string> possibleKeys;
             if (currentEnvironment == "Staging") {
                 possibleKeys = new List<string> { AuthConfig.instance.stagingApiKey, InternalHttpManager.editorAuthToken };
@@ -392,11 +411,14 @@ namespace Editor.Packages {
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
                     Debug.Log($"Building {platform} asset bundles...");
-                    var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
-                        platform.ToString());
-                    if (!Directory.Exists(buildPath)) {
-                        Directory.CreateDirectory(buildPath);
+                    string buildPath;
+                    if (isCoreMaterials) {
+                        buildPath = Path.Join("bundles", "ShippedBundles", $"CoreMaterials_{platform.ToString()}");
+                    } else {
+                        buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
+                            platform.ToString());
                     }
+                    Directory.CreateDirectory(buildPath);
 
                     // var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
                     var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
@@ -411,9 +433,13 @@ namespace Editor.Packages {
                         buildPath
                     );
                     buildParams.UseCache = this.publishOptionUseCache;
-                    Debug.Log("Building package " + packageDoc.id + " with cache=" + this.publishOptionUseCache);
-                    buildParams.BundleCompression = BuildCompression.LZ4;
-                    EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
+                    Debug.Log("Building package " + packageDoc.id + " with cache: " + this.publishOptionUseCache);
+                    if (isCoreMaterials) {
+                        buildParams.BundleCompression = BuildCompression.Uncompressed;
+                    } else {
+                        buildParams.BundleCompression = BuildCompression.LZ4;
+                    }
+                    // EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
                     buildingAssetBundles = true;
@@ -423,7 +449,7 @@ namespace Editor.Packages {
                     buildingAssetBundles = false;
                     AirshipScriptableBuildPipelineConfig.buildingPackageName = null;
                     if (returnCode != ReturnCode.Success) {
-                        Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
+                        Debug.LogError("Failed to build asset bundles. ReturnCode: " + returnCode);
                         packageUploadProgress.Remove(packageDoc.id);
                         yield break;
                     }
@@ -444,16 +470,12 @@ namespace Editor.Packages {
             var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
             var typesFolder = Path.Join(Path.Join("Assets", "AirshipPackages", "Types~"), packageDoc.id);
 
-            if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
-                Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-            }
+            Directory.CreateDirectory(Path.Join("bundles", "uploads"));
 
             // Create org scope folder (@Easy)
-            string orgScopePath = Path.Join(Application.persistentDataPath, "Uploads",
+            string orgScopePath = Path.Join("bundles", "uploads",
                 packageDoc.id.Split("/")[0]);
-            if (!Directory.Exists(orgScopePath)) {
-                Directory.CreateDirectory(orgScopePath);
-            }
+            Directory.CreateDirectory(orgScopePath);
 
             packageUploadProgress[packageDoc.id] = "Zipping source...";
             Repaint();
@@ -477,18 +499,20 @@ namespace Editor.Packages {
             }
             sourceAssetsZip.Save(zippedSourceAssetsZipPath);
 
-            packageUploadProgress[packageDoc.id] = "Starting upload...";
-            Repaint();
             if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
                 packageUploadProgress.Remove(packageDoc.id);
                 Repaint();
+                Debug.Log("<color=green>Done!</color>");
                 yield break;
             }
+
+            packageUploadProgress[packageDoc.id] = "Starting upload...";
+            Repaint();
             yield return null; // give time to repaint
 
             // code.zip
-            AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-            var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+            AirshipEditorUtil.EnsureDirectory(Path.Join("bundles", "uploads"));
+            var codeZipPath = Path.Join("bundles", "uploads", "code.zip");
             {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
@@ -540,6 +564,7 @@ namespace Editor.Packages {
             var split = packageDoc.id.Split("/");
             var orgScope = split[0].ToLower();
             var packageIdOnly = split[1];
+            uploadSizeBytes = 0;
             var uploadList = new List<IEnumerator>() {
 			    UploadSingleGameFile(urls.source, zippedSourceAssetsZipPath, packageDoc, true),
                 UploadSingleGameFile(urls.code, codeZipPath, packageDoc, true),
@@ -581,7 +606,7 @@ namespace Editor.Packages {
 
 		    // track progress
 		    bool finishedUpload = false;
-		    float totalProgress = 0;
+		    long totalProgress = 0;
 		    long prevCheckTime = 0;
 		    while (!finishedUpload) {
 			    long diff = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - prevCheckTime;
@@ -597,7 +622,6 @@ namespace Editor.Packages {
 			    prevCheckTime = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000);
 
 			    totalProgress = 0;
-			    finishedUpload = true;
                 foreach (var pair in urlUploadProgress) {
                     if (float.IsNaN(pair.Value)) {
                         Debug.LogError("Upload progress was NaN.");
@@ -608,14 +632,17 @@ namespace Editor.Packages {
                         Debug.LogError("Upload failed.");
                         yield break;
                     }
-
-                    if (pair.Value < 1) {
-					    finishedUpload = false;
-				    }
+                    
 				    totalProgress += pair.Value;
 			    }
-			    totalProgress /= urlUploadProgress.Count;
-			    Debug.Log("Upload Progress: " + Math.Floor(totalProgress * 100) + "%");
+
+                finishedUpload = totalProgress == uploadSizeBytes;
+			    var uploadPercent = (totalProgress * 100) / uploadSizeBytes;
+
+                var uploadSizeMb = Math.Round(uploadSizeBytes / (1000.0d * 1000), 1);
+                var uploadProgressMb = Math.Round(totalProgress / (1_000_000f), 1);
+                // Debug.Log(totalProgress);
+			    Debug.Log($"Upload Progress: " + uploadPercent + $"% ({uploadProgressMb}/{uploadSizeMb}mb)");
             }
 
 		    Debug.Log("Completed upload. Finalizing publish...");
@@ -687,7 +714,6 @@ namespace Editor.Packages {
         }
 
         private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {
-            urlUploadProgress[url] = 0;
             var gameConfig = GameConfig.Load();
             var buildFolder = Path.Join(AssetBridge.PackagesPath,
                 $"{packageDoc.id}_vLocalBuild");
@@ -699,7 +725,6 @@ namespace Editor.Packages {
 
             if (!File.Exists(bundleFilePath)) {
                 Debug.Log("Bundle file did not exist. Skipping. Path: " + bundleFilePath);
-                urlUploadProgress[url] = 1;
                 yield break;
             }
 
@@ -711,6 +736,8 @@ namespace Editor.Packages {
                 urlUploadProgress[url] = -2;
                 yield break;
             }
+            urlUploadProgress[url] = 0;
+            uploadSizeBytes += bytes.Length;
 
             List<IMultipartFormSection> formData = new();
             formData.Add(new MultipartFormFileSection(
@@ -721,10 +748,10 @@ namespace Editor.Packages {
 
             using var req = UnityWebRequest.Put(url, bytes);
             req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
-            yield return req.SendWebRequest();
+            req.SendWebRequest();
 
             while (!req.isDone) {
-                urlUploadProgress[url] = req.uploadProgress;
+                urlUploadProgress[url] = (long) req.uploadedBytes;
                 yield return new WaitForSecondsRealtime(0.5f);
             }
 
@@ -733,12 +760,12 @@ namespace Editor.Packages {
                 urlUploadProgress[url] = -2;
             }
 
-            urlUploadProgress[url] = 1;
+            urlUploadProgress[url] = bytes.Length;
         }
         
         public static bool IsModifyingPackages => activeDownloads.Count > 0 || activeRemovals.Count > 0;
         
-        public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
+        public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion, string publishVersionNumber) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
                 Debug.Log("Tried to download package while download is in progress. Skipping.");
                 yield break;
@@ -754,7 +781,7 @@ namespace Editor.Packages {
             // Source.zip
             var url = $"{gameCdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
-                Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
+                Path.Join("bundles", "temp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
                 File.Delete(sourceZipDownloadPath);
             }
@@ -767,7 +794,7 @@ namespace Editor.Packages {
 
             // Tell the compiler to restart soon™
 #if UNITY_EDITOR
-            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            EditorCoroutines.Execute(TypescriptServices.RestartAndAwaitUpdates());
 #endif
             
             yield return new WaitUntil(() => sourceZipRequest.isDone);
@@ -826,12 +853,17 @@ namespace Editor.Packages {
                  if (File.Exists(rootGitIgnore)) {
                      try {
                          var lines = File.ReadLines(rootGitIgnore);
+                         var org = packageId.Split("/")[0];
 
                          var srcIgnore = $"Assets/AirshipPackages/{packageId}/*";
+                         var orgMetaIgnore = $"Assets/AirshipPackages/{org}.meta";
                          var metaIgnore = $"Assets/AirshipPackages/{packageId}.meta";
                          var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
                          if (!lines.Contains(srcIgnore)) {
                              File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
+                         }
+                         if (!lines.Contains(orgMetaIgnore)) {
+                             File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{orgMetaIgnore}" });
                          }
                          if (!lines.Contains(metaIgnore)) {
                              File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
@@ -848,11 +880,13 @@ namespace Editor.Packages {
                  if (existingPackageDoc != null) {
                      existingPackageDoc.codeVersion = codeVersion;
                      existingPackageDoc.assetVersion = assetVersion;
+                     existingPackageDoc.publishVersionNumber = publishVersionNumber;
                  } else {
                      var packageDoc = new AirshipPackageDocument() {
                          id = packageId,
                          codeVersion = codeVersion,
-                         assetVersion = assetVersion
+                         assetVersion = assetVersion,
+                         publishVersionNumber = publishVersionNumber,
                      };
                      gameConfig.packages.Add(packageDoc);
                  }
@@ -882,12 +916,14 @@ namespace Editor.Packages {
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }
 
-        public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
+        public static IPromise<PackageVersionResponse> GetLatestPackageVersion(string packageId) {
             var url = $"{deployUrl}/package-versions/packageSlug/{packageId}";
 
             return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
                 Uri = url,
                 Headers = GetDeploymentServiceHeaders()
+            }).Then((res) => {
+                return res.version;
             });
         }
 
@@ -914,7 +950,13 @@ namespace Editor.Packages {
             }
 
             var response = JsonUtility.FromJson<PackageSlugResponse>(request.downloadHandler.text);
-            return response.slugProperCase;
+
+            if (response.pkg == null) {
+                addPackageError = $"No package exists with id {packageId}";
+                return null;
+            }
+
+            return response.pkg.slugProperCase;
         }
 
         private static string deployUrl {
@@ -939,10 +981,11 @@ namespace Editor.Packages {
 
         private static string contentUrl {
             get {
-                if (currentEnvironment == "Staging") {
-                    return "https://content-service-fxy2zritya-uc.a.run.app";
-                }
-                return "https://content-service-hwcvz2epka-uc.a.run.app";
+                return AirshipPlatformUrl.contentService;
+                // if (currentEnvironment == "Staging") {
+                //     return "https://content-service-fxy2zritya-uc.a.run.app";
+                // }
+                // return "https://content-service-hwcvz2epka-uc.a.run.app";
             }
         }
 
@@ -981,9 +1024,18 @@ namespace Editor.Packages {
             PackageLatestVersionResponse response =
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
+            if (response.version == null) {
+                addPackageError = $"No package exists with id {packageId}";
+                window.Repaint();
+                request.Dispose();
+                yield break;
+            }
+
+            PackageVersionResponse version = response.version;
+
             // Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
             request.Dispose();
-            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "", response.package.assetVersionNumber + "");
+            yield return DownloadPackage(packageId, version.package.codeVersionNumber + "", version.package.assetVersionNumber + "", version.package.publishNumber + "");
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {
@@ -1018,7 +1070,7 @@ namespace Editor.Packages {
 
             var url = "https://github.com/easy-games/ExamplePackage/zipball/main";
             var request = new UnityWebRequest(url);
-            var zipDownloadPath = Path.Join(Application.persistentDataPath, "EditorTemp", "PackageTemplate.zip");
+            var zipDownloadPath = Path.Join("bundles", "temp", "PackageTemplate.zip");
             request.downloadHandler = new DownloadHandlerFile(zipDownloadPath);
             request.SendWebRequest();
 
@@ -1096,7 +1148,7 @@ namespace Editor.Packages {
             yield return null;
             var packageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
             activeRemovals.Add(packageId);
-            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            EditorCoroutines.Execute(TypescriptServices.RestartAndAwaitUpdates());
             
             if (packageDoc != null) {
                 this.gameConfig.packages.Remove(packageDoc);

@@ -64,7 +64,7 @@ namespace Luau {
         
         //Keep strong references to all objects created
         private static Dictionary<int, object> s_objectKeys = new();
-        private static Dictionary<object, int> s_reverseObjectKeys = new();
+        public static Dictionary<object, int> s_reverseObjectKeys = new();
         private static HashSet<int> s_cleanUpKeys = new HashSet<int>();
 
         //Debugging
@@ -72,8 +72,11 @@ namespace Luau {
         private static bool s_debugging = false;
 
         public static int GetOrCreateObjectId(System.Object obj) {
-            bool found = s_reverseObjectKeys.TryGetValue(obj, out int key);
+            var found = s_reverseObjectKeys.TryGetValue(obj, out int key);
             if (found) {
+                if (s_cleanUpKeys.Contains(key)) {
+                    s_cleanUpKeys.Remove(key);
+                }
                 return key;
             }
 
@@ -113,15 +116,29 @@ namespace Luau {
             return id;
         }
 
-        public static object GetObjectReference(IntPtr thread, int instanceId, bool preventTrace = false) {
+        public static bool IsUnityObjectReferenceDestroyed(int instanceId) {
+            var res = s_objectKeys.TryGetValue(instanceId, out var value);
+            
+            if (ReferenceEquals(value, null)) {
+                return true;
+            }
+            
+            if (value is UnityEngine.Object go) {
+                return go == null;
+            }
+
+            return true;
+        }
+
+        public static object GetObjectReference(IntPtr thread, int instanceId, bool preventTrace = false, bool preventLogIfNull = false) {
             if (instanceId == -1) {
                 return null;
             }
             
             bool res = s_objectKeys.TryGetValue(instanceId, out object value);
             if (!res) {
-                if (s_debugging == false) {    
-                    Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " " + LuauCore.LuaThreadToString(thread));
+                if (s_debugging == false && preventLogIfNull == false) {
+                    Debug.LogError("Attempt to reference an object that is missing or destroyed. id=" + instanceId + ", highest=" + s_keyGen + " " + LuauCore.LuaThreadToString(thread));
                 } else if (s_debugging == true) {
                     bool found = s_debuggingKeys.TryGetValue(instanceId, out object debugObject);
                     
@@ -150,10 +167,10 @@ namespace Luau {
             s_cleanUpKeys.Add(instanceId);
         }
 
-        public static Luau.CallbackWrapper RegisterCallback(LuauContext context, IntPtr thread, int handle, string methodName) {
+        public static Luau.CallbackWrapper RegisterCallback(LuauContext context, IntPtr thread, int handle, string methodName, bool validateContext) {
             ThreadData threadData = GetOrCreateThreadData(context, thread, "RegisterCallback");
 
-            Luau.CallbackWrapper callback = new Luau.CallbackWrapper(context, thread, methodName, handle);
+            Luau.CallbackWrapper callback = new Luau.CallbackWrapper(context, thread, methodName, handle, validateContext);
             threadData.m_callbacks.Add(callback);
 
             return callback;
@@ -294,47 +311,8 @@ namespace Luau {
         }
 
         public static void RunEndOfFrame() {
-            //turn the list of s_objectKeys into a list of ints
-            int numGameObjectIds = s_objectKeys.Count;
-            int numDestroyedGameObjectIds = 0;
-
-            // Resize arrays if necessary
-            if (numGameObjectIds > listOfGameObjectIds.Array.Length) {
-                listOfGameObjectIds.Resize(numGameObjectIds);
-                listOfDestroyedGameObjectIds.Resize(numGameObjectIds);
-            }
-            int index = 0;
-            Profiler.BeginSample("ListDestroyedObjects");
-            foreach (var kvp in s_objectKeys) {
-                listOfGameObjectIds.Array[index] = kvp.Key;
-                if (kvp.Value is UnityEngine.Object unityObj && unityObj == null) {
-                    if (s_debugging) {
-                        Debug.Log("Destroyed GameObject: " + kvp.Key);
-                    }
-                    listOfDestroyedGameObjectIds.Array[numDestroyedGameObjectIds++] = kvp.Key;
-                }
-                index++;
-            }
-            Profiler.EndSample();
-
-            try {
-                IntPtr pointerToObjectsHandle = listOfGameObjectIds.AddrOfPinnedObject();
-                IntPtr pointerToDestroyedObjectsHandle = listOfDestroyedGameObjectIds.AddrOfPinnedObject();
-                
-                Profiler.BeginSample("LuauRunEndFrameLogic");
-                LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
-            } finally {
-                // No need to free handles here, as they are managed within the PinnedArray class.
-                Profiler.EndSample();
-            }
-
-            Profiler.BeginSample("RemoveObjectKeys");
-            for (int i = 0; i < numDestroyedGameObjectIds; i++) {
-                var key = listOfDestroyedGameObjectIds.Array[i];
-                s_objectKeys.Remove(key);
-            }
-            Profiler.EndSample();
-
+            LuauPlugin.LuauRunEndFrameLogic();
+            
             // Temporary removal process:
             s_removalList.Clear();
             

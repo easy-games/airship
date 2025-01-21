@@ -13,6 +13,7 @@ public class MainMenuLoadingScreen : BundleLoadingScreen {
     public Button continueButton;
     public GameObject spinner;
     public GameObject errorWrapper;
+    public RectTransform logo;
     public TMP_Text errorText;
     public MainMenuSceneManager sceneManager;
 
@@ -78,6 +79,7 @@ public class MainMenuLoadingScreen : BundleLoadingScreen {
     public override void SetError(string msg) {
         this.spinner.SetActive(false);
         this.progressText.gameObject.SetActive(false);
+        this.logo.gameObject.SetActive(false);
 
         this.errorText.text = msg;
         this.errorWrapper.SetActive(true);
@@ -89,8 +91,11 @@ public class MainMenuLoadingScreen : BundleLoadingScreen {
         progressText.text = text;
     }
 
-    public void Close()
-    {
-        canvas.enabled = false;
+    public void Close() {
+        this.canvas.enabled = false;
+    }
+
+    public void Show() {
+        this.canvas.enabled = true;
     }
 }

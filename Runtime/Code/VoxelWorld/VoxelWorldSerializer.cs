@@ -2,10 +2,10 @@ using Mirror;
 using VoxelWorldStuff;
 
 
-//Designed to copy the data from a VoxelWorld to fishnet
+//Designed to copy the data from a VoxelWorld to mirror
 public static class VoxelWorldSerializer
 {
-    public static void SerializeVoxelWorld(NetworkWriter writer, VoxelWorld world)
+    public static void SerializeVoxelWorld(this NetworkWriter writer, VoxelWorld world)
     {
 
         writer.Write(world.chunks.Count);

@@ -7,6 +7,7 @@ using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Code.Luau;
 using Codice.Utils;
 using HandlebarsDotNet;
 using PlasticPipe.PlasticProtocol.Messages;
@@ -325,6 +326,11 @@ namespace CsToTs.TypeScript {
                 if (skipAttribute != null) {
                     continue;
                 }
+
+                // Remove the context parameter from attached context methods
+                if (method.GetCustomAttribute<AttachContext>() != null) {
+                    parameters = parameters.Skip(1);
+                }
                 
                 var returnType = GetTypeRef(method.ReturnType, context);
                 var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic, commentLines);
@@ -403,6 +409,8 @@ namespace CsToTs.TypeScript {
             // Load the UnityEngine XML documentation file
             #if UNITY_EDITOR_WIN
             string localXMLPath = "Data\\Managed\\UnityEngine.xml";
+            #elif UNITY_EDITOR_LINUX
+            string localXMLPath = "Data/Managed/UnityEngine.xml";
             #else
             string localXMLPath = "Unity.app/Contents/Managed/UnityEngine.xml";
             #endif

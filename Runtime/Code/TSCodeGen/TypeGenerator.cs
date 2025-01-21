@@ -9,9 +9,6 @@ using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Http.Public;
-using Code.Platform.Client;
-using Code.Platform.Server;
-using Code.Player.Character.API;
 using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
@@ -40,9 +37,11 @@ using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
-using Code.Player.Human.Net;
 using Mirror;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
+using Code.Player.Accessories;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -87,10 +86,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(RenderSettings),
             typeof(ServerBootstrap),
             typeof(SceneManager),
-            typeof(AccessoryBuilder),
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
-            // typeof(VoxelWorld),
             typeof(GizmoUtils),
             typeof(CollisionWatcher),
             typeof(TriggerWatcher),
@@ -110,6 +107,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(TMP_InputField),
             typeof(Rigidbody2D),
             typeof(Slider),
+            typeof(Dropdown),
+            typeof(TMP_Dropdown),
             typeof(CanvasHitDetector),
             typeof(AudioSource),
             typeof(AudioClip),
@@ -122,31 +121,17 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterController),
             typeof(TrailRenderer),
             typeof(WindowCore),
-            typeof(CharacterMoveModifier),
             typeof(MaterialColorURP),
             typeof(MaterialColorURP.ColorSetting),
             typeof(MainMenuLoadingScreen),
             typeof(HttpManager),
             typeof(InternalHttpManager),
-            typeof(FriendsControllerBackend),
-            typeof(MatchmakingControllerBackend),
-            typeof(PartyControllerBackend),
-            typeof(AirshipInventoryControllerBackend),
-            typeof(TransferControllerBackend),
-            typeof(UsersControllerBackend),
-            typeof(CacheStoreServiceBackend),
-            typeof(DataStoreServiceBackend),
-            typeof(LeaderboardServiceBackend),
-            typeof(PartyServiceBackend),
-            typeof(MatchmakingServiceBackend),
-            typeof(TransferServiceBackend),
-            typeof(AirshipInventoryServiceBackend),
-            typeof(UsersServiceBackend),
             typeof(CrossSceneState),
             typeof(Toggle),
             typeof(HorizontalLayoutGroup),
             typeof(VerticalLayoutGroup),
             typeof(ContentSizeFitter),
+            typeof(AspectRatioFitter),
             typeof(LayoutRebuilder),
             typeof(RectTransformUtility),
             typeof(ScrollRect),
@@ -156,7 +141,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(DevConsole),
             typeof(EasyShake),
             typeof(EasyMotion),
-            typeof(GroundItemDrop),
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
@@ -175,7 +159,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(LayoutElement),
             typeof(Screen),
             typeof(Gizmos),
-            typeof(RenderUtils),
             typeof(DeviceBridge),
             typeof(Mask),
             typeof(ImageWithRoundedCorners),
@@ -211,7 +194,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipUniVoiceNetwork),
             typeof(StandaloneFileBrowser),
             typeof(MaterialColorURP),
-            typeof(Mathf),
             typeof(UnityWebRequestTexture),
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
@@ -222,6 +204,11 @@ public class TypeGenerator : MonoBehaviour
             typeof(Terrain),
             typeof(GameServer),
             typeof(GraphicRaycaster),
+            typeof(DepthOfField),
+            typeof(Volume),
+            typeof(DepthOfFieldMode),
+            typeof(LensDistortion),
+            typeof(Vignette),
 
             // Mirror
             typeof(NetworkServer),
@@ -252,6 +239,15 @@ public class TypeGenerator : MonoBehaviour
 
             // Airship
             typeof(CharacterMovementData),
+            typeof(AnimationEventData),
+            typeof(VoxelWorld),
+            typeof(AccessorySkin),
+            typeof(AccessoryComponent),
+            typeof(ActiveAccessory),
+            typeof(CharacterMovementState),
+            typeof(AirshipPredictionManager),
+            typeof(VisualGraphComponent),
+            
             // Steam
             typeof(AirshipSteamFriendInfo),
         };
@@ -306,7 +302,6 @@ public class TypeGenerator : MonoBehaviour
             "\\.DynamicVariablesManager$",
             "\\.HttpGetResponse$",
             "\\.Collider$",
-            "\\.VoxelWorld$",
             "\\.NetworkObject$",
             "\\.InputProxy$",
             "\\.NavMesh$",
@@ -319,7 +314,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkIdentity$",
             "\\.NetworkTime$",
             "UnityEngine.TextCore.Text.Character",
-            "\\.AccessoryComponent$",
+            "\\.VolumeProfile$",
         };
 
         var options = new TypeScriptOptions

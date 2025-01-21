@@ -3,8 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Serialization;
 using Agones;
 using Agones.Model;
+using Code.Analytics;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
@@ -20,6 +22,7 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [Serializable]
@@ -28,6 +31,7 @@ public struct StartupConfig {
 	[FormerlySerializedAs("GameBundleVersion")] public string GameAssetVersion; // UUID
 	public string GameCodeVersion;
 	public string StartingSceneName;
+	public string GamePublishVersion;
 	public string CdnUrl; // Base url where we download bundles
 	public List<AirshipPackageDocument> packages;
 }
@@ -100,19 +104,33 @@ public class ServerBootstrap : MonoBehaviour
 #if UNITY_EDITOR
 			port = AirshipEditorNetworkConfig.instance.portOverride;
 #endif
-			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
+			var transportOrLatencySim = AirshipNetworkManager.singleton.transport;
+			if (transportOrLatencySim is LatencySimulation latencySim) {
+				transportOrLatencySim = latencySim.wrap as KcpTransport;
+			}
+
+			if (transportOrLatencySim is not KcpTransport transport) {
+				Debug.LogError("Transport is not of type KcpTransport.");
+				return;
+			}
+			
 			transport.port = port;
 
 			if (RunCore.IsClient()) {
+				// use random port in shared mode
+				transport.port = (ushort)Random.Range(7770, 7870);
+				// print("Listening on port " + transport.port);
 				AirshipNetworkManager.singleton.StartHost();
 			} else {
-				print("Listening on port " + port);
 				AirshipNetworkManager.singleton.StartServer();
+				Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
 			}
 		} else {
 			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = 7654;
+
 			AirshipNetworkManager.singleton.StartServer();
+			Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
 		}
 
 		this.Setup();
@@ -129,7 +147,6 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void ProcessExit(object sender, EventArgs args) {
-		Debug.Log("----> Process Exit!");
 		this.onProcessExit?.Invoke();
 	}
 
@@ -139,12 +156,6 @@ public class ServerBootstrap : MonoBehaviour
 
 	[HideFromTS][LuauAPI(LuauContext.Protected)]
 	public GameServer GetGameServer() {
-		if (this.gameServer.ObjectMeta.Annotations.TryGetValue("GameConfig", out var gc)) {
-			Debug.Log("GetGameServer GameConfig: " + gc);
-		} else {
-			Debug.Log("GetGameServer CameConfig is missing.");
-		}
-
 		return this.gameServer;
 	}
 
@@ -199,8 +210,10 @@ public class ServerBootstrap : MonoBehaviour
 				id = this.startupConfig.GameBundleId,
 				assetVersion = this.startupConfig.GameAssetVersion,
 				codeVersion = this.startupConfig.GameCodeVersion,
+				publishVersionNumber = this.startupConfig.GamePublishVersion,
 				game = true
 			});
+			AnalyticsRecorder.InitGame(this.startupConfig);
 
 			// remember, this is being called in local dev env. NOT STAGING!
 			StartCoroutine(LoadWithStartupConfig(null, null));
@@ -212,9 +225,13 @@ public class ServerBootstrap : MonoBehaviour
      */
 	private bool processedMarkedForDeletion = false;
 	public void OnGameServerChange(GameServer server) {
+		if (server == null) {
+			Debug.Log("Agones GameServer is null. Ignoring.");
+			return;
+		}
 		this.gameServer = server;
 
-		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
+		if (!processedMarkedForDeletion && server.ObjectMeta != null && server.ObjectMeta.Labels != null && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
 			this.InvokeOnProcessExit();
@@ -228,6 +245,7 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.GameBundleId = annotations["GameId"];
 			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];
 			startupConfig.GameCodeVersion = annotations["GameCodeVersion"];
+			startupConfig.GamePublishVersion = annotations["GamePublishVersion"];
 
 			// print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
@@ -240,6 +258,7 @@ public class ServerBootstrap : MonoBehaviour
 					id = requiredPkg.packageSlug,
 					assetVersion = requiredPkg.assetVersionNumber + "",
 					codeVersion = requiredPkg.codeVersionNumber + "",
+					publishVersionNumber = requiredPkg.publishVersionNumber + "",
 					defaultPackage = true,
 				});
 			}
@@ -304,7 +323,7 @@ public class ServerBootstrap : MonoBehaviour
 		// Download game config
 		var url = $"{startupConfig.CdnUrl}/game/{startupConfig.GameBundleId}/code/{startupConfig.GameCodeVersion}/gameConfig.json";
 		var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(url));
-		var gameConfigPath = Path.Join(AssetBridge.GamesPath, startupConfig.GameBundleId, "gameConfig.json");
+		var gameConfigPath = Path.Combine(Application.persistentDataPath, "Games", startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
 		yield return request.SendWebRequest();
 		if (request.result != UnityWebRequest.Result.Success) {
@@ -341,8 +360,9 @@ public class ServerBootstrap : MonoBehaviour
 				if (res.Result.success) {
 					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
 					try {
-						package.codeVersion = data.package.codeVersionNumber.ToString();
-						package.assetVersion = data.package.assetVersionNumber.ToString();
+						package.codeVersion = data.version.package.codeVersionNumber.ToString();
+						package.assetVersion = data.version.package.assetVersionNumber.ToString();
+						package.publishVersionNumber = data.version.package.publishNumber.ToString();
 					} catch (Exception e) {
 						Debug.LogError("Failed to fetch latest version of " + package.id + ": " + e);
 					}
@@ -360,14 +380,16 @@ public class ServerBootstrap : MonoBehaviour
 			id = this.startupConfig.GameBundleId,
 			assetVersion = this.startupConfig.GameAssetVersion,
 			codeVersion = this.startupConfig.GameCodeVersion,
+			publishVersionNumber = this.startupConfig.GamePublishVersion,
 			game = true,
 		});
 
 		Debug.Log("Startup packages:");
 		foreach (var doc in this.startupConfig.packages) {
-			Debug.Log($"	 - id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, game={doc.game},");
+			Debug.Log($"	 - id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, publish={doc.publishVersionNumber}, game={doc.game},");
 		}
 		Debug.Log("  - " + gameCodeZipUrl);
+		AnalyticsRecorder.InitGame(this.startupConfig);
 
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray(), gameCodeZipUrl);
 	}
@@ -379,7 +401,9 @@ public class ServerBootstrap : MonoBehaviour
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
 		foreach (var doc in startupConfig.packages) {
-			packages.Add(new AirshipPackage(doc.id, doc.assetVersion, doc.codeVersion, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+			// print("Loading pkg: " + doc.id);
+			if (doc.id.ToLower() == "@easy/corematerials") continue;
+			packages.Add(new AirshipPackage(doc.id, doc.assetVersion, doc.codeVersion, doc.publishVersionNumber, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
 		}
 
 		// Download bundles over network
@@ -403,6 +427,9 @@ public class ServerBootstrap : MonoBehaviour
 #if AIRSHIP_DEBUG
         print("Loaded packages in " + stPackage.ElapsedMilliseconds + " ms.");
 #endif
+
+        //Setup project configurations from loaded package
+        PhysicsSetup.SetupFromGameConfig();
 
 		this.isStartupConfigReady = true;
 		this.OnStartupConfigReady?.Invoke();

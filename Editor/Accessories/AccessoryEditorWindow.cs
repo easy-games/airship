@@ -24,7 +24,7 @@ namespace Editor.Accessories {
             RUNNING
         }
         // Path to the human entity asset:
-        private static readonly string AccessoryHumanEntityPrefabPath = "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/AirshipCharacter.prefab";
+        private static readonly string AccessoryHumanEntityPrefabPath = "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/CharacterDummy.prefab";
         private static GameObject HumanEntityPrefab;
 
         // Path to the accessory prefab editor asset:
@@ -32,7 +32,7 @@ namespace Editor.Accessories {
 
         private PrefabStage _prefabStage;
         private AccessoryPrefabEditor prefabEditor;
-        private GameObject _humanEntity;
+        private GameObject characterGO;
         List<AccessoryComponent> allAccessories = new List<AccessoryComponent>();
         private AccessoryComponent _editingAccessoryComponent;
         private AccessoryComponent _referenceAccessoryComponent;
@@ -60,9 +60,9 @@ namespace Editor.Accessories {
             _editingAccessoryComponent = null;
             _referenceAccessoryComponent = null;
             
-            if (_humanEntity) {
-                DestroyImmediate(_humanEntity);
-                _humanEntity = null;
+            if (characterGO) {
+                DestroyImmediate(characterGO);
+                characterGO = null;
             }
         }
 
@@ -71,12 +71,12 @@ namespace Editor.Accessories {
             _prefabStage = PrefabStageUtility.OpenPrefab(AccessoryPrefabEditorPath, null, PrefabStage.Mode.InIsolation);
             prefabEditor = _prefabStage.prefabContentsRoot.GetComponent<AccessoryPrefabEditor>();
             prefabEditor.SetBackdrop(currentBackdropIndex);
-            if(!_prefabStage){
+            if (!_prefabStage){
                 Debug.LogError("Unable to load Accessory Editor Prefab at: " + AccessoryPrefabEditorPath);
                 return;
             }
 
-            if(!HumanEntityPrefab){
+            if (!HumanEntityPrefab){
                 HumanEntityPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AccessoryHumanEntityPrefabPath);
             }
 
@@ -88,9 +88,9 @@ namespace Editor.Accessories {
                 DestroyImmediate(existingEntity.gameObject);
             }
         
-            _humanEntity = Instantiate(HumanEntityPrefab, _prefabStage.prefabContentsRoot.transform);
-            _humanEntity.name = HumanEntityPrefab.name;
-            _humanEntity.hideFlags = HideFlags.DontSave;
+            characterGO = Instantiate(HumanEntityPrefab, _prefabStage.prefabContentsRoot.transform);
+            characterGO.name = HumanEntityPrefab.name;
+            characterGO.hideFlags = HideFlags.DontSave;
             OnFocus();
         }
 
@@ -98,7 +98,7 @@ namespace Editor.Accessories {
             if(_prefabStage){
                 StageUtility.GoBackToPreviousStage();
                 _prefabStage = null;
-                _humanEntity = null;
+                characterGO = null;
             }
         }
 
@@ -144,55 +144,56 @@ namespace Editor.Accessories {
             };
 
             // Backdrop
-            backdropOptions.Clear();
-            foreach(var name in Enum.GetNames(typeof(BackdropType))){
-                backdropOptions.Add(name);
-            }
-            buttonPanel.Add(new ToolbarSpacer());
-            var backdropEnum =  new DropdownField("Backdrop", backdropOptions, 0);
-            backdropEnum.RegisterValueChangedCallback((e)=>{
-                int i=0;
-                foreach(var enumValue in Enum.GetNames(typeof(BackdropType))){
-                    if(e.newValue == enumValue){
-                        prefabEditor.SetBackdrop(i);
-                        break;
-                    }
-                    i++;
-                }
-            });
-            buttonPanel.Add(backdropEnum);
+            // backdropOptions.Clear();
+            // foreach(var name in Enum.GetNames(typeof(BackdropType))){
+            //     backdropOptions.Add(name);
+            // }
+            // buttonPanel.Add(new ToolbarSpacer());
+            // var backdropEnum =  new DropdownField("Backdrop", backdropOptions, 0);
+            // backdropEnum.RegisterValueChangedCallback((e)=>{
+            //     int i=0;
+            //     foreach(var enumValue in Enum.GetNames(typeof(BackdropType))){
+            //         if(e.newValue == enumValue){
+            //             prefabEditor.SetBackdrop(i);
+            //             break;
+            //         }
+            //         i++;
+            //     }
+            // });
+            // buttonPanel.Add(backdropEnum);
 
             //Poses
-            poseOptions.Clear();
-            foreach(var name in Enum.GetNames(typeof(PoseType))){
-                poseOptions.Add(name);
-            }
-            buttonPanel.Add(new ToolbarSpacer());
-            var poseEnum =  new DropdownField("Pose", poseOptions, 0);
-            poseEnum.RegisterValueChangedCallback((e)=>{
-                int i=0;
-                foreach(var enumValue in Enum.GetNames(typeof(PoseType))){
-                    if(e.newValue == enumValue){
-                        SetPose((PoseType)i);
-                        break;
-                    }
-                    i++;
-                }
-            });
-            buttonPanel.Add(poseEnum);
+            // poseOptions.Clear();
+            // foreach(var name in Enum.GetNames(typeof(PoseType))){
+            //     poseOptions.Add(name);
+            // }
+            // buttonPanel.Add(new ToolbarSpacer());
+            // var poseEnum =  new DropdownField("Pose", poseOptions, 0);
+            // poseEnum.RegisterValueChangedCallback((e)=>{
+            //     int i=0;
+            //     foreach(var enumValue in Enum.GetNames(typeof(PoseType))){
+            //         if(e.newValue == enumValue){
+            //             SetPose((PoseType)i);
+            //             break;
+            //         }
+            //         i++;
+            //     }
+            // });
+            // buttonPanel.Add(poseEnum);
 
             
-            _listPane = new ListView();
+            _listPane = new ListView(allAccessories, 32);
             split.Add(_listPane);
 
             // Set up the left list view to show accessories:
             _listPane.selectionType = SelectionType.Single;
             _listPane.makeItem = () => {
                 var label = new Label();
-                label.style.paddingTop = new StyleLength(new Length(5, LengthUnit.Pixel));
-                label.style.paddingBottom = new StyleLength(new Length(5, LengthUnit.Pixel));
+                label.style.paddingTop = new StyleLength(new Length(10, LengthUnit.Pixel));
+                label.style.paddingBottom = new StyleLength(new Length(10, LengthUnit.Pixel));
                 label.style.paddingRight = new StyleLength(new Length(5, LengthUnit.Pixel));
                 label.style.paddingLeft = new StyleLength(new Length(5, LengthUnit.Pixel));
+                label.style.unityTextAlign = TextAnchor.MiddleLeft;
                 return label;
             };
             _listPane.bindItem = (item, index) => {
@@ -228,7 +229,7 @@ namespace Editor.Accessories {
         private void BuildScene(AccessoryComponent accessoryComponent, bool forceRedraw = false) {
             var newItem = accessoryComponent != _referenceAccessoryComponent;
             Log("Building Scene. New Item: " + newItem + " acc: " + accessoryComponent?.gameObject.name + " oldAcc: " + _referenceAccessoryComponent?.gameObject.name);
-            if (_prefabStage == null || _humanEntity == null) {
+            if (_prefabStage == null || characterGO == null) {
                 CreateStage();
             }
 
@@ -236,7 +237,7 @@ namespace Editor.Accessories {
                 ClearCurrentAccessory();
 
                 var parent = _prefabStage.prefabContentsRoot.transform;
-                var rig = _humanEntity.GetComponentInChildren<CharacterRig>();
+                var rig = characterGO.GetComponentInChildren<CharacterRig>();
                 if(rig){
                     parent = rig.GetSlotTransform(accessoryComponent.accessorySlot);
                 }else{
@@ -250,14 +251,16 @@ namespace Editor.Accessories {
 
                 
                 var go = (GameObject)PrefabUtility.InstantiatePrefab(accessoryComponent.gameObject, parent);
-                _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
-                _referenceAccessoryComponent = accessoryComponent;
-                //accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
-                Selection.activeObject = go;
-                Selection.activeGameObject = go;
-                SceneView.FrameLastActiveSceneView();
-                
-                _selectedItemLabel.text = accessoryComponent.name;
+                if (go != null) {
+                    _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
+                    _referenceAccessoryComponent = accessoryComponent;
+                    //accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
+                    Selection.activeObject = go;
+                    Selection.activeGameObject = go;
+                    SceneView.FrameLastActiveSceneView();
+
+                    _selectedItemLabel.text = accessoryComponent.name;
+                }
             }
         }
 
@@ -342,8 +345,11 @@ namespace Editor.Accessories {
             allAccessories.Sort((a,b)=>{
                 return a.gameObject.name.CompareTo(b.gameObject.name);
             });
-            
-            OnAccessorySelectionChanged(_listPane.selectedItems);
+
+            if (_listPane != null) {
+                OnAccessorySelectionChanged(_listPane.selectedItems);
+            }
+
             //BuildScene(_referenceAccessoryComponent);
         }
 
@@ -357,7 +363,7 @@ namespace Editor.Accessories {
         }
 
         private void SaveCurrentAccessory() {
-            if(!_referenceAccessoryComponent){
+            if (!_referenceAccessoryComponent) {
                 Debug.LogError("Trying to save with an empty accessory component");
                 return;
             }

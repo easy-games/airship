@@ -396,6 +396,7 @@ namespace ElRaccoone.Tweens.Core {
     /// <returns>The current Tween.</returns>
     internal Tween<DriverValueType> Finalize (DriverValueType valueTo, float duration) {
       if (this.gameObject.activeInHierarchy == false) {
+        // Debug.LogWarning("Tried to use NativeTween on an inactive GameObject: " + this.gameObject.name + ". The tween has immediately cancelled.", this.gameObject);
         this.Decommission ();
       } else {
         this.duration = duration;
@@ -410,6 +411,7 @@ namespace ElRaccoone.Tweens.Core {
     /// </summary>
     /// <param name="valueFrom">The from value.</param>
     /// <returns>The current Tween.</returns>
+    [HideFromTS]
     public Tween<DriverValueType> SetFrom (DriverValueType valueFrom) {
       this.didOverwriteFrom = true;
       this.valueFrom = valueFrom;
@@ -421,6 +423,7 @@ namespace ElRaccoone.Tweens.Core {
     /// </summary>
     /// <param name="onComplete">The completion callback.</param>
     /// <returns>The current Tween.</returns>
+    [HideFromTS]
     public Tween<DriverValueType> SetOnStart (Action onStart) {
       this.hasOnStart = true;
       this.onStart = onStart;
@@ -432,6 +435,7 @@ namespace ElRaccoone.Tweens.Core {
     /// </summary>
     /// <param name="onComplete">The completion callback.</param>
     /// <returns>The current Tween.</returns>
+    [HideFromTS]
     public Tween<DriverValueType> SetOnComplete (Action onComplete) {
       this.hasOnComplete = true;
       this.onComplete = onComplete;
@@ -443,6 +447,7 @@ namespace ElRaccoone.Tweens.Core {
     /// </summary>
     /// <param name="onCancel">The cancelation callback.</param>
     /// <returns>The current Tween.</returns>
+    [HideFromTS]
     public Tween<DriverValueType> SetOnCancel (Action onCancel) {
       this.hasOnCancel = true;
       this.onCancel = onCancel;

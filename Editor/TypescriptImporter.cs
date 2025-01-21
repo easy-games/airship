@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using Airship.Editor;
 using Luau;
 using UnityEditor;
@@ -70,6 +71,16 @@ namespace Editor {
             AssetDatabase.StopAssetEditing();
         }
 
+        public static bool RequiresRecompile(string assetPath) {
+            var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(assetPath);
+            if (asset == null) return true;
+            
+            var project = TypescriptProjectsService.Project;
+            var currentHash = project.GetOutputFileHash(assetPath);
+            
+            return currentHash != asset.compiledFileHash;
+        }
+
         public override void OnImportAsset(AssetImportContext ctx) {
             if (FileExtensions.EndsWith(ctx.assetPath,FileExtensions.TypescriptDeclaration)) {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.DeclarationFile>();
@@ -125,11 +136,10 @@ namespace Editor {
 
 
                 airshipScript.typescriptWasCompiled = hasCompiled;
+                airshipScript.compiledFileHash = project.GetOutputFileHash(assetPath);
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
             }
-            
- 
         }
     }
 }

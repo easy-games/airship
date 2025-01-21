@@ -163,11 +163,21 @@ public class LoginApp : MonoBehaviour {
            Debug.LogError("Failed to get self: " + selfRes.error);
            return;
         }
-           
-        if (selfRes.data.Length == 0) {
+
+        // print("self response: " + selfRes.data);
+
+        if (selfRes.data.Length == 0 || selfRes.data == "{}") {
            loading = false;
            RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
            return;
+        }
+
+        var user = JsonUtility.FromJson<UserResponse>(selfRes.data).user;
+
+        if (user == null) {
+            loading = false;
+            RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+            return;
         }
         
         loading = false;
@@ -209,6 +219,14 @@ public class LoginApp : MonoBehaviour {
                     this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                     return;
                 }
+
+                var user = JsonUtility.FromJson<UserResponse>(selfRes.data).user;
+
+                if (user == null) {
+                    this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+                    return;
+                }
+
                 SceneManager.LoadScene("MainMenu");
             } catch (Exception e) {
                 Debug.LogError(e);
@@ -282,6 +300,13 @@ public class LoginApp : MonoBehaviour {
                         this.loading = false;
                         this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                         this.steamLoginButton.SetLoading(false);
+                        return;
+                    }
+
+                    var user = JsonUtility.FromJson<UserResponse>(selfRes.data).user;
+
+                    if (user == null) {
+                        this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                         return;
                     }
 

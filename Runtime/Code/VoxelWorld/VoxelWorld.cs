@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -7,13 +8,12 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Unity.Mathematics;
 
-
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Assets.Luau;
-using System.Linq;
-
 
 #if UNITY_EDITOR
+using ParrelSync;
 using UnityEditor;
 #endif
 
@@ -21,14 +21,10 @@ using UnityEditor;
 [RequireComponent(typeof(VoxelRollbackManager))]
 public partial class VoxelWorld : MonoBehaviour {
 
-#if UNITY_SERVER
     public const bool runThreaded = true;       //Turn off if you suspect threading problems
-    public const bool doVisuals = false;         //Turn on for headless servers
+    [NonSerialized]
+    public bool doVisuals = true;         //Turn on for headless servers
 
-#else
-    public const bool runThreaded = false;       //Turn off if you suspect threading problems
-    public const bool doVisuals = true;         //Turn on for headless servers
-#endif
     public const int maxActiveThreads = 8;
     public const int maxMainThreadMeshMillisecondsPerFrame = 8;    //Dont spend more than 10ms per frame on uploading meshes to GPU or rebuilding collision
     public const int maxMainThreadThreadKickoffMillisecondsPerFrame = 4; //Dont spent more than 4ms on the main thread kicking off threads
@@ -48,7 +44,7 @@ public partial class VoxelWorld : MonoBehaviour {
     
     [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
 
-    [SerializeField][HideInInspector] private WorldSaveFile domainReloadSaveFile = null;
+    //[SerializeField][HideInInspector] private WorldSaveFile domainReloadSaveFile = null;
     
     [SerializeField][HideInInspector] public VoxelWorldNetworker worldNetworker;
 
@@ -77,38 +73,129 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     [HideInInspector]
     public float lodTransitionSpeed = 1;
-
- 
+     
     //Texture atlas/block definitions    
-    [HideInInspector] public VoxelBlocks voxelBlocks; 
-    [HideInInspector] public int selectedBlockIndex = 1;
+    [HideInInspector] public VoxelBlocks voxelBlocks;
+    [NonSerialized][HideInInspector] public int selectedBlockIndex = 1;
+
+    //For the editor
+    [NonSerialized][HideInInspector] public VoxelData highlightedBlock = 0;
+    [NonSerialized][HideInInspector] public Vector3Int highlightedBlockPos = new();
+
+    [NonSerialized]
+    [HideInInspector]
+    public Camera currentCamera;
+
+    // Mirroring
+    public Vector3 mirrorAround = Vector3.zero;
+
+    //Flipped blocks 
+    public enum Flips : byte {
+        Flip_0Deg = 0,
+        Flip_90Deg = 1,
+        Flip_180Deg = 2,
+        Flip_270Deg = 3,
+        Flip_0DegVertical = 4,
+        Flip_90DegVertical = 5,
+        Flip_180DegVertical = 6,
+        Flip_270DegVertical = 7
+    }
+
+    public static string[] flipNames = {
+        "0 Deg",
+        "90 Deg",
+        "180 Deg",
+        "270 Deg",
+        "0 Deg Vertical",
+        "90 Deg Vertical",
+        "180 Deg Vertical",
+        "270 Deg Vertical"
+    };
+
+    public static Flips[] allFlips = (Flips[])System.Enum.GetValues(typeof(Flips));
 
     [HideInInspector] public bool renderingDisabled = false;
 
-    [HideInInspector] private bool debugGrass = false;
-
-    [SerializeField] public bool hasUnsavedChanges = false;
+    //[HideInInspector] private bool debugGrass = false;
+    [NonSerialized] public bool hasUnsavedChanges = false;
 
     //Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static BlockId VoxelDataToBlockId(int block) {
-        return (byte)(block & 0xFFF);    //Lower 12 bits
+        return (ushort)(block & 0xFFF);    //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static BlockId VoxelDataToBlockId(VoxelData block) {
-        return (byte)(block & 0xFFF);    //Lower 12 bits
+        return (ushort)(block & 0xFFF);    //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort VoxelDataToExtraBits(VoxelData block) {
         //mask off everything except the upper 4 bits
-        return (byte)(block & 0xF000);
+        return (ushort)(block & 0xF000);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool VoxelIsSolid(VoxelData voxel) {
         return (voxel & 0x8000) != 0; //15th bit 
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static VoxelData SetVoxelSolidBit(VoxelData voxel, bool solid) {
+        //Solid bit is bit 15, toggle it on or off
+        if (solid) {
+            return (ushort)(voxel | 0x8000);
+        }
+        else {
+            return (ushort)(voxel & 0x7FFF);
+        }
+    }
+
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int GetVoxelFlippedBits(VoxelData voxel) {
+        //Flipped bits are the 12th,13th and 14th bits
+        return (voxel & 0x7000) >> 12;
+    }
+    
+    public static Quaternion FlipBitsToQuaternion(int flipBits) {
+        var flipEnum = (Flips) flipBits;
+        switch (flipEnum) {
+            case Flips.Flip_0Deg:
+                return Quaternion.identity;
+            case Flips.Flip_90Deg:
+                return Quaternion.Euler(0, 90, 0);
+            case Flips.Flip_180Deg:
+                return Quaternion.Euler(0, 180, 0);
+            case Flips.Flip_270Deg:
+                return Quaternion.Euler(0, 270, 0);
+            case Flips.Flip_0DegVertical:
+                return Quaternion.Euler(0, 0, 180);
+            case Flips.Flip_90DegVertical:
+                return Quaternion.Euler(0, 90, 180);
+            case Flips.Flip_180DegVertical:
+                return Quaternion.Euler(0, 180, 180);
+            case Flips.Flip_270DegVertical:
+                return Quaternion.Euler(0, 270, 180);
+        }
+        return Quaternion.identity;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int SetVoxelFlippedBits(int voxel, int flippedBits) {
+        // Ensure flippedBits is a 3-bit value (0-7)
+        flippedBits &= 0x7;
+
+        // Clear the 12th, 13th, and 14th bits in the original voxel
+        voxel &= ~0x7000;
+
+        // Set the 12th, 13th, and 14th bits using the flippedBits
+        voxel |= (flippedBits << 12);
+
+        return voxel;
     }
 
 
@@ -147,6 +234,9 @@ public partial class VoxelWorld : MonoBehaviour {
     public Vector3 TransformVectorToWorldSpace(Vector3 vec) {
         return transform.localToWorldMatrix.MultiplyVector(vec);
     }
+    public Vector3 TransformVectorToLocalSpace(Vector3 vec) {
+        return transform.worldToLocalMatrix.MultiplyVector(vec);
+    }
 
 
     public void InvokeOnFinishedReplicatingChunksFromServer() {
@@ -173,14 +263,43 @@ public partial class VoxelWorld : MonoBehaviour {
         var affectedChunk = WriteSingleVoxelAt(posInt, voxel, priority);
         if (affectedChunk != null) {
             //Send network update
-            if (RunCore.IsServer() && worldNetworker != null) {
+            if (RunCore.IsServer() && worldNetworker != null && worldNetworker.networkWriteVoxels) {
                 worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
             }
         }
     }
 
+    public void ColorVoxelAt(Vector3 pos, Color color, bool priority) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out Chunk chunk);
+        if (chunk == null) {
+            return;
+        }
+
+        var voxelPos = FloorInt(pos);
+        if (chunk.GetVoxelAt(voxelPos) == 0) return;
+        
+        chunk.WriteVoxelColor(voxelPos, color);
+        DirtyNeighborMeshes(voxelPos, priority);
+    }
+    
+    public void DamageVoxelAt(Vector3 pos, float damage, bool priority) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out Chunk chunk);
+        if (chunk == null) {
+            return;
+        }
+
+        var voxelPos = FloorInt(pos);
+        if (chunk.GetVoxelAt(voxelPos) == 0) return;
+        
+        chunk.WriteVoxelDamage(voxelPos, damage);
+        DirtyMesh(voxelPos, priority);
+    }
+
     private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
         Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel);
+        DamageVoxelAt(posInt, 0.0f, false);
         if (affectedChunk != null) {
             //Adding voxels to history stack for playback
             BeforeVoxelPlaced?.Invoke(voxel, posInt);
@@ -205,6 +324,14 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         this.WriteVoxelGroupAt(positions, nums, priority);
+    }
+
+    public ushort[] BulkReadVoxels(Vector3[] positions) {
+        var result = new ushort[positions.Length];
+        for (var i = 0; i < positions.Length; i++) {
+            result[i] = ReadVoxelAt(positions[i]);
+        }
+        return result;
     }
 
     public void WriteVoxelGroupAt(Vector3[] positions, double[] nums, bool priority) {
@@ -240,19 +367,15 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return children;
     }
-
-    [HideFromTS]
-    public List<Light> GetChildPointLights() {
-        List<Light> children = new List<Light>();
-        if (this.lightsFolder != null) {
-            foreach (Transform pl in this.lightsFolder.transform) {
-                var maybePl = pl.GetComponent<Light>();
-                if (maybePl != null) {
-                    children.Add(maybePl);
-                }
-            }
+     
+    public GameObject GetPrefabAt(Vector3 pos) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out Chunk chunk);
+        if (chunk == null) {
+            return null;
         }
-        return children;
+ 
+        return chunk.GetPrefabAt(pos);
     }
 
     /*
@@ -431,15 +554,25 @@ public partial class VoxelWorld : MonoBehaviour {
         return (value.GetVoxelAt(pos), value);
     }
 
-    public VoxelData GetVoxelAt(Vector3 pos) {
+    public VoxelData 
+        GetVoxelAt(Vector3 pos) {
         Vector3Int posi = FloorInt(pos);
         Vector3Int chunkKey = WorldPosToChunkKey(posi);
         chunks.TryGetValue(chunkKey, out Chunk value);
         if (value == null) {
             return 0;
-        }
+        } 
 
         return value.GetVoxelAt(posi);
+    }
+    
+    public Color32 GetVoxelColorAt(Vector3 pos) {
+        var posi = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posi);
+        if (!chunks.TryGetValue(chunkKey, out var value)) {
+            return new Color32();
+        }
+        return value.GetVoxelColorAt(posi);
     }
 
     public void DirtyMesh(Vector3Int voxel, bool priority = false) {
@@ -501,7 +634,7 @@ public partial class VoxelWorld : MonoBehaviour {
         // Get a list of all the child game objects
         List<GameObject> children = new List<GameObject>();
         foreach (Transform child in parent.transform) {
-            if (child.name == "Chunks" || child.name == "Lights") {
+            if (child.name == "Chunks") {
                 DeleteChildGameObjects(child.gameObject);
                 continue;
             }
@@ -517,6 +650,9 @@ public partial class VoxelWorld : MonoBehaviour {
      * Creates missing child GameObjects and names things properly.
      */
     private void PrepareVoxelWorldGameObject() {
+        
+        this.loadingStatus = LoadingStatus.NotLoading;
+        
         if (transform.Find("Chunks") != null) {
             this.chunksFolder = transform.Find("Chunks").gameObject;
         }
@@ -529,25 +665,11 @@ public partial class VoxelWorld : MonoBehaviour {
         this.chunksFolder.transform.localRotation = Quaternion.identity;
 
         this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-
-        if (transform.Find("Lights") != null) {
-            this.lightsFolder = transform.Find("Lights").gameObject;
-        }
-        else {
-            this.lightsFolder = new GameObject("Lights");
-            this.lightsFolder.transform.parent = this.transform;
-        }
-
-        this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-        this.lightsFolder.transform.localPosition = Vector3.zero;
-        this.lightsFolder.transform.localScale = Vector3.one;
-        this.lightsFolder.transform.localRotation = Quaternion.identity;
     }
 
     public void GenerateWorld(bool populateTerrain = false) {
         this.PrepareVoxelWorldGameObject();
-
-        
+                
         if (!voxelBlocks) {
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
@@ -606,6 +728,19 @@ public partial class VoxelWorld : MonoBehaviour {
         hasUnsavedChanges = true;
     }
 
+    public void FillFlatGround() {
+        VoxelData grass = voxelBlocks.SearchForBlockIdByString("GRASS");
+
+        for (int x = -64; x < 64; x++) {
+            for (int z = -64; z < 64; z++) {
+                WriteVoxelAtInternal(new Vector3Int(x, 0, z), grass);
+            }
+        }
+        RegenerateAllMeshes();
+
+        hasUnsavedChanges = true;
+    }
+
     public void FillSingleBlock() {
         
         VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
@@ -626,6 +761,11 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     private void OnDestroy() {
+
+#if UNITY_EDITOR        
+        AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+#endif
         foreach (var chunk in chunks) {
             chunk.Value.Free();
         }
@@ -669,47 +809,45 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return sphere;
     }
-
-   
-
+    
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
 
+    public enum LoadingStatus {
+        NotLoading,
+        Loading,
+        Loaded
+    }
     
     [NonSerialized]
-    public bool finishedLoading = false;   //Collision has been fully instantiated for this map
-
+    public LoadingStatus loadingStatus = LoadingStatus.NotLoading;
+    
     
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
-        Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
-
         if (this.voxelBlocks == null) {
             //Error
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
         }
+        
+        Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
         float startTime = Time.realtimeSinceStartup;
  
         this.delayUpdate = 1;
-        this.finishedLoading = false;
-
+        
         //Clear to begin with
         DeleteChildGameObjects(gameObject);
         
         this.PrepareVoxelWorldGameObject();
+        this.loadingStatus = LoadingStatus.Loading;
 
         this.voxelBlocks.Reload();
+        
         //load the text of textAsset
         file.LoadIntoVoxelWorld(this);
 
-        //Turns grass bushes on
-        if (debugGrass == true) {
-            PlaceGrassOnTopOfGrass();
-        }
-
         RegenerateAllMeshes();
          
-
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
 
@@ -751,58 +889,15 @@ public partial class VoxelWorld : MonoBehaviour {
     public void SaveToDomainReloadFile() {
 #if UNITY_EDITOR
 
-        if (chunks.Count > 0) {
+        if (chunks.Count > 0 && hasUnsavedChanges) {
             //Create a temporary asset for saving
-            this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+            /*this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
             this.domainReloadSaveFile.CreateFromVoxelWorld(this);
+            Debug.Log("Temporarily saving Voxel World");*/
+            SaveToFile();
         }
 #endif        
-    }
-
-    public void PlaceGrassOnTopOfGrass() {
-        
-        if (voxelBlocks == null) {
-            return;
-        }
-        //Copy the list of chunks
-        List<Chunk> chunksCopy = new List<Chunk>(chunks.Values);
-
-        BlockId grass = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:GRASS");
-        BlockId grassTop = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:FLUFFY_GRASS");
-
-        foreach (var chunk in chunksCopy) {
-            //get voxels
-            VoxelData[] readOnlyVoxel = chunk.readWriteVoxel;
-
-            //scan through all voxels, if its grass, spawn a grass tile
-            for (int x = 0; x < VoxelWorld.chunkSize; x++) {
-                for (int y = 0; y < VoxelWorld.chunkSize; y++) {
-                    for (int z = 0; z < VoxelWorld.chunkSize; z++) {
-
-                        int voxelKey = x + y * chunkSize + z * chunkSize * chunkSize;
-                        VoxelData vox = readOnlyVoxel[voxelKey];
-
-                        BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
-
-                        if (blockIndex == grass) //grass
-                        {
-                            //grab the one above, if its air
-                            VoxelData air = ReadVoxelAt(new Vector3Int(x, y + 1, z) + chunk.bottomLeftInt);
-                            BlockId blockIndex2 = VoxelWorld.VoxelDataToBlockId(air);
-
-                            if (blockIndex2 == 0) //air
-                            {
-                                //spawn a grass tile
-                                WriteVoxelAt(new Vector3Int(x, y + 1, z) + chunk.bottomLeftInt, grassTop, false); //grasstop
-                            }
-                        }
-
-
-                    }
-                }
-            }
-        }
-    }
+    } 
 
     /**
      * Used in TS on the client.
@@ -827,47 +922,34 @@ public partial class VoxelWorld : MonoBehaviour {
  
 
     private void Awake() {
-        this.finishedLoading = false;
-
-        /*
-        // Load the text of textAsset
-        if (Application.isPlaying == false) {
-            this.blocks = new VoxelBlocks();
-            this.blocks.Load(this.GetBlockDefinesContents());
-        }*/
+        doVisuals = RunCore.IsClient() || Application.isEditor;
+        PrepareVoxelWorldGameObject();
     }
 
     public VoxelWorld() {
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
-        #endif
-    }
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+#endif
+    } 
 
     private void OnEnable() {
 
-#if UNITY_EDITOR        
-        if (this.domainReloadSaveFile != null) {
+#if UNITY_EDITOR
+       /* if (this.domainReloadSaveFile != null) {
             Debug.Log("Reloading " + name + " after doman reload");
             this.LoadWorldFromSaveFile(this.domainReloadSaveFile);
             this.domainReloadSaveFile = null;
             this.hasUnsavedChanges = true;
-            return;
-        }
+            return; 
+        }*/
           
-#endif        
-
-        if (!Application.isPlaying) {
-            if (this.voxelWorldFile != null) {
-                this.LoadWorldFromSaveFile(this.voxelWorldFile);
-            }
-        }
+#endif
+        
 
         if (Application.isPlaying && this.autoLoad) {
-            if (RunCore.IsServer() && voxelWorldFile != null) {
+            if (voxelWorldFile != null) {
                 this.LoadWorldFromSaveFile(voxelWorldFile);
-            }
-            else {
-                this.LoadEmptyWorld();
             }
             return;
         }
@@ -887,6 +969,17 @@ public partial class VoxelWorld : MonoBehaviour {
                 GenerateWorld(false);
             }
         }*/
+    }
+
+    /// <summary>
+    /// Waits until the chunk containing the passed in position loads. Returns
+    /// immediately if the chunk is already loaded.
+    /// </summary>
+    public async Task WaitForChunkToLoad(Vector3 voxel) {
+        var chunk = GetChunkByVoxel(voxel);
+        if (chunk == null) return;
+        
+        await chunk.WaitForLoaded();
     }
 
     private void RegenerateMissingChunkGeometry() {
@@ -970,7 +1063,8 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
 
-        if (!this.finishedLoading) {
+        if (this.loadingStatus == LoadingStatus.Loading) {
+            
             bool hasDirtyChunk = false;
             foreach (var chunkPair in chunks) {
                 if (chunkPair.Value.IsGeometryDirty()) {
@@ -978,9 +1072,10 @@ public partial class VoxelWorld : MonoBehaviour {
                     break;
                 }
             }
+            //Debug.Log("Awaiting load - chunks remaining:" + hasDirtyChunk);
 
             if (!hasDirtyChunk) {
-                this.finishedLoading = true;
+                this.loadingStatus = LoadingStatus.Loaded;
                 this.OnFinishedLoading?.Invoke();
             }
         }
@@ -1000,11 +1095,12 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 #endif
         if (cam == null) {
-            cam = GameObject.FindObjectOfType<Camera>();
+            cam = GameObject.FindFirstObjectByType<Camera>();
         }
         foreach (var c in chunks) {
             c.Value.currentCamera = cam;
         }
+        currentCamera = cam;
 
         Profiler.BeginSample("RegenerateMissingChunkGeometry");
         RegenerateMissingChunkGeometry();
@@ -1034,7 +1130,7 @@ public partial class VoxelWorld : MonoBehaviour {
             if (SceneView.lastActiveSceneView != null) {
                 this.focusPosition = SceneView.lastActiveSceneView.camera.transform.position;
             }
-#endif          
+#endif
 
         }
     }
@@ -1138,5 +1234,14 @@ public partial class VoxelWorld : MonoBehaviour {
         SaveToDomainReloadFile();
     } 
 
-    
+#if UNITY_EDITOR
+    private void OnPlayModeStateChanged(PlayModeStateChange state) {
+        if (state == PlayModeStateChange.ExitingEditMode && chunks.Count > 0 && hasUnsavedChanges) {
+            SaveToFile();
+        }
+    }
+#endif
+
+
+
 }

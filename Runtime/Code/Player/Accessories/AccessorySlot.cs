@@ -24,4 +24,12 @@ public enum AccessorySlot {
     FeetInner,
     LeftFoot,
     RightFoot,
+    LeftLegUpper,
+    LeftLegLower,
+    RightLegUpper,
+    RightLegLower,
+    LeftArmUpper,
+    LeftArmLower,
+    RightArmUpper,
+    RightArmLower
 }    

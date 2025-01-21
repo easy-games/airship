@@ -99,6 +99,15 @@ namespace Editor {
 
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
+            
+            // Grab icons
+            var sizes = new[] { 1024, 512, 256, 128, 64, 48, 32, 16 };
+            var icons = new Texture2D[8];
+            for (var i = 0; i < sizes.Length; i++) {
+                var iconSize = sizes[i];
+                icons[i] = AssetDatabase.LoadAssetAtPath<Texture2D>($"Assets/App Icons/logo_mac/mac_icon_{iconSize}.png");
+            }
+            PlayerSettings.SetIcons(NamedBuildTarget.Standalone, icons, IconKind.Application);
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
@@ -224,6 +233,7 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            PlayerSettings.SetIcons(NamedBuildTarget.Standalone, Array.Empty<Texture2D>(), IconKind.Application);
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();

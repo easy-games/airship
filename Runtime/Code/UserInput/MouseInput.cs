@@ -17,6 +17,8 @@ public class MouseInput : IDisposable {
             Mouse.current.leftButton,
             Mouse.current.middleButton,
             Mouse.current.rightButton,
+            Mouse.current.forwardButton,
+            Mouse.current.backButton,
             Mouse.current.position,
             Mouse.current.scroll,
         };
@@ -39,6 +41,10 @@ public class MouseInput : IDisposable {
                             OnButton?.Invoke(MouseButton.Right, down);
                         } else if (context.control == Mouse.current.middleButton) {
                             OnButton?.Invoke(MouseButton.Middle, down);
+                        } else if (context.control == Mouse.current.forwardButton) {
+                            OnButton?.Invoke(MouseButton.Forward, down);
+                        } else if (context.control == Mouse.current.backButton) {
+                            OnButton?.Invoke(MouseButton.Back, down);
                         }
                     }
 

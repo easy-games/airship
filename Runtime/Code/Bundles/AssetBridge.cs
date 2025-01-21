@@ -16,8 +16,8 @@ using Object = UnityEngine.Object;
 [Preserve]
 public class AssetBridge : IAssetBridge
 {
-	public static string GamesPath = Path.Join(Application.persistentDataPath, "Games");
-	public static string PackagesPath = Path.Join(Application.persistentDataPath, "Packages");
+	public static string GamesPath = Path.Join("bundles", "games");
+	public static string PackagesPath = Path.Join("bundles", "packages");
 
 	public static bool useBundles = true;
 
@@ -79,13 +79,17 @@ public class AssetBridge : IAssetBridge
 	/// Used by TS.
 	/// C# should use <see cref="LoadAssetInternal{T}" />
 	/// </summary>
-	public Object LoadAsset(string path)
-	{
+	public Object LoadAsset(string path) {
+		if (path.EndsWith(".sprite")) {
+			return LoadAssetInternal<Sprite>(path.Replace(".sprite", ""));
+		}
 		return LoadAssetInternal<Object>(path);
 	}
 
-	public Object LoadAssetIfExists(string path)
-	{
+	public Object LoadAssetIfExists(string path) {
+		if (path.EndsWith(".sprite")) {
+			return LoadAssetInternal<Sprite>(path.Replace(".sprite", ""), false);
+		}
 		return LoadAssetInternal<Object>(path, false);
 	}
 
@@ -237,6 +241,7 @@ public class AssetBridge : IAssetBridge
 
 		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
 			if (path != "gameconfig.asset") {
+				Profiler.EndSample();
 				Debug.LogError($"Failed to load asset at path: \"{fixedPath}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
 				return null;
 			}

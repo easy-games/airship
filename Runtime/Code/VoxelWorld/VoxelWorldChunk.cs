@@ -1,13 +1,14 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
 using UnityEngine;
-
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System.Runtime.CompilerServices;
-using UnityEditor.Rendering;
+using System.Threading.Tasks;
 using UnityEngine.Profiling;
+using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace VoxelWorldStuff {
     public enum SurfaceBits : byte {
@@ -26,6 +27,9 @@ namespace VoxelWorldStuff {
     // 000000000000     000         0
 
     public class Chunk {
+        #if !UNITY_SERVER
+        private static Material simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Lit"));
+        #endif
         
         private static readonly Vector3Int[] searchOffsets =
         {
@@ -48,9 +52,11 @@ namespace VoxelWorldStuff {
 
         //Permanent data
         public UInt16[] readWriteVoxel = new UInt16[chunkSize * chunkSize * chunkSize];
+        public uint[] color = new uint[chunkSize * chunkSize * chunkSize];
+        public Dictionary<ushort, float> damageMap = new();
 
         //Currently instantiated prefabs
-        private Dictionary<Vector3Int,GameObject> prefabObjects;
+        private Dictionary<Vector3Int, (GameObject, int)> prefabObjects;
 
         public bool materialPropertiesDirty = true;
 
@@ -62,6 +68,10 @@ namespace VoxelWorldStuff {
 
         private bool geometryDirty = true;
         private bool geometryDirtyPriorityUpdate = false;
+        /// <summary>
+        /// This is true if the chunk has been built once
+        /// </summary>
+        private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
  
         public Camera currentCamera = null;
                 
@@ -93,6 +103,7 @@ namespace VoxelWorldStuff {
         private Mesh[] detailMeshes;
         private MeshFilter[] detailFilters;
         private MeshRenderer[] detailRenderers;
+        private MeshRenderer shadowRenderer;
         
 
         private GameObject parent;
@@ -138,6 +149,18 @@ namespace VoxelWorldStuff {
             return count;
         }
 
+        public GameObject GetPrefabAt(Vector3 worldPos) {
+            if (prefabObjects == null) {
+                return null;
+            }
+            Vector3Int localKey = WorldPosToLocalPos(Vector3Int.FloorToInt(worldPos));
+
+            if (prefabObjects.TryGetValue(localKey, out var prefab)) {
+                return prefab.Item1;
+            }
+            return null;
+        }
+
         private void ClearPrefabsMainThread() {
             //If its the editor detroy
 
@@ -148,17 +171,17 @@ namespace VoxelWorldStuff {
             if (Application.isPlaying == false) {
                 foreach (var obj in prefabObjects) {
                
-                    GameObject.DestroyImmediate(obj.Value);
+                    GameObject.DestroyImmediate(obj.Value.Item1);
                 }
             }
             else {
                 foreach (var obj in prefabObjects) {
-                    GameObject.Destroy(obj.Value);
+                    GameObject.Destroy(obj.Value.Item1);
                 }
             }
 #else
             foreach (var obj in prefabObjects) {
-                GameObject.Destroy(obj.Value);
+                GameObject.Destroy(obj.Value.Item1);
             }
 #endif
             
@@ -167,10 +190,10 @@ namespace VoxelWorldStuff {
 
         private void FullInstatiatePrefabsMainThread() {
 
-            ClearPrefabsMainThread();
+            // ClearPrefabsMainThread();
 
             if (prefabObjects == null) {
-                prefabObjects = new Dictionary<Vector3Int, GameObject>();
+                prefabObjects = new Dictionary<Vector3Int, (GameObject, int)>();
             }
 
             if (obj == null) {
@@ -181,28 +204,43 @@ namespace VoxelWorldStuff {
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for (int z = 0; z < chunkSize; z++) {
-                        
-                        BlockId blockId = VoxelWorld.VoxelDataToBlockId(GetLocalVoxelAt(x, y, z));
-                        
-                        if (blockId > 0) {
-                            var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
-                            if (blockDefinition.definition.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
-                                GameObject prefabDef = blockDefinition.definition.prefab;
-                                GameObject prefab = GameObject.Instantiate(prefabDef);
-                                Vector3Int pos = new Vector3Int(x, y, z);
-                                prefab.transform.parent = obj.transform;
-                                prefab.transform.localPosition = origin + pos;
-                                prefab.transform.localRotation = Quaternion.identity;
-                                prefab.transform.localScale = Vector3.one;
+                        var voxelData = GetLocalVoxelAt(x, y, z);
+                        BlockId blockId = VoxelWorld.VoxelDataToBlockId(voxelData);
 
-                                if (blockDefinition.definition.randomRotation) {
-                                    float angle = VoxelWorld.HashCoordinates(x,y,z) % 4;
-                                    prefab.transform.localRotation = Quaternion.Euler(0, angle * 90, 0);
-                                }
-                                prefabObjects.Add(pos, prefab);
-                            }
+                        // If this is a new block type destroy the existing prefab
+                        var localChunkPos = new Vector3Int(x, y, z);
+                        if (prefabObjects.TryGetValue(localChunkPos, out var existingPrefab)) {
+                            // Prefab unchanged
+                            if (blockId == existingPrefab.Item2) {
+                                existingPrefab.Item1.transform.parent = obj.transform;
+                                continue;
+                            } 
+                            
+                            prefabObjects.Remove(localChunkPos);
+                            Object.Destroy(existingPrefab.Item1);
                         }
-                      
+
+                        if (blockId == 0) {
+                            continue;
+                        }
+
+                        var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
+                        if (blockDefinition.definition.contextStyle != VoxelBlocks.ContextStyle.Prefab) {
+                            continue;
+                        }
+
+                        GameObject prefabDef = blockDefinition.definition.prefab;
+                        var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
+                        var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
+                        GameObject prefab = GameObject.Instantiate(prefabDef, origin + localChunkPos, rot,  obj.transform);
+                        prefab.transform.parent = obj.transform;
+                        prefab.transform.localScale = Vector3.one;
+
+                        if (blockDefinition.definition.randomRotation) {
+                            float angle = VoxelWorld.HashCoordinates(x,y,z) % 4;
+                            prefab.transform.localRotation = Quaternion.Euler(0, angle * 90, 0);
+                        }
+                        prefabObjects.Add(localChunkPos, (prefab, blockId));
                     }
                 }
             }
@@ -328,6 +366,48 @@ namespace VoxelWorldStuff {
             return readWriteVoxel[key];
         }
 
+        private uint Color32ToUInt(Color32 col) {
+            uint res = (uint) col.r << 24;
+            res |= (uint) col.g << 16;
+            res |= (uint) col.b << 8;
+            res |= (uint)col.a;
+            return res;
+        }
+        
+        public Color32 GetVoxelColorAt(Vector3Int worldPos) {
+            var key = WorldPosToVoxelIndex(worldPos);
+            var col= color[key];
+            return UIntToColor32(col);
+        }
+
+        private Color32 UIntToColor32(uint col) {
+            var r = (byte) ((col & 0xFF000000) >> 24);
+            var g = (byte) ((col & 0x00FF0000) >> 16);
+            var b = (byte) ((col & 0x0000FF00) >> 8);
+            var a = (byte) (col & 0x000000FF);
+            return new Color32(r, g, b, a);
+        }
+        
+        public void WriteVoxelColor(Vector3Int worldPos, Color32 col) {
+            int key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return;
+            }
+
+            color[key] = Color32ToUInt(col);
+        }
+        
+        public void WriteVoxelDamage(Vector3Int worldPos, float dmg) {
+            int key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return;
+            }
+
+            damageMap[(ushort) key] = dmg;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VoxelData GetLocalVoxelAt(Vector3Int localPos) {
             int key = localPos.x + localPos.y * chunkSize + localPos.z * chunkSize * chunkSize;
@@ -339,7 +419,15 @@ namespace VoxelWorldStuff {
             int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
             return readWriteVoxel[key];
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Color32 GetLocalColorAt(int localX, int localY, int localZ) {
+            int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
+            var col = color[key];
+            if (col == 0) return default;
+            return UIntToColor32(col);
+        }
+        
         public void Clear() {
             if (obj != null) {
                 colliders.Clear();
@@ -362,7 +450,7 @@ namespace VoxelWorldStuff {
 
         public bool MainthreadUpdateMesh(VoxelWorld world) {
 #pragma warning disable CS0162
-            if (VoxelWorld.doVisuals == false) {
+            if (this.world.doVisuals == false) {
                 return DoHeadlessUpdate(world);
             }
             else {
@@ -373,22 +461,36 @@ namespace VoxelWorldStuff {
 
         private bool DoHeadlessUpdate(VoxelWorld world) {
             if (IsGeometryDirty() == true) {
+                var newChunk = new GameObject();
+                
                 if (obj != null) {
+                    // Copy prefabs to new chunk (so we don't destroy them)
+                    foreach (var (pos, prefab) in prefabObjects) {
+                        prefab.Item1.transform.parent = newChunk.transform;
+                    }
+                    
                     Clear();
                 }
 
                 if (obj == null) {
-                    obj = new GameObject();
+                    obj = newChunk;
                     obj.transform.parent = parent.transform;
+                    obj.transform.localRotation = Quaternion.identity;
+                    obj.transform.localScale = Vector3.one;
+                    obj.transform.localPosition = Vector3.zero;
+                    obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                     obj.name = "Chunk";
-              
 
                     renderer = obj.AddComponent<MeshRenderer>();
                 }
 
+                //Fill the prefabs out
+                FullInstatiatePrefabsMainThread();
+                
                 //Fill the collision out
                 VoxelWorldCollision.MakeCollision(this);
                 geometryDirty = false;
+                SetLoaded();
                 return true;
             }
 
@@ -423,21 +525,34 @@ namespace VoxelWorldStuff {
 
         private bool DoVisualUpdate(VoxelWorld world) {
             if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true) {
+                LODGroup lodSystem = null;
                 //This runs on the main thread, so we can do unity scene manipulation here (and only here)
                 if (meshProcessor.GetGeometryReady() == true) {
                      
                     Profiler.BeginSample("ChunkMainThread");
+                    
+                    var newChunk = new GameObject();
                     if (obj != null) {
+                        // Copy prefabs to new chunk (so we don't destroy them)
+                        foreach (var (pos, prefab) in prefabObjects) {
+                            prefab.Item1.transform.parent = newChunk.transform;
+                        }
+                        
                         Clear();
                     }
 
                     if (obj == null) {
-
-                        obj = new GameObject();
+                        obj = newChunk;
+                        obj.layer = world.gameObject.layer;
                         obj.transform.parent = parent.transform;
+                        obj.transform.localRotation = Quaternion.identity;
+                        obj.transform.localScale = Vector3.one;
+                        obj.transform.localPosition = Vector3.zero;
+                        obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
-                        mesh = new Mesh();
-                        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
+                        
+                        if (mesh == null) mesh = new Mesh();
+                        // mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                         filter = obj.AddComponent<MeshFilter>();
                         filter.mesh = mesh;
@@ -446,10 +561,11 @@ namespace VoxelWorldStuff {
                         renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
 
                         //See if this mesh has detail meshes
-                        if (meshProcessor.GetHasDetailMeshes() == true) {
-                            
+                        if (meshProcessor.GetHasDetailMeshes() == true) { //@@ This code has bugs when you delete all the meshes
+
                             if (detailGameObjects == null) {
                                 detailGameObjects = new GameObject[3];
+                                
 
                                 detailMeshes = new Mesh[3];
                                 detailFilters = new MeshFilter[3];
@@ -458,7 +574,14 @@ namespace VoxelWorldStuff {
 
                             for (int i = 0; i < 3; i++) {
                                 detailGameObjects[i] = new GameObject();
+                                detailGameObjects[i].layer = world.gameObject.layer;
+                                detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                                 detailGameObjects[i].transform.parent = obj.transform;
+
+                                detailGameObjects[i].transform.localRotation = Quaternion.identity;
+                                detailGameObjects[i].transform.localScale = Vector3.one;
+                                detailGameObjects[i].transform.localPosition = Vector3.zero;
+
                                 if (i == 0) {
                                     detailGameObjects[i].name = "DetailMeshNear";
                                 }
@@ -468,32 +591,55 @@ namespace VoxelWorldStuff {
                                 if (i == 2) {
                                     detailGameObjects[i].name = "DetailMeshVeryFar";
                                 }
-                                
+
                                 detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
                                 detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
+                                detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
 
                                 detailMeshes[i] = new Mesh();
-                                detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
+                                // detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                                 detailFilters[i].mesh = detailMeshes[i];
                             }
-
-                            LODGroup lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
+                            
+                            // Setup lod'd shadows
+                            var shadowGo = new GameObject("ShadowCaster", typeof(MeshFilter), typeof(MeshRenderer));
+                            var shadowFilter = shadowGo.GetComponent<MeshFilter>();
+                            shadowFilter.mesh = detailMeshes[1]; // DetailMeshFar is our shadow mesh -- should make this configurable
+                            shadowRenderer = shadowGo.GetComponent<MeshRenderer>();
+                            #if !UNITY_SERVER
+                            shadowRenderer.sharedMaterial = simpleLitMaterial;
+                            #endif
+                            shadowRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly; // Only cast shadows (invisible)
+                            shadowRenderer.staticShadowCaster = true;
+                            shadowGo.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+                            shadowGo.transform.parent = obj.transform;
+                            
+                            
+                            lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
 
                             // Enable crossfade
-                            lodSystem.fadeMode = LODFadeMode.CrossFade;
-                            lodSystem.animateCrossFading = true;
+                            lodSystem.fadeMode = LODFadeMode.None;
+                            lodSystem.animateCrossFading = false;
 
                             // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
                             LOD[] lods = new LOD[3] {
-                                new LOD(0.07f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
-                                new LOD(0.03f, new Renderer[] { detailRenderers[1] }),
-                                new LOD(0.0f, new Renderer[] { detailRenderers[2] })  
+                                new LOD(0.4f, new Renderer[] { detailRenderers[0] }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                new LOD(0.01f, new Renderer[] { detailRenderers[1] }),
+                                new LOD(0.0f, new Renderer[] { detailRenderers[2] })
                             };
-                       
+
                             lodSystem.SetLODs(lods);
-
-
+                        }
+                        else {
+                            if (detailGameObjects != null) {
+                                for (int i = 0; i < 3; i++) {
+                                    if (detailGameObjects[i] != null) {
+                                        GameObject.DestroyImmediate(detailGameObjects[i]);
+                                        detailGameObjects[i] = null;
+                                    }
+                                }
+                            }
                         }
                     }
                     
@@ -504,9 +650,6 @@ namespace VoxelWorldStuff {
                     Profiler.EndSample();
 
                     Profiler.BeginSample("RebuildCollision");
-
-                    
-
                     //Fill the collision out
                     //Greedy mesh time!
                     VoxelWorldCollision.MakeCollision(this);
@@ -527,9 +670,17 @@ namespace VoxelWorldStuff {
                 }
 
                 Profiler.BeginSample("FinalizeMesh");
-                meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, world);
+                meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, shadowRenderer, world);
                 meshProcessor = null; //clear it
                 Profiler.EndSample();
+
+                if (lodSystem != null) {
+                    Profiler.BeginSample("RecalculateLodBounds");
+                    // lodSystem.RecalculateBounds();
+                    lodSystem.size = (chunkSize / 2.0f) * 1.732f; // cube radius * sqrt(3)
+                    lodSystem.localReferencePoint = chunkKey * chunkSize + (chunkSize / 2.0f) * Vector3.one; 
+                    Profiler.EndSample();
+                }
 
                 Profiler.BeginSample("UpdatePropertiesForChunk");
                 materialPropertiesDirty = true;
@@ -555,8 +706,25 @@ namespace VoxelWorldStuff {
             //Note this is not cleared while there is still a processing mesh (earlier in this method) because it makes sure the mesh always captures new updates
             geometryDirty = false;
             geometryDirtyPriorityUpdate = false;
+            SetLoaded();
 
             return true;
+        }
+
+        /// <summary>
+        /// This gets marked as true once the chunk has done its first build
+        /// </summary>
+        public bool IsLoaded() {
+            return loadedTask.Task.IsCompleted;
+        }
+
+        public async Task WaitForLoaded() {
+            if (loadedTask.Task.IsCompleted) return;
+            await loadedTask.Task;
+        }
+
+        private void SetLoaded() {
+            loadedTask.TrySetResult(true);
         }
 
         public static bool TestAABBSphere(Bounds aabb, Vector3 sphereCenter, float sphereRadius) {
@@ -571,6 +739,11 @@ namespace VoxelWorldStuff {
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void OnStartup() {
+            #if !UNITY_SERVER
+            // Reset simple lit material
+            Object.Destroy(simpleLitMaterial);
+            simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Lit"));
+            #endif
             Array.Clear(lightsPositions, 0, lightsPositions.Length);
             Array.Clear(lightColors, 0, lightColors.Length);
             Array.Clear(lightRadius, 0, lightRadius.Length);

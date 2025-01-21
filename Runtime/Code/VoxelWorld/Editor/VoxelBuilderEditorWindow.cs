@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.TerrainTools;
 using UnityEngine;
 
 namespace Code.Airship.Resources.VoxelRenderer.Editor {
@@ -24,6 +25,13 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
         [MenuItem("Airship/Misc/VoxelEditor")]
         static void Init() {
             ShowWindow();
+        }
+
+        public static void ForceRepaint() {
+
+            if (active) {
+                GetWindow<VoxelBuilderEditorWindow>().Repaint();
+            }
         }
 
         public static void ShowWindow() {
@@ -109,8 +117,6 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             ShowSelectionGui();
             
-            
-            
             VoxelWorld world = GetVoxelWorld();
             SelectionZone selection = null;
             if (world == null || world.voxelBlocks == null) {
@@ -118,32 +124,36 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 return; 
             }
             
-
             //See if we're in the selection mode
             if (VoxelWorldSelectionToolBase.buttonActive == true) {
                 //Find or create the SelectionZone for this voxelWorld
 
-                selection = world.GetComponentInChildren<SelectionZone>();
+                selection = world.GetComponentInChildren<SelectionZone>(true);
                 if (selection == null) {
                     selection = new GameObject("SelectionZone").AddComponent<SelectionZone>();
-                    selection.hideFlags = HideFlags.DontSave;
+                    selection.hideFlags = HideFlags.HideAndDontSave;
                     selection.transform.parent = world.transform;
                     selection.transform.localPosition = Vector3.zero;
                     selection.voxelWorld = world;
                 }
                 //Select this
+                selection.gameObject.SetActive(true);
                 Selection.activeGameObject = selection.gameObject;
+                
             }
             if (VoxelWorldEditorToolBase.buttonActive == true) {
             
-                //If we're not in selection mode, destroy the selection zone
+                //If we're not in selection mode, disable the selection zone
                 selection = world.GetComponentInChildren<SelectionZone>();
                                 
                 if (selection) {
                     //Select the world
                     Selection.activeGameObject = world.gameObject;
-                    //Destroy it
-                    DestroyImmediate(selection.gameObject);
+                    //disable it
+                    selection.gameObject.SetActive(false);
+                    
+                    //we used to destroy it
+                    //DestroyImmediate(selection.gameObject);
                 }
             }
 
@@ -154,6 +164,33 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             //gap
             EditorGUILayout.Space();
+
+            //Prefab
+
+            GameObject prefab = world.GetPrefabAt(world.highlightedBlockPos);
+            
+            ushort blockData = world.GetVoxelAt(world.highlightedBlockPos);
+
+            GUILayout.Label("Highlighted Block");
+
+            if (VoxelWorld.VoxelDataToBlockId(blockData) == 0) {
+                GUI.enabled = false;
+            }
+            int flipBits = VoxelWorld.GetVoxelFlippedBits(blockData);
+
+            Color def = GUI.backgroundColor;
+
+            GUILayout.BeginHorizontal();
+
+            GUILayout.Label("Rotation: " + VoxelWorld.flipNames[flipBits]);
+          
+            GUI.backgroundColor = def;
+            GUILayout.EndHorizontal();
+            GUI.enabled = true;
+
+            if (prefab != null) {
+                GUILayout.Label("Prefab: " + prefab.name);
+            }
 
             GUILayout.Label("Blocks", EditorStyles.boldLabel);
 
@@ -183,11 +220,25 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             }
             GUILayout.EndScrollView();
             GUI.enabled = true;
+ 
+
+        }
+        
+        void onSceneGUIDelegate(SceneView sceneView) {
+           
+           
+            
         }
 
         void OnEnable() {
             base.autoRepaintOnSceneChange = true;
+            SceneView.duringSceneGui += onSceneGUIDelegate;
+            
+        } 
+        private void OnDisable() {
+            SceneView.duringSceneGui -= onSceneGUIDelegate;
         }
     }
+
 }
 #endif

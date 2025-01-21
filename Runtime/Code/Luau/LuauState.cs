@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Profiling;
 using Object = UnityEngine.Object;
 
 namespace Luau {
@@ -60,7 +61,12 @@ namespace Luau {
 
         public static void UpdateAll() {
             foreach (var (_, state) in StatesPerContext) {
-                state.OnUpdate();
+                Profiler.BeginSample($"Update{Enum.GetName(typeof(LuauContext), state.Context)}");
+                try {
+                    state.OnUpdate();
+                } finally {
+                    Profiler.EndSample();   
+                }
             }
         }
 
@@ -162,6 +168,8 @@ namespace Luau {
         }
 
         private void OnUpdate() {
+            LuauPlugin.LuauResetTimeCache(Context, false);
+            
             var runBuffer = _currentBuffer;
             if (_currentBuffer == _pendingCoroutineResumesA) {
                 _currentBuffer = _pendingCoroutineResumesB;
@@ -169,15 +177,21 @@ namespace Luau {
                 _currentBuffer = _pendingCoroutineResumesA;
             }
 
+            Profiler.BeginSample("RunYieldedThreads");
             foreach (CallbackRecord coroutineCallback in runBuffer) {
                 // Context of the callback is in coroutineCallback.trace
                 ThreadDataManager.SetThreadYielded(coroutineCallback.callback, false);
                 LuauPlugin.LuauRunThread(coroutineCallback.callback);
             }
+            Profiler.EndSample();
             runBuffer.Clear();
             
+            Profiler.BeginSample("RunTaskScheduler");
             LuauPlugin.LuauRunTaskScheduler(Context);
+            Profiler.EndSample();
+            Profiler.BeginSample("UpdateAirshipComponents");
             LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
+            Profiler.EndSample();
         }
 
         private void OnLateUpdate() {
@@ -185,6 +199,7 @@ namespace Luau {
         }
 
         private void OnFixedUpdate() {
+            LuauPlugin.LuauResetTimeCache(Context, true);
             LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipFixedUpdate, Time.fixedDeltaTime);
         }
     }

@@ -1,8 +1,10 @@
 ﻿#if UNITY_EDITOR
 using System.Collections;
+using Editor;
 using Editor.EditorInternal;
 using Editor.Packages;
 using ParrelSync;
+using Unity.EditorCoroutines.Editor;
 using Unity.Multiplayer.Playmode;
 using UnityEditor;
 using UnityEngine;
@@ -73,8 +75,8 @@ namespace Airship.Editor {
         /// True if the compiler services is currently "restarting" due to something like packages updating
         /// </summary>
         internal static bool IsAwaitingRestart { get; private set; }
-
-        internal static IEnumerator RestartForPackageModification() {
+        
+        internal static IEnumerator RestartAndAwaitUpdates() {
             if (!TypescriptCompilationService.IsWatchModeRunning || IsAwaitingRestart) {
                 yield break;
             }
@@ -82,7 +84,7 @@ namespace Airship.Editor {
             IsAwaitingRestart = true;
             TypescriptCompilationService.StopCompilerServices();
             TypescriptCompilationService.ClearIncrementalCache();
-            yield return new WaitUntil(() => !AirshipPackagesWindow.IsModifyingPackages);
+            yield return new WaitUntil(() => !AirshipPackagesWindow.IsModifyingPackages && !AirshipUpdateService.IsUpdatingAirship);
             TypescriptCompilationService.StartCompilerServices();
             IsAwaitingRestart = false;
         }
@@ -160,20 +162,33 @@ namespace Airship.Editor {
             }
         }
 
+        private static IEnumerator RestoreErrorsOnNextFrame() {
+            yield return new WaitForEndOfFrame();
+            
+            var prefix = $"<color=#8e8e8e>TS</color>";
+            
+            foreach (var problem in TypescriptProjectsService.Project.ProblemItems) {
+                if (problem is TypescriptFileDiagnosticItem diagnosticItem) {
+                    var diagnosticString = ConsoleFormatting.GetProblemItemString(diagnosticItem);
+                    Debug.LogError($"{prefix} {diagnosticString}");
+                }
+                   
+            }
+
+            isRestoringErrors = false;
+        }
+        
         private static int prevLogCount = 0;
+        private static bool isRestoringErrors = false;
         private static void OnUpdate() {
+            if (isRestoringErrors) return;
             int logCount = LogExtensions.GetLogCount();
             
             if (logCount <= 0 && TypescriptProjectsService.ProblemCount > 0 && EditorIntegrationsConfig.instance.typescriptRestoreConsoleErrors) {
-                var prefix = $"<color=#8e8e8e>TS</color>";
+                
                 // Assume it was cleared
-                foreach (var problem in TypescriptProjectsService.Project.ProblemItems) {
-                    if (problem is TypescriptFileDiagnosticItem diagnosticItem) {
-                        var diagnosticString = ConsoleFormatting.GetProblemItemString(diagnosticItem);
-                        Debug.LogError($"{prefix} {diagnosticString}");
-                    }
-                   
-                }
+                isRestoringErrors = true;
+                EditorCoroutines.Execute(RestoreErrorsOnNextFrame());
             }
         }
     }

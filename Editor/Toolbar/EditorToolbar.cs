@@ -365,6 +365,7 @@ namespace Airship.Editor
                     }, coreUpdateStyle)
                 ) {
                     AirshipPackageAutoUpdater.isCoreUpdateAvailable = false;
+                    RepaintToolbar();
                     EditorCoroutines.Execute(AirshipPackageAutoUpdater.CheckAllPackages(GameConfig.Load(), false, true));
                 }
                 GUILayout.EndHorizontal();

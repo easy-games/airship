@@ -47,15 +47,24 @@ namespace Code.PoolManager
                 lastIndex++;
                 if (lastIndex > list.Count - 1) lastIndex = 0;
 
-                if (list[lastIndex].Used)
-                {
+                var c = list[lastIndex];
+                if (c.Used || c.Destroyed) continue;
+
+                // Unity object specific check
+                if (c.Item is UnityEngine.Object o) {
+                    if (o == null) {
+                        c.Destroyed = true;
+                        continue;
+                    } 
+                }
+                
+                if (c.Item == null) {
+                    c.Destroyed = true;
                     continue;
                 }
-                else
-                {
-                    container = list[lastIndex];
-                    break;
-                }
+
+                container = c;
+                break;
             }
 
             if (container == null)

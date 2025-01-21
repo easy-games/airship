@@ -1,3 +1,5 @@
+using NUnit.Framework.Internal;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -32,33 +34,75 @@ public class ModelSplitter : MonoBehaviour
             modelMaterial = foundMaterial;
         }
 
-        foreach (MeshFilter meshFilter in meshFilters)
-        {
+        Dictionary<string, List<MeshFilter>> combinedList = new();
+        foreach (MeshFilter meshFilter in meshFilters){
+
+            string meshName = meshFilter.name;
+            if (meshName.Contains("-")) {
+                meshName = meshName.Substring(0, meshName.IndexOf("-"));
+            }
+
+            if (!combinedList.ContainsKey(meshName)) {
+                combinedList.Add(meshName, new List<MeshFilter>());
+            }
+
+            combinedList[meshName].Add(meshFilter);
+        }
+
+
+        foreach (var rec in combinedList) {
             //Skip if meshFilter.Name begins with a _
-            if (meshFilter.name.StartsWith("_"))
+            if (rec.Key.StartsWith("_"))
             {
                 continue;
             }
-            
-            GameObject newPrefab = new GameObject(meshFilter.name);
+
+            GameObject newPrefab = new GameObject(rec.Key);
             newPrefab.transform.position = Vector3.zero;
-            newPrefab.transform.rotation = meshFilter.transform.rotation;
-            newPrefab.transform.localScale = meshFilter.transform.localScale;
+            newPrefab.transform.rotation = rec.Value[0].transform.rotation;
+            newPrefab.transform.localScale = rec.Value[0].transform.localScale;
+            
+            if (rec.Value.Count == 1) {
+              
+                MeshRenderer renderer = newPrefab.AddComponent<MeshRenderer>();
+                if (modelMaterial != null)
+                {
+                    renderer.sharedMaterial = modelMaterial;
+                }
+                else
+                {
+                    renderer.sharedMaterials = rec.Value[0].GetComponent<MeshRenderer>().sharedMaterials;
+                }
 
-            MeshRenderer renderer = newPrefab.AddComponent<MeshRenderer>();
-            if (modelMaterial != null)
-            {
-                renderer.sharedMaterial = modelMaterial;
+                MeshFilter newMeshFilter = newPrefab.AddComponent<MeshFilter>();
+                newMeshFilter.sharedMesh = rec.Value[0].sharedMesh;
             }
-            else
-            {
-                renderer.sharedMaterials = meshFilter.GetComponent<MeshRenderer>().sharedMaterials;
+            else {
+               
+
+                //Add each meshfilter as its own subobject
+                foreach (MeshFilter meshFilter in rec.Value) {
+                    GameObject subObject = new GameObject(meshFilter.name);
+                    subObject.transform.parent = newPrefab.transform;
+                    subObject.transform.localPosition = Vector3.zero;
+                    subObject.transform.localRotation = Quaternion.identity;
+                    subObject.transform.localScale = Vector3.one;
+
+                    MeshRenderer renderer = subObject.AddComponent<MeshRenderer>();
+                    if (modelMaterial != null) {
+                        renderer.sharedMaterial = modelMaterial;
+                    }
+                    else {
+                        renderer.sharedMaterials = meshFilter.GetComponent<MeshRenderer>().sharedMaterials;
+                    }
+
+                    MeshFilter newMeshFilter = subObject.AddComponent<MeshFilter>();
+                    newMeshFilter.sharedMesh = meshFilter.sharedMesh;
+                }
             }
+            
 
-            MeshFilter newMeshFilter = newPrefab.AddComponent<MeshFilter>();
-            newMeshFilter.sharedMesh = meshFilter.sharedMesh;
-
-            string prefabPath = modelDirectory + "/" + meshFilter.name + ".prefab";
+            string prefabPath = modelDirectory + "/" + rec.Key + ".prefab";
             PrefabUtility.SaveAsPrefabAsset(newPrefab, prefabPath);
             DestroyImmediate(newPrefab);
         }

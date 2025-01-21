@@ -46,7 +46,7 @@ public class ProjectConfigUpdater {
         var url = "https://github.com/easy-games/project-config/zipball/main";
         var request = new UnityWebRequest(url);
         
-        var zipDownloadPath = Path.Join(Application.persistentDataPath, "EditorTemp", "AirshipTemplate.zip");
+        var zipDownloadPath = Path.Join("bundles", "temp", "AirshipTemplate.zip");
         File.Delete(zipDownloadPath);
         
         request.downloadHandler = new DownloadHandlerFile(zipDownloadPath);

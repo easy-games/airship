@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [LuauAPI]
 [ExecuteInEditMode]
@@ -9,8 +10,13 @@ public class CharacterRig : MonoBehaviour {
     [Header("Meshes")]
 	public SkinnedMeshRenderer bodyMesh;
     public SkinnedMeshRenderer armsMesh;
-    public Renderer headMesh;
+    public SkinnedMeshRenderer headMesh;
 	public Renderer faceMesh;
+    public SkinnedMeshRenderer viewmodelArmsMesh;
+
+    public SkinnedMeshRenderer[] bodyMeshLOD;
+    public SkinnedMeshRenderer[] armsMeshLOD;
+    public SkinnedMeshRenderer[] headMeshLOD;
 
 	[Header("Root")]
 	public Transform rigHolder;
@@ -53,20 +59,24 @@ public class CharacterRig : MonoBehaviour {
 	public Transform heldItemL;
 	public Transform heldItemR;
 
+    [Header("Color")] public MaterialColorURP headColor;
+    public MaterialColorURP bodyColor;
+    public MaterialColorURP armsColor;
+    public MaterialColorURP viewmodelArmsColor;
+
     [NonSerialized]
     public Renderer[] baseMeshes; //All skin based Meshes (not face decal)
 
-    private void Awake(){
+    private void Awake() {
         List<Renderer> meshes = new List<Renderer>();
-        if(bodyMesh != null){
-            meshes.Add(bodyMesh);
+        if (bodyMesh != null) {
+            meshes.Add(this.bodyMesh);
         }
-        if (armsMesh != null)
-        {
-            meshes.Add(armsMesh);
+        if (armsMesh != null) {
+            meshes.Add(this.armsMesh);
         }
         if (headMesh != null){
-            meshes.Add(headMesh);
+            meshes.Add(this.headMesh);
         }
         baseMeshes = meshes.ToArray();   
     }
@@ -74,17 +84,8 @@ public class CharacterRig : MonoBehaviour {
     public Transform GetSlotTransform(AccessorySlot slot)
     {
         switch (slot){
-                case AccessorySlot.Hands:
-                case AccessorySlot.RightHand:
-                    return heldItemR;
-                case AccessorySlot.LeftHand:
-                    return heldItemL;
-                case AccessorySlot.Torso:
-                case AccessorySlot.TorsoInner:
-                case AccessorySlot.TorsoOuter:
-                    return spine;
-                case AccessorySlot.Backpack:
-                    return spineChest;
+                
+                //HEAD
                 case AccessorySlot.Head:
                 case AccessorySlot.Hair:
                 case AccessorySlot.Face:
@@ -94,12 +95,45 @@ public class CharacterRig : MonoBehaviour {
                 case AccessorySlot.Neck:
                     return neck;
                 case AccessorySlot.Waist:
+
+                //TORSO
+                case AccessorySlot.Torso:
+                case AccessorySlot.TorsoInner:
+                case AccessorySlot.TorsoOuter:
+                    return spine;
+                case AccessorySlot.Backpack:
+                    return spineChest;
+
+                //ARMS
+                case AccessorySlot.Hands:
+                case AccessorySlot.RightHand:
+                    return heldItemR;
+                case AccessorySlot.LeftHand:
+                    return heldItemL;
+                case AccessorySlot.LeftArmUpper:
+                    return upperArmL;
+                case AccessorySlot.LeftArmLower:
+                    return forearmL;
+                case AccessorySlot.RightArmUpper:
+                    return upperArmR;
+                case AccessorySlot.RightArmLower:
+                    return forearmR;
+
+                //LEGS
                 case AccessorySlot.Legs:
+                case AccessorySlot.Feet:
                     return hips;
+                case AccessorySlot.LeftLegUpper:
+                    return thighL;
+                case AccessorySlot.LeftLegLower:
+                    return shinL;
+                case AccessorySlot.RightLegUpper:
+                    return thighL;
+                case AccessorySlot.RightLegLower:
+                    return shinL;
                 case AccessorySlot.LeftFoot:
                     return footL;
                 case AccessorySlot.RightFoot:
-                case AccessorySlot.Feet:
                     return footR;
                 case AccessorySlot.Root:
                     return transform;

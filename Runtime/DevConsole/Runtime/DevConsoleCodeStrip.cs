@@ -6,5 +6,7 @@ public class DevConsoleCodeStrip : MonoBehaviour {
         DevConsole.OnConsoleOpened += b => {};
         DevConsole.OnConsoleClosed += b => {};
         var open = DevConsole.IsOpen;
+
+        DevConsole.CloseConsole();
     }
 }

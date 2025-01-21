@@ -15,6 +15,7 @@ using UnityEditor;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using UnityEngine.Tilemaps;
+using VoxelWorldStuff;
 
 [LuauAPI]
 public class VoxelBlocks : MonoBehaviour {
@@ -42,6 +43,7 @@ public class VoxelBlocks : MonoBehaviour {
         TileSize4x4x4 = 3,
         Max = 4,
     }
+    static public int[] allTileSizes = new int[] { 1, 2, 3, 4 };
 
     public static Dictionary<int, Vector3> meshTileOffsets = new Dictionary<int, Vector3>()
     {
@@ -180,7 +182,21 @@ public class VoxelBlocks : MonoBehaviour {
         QuarterBlockTypes.MAX, //UK
         QuarterBlockTypes.MAX, //UL
         QuarterBlockTypes.MAX, //UM
-        QuarterBlockTypes.UM, //UN
+        QuarterBlockTypes.UM,  //UN
+        QuarterBlockTypes.MAX, //UA
+        QuarterBlockTypes.DA,  //UB can be flipped UA
+        QuarterBlockTypes.MAX, //uc
+        QuarterBlockTypes.MAX, //ud
+        QuarterBlockTypes.MAX, //ue
+        QuarterBlockTypes.DE,  //UF can be flipped UE
+        QuarterBlockTypes.MAX, //ug
+        QuarterBlockTypes.MAX, //UH
+        QuarterBlockTypes.MAX, //UI
+        QuarterBlockTypes.DI,  //UJ can be flipped UI
+        QuarterBlockTypes.MAX, //UK
+        QuarterBlockTypes.MAX, //UL
+        QuarterBlockTypes.MAX, //UM
+        QuarterBlockTypes.DM,  //UN
     };
 
     public class LodSet {
@@ -215,22 +231,37 @@ public class VoxelBlocks : MonoBehaviour {
 
         public LodSet mesh = null;
 
-        public Dictionary<int, LodSet> meshTiles = new();
+        public LodSet[] meshTiles = new LodSet[4];
 
         public List<int> meshTileProcessingOrder = new();
-        
-        public VoxelMeshCopy[] meshContexts = new VoxelMeshCopy[(int)QuarterBlockTypes.MAX];
-        
+
+        public List<VoxelMeshCopy[]> meshContexts = new();
+        public int[] meshContextsRandomTable = new int[0];
+
         public Texture2D editorTexture; //Null in release
 
         public Rect topUvs;
         public Rect bottomUvs;
         public Rect sideUvs;
-     
 
+
+        /// <summary>
+        /// Read only! To write to materials use SetMaterial
+        /// </summary>
         public Material[] materials = new Material[6];
-        public Material meshMaterial;
-        //public string meshMaterialName;
+        public int[] materialInstanceIds = new int[6];
+        
+        private Material _meshMaterial;
+
+        public Material meshMaterial {
+            get => _meshMaterial;
+            set {
+                _meshMaterial = value;
+                meshMaterialInstanceId = value.GetInstanceID();
+                MeshProcessor.materialIdToMaterial[meshMaterialInstanceId] = _meshMaterial;
+            }
+        }
+        public int meshMaterialInstanceId;
         
         [CanBeNull]
         public string[] minecraftConversions;
@@ -244,6 +275,17 @@ public class VoxelBlocks : MonoBehaviour {
                 case 4: return topUvs;
                 case 5: return bottomUvs;
             }
+        }
+        
+        [HideFromTS]
+        public void SetMaterial(int index, Material material) {
+            this.materials[index] = material;
+            
+            var instanceId = material.GetInstanceID();
+            this.materialInstanceIds[index] = instanceId;
+
+            // Register material
+            MeshProcessor.materialIdToMaterial[instanceId] = material;
         }
     }
 
@@ -274,7 +316,9 @@ public class VoxelBlocks : MonoBehaviour {
     [SerializeField] public List<VoxelBlockDefinionList> blockDefinionLists = new();
 
     public BlockDefinition GetBlock(BlockId index) {
-        loadedBlocks.TryGetValue(index, out BlockDefinition value);
+        
+        var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
+        loadedBlocks.TryGetValue(ix, out BlockDefinition value);
         return value;
     }
 
@@ -294,6 +338,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     public BlockDefinition GetBlockDefinitionFromBlockId(int index) {
+        index = VoxelWorld.VoxelDataToBlockId(index);
         return GetBlock((ushort)index);
     }
 
@@ -319,7 +364,8 @@ public class VoxelBlocks : MonoBehaviour {
     /// </summary>
     /// <param name="string">Any string that mostly matches the block name eg: "GRASS"</param>
     /// <returns>The block id</returns>
-    public BlockId SearchForBlockIdByString(string stringId) {
+    public BlockId 
+        SearchForBlockIdByString(string stringId) {
 
         foreach (var block in this.loadedBlocks) {
             if (block.Value.blockTypeId.Contains(stringId, StringComparison.OrdinalIgnoreCase)) {
@@ -338,6 +384,9 @@ public class VoxelBlocks : MonoBehaviour {
     /// <param name="blockVoxelId">The voxel block id</param>
     /// <returns>The string id of this voxel block</returns>
     public string GetStringIdFromBlockId(BlockId blockVoxelId) {
+
+        blockVoxelId = VoxelWorld.VoxelDataToBlockId(blockVoxelId); //anti foot gun
+        
         var block = TryGetBlock(blockVoxelId, out var blockDefinition);
         if (block) {
             return blockDefinition.blockTypeId;
@@ -349,7 +398,7 @@ public class VoxelBlocks : MonoBehaviour {
 
     //Destructor
     ~VoxelBlocks() {
-        atlas.Dispose();
+        atlas?.Dispose();
     }
 
     private void Clear() {
@@ -363,6 +412,43 @@ public class VoxelBlocks : MonoBehaviour {
         loadedBlocks = new();
     }
 
+    private LodSet BuildLodSet(VoxelBlockDefinition.MeshSet meshSet) {
+        LodSet result = new();
+
+        if (meshSet.mesh_LOD0) {
+            result.lod0 = new VoxelMeshCopy(meshSet.mesh_LOD0);
+        }
+        if (meshSet.mesh_LOD1) {
+            result.lod1 = new VoxelMeshCopy(meshSet.mesh_LOD1);
+        }
+        if (meshSet.mesh_LOD2) {
+            result.lod2 = new VoxelMeshCopy(meshSet.mesh_LOD2);
+        }
+
+        return result;
+    }
+
+    private void ParseGreedyTilingMeshBlock(BlockDefinition block) {
+        if (block.definition.contextStyle != ContextStyle.GreedyMeshingTiles) {
+            return;
+        }
+
+        if (block.definition.meshTile1x1x1.mesh_LOD0 == null) {
+            return;
+        }
+        
+        block.meshTiles[(int)TileSizes.TileSize1x1x1] = BuildLodSet(block.definition.meshTile1x1x1);
+        block.meshTiles[(int)TileSizes.TileSize2x2x2] = BuildLodSet(block.definition.meshTile2x2x2);
+        block.meshTiles[(int)TileSizes.TileSize3x3x3] = BuildLodSet(block.definition.meshTile3x3x3);
+        block.meshTiles[(int)TileSizes.TileSize4x4x4] = BuildLodSet(block.definition.meshTile4x4x4);
+
+        for (int i = (int)TileSizes.Max - 1; i > 0; i--) {
+            
+            if (block.meshTiles[i].lod0 != null && i > 0) {
+                block.meshTileProcessingOrder.Add(i);
+            }
+        }
+    }
     private void ParseStaticMeshBlock(BlockDefinition block) {
         if (block.definition.contextStyle != ContextStyle.StaticMesh) {
             return;
@@ -395,17 +481,66 @@ public class VoxelBlocks : MonoBehaviour {
 
     private void ParseQuarterBlock(BlockDefinition block) {
 
-        if (block.definition.quarterBlockMesh == null || block.definition.contextStyle != ContextStyle.QuarterBlocks) {
+        if (block.definition.contextStyle != ContextStyle.QuarterBlocks) {
+            return;
+        }
+
+        if (block.definition.quarterBlockMeshes == null) {
+            Debug.LogWarning($"[VoxelWorld] {block.blockTypeId} is a QuarterBlock but doesn't have any QuarterBlockMeshes.");
+            return;
+        } 
+        foreach (var quarter in block.definition.quarterBlockMeshes) {
+            ParseQuarterBlockItem(block, quarter);
+        }
+        int resolution = 100;
+        int probabilityCount = block.definition.quarterBlockMeshes.Length * resolution;
+        block.meshContextsRandomTable = new int[probabilityCount];
+
+        //Horrible, but very fast to access later
+        int index = 0;
+        for (int i = 0; i < block.definition.quarterBlockMeshes.Length; i++) {
+            for (int j = 0; j < block.definition.quarterBlockMeshes[i].probablity * resolution; j++) {
+                block.meshContextsRandomTable[index] = i;
+                index++;
+            }
+        }
+    }
+    public static VoxelMeshCopy[] GetRandomMeshContext(BlockDefinition block) {
+        int randomIndex = UnityEngine.Random.Range(0, block.meshContextsRandomTable.Length);
+        int meshIndex = block.meshContextsRandomTable[randomIndex];
+        return block.meshContexts[meshIndex];
+    }
+    public static VoxelMeshCopy[] GetRandomMeshContext(BlockDefinition block, Vector3 origin, int offset) {
+
+        // Use a more varied hash function
+        int hash = (int)(((int)origin.x * 73856093) ^ ((int)origin.y * 19349663) ^ ((int)origin.z * 83492791) ^ (offset * 1548585));
+        
+        // Ensure the result is within the range of the random table length
+        int randomIndex = Mathf.Abs(hash) % block.meshContextsRandomTable.Length;
+ 
+        int meshIndex = block.meshContextsRandomTable[randomIndex];
+        return block.meshContexts[meshIndex];
+    }
+
+
+
+    private void ParseQuarterBlockItem(BlockDefinition block, VoxelQuarterBlockMeshDefinition source) {
+
+        if (source == null || block.definition.contextStyle != ContextStyle.QuarterBlocks) {
             return;
         }
 
         block.meshMaterial = block.definition.meshMaterial;
+        block.meshMaterialInstanceId = block.meshMaterial.GetInstanceID();
+        var meshList = new VoxelMeshCopy[(int)QuarterBlockTypes.MAX];
+        block.meshContexts.Add(meshList); //Random variation
+        //VoxelQuarterBlockMeshDefinition source = block.definition.quarterBlockMesh;
 
         //Parse the quarterblocks
         for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
 
             string name = QuarterBlockNames[i];
-            GameObject obj = block.definition.quarterBlockMesh.GetQuarterBlockMesh(name);
+            GameObject obj = source.GetQuarterBlockMesh(name);
                         
             if (i == 0 && obj == null) {
                 break;
@@ -413,11 +548,13 @@ public class VoxelBlocks : MonoBehaviour {
 
             VoxelMeshCopy meshToAdd = null;
 
+            
+        
             if (obj == null) {
              
                 //Can we flip an existing one
-                if (i < (int)QuarterBlockTypes.DA && QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
-                    VoxelMeshCopy meshSrc = block.meshContexts[ (int)QuarterBlockSubstitutions[i]];
+                if (QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
+                    VoxelMeshCopy meshSrc = meshList[ (int)QuarterBlockSubstitutions[i]];
                     if (meshSrc != null && meshSrc.surfaces != null) {
                         VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
                         meshCopySub.FlipHorizontally();
@@ -427,9 +564,11 @@ public class VoxelBlocks : MonoBehaviour {
                 }
 
                 if (meshToAdd == null) {
-                    //Can we flip the upwards one?
+                    
                     if (i >= (int)QuarterBlockTypes.DA) {
-                        VoxelMeshCopy meshSrc = block.meshContexts[i - (int)QuarterBlockTypes.DA];
+
+                        //Can we flip the upwards one?
+                        VoxelMeshCopy meshSrc = meshList[i - (int)QuarterBlockTypes.DA];
 
                         if (meshSrc != null && meshSrc.surfaces != null) {
                             VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
@@ -450,15 +589,8 @@ public class VoxelBlocks : MonoBehaviour {
             if (meshToAdd == null) {
                 meshToAdd = new VoxelMeshCopy("", false);
             }
-          
-            block.meshContexts[i] = meshToAdd;
-        }
 
-        
-        for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
-            if (block.meshContexts[i] == null) {
-                Debug.Log("Missing mesh for " + block.blockTypeId + " " + QuarterBlockNames[i]);
-            }
+            meshList[i] = meshToAdd;
         }
     }
     public void Load(bool loadTexturesDirectlyFromDisk = false) {
@@ -472,8 +604,8 @@ public class VoxelBlocks : MonoBehaviour {
         
         //Add air
         BlockDefinition airBlock = new BlockDefinition();
-
-        airBlock.definition = (VoxelBlockDefinition)ScriptableObject.CreateInstance("VoxelBlockDefinition");
+        
+        airBlock.definition = ScriptableObject.CreateInstance<VoxelBlockDefinition>();
         airBlock.definition.blockName = "Air";
         airBlock.definition.solid = false;
         airBlock.definition.collisionType = CollisionType.None;
@@ -524,6 +656,8 @@ public class VoxelBlocks : MonoBehaviour {
                 ParseQuarterBlock(block);
 
                 ParseStaticMeshBlock(block);
+
+                ParseGreedyTilingMeshBlock(block);
 
                 loadedBlocks.Add(block.blockId, block);
             }
@@ -872,33 +1006,28 @@ public class VoxelBlocks : MonoBehaviour {
         Profiler.BeginSample("CreateMaterials");
         foreach (var blockRec in loadedBlocks) {
             for (int i = 0; i < 6; i++) {
-                blockRec.Value.materials[i] = atlasMaterial;
+                blockRec.Value.SetMaterial(i, atlasMaterial);
             }
 
             Material fullMaterial = blockRec.Value.definition.topTexture.material;
             if (fullMaterial != null) {
-
-                blockRec.Value.materials[0] = fullMaterial;
-                blockRec.Value.materials[1] = fullMaterial;
-                blockRec.Value.materials[2] = fullMaterial;
-                blockRec.Value.materials[3] = fullMaterial;
-                blockRec.Value.materials[4] = fullMaterial;
-                blockRec.Value.materials[5] = fullMaterial;
+                for (var i = 0; i < 6; i++) {
+                    blockRec.Value.SetMaterial(i, fullMaterial);
+                }
             }
 
             if (blockRec.Value.definition.topTexture.material != null) {
-                blockRec.Value.materials[4] = blockRec.Value.definition.topTexture.material;
+                blockRec.Value.SetMaterial(4, blockRec.Value.definition.topTexture.material);
             }
             
             if (blockRec.Value.definition.sideTexture.material != null) {
-                blockRec.Value.materials[0] = blockRec.Value.definition.sideTexture.material;
-                blockRec.Value.materials[1] = blockRec.Value.definition.sideTexture.material;
-                blockRec.Value.materials[2] = blockRec.Value.definition.sideTexture.material;
-                blockRec.Value.materials[3] = blockRec.Value.definition.sideTexture.material;
+                for (var i = 0; i < 4; i++) {
+                    blockRec.Value.SetMaterial(i, blockRec.Value.definition.sideTexture.material);
+                }
             }
 
             if (blockRec.Value.definition.bottomTexture.material != null) {
-                blockRec.Value.materials[5] = blockRec.Value.definition.bottomTexture.material;
+                blockRec.Value.SetMaterial(5, blockRec.Value.definition.bottomTexture.material);
             }
 
             /*
@@ -969,7 +1098,7 @@ public class VoxelBlocks : MonoBehaviour {
 
             }*/
         }
-        Profiler.EndSample();
+        // Profiler.EndSample();
     }
 
     //Fix a voxel value up with its solid mask bit
@@ -1075,7 +1204,7 @@ public class VoxelBlocks : MonoBehaviour {
        
         BlockDefinition blockDef = new BlockDefinition();
 
-        blockDef.definition = (VoxelBlockDefinition)ScriptableObject.CreateInstance("VoxelBlockDefinition");
+        blockDef.definition = ScriptableObject.CreateInstance<VoxelBlockDefinition>();
         blockDef.definition.blockName = name;
         blockDef.definition.solid = true;
         blockDef.definition.collisionType = CollisionType.Solid;
@@ -1086,7 +1215,7 @@ public class VoxelBlocks : MonoBehaviour {
         blockIdLookup.Add(name, blockDef.blockId);
 
         for (int i = 0; i < 6; i++) {
-            blockDef.materials[i] = atlasMaterial;
+            blockDef.SetMaterial(i, atlasMaterial);
         }
 
         return blockDef;

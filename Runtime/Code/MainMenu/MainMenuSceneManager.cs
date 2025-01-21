@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Code;
 using Code.Bootstrap;
 using Code.Platform.Shared;
+using Code.UI;
 using Luau;
 using Proyecto26;
 using RSG;
@@ -14,8 +15,15 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
+using Newtonsoft.Json;
 
+[Serializable]
 class PlatformVersionsResponse {
+    public PlatformVersion platformVersion;
+}
+
+[Serializable]
+class PlatformVersion {
     public int Core;
     public string Player;
     public int MinPlayerVersion;
@@ -27,7 +35,11 @@ public class MainMenuSceneManager : MonoBehaviour {
     private string cachedCoreAssetVersion = "";
     private string cachedCoreCodeVersion = "";
 
+    private bool successfulTSLoad = false;
+
     private void Start() {
+        InternalAirshipUtil.HandleWindowSize();
+        
         var savedAccount = AuthManager.GetSavedAccount();
         if (savedAccount == null) {
             SceneManager.LoadScene("Login");
@@ -38,6 +50,13 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         Application.focusChanged += OnApplicationFocus;
         OnApplicationFocus(Application.isFocused);
+    }
+
+    /**
+     * Called by TS to signal that the menu loaded successfully.
+     */
+    public void CompletedTSLoad() {
+        this.successfulTSLoad = true;
     }
 
     private void OnDestroy() {
@@ -59,7 +78,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     public void Retry() {
         // Delete existing @Easy folder. This will force redownload of core.
-        var easyDir = Path.Combine(AssetBridge.PackagesPath, "@Easy");
+        var easyDir = Path.Combine(Application.persistentDataPath, "Packages", "@Easy");
         if (Directory.Exists(easyDir)) {
             Directory.Delete(easyDir, true);
         }
@@ -75,16 +94,18 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then(() => {
             Promise<List<string>> promise = new Promise<List<string>>();
             if (isUsingBundles) {
-                List<IPromise<PackageLatestVersionResponse>> promises = new();
+                List<IPromise<PackageVersionResponse>> promises = new();
                 promises.Add(GetLatestPackageVersion("@Easy/Core"));
-                promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
-                PromiseHelpers.All(promises[0], promises[1]).Then((results) => {
-                    print(results.Item1.package);
+                // promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
+                promises[0].Then((results) => {
+                    print(JsonConvert.SerializeObject(results.package));
+                    print("Asset Version Number: " + results.package.assetVersionNumber);
+                    print("Code Version Number: " + results.package.codeVersionNumber);
                     promise.Resolve(new List<string>() {
-                        results.Item1.package.assetVersionNumber + "",
-                        results.Item1.package.codeVersionNumber + "",
-                        results.Item2.package.assetVersionNumber + "",
-                        results.Item2.package.codeVersionNumber + ""
+                        results.package.assetVersionNumber + "",
+                        results.package.codeVersionNumber + "",
+                        // results.Item2.package.assetVersionNumber + "",
+                        // results.Item2.package.codeVersionNumber + ""
                     });
                 }).Catch((err) => {
                     promise.Reject(err);
@@ -93,8 +114,8 @@ public class MainMenuSceneManager : MonoBehaviour {
                 promise.Resolve(new List<string>() {
                     "LocalBuild",
                     "LocalBuild",
-                    "LocalBuild",
-                    "LocalBuild"
+                    // "LocalBuild",
+                    // "LocalBuild"
                 });
             }
 
@@ -102,8 +123,8 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then(async (versions) => {
             var corePackageAssetVersion = versions[0];
             var corePackageCodeVersion = versions[1];
-            var coreMaterialsPackageAssetVersion = versions[2];
-            var coreMaterialsPackageCodeVersion = versions[3];
+            // var coreMaterialsPackageAssetVersion = versions[2];
+            // var coreMaterialsPackageCodeVersion = versions[3];
 
             // Check if app update is required
             if (isUsingBundles) {
@@ -123,10 +144,10 @@ public class MainMenuSceneManager : MonoBehaviour {
                 Debug.Log("Checked latest airship version in " + versionCheckSw.ElapsedMilliseconds + " ms.");
             }
 
-            Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
+            Debug.Log($"@Easy/Core: {versions[0]}");
             List<AirshipPackage> packages = new();
-            packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
-            packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, "", AirshipPackageType.Package));
+            // packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 await this.StartPackageDownload(packages);
             } else {
@@ -152,8 +173,16 @@ public class MainMenuSceneManager : MonoBehaviour {
             return false;
         }
 
+        print("Platform version:" + www.downloadHandler.text);
         var res = JsonUtility.FromJson<PlatformVersionsResponse>(www.downloadHandler.text);
-        return AirshipConst.playerVersion < res.MinPlayerVersion;
+        print(JsonConvert.SerializeObject(res));
+
+        if (res.platformVersion == null) {
+            Debug.LogError("No platform version found. Something went wrong. Allowing through...");
+            return false;
+        }
+
+        return AirshipConst.playerVersion < res.platformVersion.MinPlayerVersion;
     }
 
     private async Task StartPackageDownload(List<AirshipPackage> packages) {
@@ -182,9 +211,13 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {
         var st = Stopwatch.StartNew();
+        this.successfulTSLoad = false;
         yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
+        //Setup project configurations from loaded package
+        PhysicsSetup.SetupFromGameConfig();
+        
         // var mainMenuBindingGO = new GameObject("MainMenuBinding");
         // var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
         // mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
@@ -199,13 +232,33 @@ public class MainMenuSceneManager : MonoBehaviour {
         var coreLuauBinding = coreLuauBindingGO.AddComponent<AirshipComponent>();
         coreLuauBinding.SetScriptFromPath("AirshipPackages/@Easy/Core/Shared/MainMenu.ts", LuauContext.Protected);
         coreLuauBinding.Init();
+
+        StartCoroutine(CheckForFailedStartup());
     }
 
-    public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
+    public IEnumerator CheckForFailedStartup() {
+        yield return new WaitForSeconds(2);
+        if (!this.successfulTSLoad) {
+            LuauCore.ResetContext(LuauContext.Protected);
+
+            // Delete core packages
+            var path = Path.Combine(Application.persistentDataPath, "Packages", "@Easy");
+            if (Directory.Exists(path)) {
+                Directory.Delete(path, true);
+            }
+
+            // yield return SceneManager.UnloadSceneAsync("MainMenu");
+            SceneManager.LoadScene("MainMenu");
+        }
+    }
+
+    public static IPromise<PackageVersionResponse> GetLatestPackageVersion(string packageId) {
         var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{packageId}";
 
         return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
             Uri = url
+        }).Then((res) => {
+            return res.version;
         });
     }
 }

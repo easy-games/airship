@@ -11,10 +11,14 @@ namespace VoxelWorldStuff {
             }
             return true;
         }
-
-        //True = we generate surfaces between us and this block
-        //false = we dont
-        private static bool SurfaceFunction(VoxelBlocks.BlockDefinition block, VoxelData data) {
+        
+        /// <param name="block">Block being placed</param>
+        /// <param name="data">Data of neighboring block</param>
+        /// <returns>
+        /// True = we generate surfaces between us and this block
+        /// False = we dont
+        /// </returns>
+        private static bool ShouldGenerateSurface(VoxelBlocks.BlockDefinition block, VoxelData data) {
             int blockId = VoxelWorld.VoxelDataToBlockId(data);
             if (blockId == 0) return true;
 
@@ -33,7 +37,45 @@ namespace VoxelWorldStuff {
             return false;
         }
 
-        private static bool QuarterBlocksPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin) {
+        /// <summary>
+        /// Helper function for emitting quarter block 
+        /// </summary>
+        /// <returns>True if the voxel data provided is a quarter block but not the same block type as the one passed in.</returns>
+        private static bool IsDifferentQuarterBlock(VoxelWorld world, ushort blockId, ushort voxelData) {
+            // If the voxelData doesn't represent a quarter block return false
+            if (world.voxelBlocks.GetBlock(voxelData).definition.contextStyle !=
+                VoxelBlocks.ContextStyle.QuarterBlocks) return false;
+            // If they are the same block id return false
+            if (blockId == VoxelWorld.VoxelDataToBlockId(voxelData)) return false;
+            return true;
+        }
+        
+
+        private static bool QuarterBlocskEmitSingleBlock(VoxelBlocks.BlockDefinition block, TemporaryMeshData meshData, VoxelWorld world, Vector2 damageUv, Color32 col) {
+
+            Vector3 origin = new Vector3(-0.5f,-0.5f,-0.5f);
+            int flip = 0;
+        
+            var meshContextListU0 = VoxelBlocks.GetRandomMeshContext(block, origin, 0);
+
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 0, flip, damageUv, col, null);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 1, flip, damageUv, col, null);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 2, flip, damageUv, col, null);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], meshData, world, origin, 3, flip, damageUv, col, null);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 0, flip, damageUv, col, null);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 1, flip, damageUv, col, null);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 2, flip, damageUv, col, null);
+            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.DG], meshData, world, origin, 3, flip, damageUv, col, null);
+
+            //EmitMesh(block, block.mesh.lod0, meshData, world, origin, rotation, flip, damageUv);
+            return true;
+        }
+
+        private static bool QuarterBlocksPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, Color32 col) {
+            if (block.meshContexts.Count == 0) {
+                return false;
+            }
+
             //get surrounding data
             VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];
             VoxelData voxDown = readOnlyVoxel[localVoxelKey - paddedChunkSize];
@@ -68,88 +110,197 @@ namespace VoxelWorldStuff {
             VoxelData voxUpRight = readOnlyVoxel[localVoxelKey + paddedChunkSize + 1];
 
             //Cardinals
-            bool airUp = SurfaceFunction(block, voxUp);
-            bool airDown = SurfaceFunction(block, voxDown);
-            bool airLeft = SurfaceFunction(block, voxLeft);
-            bool airForward = SurfaceFunction(block, voxForward);
-            bool airRight = SurfaceFunction(block, voxRight);
-            bool airBack = SurfaceFunction(block, voxBack);
+            bool airUp = ShouldGenerateSurface(block, voxUp);
+            bool airDown = ShouldGenerateSurface(block, voxDown);
+            bool airLeft = ShouldGenerateSurface(block, voxLeft);
+            bool airForward = ShouldGenerateSurface(block, voxForward);
+            bool airRight = ShouldGenerateSurface(block, voxRight);
+            bool airBack = ShouldGenerateSurface(block, voxBack);
 
             //diagonals
-            bool airForwardLeft = SurfaceFunction(block, voxForwardLeft);
-            bool airForwardRight = SurfaceFunction(block, voxForwardRight);
-            bool airBackLeft = SurfaceFunction(block, voxBackLeft);
-            bool airBackRight = SurfaceFunction(block, voxBackRight);
+            bool airForwardLeft = ShouldGenerateSurface(block, voxForwardLeft);
+            bool airForwardRight = ShouldGenerateSurface(block, voxForwardRight);
+            bool airBackLeft = ShouldGenerateSurface(block, voxBackLeft);
+            bool airBackRight = ShouldGenerateSurface(block, voxBackRight);
 
             //downs
-            bool airDownForward = SurfaceFunction(block, voxDownForward);
-            bool airDownBack = SurfaceFunction(block, voxDownBack);
-            bool airDownLeft = SurfaceFunction(block, voxDownLeft);
-            bool airDownRight = SurfaceFunction(block, voxDownRight);
+            bool airDownForward = ShouldGenerateSurface(block, voxDownForward);
+            bool airDownBack = ShouldGenerateSurface(block, voxDownBack);
+            bool airDownLeft = ShouldGenerateSurface(block, voxDownLeft);
+            bool airDownRight = ShouldGenerateSurface(block, voxDownRight);
 
-            bool airDownForwardRight = SurfaceFunction(block, voxDownForwardRight);
-            bool airDownForwardLeft = SurfaceFunction(block, voxDownForwardLeft);
-            bool airDownBackRight = SurfaceFunction(block, voxDownBackRight);
-            bool airDownBackLeft = SurfaceFunction(block, voxDownBackLeft);
+            bool airDownForwardRight = ShouldGenerateSurface(block, voxDownForwardRight);
+            bool airDownForwardLeft = ShouldGenerateSurface(block, voxDownForwardLeft);
+            bool airDownBackRight = ShouldGenerateSurface(block, voxDownBackRight);
+            bool airDownBackLeft = ShouldGenerateSurface(block, voxDownBackLeft);
 
             //Ups
-            bool airUpForward = SurfaceFunction(block, voxUpForward);
-            bool airUpBack = SurfaceFunction(block, voxUpBack);
-            bool airUpLeft = SurfaceFunction(block, voxUpLeft);
-            bool airUpRight = SurfaceFunction(block, voxUpRight);
+            bool airUpForward = ShouldGenerateSurface(block, voxUpForward);
+            bool airUpBack = ShouldGenerateSurface(block, voxUpBack);
+            bool airUpLeft = ShouldGenerateSurface(block, voxUpLeft);
+            bool airUpRight = ShouldGenerateSurface(block, voxUpRight);
 
-            bool airUpForwardRight = SurfaceFunction(block, voxUpForwardRight);
-            bool airUpForwardLeft = SurfaceFunction(block, voxUpForwardLeft);
-            bool airUpBackRight = SurfaceFunction(block, voxUpBackRight);
-            bool airUpBackLeft = SurfaceFunction(block, voxUpBackLeft);
+            bool airUpForwardRight = ShouldGenerateSurface(block, voxUpForwardRight);
+            bool airUpForwardLeft = ShouldGenerateSurface(block, voxUpForwardLeft);
+            bool airUpBackRight = ShouldGenerateSurface(block, voxUpBackRight);
+            bool airUpBackLeft = ShouldGenerateSurface(block, voxUpBackLeft);
+            
+            // If block up is a quarter block and has any air neighbors then it can be seen through
+            var entirelyCovered = true;
+            for (var x = 0; x < 3; x++) {
+                for (var y = 0; y < 3; y++) {
+                    for (var z = 0; z < 3; z++) {
+                        if (x == 1 && y == 1 && z == 1) continue;
 
+                        var key = localVoxelKey + x - 1 + (y - 1) * paddedChunkSize +
+                                  (paddedChunkSize * paddedChunkSize) * (z - 1);
+                        var vox = readOnlyVoxel[key];
+                        if (ShouldGenerateSurface(block, vox)) {
+                            entirelyCovered = false;
+                            if (y == 2 && IsDifferentQuarterBlock(world, block.blockId, voxUp)) airUp = true;
+                            if (y == 0 && IsDifferentQuarterBlock(world, block.blockId, voxDown)) airDown = true;
+                            if (x == 0 && IsDifferentQuarterBlock(world, block.blockId, voxLeft)) airLeft = true;
+                            if (x == 2 && IsDifferentQuarterBlock(world, block.blockId, voxRight)) airRight = true;
+                            if (z == 2 && IsDifferentQuarterBlock(world, block.blockId, voxForward)) airForward = true;
+                            if (z == 0 && IsDifferentQuarterBlock(world, block.blockId, voxBack)) airBack = true;
+
+                            // if (x >= 1) {
+                            //     if (z >= 1 && IsDifferentQuarterBlock(world, block.blockId, voxForwardRight)) airForwardRight = true;
+                            // }
+                            if (x >= 1 && y >= 1 && z >= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxUpForwardRight))
+                                airUpForwardRight = true;
+                            if (x <= 1 && y >= 1 && z >= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxUpForwardLeft))
+                                airUpForwardLeft = true;
+                            if (x >= 1 && y <= 1 && z >= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxDownForwardRight))
+                                airDownForwardRight = true;
+                            if (x <= 1 && y <= 1 && z >= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxDownForwardLeft))
+                                airDownForwardLeft = true;
+                            if (x >= 1 && y >= 1 && z <= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxUpBackRight))
+                                airUpBackRight = true;
+                            if (x <= 1 && y >= 1 && z <= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxUpBackLeft))
+                                airUpBackLeft = true;
+                            if (x >= 1 && y <= 1 && z <= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxDownBackRight))
+                                airDownBackRight = true;
+                            if (x <= 1 && y <= 1 && z <= 1 &&
+                                IsDifferentQuarterBlock(world, block.blockId, voxDownBackLeft))
+                                airDownBackLeft = true;
+                            
+                            // Not super corners nor cardinals
+                            if (x >= 1 && z >= 1) {
+                                if ((y == 0 || (x == 2 && z == 2)) && IsDifferentQuarterBlock(world, block.blockId, voxForwardRight)) {
+                                    airForwardRight = true;
+                                }
+                            }
+                            if (x <= 1 && z >= 1) {
+                                if ((y == 0 || (x == 0 && z == 2)) && IsDifferentQuarterBlock(world, block.blockId, voxForwardLeft)) {
+                                    airForwardLeft = true;
+                                }
+                            }
+                            if (x >= 1 && z <= 1) {
+                                if ((y == 0 || (x == 2 && z == 0)) && IsDifferentQuarterBlock(world, block.blockId, voxBackRight)) {
+                                    airBackRight = true;
+                                }
+                            }
+                            if (x <= 1 && z <= 1) {
+                                if ((y == 0 || (x == 0 && z == 0)) && IsDifferentQuarterBlock(world, block.blockId, voxBackLeft)) {
+                                    airBackLeft = true;
+                                }
+                            }
+                                
+                        }
+                    }
+                }
+            }
+
+            if (entirelyCovered) return true;
+
+            var meshContextListU0 = VoxelBlocks.GetRandomMeshContext(block, origin,0);
+            var meshContextListU1 = VoxelBlocks.GetRandomMeshContext(block, origin,1);
+            var meshContextListU2 = VoxelBlocks.GetRandomMeshContext(block, origin,2);
+            var meshContextListU3 = VoxelBlocks.GetRandomMeshContext(block, origin,3);
+            var meshContextListD0 = VoxelBlocks.GetRandomMeshContext(block, origin,4);
+            var meshContextListD1 = VoxelBlocks.GetRandomMeshContext(block, origin,5);
+            var meshContextListD2 = VoxelBlocks.GetRandomMeshContext(block, origin,6);
+            var meshContextListD3 = VoxelBlocks.GetRandomMeshContext(block, origin,7);
+
+
+            float[] lerps = null;// new float[6];
+            /*
+            if (!airLeft) {
+                lerps[0] = 1.0f;
+            }
+            if (!airRight) {
+                lerps[1] = 1.0f;
+            }
+            
+            if (airUp) {
+                lerps[2] = 1.0f;  
+            }
+            //if (airDown) {
+               // lerps[3] = 1.0f;
+            //}
+
+            if (!airForward) {
+                lerps[4] = 1.0f;
+            }
+            if (!airBack) {
+                lerps[5] = 1.0f;
+            }*/
+            
             // do the vertical flat faces ///////////////////////////////////////////////////////////////////////////////////////////////
             //Flat Left - lots of neighbors
             if (airLeft) {
                 if (!airUp) {
                     if (!airBack) {
                         //Wait we might need to curl in here
-                        if (airUpBack) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpBack) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
 
                     }
                     if (!airForward) {
                         //Wait we might need to curl in here
-                        if (airUpForward) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpForward) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
 
                     }
                 }
                 if (!airDown) {
                     if (!airBack) {
-                        if (airDownBack) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownBack) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airForward) {
-                        if (airDownForward) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownForward) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                     }
                 }
@@ -160,22 +311,22 @@ namespace VoxelWorldStuff {
                 if (!airUp) {
                     if (!airBack) {
                         //Wait we might need to curl in here
-                        if (airUpBack) {
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 1);
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpBack) != block.blockId) {
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airForward) {
                         //Wait we might need to curl in here
-                        if (airUpForward) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpForward) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                     }
 
@@ -183,23 +334,23 @@ namespace VoxelWorldStuff {
                 }
                 if (!airDown) {
                     if (!airBack) {
-                        if (airDownBack) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownBack) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airForward) {
-                        if (airDownForward) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownForward) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                     }
                 }
@@ -210,43 +361,43 @@ namespace VoxelWorldStuff {
             if (airBack) {
                 if (!airUp) {
                     if (!airLeft) {
-                        if (airUpLeft) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpLeft) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airRight) {
-                        if (airUpRight) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpRight) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                     }
                 }
                 if (!airDown) {
                     if (!airLeft) {
-                        if (airDownLeft) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownLeft) != block.blockId) {
                             //Curled
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airRight) {
-                        if (airDownRight) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownRight) != block.blockId) {
                             //Curled
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
 
                     }
@@ -261,46 +412,46 @@ namespace VoxelWorldStuff {
                     if (!airLeft) //Block to our left is Solid
                     {
                         //Fixing
-                        if (airUpLeft) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpLeft) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
 
                     }
                     if (!airRight) {
-                        if (airUpRight) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxUpRight) != block.blockId) {
                             //Is curled in
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                     }
                 }
                 if (!airDown) {
                     if (!airLeft) {
-                        if (airDownLeft) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownLeft) != block.blockId) {
                             //Curled
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airRight) {
-                        if (airDownRight) {
+                        if (VoxelWorld.VoxelDataToBlockId(voxDownRight) != block.blockId) {
                             //Curled
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //Is flat
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
 
                     }
@@ -312,31 +463,31 @@ namespace VoxelWorldStuff {
             if (airLeft && airForward) {
                 if (airUp) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                 }
                 else {
                     if (NeedsCapSurface(voxUp, block) && !airUpForwardLeft && !airUpForward && !airUpLeft) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
                 }
 
                 if (airDown) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                 }
                 else {
                     if (NeedsCapSurface(voxDown, block) && !airDownForwardLeft && !airDownForward && !airDownLeft) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
                 }
             }
@@ -345,32 +496,32 @@ namespace VoxelWorldStuff {
             if (airRight && airForward) {
                 if (airUp) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                 }
                 else {
                     //Vertical side
                     if (NeedsCapSurface(voxUp, block) && !airUpForwardRight && !airUpForward && !airUpRight) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                 }
 
                 if (airDown) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                 }
                 else {
                     if (NeedsCapSurface(voxDown, block) && !airDownForwardRight && !airDownForward && !airDownRight) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                 }
             }
@@ -378,31 +529,31 @@ namespace VoxelWorldStuff {
             if (airLeft && airBack) {
                 if (airUp) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 3);
+                    EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                 }
                 else {
                     if (NeedsCapSurface(voxUp, block) && !airUpBackLeft && !airUpBack && !airUpLeft) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                 }
 
                 if (airDown) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, true, 3);
+                    EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                 }
                 else {
                     if (NeedsCapSurface(voxDown, block) && !airDownBackLeft && !airDownBack && !airDownLeft) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                 }
             }
@@ -410,33 +561,33 @@ namespace VoxelWorldStuff {
             if (airRight && airBack) {
                 if (airUp) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 2);
+                    EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                 }
                 else {
                     //Vertical side
                     if (NeedsCapSurface(voxUp, block) && !airUpBackRight && !airUpBack && !airUpRight) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UL], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
                 }
 
                 if (airDown) {
                     //Corner
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, true, 2);
+                    EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DG], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                 }
                 else {
                     //Wait - we might be ploughing into an impossible connection, make a solid corner instead
                     if (NeedsCapSurface(voxDown, block) && !airDownBackRight && !airDownBack && !airDownRight) {
                         //solid corner
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DL], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
                     else {
                         //Vertical side
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
                 }
             }
@@ -450,24 +601,24 @@ namespace VoxelWorldStuff {
                     //Connection along a top edge for foward and backward
                     if (!airBack) {
                         //Top Edge
-                        if (NeedsCapSurface(voxBack, block) && !airUpBackLeft && !airUpBack && !airBackLeft) {
+                        if (!airUpBackLeft && !airUpBack && !airBackLeft) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airForward) {
                         //Top Edge
-                        if (NeedsCapSurface(voxForward, block) && !airUpForwardLeft && !airUpForward && !airForwardLeft) {
+                        if (!airUpForwardLeft && !airUpForward && !airForwardLeft) {
                             //Solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                     }
 
@@ -476,24 +627,24 @@ namespace VoxelWorldStuff {
                 if (airDown) {
                     if (!airBack) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxBack, block) && !airDownBackLeft && !airDownBack && !airBackLeft) {
+                        if (!airDownBackLeft && !airDownBack && !airBackLeft) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
                             //Horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airForward) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxForward, block) && !airDownForwardLeft && !airDownForward && !airForwardLeft) {
+                        if (!airDownForwardLeft && !airDownForward && !airForwardLeft) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, true, 3);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                         }
                     }
 
@@ -503,24 +654,24 @@ namespace VoxelWorldStuff {
                 if (airUp) {
                     if (!airBack) {
                         //Top Edge
-                        if (NeedsCapSurface(voxBack, block) && !airUpBackRight && !airUpBack && !airBackRight) {
+                        if (!airUpBackRight && !airUpBack && !airBackRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                     }
                     if (!airForward) {
                         //Top Edge
-                        if (NeedsCapSurface(voxForward, block) && !airUpForwardRight && !airUpForward && !airForwardRight) {
+                        if (!airUpForwardRight && !airUpForward && !airForwardRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
 
                     }
@@ -530,25 +681,25 @@ namespace VoxelWorldStuff {
                 if (airDown) {
                     if (!airBack) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxBack, block) && !airDownBackRight && !airDownBack && !airBackRight) {
+                        if (!airDownBackRight && !airDownBack && !airBackRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
 
                     }
                     if (!airForward) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxForward, block) && !airDownForwardRight && !airDownForward && !airForwardRight) {
+                        if (!airDownForwardRight && !airDownForward && !airForwardRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 1);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                         }
                     }
                 }
@@ -559,25 +710,25 @@ namespace VoxelWorldStuff {
                 if (airUp) {
                     if (!airLeft) {
                         //Top Edge
-                        if (NeedsCapSurface(voxLeft, block) && !airUpForwardLeft && !airUpLeft && !airForwardLeft) {
+                        if (!airUpForwardLeft && !airUpLeft && !airForwardLeft) {
                             //Solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
 
                     }
                     if (!airRight) {
                         //Top Edge
-                        if (NeedsCapSurface(voxRight, block) && !airUpForwardRight && !airUpRight && !airForwardRight) {
+                        if (!airUpForwardRight && !airUpRight && !airForwardRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //Horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
 
                     }
@@ -587,25 +738,25 @@ namespace VoxelWorldStuff {
                 if (airDown) {
                     if (!airLeft) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxLeft, block) && !airDownForwardLeft && !airDownLeft && !airForwardLeft) {
+                        if (!airDownForwardLeft && !airDownLeft && !airForwardLeft) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
 
                     }
                     if (!airRight) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxRight, block) && !airDownForwardRight && !airDownRight && !airForwardRight) {
+                        if (!airDownForwardRight && !airDownRight && !airForwardRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, true, 0);
+                            EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                         }
 
                     }
@@ -616,25 +767,25 @@ namespace VoxelWorldStuff {
                 if (airUp) {
                     if (!airLeft) {
                         //Top Edge
-                        if (NeedsCapSurface(voxLeft, block) && !airUpBackLeft && !airUpLeft && !airBackLeft) {
+                        if (!airUpBackLeft && !airUpLeft && !airBackLeft) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UN], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
                             //horizontal side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UF], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
 
                     }
                     if (!airRight) {
                         //Top Edge
-                        if (NeedsCapSurface(voxRight, block) && !airUpBackRight && !airUpRight && !airBackRight) {
+                        if (!airUpBackRight && !airUpRight && !airBackRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UM], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
                             //side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                     }
 
@@ -643,25 +794,25 @@ namespace VoxelWorldStuff {
                 if (airDown) {
                     if (!airLeft) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxLeft, block) && !airDownBackLeft && !airDownLeft && !airBackLeft) {
+                        if (!airDownBackLeft && !airDownLeft && !airBackLeft) {
                             //Solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DN], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
                             //side 
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DF], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
 
                     }
                     if (!airRight) {
                         //Bot Edge
-                        if (NeedsCapSurface(voxRight, block) && !airDownBackRight && !airDownRight && !airBackRight) {
+                        if (!airDownBackRight && !airDownRight && !airBackRight) {
                             //solid corner
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DM], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
                         else {
                             //side
-                            EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 2);
+                            EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                         }
 
                     }
@@ -677,38 +828,38 @@ namespace VoxelWorldStuff {
 
                     //Wait, it might have air on the diagonal, so we should use the other type of top corner then
                     if (airForwardLeft) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
 
                 }
                 if (!airForward && !airRight) {
                     //Top Surface
                     if (airForwardRight) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                 }
                 if (!airBack && !airLeft) {
                     //Top Surface
                     if (airBackLeft) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                 }
                 if (!airBack && !airRight) {
                     //Top Surface
                     if (airBackRight) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
 
                 }
@@ -717,37 +868,37 @@ namespace VoxelWorldStuff {
                 if (!airForward && !airLeft) {
                     //Bot Surface
                     if (airForwardLeft) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, 0, 0, damageUv, col, lerps);
                     }
                 }
                 if (!airForward && !airRight) {
                     //Bot Surface
                     if (airForwardRight) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, 1, 0, damageUv, col, lerps);
                     }
                 }
                 if (!airBack && !airLeft) {
                     //Bot Surface
                     if (airBackLeft) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, 3, 0, damageUv, col, lerps);
                     }
                 }
                 if (!airBack && !airRight) {
                     //Bot Surface
                     if (airBackRight) {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
                     else {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, 2, 0, damageUv, col, lerps);
                     }
                 }
             }
@@ -761,46 +912,46 @@ namespace VoxelWorldStuff {
                 VoxelData voxForwardDown = readOnlyVoxel[localVoxelKey - paddedChunkSize + (paddedChunkSize * paddedChunkSize)];
                 bool airForwardDown = (block.blockId != VoxelWorld.VoxelDataToBlockId(voxForwardDown));
 
-                if (!airLeftDown && !airForwardDown) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), true, 0);
+                if (!airLeftDown && !airForwardDown && VoxelWorld.VoxelDataToBlockId(voxDown) == block.blockId) {
+                    EmitMesh(block, meshContextListU0[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), 0, 0, damageUv, col, lerps);
                 }
             }
 
             //Do the other 3
             if (airRight && airForward && airDownForwardRight) {
-                if (!airDownRight && !airDownForward) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), true, 1);
+                if (!airDownRight && !airDownForward && VoxelWorld.VoxelDataToBlockId(voxDown) == block.blockId) {
+                    EmitMesh(block, meshContextListU1[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), 1, 0, damageUv, col, lerps);
                 }
             }
             if (airLeft && airBack && airDownBackLeft) {
-                if (!airDownLeft && !airDownBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), true, 3);
+                if (!airDownLeft && !airDownBack && VoxelWorld.VoxelDataToBlockId(voxDown) == block.blockId) {
+                    EmitMesh(block, meshContextListU3[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), 3, 0, damageUv, col, lerps);
                 }
             }
             if (airRight && airBack && airDownBackRight) {
-                if (!airDownRight && !airDownBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), true, 2);
+                if (!airDownRight && !airDownBack && VoxelWorld.VoxelDataToBlockId(voxDown) == block.blockId) {
+                    EmitMesh(block, meshContextListU2[(int)VoxelBlocks.QuarterBlockTypes.UK], temporaryMeshData, world, origin + new Vector3(0, -1, 0), 2, 0, damageUv, col, lerps);
                 }
             }
             //Do the upwards ones now
             if (airLeft && airForward && airUpForwardLeft) {
-                if (!airUpLeft && !airUpForward) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), true, 0);
+                if (!airUpLeft && !airUpForward && VoxelWorld.VoxelDataToBlockId(voxUp) == block.blockId) {
+                    EmitMesh(block, meshContextListD0[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), 0, 0, damageUv, col, lerps);
                 }
             }
             if (airRight && airForward && airUpForwardRight) {
-                if (!airUpRight && !airUpForward) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), true, 1);
+                if (!airUpRight && !airUpForward && VoxelWorld.VoxelDataToBlockId(voxUp) == block.blockId) {
+                    EmitMesh(block, meshContextListD1[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), 1, 0, damageUv, col, lerps);
                 }
             }
             if (airLeft && airBack && airUpBackLeft) {
-                if (!airUpLeft && !airUpBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), true, 3);
+                if (!airUpLeft && !airUpBack && VoxelWorld.VoxelDataToBlockId(voxUp) == block.blockId) {
+                    EmitMesh(block, meshContextListD3[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), 3, 0, damageUv, col, lerps);
                 }
             }
             if (airRight && airBack && airUpBackRight) {
-                if (!airUpRight && !airUpBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), true, 2);
+                if (!airUpRight && !airUpBack && VoxelWorld.VoxelDataToBlockId(voxUp) == block.blockId) {
+                    EmitMesh(block, meshContextListD2[(int)VoxelBlocks.QuarterBlockTypes.DK], temporaryMeshData, world, origin + new Vector3(0, 1, 0), 2, 0, damageUv, col, lerps);
                 }
             }
             return true;
