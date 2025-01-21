@@ -1620,12 +1620,12 @@ public partial class LuauCore : MonoBehaviour {
         type = staticClassApi.GetAPIType();
         // !!! This could be broken
         //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
         if (retValue >= 0) {
             return retValue;
         }
         
-        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, parameterIsTable);
+        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, parameterIsTable);
     }
 
     private static int InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, ArraySegment<object> parameters, out bool shouldYield) {

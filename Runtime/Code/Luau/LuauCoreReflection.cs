@@ -335,7 +335,7 @@ public partial class LuauCore : MonoBehaviour
         return new ArraySegment<object>(UnrolledPodObjects, 0, numParameters);
     }
 
-    private static int RunConstructor(IntPtr thread, Type type, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> paramaterDataSizes, ArraySegment<int> paramaterIsTable) {
+    private static int RunConstructor(IntPtr thread, Type type, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> paramaterDataSizes, ArraySegment<int> parameterIsTable) {
 
         ConstructorInfo[] constructors = type.GetConstructors();
 
