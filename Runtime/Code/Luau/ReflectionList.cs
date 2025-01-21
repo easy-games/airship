@@ -208,6 +208,7 @@ namespace Luau {
             ["ElRaccoone.Tweens.NativeTween+LocalPositionDriver"] = LuauContextAll,
             ["ElRaccoone.Tweens.NativeTween+LocalRotationDriver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
+            ["TubeRendererCS"] = LuauContextAll,
         };
 
         public static Dictionary<Type, LuauContext> allowedTypesInternal;
@@ -252,7 +253,7 @@ namespace Luau {
             }
 
 
-            var allowed =  allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+            var allowed = allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
             if (!allowed) {
                 if (t != null && !string.IsNullOrEmpty(t.Namespace) && t.Namespace.Contains("ElRaccoone")) {
                     return true;
