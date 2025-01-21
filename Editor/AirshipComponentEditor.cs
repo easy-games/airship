@@ -10,6 +10,7 @@ using System.Text;
 using Code.Luau;
 using JetBrains.Annotations;
 using Luau;
+using Mirror;
 using UnityEditor.IMGUI.Controls;
 using UnityEditorInternal;
 using Object = System.Object;
@@ -530,6 +531,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                                         case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.scriptFile, scriptPath):
                                             objRef = component;
                                             break;
+                                        case AirshipComponent component when scriptPath == AirshipBehaviourPath:
+                                            objRef = component;
+                                            break;
                                         case AirshipComponent:
                                             continue;
                                         case GameObject go: {
@@ -634,15 +638,30 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 break;
             case AirshipComponentPropertyType.AirshipComponent: {
                 var fileRef = arraySerializedProperty.FindPropertyRelative("fileRef");
-                var script = AirshipScript.GetBinaryFileFromPath("Assets/" + fileRef.stringValue);
-                var value = objectRefs.GetArrayElementAtIndex(index);
-                
-                var objOld = objectRefs.arraySize > index ? value.objectReferenceValue as AirshipComponent : null;
-                var objNew = AirshipScriptGUI.AirshipBehaviourField(rect, new GUIContent(label), script, objOld, value);
-                if (objOld != objNew) {
-                    value.objectReferenceValue = objNew;
-                    arrayModified.boolValue = true;
+
+                if (fileRef.stringValue == AirshipBehaviourPath) {
+                    var value = objectRefs.GetArrayElementAtIndex(index);
+                    var objOld = objectRefs.arraySize > index ? value.objectReferenceValue as AirshipComponent : null;
+                    var objNew = EditorGUI.ObjectField(rect, new GUIContent(label), value.objectReferenceValue,
+                        typeof(AirshipComponent), true);
+                    if (objOld != objNew) {
+                        value.objectReferenceValue = objNew;
+                        arrayModified.boolValue = true;
+                    }
                 }
+                else {
+                    var script = AirshipScript.GetBinaryFileFromPath("Assets/" + fileRef.stringValue);
+                    var value = objectRefs.GetArrayElementAtIndex(index);
+                
+                    var objOld = objectRefs.arraySize > index ? value.objectReferenceValue as AirshipComponent : null;
+                    var objNew = AirshipScriptGUI.AirshipBehaviourField(rect, new GUIContent(label), script, objOld, value);
+                    if (objOld != objNew) {
+                        value.objectReferenceValue = objNew;
+                        arrayModified.boolValue = true;
+                    }
+                }
+                
+
                 break;
             }
             case AirshipComponentPropertyType.AirshipObject: {
@@ -993,11 +1012,21 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
     }
 
-    
+
+    private const string AirshipBehaviourPath =
+        "AirshipPackages/@Easy/Core/Shared/Types/Compiler/AirshipBehaviour.d.ts";
     private void DrawAirshipBehaviourReferenceProperty(GUIContent guiContent, LuauMetadata metadata, LuauMetadataProperty metadataProperty, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty modified) {
         var currentObject = (AirshipComponent) obj.objectReferenceValue;
         var fileRefStr = "Assets/" + metadataProperty.fileRef.Replace("\\", "/");
 
+        // AnyBehaviour
+        if (metadataProperty.fileRef == AirshipBehaviourPath) {
+            // AirshipScriptGUI.AirshipBehaviourField(guiContent, null, obj);
+            EditorGUILayout.ObjectField(guiContent, obj.objectReferenceValue, typeof(AirshipComponent), true);
+
+            return;
+        }
+        
         var script = AirshipScript.GetBinaryFileFromPath(fileRefStr);
         if (script == null) {
             return;

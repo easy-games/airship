@@ -133,7 +133,7 @@ namespace Code.Luau {
                                     return itemScriptBinding != null &&
                                            itemScriptBinding.IsBindableAsComponent(script);
                                 }, null, script.m_metadata?.displayName ?? "AirshipBehaviour");
-                            view.SetSearchText($"h:t:ScriptBinding"); // #m_fileFullPath={script.m_path}
+                            view.SetSearchText($"h: t:AirshipComponent #scriptFile=\"{script.assetPath}\""); // #m_fileFullPath={script.m_path}
 
                             evt.Use();
                             GUIUtility.ExitGUI();
