@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class AirshipPredictionManager : MonoBehaviour {
     public static double PhysicsTime {get; private set;} = 0;
@@ -67,11 +68,29 @@ public class AirshipPredictionManager : MonoBehaviour {
     private float lastSimulationTime = 0;
     private float lastSimulationDuration = 0;
 
+    private int lerpTimeingMode = 0;
+
 #region PUBLIC API
     public void StartPrediction(){
         Physics.simulationMode = SimulationMode.Script;
         debugging = false;
         this.physicsTimer = 0;
+        Keyboard.current.onTextInput += OnKeyboardInput;
+    }
+
+    private void OnKeyboardInput(Char e){
+        if(e == '1'){
+            print("Setting lerp mode to Time.time");
+            lerpTimeingMode = 0;
+        }
+        if(e == '2'){
+            print("Setting lerp mode to physicsTime");
+            lerpTimeingMode = 1;
+        }
+        if(e == '3'){
+            print("Setting lerp mode to physicsTime - remainder");
+            lerpTimeingMode = 2;
+        }
     }
 
     public void StopPrediction(){
@@ -134,7 +153,6 @@ public class AirshipPredictionManager : MonoBehaviour {
         var simulated = false;
         var timerDuration = physicsTimer;
         while (physicsTimer > Time.fixedDeltaTime) {
-            simulated = true;
             var test = physicsTimer;
 
             //Simulate the physics
@@ -151,17 +169,33 @@ public class AirshipPredictionManager : MonoBehaviour {
             //RIGID SMOOTHING
             //Update rigidbody state data
             foreach(var kvp in currentTrackedRigidbodies){
-                kvp.Value.lastPosition = kvp.Value.currentPosition;
-                kvp.Value.lastRotation = kvp.Value.currentRotation;
+                //Dont set the last values more than once in case multiple physics ticks run
+                if(!simulated){
+                    //Store new starting point
+                    kvp.Value.lastPosition = kvp.Value.currentPosition;
+                    kvp.Value.lastRotation = kvp.Value.currentRotation;
+                }
+                //Store new ending point
                 kvp.Value.currentPosition = kvp.Value.rigid.position;
                 kvp.Value.currentRotation = kvp.Value.rigid.rotation;
             }
+            simulated = true;
         }
 
         if(NetworkClient.active){
             if(simulated){
-                //lastSimulationDuration = Time.time - lastSimulationTime;
-                lastSimulationDuration = timerDuration;
+                //How long do we need to interpolate for this frame?
+                switch(lerpTimeingMode){
+                    case 0:
+                        lastSimulationDuration = Time.time - lastSimulationTime;
+                        break;
+                    case 1:
+                        lastSimulationDuration = timerDuration;
+                        break;
+                    case 2:
+                        lastSimulationDuration = timerDuration - physicsTimer;
+                        break;
+                }
                 lastSimulationTime = Time.time;
                 //print("Simulating physics: " + Time.time + " duration: " + lastSimulationDuration + " timerDuration: " + timerDuration);
             }
