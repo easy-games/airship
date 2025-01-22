@@ -162,12 +162,12 @@ public class AirshipPredictionManager : MonoBehaviour {
         while (physicsTimer > Time.fixedDeltaTime) {
             var test = physicsTimer;
 
+            OnPhysicsTick?.Invoke();
+
             //Simulate the physics
             physicsTimer -= Time.fixedDeltaTime;
             Physics.Simulate(Time.fixedDeltaTime);
             PhysicsTime += Time.fixedDeltaTime;
-
-            OnPhysicsTick?.Invoke();
 
             if(!SmoothRigidbodies){
                 continue;
