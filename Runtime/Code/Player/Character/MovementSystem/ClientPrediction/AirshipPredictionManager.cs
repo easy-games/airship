@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class AirshipPredictionManager : MonoBehaviour {
     public static double PhysicsTime {get; private set;} = 0;
@@ -66,15 +67,37 @@ public class AirshipPredictionManager : MonoBehaviour {
     private Dictionary<float, RigidbodyState> currentTrackedRigidbodies = new Dictionary<float, RigidbodyState>();
     private float lastSimulationTime = 0;
     private float lastSimulationDuration = 0;
-    private float currentSimulationTime = 0;
-    private int simI = 0;
-    private int simFrames = 4;
+
+    private int lerpTimeingMode = 0;
 
 #region PUBLIC API
     public void StartPrediction(){
         Physics.simulationMode = SimulationMode.Script;
         debugging = false;
         this.physicsTimer = 0;
+        
+        if(RunCore.IsClient() && Keyboard.current != null){
+            Keyboard.current.onTextInput += OnKeyboardInput;
+        }
+    }
+
+    private void OnKeyboardInput(Char e){
+        if(e == '1'){
+            print("Setting lerp mode to Time.time");
+            lerpTimeingMode = 0;
+        }
+        if(e == '2'){
+            print("Setting lerp mode to physicsTime");
+            lerpTimeingMode = 1;
+        }
+        if(e == '3'){
+            print("Setting lerp mode to physicsTime - remainder");
+            lerpTimeingMode = 2;
+        }
+        if(e == '4'){
+            print("Setting lerp mode to fixedDeltaTime");
+            lerpTimeingMode = 3;
+        }
     }
 
     public void StopPrediction(){
@@ -134,39 +157,58 @@ public class AirshipPredictionManager : MonoBehaviour {
         // Advance the physics simulation in portions of Time.fixedDeltaTime
         // Note that generally, we don't want to pass variable delta to Simulate as that leads to unstable results.
         physicsTimer += Time.deltaTime;
-        while (physicsTimer >= Time.fixedDeltaTime) {
+        var simulated = false;
+        var timerDuration = physicsTimer;
+        while (physicsTimer > Time.fixedDeltaTime) {
+            var test = physicsTimer;
+
+            OnPhysicsTick?.Invoke();
 
             //Simulate the physics
             physicsTimer -= Time.fixedDeltaTime;
             Physics.Simulate(Time.fixedDeltaTime);
             PhysicsTime += Time.fixedDeltaTime;
 
-            OnPhysicsTick?.Invoke();
-
             if(!SmoothRigidbodies){
                 continue;
             }
 
-            //RIGID SMOOTHING: Save timeing data every X frames
-            simI++;
-            if(simI >= simFrames){
-                simI = 0;
-                lastSimulationTime = currentSimulationTime;
-                currentSimulationTime = Time.time;
-                lastSimulationDuration = Time.time - lastSimulationTime;
-                lastSimulationTime = Time.time;
-
-                //Update rigidbody state data
-                foreach(var kvp in currentTrackedRigidbodies){
+            //RIGID SMOOTHING
+            //Update rigidbody state data
+            foreach(var kvp in currentTrackedRigidbodies){
+                //Dont set the last values more than once in case multiple physics ticks run
+                if(!simulated){
+                    //Store new starting point
                     kvp.Value.lastPosition = kvp.Value.currentPosition;
                     kvp.Value.lastRotation = kvp.Value.currentRotation;
-                    kvp.Value.currentPosition = kvp.Value.rigid.position;
-                    kvp.Value.currentRotation = kvp.Value.rigid.rotation;
                 }
+                //Store new ending point
+                kvp.Value.currentPosition = kvp.Value.rigid.position;
+                kvp.Value.currentRotation = kvp.Value.rigid.rotation;
             }
+            simulated = true;
         }
 
         if(NetworkClient.active){
+            if(simulated){
+                //How long do we need to interpolate for this frame?
+                switch(lerpTimeingMode){
+                    case 0:
+                        lastSimulationDuration = Time.time - lastSimulationTime;
+                        break;
+                    case 1:
+                        lastSimulationDuration = timerDuration;
+                        break;
+                    case 2:
+                        lastSimulationDuration = timerDuration - physicsTimer;
+                        break;
+                    case 3:
+                        lastSimulationDuration = Time.fixedDeltaTime;
+                        break;
+                }
+                lastSimulationTime = Time.time;
+                //print("Simulating physics: " + Time.time + " duration: " + lastSimulationDuration + " timerDuration: " + timerDuration);
+            }
             //Smooth out rigidbody movement
             InterpolateBodies();
         }
@@ -185,15 +227,11 @@ public class AirshipPredictionManager : MonoBehaviour {
         if(!SmoothRigidbodies || lastSimulationDuration == 0){
             return;
         }
-        float interpolationTime = Mathf.Clamp01((Time.time - lastSimulationTime) / lastSimulationDuration);
-        //print("interpolationTime: " + interpolationTime + " lastTime: " + lastSimulationTime + " lastDuration: " + lastSimulationDuration + " time: " + Time.time);
+        float interpolationTime = Mathf.Clamp01((Time.time - lastSimulationTime) / lastSimulationDuration);  
+        //print("interpolationTime: " + interpolationTime + " timeDiff: " + (Time.time - lastSimulationTime) + " lastDuration: " + lastSimulationDuration);
         //TODO: Sort the rigidbodies by depth (how deep in heirarchy?) so that we update nested rigidbodies in the correct order
         foreach(var kvp in currentTrackedRigidbodies){
             var rigidData = kvp.Value;
-            // rigidData.graphicsHolder.SetPositionAndRotation(
-            //     Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime), 
-            //     Quaternion.Lerp(rigidData.lastRotation, rigidData.currentRotation, interpolationTime)
-            //     );
             rigidData.graphicsHolder.position = Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime);
 
             // GizmoUtils.DrawSphere(

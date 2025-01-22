@@ -168,6 +168,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMeshObstacle),
             typeof(ScrollView),
             typeof(AirshipLongPress),
+            typeof(DecalProjector),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),
