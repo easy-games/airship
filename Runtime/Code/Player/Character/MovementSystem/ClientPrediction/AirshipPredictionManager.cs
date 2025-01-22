@@ -75,7 +75,10 @@ public class AirshipPredictionManager : MonoBehaviour {
         Physics.simulationMode = SimulationMode.Script;
         debugging = false;
         this.physicsTimer = 0;
-        Keyboard.current.onTextInput += OnKeyboardInput;
+        
+        if(RunCore.IsClient() && Keyboard.current != null){
+            Keyboard.current.onTextInput += OnKeyboardInput;
+        }
     }
 
     private void OnKeyboardInput(Char e){
