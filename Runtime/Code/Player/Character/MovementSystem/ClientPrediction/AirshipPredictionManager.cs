@@ -66,9 +66,6 @@ public class AirshipPredictionManager : MonoBehaviour {
     private Dictionary<float, RigidbodyState> currentTrackedRigidbodies = new Dictionary<float, RigidbodyState>();
     private float lastSimulationTime = 0;
     private float lastSimulationDuration = 0;
-    private float currentSimulationTime = 0;
-    private int simI = 0;
-    private int simFrames = 4;
 
 #region PUBLIC API
     public void StartPrediction(){
@@ -134,7 +131,11 @@ public class AirshipPredictionManager : MonoBehaviour {
         // Advance the physics simulation in portions of Time.fixedDeltaTime
         // Note that generally, we don't want to pass variable delta to Simulate as that leads to unstable results.
         physicsTimer += Time.deltaTime;
-        while (physicsTimer >= Time.fixedDeltaTime) {
+        var simulated = false;
+        var timerDuration = physicsTimer;
+        while (physicsTimer > Time.fixedDeltaTime) {
+            simulated = true;
+            var test = physicsTimer;
 
             //Simulate the physics
             physicsTimer -= Time.fixedDeltaTime;
@@ -147,26 +148,23 @@ public class AirshipPredictionManager : MonoBehaviour {
                 continue;
             }
 
-            //RIGID SMOOTHING: Save timeing data every X frames
-            simI++;
-            if(simI >= simFrames){
-                simI = 0;
-                lastSimulationTime = currentSimulationTime;
-                currentSimulationTime = Time.time;
-                lastSimulationDuration = Time.time - lastSimulationTime;
-                lastSimulationTime = Time.time;
-
-                //Update rigidbody state data
-                foreach(var kvp in currentTrackedRigidbodies){
-                    kvp.Value.lastPosition = kvp.Value.currentPosition;
-                    kvp.Value.lastRotation = kvp.Value.currentRotation;
-                    kvp.Value.currentPosition = kvp.Value.rigid.position;
-                    kvp.Value.currentRotation = kvp.Value.rigid.rotation;
-                }
+            //RIGID SMOOTHING
+            //Update rigidbody state data
+            foreach(var kvp in currentTrackedRigidbodies){
+                kvp.Value.lastPosition = kvp.Value.currentPosition;
+                kvp.Value.lastRotation = kvp.Value.currentRotation;
+                kvp.Value.currentPosition = kvp.Value.rigid.position;
+                kvp.Value.currentRotation = kvp.Value.rigid.rotation;
             }
         }
 
         if(NetworkClient.active){
+            if(simulated){
+                //lastSimulationDuration = Time.time - lastSimulationTime;
+                lastSimulationDuration = timerDuration;
+                lastSimulationTime = Time.time;
+                //print("Simulating physics: " + Time.time + " duration: " + lastSimulationDuration + " timerDuration: " + timerDuration);
+            }
             //Smooth out rigidbody movement
             InterpolateBodies();
         }
@@ -190,10 +188,6 @@ public class AirshipPredictionManager : MonoBehaviour {
         //TODO: Sort the rigidbodies by depth (how deep in heirarchy?) so that we update nested rigidbodies in the correct order
         foreach(var kvp in currentTrackedRigidbodies){
             var rigidData = kvp.Value;
-            // rigidData.graphicsHolder.SetPositionAndRotation(
-            //     Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime), 
-            //     Quaternion.Lerp(rigidData.lastRotation, rigidData.currentRotation, interpolationTime)
-            //     );
             rigidData.graphicsHolder.position = Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime);
 
             // GizmoUtils.DrawSphere(
