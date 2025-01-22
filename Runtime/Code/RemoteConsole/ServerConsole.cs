@@ -62,34 +62,34 @@ namespace Code.RemoteConsole {
 
         private void OnDisable() {
             if (RunCore.IsServer()) {
-                // Application.logMessageReceived -= LogCallback;
+                Application.logMessageReceived -= LogCallback;
             }
         }
 
         private void SendServerLogMessage(string message, LogType logType = LogType.Log, string stackTrace = "") {
-            // if (RunCore.IsServer()) {
-            //     var time = DateTime.Now.ToString("HH:mm:ss");
-            //     if (this.startupMessages.Count < maxStartupMessages) {
-            //         this.startupMessages.Add(new ServerConsoleBroadcast() {
-            //             message = message,
-            //             logType = logType,
-            //             startup = true,
-            //             time = time,
-            //             stackTrace = stackTrace,
-            //         });
-            //     }
-            //
-            //     if (NetworkServer.active) {
-            //         var packet = new ServerConsoleBroadcast() {
-            //             message = message,
-            //             logType = logType,
-            //             startup = false,
-            //             stackTrace = stackTrace,
-            //             time = time,
-            //         };
-            //         NetworkServer.SendToAll(packet);
-            //     }
-            // }
+            if (RunCore.IsServer()) {
+                var time = DateTime.Now.ToString("HH:mm:ss");
+                if (this.startupMessages.Count < maxStartupMessages) {
+                    this.startupMessages.Add(new ServerConsoleBroadcast() {
+                        message = message,
+                        logType = logType,
+                        startup = true,
+                        time = time,
+                        stackTrace = stackTrace,
+                    });
+                }
+
+                if (NetworkServer.active) {
+                    var packet = new ServerConsoleBroadcast() {
+                        message = message,
+                        logType = logType,
+                        startup = false,
+                        stackTrace = stackTrace,
+                        time = time,
+                    };
+                    NetworkServer.SendToAll(packet);
+                }
+            }
         }
     }
 }
