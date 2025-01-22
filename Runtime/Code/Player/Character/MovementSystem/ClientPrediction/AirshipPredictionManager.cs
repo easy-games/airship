@@ -94,6 +94,10 @@ public class AirshipPredictionManager : MonoBehaviour {
             print("Setting lerp mode to physicsTime - remainder");
             lerpTimeingMode = 2;
         }
+        if(e == '4'){
+            print("Setting lerp mode to fixedDeltaTime");
+            lerpTimeingMode = 3;
+        }
     }
 
     public void StopPrediction(){
@@ -198,6 +202,9 @@ public class AirshipPredictionManager : MonoBehaviour {
                     case 2:
                         lastSimulationDuration = timerDuration - physicsTimer;
                         break;
+                    case 3:
+                        lastSimulationDuration = Time.fixedDeltaTime;
+                        break;
                 }
                 lastSimulationTime = Time.time;
                 //print("Simulating physics: " + Time.time + " duration: " + lastSimulationDuration + " timerDuration: " + timerDuration);
@@ -220,8 +227,8 @@ public class AirshipPredictionManager : MonoBehaviour {
         if(!SmoothRigidbodies || lastSimulationDuration == 0){
             return;
         }
-        float interpolationTime = Mathf.Clamp01((Time.time - lastSimulationTime) / lastSimulationDuration);
-        //print("interpolationTime: " + interpolationTime + " lastTime: " + lastSimulationTime + " lastDuration: " + lastSimulationDuration + " time: " + Time.time);
+        float interpolationTime = Mathf.Clamp01((Time.time - lastSimulationTime) / lastSimulationDuration);  
+        //print("interpolationTime: " + interpolationTime + " timeDiff: " + (Time.time - lastSimulationTime) + " lastDuration: " + lastSimulationDuration);
         //TODO: Sort the rigidbodies by depth (how deep in heirarchy?) so that we update nested rigidbodies in the correct order
         foreach(var kvp in currentTrackedRigidbodies){
             var rigidData = kvp.Value;
