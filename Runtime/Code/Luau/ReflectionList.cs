@@ -174,6 +174,7 @@ namespace Luau {
             [typeof(SkinnedMeshRenderer)] = LuauContextAll,
             [typeof(MeshFilter)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
+            [typeof(DecalProjector)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
