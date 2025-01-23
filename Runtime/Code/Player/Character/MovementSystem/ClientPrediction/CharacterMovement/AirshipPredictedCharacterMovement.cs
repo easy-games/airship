@@ -151,6 +151,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
         if(tick < serverTick){
             Debug.LogWarning("Recieved inputs from client that are in the past by " + (tick - serverTick) + " ticks");
+            return;
         }
 
         //If there is already a value here, overwrite it

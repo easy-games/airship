@@ -215,6 +215,7 @@ protected void Log(string message){
             }else{
                 predictedTick++;
             }
+
             // on clients (not host) we record the current state every FixedUpdate.
             // this is cheap, and allows us to keep a dense history.
             if (!isClientOnly || IsObserver()) return;
@@ -498,6 +499,7 @@ protected void Log(string message){
     // reliable for now.
     // TODO we should use the one from FixedUpdate
     public override void OnSerialize(NetworkWriter writer, bool initialState) {
+
         //Pass what tick we sent this on
         writer.WriteInt(serverTick);
 
@@ -517,13 +519,20 @@ protected void Log(string message){
     }
 
     // read the server's state, compare with client state & correct if necessary.
-    public override void OnDeserialize(NetworkReader reader, bool initialState) {        
+    private int newestTick = 0;
+    public override void OnDeserialize(NetworkReader reader, bool initialState) {    
+            
         // deserialize data
         // we want to know the time on the server when this was sent, which is remoteTimestamp.
         //double serverTimestamp = NetworkClient.connection.remoteTimeStamp;
 
         //Get server tick
-        SetServerTick(reader.ReadInt());
+        var tick = reader.ReadInt();
+        if(tick < newestTick){
+            return;
+        }
+        newestTick = tick;
+        SetServerTick(tick);
 
         //Must we replay?
         var forceReplay = reader.ReadBool();
