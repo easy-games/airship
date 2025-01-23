@@ -10,7 +10,7 @@ using Luau;
 using Debug = UnityEngine.Debug;
 
 public static class LuauPlugin {
-	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr);
+	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
 	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
 	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield);
@@ -660,17 +660,6 @@ public static class LuauPlugin {
 	public static LuauContext LuauGetContextFromThread(IntPtr thread) {
 		ThreadSafetyCheck();
 		return GetContextFromThread(thread);
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern void FreeString(IntPtr cStringPtr);
-	public static void LuauFreeString(IntPtr cStringPtr) {
-		ThreadSafetyCheck();
-		FreeString(cStringPtr);
 	}
 	
 #if UNITY_IPHONE

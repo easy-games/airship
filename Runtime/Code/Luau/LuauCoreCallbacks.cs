@@ -124,11 +124,10 @@ public partial class LuauCore : MonoBehaviour {
     }
 
 #if UNITY_EDITOR
+    private static readonly Regex AnchorLinkPattern = new Regex(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static string InjectAnchorLinkToLuaScript(string logMessage) {
         // e.g. "path/to/my/script.lua:10: an error occurred"
-        var rx = new Regex(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-        return rx.Replace(logMessage, (m) => {
+        return AnchorLinkPattern.Replace(logMessage, (m) => {
             var scriptPath = m.Groups[1].Value;
             var line = m.Groups[2].Value;
             
@@ -140,14 +139,10 @@ public partial class LuauCore : MonoBehaviour {
 
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr) {
+    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
         CurrentContext = context;
         
-        string res = LuauCore.PtrToStringUTF8(buffer, length);
-        if (res == null) {
-            LuauPlugin.LuauFreeString(ptr);
-            return;
-        }
+        var res = LuauCore.PtrToStringUTF8(buffer, length);
         
 #if UNITY_EDITOR
         if (style == 1 || style == 2) {
@@ -169,14 +164,11 @@ public partial class LuauCore : MonoBehaviour {
             Debug.LogWarning(res, logContext);
         } else if (style == 2) {
             Debug.LogError(res, logContext);
-            //If its an error, the thread is suspended 
+            //If it's an error, the thread is suspended 
             ThreadDataManager.Error(thread);
-            //GetLuauDebugTrace(thread);
         } else {
             Debug.Log(res, logContext);
         }
-        
-        LuauPlugin.LuauFreeString(ptr);
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToStringCallback))]
