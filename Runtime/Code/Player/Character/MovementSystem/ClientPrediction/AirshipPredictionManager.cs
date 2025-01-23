@@ -20,7 +20,6 @@ public class AirshipPredictionManager : MonoBehaviour {
                 var go = new GameObject("PredictionManager");
                 DontDestroyOnLoad(go);
                 _instance = go.AddComponent<AirshipPredictionManager>();
-                _instance.StartPrediction();
             }
             return _instance;
         }
@@ -61,20 +60,32 @@ public class AirshipPredictionManager : MonoBehaviour {
 
     private bool debugging = false;
     private bool readyToTick = false;
-    private float physicsTimer;
+    private float physicsTickTimer;
     private SortedList<double, ReplayData> pendingReplays = new SortedList<double, ReplayData>();
     private Dictionary<float, IPredictedReplay> replayObjects = new Dictionary<float, IPredictedReplay>();
     private Dictionary<float, RigidbodyState> currentTrackedRigidbodies = new Dictionary<float, RigidbodyState>();
-    private float lastSimulationTime = 0;
+    private float lastSimulationTime = 3;
     private float lastSimulationDuration = 0;
 
     private int lerpTimeingMode = 0;
 
+    public void Awake(){
+        if(!_instance){
+            _instance = this;
+        } else{
+            Debug.LogWarning("Multiple AirshipPredictionManager objects in scene");
+        }
+    }
+
 #region PUBLIC API
     public void StartPrediction(){
+        if(Physics.simulationMode == SimulationMode.Script){
+            return;
+        }
         Physics.simulationMode = SimulationMode.Script;
         debugging = false;
-        this.physicsTimer = 0;
+        this.physicsTickTimer = 0;
+        PhysicsTime = Time.time;
         
         if(RunCore.IsClient() && Keyboard.current != null){
             Keyboard.current.onTextInput += OnKeyboardInput;
@@ -136,8 +147,8 @@ public class AirshipPredictionManager : MonoBehaviour {
 #endregion
 
 #region UPDATE
-    private void Update() {
 
+    private void FixedUpdate(){
         if(Physics.simulationMode != SimulationMode.Script){
             return;
         }
@@ -152,63 +163,105 @@ public class AirshipPredictionManager : MonoBehaviour {
             return;
         }
         readyToTick = false;
+        //Simulate the physics
+        Physics.Simulate(Time.fixedDeltaTime);
+        PhysicsTime += Time.fixedDeltaTime;
 
-        // Catch up with the game time.
-        // Advance the physics simulation in portions of Time.fixedDeltaTime
-        // Note that generally, we don't want to pass variable delta to Simulate as that leads to unstable results.
-        physicsTimer += Time.deltaTime;
-        var simulated = false;
-        var timerDuration = physicsTimer;
-        while (physicsTimer > Time.fixedDeltaTime) {
-            var test = physicsTimer;
+        OnPhysicsTick?.Invoke();
 
-            OnPhysicsTick?.Invoke();
-
-            //Simulate the physics
-            physicsTimer -= Time.fixedDeltaTime;
-            Physics.Simulate(Time.fixedDeltaTime);
-            PhysicsTime += Time.fixedDeltaTime;
-
-            if(!SmoothRigidbodies){
-                continue;
-            }
-
-            //RIGID SMOOTHING
-            //Update rigidbody state data
-            foreach(var kvp in currentTrackedRigidbodies){
-                //Dont set the last values more than once in case multiple physics ticks run
-                if(!simulated){
-                    //Store new starting point
-                    kvp.Value.lastPosition = kvp.Value.currentPosition;
-                    kvp.Value.lastRotation = kvp.Value.currentRotation;
-                }
-                //Store new ending point
-                kvp.Value.currentPosition = kvp.Value.rigid.position;
-                kvp.Value.currentRotation = kvp.Value.rigid.rotation;
-            }
-            simulated = true;
+        if(!SmoothRigidbodies){
+            return;
         }
 
+        //RIGID SMOOTHING
+        //Update rigidbody state data
+        foreach(var kvp in currentTrackedRigidbodies){
+            //Store new starting point
+            kvp.Value.lastPosition = kvp.Value.currentPosition;
+            kvp.Value.lastRotation = kvp.Value.currentRotation;
+            //Store new ending point
+            kvp.Value.currentPosition = kvp.Value.rigid.position;
+            kvp.Value.currentRotation = kvp.Value.rigid.rotation;
+        }
+
+        //lastSimulationTime = ;
+        lastSimulationDuration = Time.fixedDeltaTime;
+    }
+
+    private void Update() {
+
+        // if(Physics.simulationMode != SimulationMode.Script){
+        //     return;
+        // }
+
+        // // if(pendingReplays.Count > 0){
+        // //     StartReplays();
+        // // }
+
+
+        // if(debugging && !readyToTick){
+        //     //Don't step time 
+        //     return;
+        // }
+        // readyToTick = false;
+
+        // // Catch up with the game time.
+        // // Advance the physics simulation in portions of Time.fixedDeltaTime
+        // // Note that generally, we don't want to pass variable delta to Simulate as that leads to unstable results.
+        // physicsTickTimer += Time.deltaTime;
+        // var simulated = false;
+        // var timerDuration = physicsTickTimer;
+        // while (physicsTickTimer >= Time.fixedDeltaTime) {
+        //     var test = physicsTickTimer;
+
+
+        //     //Simulate the physics
+        //     Physics.Simulate(Time.fixedDeltaTime);
+        //     physicsTickTimer -= Time.fixedDeltaTime;
+        //     PhysicsTime += Time.fixedDeltaTime;
+
+        //     OnPhysicsTick?.Invoke();
+
+        //     if(!SmoothRigidbodies){
+        //         continue;
+        //     }
+
+        //     //RIGID SMOOTHING
+        //     //Update rigidbody state data
+        //     foreach(var kvp in currentTrackedRigidbodies){
+        //         //Dont set the last values more than once in case multiple physics ticks run
+        //         if(!simulated){
+        //             //Store new starting point
+        //             kvp.Value.lastPosition = kvp.Value.currentPosition;
+        //             kvp.Value.lastRotation = kvp.Value.currentRotation;
+        //         }
+        //         //Store new ending point
+        //         kvp.Value.currentPosition = kvp.Value.rigid.position;
+        //         kvp.Value.currentRotation = kvp.Value.rigid.rotation;
+        //     }
+        //     simulated = true;
+        // }
+
         if(NetworkClient.active){
-            if(simulated){
-                //How long do we need to interpolate for this frame?
-                switch(lerpTimeingMode){
-                    case 0:
-                        lastSimulationDuration = Time.time - lastSimulationTime;
-                        break;
-                    case 1:
-                        lastSimulationDuration = timerDuration;
-                        break;
-                    case 2:
-                        lastSimulationDuration = timerDuration - physicsTimer;
-                        break;
-                    case 3:
-                        lastSimulationDuration = Time.fixedDeltaTime;
-                        break;
-                }
-                lastSimulationTime = Time.time;
-                //print("Simulating physics: " + Time.time + " duration: " + lastSimulationDuration + " timerDuration: " + timerDuration);
-            }
+            // if(simulated){
+            //     //How long do we need to interpolate for this frame?
+            //     switch(lerpTimeingMode){
+            //         case 0:
+            //             lastSimulationDuration = Time.time - lastSimulationTime;
+            //             break;
+            //         case 1:
+            //             lastSimulationDuration = timerDuration;
+            //             break;
+            //         case 2:
+            //             lastSimulationDuration = timerDuration - physicsTickTimer;
+            //             break;
+            //         case 3:
+            //             lastSimulationDuration = Time.fixedDeltaTime;
+            //             break;
+            //     }
+            //     lastSimulationTime = (float)PhysicsTime;
+            //     //print("Simulating physics: " + Time.time + " duration: " + lastSimulationDuration + " timerDuration: " + timerDuration);
+            // }
             //Smooth out rigidbody movement
             InterpolateBodies();
         }
@@ -227,8 +280,8 @@ public class AirshipPredictionManager : MonoBehaviour {
         if(!SmoothRigidbodies || lastSimulationDuration == 0){
             return;
         }
-        float interpolationTime = Mathf.Clamp01((Time.time - lastSimulationTime) / lastSimulationDuration);  
-        //print("interpolationTime: " + interpolationTime + " timeDiff: " + (Time.time - lastSimulationTime) + " lastDuration: " + lastSimulationDuration);
+        float interpolationTime = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);  
+        //print("interpolationTime: " + interpolationTime + " timeDiff: " + (Time.time - Time.fixedTime) + " lastDuration: " + Time.fixedDeltaTime);
         //TODO: Sort the rigidbodies by depth (how deep in heirarchy?) so that we update nested rigidbodies in the correct order
         foreach(var kvp in currentTrackedRigidbodies){
             var rigidData = kvp.Value;
