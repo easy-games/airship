@@ -1128,15 +1128,15 @@ public class CharacterMovement : NetworkBehaviour {
 
 	public void SetFlying(bool flyModeEnabled) {
 		this.currentMoveState.isFlying = flyModeEnabled;
-		if(isClient && hasMovementAuth){
+		if(!isServerAuth && isClientOnly && hasMovementAuth){
 			CommandSetFlying(flyModeEnabled);
-		}else if(!isServerAuth && isServerOnly){
-			RpcSetFlying(flyModeEnabled);
+		}else if(isServerOnly){
+			RpcSetFlying(base.connectionToClient, flyModeEnabled);
 		}
 	}
 
-	[ClientRpc(includeOwner = false)]
-	private void RpcSetFlying(bool flyModeEnabled) {
+	[TargetRpc]
+	private void RpcSetFlying(NetworkConnection conn, bool flyModeEnabled) {
 		this.currentMoveState.isFlying = flyModeEnabled;
 	}
 
