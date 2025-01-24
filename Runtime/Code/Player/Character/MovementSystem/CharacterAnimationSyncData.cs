@@ -7,7 +7,11 @@ public class CharacterAnimationSyncData {
     public bool sprinting = false;
     public bool crouching = false;
     public Vector3 localVelocity = Vector3.zero;
-    public Vector3 lookVector = Vector3.zero;
+    public Vector3 lookVector = Vector3.zero;    
+    
+    //Just for observers in predicted mode
+    public Vector3 position = Vector3.zero;
+
 
     // override object.Equals
     public override bool Equals(object obj) {
@@ -28,6 +32,7 @@ public class CharacterAnimationSyncData {
             hashCode = (hashCode * 397) ^ crouching.GetHashCode();
             hashCode = (hashCode * 397) ^ lookVector.GetHashCode();
             hashCode = (hashCode * 397) ^ localVelocity.GetHashCode();
+            hashCode = (hashCode * 397) ^ position.GetHashCode();
             return hashCode;
         }
     }
