@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using Code.Platform.Shared;
 using UnityEngine;
 
 namespace Code.Analytics {
     public static class AnalyticsRecorder {
-        private static List<ReportableError> errors = new();
+        private const int MaxErrorsBuffered = 100;
+        
+        private static readonly List<ReportableError> errors = new(MaxErrorsBuffered);
         public static StartupConfig? startupConfig { get; private set; }
         public static void InitGame(StartupConfig config) {
             AnalyticsRecorder.startupConfig = config;
@@ -24,25 +25,32 @@ namespace Code.Analytics {
                 return;
             }
 
-            var now = DateTime.UtcNow;
             if (logType == LogType.Error) {
-                errors.Add(new ReportableError {
-                    timestamp = now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture),
+                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+
+                var reportableError = new ReportableError {
+                    timestamp = timestamp,
                     stackTrace = stackTrace,
                     message = message,
-                });
+                };
 
-                if (errors.Count > 100) {
+                if (errors.Count >= MaxErrorsBuffered) {
                     errors.RemoveAt(0);
                 }
+            
+                errors.Add(reportableError);
             }
         }
 
-    public static List<ReportableError> GetAndClearErrors() {
-            var errorsToReturn = errors;
-            errors = new();
+        public static List<ReportableError> GetAndClearErrors() {
+            if (errors.Count <= 0) {
+                return null;
+            }
+            
+            var errorsToReturn = new List<ReportableError>(errors);
+            errors.Clear();
+            
             return errorsToReturn;
         }
-
     }
 }
