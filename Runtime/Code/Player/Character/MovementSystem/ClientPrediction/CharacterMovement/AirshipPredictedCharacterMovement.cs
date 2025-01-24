@@ -15,6 +15,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     public CharacterMovement movement;
 
     [Header("Variables")]
+    public float observerLerpDuration = .1f;
     public bool pauseOnReplay = false;
 
 #endregion
@@ -59,6 +60,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     protected override void OnEnable() {
+        if(IsObserver()){
+            base.OnEnable();
+            return;
+        }
+
         if(this.smoothRigidbody){
             AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
         }
@@ -68,6 +74,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     protected override void OnDisable() {
+        if(IsObserver()){
+            base.OnDisable();
+            return;
+        }
+
         if(this.smoothRigidbody){
             AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
         }
@@ -75,6 +86,29 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         movement.OnSetCustomData -= OnSetMovementData;
         movement.OnEndMove -= OnMovementEnd;
     }
+#endregion
+
+#region OBSERVERS
+    private CharacterMovementState prevObserverState;
+    private CharacterMovementState nextObserverState;
+    private float lastObserverTime = 0;
+    protected override void OnRecievedObserverState(CharacterMovementState serverState) {
+        if(prevObserverState != null){
+            this.SnapTo(nextObserverState);
+        }
+        this.prevObserverState = nextObserverState;
+        nextObserverState = serverState;
+        lastObserverTime = Time.time;
+    }
+
+    protected override void Update(){
+        base.Update();
+        if(IsObserver() && prevObserverState != null && nextObserverState != null){
+            var delta = Mathf.Clamp01((Time.time - lastObserverTime) / this.observerLerpDuration);
+            movement.rootTransform.position = Vector3.Lerp(prevObserverState.position, nextObserverState.position, delta);
+        }
+    }
+
 #endregion
 
 #region PREDICTION

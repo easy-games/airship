@@ -253,7 +253,7 @@ public class CharacterMovement : NetworkBehaviour {
 				lookTarget = new Vector3(0,0,.01f);
 			}
 			airshipTransform.rotation = Quaternion.Lerp(
-				graphicTransform.rotation,
+				airshipTransform.rotation,
 				Quaternion.LookRotation(lookTarget),
 				observerRotationLerpMod * Time.deltaTime);
 		}

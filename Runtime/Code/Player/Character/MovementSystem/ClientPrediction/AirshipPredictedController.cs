@@ -134,6 +134,10 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
         }
         return needsCorrection;
     }
+
+    protected virtual void OnRecievedObserverState(T serverState){
+        SnapTo(serverState);
+    }
 #endregion
 
 protected void Log(string message){
@@ -318,7 +322,7 @@ protected void Log(string message){
     // serverTimestamp is the same value as serverState.timestamp
     protected void OnReceivedState(int serverTick, T serverState, bool forceReplay) {
         if(IsObserver()){
-            SnapTo(serverState);
+            OnRecievedObserverState(serverState);
             return;
         }
 
