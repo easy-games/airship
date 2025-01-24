@@ -163,7 +163,12 @@ public partial class LuauCore : MonoBehaviour {
         if (style == 1) {
             Debug.LogWarning(res, logContext);
         } else if (style == 2) {
+            // The STANDALONE here is just a test:
+#if UNITY_STANDALONE
+            Debug.LogWarning("[ERROR] " + res, logContext);
+#else
             Debug.LogError(res, logContext);
+#endif
             //If it's an error, the thread is suspended 
             ThreadDataManager.Error(thread);
         } else {
