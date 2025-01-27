@@ -32,6 +32,8 @@ namespace Code.Player.Character
         /// </summary>
         public List<BaseClipPreset> baseClipSelectionPresets = new List<BaseClipPreset>();
 
+        private List<KeyValuePair<AnimationClip, AnimationClip>> originalOverrides;
+
         private void Awake()
         {
             var components = GetComponents<AnimatorClipReplacer>();
@@ -101,6 +103,8 @@ namespace Code.Player.Character
                 Debug.LogError("No clips has been applied as the overrider list is empty");
                 return;
             }
+
+            SaveOriginalOverrides(overrideController);
 
             // Checks for duplicates in the clipReplacements list
             var duplicateClips = clipReplacements
@@ -177,18 +181,11 @@ namespace Code.Player.Character
         /// <param name="controller">The AnimatorOverrideController to apply the replacements to.</param>
         public void RemoveClips(Object controller)
         {
-
             AnimatorOverrideController overrideController = null;
 
             if (controller == null)
             {
                 Debug.LogError("No valid AnimatorOverrideController found.");
-                return;
-            }
-
-            if (clipReplacements.Count == 0)
-            {
-                Debug.LogError("No clips has been removed as the overrider list is empty");
                 return;
             }
 
@@ -210,33 +207,21 @@ namespace Code.Player.Character
                 return;
             }
 
-            // Creates the animation map without duplicates
-            var animationMap = clipReplacements.ToDictionary(
-                clip => clip.baseClipName,
-                clip => clip.replacementClip
-            );
-
-            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
-            overrideController.GetOverrides(overrides);
-
-            // Overwriting null clips in the overrider list
-            for (int i = 0; i < overrides.Count; i++)
+            if (originalOverrides == null || originalOverrides.Count == 0)
             {
-                var originalClip = overrides[i].Key;
-                if (animationMap.TryGetValue(originalClip.name, out var newClip))
-                {
-                    overrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(originalClip, null);
-                }
+                Debug.LogWarning("No original overrides found to restore.");
+                return;
             }
 
-            // Apply the updated overrides
-            overrideController.ApplyOverrides(overrides);
+            // Restaura os overrides originais
+            overrideController.ApplyOverrides(originalOverrides);
 
             if (!Application.isPlaying)
             {
-                Debug.Log("Clips Overrides have been removed");
+                Debug.Log("Original clips have been restored.");
             }
         }
+
         /// <summary>
         /// Attempts to extract an AnimatorOverrideController from the given object.
         /// </summary>
@@ -250,6 +235,7 @@ namespace Code.Player.Character
 
                 if (Application.isPlaying)
                 {
+                    SaveOriginalOverrides(overrideController);
                     AnimatorOverrideController instanaceAnimator = new(animator.runtimeAnimatorController);
                     var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
                     overrideController.GetOverrides(overrides);
@@ -269,6 +255,7 @@ namespace Code.Player.Character
 
                     if (Application.isPlaying)
                     {
+                        SaveOriginalOverrides(overrideController);
                         AnimatorOverrideController instanaceAnimator = new(animatorComponent.runtimeAnimatorController);
                         var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
                         overrideController.GetOverrides(overrides);
@@ -318,6 +305,16 @@ namespace Code.Player.Character
                 return null;
             }
         }
+
+        private void SaveOriginalOverrides(AnimatorOverrideController overrideController)
+        {
+            if (originalOverrides == null)
+            {
+                originalOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
+                overrideController.GetOverrides(originalOverrides);
+            }
+        }
+
     }
 
     /// <summary>
