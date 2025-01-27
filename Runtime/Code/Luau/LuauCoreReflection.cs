@@ -861,160 +861,131 @@ public partial class LuauCore : MonoBehaviour
             Type sourceParamType = methodParameters[paramIndex].ParameterType;
             
             // Handle Luau tables:
-            if (isTable[paramIndex] != 0) {
-                var success = ParseTableParameter(thread, paramType, sourceParamType, sizes[paramIndex], paramIndex - numParameters, out var value);
+            if (isTable[i] != 0) {
+                var success = ParseTableParameter(thread, paramType, sourceParamType, sizes[i], i - numParameters, out var value);
                 if (!success) {
-                    Debug.LogError("Param " + paramIndex + " " + podTypes[paramIndex] + " not valid table type for this parameter/unhandled so far.");
+                    Debug.LogError($"Param {i} {podTypes[i]} not valid table type for this parameter/unhandled so far.");
                     return false;
                 }
                 parsedData[paramIndex] = value;
                 continue;
             }
             
-            switch (paramType)
-            {
-                case PODTYPE.POD_OBJECT:
-                    {
-                        System.Object objectRef = podObjects[i];
-                        parsedData[paramIndex] = objectRef;
-                        continue;
-                    }
+            switch (paramType) {
+                case PODTYPE.POD_OBJECT: {
+                    System.Object objectRef = podObjects[i];
+                    parsedData[paramIndex] = objectRef;
+                    continue;
+                }
                 case PODTYPE.POD_AIRSHIP_COMPONENT: {
                     var objectRef = podObjects[paramIndex] as AirshipComponent;
                     parsedData[paramIndex] = objectRef;
                     continue;
                 }
-                case PODTYPE.POD_DOUBLE:
-                    {
-                        double[] doubleData = new double[1];
-                        Marshal.Copy(intPtrs[i], doubleData, 0, 1);
-                        if (sourceParamType.IsAssignableFrom(doubleType))
-                        {
-                            parsedData[paramIndex] = doubleData[0];
-                            continue;
-                        }
-                        if (sourceParamType.IsAssignableFrom(floatType))
-                        {
-                            parsedData[paramIndex] = (System.Single)doubleData[0];
-                            continue;
-                        }
-                        if (sourceParamType.IsAssignableFrom(byteType))
-                        {
+                case PODTYPE.POD_DOUBLE: {
+                    double[] doubleData = new double[1];
+                    Marshal.Copy(intPtrs[i], doubleData, 0, 1);
+                    if (sourceParamType.IsAssignableFrom(doubleType)) {
+                        parsedData[paramIndex] = doubleData[0];
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(floatType)) {
+                        parsedData[paramIndex] = (System.Single)doubleData[0];
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(byteType)) {
+                        parsedData[paramIndex] = (System.Byte)doubleData[0];
+                        continue;
+                    }
+
+                    if (sourceParamType.BaseType == enumType) {
+                        if (Enum.GetUnderlyingType(sourceParamType) == byteType) {
                             parsedData[paramIndex] = (System.Byte)doubleData[0];
-                            continue;
-                        }
-
-                        if (sourceParamType.BaseType == enumType)
-                        {
-                            if (Enum.GetUnderlyingType(sourceParamType) == byteType)
-                            {
-                                parsedData[paramIndex] = (System.Byte)doubleData[0];
-                            } else
-                            {
-                                parsedData[paramIndex] = (System.Int32)doubleData[0];
-                            }
-                            continue;
-                        }
-                        if (sourceParamType.IsAssignableFrom(intType))
-                        {
+                        } else {
                             parsedData[paramIndex] = (System.Int32)doubleData[0];
-                            continue;
                         }
-                        if (sourceParamType.IsAssignableFrom(uIntType))
-                        {
-                            parsedData[paramIndex] = (System.UInt32)doubleData[0];
-                            continue;
-                        }
-                        if (sourceParamType.IsAssignableFrom(ushortType)) {
-                            parsedData[paramIndex] = (System.UInt16)doubleData[0];
-                            continue;
-                        }
-                        if (sourceParamType.IsAssignableFrom(longType))
-                        {
-                            parsedData[paramIndex] = (System.Int64)doubleData[0];
-                            continue;
-                        }
-                        if (sourceParamType.IsAssignableFrom(uLongType))
-                        {
-                            parsedData[paramIndex] = (System.UInt64)doubleData[0];
-                            continue;
-                        }
-
-                        break;
+                        continue;
                     }
-                case PODTYPE.POD_BOOL:
-                    {
-                        double[] doubleData = new double[1];
-                        Marshal.Copy(intPtrs[i], doubleData, 0, 1);
-                        if (doubleData[0] == 0)
-                        {
-                            parsedData[paramIndex] = false;
-                        }
-                        else
-                        {
-                            parsedData[paramIndex] = true;
-                        }
-
+                    if (sourceParamType.IsAssignableFrom(intType)) {
+                        parsedData[paramIndex] = (System.Int32)doubleData[0];
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uIntType)) {
+                        parsedData[paramIndex] = (System.UInt32)doubleData[0];
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(ushortType)) {
+                        parsedData[paramIndex] = (System.UInt16)doubleData[0];
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(longType)) {
+                        parsedData[paramIndex] = (System.Int64)doubleData[0];
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uLongType)) {
+                        parsedData[paramIndex] = (System.UInt64)doubleData[0];
                         continue;
                     }
 
-
-                case PODTYPE.POD_VECTOR3:
-                    {
-                        parsedData[paramIndex] = NewVector3FromPointer(intPtrs[i]);
-                        continue;
+                    break;
+                }
+                case PODTYPE.POD_BOOL: {
+                    double[] doubleData = new double[1];
+                    Marshal.Copy(intPtrs[i], doubleData, 0, 1);
+                    if (doubleData[0] == 0) {
+                        parsedData[paramIndex] = false;
+                    }else {
+                        parsedData[paramIndex] = true;
                     }
 
-                case PODTYPE.POD_STRING:
-                    {
-                        string dataStr = LuauCore.PtrToStringUTF8(intPtrs[i], sizes[i]);
-                        parsedData[paramIndex] = dataStr;
+                    continue;
+                }
+                case PODTYPE.POD_VECTOR3: {
+                    parsedData[paramIndex] = NewVector3FromPointer(intPtrs[i]);
+                    continue;
+                }
 
-                        continue;
-                    }
+                case PODTYPE.POD_STRING: {
+                    string dataStr = LuauCore.PtrToStringUTF8(intPtrs[i], sizes[i]);
+                    parsedData[paramIndex] = dataStr;
 
-                case PODTYPE.POD_RAY:
-                    {
-                        parsedData[paramIndex] = NewRayFromPointer(intPtrs[i]);
-                        continue;
-                    }
+                    continue;
+                }
 
-                case PODTYPE.POD_BINARYBLOB:
-                    {
-                        parsedData[paramIndex] = NewBinaryBlobFromPointer(intPtrs[i], sizes[i]);
-                        continue;
-                    }
+                case PODTYPE.POD_RAY: {
+                    parsedData[paramIndex] = NewRayFromPointer(intPtrs[i]);
+                    continue;
+                }
 
-                case PODTYPE.POD_PLANE:
-                    {
-                        parsedData[paramIndex] = NewPlaneFromPointer(intPtrs[i]);
-                        continue;
-                    }
-                case PODTYPE.POD_QUATERNION:
-                    {
-                        parsedData[paramIndex] = NewQuaternionFromPointer(intPtrs[i]);
-                        continue;
-                    }
-                case PODTYPE.POD_VECTOR2:
-                    {
-                        parsedData[paramIndex] = NewVector2FromPointer(intPtrs[i]);
-                        continue;
-                    }
-                case PODTYPE.POD_VECTOR4:
-                    {
-                        parsedData[paramIndex] = NewVector4FromPointer(intPtrs[i]);
-                        continue;
-                    }
-                case PODTYPE.POD_COLOR:
-                    {
-                        parsedData[paramIndex] = NewColorFromPointer(intPtrs[i]);
-                        continue;
-                    }
-                case PODTYPE.POD_MATRIX:
-                    {
-                        parsedData[paramIndex] = NewMatrixFromPointer(intPtrs[i]);
-                        continue;
-                    }
+                case PODTYPE.POD_BINARYBLOB: {
+                    parsedData[paramIndex] = NewBinaryBlobFromPointer(intPtrs[i], sizes[i]);
+                    continue;
+                }
+
+                case PODTYPE.POD_PLANE: {
+                    parsedData[paramIndex] = NewPlaneFromPointer(intPtrs[i]);
+                    continue;
+                }
+                case PODTYPE.POD_QUATERNION: {
+                    parsedData[paramIndex] = NewQuaternionFromPointer(intPtrs[i]);
+                    continue;
+                }
+                case PODTYPE.POD_VECTOR2: {
+                    parsedData[paramIndex] = NewVector2FromPointer(intPtrs[i]);
+                    continue;
+                }
+                case PODTYPE.POD_VECTOR4: {
+                    parsedData[paramIndex] = NewVector4FromPointer(intPtrs[i]);
+                    continue;
+                }
+                case PODTYPE.POD_COLOR: {
+                    parsedData[paramIndex] = NewColorFromPointer(intPtrs[i]);
+                    continue;
+                }
+                case PODTYPE.POD_MATRIX: {
+                    parsedData[paramIndex] = NewMatrixFromPointer(intPtrs[i]);
+                    continue;
+                }
             }
 
             Debug.LogError("Param " + paramIndex + " " + podTypes[i] + " not valid type for this parameter/unhandled so far.");
