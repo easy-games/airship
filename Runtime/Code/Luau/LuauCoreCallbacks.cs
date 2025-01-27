@@ -1530,10 +1530,8 @@ public partial class LuauCore : MonoBehaviour {
         return returnCount;
     }
 
-    private static void WriteMethodReturnValuesToThread(IntPtr thread, Type type, Type returnType, ParameterInfo[] finalParameters, object returnValue, object[] parsedData)
-    {
-        if (type.IsSZArray == true)
-        {
+    private static void WriteMethodReturnValuesToThread(IntPtr thread, Type type, Type returnType, ParameterInfo[] finalParameters, object returnValue, object[] parsedData) {
+        if (type.IsSZArray) {
             //When returning array types, finalMethod.ReturnType is wrong
             returnType = type.GetElementType();
         }
@@ -1541,10 +1539,8 @@ public partial class LuauCore : MonoBehaviour {
         WritePropertyToThread(thread, returnValue, returnType);
 
         //Write the out params
-        for (var j = 0; j < finalParameters.Length; j++)
-        {
-            if (finalParameters[j].IsOut)
-            {
+        for (var j = 0; j < finalParameters.Length; j++) {
+            if (finalParameters[j].IsOut) {
                 WritePropertyToThread(thread, parsedData[j], finalParameters[j].ParameterType.GetElementType());
             }
         }
