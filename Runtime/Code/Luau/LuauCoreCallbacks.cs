@@ -1410,15 +1410,14 @@ public partial class LuauCore : MonoBehaviour {
 #else
                 return LuauError(thread, $"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Full type name: {type.FullName}");
 #endif
-            } else if (!nameFound) {
-                return LuauError(thread, "Error: Method " + methodName + " not found on " + type.Name + "(" + instanceId + ")");
-            } else if (nameFound && !countFound) {
-                return LuauError(thread, "Error: No version of " + methodName + " on " + type.Name + "(" + instanceId + ") takes " + numParameters + " parameters.");
-            } else if (nameFound && countFound) {
-                return LuauError(thread, "Error: Method " + methodName + " could not match parameter types on " + type.Name + "(" + instanceId + ")");
             }
-
-            return LuauError(thread, "Error: Failed to get method");
+            if (!nameFound) {
+                return LuauError(thread, "Error: Method " + methodName + " not found on " + type.Name + "(" + instanceId + ")");
+            }
+            if (!countFound) {
+                return LuauError(thread, "Error: No version of " + methodName + " on " + type.Name + "(" + instanceId + ") takes " + numParameters + " parameters.");
+            }
+            return LuauError(thread, "Error: Method " + methodName + " could not match parameter types on " + type.Name + "(" + instanceId + ")");
         }
 
         // object[] parsedData = null;

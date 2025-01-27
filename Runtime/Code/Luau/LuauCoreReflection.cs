@@ -717,7 +717,14 @@ public partial class LuauCore : MonoBehaviour
     private static bool ParseTableParameter(IntPtr thread, PODTYPE podType, Type sourceParamType, int size, int idx, out object value) {
         switch (podType) {
             case PODTYPE.POD_DOUBLE: {
-                var elementType = sourceParamType.GetElementType();
+                Type elementType = null;
+                if (sourceParamType.IsArray) {
+                    elementType = sourceParamType.GetElementType();
+                }
+                else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
+                    elementType = sourceParamType.GetGenericArguments()[0];
+                }
+
                 if (elementType != null) {
                     if (elementType.IsAssignableFrom(doubleType)) {
                         LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
@@ -1104,11 +1111,8 @@ public partial class LuauCore : MonoBehaviour
         }
         return PODTYPE.POD_OBJECT;
     }
-
-
-    // private static HashSet<MethodInfo> _methodsUsedTest = new();
-    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, ArraySegment<int> podIsTable, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext)
-    {
+    
+    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, ArraySegment<int> podIsTable, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext) {
         nameFound = false;
         countFound = false;
         finalParameters = null;
@@ -1118,17 +1122,14 @@ public partial class LuauCore : MonoBehaviour
         attachContext = false;
         
         var methodDict = GetCachedMethods(type);
-        if (methodDict.TryGetValue(methodName, out var methods))
-        {
+        if (methodDict.TryGetValue(methodName, out var methods)) {
             nameFound = true;
-            foreach (var info in methods)
-            {
+            foreach (var info in methods) {
                 ParameterInfo[] parameters = GetCachedParameters(info);
 
                 var contextAttached = false;
                 //match parameters
-                if (parameters.Length != numParameters)
-                {
+                if (parameters.Length != numParameters) {
                     // Check for context pass through (c# function would have 1 more param then Luau call)
                     if (parameters.Length != (numParameters + 1)) {
                         continue;
@@ -1142,10 +1143,9 @@ public partial class LuauCore : MonoBehaviour
                     if (!contextAttached) continue;
                 }
                 countFound = true;
-
+                
                 bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable, contextAttached);
-                if (match)
-                {
+                if (match) {
                     if (!type.IsArray) {
                         if (!ReflectionList.IsMethodAllowed(type, info, context)) {
                             insufficientContext = true;
@@ -1175,17 +1175,14 @@ public partial class LuauCore : MonoBehaviour
         // finalExtensionMethod = false;
 
         var extensions = GetCachedExtensionMethods(type);
-        foreach (MethodInfo info in extensions)
-        {
-            if (info.Name != methodName)
-            {
+        foreach (MethodInfo info in extensions) {
+            if (info.Name != methodName) {
                 continue;
             }
 
             nameFound = true;
             ParameterInfo[] parameters = GetCachedParameters(info);
-            if (parameters.Length - 1 != numParameters)
-            {
+            if (parameters.Length - 1 != numParameters) {
                 continue;
             }
             // first param is a reference to "this". Remember, extension methods are really static methods.
@@ -1194,8 +1191,7 @@ public partial class LuauCore : MonoBehaviour
 
             bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable, false);
 
-            if (match)
-            {
+            if (match) {
                 if (!ReflectionList.IsMethodAllowed(type, info, context)) {
                     insufficientContext = true;
                     return;
@@ -1249,12 +1245,21 @@ public partial class LuauCore : MonoBehaviour
             }
 
             // Adjust source type to handle arrays:
-            if (sourceParamType != null && sourceParamType.IsArray && podIsTable[paramIndex] != 0) {
-                sourceParamType = sourceParamType.GetElementType();
+            if (sourceParamType != null && podIsTable[i] != 0) {
+                if (sourceParamType.IsArray) {
+                    sourceParamType = sourceParamType.GetElementType();
+                } else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
+                    // Check for IEnumerable to cover things like List<T>:
+                    sourceParamType = sourceParamType.GetGenericArguments()[0];
+                } else {
+                    return false;
+                }
+                if (sourceParamType == null) {
+                    return false;
+                }
             }
             
-            switch (paramType)
-            {
+            switch (paramType) {
                 case PODTYPE.POD_NULL:
                     continue;
                 case PODTYPE.POD_AIRSHIP_COMPONENT:
@@ -1264,108 +1269,88 @@ public partial class LuauCore : MonoBehaviour
                     break;
                 case PODTYPE.POD_OBJECT:
                     var obj = podObjects[i];
-                    if (obj == null || sourceParamType.IsAssignableFrom(obj.GetType()))
-                    {
+                    if (obj == null || sourceParamType.IsAssignableFrom(obj.GetType())) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_BOOL:
-                    if (sourceParamType.IsAssignableFrom(boolType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(boolType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_DOUBLE:
-                    if (sourceParamType.IsAssignableFrom(doubleType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(doubleType)) {
                         continue;
                     }
-                    if (sourceParamType.IsAssignableFrom(floatType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(floatType)) {
                         continue;
                     }
-                    if (sourceParamType.IsAssignableFrom(ushortType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(ushortType)) {
                         continue;
                     }
-                    if (sourceParamType.IsAssignableFrom(byteType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(byteType)) {
                         continue;
                     }
-                    if (sourceParamType.IsAssignableFrom(intType) == true || sourceParamType.BaseType == enumType)
-                    {
+                    if (sourceParamType.IsAssignableFrom(intType) || sourceParamType.BaseType == enumType) {
                         continue;
                     }
-                    if (sourceParamType.IsAssignableFrom(uIntType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(uIntType)) {
                         continue;
                     }
-                    if (sourceParamType.IsAssignableFrom(longType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(longType)) {
                         continue;
                     }
-                    if (sourceParamType.IsAssignableFrom(uLongType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(uLongType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_VECTOR3:
-                    if (sourceParamType.IsAssignableFrom(vector3Type) || sourceParamType.IsAssignableFrom(vector3IntType))
-                    {
+                    if (sourceParamType.IsAssignableFrom(vector3Type) || sourceParamType.IsAssignableFrom(vector3IntType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_STRING:
-                    if (sourceParamType.IsAssignableFrom(stringType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(stringType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_RAY:
-                    if (sourceParamType.IsAssignableFrom(rayType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(rayType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_BINARYBLOB:
-                    if (sourceParamType.IsAssignableFrom(binaryBlobType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(binaryBlobType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_COLOR:
-                    if (sourceParamType.IsAssignableFrom(colorType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(colorType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_MATRIX:
-                    if (sourceParamType.IsAssignableFrom(matrixType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(matrixType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_PLANE:
-                    if (sourceParamType.IsAssignableFrom(planeType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(planeType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_QUATERNION:
-                    if (sourceParamType.IsAssignableFrom(quaternionType) == true)
-                    {
+                    if (sourceParamType.IsAssignableFrom(quaternionType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_VECTOR2:
-                    if (sourceParamType.IsAssignableFrom(vector2Type) || sourceParamType.IsAssignableFrom(vector2IntType))
-                    {
+                    if (sourceParamType.IsAssignableFrom(vector2Type) || sourceParamType.IsAssignableFrom(vector2IntType)) {
                         continue;
                     }
                     break;
                 case PODTYPE.POD_VECTOR4:
-                    if (sourceParamType.IsAssignableFrom(vector4Type))
-                    {
+                    if (sourceParamType.IsAssignableFrom(vector4Type)) {
                         continue;
                     }
                     break;
