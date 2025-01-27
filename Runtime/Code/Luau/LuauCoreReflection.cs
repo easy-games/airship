@@ -400,27 +400,23 @@ public partial class LuauCore : MonoBehaviour
         quatData[2] = quat.z;
         quatData[3] = quat.w;
         
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_QUATERNION, new IntPtr(quatData),
-            0); // 0, because we know how big an intPtr is
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_QUATERNION, new IntPtr(quatData), 0);
     }
     
     // Called from WriteProperty
     private static unsafe void WritePropertyToThreadInt32(IntPtr thread, int value) {
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value),
-            0); // 0, because we know how big an intPtr is
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value), 0);
     }
     
     // Called from WriteProperty
     private static unsafe void WritePropertyToThreadSingle(IntPtr thread, float value) {
         double number = value;
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number),
-            0); // 0, because we know how big an intPtr is
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number), 0);
     }
     
     // Called from WriteProperty
     private static unsafe void WritePropertyToThreadDouble(IntPtr thread, double value) {
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value),
-            0); // 0, because we know how big an intPtr is
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value), 0);
     }
 
     public static unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
@@ -656,10 +652,9 @@ public partial class LuauCore : MonoBehaviour
     private static bool ParseTableParameter(IntPtr thread, PODTYPE podType, Type sourceParamType, int size, int idx, out object value) {
         Type elementType = null;
         var arrayAsList = false;
-        if (sourceParamType.IsArray) {
+        if (sourceParamType.IsSZArray) {
             elementType = sourceParamType.GetElementType();
-        }
-        else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
+        } else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
             elementType = sourceParamType.GetGenericArguments()[0];
             arrayAsList = true;
         }
@@ -1207,7 +1202,7 @@ public partial class LuauCore : MonoBehaviour
 
             // Adjust source type to handle arrays:
             if (sourceParamType != null && podIsTable[i] != 0) {
-                if (sourceParamType.IsArray) {
+                if (sourceParamType.IsSZArray) {
                     sourceParamType = sourceParamType.GetElementType();
                 } else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
                     // Check for IEnumerable to cover things like List<T>:
