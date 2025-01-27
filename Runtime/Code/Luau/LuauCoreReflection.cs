@@ -74,10 +74,8 @@ public partial class LuauCore : MonoBehaviour
         return dict;
     }
 
-    public static ParameterInfo[] GetCachedParameters(MethodInfo methodInfo)
-    {
-        if (methodParameters.TryGetValue(methodInfo, out var existing))
-        {
+    private static ParameterInfo[] GetCachedParameters(MethodInfo methodInfo) {
+        if (methodParameters.TryGetValue(methodInfo, out var existing)) {
             return existing;
         }
 
@@ -86,26 +84,20 @@ public partial class LuauCore : MonoBehaviour
         return parameters;
     }
 
-    public static List<MethodInfo> GetCachedExtensionMethods(Type type)
-    {
-        if (extensionMethods.TryGetValue(type, out List<MethodInfo> existing))
-        {
+    private static List<MethodInfo> GetCachedExtensionMethods(Type type) {
+        if (extensionMethods.TryGetValue(type, out List<MethodInfo> existing)) {
             return existing;
         }
 
         List<MethodInfo> methods = new();
-        if (typeof(Component).IsAssignableFrom(type))
-        {
-            if (extensionMethods.TryGetValue(typeof(Component), out var f))
-            {
+        if (typeof(Component).IsAssignableFrom(type)) {
+            if (extensionMethods.TryGetValue(typeof(Component), out var f)) {
                 methods.AddRange(f);
             }
         }
 
-        if (type != typeof(Component))
-        {
-            if (extensionMethods.TryGetValue(type, out var foundExtensionMethods))
-            {
+        if (type != typeof(Component)) {
+            if (extensionMethods.TryGetValue(type, out var foundExtensionMethods)) {
                 methods.AddRange(foundExtensionMethods);
             }
         }
@@ -145,21 +137,17 @@ public partial class LuauCore : MonoBehaviour
         // print("Finished reflection setup in " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
-    public static void AddTypeExtensionMethodsFromClass(Type type, Type classToSearch)
-    {
+    public static void AddTypeExtensionMethodsFromClass(Type type, Type classToSearch) {
         var methods = classToSearch.GetMethods();
-        methods = Array.FindAll(methods, info =>
-        {
-            if (!info.IsDefined(extensionAttributeType, true))
-            {
+        methods = Array.FindAll(methods, info => {
+            if (!info.IsDefined(extensionAttributeType, true)) {
                 return false;
             }
 
             var parameters = info.GetParameters();
             if (parameters.Length == 0) return false;
             var paramType = parameters[0].ParameterType;
-            if (!paramType.IsAssignableFrom(type))
-            {
+            if (!paramType.IsAssignableFrom(type)) {
                 return false;
             }
 
@@ -167,91 +155,72 @@ public partial class LuauCore : MonoBehaviour
         });
         // print("Found " + methods.Length + " extension methods for " + type.Name + " in class " + classToSearch.Name);
 
-        if (extensionMethods.TryGetValue(type, out var existing))
-        {
+        if (extensionMethods.TryGetValue(type, out var existing)) {
             existing.AddRange(methods);
-        } else
-        {
+        } else {
             extensionMethods.Add(type, new List<MethodInfo>(methods));
         }
     }
 
-    public static void AddExtensionMethodsFromNamespace(Type type, string assemblyName, string namespaceName)
-    {
+    public static void AddExtensionMethodsFromNamespace(Type type, string assemblyName, string namespaceName) {
         List<MethodInfo> methods = new();
         List<Type> types = new();
         types.AddRange(GetTypesInNamespace(assemblyName, namespaceName));
-        foreach (var t in types)
-        {
+        foreach (var t in types) {
             var values = GetCachedMethods(t).Values;
-            foreach (var list in values)
-            {
-                var tMethods = list.FindAll(info =>
-                {
+            foreach (var list in values) {
+                var tMethods = list.FindAll(info => {
                     return info.IsDefined(extensionAttributeType, true);
                 });
                 methods.AddRange(tMethods);
             }
-
         }
 
         // print("Found " + methods.Count + " extension methods for " + type.Name + " in namespace " + namespaceName);
 
-        if (extensionMethods.TryGetValue(type, out var existing))
-        {
+        if (extensionMethods.TryGetValue(type, out var existing)) {
             existing.AddRange(methods);
-        } else
-        {
+        } else {
             extensionMethods.Add(type, methods);
         }
     }
     
-    private static Type[] GetTypesInNamespace(string assemblyName, string nameSpace)
-    {
-        foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (assembly.GetName().Name == assemblyName)
-            {
-                var types = assembly.GetTypes();
-                types = types
-                    .Where(t => String.Equals(t.Namespace, nameSpace, StringComparison.Ordinal))
-                    .ToArray();
-                if (types.Length > 0)
-                {
-                    return types;
-                }   
+    private static Type[] GetTypesInNamespace(string assemblyName, string nameSpace) {
+        foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies()) {
+            if (assembly.GetName().Name != assemblyName) continue;
+            
+            var types = assembly.GetTypes();
+            types = types
+                .Where(t => string.Equals(t.Namespace, nameSpace, StringComparison.Ordinal))
+                .ToArray();
+            if (types.Length > 0) {
+                return types;
             }
         }
 
         return new Type[] { };
     }
 
-    PropertyInfo GetPropertyInfoForType(Type sourceType, string propName, ulong propNameHash)
-    {
+    private PropertyInfo GetPropertyInfoForType(Type sourceType, string propName, ulong propNameHash) {
         unityPropertyAlias.TryGetValue(sourceType, out Dictionary<ulong, PropertyInfo> propDict);
         //if its null create it
-        if (propDict == null)
-        {
+        if (propDict == null) {
             propDict = new Dictionary<ulong, PropertyInfo>();
             unityPropertyAlias.Add(sourceType, propDict);
         }
 
         propDict.TryGetValue(propNameHash, out PropertyInfo property);
-        if (property == null)
-        {
+        if (property == null) {
             property = sourceType.GetProperty(propName);
 
             //Still null?
-            if (property == null)
-            {
+            if (property == null) {
                 var list = sourceType.GetRuntimeProperties();
-                foreach (var prop in list)
-                {
+                foreach (var prop in list) {
                     string name = prop.Name;
                     var parts = name.Split('.');
                     string possibleName = parts[parts.Length - 1];
-                    if (possibleName == propName)
-                    {
+                    if (possibleName == propName) {
                         property = prop;
                         //Store it for next time
                         break;
@@ -260,34 +229,29 @@ public partial class LuauCore : MonoBehaviour
             }
 
             //we (finally) found it, write it for next time
-            if (property != null)
-            {
+            if (property != null) {
                 propDict.Add(propNameHash, property);
             }
         }
+        
         return property;
     }
 
-    FieldInfo GetFieldInfoForType(Type sourceType, string propName, ulong propNameHash)
-    {
+    private FieldInfo GetFieldInfoForType(Type sourceType, string propName, ulong propNameHash) {
         unityFieldAlias.TryGetValue(sourceType, out Dictionary<ulong, FieldInfo> fieldDict);
         //if its null create it
-        if (fieldDict == null)
-        {
+        if (fieldDict == null) {
             fieldDict = new Dictionary<ulong, FieldInfo>();
             unityFieldAlias.Add(sourceType, fieldDict);
         }
         fieldDict.TryGetValue(propNameHash, out FieldInfo field);
-        if (field == null)
-        {
+        if (field == null) {
             field = sourceType.GetField(propName);
             
             //Still null?
-            if (field == null)
-            {
+            if (field == null) {
                 var list = sourceType.GetRuntimeFields();
-                foreach (var listField in list)
-                {
+                foreach (var listField in list) {
                     string name = listField.Name;
                     var parts = name.Split('.');
                     string possibleName = parts[parts.Length - 1];
@@ -301,15 +265,15 @@ public partial class LuauCore : MonoBehaviour
             }
 
             //we (finally) found it, write it for next time
-            if (field != null)
-            {
+            if (field != null) {
                 fieldDict.Add(propNameHash, field);
             }
         }
+        
         return field;
     }
 
-    EventInfo GetEventInfoForType(Type sourceType, string propName, ulong propNameHash) {
+    private EventInfo GetEventInfoForType(Type sourceType, string propName, ulong propNameHash) {
         var eventType = sourceType.GetRuntimeEvent(propName);
         return eventType;
     }
@@ -336,11 +300,9 @@ public partial class LuauCore : MonoBehaviour
     }
 
     private static int RunConstructor(IntPtr thread, Type type, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> paramaterDataSizes, ArraySegment<int> parameterIsTable) {
-
         ConstructorInfo[] constructors = type.GetConstructors();
 
-        if (constructors.Length == 0)
-        {
+        if (constructors.Length == 0) {
             System.Object retStruct = Activator.CreateInstance(type);
 
             //Push this onto the stack
@@ -351,15 +313,11 @@ public partial class LuauCore : MonoBehaviour
         var podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
         FindConstructor(type, constructors, numParameters, parameterDataPODTypes, podObjects, parameterIsTable, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor);
 
-        if (finalConstructor == null)
-        {
-            if (countFound == false)
-            {
+        if (finalConstructor == null) {
+            if (countFound == false) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: No version of New on " + type.Name + " takes " + numParameters + " parameters.");
-            }
-            else
-            {
+            }else {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: No matching New found for " + type.Name);
             }
@@ -379,17 +337,18 @@ public partial class LuauCore : MonoBehaviour
 
         //Push this onto the stack
         WritePropertyToThread(thread, returnValue, type);
+        
         return 1;
     }
     
-    public static Dictionary<Type, Delegate> writeMethodFunctions = new ();
+    private static readonly Dictionary<Type, Delegate> WriteMethodFunctions = new ();
 
     /// <summary>
     /// This will not work if passed in type is not a value type
     /// </summary>
     public static unsafe bool FastWriteValuePropertyToThread<T>(IntPtr thread, T value) {
         var genericType = typeof(T);
-        if (writeMethodFunctions.TryGetValue(genericType, out var f)) {
+        if (WriteMethodFunctions.TryGetValue(genericType, out var f)) {
             ((Action<IntPtr, T>) f)(thread, value);
             return true;
         }
@@ -423,18 +382,18 @@ public partial class LuauCore : MonoBehaviour
 
         var funcType = typeof(Action<IntPtr, T>);
         var writePropertyDelegate = (Action<IntPtr, T>)method.CreateDelegate(funcType);
-        writeMethodFunctions[genericType] = writePropertyDelegate;
+        WriteMethodFunctions[genericType] = writePropertyDelegate;
         writePropertyDelegate(thread, value);
         return true;
     }
     
     // Called from WriteProperty
-    public static unsafe void WritePropertyToThreadVector3(IntPtr thread, Vector3 value) {
+    private static void WritePropertyToThreadVector3(IntPtr thread, Vector3 value) {
         LuauPlugin.LuauPushVector3ToThread(thread, value.x, value.y, value.z);
     }
     
     // Called from WriteProperty
-    public static unsafe void WritePropertyToThreadQuaternion(IntPtr thread, Quaternion quat) {
+    private static unsafe void WritePropertyToThreadQuaternion(IntPtr thread, Quaternion quat) {
         float* quatData = stackalloc float[4];
         quatData[0] = quat.x;
         quatData[1] = quat.y;
@@ -446,20 +405,20 @@ public partial class LuauCore : MonoBehaviour
     }
     
     // Called from WriteProperty
-    public static unsafe void WritePropertyToThreadInt32(IntPtr thread, int value) {
+    private static unsafe void WritePropertyToThreadInt32(IntPtr thread, int value) {
         LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value),
             0); // 0, because we know how big an intPtr is
     }
     
     // Called from WriteProperty
-    public static unsafe void WritePropertyToThreadSingle(IntPtr thread, float value) {
+    private static unsafe void WritePropertyToThreadSingle(IntPtr thread, float value) {
         double number = value;
         LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number),
             0); // 0, because we know how big an intPtr is
     }
     
     // Called from WriteProperty
-    public static unsafe void WritePropertyToThreadDouble(IntPtr thread, double value) {
+    private static unsafe void WritePropertyToThreadDouble(IntPtr thread, double value) {
         LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value),
             0); // 0, because we know how big an intPtr is
     }
@@ -1205,26 +1164,22 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, ArraySegment<int> podIsTable, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor)
-    {
+    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, ArraySegment<int> podIsTable, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor) {
         countFound = false;
         finalParameters = null;
         finalConstructor = null;
 
         //Check our method signature
-        foreach (ConstructorInfo info in constructors)
-        {
+        foreach (ConstructorInfo info in constructors) {
             ParameterInfo[] parameters = info.GetParameters();
-            if (parameters.Length != numParameters)
-            {
+            if (parameters.Length != numParameters) {
                 // Debug.Log("Length mismatch: " + numParameters + " " + parameters.Length);
                 continue;
             }
             countFound = true;
 
             bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable, false) ;
-            if (match == true)
-            {
+            if (match == true) {
                 finalConstructor = info;
                 finalParameters = parameters;
                 break;
@@ -1239,8 +1194,7 @@ public partial class LuauCore : MonoBehaviour
             
             PODTYPE paramType = (PODTYPE)podTypes[i];
             Type sourceParamType = parameters[paramIndex].ParameterType;
-            if (parameters[paramIndex].IsOut == true || parameters[paramIndex].IsIn == true)
-            {
+            if (parameters[paramIndex].IsOut || parameters[paramIndex].IsIn) {
                 sourceParamType = sourceParamType.GetElementType();
             }
 
@@ -1254,9 +1208,10 @@ public partial class LuauCore : MonoBehaviour
                 } else {
                     return false;
                 }
-                if (sourceParamType == null) {
-                    return false;
-                }
+            }
+            
+            if (sourceParamType == null) {
+                return false;
             }
             
             switch (paramType) {
@@ -1477,41 +1432,32 @@ public partial class LuauCore : MonoBehaviour
         if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_OBJECT) {
             return null;
         }
-        // var intData = new int[1];
         Marshal.Copy(parameterDataPtrs[paramIndex], ObjectParamIntData, 0, 1);
         var propertyInstanceId = ObjectParamIntData[0];
         
-        //int instanceId = NewIntFromPointer(parameterDataPtrs[paramIndex]);
         return ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
     }
 
     private static readonly double[] DoubleData = new double[1];
     private static float NewFloatFromPointer(IntPtr data) {
-        // double[] doubles = new double[1];
         Marshal.Copy(data, DoubleData, 0, 1);
         return (float)DoubleData[0];
     }
 
     private static int NewIntFromPointer(IntPtr data) {
-        // double[] doubles = new double[1];
         Marshal.Copy(data, DoubleData, 0, 1);
         return (int)DoubleData[0];
     }
 
     private static bool NewBoolFromPointer(IntPtr data) {
-        // double[] doubles = new double[1];
         Marshal.Copy(data, DoubleData, 0, 1);
         return DoubleData[0] != 0;
     }
 
     private static readonly float[] VectorData = new float[4];
     private static Vector3 NewVector3FromPointer(IntPtr data) {
-        // float[] floats = new float[3];
         Marshal.Copy(data, VectorData, 0, 3);
         return new Vector3(VectorData[0], VectorData[1], VectorData[2]);
-    }
-    public static int Vector3Size() {
-        return 4 * 3;
     }
 
     private static Assets.Luau.BinaryBlob NewBinaryBlobFromPointer(IntPtr data, int size) {
@@ -1522,7 +1468,6 @@ public partial class LuauCore : MonoBehaviour
 
     private static readonly float[] RayData = new float[6]; 
     public static Ray NewRayFromPointer(IntPtr data) {
-        // float[] floats = new float[6];
         Marshal.Copy(data, RayData, 0, 6);
         var origin = new Vector3(RayData[0], RayData[1], RayData[2]);
         var direction = new Vector3(RayData[3], RayData[4], RayData[5]);
@@ -1533,7 +1478,6 @@ public partial class LuauCore : MonoBehaviour
     }
 
     public static Color NewColorFromPointer(IntPtr data) {
-        // float[] floats = new float[4];
         Marshal.Copy(data, VectorData, 0, 4);
         return new Color(VectorData[0], VectorData[1], VectorData[2], VectorData[3]);
     }
@@ -1543,7 +1487,6 @@ public partial class LuauCore : MonoBehaviour
 
     private static readonly float[] MatrixData = new float[16];
     public static Matrix4x4 NewMatrixFromPointer(IntPtr data) {
-        // float[] floats = new float[16];
         Marshal.Copy(data, MatrixData, 0, 16);
         return new Matrix4x4(
             new Vector4(MatrixData[0], MatrixData[1], MatrixData[2], MatrixData[3]),
@@ -1557,7 +1500,6 @@ public partial class LuauCore : MonoBehaviour
     }
 
     public static Plane NewPlaneFromPointer(IntPtr data) {
-        // float[] floats = new float[4];
         Marshal.Copy(data, VectorData, 0, 4);
         return new Plane(new Vector3(VectorData[0], VectorData[1], VectorData[2]), VectorData[3]);
     }
@@ -1566,7 +1508,6 @@ public partial class LuauCore : MonoBehaviour
     }
 
     public static Quaternion NewQuaternionFromPointer(IntPtr data) {
-        // float[] floats = new float[4];
         Marshal.Copy(data, VectorData, 0, 4);
         return new Quaternion(VectorData[0], VectorData[1], VectorData[2], VectorData[3]);
     }
@@ -1575,7 +1516,6 @@ public partial class LuauCore : MonoBehaviour
     }
 
     public static Vector2 NewVector2FromPointer(IntPtr data) {
-        // var floats = new float[2];
         Marshal.Copy(data, VectorData, 0, 2);
         return new Vector2(VectorData[0], VectorData[1]);
     }
@@ -1584,7 +1524,6 @@ public partial class LuauCore : MonoBehaviour
     }
     
     public static Vector4 NewVector4FromPointer(IntPtr data) {
-        // var floats = new float[4];
         Marshal.Copy(data, VectorData, 0, 4);
         return new Vector4(VectorData[0], VectorData[1], VectorData[2], VectorData[3]);
     }

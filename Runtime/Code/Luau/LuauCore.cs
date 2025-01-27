@@ -305,7 +305,7 @@ public partial class LuauCore : MonoBehaviour {
         propertyGetCache.Clear();
         protectedSceneHandles.Clear();
         _propertySetterCache.Clear();
-        writeMethodFunctions.Clear();
+        WriteMethodFunctions.Clear();
     }
 
     public static void ResetContext(LuauContext context) {
