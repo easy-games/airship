@@ -497,8 +497,8 @@ public partial class LuauCore : MonoBehaviour
         }
 
         if (t == rayType) {
-            Ray ray = (Ray)value;
-            float[] rayData = new float[6];
+            var ray = (Ray)value;
+            var rayData = stackalloc float[6];
             rayData[0] = ray.origin.x;
             rayData[1] = ray.origin.y;
             rayData[2] = ray.origin.z;
@@ -506,25 +506,20 @@ public partial class LuauCore : MonoBehaviour
             rayData[4] = ray.direction.y;
             rayData[5] = ray.direction.z;
 
-            //woof. maybe make something that can eat 6 parameters akin to LuauPushVector3ToThread
-            var gch = GCHandle.Alloc(rayData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RAY, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
-            gch.Free();
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RAY, new IntPtr(rayData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
 
         if (t == colorType) {
-            Color color = (Color)value;
-            float[] colorData = new float[4];
+            var color = (Color)value;
+            var colorData = stackalloc float[4];
             colorData[0] = color.r;
             colorData[1] = color.g;
             colorData[2] = color.b;
             colorData[3] = color.a;
 
-            var gch = GCHandle.Alloc(colorData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_COLOR, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
-            gch.Free();
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_COLOR, new IntPtr(colorData), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
@@ -545,63 +540,55 @@ public partial class LuauCore : MonoBehaviour
 
         if (t == vector2Type) {
             var vec = (Vector2)value;
-            var vecData = new float[2];
+            var vecData = stackalloc float[2];
             vecData[0] = vec.x;
             vecData[1] = vec.y;
 
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
-            gch.Free();
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, new IntPtr(vecData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
 
         if (t == vector2IntType) {
-            Vector2 vec = Vector2Int.FloorToInt((Vector2Int)value);
-            var vecData = new float[2];
+            var vec = Vector2Int.FloorToInt((Vector2Int)value);
+            var vecData = stackalloc float[2];
             vecData[0] = vec.x;
             vecData[1] = vec.y;
 
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
-            gch.Free();
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, new IntPtr(vecData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
 
         if (t == vector4Type) {
             var vec = (Vector4)value;
-            var vecData = new float[4];
+            var vecData = stackalloc float[4];
             vecData[0] = vec.x;
             vecData[1] = vec.y;
             vecData[2] = vec.z;
             vecData[3] = vec.w;
 
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR4, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
-            gch.Free();
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR4, new IntPtr(vecData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
 
         if (t == planeType) {
-            Plane plane = (Plane)value;
-            float[] planeData = new float[4];
+            var plane = (Plane)value;
+            var planeData = stackalloc float[4];
             planeData[0] = plane.normal.x;
             planeData[1] = plane.normal.y;
             planeData[2] = plane.normal.z;
             planeData[3] = plane.distance;
 
-            var gch = GCHandle.Alloc(planeData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_PLANE, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
-            gch.Free();
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_PLANE, new IntPtr(planeData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
 
         if (t == matrixType) {
-            Matrix4x4 mat = (Matrix4x4)value;
-            float[] matData = new float[16];
+            var mat = (Matrix4x4)value;
+            var matData = stackalloc float[16];
             matData[0] = mat.m00;
             matData[1] = mat.m01;
             matData[2] = mat.m02;
@@ -619,9 +606,7 @@ public partial class LuauCore : MonoBehaviour
             matData[14] = mat.m32;
             matData[15] = mat.m33;
 
-            var gch = GCHandle.Alloc(matData, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_MATRIX, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
-            gch.Free();
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_MATRIX, new IntPtr(matData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
