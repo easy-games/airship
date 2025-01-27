@@ -11,11 +11,11 @@ using UnityEngine;
 public class AirshipPredictedCharacterMovement : AirshipPredictedController<CharacterMovementState> {
 
 #region PUBLIC 
-    [Header("References")]
-    public CharacterMovement movement;
-
-    [Header("Variables")]
     public bool pauseOnReplay = false;
+    public float observerLerpDuration = .1f;
+
+    [Header("Character References")]
+    public CharacterMovement movement;
 
 #endregion
 
@@ -59,6 +59,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     protected override void OnEnable() {
+        if(IsObserver()){
+            base.OnEnable();
+            return;
+        }
+
         if(this.smoothRigidbody){
             AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
         }
@@ -68,6 +73,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
 
     protected override void OnDisable() {
+        if(IsObserver()){
+            base.OnDisable();
+            return;
+        }
+
         if(this.smoothRigidbody){
             AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
         }
@@ -151,6 +161,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         }
         if(tick < serverTick){
             Debug.LogWarning("Recieved inputs from client that are in the past by " + (tick - serverTick) + " ticks");
+            return;
         }
 
         //If there is already a value here, overwrite it
@@ -183,8 +194,18 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     public override void SnapTo(CharacterMovementState newState){
         if(showLogs){
             print("Snapping Movement To: " + newState.tick);
+        }    
+
+        if(IsObserver()){
+            //Observers visual states are already synced by CharacterMovement
+            // movement.rigidbody.position = newState.position;
+            // movement.currentMoveState.position = newState.position;
+            // movement.currentMoveState.velocity = newState.velocity;
+            return;
+        }else{
+            //Sync this state into the character movement
+            movement.ForceToNewMoveState(newState);
         }
-        movement.ForceToNewMoveState(newState);
     }
 
     public override void OnReplayStarted(AirshipPredictedState initialState, int historyIndex){

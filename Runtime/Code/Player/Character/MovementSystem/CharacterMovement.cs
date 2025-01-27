@@ -28,6 +28,8 @@ public class CharacterMovement : NetworkBehaviour {
 	[Header("Visual Variables")]
 	public bool autoCalibrateSkiddingSpeed = true;
 	public float observerRotationLerpMod = 1;
+	[Tooltip("Only used for Server Authoritative observers")]
+	public float observerLerpDuration = .1f;
 	[Tooltip("If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
 	public bool playAnimationOnServer = true;
 #endregion
@@ -123,6 +125,11 @@ public class CharacterMovement : NetworkBehaviour {
 
 	//Prediction
 	private bool queueReplay = false;
+
+	//Prediction Observers
+	private Vector3 prevObserverPosition;
+	private Vector3 nextObserverPosition;
+	private float lastObserverTime;
 #endregion
 
 #region SYNC DATA
@@ -235,7 +242,14 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 #endregion
 
-#region LATEUPDATE
+#region UPDATE
+	private void Update(){
+        if(IsObserver() && isServerAuth){
+            var delta = Mathf.Clamp01((Time.time - lastObserverTime) / this.observerLerpDuration);
+            this.rigidbody.position = Vector3.Lerp(prevObserverPosition, nextObserverPosition, delta);
+        }
+	}
+
 	//Every frame update the calculated look vector and the visual state of the movement
 	private void LateUpdate(){
 		//Handle the look rotation
@@ -253,7 +267,7 @@ public class CharacterMovement : NetworkBehaviour {
 				lookTarget = new Vector3(0,0,.01f);
 			}
 			airshipTransform.rotation = Quaternion.Lerp(
-				graphicTransform.rotation,
+				airshipTransform.rotation,
 				Quaternion.LookRotation(lookTarget),
 				observerRotationLerpMod * Time.deltaTime);
 		}
@@ -850,6 +864,7 @@ public class CharacterMovement : NetworkBehaviour {
 			crouching = isCrouching,
 			localVelocity = currentLocalVelocity,
 			lookVector = lookVector,
+			position = transform.position,
 		});
 
 		if (didJump){
@@ -1128,15 +1143,15 @@ public class CharacterMovement : NetworkBehaviour {
 
 	public void SetFlying(bool flyModeEnabled) {
 		this.currentMoveState.isFlying = flyModeEnabled;
-		if(isClient && hasMovementAuth){
+		if(!isServerAuth && isClientOnly && hasMovementAuth){
 			CommandSetFlying(flyModeEnabled);
-		}else if(!isServerAuth && isServerOnly){
-			RpcSetFlying(flyModeEnabled);
+		}else if(isServerOnly){
+			RpcSetFlying(base.connectionToClient, flyModeEnabled);
 		}
 	}
 
-	[ClientRpc(includeOwner = false)]
-	private void RpcSetFlying(bool flyModeEnabled) {
+	[TargetRpc]
+	private void RpcSetFlying(NetworkConnection conn, bool flyModeEnabled) {
 		this.currentMoveState.isFlying = flyModeEnabled;
 	}
 
@@ -1147,7 +1162,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 	private void TrySetState(CharacterAnimationSyncData newStateData) {
 		bool isNewState = newStateData.state != this.stateSyncData.state;
-		bool isNewData = !newStateData.Equals(this.stateSyncData);
+		bool isNewData = !newStateData.Equals(this.stateSyncData) || (isServerAuth && stateSyncData.position != newStateData.position);
 
 		// If new value in the state
 		if (isNewData) {
@@ -1155,9 +1170,12 @@ public class CharacterMovement : NetworkBehaviour {
 			if(hasMovementAuth){
 				if(isClientOnly){
 					CommandSetStateData(newStateData);
-				} else if (isServerOnly){
-					RpcSetStateData(newStateData);
-				}
+				} 
+				// Right now the visual state is controlled by the client only
+                // We may want server auth to update the state but that makes observers have even older version of the character
+                //  else if (isServerOnly ){
+                //     RpcSetStateData(newStateData);
+                // }
 			}
 		}
 
@@ -1186,6 +1204,7 @@ public class CharacterMovement : NetworkBehaviour {
 		ApplyNonLocalStateData(data);
 	}
 
+
 	private void ApplyNonLocalStateData(CharacterAnimationSyncData data) {
 		var oldState = this.stateSyncData;
 		this.stateSyncData = data;
@@ -1198,7 +1217,15 @@ public class CharacterMovement : NetworkBehaviour {
 		if (oldState.state != data.state) {
 			stateChanged?.Invoke((int)data.state);
 		}
-		
+
+		//In server auth we don't sync position with the NetworkTransform so I am doing it here
+        if(this.IsObserver() && isServerAuth){
+			//Store prev and next positions so we can lerp between the two to account for network lag
+			lastObserverTime = Time.time;
+			prevObserverPosition = nextObserverPosition;
+			nextObserverPosition = data.position;
+        }
+
 		animationHelper.SetState(data);
 	}
 

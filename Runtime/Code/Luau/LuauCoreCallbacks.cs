@@ -126,11 +126,10 @@ public partial class LuauCore : MonoBehaviour {
     }
 
 #if UNITY_EDITOR
+    private static readonly Regex AnchorLinkPattern = new Regex(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static string InjectAnchorLinkToLuaScript(string logMessage) {
         // e.g. "path/to/my/script.lua:10: an error occurred"
-        var rx = new Regex(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-        return rx.Replace(logMessage, (m) => {
+        return AnchorLinkPattern.Replace(logMessage, (m) => {
             var scriptPath = m.Groups[1].Value;
             var line = m.Groups[2].Value;
             
@@ -142,14 +141,10 @@ public partial class LuauCore : MonoBehaviour {
 
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr) {
+    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
         CurrentContext = context;
         
-        string res = LuauCore.PtrToStringUTF8(buffer, length);
-        if (res == null) {
-            LuauPlugin.LuauFreeString(ptr);
-            return;
-        }
+        var res = LuauCore.PtrToStringUTF8(buffer, length);
         
 #if UNITY_EDITOR
         if (style == 1 || style == 2) {
@@ -170,15 +165,17 @@ public partial class LuauCore : MonoBehaviour {
         if (style == 1) {
             Debug.LogWarning(res, logContext);
         } else if (style == 2) {
+            // The STANDALONE here is just a test:
+#if UNITY_STANDALONE
+            Debug.LogWarning("[ERROR] " + res, logContext);
+#else
             Debug.LogError(res, logContext);
-            //If its an error, the thread is suspended 
+#endif
+            //If it's an error, the thread is suspended 
             ThreadDataManager.Error(thread);
-            //GetLuauDebugTrace(thread);
         } else {
             Debug.Log(res, logContext);
         }
-        
-        LuauPlugin.LuauFreeString(ptr);
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToCsArrayCallback))]
@@ -702,121 +699,92 @@ public partial class LuauCore : MonoBehaviour {
             return LuauError(thread, "Error: InstanceId not currently available. InstanceId=" + instanceId + ", propName=" + propName);
         }
     }
-
-    private static Func<object, T> CreateGetter<T>(PropertyInfo propertyInfo, object referenceObject) {
-        var method = new DynamicMethod(
-            name: $"Get_{referenceObject.GetType().Name}_{propertyInfo.Name}",
-            returnType: typeof(T),
-            parameterTypes: new[] { typeof(object) },
-            restrictedSkipVisibility: true);
-
-        ILGenerator il = method.GetILGenerator();
-
-        // Load the input argument (object instance)
-        il.Emit(OpCodes.Ldarg_0);
-
-        // Cast it to the correct type if needed
-        if (propertyInfo.DeclaringType.IsValueType) {
-            il.Emit(OpCodes.Unbox, propertyInfo.DeclaringType);
-        } else {
-            il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-        }
-
-        // Call the getter
-        il.EmitCall(OpCodes.Callvirt, propertyInfo.GetMethod, null);
-
-        // Box the return value if it's a value type
-        // If typeof(T) != typeof(object) that means we're trying to do a fast non-boxed execution
-        if (propertyInfo.PropertyType.IsValueType && typeof(T) == typeof(object)) {
-            il.Emit(OpCodes.Box, propertyInfo.PropertyType);
-        }
-
-        il.Emit(OpCodes.Ret);
-
-        return (Func<object, T>)method.CreateDelegate(typeof(Func<object, T>));
-    }
     
     private static readonly Dictionary<(bool, Type, string), Delegate> _propertySetterCache = 
         new Dictionary<(bool, Type, string), Delegate>();
+    private delegate T Getter<T>(object target);
+    private delegate void Setter<T>(object target, T val);
+    private delegate void StaticSetter<T>(T val);
     
     private static Delegate CreateSetter<T>(PropertyInfo propertyInfo, bool isStatic) {
-        var methodParamsTypes = isStatic
-            ? new[] { typeof(T) }
-            : new[] { typeof(object), typeof(T) };
-        
-        var staticStr = isStatic ? "_Static" : "";
-        var method = new DynamicMethod(
-            name: $"Set_{propertyInfo.DeclaringType.Name}_{propertyInfo.Name}{staticStr}",
-            returnType: typeof(void),
-            parameterTypes: methodParamsTypes,
-            restrictedSkipVisibility: true);
-        
-        ILGenerator il = method.GetILGenerator();
-        
-        // Load object instance
-        if (!isStatic) {
-            il.Emit(OpCodes.Ldarg_0);
-        
-            if (propertyInfo.DeclaringType.IsValueType) {
-                il.Emit(OpCodes.Unbox, propertyInfo.DeclaringType);
+        var setMethod = propertyInfo.GetSetMethod();
+        var declaringType = propertyInfo.DeclaringType;
+    
+        unsafe {
+            if (!isStatic) {
+                if (declaringType.IsValueType) {
+                    // Just direct reflection for this case (like ParticleEmitter modules -- weird Unity niche)
+                    return new Action<object, T>((object target, T value) => {
+                        propertyInfo.SetValue(target, value);
+                    });
+                } else {
+                    // Original class handling
+                    delegate*<object, T, void> funcPtr = (delegate*<object, T, void>)setMethod
+                        .MethodHandle
+                        .GetFunctionPointer()
+                        .ToPointer();
+
+                    var setter = new Setter<T>((obj, val) => { funcPtr(obj, val); });
+                    return setter;
+                }
+            } else {
+                delegate*<T, void> funcPtr = (delegate*<T, void>)setMethod
+                    .MethodHandle
+                    .GetFunctionPointer()
+                    .ToPointer();
+
+                var setter = new StaticSetter<T>((val) => { funcPtr(val); });
+                return setter;
             }
-            else {
-                il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-            }
-        }
-        
-        // Load value to set
-        il.Emit(isStatic ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1); // For static calls arg0 is value
-        
-        // For non generic calls box the value
-        if (propertyInfo.PropertyType.IsValueType && typeof(T) == typeof(object)) {
-            il.Emit(OpCodes.Unbox, propertyInfo.PropertyType);
-        }
-        
-        // Call the setter
-        if (!isStatic) {
-            il.EmitCall(OpCodes.Callvirt, propertyInfo.SetMethod, null);
-        } else {
-            il.EmitCall(OpCodes.Call, propertyInfo.SetMethod, null);
-        }
-        
-        il.Emit(OpCodes.Ret);
-        
-        if (isStatic) {
-            return (Action<T>) method.CreateDelegate(typeof(Action<T>));
-        } else {
-            return (Action<object, T>) method.CreateDelegate(typeof(Action<object, T>));
         }
     }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
-        // Simple reflection for now!
-        return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
+            if (typeof(T) == typeof(object)) {
+                return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
+            }
         
-        var propertyInfo = cacheData.propertyInfo;
-        if (!cacheData.HasGetPropertyFunc) {
-            cacheData.GetProperty = CreateGetter<T>(propertyInfo, instance);
-            cacheData.HasGetPropertyFunc = true;
-            propertyGetCache[new PropertyCacheKey(instance.GetType(), propertyInfo.Name)] = cacheData;
-        }
-        return ((Func<object, T>)cacheData.GetProperty)(instance);
+            if (!cacheData.HasGetPropertyFunc) {
+                var getMethod = cacheData.propertyInfo.GetGetMethod();
+
+                unsafe {
+                    delegate*<object, T> funcPtr = (delegate*<object, T>)getMethod
+                        .MethodHandle
+                        .GetFunctionPointer()
+                        .ToPointer();
+                
+                    // Create a delegate that wraps the function pointer
+                    var getter = new Getter<T>(obj => {
+                        unsafe {
+                            return funcPtr(obj);
+                        }
+                    });
+                
+                    cacheData.HasGetPropertyFunc = true;
+                    cacheData.GetProperty = getter;
+                    LuauCore.propertyGetCache[new PropertyCacheKey(instance.GetType(), cacheData.propertyInfo.Name)] = cacheData;
+                }
+            }
+            
+        return ((Getter<T>) cacheData.GetProperty)(instance);
     }
     
     private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
-        // Simple reflection for now!
-        pi.SetValue(instance, value);
-        return;
-        
         var staticSet = instance == null;
         if (!_propertySetterCache.TryGetValue((staticSet, pi.DeclaringType, pi.Name), out var setter)) {
             setter = CreateSetter<T>(pi, staticSet);
             _propertySetterCache[(staticSet, pi.DeclaringType, pi.Name)] = setter; 
         }
-
+        
         if (staticSet) {
-            ((Action<T>) setter)(value);
+            ((StaticSetter<T>) setter)(value);
         } else {
-            ((Action<object, T>)setter)(instance, value);
+            if (pi.DeclaringType.IsValueType) {
+                ((Action<object, T>)setter)(instance, value);
+            }
+            else {
+                ((Setter<T>)setter)(instance, value);       
+            }
         }
     }
 
@@ -940,12 +908,10 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
-                    /* Disabled for now...
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
                         Profiler.EndSample();
                         return 1;
                     }
-                    */
 
                     var value = GetValue<object>(objectReference, cacheData.Value);
                     if (value != null) {
@@ -1087,27 +1053,27 @@ public partial class LuauCore : MonoBehaviour {
         var propType = cacheData.propertyInfo.PropertyType;
         if (propType == intType) {
             var intValue = GetValue<int>(objectReference, cacheData);
-            FastWriteValuePropertyToThread(thread, intValue);
+            WritePropertyToThreadInt32(thread, intValue);
             return true;
         }
         if (propType == doubleType) {
             var doubleVal = GetValue<double>(objectReference, cacheData);
-            FastWriteValuePropertyToThread(thread, doubleVal);
+            WritePropertyToThreadDouble(thread, doubleVal);
             return true;
         }
         if (propType == floatType) {
             var shortVal = GetValue<float>(objectReference, cacheData);
-            FastWriteValuePropertyToThread(thread, shortVal);
+            WritePropertyToThreadSingle(thread, shortVal);
             return true;
         }
         if (propType == vector3Type) {
             var vecValue = GetValue<Vector3>(objectReference, cacheData);
-            FastWriteValuePropertyToThread(thread, vecValue);
+            WritePropertyToThreadVector3(thread, vecValue);
             return true;
         }
         if (propType == quaternionType) {
             var quatValue = GetValue<Quaternion>(objectReference, cacheData);
-            FastWriteValuePropertyToThread(thread, quatValue);
+            WritePropertyToThreadQuaternion(thread, quatValue);
             return true;
         }
         return false;
