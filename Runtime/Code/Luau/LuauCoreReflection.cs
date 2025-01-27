@@ -419,10 +419,39 @@ public partial class LuauCore : MonoBehaviour
         LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value), 0);
     }
 
+    private static bool WriteArrayToThread(IntPtr thread, IEnumerable array, Type t, int knownSize = 0) {
+        LuauPluginRaw.NewTable(thread, knownSize);
+
+        var i = 0;
+        foreach (var value in array) {
+            i++; // Increment first, because Lua tables start at index 1.
+            if (!WritePropertyToThread(thread, value, t)) {
+                LuauPluginRaw.Pop(thread, 1); // Pop the new table off the stack
+                return false;
+            }
+            LuauPluginRaw.RawSetI(thread, -2, i);
+        }
+
+        return true;
+    }
+
     public static unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
         if (value == null) {
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
             return true;
+        }
+        
+        // Handle arrays/lists/IEnumerables:
+        if (t.IsSZArray) {
+            return WriteArrayToThread(thread, (IEnumerable)value, t.GetElementType(), ((IList)value).Count);
+        }
+        if (t.IsGenericType && typeof(IEnumerable).IsAssignableFrom(t)) {
+            var valueType = t.GetGenericArguments()[0];
+            if (typeof(IList).IsAssignableFrom(t)) {
+                return WriteArrayToThread(thread, (IEnumerable)value, valueType, ((IList)value).Count);
+            } else {
+                return WriteArrayToThread(thread, (IEnumerable)value, valueType);
+            }
         }
 
         if (t == stringType) {

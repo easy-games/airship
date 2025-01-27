@@ -582,10 +582,10 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize);
-	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize) {
+	private static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
+	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
         ThreadSafetyCheck();
-        ThrowIfNotNullPtr(PushValueToThread(thread, type, data, dataSize));
+        ThrowIfNotNullPtr(PushValueToThread(thread, type, data, dataSize, arraySize));
 	}
 
 #if UNITY_IPHONE
