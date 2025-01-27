@@ -674,73 +674,75 @@ public partial class LuauCore : MonoBehaviour
      }
 
     private static bool ParseTableParameter(IntPtr thread, PODTYPE podType, Type sourceParamType, int size, int idx, out object value) {
+        Type elementType = null;
+        var arrayAsList = false;
+        if (sourceParamType.IsArray) {
+            elementType = sourceParamType.GetElementType();
+        }
+        else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
+            elementType = sourceParamType.GetGenericArguments()[0];
+            arrayAsList = true;
+        }
+        
         switch (podType) {
             case PODTYPE.POD_DOUBLE: {
-                Type elementType = null;
-                if (sourceParamType.IsArray) {
-                    elementType = sourceParamType.GetElementType();
-                }
-                else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
-                    elementType = sourceParamType.GetGenericArguments()[0];
-                }
-
                 if (elementType != null) {
                     if (elementType.IsAssignableFrom(doubleType)) {
-                        LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(floatType)) {
-                        LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_FLOAT, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_FLOAT, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(byteType)) {
-                        LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.BaseType == enumType) {
                         if (Enum.GetUnderlyingType(sourceParamType) == byteType) {
-                            LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                            LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                             value = arr;
                             return true;
                         } else {
-                            LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr);
+                            LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr, arrayAsList);
                             value = arr;
                             return true;
                         }
                     }
 
                     if (elementType.IsAssignableFrom(intType)) {
-                        LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(uIntType)) {
-                        LuauPlugin.LuauCopyTableToArray<uint>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<uint>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(ushortType)) {
-                        LuauPlugin.LuauCopyTableToArray<ushort>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<ushort>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(longType)) {
-                        LuauPlugin.LuauCopyTableToArray<long>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<long>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(uLongType)) {
-                        LuauPlugin.LuauCopyTableToArray<ulong>(thread, PODTYPE.POD_INT32, size, idx, out var arr);
+                        LuauPlugin.LuauCopyTableToArray<ulong>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
@@ -749,59 +751,84 @@ public partial class LuauCore : MonoBehaviour
                 break;
             }
             case PODTYPE.POD_COLOR: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_COLOR, size * 4, idx, out var arr);
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_COLOR, size * 4, idx, out var arr, arrayAsList);
 
-                var colors = new Color[size];
+                IList<Color> colors = arrayAsList ? new List<Color>(size) : new Color[size];
                 for (var i = 0; i < size; i++) {
                     var j = i * 4;
-                    colors[i] = new Color(arr[j], arr[j + 1], arr[j + 2]);
+                    var item = new Color(arr[j], arr[j + 1], arr[j + 2]);
+                    if (arrayAsList) {
+                        colors.Add(item);
+                    } else {
+                        colors[i] = item;
+                    }
                 }
                 value = colors;
 
                 return true;
             }
             case PODTYPE.POD_VECTOR2: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR2, size * 2, idx, out var arr);
-
-                var vectors = new Vector2[size];
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR2, size * 2, idx, out var arr, arrayAsList);
+                
+                IList<Vector2> vectors = arrayAsList ? new List<Vector2>(size) : new Vector2[size];
                 for (var i = 0; i < size; i++) {
                     var j = i * 2;
-                    vectors[i] = new Vector2(arr[j], arr[j + 1]);
+                    var item = new Vector2(arr[j], arr[j + 1]);
+                    if (arrayAsList) {
+                        vectors.Add(item);
+                    } else {
+                        vectors[i] = item;
+                    }
                 }
                 value = vectors;
 
                 return true;
             }
             case PODTYPE.POD_VECTOR3: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR3, size * 3, idx, out var arr);
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR3, size * 3, idx, out var arr, arrayAsList);
 
-                var vectors = new Vector3[size];
+                IList<Vector3> vectors = arrayAsList ? new List<Vector3>(size) : new Vector3[size];
                 for (var i = 0; i < size; i++) {
                     var j = i * 3;
-                    vectors[i] = new Vector3(arr[j], arr[j + 1], arr[j + 2]);
+                    var item = new Vector3(arr[j], arr[j + 1], arr[j + 2]);
+                    if (arrayAsList) {
+                        vectors.Add(item);
+                    } else {
+                        vectors[i] = item;
+                    }
                 }
                 value = vectors;
 
                 return true;
             }
             case PODTYPE.POD_VECTOR4: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR4, size * 4, idx, out var arr);
+                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR4, size * 4, idx, out var arr, arrayAsList);
 
-                var vectors = new Vector2[size];
+                IList<Vector4> vectors = arrayAsList ? new List<Vector4>(size) : new Vector4[size];
                 for (var i = 0; i < size; i++) {
                     var j = i * 4;
-                    vectors[i] = new Vector2(arr[j], arr[j + 1]);
+                    var item = new Vector4(arr[j], arr[j + 1], arr[j + 2], arr[j + 3]);
+                    if (arrayAsList) {
+                        vectors.Add(item);
+                    } else {
+                        vectors[i] = item;
+                    }
                 }
                 value = vectors;
 
                 return true;
             }
             case PODTYPE.POD_BOOL: {
-                LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_BOOL, size, idx, out var arr);
+                LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_BOOL, size, idx, out var arr, arrayAsList);
 
-                var booleans = new bool[size];
+                IList<bool> booleans = arrayAsList ? new List<bool>(size) : new bool[size];
                 for (var i = 0; i < size; i++) {
-                    booleans[i] = arr[i] != 0;
+                    var item = arr[i] != 0;
+                    if (arrayAsList) {
+                        booleans.Add(item);
+                    } else {
+                        booleans[i] = item;
+                    }
                 }
                 value = booleans;
 

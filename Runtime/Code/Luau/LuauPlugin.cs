@@ -1,6 +1,7 @@
 #define DO_THREAD_SAFTEYCHECK
 // #define DO_CALL_SAFTEYCHECK
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -700,13 +701,17 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CopyTableToArray(IntPtr thread, IntPtr array, int type, int size, int idx);
-	public static void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out T[] array) {
+	public static void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) {
 		array = new T[size];
 		var gc = GCHandle.Alloc(array, GCHandleType.Pinned);
 		var arrayPtr = gc.AddrOfPinnedObject();
 		var res = CopyTableToArray(thread, arrayPtr, (int)type, size, idx);
 		gc.Free();
 		ThrowIfNotNullPtr(res);
+
+		if (asList) {
+			array = new List<T>(array);
+		}
 	}
 	
 #if UNITY_IPHONE
