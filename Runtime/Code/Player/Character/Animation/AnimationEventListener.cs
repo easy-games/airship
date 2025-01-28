@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[LuauAPI]
 public class AnimationEventListener : MonoBehaviour {
     
     [Tooltip("If identical events come in within this threshold only 1 will fire. In seconds.")]

@@ -447,10 +447,14 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 //Do nothing
             }
 
+            if (GUILayout.Button("Paste (Ignore Air)")) {
+                // Do nothing
+            }
+
             GUI.enabled = true;
         } else {
-            //Actual paste
-            if (GUILayout.Button("Paste")) {
+
+            void Paste(bool ignoreAir) {
                 //walk the bouns
                 float dx = copiedSize.x / 2;
                 float dy = copiedSize.y / 2;
@@ -460,8 +464,6 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 float pz = cube.transform.localPosition.z;
 
                 if (cube.voxelWorld) {
-                    int index = 0;
-
                     List<VoxelEditAction.EditInfo> edits = new();
 
                     //Walk the current selection zone
@@ -470,17 +472,24 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                             for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
                                 //cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), copiedData[index++], false);
                                 UInt16 prevData = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z));
+
                                 int xx = x - Mathf.FloorToInt(px - dx);
                                 int yy = y - Mathf.FloorToInt(py - dy);
                                 int zz = z - Mathf.FloorToInt(pz - dz);
+                                var newData = copiedData[xx, yy, zz];
 
-                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, copiedData[xx,yy,zz]));
+                                if (ignoreAir) {
+                                    var newBlockId = VoxelWorld.VoxelDataToBlockId(newData);
+                                    if (newBlockId == 0) {
+                                        continue;
+                                    }
+                                }
+
+                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, newData));
                             }
                         }
                     }
                     voxelEditManager.AddEdits(cube.voxelWorld, edits, "Paste Voxels");
-
-
                 }
 
                 //resize the box to whatever we pasted
@@ -488,6 +497,15 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 SnapToGrid();
                 cube.BuildCube();
                 ResetHandles();
+            }
+
+            //Actual paste
+            if (GUILayout.Button("Paste")) {
+                Paste(false);
+            }
+
+            if (GUILayout.Button("Paste (Ignore Air)")) {
+                Paste(true);
             }
         }
 
@@ -546,7 +564,6 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             }
         }
     }
-    
 
     void Awake() {
         // Add a handler for the gizmo refresh event
