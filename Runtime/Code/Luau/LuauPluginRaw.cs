@@ -142,4 +142,17 @@ public static class LuauPluginRaw {
 	public static void Pop(IntPtr thread, int n) {
 		ThrowIfNotNullPtr(LuaPop(thread, n));
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaSetReadonly(IntPtr thread, int idx, int enabled);
+	/// <summary>
+	/// Pops "n" values from the top of the stack.
+	/// </summary>
+	public static void SetReadonly(IntPtr thread, int idx, bool enabled) {
+		ThrowIfNotNullPtr(LuaSetReadonly(thread, idx, enabled ? 1 : 0));
+	}
 }

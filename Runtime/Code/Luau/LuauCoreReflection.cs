@@ -431,6 +431,8 @@ public partial class LuauCore : MonoBehaviour
             }
             LuauPluginRaw.RawSetI(thread, -2, i);
         }
+        
+        LuauPluginRaw.SetReadonly(thread, -1, true);
 
         return true;
     }

@@ -574,7 +574,7 @@ namespace CsToTs.TypeScript {
                 enumerable = type.GetInterfaces().FirstOrDefault(IsClosedEnumerableType);
 
             if (enumerable != null)
-                return $"CSArray<{GetTypeRef(enumerable.GetGenericArguments().First(), context)}>";
+                return $"Readonly<{GetTypeRef(enumerable.GetGenericArguments().First(), context)}[]>";
                 
             var typeDef = PopulateTypeDefinition(type, context);
             if (typeDef == null) 
