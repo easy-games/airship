@@ -13,7 +13,7 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
-using Assets.Luau.Network;
+using Code.Network;
 using Code.RemoteConsole;
 using Code.VoiceChat;
 using ElRaccoone.Tweens;

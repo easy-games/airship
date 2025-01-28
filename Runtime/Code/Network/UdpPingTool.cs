@@ -3,14 +3,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Debug = UnityEngine.Debug;
+using UnityEngine.Scripting;
 
-namespace Assets.Luau.Network
+namespace Code.Network
 {
-    [LuauAPI]
+    [LuauAPI][Preserve]
     public class UdpPingTool
     {
         public static async Task<long> GetPing(string serverUrl, int timeoutMilliseconds)
