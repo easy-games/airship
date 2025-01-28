@@ -740,7 +740,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         // Voxel painter
         if (VoxelWorldBrushToolBase.buttonActive) {
-            if (e.type == EventType.MouseUp && e.button == 0) {
+            if ((e.type == EventType.MouseDrag || e.type == EventType.MouseDown) && e.button == 0) {
                 // Create a ray from the mouse position
                 if (validPosition) {
                     var voxelPos = lastPos;

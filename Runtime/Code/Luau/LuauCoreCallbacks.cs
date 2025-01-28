@@ -54,6 +54,7 @@ public partial class LuauCore : MonoBehaviour {
         public Task Task;
         public MethodInfo Method;
         public LuauContext Context;
+        public Type Type;
     }
 
     private struct PropertyGetReflectionCache {
@@ -166,7 +167,7 @@ public partial class LuauCore : MonoBehaviour {
             Debug.LogWarning(res, logContext);
         } else if (style == 2) {
             // The STANDALONE here is just a test:
-#if UNITY_STANDALONE
+#if UNITY_STANDALONE && !UNITY_EDITOR
             Debug.LogWarning("[ERROR] " + res, logContext);
 #else
             Debug.LogError(res, logContext);
@@ -1600,6 +1601,7 @@ public partial class LuauCore : MonoBehaviour {
                 Task = task,
                 Method = method,
                 Context = context,
+                Type = type,
             };
             
             if (task.IsCompleted) {
@@ -1643,9 +1645,19 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         if (awaitingTask.Task.IsFaulted) {
-            ThreadDataManager.Error(thread);
-            Debug.LogException(awaitingTask.Task.Exception);
-            GetLuauDebugTrace(thread);
+            var result = -1;
+            try {
+                LuauError(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
+                result = LuauPlugin.LuauResumeThread(thread, -1);
+            } catch (LuauException e) {
+                Debug.LogException(e);
+            }
+            if (binding != null) {
+                binding.m_asyncYield = false;
+                binding.m_canResume = result == 1;
+                binding.m_error = true;
+            }
+            
             return;
         }
 
