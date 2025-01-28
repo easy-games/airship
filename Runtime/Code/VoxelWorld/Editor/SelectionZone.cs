@@ -447,14 +447,14 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 //Do nothing
             }
 
-            if (GUILayout.Button("Paste (Air Only)")) {
+            if (GUILayout.Button("Paste (Ignore Air)")) {
                 // Do nothing
             }
 
             GUI.enabled = true;
         } else {
 
-            void Paste(bool airOnly) {
+            void Paste(bool ignoreAir) {
                 //walk the bouns
                 float dx = copiedSize.x / 2;
                 float dy = copiedSize.y / 2;
@@ -472,18 +472,20 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                             for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
                                 //cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), copiedData[index++], false);
                                 UInt16 prevData = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z));
-                                if (airOnly) {
-                                    var prevBlockId = VoxelWorld.VoxelDataToBlockId(prevData);
-                                    if (prevBlockId != 0) {
-                                        continue;
-                                    }
-                                }
 
                                 int xx = x - Mathf.FloorToInt(px - dx);
                                 int yy = y - Mathf.FloorToInt(py - dy);
                                 int zz = z - Mathf.FloorToInt(pz - dz);
+                                var newData = copiedData[xx, yy, zz];
 
-                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, copiedData[xx,yy,zz]));
+                                if (ignoreAir) {
+                                    var newBlockId = VoxelWorld.VoxelDataToBlockId(newData);
+                                    if (newBlockId == 0) {
+                                        continue;
+                                    }
+                                }
+
+                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, newData));
                             }
                         }
                     }
@@ -502,7 +504,7 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 Paste(false);
             }
 
-            if (GUILayout.Button("Paste (Air Only)")) {
+            if (GUILayout.Button("Paste (Ignore Air)")) {
                 Paste(true);
             }
         }
