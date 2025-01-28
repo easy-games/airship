@@ -13,6 +13,7 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
+using Assets.Luau.Network;
 using Code.RemoteConsole;
 using Code.VoiceChat;
 using ElRaccoone.Tweens;
@@ -126,6 +127,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(MainMenuLoadingScreen),
             typeof(HttpManager),
             typeof(InternalHttpManager),
+            typeof(UdpPingTool),
             typeof(CrossSceneState),
             typeof(Toggle),
             typeof(HorizontalLayoutGroup),
