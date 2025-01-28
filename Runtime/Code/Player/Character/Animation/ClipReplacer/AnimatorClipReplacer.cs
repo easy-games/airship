@@ -207,20 +207,64 @@ namespace Code.Player.Character
                 return;
             }
 
+            if (overrideController == null)
+            {
+                Debug.LogError("No valid AnimatorOverrideController found.");
+                return;
+            }
+
             if (originalOverrides == null || originalOverrides.Count == 0)
             {
                 Debug.LogWarning("No original overrides found to restore.");
                 return;
             }
 
-            // Restaura os overrides originais
-            overrideController.ApplyOverrides(originalOverrides);
+            if (clipReplacements == null || clipReplacements.Count == 0)
+            {
+                Debug.LogWarning("No clip replacements configured to restore.");
+                return;
+            }
+
+            // Get the current overrides from the AnimatorOverrideController
+            var currentOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
+            overrideController.GetOverrides(currentOverrides);
+
+            // Create a new list to store the restored overrides
+            var restoredOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(currentOverrides);
+
+            // Restore only the clips configured in clipReplacements
+            foreach (var replacement in clipReplacements)
+            {
+                var baseClipName = replacement.baseClipName;
+                var originalOverride = originalOverrides.FirstOrDefault(o => o.Key.name == baseClipName);
+
+                if (originalOverride.Key != null)
+                {
+                    // Replace the current clip with the original
+                    for (int i = 0; i < restoredOverrides.Count; i++)
+                    {
+                        if (restoredOverrides[i].Key.name == baseClipName)
+                        {
+                            restoredOverrides[i] = originalOverride;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"Original clip for {baseClipName} not found in saved overrides.");
+                }
+            }
+
+            // Apply the restored overrides to the AnimatorOverrideController
+            overrideController.ApplyOverrides(restoredOverrides);
 
             if (!Application.isPlaying)
             {
-                Debug.Log("Original clips have been restored.");
+                Debug.Log("Specified clips have been restored.");
             }
         }
+
 
         /// <summary>
         /// Attempts to extract an AnimatorOverrideController from the given object.
