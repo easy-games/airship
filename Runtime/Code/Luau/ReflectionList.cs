@@ -51,6 +51,7 @@ namespace Luau {
             [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
             [typeof(ShaderWarmup)] = LuauContextAll,
+            [typeof(ShaderVariantCollection)] = LuauContextAll,
 
             // Navmesh
             [typeof(NavMesh)] = LuauContextAll,
