@@ -1,8 +1,10 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
 
@@ -11,10 +13,7 @@ namespace Assets.Luau.Network
     [LuauAPI]
     public class UdpPingTool
     {
-        private const int BufferSize = 32; // Size of the UDP packet.
-        private const int TimeoutMilliseconds = 5000; // Timeout for the ping response.
-
-        public static async Task<long> GetPing(string serverUrl)
+        public static async Task<long> GetPing(string serverUrl, int timeoutMilliseconds)
         {
             if (string.IsNullOrWhiteSpace(serverUrl))
             {
@@ -28,27 +27,24 @@ namespace Assets.Luau.Network
 
             using (var udpClient = new UdpClient())
             {
-                udpClient.Client.ReceiveTimeout = TimeoutMilliseconds;
+                udpClient.Client.ReceiveTimeout = timeoutMilliseconds;
                 var endpoint = new IPEndPoint(ipAddress, port);
 
-                var uniqueId = Guid.NewGuid().ToString(); // Generate a unique ID for this ping.
-                var buffer = Encoding.ASCII.GetBytes(uniqueId); // Send the unique ID as the ping message.
+                var uniqueId = Guid.NewGuid().ToByteArray();
                 var stopwatch = new Stopwatch();
 
                 try
                 {
-                    var receiveTask = udpClient.ReceiveAsync(); // start waiting before we send the packet to avoid race condition
-                    await udpClient.SendAsync(buffer, buffer.Length, endpoint);
+                    var receiveTask = udpClient.ReceiveAsync();
+                    await udpClient.SendAsync(uniqueId, uniqueId.Length, endpoint);
                     
                     stopwatch.Start();
-                    if (await Task.WhenAny(receiveTask, Task.Delay(TimeoutMilliseconds)) == receiveTask)
+                    if (await Task.WhenAny(receiveTask, Task.Delay(timeoutMilliseconds)) == receiveTask)
                     {
                         var response = receiveTask.Result;
-
                         stopwatch.Stop();
-
-                        // Check if the response matches the sent unique ID.
-                        if (Encoding.ASCII.GetString(response.Buffer) == uniqueId)
+                        
+                        if (response.Buffer.SequenceEqual(uniqueId))
                         {
                             return stopwatch.ElapsedMilliseconds;
                         }
