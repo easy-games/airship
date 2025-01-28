@@ -9,6 +9,7 @@ using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
@@ -49,6 +50,7 @@ namespace Luau {
             [typeof(Scene)] = LuauContextAll,
             [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
+            [typeof(ShaderWarmup)] = LuauContextAll,
 
             // Navmesh
             [typeof(NavMesh)] = LuauContextAll,
