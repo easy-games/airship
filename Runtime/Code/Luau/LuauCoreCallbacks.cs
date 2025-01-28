@@ -1500,10 +1500,13 @@ public partial class LuauCore : MonoBehaviour {
                 Method = method,
                 Context = context,
             };
-
+            
             if (task.IsCompleted) {
-                ResumeAsyncTask(awaitingTask, true);
                 shouldYield = false;
+                if (task.IsFaulted) {
+                    return LuauError(thread, $"Error: Exception thrown in {type.Name} {method.Name}: {task.Exception.Message}");
+                }
+                ResumeAsyncTask(awaitingTask, true);
                 return 0;
             }
 
