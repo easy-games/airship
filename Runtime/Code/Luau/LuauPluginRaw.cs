@@ -150,7 +150,7 @@ public static class LuauPluginRaw {
 #endif
 	private static extern IntPtr LuaSetReadonly(IntPtr thread, int idx, int enabled);
 	/// <summary>
-	/// Pops "n" values from the top of the stack.
+	/// Sets the read-only flag on the table at index "idx."
 	/// </summary>
 	public static void SetReadonly(IntPtr thread, int idx, bool enabled) {
 		ThrowIfNotNullPtr(LuaSetReadonly(thread, idx, enabled ? 1 : 0));

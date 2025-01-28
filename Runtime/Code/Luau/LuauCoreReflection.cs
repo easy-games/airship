@@ -448,11 +448,14 @@ public partial class LuauCore : MonoBehaviour
             return WriteArrayToThread(thread, (IEnumerable)value, t.GetElementType(), ((IList)value).Count);
         }
         if (t.IsGenericType && typeof(IEnumerable).IsAssignableFrom(t)) {
-            var valueType = t.GetGenericArguments()[0];
-            if (typeof(IList).IsAssignableFrom(t)) {
-                return WriteArrayToThread(thread, (IEnumerable)value, valueType, ((IList)value).Count);
-            } else {
-                return WriteArrayToThread(thread, (IEnumerable)value, valueType);
+            var genericArgs = t.GetGenericArguments();
+            if (genericArgs.Length == 1) {
+                var valueType = genericArgs[0];
+                if (typeof(IList).IsAssignableFrom(t)) {
+                    return WriteArrayToThread(thread, (IEnumerable)value, valueType, ((IList)value).Count);
+                } else {
+                    return WriteArrayToThread(thread, (IEnumerable)value, valueType);
+                }
             }
         }
 
@@ -671,8 +674,11 @@ public partial class LuauCore : MonoBehaviour
         if (sourceParamType.IsSZArray) {
             elementType = sourceParamType.GetElementType();
         } else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
-            elementType = sourceParamType.GetGenericArguments()[0];
-            arrayAsList = true;
+            var genericArgs = sourceParamType.GetGenericArguments();
+            if (genericArgs.Length == 1) {
+                elementType = genericArgs[0];
+                arrayAsList = true;
+            }
         }
         
         switch (podType) {
@@ -1222,7 +1228,12 @@ public partial class LuauCore : MonoBehaviour
                     sourceParamType = sourceParamType.GetElementType();
                 } else if (sourceParamType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(sourceParamType)) {
                     // Check for IEnumerable to cover things like List<T>:
-                    sourceParamType = sourceParamType.GetGenericArguments()[0];
+                    var genericArgs = sourceParamType.GetGenericArguments();
+                    if (genericArgs.Length == 1) {
+                        sourceParamType = genericArgs[0];
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }
