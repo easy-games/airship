@@ -400,6 +400,10 @@ public class AccessoryBuilder : MonoBehaviour
                     goList.Add(meshRenderers[i].gameObject);
                     meshRenderers[i].gameObject.layer = gameObject.layer;
                 }
+                for (var i = 0; i < skinnedMeshRenderers.Length; i++) {
+                    goList.Add(skinnedMeshRenderers[i].gameObject);
+                    skinnedMeshRenderers[i].gameObject.layer = gameObject.layer;
+                }
 
                 // Any type of renderer
                 var activeAccessory = new ActiveAccessory {
