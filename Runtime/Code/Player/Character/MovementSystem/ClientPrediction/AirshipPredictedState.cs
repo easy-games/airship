@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public abstract class AirshipPredictedState{
+public class AirshipPredictedState{
     public int tick;
     public Vector3 position;
     public Vector3 velocity;

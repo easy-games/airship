@@ -5,6 +5,10 @@ using UnityEngine;
 public class AirshipPredictedRigidbodyState : AirshipPredictedState {
     public Quaternion rotation { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] protected set; }
     public Vector3 angularVelocity { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] protected set; }
+
+    public AirshipPredictedRigidbodyState(){
+    }
+
     public AirshipPredictedRigidbodyState(int tick, Vector3 pos, Quaternion rot, Vector3 vel, Vector3 angularVel){
         this.position = pos;
         this.velocity = vel;

@@ -12,7 +12,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
 #region PUBLIC 
     public bool pauseOnReplay = false;
-	public float observerLerpDuration = .1f;
 
     [Header("Character References")]
     public CharacterMovement movement;
@@ -30,11 +29,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
 
     private MoveInputData lastSentInput;
     
-	//Prediction Observers
-	private Vector3 prevLocalObserverPosition;
-	private Vector3 prevObserverPosition;
-	private Vector3 nextObserverPosition;
-	private float lastObserverTime;
 #endregion
 
 #region GETTERS
@@ -91,40 +85,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         movement.OnSetCustomData -= OnSetMovementData;
         movement.OnEndMove -= OnMovementEnd;
     }
-    #endregion
-
-    #region OBSERVERS
-
-    protected override void OnRecievedObserverState(CharacterMovementState serverState) {
-		//In server auth we don't sync position with the NetworkTransform so I am doing it here
-        
-        //Update observers movement with all the state information we have (For animations only)
-        movement.ForceToNewMoveState(serverState);
-
-        //Store prev and next positions so we can lerp between the two to account for network lag
-        //prevObserverPosition = movement.transform.position; //Start lerping from your current position
-        prevLocalObserverPosition = movement.transform.position;
-        prevObserverPosition = nextObserverPosition; //Start lerping from this states position
-        //TODO: Should prev position be the last state position? Would get snapping but would be more accurate to their current pos
-        nextObserverPosition = serverState.position; //End at the latest server position
-
-        //Track how long we should interpolate
-        lastObserverTime = Time.time;
-
-    }
-
-	protected override void Update(){
-        base.Update();
-        if(IsObserver()){
-            //Find where we are in time since the last observer update
-            var delta = Mathf.Clamp((Time.time - lastObserverTime) / observerLerpDuration, 0, 10); //Let it extrapolate but not too crazy (10 is an arbitrary guess at what is too crazy)
-            //Interpolate between prev position and the lateset server position
-            movement.transform.position = Vector3.Lerp(
-                //Vector3.Lerp(prevLocalObserverPosition, prevObserverPosition, delta), //To avoid hard snap if we didn't make it to the observer position before the next update
-                prevObserverPosition,
-                nextObserverPosition, delta);
-        }
-	}
     #endregion
 
     #region PREDICTION
@@ -332,17 +292,41 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     public override void OnReplayingOthersFinished() {
         // TODO
     }
-#endregion
+    #endregion
 
-#region SERIALIZE
-    public override void SerializeState(NetworkWriter writer) {
-        writer.WriteVector3(tf.position);
-        writer.WriteVector3(movement.GetVelocity());
+    #region SERIALIZE
+    // public override void SerializeState(NetworkWriter writer) {
+    //     writer.WriteVector3(tf.position);
+    //     writer.WriteVector3(movement.GetVelocity());
+    // }
+
+    // public override CharacterMovementState DeserializeState(NetworkReader reader, int tick) {
+    //     var state = new CharacterMovementState(tick, reader.ReadVector3(), reader.ReadVector3());
+    //     return state;
+    // }
+    
+    protected override void OnServerSendObserverState(){
+        RpcObserversRecieveServerState(serverTick, CreateCurrentState(serverTick));
     }
 
-    public override CharacterMovementState DeserializeState(NetworkReader reader, int tick) {
-        var state = new CharacterMovementState(tick, reader.ReadVector3(), reader.ReadVector3());
-        return state;
+    [ClientRpc(includeOwner = false)]
+    protected void RpcObserversRecieveServerState(int tick, CharacterMovementState serverState){
+        if(!IsLatestTick(tick)){
+            return;
+        }
+
+        OnObserverRecievedServerState(serverState);
+    }
+    
+    protected override void OnObserverRecievedServerState(CharacterMovementState serverState) {
+        //Update observers movement with all the state information we have (For animations only)
+        movement.ForceToNewMoveState(serverState);
+        base.OnObserverRecievedServerState(serverState);
+
+    }
+
+    public override CharacterMovementState DeserializeState(int tick, Vector3 position, Vector3 velocity){
+        return new CharacterMovementState(tick, position, velocity);
     }
     #endregion
 
