@@ -210,6 +210,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(DepthOfFieldMode),
             typeof(LensDistortion),
             typeof(Vignette),
+            typeof(ShaderWarmup),
+            typeof(ShaderVariantCollection),
 
             // Mirror
             typeof(NetworkServer),

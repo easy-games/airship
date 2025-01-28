@@ -110,7 +110,7 @@ public class AnimatorClipReplacementEditor : UnityEditor.Editor
             }
         }
 
-        if (GUILayout.Button("Remove Clips"))
+        if (GUILayout.Button("Restore Original Clips"))
         {
             var replacer = (AnimatorClipReplacer)target;
 

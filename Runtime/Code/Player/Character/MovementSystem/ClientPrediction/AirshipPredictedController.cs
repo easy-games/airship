@@ -552,15 +552,15 @@ protected void Log(string message){
         // we don't know why yet, so keep this as an option for now.
         // possibly because client captures at the beginning of the frame,
         // with physics happening at the end of the frame?
-        serverTick += serverSerializationOffset;
+        tick += serverSerializationOffset;
 
         //Let the child class deserialize its data
-        T newState = DeserializeState(reader, serverTick);
+        T newState = DeserializeState(reader, tick);
 
         //print("Deserialize time: " + timestamp + " readerTime: " + serverDeltaTime);
         // process received state
         try{
-            OnReceivedState(serverTick, newState, forceReplay);
+            OnReceivedState(tick, newState, forceReplay);
         }catch(Exception e){
             Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
         }

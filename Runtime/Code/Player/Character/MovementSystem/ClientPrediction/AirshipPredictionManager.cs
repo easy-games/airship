@@ -20,6 +20,7 @@ public class AirshipPredictionManager : MonoBehaviour {
                 var go = new GameObject("PredictionManager");
                 DontDestroyOnLoad(go);
                 _instance = go.AddComponent<AirshipPredictionManager>();
+                _instance.StopPrediction();
             }
             return _instance;
         }
@@ -90,6 +91,8 @@ public class AirshipPredictionManager : MonoBehaviour {
         if(RunCore.IsClient() && Keyboard.current != null){
             Keyboard.current.onTextInput += OnKeyboardInput;
         }
+
+        this.enabled = true;
     }
 
     private void OnKeyboardInput(Char e){
@@ -113,6 +116,7 @@ public class AirshipPredictionManager : MonoBehaviour {
 
     public void StopPrediction(){
         Physics.simulationMode = SimulationMode.FixedUpdate;
+        this.enabled = false;
     }
 
     public void EnabledDebugMode(){
@@ -285,7 +289,9 @@ public class AirshipPredictionManager : MonoBehaviour {
         //TODO: Sort the rigidbodies by depth (how deep in heirarchy?) so that we update nested rigidbodies in the correct order
         foreach(var kvp in currentTrackedRigidbodies){
             var rigidData = kvp.Value;
-            rigidData.graphicsHolder.position = Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime);
+            if(rigidData != null && rigidData.graphicsHolder != null){
+                rigidData.graphicsHolder.position = Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime);
+            }
 
             // GizmoUtils.DrawSphere(
             //     Vector3.Lerp(rigidData.lastPosition, rigidData.currentPosition, interpolationTime),

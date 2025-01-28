@@ -28,8 +28,6 @@ public class CharacterMovement : NetworkBehaviour {
 	[Header("Visual Variables")]
 	public bool autoCalibrateSkiddingSpeed = true;
 	public float observerRotationLerpMod = 1;
-	[Tooltip("Only used for Server Authoritative observers")]
-	public float observerLerpDuration = .1f;
 	[Tooltip("If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
 	public bool playAnimationOnServer = true;
 #endregion
@@ -126,10 +124,6 @@ public class CharacterMovement : NetworkBehaviour {
 	//Prediction
 	private bool queueReplay = false;
 
-	//Prediction Observers
-	private Vector3 prevObserverPosition;
-	private Vector3 nextObserverPosition;
-	private float lastObserverTime;
 #endregion
 
 #region SYNC DATA
@@ -231,24 +225,30 @@ public class CharacterMovement : NetworkBehaviour {
 		SetMoveInputData(newState.currentMoveInput);
 
 		this.currentMoveState = new CharacterMovementState(newState);
-		
-		// apply the state to the Rigidbody instantly
-        rigidbody.position = newState.position;
 
-        // Set the velocity
-        if (!rigidbody.isKinematic) {
-            rigidbody.velocity = newState.velocity;
-        }
+		if(IsObserver()){
+			//Update visuals to match new state
+			animationHelper.SetState(new CharacterAnimationSyncData() {
+				state = newState.state,
+				grounded = newState.timeSinceBecameGrounded > 0,
+				sprinting = newState.currentMoveInput.sprint,
+				crouching = newState.currentMoveInput.crouch,
+				localVelocity = graphicTransform.InverseTransformDirection(newState.velocity),
+				lookVector = newState.currentMoveInput.lookVector,
+			});
+		} else{
+			// apply the state to the Rigidbody instantly
+			rigidbody.position = newState.position;
+
+			// Set the velocity
+			if (!rigidbody.isKinematic) {
+				rigidbody.velocity = newState.velocity;
+			}
+		}
 	}
 #endregion
 
 #region UPDATE
-	private void Update(){
-        if(IsObserver() && isServerAuth){
-            var delta = Mathf.Clamp01((Time.time - lastObserverTime) / this.observerLerpDuration);
-            this.rigidbody.position = Vector3.Lerp(prevObserverPosition, nextObserverPosition, delta);
-        }
-	}
 
 	//Every frame update the calculated look vector and the visual state of the movement
 	private void LateUpdate(){
@@ -864,7 +864,6 @@ public class CharacterMovement : NetworkBehaviour {
 			crouching = isCrouching,
 			localVelocity = currentLocalVelocity,
 			lookVector = lookVector,
-			position = transform.position,
 		});
 
 		if (didJump){
@@ -1161,11 +1160,13 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	private void TrySetState(CharacterAnimationSyncData newStateData) {
+
 		bool isNewState = newStateData.state != this.stateSyncData.state;
-		bool isNewData = !newStateData.Equals(this.stateSyncData) || (isServerAuth && stateSyncData.position != newStateData.position);
+		bool isNewData = !newStateData.Equals(this.stateSyncData);
 
 		// If new value in the state
-		if (isNewData) {
+		if (isNewData && !isServerAuth) {
+			//NOTE: Server Auth syncs animation data along with the predicted inputs so we don't need to also send data through RPCs
 			this.stateSyncData = newStateData;
 			if(hasMovementAuth){
 				if(isClientOnly){
@@ -1187,6 +1188,7 @@ public class CharacterMovement : NetworkBehaviour {
 			stateChanged?.Invoke((int)newStateData.state);
 		}
 
+		//Update our local visuals
 		animationHelper.SetState(newStateData);
 	}
 	
@@ -1217,14 +1219,6 @@ public class CharacterMovement : NetworkBehaviour {
 		if (oldState.state != data.state) {
 			stateChanged?.Invoke((int)data.state);
 		}
-
-		//In server auth we don't sync position with the NetworkTransform so I am doing it here
-        if(this.IsObserver() && isServerAuth){
-			//Store prev and next positions so we can lerp between the two to account for network lag
-			lastObserverTime = Time.time;
-			prevObserverPosition = nextObserverPosition;
-			nextObserverPosition = data.position;
-        }
 
 		animationHelper.SetState(data);
 	}
