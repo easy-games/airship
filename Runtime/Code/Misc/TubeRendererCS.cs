@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Assets.Code.Misc {
@@ -45,7 +46,13 @@ namespace Assets.Code.Misc {
 		}
 
 		void Update() {
+			MakeExceptionHappen();
 			GenerateMesh();
+		}
+
+		public void MakeExceptionHappen()
+		{
+			throw new SystemException();
 		}
 
 		public void SetStartRadius(float radius) {
