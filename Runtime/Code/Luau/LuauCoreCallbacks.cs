@@ -102,20 +102,19 @@ public partial class LuauCore : MonoBehaviour {
 
     public static GameObject luauModulesFolder;
 
-    private void CreateCallbacks()
-    {
-        printCallback_holder = new LuauPlugin.PrintCallback(printf);
-        getPropertyCallback_holder = new LuauPlugin.GetPropertyCallback(getProperty);
-        setPropertyCallback_holder = new LuauPlugin.SetPropertyCallback(setProperty);
-        callMethodCallback_holder = new LuauPlugin.CallMethodCallback(callMethod);
-        objectGCCallback_holder = new LuauPlugin.ObjectGCCallback(objectGc);
-        requireCallback_holder = new LuauPlugin.RequireCallback(requireCallback);
-        constructorCallback_holder = new LuauPlugin.ConstructorCallback(constructorCallback);
-        requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
-        toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
-        componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
-        toggleProfilerCallback_holder = new LuauPlugin.ToggleProfilerCallback(ToggleProfilerCallback);
-        isObjectDestroyedCallback_holder = new LuauPlugin.IsObjectDestroyedCallback(IsObjectDestroyedCallback);
+    private void CreateCallbacks() {
+        printCallback_holder = printf;
+        getPropertyCallback_holder = getProperty;
+        setPropertyCallback_holder = setProperty;
+        callMethodCallback_holder = callMethod;
+        objectGCCallback_holder = objectGc;
+        requireCallback_holder = requireCallback;
+        constructorCallback_holder = constructorCallback;
+        requirePathCallback_holder = requirePathCallback;
+        toStringCallback_holder = toStringCallback;
+        componentSetEnabledCallback_holder = SetComponentEnabled;
+        toggleProfilerCallback_holder = ToggleProfilerCallback;
+        isObjectDestroyedCallback_holder = IsObjectDestroyedCallback;
     }
 
     private static int LuauError(IntPtr thread, string err) {
