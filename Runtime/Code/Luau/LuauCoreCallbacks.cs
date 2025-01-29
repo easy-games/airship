@@ -669,10 +669,6 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
-        // Temporary -- causes allocations
-        pi.SetValue(instance, value);
-        return;
-        
         var staticSet = instance == null;
         if (!_propertySetterCache.TryGetValue((staticSet, pi.DeclaringType, pi.Name), out var setter)) {
             setter = CreateSetter<T>(pi, staticSet);
@@ -811,10 +807,10 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
-                    // if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
-                    //     Profiler.EndSample();
-                    //     return 1;
-                    // }
+                    if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
+                        Profiler.EndSample();
+                        return 1;
+                    }
 
                     var value = GetValue<object>(objectReference, cacheData.Value);
                     if (value != null) {
