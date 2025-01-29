@@ -46,13 +46,7 @@ namespace Assets.Code.Misc {
 		}
 
 		void Update() {
-			MakeExceptionHappen();
 			GenerateMesh();
-		}
-
-		public void MakeExceptionHappen()
-		{
-			throw new SystemException();
 		}
 
 		public void SetStartRadius(float radius) {
