@@ -15,7 +15,7 @@ using UnityEngine;
 /// and handeling generic server client syncronization
 /// </summary>
 /// <typeparam name="T">The data type stored in the history that is needed for replays</typeparam>
-[RequireComponent(typeof(NetworkIdentity))]
+[RequireComponent(typeof(NetworkIdentity), typeof(AirshipPredictionRPC))]
 public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredictedReplay where T: AirshipPredictedState{
 
 #region INSPECTOR
@@ -106,7 +106,13 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 	private Vector3 prevObserverPosition;
 	private Vector3 nextObserverPosition;
 	private float lastObserverTime;
+
+    private AirshipPredictionRPC rpcCalls;
     
+    public override int GetHashCode() {
+        print("PredictedController Hash: " + base.GetHashCode());
+        return 1337;
+    }
 #endregion
 
 
@@ -156,6 +162,11 @@ protected void Log(string message){
     protected virtual void Awake() {
         // cache some threshold to avoid calculating them in LateUpdate
         float colliderSize = GetComponentInChildren<Collider>().bounds.size.magnitude;
+        rpcCalls = gameObject.GetComponent<AirshipPredictionRPC>();
+        if(!rpcCalls){
+            Debug.LogError("Missing AirshipPredictionRPC component on predicted controller");
+        }
+        rpcCalls.OnClientRecievedServerState += OnClientRecievedServerState;
 
         // cache ² computations
         velocitySnapThresholdSqr = velocitySnapThreshold * velocitySnapThreshold;
@@ -276,173 +287,186 @@ protected void Log(string message){
     // process a received server state.
     // compares it against our history and applies corrections if needed.
     // serverTimestamp is the same value as serverState.timestamp
-    protected void OnClientReceivedServerState(int serverTick, T serverState, bool forceReplay) {
-        if(forceReplay){
-            int forcedIndex;
-            if(stateHistory.Count <= 2){
-                //Shouldn't this be apply state so it actually saves into the history?
-                //ApplyState(serverState);
-                SnapTo(serverState);
+    protected virtual void OnClientRecievedServerState(int tick, bool forceReplay, Vector3 position, Vector3 velocity){
+        //Only use if its the latest information
+        if(!IsLatestTick(tick)){
+            return;
+        }
+
+        print("Recieved Server state: " + netId + "  server tick: " + serverTick);
+        // process received state
+        try{
+            var serverState = DeserializeState(tick, position, velocity);
+            if(forceReplay){
+                int forcedIndex;
+                if(stateHistory.Count <= 2){
+                    //Shouldn't this be apply state so it actually saves into the history?
+                    //ApplyState(serverState);
+                    SnapTo(serverState);
+                    return;
+                } else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
+                    AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, forcedIndex);
+                    return;
+                } else {
+                    // something went very wrong. sampling should've worked.
+                    Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
+                    PrintHistory();
+                }
+            }
+
+            // correction requires at least 2 existing states for 'before' and 'after'.
+            // if we don't have two yet, drop this state and try again next time once we recorded more.
+            if (stateHistory.Count <= 2) return;
+            
+            //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
+
+            if(lastRecordedTick > 0 && lastRecordedTick < serverTick){
+                GizmoUtils.DrawBox(serverState.position, Quaternion.identity, new Vector3(.04f, .04f, .04f), Color.white, gizmoDuration);
+            }
+            
+
+            // DO NOT SYNC SLEEPING! this cuts benchmark performance in half(!!!)
+            // color code remote sleeping objects to debug objects coming to rest
+            // if (showRemoteSleeping)
+            // {
+            //     rend.material.color = sleeping ? Color.gray : originalColor;
+            // }
+
+            // OPTIONAL performance optimization when comparing idle objects.
+            // even idle objects will have a history of ~32 entries.
+            // sampling & traversing through them is unnecessarily costly.
+            // instead, compare directly against the current rigidbody position!
+            // => this is technically not 100% correct if an object runs in
+            //    circles where it may revisit the same position twice.
+            // => but practically, objects that didn't move will have their
+            //    whole history look like the last inserted state.
+            // => comparing against that is free and gives us a significant
+            //    performance saving vs. a tiny chance of incorrect results due
+            //    to objects running in circles.
+            // => the RecordState() call below is expensive too, so we want to
+            //    do this before even recording the latest state. the only way
+            //    to do this (in case last recorded state is too old), is to
+            //    compare against live rigidbody.position without any recording.
+            //    this is as fast as it gets for skipping idle objects.
+            //
+            // if this ever causes issues, feel free to disable it.
+            if (Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr &&
+                Vector3.SqrMagnitude(serverState.velocity - currentVelocity) < velocityCorrectionThresholdSqr) {
+                //Close enought to not need any adjustments
+                //Log($"OnReceivedState for {name}: taking is idle optimized early return!");
                 return;
-            } else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
-                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, forcedIndex);
-                return;
-            } else {
-                // something went very wrong. sampling should've worked.
-                Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
+            }
+
+            // we only capture state every 'interval' milliseconds.
+            // so the newest entry in 'history' may be up to 'interval' behind 'now'.
+            // if there's no latency, we may receive a server state for 'now'.
+            // sampling would fail, if we haven't recorded anything in a while.
+            // to solve this, always record the current state when receiving a server state.
+
+            //This shouldn't be need in Airship because we are controlling the FixedUpdate loop and recording again will just record redundant data
+            // if(predictedTime > lastRecorded.timestamp + recordInterval/2 
+            //     && !this.stateHistory.ContainsKey(predictedTime)){
+            //     RecordState(predictedTime);
+            // }
+
+            int oldestTick = stateHistory.Values[0].tick;
+
+            // edge case: is the server state newer than the newest state in history?
+            // this can happen if client's predictedTime predicts too far ahead of the server.
+            // in that case, log a warning for now but still apply the correction.
+            // otherwise it could be out of sync as long as it's too far ahead.
+            //
+            // for example, when running prediction on the same machine with near zero latency.
+            // when applying corrections here, this looks just fine on the local machine.
+            // Only force if the difference is significant
+            if (serverTick > lastRecordedTick) {
+                // the correction is for a state in the future.
+                // force the state to the server
+                // TODO maybe we should interpolate this back to 'now'?
+                // this can happen a lot when latency is ~0. logging all the time allocates too much and is too slow.
+                Log($"Hard correction because the server is ahead of the client\n" +
+                    $"serverTime={serverTick:F3} locallastRecordTick={lastRecordedTick:F3} predictionTime: {predictedTick}\n" +
+                    $"local oldestTick={oldestTick:F3} History of size={stateHistory.Count}. \n" +
+                    $"This can happen when latency is near zero, and is fine unless it shows jitter.");
                 PrintHistory();
+                ApplyState(serverState);
+                return;
             }
-        }
 
-        // correction requires at least 2 existing states for 'before' and 'after'.
-        // if we don't have two yet, drop this state and try again next time once we recorded more.
-        if (stateHistory.Count <= 2) return;
-        
-        //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
+            T clientState;
+            int afterIndex;
 
-        if(lastRecordedTick > 0 && lastRecordedTick < serverTick){
-            GizmoUtils.DrawBox(serverState.position, Quaternion.identity, new Vector3(.04f, .04f, .04f), Color.white, gizmoDuration);
-        }
-        
+            // edge case: is the state older than the oldest state in history?
+            // this can happen if the client gets so far behind the server
+            // that it doesn't have a recored history to sample from.
+            // in that case, we should hard correct the client.
+            // otherwise it could be out of sync as long as it's too far behind.
+            if (serverTick < oldestTick) {
+                // when starting, client may only have 2-3 states in history.
+                // it's expected that server states would be behind those 2-3.
+                // only show a warning if it's behind the full history limit!
+                if (stateHistory.Count >= stateHistoryLimit)
+                    Debug.LogWarning($"Hard correcting client object {name} because the client is too far behind the server. History of size={stateHistory.Count} oldest={oldestTick:F3} newest={lastRecordedTick}. This would cause the client to be out of sync as long as it's behind.");
 
-        // DO NOT SYNC SLEEPING! this cuts benchmark performance in half(!!!)
-        // color code remote sleeping objects to debug objects coming to rest
-        // if (showRemoteSleeping)
-        // {
-        //     rend.material.color = sleeping ? Color.gray : originalColor;
-        // }
-
-        // OPTIONAL performance optimization when comparing idle objects.
-        // even idle objects will have a history of ~32 entries.
-        // sampling & traversing through them is unnecessarily costly.
-        // instead, compare directly against the current rigidbody position!
-        // => this is technically not 100% correct if an object runs in
-        //    circles where it may revisit the same position twice.
-        // => but practically, objects that didn't move will have their
-        //    whole history look like the last inserted state.
-        // => comparing against that is free and gives us a significant
-        //    performance saving vs. a tiny chance of incorrect results due
-        //    to objects running in circles.
-        // => the RecordState() call below is expensive too, so we want to
-        //    do this before even recording the latest state. the only way
-        //    to do this (in case last recorded state is too old), is to
-        //    compare against live rigidbody.position without any recording.
-        //    this is as fast as it gets for skipping idle objects.
-        //
-        // if this ever causes issues, feel free to disable it.
-        if (Vector3.SqrMagnitude(serverState.position - currentPosition) < positionCorrectionThresholdSqr &&
-            Vector3.SqrMagnitude(serverState.velocity - currentVelocity) < velocityCorrectionThresholdSqr) {
-            //Close enought to not need any adjustments
-            //Log($"OnReceivedState for {name}: taking is idle optimized early return!");
-            return;
-        }
-
-        // we only capture state every 'interval' milliseconds.
-        // so the newest entry in 'history' may be up to 'interval' behind 'now'.
-        // if there's no latency, we may receive a server state for 'now'.
-        // sampling would fail, if we haven't recorded anything in a while.
-        // to solve this, always record the current state when receiving a server state.
-
-        //This shouldn't be need in Airship because we are controlling the FixedUpdate loop and recording again will just record redundant data
-        // if(predictedTime > lastRecorded.timestamp + recordInterval/2 
-        //     && !this.stateHistory.ContainsKey(predictedTime)){
-        //     RecordState(predictedTime);
-        // }
-
-        int oldestTick = stateHistory.Values[0].tick;
-
-        // edge case: is the server state newer than the newest state in history?
-        // this can happen if client's predictedTime predicts too far ahead of the server.
-        // in that case, log a warning for now but still apply the correction.
-        // otherwise it could be out of sync as long as it's too far ahead.
-        //
-        // for example, when running prediction on the same machine with near zero latency.
-        // when applying corrections here, this looks just fine on the local machine.
-        // Only force if the difference is significant
-        if (serverTick > lastRecordedTick) {
-            // the correction is for a state in the future.
-            // force the state to the server
-            // TODO maybe we should interpolate this back to 'now'?
-            // this can happen a lot when latency is ~0. logging all the time allocates too much and is too slow.
-            Log($"Hard correction because the server is ahead of the client\n" +
-                $"serverTime={serverTick:F3} locallastRecordTick={lastRecordedTick:F3} predictionTime: {predictedTick}\n" +
-                $"local oldestTick={oldestTick:F3} History of size={stateHistory.Count}. \n" +
-                $"This can happen when latency is near zero, and is fine unless it shows jitter.");
-            PrintHistory();
-            ApplyState(serverState);
-            return;
-        }
-
-        T clientState;
-        int afterIndex;
-
-        // edge case: is the state older than the oldest state in history?
-        // this can happen if the client gets so far behind the server
-        // that it doesn't have a recored history to sample from.
-        // in that case, we should hard correct the client.
-        // otherwise it could be out of sync as long as it's too far behind.
-        if (serverTick < oldestTick) {
-            // when starting, client may only have 2-3 states in history.
-            // it's expected that server states would be behind those 2-3.
-            // only show a warning if it's behind the full history limit!
-            if (stateHistory.Count >= stateHistoryLimit)
-                Debug.LogWarning($"Hard correcting client object {name} because the client is too far behind the server. History of size={stateHistory.Count} oldest={oldestTick:F3} newest={lastRecordedTick}. This would cause the client to be out of sync as long as it's behind.");
-
-            Log("serverState is older than our history. Server: " + serverTick + " oldest tick: " + stateHistory.Keys[0]);
-            //Add a history element before everything to replay from
-            stateHistory.Add(serverTick, serverState);
-            clientState = serverState;
-            afterIndex = 1;
-            //Continue to the replay below
-        }
-        // find the two closest client states between timestamp
-        else if (Sample(stateHistory, serverTick, out T before, out afterIndex)) {
-            clientState = before;
-        }else {
-            // something went very wrong. sampling should've worked.
-            // hard correct to recover the error.
-            Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ oldest={oldestTick:F3} newest={lastRecordedTick}. This should never happen because the timestamp is within history.");
-            PrintHistory();
-            ApplyState(serverState);
-            return;
-        }
-
-
-        // too far off? then correct it
-        if (NeedsCorrection(serverState, clientState)) {
-            Log($"CORRECTION NEEDED FOR {name} client= {clientState.tick} + pos: {clientState.position} server= {serverState.tick} + pos: {serverState.position}");
-            if(showGizmos){
-                // show the received correction position + velocity for debugging.
-                // helps to compare with the interpolated/applied correction locally.
-                GizmoUtils.DrawLine(serverState.position, serverState.position + serverState.velocity * 0.1f, Color.white, gizmoDuration);
-
-                //Recieved server position
-                GizmoUtils.DrawBox(serverState.position, Quaternion.identity, 
-                    new Vector3(.1f, .1f, .1f), serverColor, gizmoDuration);
-
-                //Current client position
-                GizmoUtils.DrawSphere(currentPosition, .08f, Color.red, 4, gizmoDuration);
-                GizmoUtils.DrawLine(currentPosition, currentPosition + currentVelocity * 0.1f, Color.red, gizmoDuration);
-
-                //Client position at the this timestamp
-                GizmoUtils.DrawSphere(clientState.position, .08f, Color.red, 4, gizmoDuration);
-                GizmoUtils.DrawLine(clientState.position, clientState.position + clientState.velocity * 0.1f, Color.red, gizmoDuration);
+                Log("serverState is older than our history. Server: " + serverTick + " oldest tick: " + stateHistory.Keys[0]);
+                //Add a history element before everything to replay from
+                stateHistory.Add(serverTick, serverState);
+                clientState = serverState;
+                afterIndex = 1;
+                //Continue to the replay below
+            }
+            // find the two closest client states between timestamp
+            else if (Sample(stateHistory, serverTick, out T before, out afterIndex)) {
+                clientState = before;
+            }else {
+                // something went very wrong. sampling should've worked.
+                // hard correct to recover the error.
+                Debug.LogError($"Failed to sample history of size={stateHistory.Count} @ oldest={oldestTick:F3} newest={lastRecordedTick}. This should never happen because the timestamp is within history.");
+                PrintHistory();
+                ApplyState(serverState);
+                return;
             }
 
 
-            //Simulate until the end of our history
-            if(lastRecordedTick > serverTick){
-                if(showLogs){
-                    print("Replaying until tick: " + lastRecordedTick + " which is " + ((serverTick - lastRecordedTick) * syncInterval) + " seconds away");
+            // too far off? then correct it
+            if (NeedsCorrection(serverState, clientState)) {
+                Log($"CORRECTION NEEDED FOR {name} client= {clientState.tick} + pos: {clientState.position} server= {serverState.tick} + pos: {serverState.position}");
+                if(showGizmos){
+                    // show the received correction position + velocity for debugging.
+                    // helps to compare with the interpolated/applied correction locally.
+                    GizmoUtils.DrawLine(serverState.position, serverState.position + serverState.velocity * 0.1f, Color.white, gizmoDuration);
+
+                    //Recieved server position
+                    GizmoUtils.DrawBox(serverState.position, Quaternion.identity, 
+                        new Vector3(.1f, .1f, .1f), serverColor, gizmoDuration);
+
+                    //Current client position
+                    GizmoUtils.DrawSphere(currentPosition, .08f, Color.red, 4, gizmoDuration);
+                    GizmoUtils.DrawLine(currentPosition, currentPosition + currentVelocity * 0.1f, Color.red, gizmoDuration);
+
+                    //Client position at the this timestamp
+                    GizmoUtils.DrawSphere(clientState.position, .08f, Color.red, 4, gizmoDuration);
+                    GizmoUtils.DrawLine(clientState.position, clientState.position + clientState.velocity * 0.1f, Color.red, gizmoDuration);
                 }
 
-                //Replay States
-                AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, afterIndex);
-            }else{
-                //Snap because there isn't a time difference (should just be in shared mode)
-                ApplyState(serverState);
+
+                //Simulate until the end of our history
+                if(lastRecordedTick > serverTick){
+                    if(showLogs){
+                        print("Replaying until tick: " + lastRecordedTick + " which is " + ((serverTick - lastRecordedTick) * syncInterval) + " seconds away");
+                    }
+
+                    //Replay States
+                    AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, afterIndex);
+                }else{
+                    //Snap because there isn't a time difference (should just be in shared mode)
+                    ApplyState(serverState);
+                }
             }
+        } catch(Exception e){
+            Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
         }
+        
     }
 
 #endregion
@@ -475,20 +499,18 @@ protected void Log(string message){
             
             if(Time.time - lastSendTimeClient > this.serverToClientSendDelay + optimizationDuration){
                 this.lastSendTimeClient = Time.time;
-                print("Sending tp client RPC: " + connectionToClient + ": " + serverTick);
-
-                //Send position and velcoity to CLIENT
-                RpcClientRecieveServerState(serverTick, forceNextReplay, currentPosition, currentVelocity); 
+                print("Sending tp client RPC: " + this.netId + ": " + serverTick);
+                rpcCalls.SendServerStateToClient(serverTick, forceNextReplay, currentPosition, currentVelocity);
                 forceNextReplay = false;
             }
 
             
-            if(Time.time - lastSendTimeObservers > this.serverToObserversSendDelay){
+            if(Time.time - lastSendTimeObservers > this.serverToObserversSendDelay + optimizationDuration){
                 this.lastSendTimeObservers = Time.time;
                 print("Sending to observers RPC: " + serverTick);
 
                 //Send entire state data to OBSERVERS
-                OnServerSendObserverState();
+                rpcCalls.SendServerStateToObservers();
             }
             
 
@@ -496,28 +518,6 @@ protected void Log(string message){
             SetDirty();
         }
 
-
-        /// <summary>
-        /// Make an RPC call to observers giving them state information so they can visually replicate the server
-        /// </summary>
-        protected abstract void OnServerSendObserverState();
-
-        [TargetRpc()]
-        private void RpcClientRecieveServerState(int tick, bool forceReplay, Vector3 position, Vector3 velocity){
-            //Only use if its the latest information
-            if(!IsLatestTick(tick)){
-                return;
-            }
-
-            //print("GOT server tick: " + serverTick + " predictedTick: " + predictedTick + " offset: " + offset +  " offsetTime: " + NetworkTime.predictionErrorUnadjusted);
-            // process received state
-            try{
-                OnClientReceivedServerState(tick, 
-                    DeserializeState(tick, position, velocity), forceReplay);
-            }catch(Exception e){
-                Debug.LogError("Error on recieved state: " + e.Message + " trace: " + e.StackTrace);
-            }
-        }
 
         protected bool IsLatestTick(int tick){
             if(tick < newestTick){
@@ -530,7 +530,7 @@ protected void Log(string message){
 
         private AirshipPredictedState[] observedStates = new AirshipPredictedState[2] {null, null};
 
-        protected virtual void OnObserverRecievedServerState(T serverState){
+        protected virtual void OnObserverRecievedServerState(AirshipPredictedState serverState){
 		    //In server auth we don't sync position with the NetworkTransform so I am doing it here
 
             //Store prev and next positions so we can lerp between the two to account for network lag
@@ -538,7 +538,7 @@ protected void Log(string message){
             nextObserverPosition = serverState.position; //End at the latest server position
 
             observedStates[0] = observedStates[1];
-            observedStates[1] = new AirshipPredictedState() { tick = serverTick, position = serverState.position, velocity = serverState.velocity};
+            observedStates[1] = serverState;
 
             //Track how long we should interpolate
             lastObserverTime = Time.time;

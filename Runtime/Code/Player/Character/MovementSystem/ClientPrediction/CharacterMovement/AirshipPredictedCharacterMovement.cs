@@ -28,7 +28,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     private SortedList<int, MoveInputData> recievedInputs = new SortedList<int, MoveInputData>();
 
     private MoveInputData lastSentInput;
-    
 #endregion
 
 #region GETTERS
@@ -38,6 +37,7 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
             return tf.position;
         } 
     }
+
     public override Vector3 currentVelocity {
         get{
             return movement.GetVelocity();
@@ -55,7 +55,6 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         recordInterval = Time.fixedDeltaTime;
 
         base.Awake();
-        
     }
 
     protected override void OnEnable() {
