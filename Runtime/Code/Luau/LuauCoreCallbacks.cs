@@ -669,6 +669,10 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
+        // Temporary -- causes allocations
+        pi.SetValue(instance, value);
+        return;
+        
         var staticSet = instance == null;
         if (!_propertySetterCache.TryGetValue((staticSet, pi.DeclaringType, pi.Name), out var setter)) {
             setter = CreateSetter<T>(pi, staticSet);
