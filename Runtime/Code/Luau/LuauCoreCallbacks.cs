@@ -807,10 +807,10 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
-                    if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
-                        Profiler.EndSample();
-                        return 1;
-                    }
+                    // if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
+                    //     Profiler.EndSample();
+                    //     return 1;
+                    // }
 
                     var value = GetValue<object>(objectReference, cacheData.Value);
                     if (value != null) {
