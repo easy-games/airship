@@ -215,6 +215,11 @@ public partial class LuauCore : MonoBehaviour {
                 staticList = stringAddresses.AddrOfPinnedObject(),
                 staticCount = stringCount,
                 isServer = RunCore.IsServer() ? 1 : 0,
+#if UNITY_EDITOR
+                useUnityAllocator = 1,
+#else
+                useUnityAllocator = 0,
+#endif
             }
         );
 

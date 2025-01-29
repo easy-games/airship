@@ -60,6 +60,7 @@ public static class LuauPlugin {
 		public IntPtr staticList;
 		public int staticCount;
 		public int isServer;
+		public int useUnityAllocator;
 	}
 	
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
