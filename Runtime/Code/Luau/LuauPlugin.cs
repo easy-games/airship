@@ -1,6 +1,7 @@
 #define DO_THREAD_SAFTEYCHECK
 // #define DO_CALL_SAFTEYCHECK
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -12,13 +13,14 @@ using Debug = UnityEngine.Debug;
 public static class LuauPlugin {
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
-	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
-	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield);
-	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize);
+	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize, int isTable);
+	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield);
+	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
 	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int RequirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
+	public delegate int ToCsArrayCallback(LuauContext context, IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType);
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate void ToggleProfilerCallback(int componentId, IntPtr str, int strLen);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
@@ -580,10 +582,10 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize);
-	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize) {
+	private static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
+	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
         ThreadSafetyCheck();
-        ThrowIfNotNullPtr(PushValueToThread(thread, type, data, dataSize));
+        ThrowIfNotNullPtr(PushValueToThread(thread, type, data, dataSize, arraySize));
 	}
 
 #if UNITY_IPHONE
@@ -691,6 +693,25 @@ public static class LuauPlugin {
 	private static extern void SetIsPaused(int isPaused);
 	public static void LuauSetIsPaused(bool isPaused) {
 		SetIsPaused(isPaused ? 1 : 0);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr CopyTableToArray(IntPtr thread, IntPtr array, int type, int size, int idx);
+	public static void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) {
+		array = new T[size];
+		var gc = GCHandle.Alloc(array, GCHandleType.Pinned);
+		var arrayPtr = gc.AddrOfPinnedObject();
+		var res = CopyTableToArray(thread, arrayPtr, (int)type, size, idx);
+		gc.Free();
+		ThrowIfNotNullPtr(res);
+
+		if (asList) {
+			array = new List<T>(array);
+		}
 	}
 	
 #if UNITY_IPHONE
