@@ -507,7 +507,7 @@ public class AirshipComponent : MonoBehaviour {
         LuauCore.onResetInstance += OnLuauReset;
         
         if (scriptFile != null) {
-            componentIdToScriptName[_scriptBindingId] = scriptFile.name;
+            componentIdToScriptName[_scriptBindingId] = string.Intern(scriptFile.name);
         }
 #if UNITY_EDITOR
         if (!validatedSceneInGameConfig) {
@@ -831,6 +831,7 @@ public class AirshipComponent : MonoBehaviour {
     private void OnDestroy() {
         _isDestroyed = true;
         DisconnectUnityEvents();
+        componentIdToScriptName.Remove(_scriptBindingId);
         
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
