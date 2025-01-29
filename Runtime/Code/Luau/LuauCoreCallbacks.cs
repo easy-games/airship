@@ -40,7 +40,6 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.ConstructorCallback constructorCallback_holder;
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
-    private LuauPlugin.ToCsArrayCallback toCsArrayCallback_holder;
     private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
     private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
     
@@ -114,7 +113,6 @@ public partial class LuauCore : MonoBehaviour {
         constructorCallback_holder = new LuauPlugin.ConstructorCallback(constructorCallback);
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
-        toCsArrayCallback_holder = new LuauPlugin.ToCsArrayCallback(toCsArrayCallback);
         componentSetEnabledCallback_holder = new LuauPlugin.ComponentSetEnabledCallback(SetComponentEnabled);
         toggleProfilerCallback_holder = new LuauPlugin.ToggleProfilerCallback(ToggleProfilerCallback);
         isObjectDestroyedCallback_holder = new LuauPlugin.IsObjectDestroyedCallback(IsObjectDestroyedCallback);
@@ -177,93 +175,6 @@ public partial class LuauCore : MonoBehaviour {
         } else {
             Debug.Log(res, logContext);
         }
-    }
-
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToCsArrayCallback))]
-    static unsafe int toCsArrayCallback(LuauContext context, IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType) {
-        switch (podType) {
-            case PODTYPE.POD_DOUBLE: {
-                var arr = new double[arrayLen];
-                Marshal.Copy(arrayPtr, arr, 0, arrayLen);
-                WritePropertyToThread(thread, arr, arr.GetType());
-                break;
-            }
-            case PODTYPE.POD_FLOAT: {
-                var arr = new float[arrayLen];
-                Marshal.Copy(arrayPtr, arr, 0, arrayLen);
-                WritePropertyToThread(thread, arr, arr.GetType());
-                break;
-            }
-            case PODTYPE.POD_INT32: {
-                var arr = new int[arrayLen];
-                Marshal.Copy(arrayPtr, arr, 0, arrayLen);
-                WritePropertyToThread(thread, arr, arr.GetType());
-                break;
-            }
-            case PODTYPE.POD_BOOL: {
-                var arr = new bool[arrayLen];
-                var ptr = (int*)arrayPtr.ToPointer();
-                for (var i = 0; i < arrayLen; i++) {
-                    arr[i] = ptr[i] != 0;
-                }
-                WritePropertyToThread(thread, arr, arr.GetType());
-                break;
-            }
-            case PODTYPE.POD_STRING: {
-                var arr = new string[arrayLen];
-                var ptr = (byte**)arrayPtr.ToPointer();
-                for (var i = 0; i < arrayLen; i++) {
-                    var s = ptr[i];
-                    arr[i] = Marshal.PtrToStringUTF8((IntPtr)s);
-                }
-                WritePropertyToThread(thread, arr, arr.GetType());
-                break;
-            }
-            case PODTYPE.POD_VECTOR3: {
-                var arr = new Vector3[arrayLen];
-                var ptr = (float**)arrayPtr.ToPointer();
-                for (var i = 0; i < arrayLen; i++) {
-                    var vec = ptr[i];
-                    arr[i] = new Vector3(vec[0], vec[1], vec[2]);
-                }
-                WritePropertyToThread(thread, arr, arr.GetType());
-                break;
-            }
-            case PODTYPE.POD_COLOR: {
-                var arr = new Color[arrayLen];
-                var ptr = (float**)arrayPtr.ToPointer();
-                for (var i = 0; i < arrayLen; i++) {
-                    var color = ptr[i];
-                    arr[i] = new Color(color[0], color[1], color[2], color[3]);
-                }
-                WritePropertyToThread(thread, arr, arr.GetType());
-                break;
-            }
-            default: {
-                // Return '0' to indicate non-handled type:
-                return 0;
-            }
-/*
-   POD_DOUBLE = 0,
-   POD_OBJECT = 1,
-   POD_STRING = 2,
-   POD_INT32 = 3,
-   POD_VECTOR3 = 4,
-   POD_BOOL = 5,
-   POD_NULL = 6,
-   POD_RAY = 7,
-   POD_MATRIX = 8,
-   POD_QUATERNION = 9,
-   POD_PLANE = 10,
-   POD_COLOR = 11,
-   POD_LUAFUNCTION = 12,
-   POD_BINARYBLOB = 13,
-   POD_VECTOR2 = 14,
-   POD_VECTOR4 = 15,
- */
-        }
-
-        return 1;
     }
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToStringCallback))]

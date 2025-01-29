@@ -209,7 +209,6 @@ public partial class LuauCore : MonoBehaviour {
                 requirePathCallback = requirePathCallback_holder,
                 constructorCallback = constructorCallback_holder,
                 toStringCallback = toStringCallback_holder,
-                toCsArrayCallback = toCsArrayCallback_holder,
                 toggleProfilerCallback = toggleProfilerCallback_holder,
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
                 staticList = stringAddresses.AddrOfPinnedObject(),

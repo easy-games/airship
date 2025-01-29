@@ -52,7 +52,6 @@ public static class LuauPlugin {
 		public RequireCallback requireCallback;
 		public RequirePathCallback requirePathCallback;
 		public ConstructorCallback constructorCallback;
-		public ToCsArrayCallback toCsArrayCallback;
 		public ToStringCallback toStringCallback;
 		public ToggleProfilerCallback toggleProfilerCallback;
 		public IsObjectDestroyedCallback isObjectDestroyedCallback;
