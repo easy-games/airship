@@ -104,8 +104,8 @@ public partial class LuauCore : MonoBehaviour {
 
     private void CreateCallbacks() {
         printCallback_holder = printf;
-        getPropertyCallback_holder = getProperty;
-        setPropertyCallback_holder = setProperty;
+        getPropertyCallback_holder = GetPropertySafe;
+        setPropertyCallback_holder = SetPropertySafe;
         callMethodCallback_holder = callMethod;
         objectGCCallback_holder = objectGc;
         requireCallback_holder = requireCallback;
@@ -230,10 +230,20 @@ public partial class LuauCore : MonoBehaviour {
         return 0;
     }
 
-
-    //When a lua object wants to set a property
+    // When a lua object wants to set a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
-    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
+    private static int SetPropertySafe(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
+        var ret = 0;
+        try {
+            ret = SetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, type, propertyData, propertyDataSize, isTable);
+        } catch (Exception e) {
+            ret = LuauError(thread, e.Message);
+        }
+
+        return ret;
+    }
+    
+    private static int SetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
         CurrentContext = context;
         
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
@@ -699,10 +709,20 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-
-    //When a lua object wants to get a property
+    // When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
-    static unsafe int getProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
+    private static int GetPropertySafe(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
+        var ret = 0;
+        try {
+            ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength);
+        } catch (Exception e) {
+            ret = LuauError(thread, e.Message);
+        }
+
+        return ret;
+    }
+
+    private static int GetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
         Profiler.BeginSample("LuauCore.GetProperty");
         CurrentContext = context;
 
