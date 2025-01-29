@@ -680,6 +680,18 @@ public partial class LuauCore : MonoBehaviour
                 arrayAsList = true;
             }
         }
+
+        // If empty table, then the podType is going to be POD_NULL. Switch this to be an empty array of whatever source type is required:
+        if (size == 0 && elementType != null) {
+            if (arrayAsList) {
+                var listType = typeof(List<>).MakeGenericType(elementType);
+                value = Activator.CreateInstance(listType);
+            } else {
+                var arr = Array.CreateInstance(elementType, 0);
+                value = arr;
+            }
+            return true;
+        }
         
         switch (podType) {
             case PODTYPE.POD_DOUBLE: {
