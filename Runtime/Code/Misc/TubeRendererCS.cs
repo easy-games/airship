@@ -34,6 +34,7 @@ namespace Assets.Code.Misc {
 			}
 
 			_mesh = new Mesh();
+			_mesh.name = "Tube Mesh";
 			_meshFilter.mesh = _mesh;
 		}
 
@@ -78,7 +79,6 @@ namespace Assets.Code.Misc {
 
 		private void GenerateMesh() {
 			if (_mesh == null || _positions == null || _positions.Length <= 1) {
-				_mesh = new Mesh();
 				return;
 			}
 
@@ -115,6 +115,10 @@ namespace Assets.Code.Misc {
 			_mesh.RecalculateBounds();
 
 			_meshFilter.mesh = _mesh;
+		}
+
+		private void OnDestroy() {
+			Destroy(_mesh);
 		}
 
 		private Vector2[] GenerateUVs() {

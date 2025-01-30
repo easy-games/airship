@@ -1544,7 +1544,8 @@ namespace VoxelWorldStuff {
             meshRenderer.sharedMaterial = world.voxelBlocks.atlasMaterial;
 
             Mesh theMesh = new Mesh();
-
+            theMesh.name = "SingleBlock";
+            
             //Center around 0,0,0
             Vector3 origin = new Vector3(-0.5f, -0.5f, -0.5f);
             int flip = 0;
