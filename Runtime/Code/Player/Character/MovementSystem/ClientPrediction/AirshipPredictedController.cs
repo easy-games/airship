@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Windows.Forms;
 using Mirror;
 using Unity.Mathematics;
 using UnityEngine;
@@ -478,7 +477,7 @@ protected void Log(string message){
                 
                 if(Time.time - lastSendTimeClient > this.serverToClientSendDelay + optimizationDuration){
                     this.lastSendTimeClient = Time.time;
-                    print("Sending tp client RPC: " + this.netId + ": " + serverTick);
+                    //print("Sending to client RPC: " + this.netId + ": " + serverTick);
                     rpcCalls.SendServerStateToClient(serverTick, forceNextReplay, currentPosition, currentVelocity);
                     forceNextReplay = false;
                 }
