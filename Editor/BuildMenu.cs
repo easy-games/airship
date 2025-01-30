@@ -84,8 +84,11 @@ namespace Editor {
             CreateAssetBundles.AddAllGameBundleScenes();
         }
 
+#if AIRSHIP_PLAYER
+        [MenuItem("Airship/Create Binary/Client/Mac (Staging)", priority = 80)]
+#endif
         public static void BuildMacClientStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_STAGING");
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER"});
             BuildMacClient();
         }
 
