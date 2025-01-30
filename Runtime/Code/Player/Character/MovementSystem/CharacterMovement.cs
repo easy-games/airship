@@ -223,6 +223,8 @@ public class CharacterMovement : NetworkBehaviour {
 	public void ForceToNewMoveState(CharacterMovementState newState){
 		//Apply inputs
 		SetMoveInputData(newState.currentMoveInput);
+		
+		var didJump = newState.jumpCount > this.currentMoveState.jumpCount;
 
 		this.currentMoveState = new CharacterMovementState(newState);
 
@@ -230,11 +232,12 @@ public class CharacterMovement : NetworkBehaviour {
 			//Update visuals to match new state
 			animationHelper.SetState(new CharacterAnimationSyncData() {
 				state = newState.state,
-				grounded = newState.timeSinceBecameGrounded > 0,
+				grounded = newState.prevGrounded,
 				sprinting = newState.currentMoveInput.sprint,
 				crouching = newState.currentMoveInput.crouch,
 				localVelocity = graphicTransform.InverseTransformDirection(newState.velocity),
 				lookVector = newState.currentMoveInput.lookVector,
+				jumping = didJump
 			});
 		} else{
 			// apply the state to the Rigidbody instantly
@@ -864,16 +867,8 @@ public class CharacterMovement : NetworkBehaviour {
 			crouching = isCrouching,
 			localVelocity = currentLocalVelocity,
 			lookVector = lookVector,
+			jumping = didJump,
 		});
-
-		if (didJump){
-			//Fire on the server
-			TriggerJump();
-			if(isClientOnly){
-				//Fire locally immediately
-				this.animationHelper.TriggerJump();
-			}
-		}
 
 		// Handle OnMoveDirectionChanged event
 		if (currentMoveState.prevMoveDir != md.moveDir) {
@@ -1221,28 +1216,6 @@ public class CharacterMovement : NetworkBehaviour {
 		}
 
 		animationHelper.SetState(data);
-	}
-
-	private void TriggerJump(){
-		if(isClientOnly){
-			CommandTriggerJump();
-		}else if (isServer){
-			if (playAnimationOnServer) animationHelper.TriggerJump();
-			if(isServerOnly){
-				RpcTriggerJump();
-			}
-		}
-	}
-
-	[Command]
-	private void CommandTriggerJump(){
-		if (playAnimationOnServer) animationHelper.TriggerJump();
-		RpcTriggerJump();
-	}
-	
-	[ClientRpc(includeOwner = false)]
-	private void RpcTriggerJump() {
-		this.animationHelper.TriggerJump();
 	}
 
 	/**

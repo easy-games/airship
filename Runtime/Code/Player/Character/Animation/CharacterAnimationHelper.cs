@@ -206,34 +206,35 @@ public class CharacterAnimationHelper : MonoBehaviour {
             return;
         }
 
-            var newState = syncedState.state;
-            this.grounded = syncedState.grounded;
-            animator.SetBool("Grounded", grounded);
-            animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
-            animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
-            if(sprintVfx){
-                if (newState == CharacterState.Sprinting) {
-                    if (this.IsInParticleDistance()) {
-                        sprintVfx.Play();
-                    }
-                } else {
-                    sprintVfx.Stop();
+        var newState = syncedState.state;
+        this.grounded = syncedState.grounded;
+        animator.SetBool("Grounded", grounded);
+        animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
+        animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
+        
+        if(syncedState.jumping){
+            SetTrigger("Jump");
+        }
+        
+        if(sprintVfx){
+            if (newState == CharacterState.Sprinting) {
+                if (this.IsInParticleDistance()) {
+                    sprintVfx.Play();
                 }
+            } else {
+                sprintVfx.Stop();
             }
-
-            if (this.firstPerson) {
-                animator.SetLayerWeight(0,0);
-            }
-
-            lastStateTime = Time.time;
-            currentState = newState;
-
-            this.SetVelocity(syncedState.localVelocity);
-            //print("Set state: " + currentState);
         }
 
-    public void TriggerJump(){
-        SetTrigger("Jump");
+        if (this.firstPerson) {
+            animator.SetLayerWeight(0,0);
+        }
+
+        lastStateTime = Time.time;
+        currentState = newState;
+
+        this.SetVelocity(syncedState.localVelocity);
+        //print("Set state: " + currentState);
     }
 
     private void SetTrigger(string trigger) {

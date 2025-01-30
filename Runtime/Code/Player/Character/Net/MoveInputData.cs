@@ -27,13 +27,13 @@ public struct MoveInputData : IEquatable<MoveInputData>{
 
     public bool Equals(MoveInputData other) {
 		return moveDir == other.moveDir &&
+			lookVector == other.lookVector &&
 			jump == other.jump && 
 			crouch == other.crouch &&
 			sprint == other.sprint &&
 			((customData == null && other.customData == null) ||
-				(customData != null && customData.Equals(other.customData)));//&& 
-			//lookVector == other.lookVector;
-    }
+				(customData != null && customData.Equals(other.customData)));
+	}
 
     // override object.GetHashCode
     public override readonly int GetHashCode() {

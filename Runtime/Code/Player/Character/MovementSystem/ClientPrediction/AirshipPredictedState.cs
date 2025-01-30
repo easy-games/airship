@@ -5,6 +5,13 @@ public class AirshipPredictedState{
     public Vector3 position;
     public Vector3 velocity;
 
+    public AirshipPredictedState Copy(AirshipPredictedState otherState){
+        this.tick = otherState.tick;
+        this.position = otherState.position;
+        this.velocity = otherState.velocity;
+        return this;
+    }
+
     /// <summary>
     /// Interpolates from the current state to another state by delta amount
     /// </summary>

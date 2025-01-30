@@ -6,6 +6,7 @@ public class CharacterAnimationSyncData {
     public bool grounded = true;
     public bool sprinting = false;
     public bool crouching = false;
+    public bool jumping = false;
     public Vector3 localVelocity = Vector3.zero;
     public Vector3 lookVector = Vector3.zero;
 
