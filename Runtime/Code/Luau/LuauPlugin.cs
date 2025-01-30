@@ -61,10 +61,24 @@ public static class LuauPlugin {
 		public int isServer;
 		public int useUnityAllocator;
 	}
+
+	// Must match MemoryCategoryDumpItem struct in Debug.h
+	[StructLayout(LayoutKind.Sequential)]
+	private struct LuauMemoryCategoryDumpItemInternal {
+		private readonly IntPtr NamePtr;
+		private readonly ulong NameLen;
+		public readonly ulong Bytes;
+		
+		public string Name => Marshal.PtrToStringUTF8(NamePtr, (int)NameLen);
+	}
+
+	public class LuauMemoryCategoryDumpItem {
+		public string Name { internal set; get; }
+		public ulong Bytes { internal set; get; }
+	}
 	
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
-
-
+    
     private static void ThreadSafetyCheck() {
 #if DO_THREAD_SAFTEYCHECK
 		if (unityMainThreadId == -1) {
@@ -766,5 +780,37 @@ public static class LuauPlugin {
 	private static extern void DebugPrintStack(IntPtr thread);
 	public static void LuauDebugPrintStack(IntPtr thread) {
 		DebugPrintStack(thread);
+	}
+	
+	/// <summary>
+	/// Get the various memory categories from Luau. The memCatDump list should be unique per Luau context.
+	/// </summary>
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr GetMemoryCategoryDump(LuauContext context, ref ulong count);
+	public static void LuauGetMemoryCategoryDump(LuauContext context, List<LuauMemoryCategoryDumpItem> memCatDump) {
+		ulong count = 0;
+		var memCatDumpItemsPtr = GetMemoryCategoryDump(context, ref count);
+
+		if (memCatDumpItemsPtr == IntPtr.Zero) {
+			throw new Exception("Failed to get memory category dump");
+		}
+		
+		for (var i = 0; i < (int)count; i++) {
+			var item = Marshal.PtrToStructure<LuauMemoryCategoryDumpItemInternal>(memCatDumpItemsPtr);
+			if (i < memCatDump.Count - 1) {
+				memCatDump[i].Bytes = item.Bytes;
+			} else {
+				memCatDump.Add(new LuauMemoryCategoryDumpItem {
+					Bytes = item.Bytes,
+					Name = item.Name
+				});
+			}
+			
+			memCatDumpItemsPtr += Marshal.SizeOf<LuauMemoryCategoryDumpItemInternal>();
+		}
 	}
 }
