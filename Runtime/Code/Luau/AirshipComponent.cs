@@ -418,7 +418,6 @@ public class AirshipComponent : MonoBehaviour {
             propertyDtos[i] = dto;
         }
 
-
         LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, propertyDtos);
         // Set enabled property
         LuauPlugin.LuauSetAirshipComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, enabled);

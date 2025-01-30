@@ -464,11 +464,10 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr SetMutableGlobals(IntPtr[] strings, int[] stringLengths, int numStrings);
-	public static void LuauSetMutableGlobals(string[] mutableGlobals) {
-		var strings = new IntPtr[mutableGlobals.Length];
-		var lengths = new int[mutableGlobals.Length];
-		var handles = new GCHandle[mutableGlobals.Length];
+	private static extern IntPtr SetMutableGlobals(IntPtr strings, IntPtr stringLengths, int numStrings);
+	public static unsafe void LuauSetMutableGlobals(string[] mutableGlobals) {
+		var strings = stackalloc IntPtr[mutableGlobals.Length];
+		var lengths = stackalloc int[mutableGlobals.Length];
         
 		for (var i = 0; i < mutableGlobals.Length; i++) {
 			var str = mutableGlobals[i];
@@ -477,14 +476,9 @@ public static class LuauPlugin {
 			var bytesPtr = handle.AddrOfPinnedObject();
 			strings[i] = bytesPtr;
 			lengths[i] = bytes.Length;
-			handles[i] = handle;
 		}
 		
-		var res = SetMutableGlobals(strings, lengths, mutableGlobals.Length);
-
-		foreach (var handle in handles) {
-			handle.Free();
-		}
+		var res = SetMutableGlobals(new IntPtr(strings), new IntPtr(lengths), mutableGlobals.Length);
 		
 		ThrowIfNotNullPtr(res);
 	}
