@@ -7,7 +7,7 @@ using UnityEngine;
 // Instead of syncing position and velocity we sync the movement state and inputs for replays.
 // This will be slower as we have to resimulate physics steps. Perhaps a future optimization
 // would be to seperate the scene into multiple physics scenes and only resimulate the once the player is in
-
+[RequireComponent(typeof(AirshipPredictionCharacterMovementRPC))]
 public class AirshipPredictedCharacterMovement : AirshipPredictedController<CharacterMovementState> {
 
 #region PUBLIC 
@@ -57,30 +57,34 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
         base.Awake();
     }
 
-    protected override void OnEnable() {
-        if(IsObserver()){
-            base.OnEnable();
-            return;
-        }
-
+    public override void OnStartAuthority() {
+        base.OnStartAuthority();
         if(this.smoothRigidbody){
             AirshipPredictionManager.instance.RegisterRigidbody(this.movement.rigidbody, this.movement.airshipTransform);
         }
+    }
+
+    public override void OnStopAuthority() {
+        base.OnStopAuthority();
+        if(this.smoothRigidbody){
+            AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
+        }
+    }
+
+    protected override void OnEnable() {
         base.OnEnable();
+        if(IsObserver()){
+            return;
+        }
         movement.OnSetCustomData += OnSetMovementData;
         movement.OnEndMove += OnMovementEnd;
     }
 
     protected override void OnDisable() {
+        base.OnDisable();
         if(IsObserver()){
-            base.OnDisable();
             return;
         }
-
-        if(this.smoothRigidbody){
-            AirshipPredictionManager.instance.UnRegisterRigidbody(this.movement.rigidbody);
-        }
-        base.OnDisable();
         movement.OnSetCustomData -= OnSetMovementData;
         movement.OnEndMove -= OnMovementEnd;
     }
@@ -293,34 +297,11 @@ public class AirshipPredictedCharacterMovement : AirshipPredictedController<Char
     }
     #endregion
 
-    #region SERIALIZE
-    // public override void SerializeState(NetworkWriter writer) {
-    //     writer.WriteVector3(tf.position);
-    //     writer.WriteVector3(movement.GetVelocity());
-    // }
-
-    // public override CharacterMovementState DeserializeState(NetworkReader reader, int tick) {
-    //     var state = new CharacterMovementState(tick, reader.ReadVector3(), reader.ReadVector3());
-    //     return state;
-    // }
-    
-    protected override void OnServerSendObserverState(){
-        RpcObserversRecieveServerState(serverTick, CreateCurrentState(serverTick));
-    }
-
-    [ClientRpc(includeOwner = false)]
-    protected void RpcObserversRecieveServerState(int tick, CharacterMovementState serverState){
-        if(!IsLatestTick(tick)){
-            return;
-        }
-
-        OnObserverRecievedServerState(serverState);
-    }
-    
-    protected override void OnObserverRecievedServerState(CharacterMovementState serverState) {
+    #region SERIALIZE    
+    protected override void ProcessServerStateOnObserver(AirshipPredictedState serverState) {
         //Update observers movement with all the state information we have (For animations only)
-        movement.ForceToNewMoveState(serverState);
-        base.OnObserverRecievedServerState(serverState);
+        movement.ForceToNewMoveState((CharacterMovementState)serverState);
+        base.ProcessServerStateOnObserver(serverState);
 
     }
 

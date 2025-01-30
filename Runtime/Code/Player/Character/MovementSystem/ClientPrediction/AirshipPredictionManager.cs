@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -137,7 +138,9 @@ public class AirshipPredictionManager : MonoBehaviour {
     }
     
     public void UnRegisterPredictedObject(IPredictedReplay replayObject) {
-        this.replayObjects.Remove(replayObject.guid);
+        if(this.replayObjects.ContainsKey(replayObject.guid)){
+            this.replayObjects.Remove(replayObject.guid);
+        }
     }
 
     public void RegisterRigidbody(Rigidbody rigid, Transform graphicsHolder) {
@@ -146,7 +149,9 @@ public class AirshipPredictionManager : MonoBehaviour {
     }
     
     public void UnRegisterRigidbody(Rigidbody rigid) {
-        this.currentTrackedRigidbodies.Remove(rigid.GetInstanceID());
+        if(this.currentTrackedRigidbodies.ContainsKey(rigid.GetInstanceID())){
+            this.currentTrackedRigidbodies.Remove(rigid.GetInstanceID());
+        }
     }
 #endregion
 

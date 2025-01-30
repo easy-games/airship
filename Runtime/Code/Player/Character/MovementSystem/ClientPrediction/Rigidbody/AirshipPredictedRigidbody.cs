@@ -180,35 +180,6 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
     #endregion
 
     #region SERIALIZE
-    // public override void SerializeState(NetworkWriter writer) {
-    //     writer.WriteVector3(rigid.position);
-    //     writer.WriteVector4(rigid.rotation.ConvertToVector4());
-    //     writer.WriteVector3(rigid.velocity);
-    //     writer.WriteVector3(rigid.angularVelocity);
-    // }
-
-    // public override AirshipPredictedRigidbodyState DeserializeState(NetworkReader reader, int tick) {
-    //     return new AirshipPredictedRigidbodyState(tick, 
-    //         reader.ReadVector3(), 
-    //         reader.ReadVector4().ConvertToQuaternion(), 
-    //         reader.ReadVector3(), 
-    //         reader.ReadVector3());
-    // }
-
-    
-    
-    protected override void OnServerSendObserverState(){
-        RpcObserversRecieveServerState(serverTick, CreateCurrentState(serverTick));
-    }
-
-    [ClientRpc(includeOwner = false)]
-    protected void RpcObserversRecieveServerState(int tick, AirshipPredictedRigidbodyState serverState){
-        if(!IsLatestTick(tick)){
-            return;
-        }
-
-        OnObserverRecievedServerState(serverState);
-    }
 
     public override AirshipPredictedRigidbodyState DeserializeState(int tick, Vector3 position, Vector3 velocity){
         return new AirshipPredictedRigidbodyState(tick, position, Quaternion.identity, velocity, Vector3.zero);

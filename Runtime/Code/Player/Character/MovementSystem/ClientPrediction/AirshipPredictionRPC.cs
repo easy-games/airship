@@ -32,9 +32,8 @@ public class AirshipPredictionRPC : NetworkBehaviour {
         //Child classes can send Rpc calls with their own state information
     }
 
-    [TargetRpc()]
+    [ClientRpc(includeOwner = false)]
     private void RpcObserverRecieveServerState(AirshipPredictedState serverState){
-        //new AirshipPredictedState() { tick = serverTick, position = serverState.position, velocity = serverState.velocity}
         OnObserverRecievedServerState?.Invoke(serverState);
     }
 }

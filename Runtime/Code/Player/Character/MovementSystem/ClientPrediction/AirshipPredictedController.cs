@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Windows.Forms;
 using Mirror;
 using Unity.Mathematics;
 using UnityEngine;
@@ -15,7 +16,7 @@ using UnityEngine;
 /// and handeling generic server client syncronization
 /// </summary>
 /// <typeparam name="T">The data type stored in the history that is needed for replays</typeparam>
-[RequireComponent(typeof(NetworkIdentity), typeof(AirshipPredictionRPC))]
+[RequireComponent(typeof(NetworkIdentity))]
 public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredictedReplay where T: AirshipPredictedState{
 
 #region INSPECTOR
@@ -41,9 +42,6 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     [Tooltip("Optimization. How long in seconds to wait between server state sends to the owning client. <= 1 to update the client as often as possible.")]
     public int serverToClientSendDelay = 0;
-
-    [Tooltip("Optimization. How long in seconds to wait between server state sends to all observers. <= 1 to update the observers as often as possible.")]
-    public int serverToObserversSendDelay = 0;
     public int replayTickOffset = 0;
 
     [Tooltip("Correction threshold in meters. For example, 0.1 means that if the client is off by more than 10cm, it gets corrected.")]
@@ -53,6 +51,11 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     [Tooltip("Snap to the server state directly when velocity is < threshold. This is useful to reduce jitter/fighting effects before coming to rest.\nNote this applies position, rotation and velocity(!) so it's still smooth.")]
     public float velocitySnapThreshold = 2; // 0.5 has too much fighting-at-rest, 2 seems ideal.
+
+    [Header("Observers")]
+
+    [Tooltip("Optimization. How long in seconds to wait between server state sends to all observers. <= 1 to update the observers as often as possible.")]
+    public int serverToObserversSendDelay = 0;
 
 
     [Header("Bandwidth")]
@@ -103,9 +106,12 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     private int newestTick = 0;
 
 	//Prediction Observers
+    private AirshipPredictedState[] observedStates = new AirshipPredictedState[2] {null, null};
 	private Vector3 prevObserverPosition;
 	private Vector3 nextObserverPosition;
 	private float lastObserverTime;
+	private float lastObserverDuration;
+	private float lastObserverSpeed;
 
     private AirshipPredictionRPC rpcCalls;
     
@@ -167,6 +173,7 @@ protected void Log(string message){
             Debug.LogError("Missing AirshipPredictionRPC component on predicted controller");
         }
         rpcCalls.OnClientRecievedServerState += OnClientRecievedServerState;
+        rpcCalls.OnObserverRecievedServerState += OnObserverRecievedServerState;
 
         // cache ² computations
         velocitySnapThresholdSqr = velocitySnapThreshold * velocitySnapThreshold;
@@ -174,13 +181,21 @@ protected void Log(string message){
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
     }
 
-    protected virtual void OnEnable() {
+    public override void OnStartAuthority() {
+        base.OnStartAuthority();
         AirshipPredictionManager.instance.RegisterPredictedObject(this);
+    }
+
+    public override void OnStopAuthority() {
+        base.OnStopAuthority();
+        AirshipPredictionManager.instance.UnRegisterPredictedObject(this);
+    }
+
+    protected virtual void OnEnable() {
         AirshipPredictionManager.OnPhysicsTick += OnPhysicsTick;
     }
 
     protected virtual void OnDisable() {
-        AirshipPredictionManager.instance.UnRegisterPredictedObject(this);
         AirshipPredictionManager.OnPhysicsTick -= OnPhysicsTick;
     }
 
@@ -284,46 +299,11 @@ protected void Log(string message){
         stateHistory.Add(snapshotState.tick, snapshotState);
     }
 
-    // process a received server state.
-    // compares it against our history and applies corrections if needed.
-    // serverTimestamp is the same value as serverState.timestamp
-    protected virtual void OnClientRecievedServerState(int tick, bool forceReplay, Vector3 position, Vector3 velocity){
-        //Only use if its the latest information
-        if(!IsLatestTick(tick)){
-            return;
-        }
-
-        print("Recieved Server state: " + netId + "  server tick: " + serverTick);
-        // process received state
+    protected virtual void ProcessServerStateOnClient(T serverState){
         try{
-            var serverState = DeserializeState(tick, position, velocity);
-            if(forceReplay){
-                int forcedIndex;
-                if(stateHistory.Count <= 2){
-                    //Shouldn't this be apply state so it actually saves into the history?
-                    //ApplyState(serverState);
-                    SnapTo(serverState);
-                    return;
-                } else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
-                    AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, forcedIndex);
-                    return;
-                } else {
-                    // something went very wrong. sampling should've worked.
-                    Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
-                    PrintHistory();
-                }
-            }
-
-            // correction requires at least 2 existing states for 'before' and 'after'.
-            // if we don't have two yet, drop this state and try again next time once we recorded more.
-            if (stateHistory.Count <= 2) return;
-            
-            //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
-
             if(lastRecordedTick > 0 && lastRecordedTick < serverTick){
                 GizmoUtils.DrawBox(serverState.position, Quaternion.identity, new Vector3(.04f, .04f, .04f), Color.white, gizmoDuration);
             }
-            
 
             // DO NOT SYNC SLEEPING! this cuts benchmark performance in half(!!!)
             // color code remote sleeping objects to debug objects coming to rest
@@ -475,49 +455,56 @@ protected void Log(string message){
 #region SERIALIZATION
 
         protected virtual void Update() {
+            //Observers update their visual position
             if(IsObserver()){
                 InterpolateObserverPosition();
             }
             
-            if (!isServer){
-                return;
+            if (isServer){
+                //Let server decide when to sync with clients
+                int optimizationDuration = 0;
+                // bandwidth optimization while idle.
+                if (reduceSendsWhileIdle && !IsMoving()) {
+                    // while moving, always sync every frame for immediate corrections.
+                    // while idle, only sync once per second.
+                    optimizationDuration = 1;
+
+                    // TODO
+                    // next round of optimizations: if client received nothing for 1s,
+                    // force correct to last received state. then server doesn't need
+                    // to send once per second anymore.
+                }
+
+                
+                if(Time.time - lastSendTimeClient > this.serverToClientSendDelay + optimizationDuration){
+                    this.lastSendTimeClient = Time.time;
+                    print("Sending tp client RPC: " + this.netId + ": " + serverTick);
+                    rpcCalls.SendServerStateToClient(serverTick, forceNextReplay, currentPosition, currentVelocity);
+                    forceNextReplay = false;
+                }
+
+                
+                if(Time.time - lastSendTimeObservers > this.serverToObserversSendDelay){
+                    this.lastSendTimeObservers = Time.time;
+                    //print("Sending to observers RPC: " + serverTick);
+
+                    //Send entire state data to OBSERVERS
+                    rpcCalls.SendServerStateToObservers(CreateCurrentState(serverTick));
+                }
+                
+
+                // always set dirty to always serialize in next sync interval.
+                //SetDirty();
+                //Not using OnSerialize to synce data anymore
             }
-
-            int optimizationDuration = 0;
-            // bandwidth optimization while idle.
-            if (reduceSendsWhileIdle && !IsMoving()) {
-                // while moving, always sync every frame for immediate corrections.
-                // while idle, only sync once per second.
-                optimizationDuration = 1;
-
-                // TODO
-                // next round of optimizations: if client received nothing for 1s,
-                // force correct to last received state. then server doesn't need
-                // to send once per second anymore.
-            }
-
-            
-            if(Time.time - lastSendTimeClient > this.serverToClientSendDelay + optimizationDuration){
-                this.lastSendTimeClient = Time.time;
-                print("Sending tp client RPC: " + this.netId + ": " + serverTick);
-                rpcCalls.SendServerStateToClient(serverTick, forceNextReplay, currentPosition, currentVelocity);
-                forceNextReplay = false;
-            }
-
-            
-            if(Time.time - lastSendTimeObservers > this.serverToObserversSendDelay + optimizationDuration){
-                this.lastSendTimeObservers = Time.time;
-                print("Sending to observers RPC: " + serverTick);
-
-                //Send entire state data to OBSERVERS
-                rpcCalls.SendServerStateToObservers();
-            }
-            
-
-            // always set dirty to always serialize in next sync interval.
-            SetDirty();
         }
 
+        private void SetServerTick(int tick){
+            serverTick = tick;
+            //Calculate the estimated predicted tick. But don't go into the past if we have already predicted further
+            var offset = NetworkTime.predictedTime - NetworkTime.time;
+            predictedTick = Mathf.Max(serverTick + math.max(1, GetTick(offset)), predictedTick);
+        }
 
         protected bool IsLatestTick(int tick){
             if(tick < newestTick){
@@ -528,45 +515,92 @@ protected void Log(string message){
             return true;
         }
 
-        private AirshipPredictedState[] observedStates = new AirshipPredictedState[2] {null, null};
+        //CLIENTS
+        // process a received server state.
+        // compares it against our history and applies corrections if needed.
+        // serverTimestamp is the same value as serverState.timestamp
+        protected virtual void OnClientRecievedServerState(int tick, bool forceReplay, Vector3 position, Vector3 velocity){
+            //Only use if its the latest information
+            if(!IsLatestTick(tick)){
+                return;
+            }
+            
+            var serverState = DeserializeState(tick, position, velocity);
+            
+            //print("RECIEVED STATE: " + serverTimestamp + " stateTime: " + serverState.timestamp);
+            //Forcing replay so don't need to process
+            if(forceReplay){
+                int forcedIndex;
+                if(stateHistory.Count <= 2){
+                    //Shouldn't this be apply state so it actually saves into the history?
+                    //ApplyState(serverState);
+                    SnapTo(serverState);
+                    return;
+                } else if (Sample(stateHistory, serverTick, out T before, out forcedIndex)) {
+                    AirshipPredictionManager.instance.QueueReplay(this, serverState, lastRecorded.tick - 1 + replayTickOffset, forcedIndex);
+                    return;
+                } else {
+                    // something went very wrong. sampling should've worked.
+                    Debug.LogError("Unable to sample with a forced replay at tick: " + serverTick);
+                    PrintHistory();
+                }
+            }
 
-        protected virtual void OnObserverRecievedServerState(AirshipPredictedState serverState){
-		    //In server auth we don't sync position with the NetworkTransform so I am doing it here
+            //Early out
+            // correction requires at least 2 existing states for 'before' and 'after'.
+            // if we don't have two yet, drop this state and try again next time once we recorded more.
+            if (stateHistory.Count <= 2) return;
+            
+            ProcessServerStateOnClient(serverState);
+        }
+
+        //OBSERVERS
+        protected void OnObserverRecievedServerState(AirshipPredictedState serverState){
+            if(!IsLatestTick(serverState.tick)){
+                return;
+            }
 
             //Store prev and next positions so we can lerp between the two to account for network lag
             prevObserverPosition = transform.position; //Start lerping from where we currently are so we don't get popping
             nextObserverPosition = serverState.position; //End at the latest server position
 
             observedStates[0] = observedStates[1];
-            observedStates[1] = serverState;
+            observedStates[1] = new AirshipPredictedState().Copy(serverState);
 
-            //Track how long we should interpolate
+            //So we can track how far its been since this server state recieve
             lastObserverTime = Time.time;
+            lastObserverDuration = GetTime(serverState.tick - observedStates[0].tick) + .1f; //Get duration from the ticks they were sent on the server +100ms margin
+            lastObserverSpeed = serverState.velocity.magnitude;
+            
+            //Debug.Log("prevTick: " + observedStates[0].tick + " new tick: " + serverState.tick + " duration: " + lastObserverDuration + " new pos: " + nextObserverPosition);
+            
+            //Let child classses handle the synced state
+            ProcessServerStateOnObserver(serverState);
+        }
+
+        protected virtual void ProcessServerStateOnObserver(AirshipPredictedState serverState) {
+            
         }
         
+		    //In server auth we don't sync position with the NetworkTransform so I am doing it here
         private void InterpolateObserverPosition(){
-            var prevState = observedStates[0];
-            var nextState = observedStates[1];
-
-            if(prevState == null){
+            //Don't process unless we have recieved data
+            if(observedStates[0] == null){
                 return;
             }
             
+            //How far along are we in this interp? Minimum 1 frame so we arn't stuck at the starting position on fast network updates
+            var timeDelta = Mathf.Max(Time.fixedDeltaTime, Time.time - lastObserverTime) / lastObserverDuration;
             //Find where we are in time since the last observer update
             var delta = Mathf.Clamp(
-                (Time.time - lastObserverTime) / (GetTime(nextState.tick - prevState.tick) + .1f), //Get duration from the ticks they were sent on the server +100ms margin
-                0, 10); //Let it extrapolate but not too crazy (10 is an arbitrary guess at what is too crazy)
+                timeDelta,
+                0, Mathf.Clamp(lastObserverSpeed, 1, 10)); //Let it extrapolate but not too crazy (10 is an arbitrary guess at what is too crazy)
             //Interpolate between prev position and the lateset server position
             transform.position = Vector3.Lerp(
                 prevObserverPosition,
                 nextObserverPosition, delta);
-        }
 
-        private void SetServerTick(int tick){
-            serverTick = tick;
-            //Calculate the estimated predicted tick. But don't go into the past if we have already predicted further
-            var offset = NetworkTime.predictedTime - NetworkTime.time;
-            predictedTick = Mathf.Max(serverTick + math.max(1, GetTick(offset)), predictedTick);
+            //Debug.Log("Interp Observer time delta: " + timeDelta + " new Pos: " + transform.position);
         }
 #endregion
 
