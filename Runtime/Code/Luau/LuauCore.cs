@@ -42,7 +42,8 @@ public partial class LuauCore : MonoBehaviour {
         POD_BINARYBLOB = 13,
         POD_VECTOR2 = 14,
         POD_VECTOR4 = 15,
-        POD_AIRSHIP_COMPONENT = 16,
+        POD_FLOAT = 16,
+        POD_AIRSHIP_COMPONENT = 17,
     };
 
     public static bool s_shutdown = false;
@@ -213,6 +214,11 @@ public partial class LuauCore : MonoBehaviour {
                 staticList = stringAddresses.AddrOfPinnedObject(),
                 staticCount = stringCount,
                 isServer = RunCore.IsServer() ? 1 : 0,
+#if UNITY_EDITOR
+                useUnityAllocator = 1,
+#else
+                useUnityAllocator = 0,
+#endif
             }
         );
 
@@ -303,7 +309,7 @@ public partial class LuauCore : MonoBehaviour {
         propertyGetCache.Clear();
         protectedSceneHandles.Clear();
         _propertySetterCache.Clear();
-        writeMethodFunctions.Clear();
+        WriteMethodFunctions.Clear();
     }
 
     public static void ResetContext(LuauContext context) {
