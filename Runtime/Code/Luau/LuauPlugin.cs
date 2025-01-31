@@ -78,12 +78,20 @@ public static class LuauPlugin {
 		
 		public string ShortName {
 			get {
-				var name = Name;
-				var lastSlashIdx = name.LastIndexOf("/", StringComparison.Ordinal);
-				if (lastSlashIdx != -1) {
-					name = name.Substring(lastSlashIdx + 1);
+				var full = "";
+				var names = Name.Split(',');
+				foreach (var name in names) {
+					if (full != string.Empty) {
+						full += ",";
+					}
+					var lastSlashIdx = name.LastIndexOf("/", StringComparison.Ordinal);
+					if (lastSlashIdx != -1) {
+						full += name.Substring(lastSlashIdx + 1);
+					} else {
+						full += name;
+					}
 				}
-				return name;
+				return full;
 			}
 		}
 	}
@@ -817,7 +825,7 @@ public static class LuauPlugin {
 			} else {
 				memCatDump.Add(new LuauMemoryCategoryDumpItem {
 					Bytes = item.Bytes,
-					Name = item.Name
+					Name = item.Name,
 				});
 			}
 			
