@@ -75,6 +75,17 @@ public static class LuauPlugin {
 	public class LuauMemoryCategoryDumpItem {
 		public string Name { internal set; get; }
 		public ulong Bytes { internal set; get; }
+		
+		public string ShortName {
+			get {
+				var name = Name;
+				var lastSlashIdx = name.LastIndexOf("/", StringComparison.Ordinal);
+				if (lastSlashIdx != -1) {
+					name = name.Substring(lastSlashIdx + 1);
+				}
+				return name;
+			}
+		}
 	}
 	
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
