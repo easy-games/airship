@@ -84,12 +84,22 @@ public static class LuauPlugin {
 					if (full != string.Empty) {
 						full += ",";
 					}
-					var lastSlashIdx = name.LastIndexOf("/", StringComparison.Ordinal);
+
+					var transformedName = name;
+					
+					// Include pathname after the last slash:
+					var lastSlashIdx = transformedName.LastIndexOf("/", StringComparison.Ordinal);
 					if (lastSlashIdx != -1) {
-						full += name.Substring(lastSlashIdx + 1);
-					} else {
-						full += name;
+						transformedName = transformedName.Substring(lastSlashIdx + 1);
 					}
+					
+					// Remove extension:
+					var dotIdx = transformedName.LastIndexOf(".", StringComparison.Ordinal);
+					if (dotIdx != -1) {
+						transformedName = transformedName.Substring(0, dotIdx);
+					}
+
+					full += transformedName;
 				}
 				return full;
 			}
