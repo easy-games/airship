@@ -7,6 +7,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -60,6 +61,7 @@ public partial class LuauCore : MonoBehaviour {
         [FormerlySerializedAs("pi")] public PropertyInfo propertyInfo;
         public Delegate GetProperty;
         public bool HasGetPropertyFunc;
+        public bool IsNativeClass;
     }
 
     // Hopefully faster dictionary comparison / hash time
@@ -627,31 +629,27 @@ public partial class LuauCore : MonoBehaviour {
     
     private static Delegate CreateSetter<T>(PropertyInfo propertyInfo, bool isStatic) {
         var setMethod = propertyInfo.GetSetMethod();
+
         var declaringType = propertyInfo.DeclaringType;
-    
         unsafe {
+            var setPointer = setMethod
+                .MethodHandle
+                .GetFunctionPointer();
+            
+            if (setPointer == IntPtr.Zero || declaringType.IsValueType) {
+                // Just direct reflection for this case (like ParticleEmitter modules -- weird Unity niche)
+                return new Action<object, T>((object target, T value) => { propertyInfo.SetValue(target, value); });
+            }
+
+
             if (!isStatic) {
-                if (declaringType.IsValueType) {
-                    // Just direct reflection for this case (like ParticleEmitter modules -- weird Unity niche)
-                    return new Action<object, T>((object target, T value) => {
-                        propertyInfo.SetValue(target, value);
-                    });
-                } else {
-                    // Original class handling
-                    delegate*<object, T, void> funcPtr = (delegate*<object, T, void>)setMethod
-                        .MethodHandle
-                        .GetFunctionPointer()
-                        .ToPointer();
+                // Original class handling
+                delegate*<object, T, void> funcPtr = (delegate*<object, T, void>)setPointer.ToPointer();;
 
-                    var setter = new Setter<T>((obj, val) => { funcPtr(obj, val); });
-                    return setter;
-                }
+                var setter = new Setter<T>((obj, val) => { funcPtr(obj, val); });
+                return setter;
             } else {
-                delegate*<T, void> funcPtr = (delegate*<T, void>)setMethod
-                    .MethodHandle
-                    .GetFunctionPointer()
-                    .ToPointer();
-
+                delegate*<T, void> funcPtr = (delegate*<T, void>)setPointer.ToPointer();;
                 var setter = new StaticSetter<T>((val) => { funcPtr(val); });
                 return setter;
             }
@@ -659,9 +657,9 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
-            // if (typeof(T) == typeof(object)) {
+            if (typeof(T) == typeof(object) || cacheData.IsNativeClass) {
                 return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
-            // }
+            }
         
             if (!cacheData.HasGetPropertyFunc) {
                 var getMethod = cacheData.propertyInfo.GetGetMethod();
@@ -689,24 +687,21 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
-        pi.SetValue(instance, value);
-        return;
-        
         var staticSet = instance == null;
         if (!_propertySetterCache.TryGetValue((staticSet, pi.DeclaringType, pi.Name), out var setter)) {
             setter = CreateSetter<T>(pi, staticSet);
             _propertySetterCache[(staticSet, pi.DeclaringType, pi.Name)] = setter; 
         }
         
+        if (pi.GetSetMethod().MethodHandle.GetFunctionPointer() == IntPtr.Zero || pi.DeclaringType.IsValueType) {
+            ((Action<object, T>)setter)(instance, value);
+            return;
+        }
+        
         if (staticSet) {
             ((StaticSetter<T>) setter)(value);
         } else {
-            if (pi.DeclaringType.IsValueType) {
-                ((Action<object, T>)setter)(instance, value);
-            }
-            else {
-                ((Setter<T>)setter)(instance, value);       
-            }
+            ((Setter<T>)setter)(instance, value);       
         }
     }
 
@@ -1682,6 +1677,8 @@ public partial class LuauCore : MonoBehaviour {
         var cacheData = new PropertyGetReflectionCache {
             t = propertyInfo.PropertyType,
             propertyInfo = propertyInfo,
+            IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
+                .Any(attr => attr.GetType().Name == "NativeClassAttribute")
         };
         LuauCore.propertyGetCache[new PropertyCacheKey(objectType, propName)] = cacheData;
         return cacheData;
