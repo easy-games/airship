@@ -110,8 +110,10 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
 	//Prediction Observers
     private AirshipPredictedState[] observedStates;
-
     private AirshipPredictionRPC rpcCalls;
+    
+    //Observer Rendering
+    private AirshipPredictedState observerBaseTick; // This is the tick we are basing our rendering lerps on
     
     public override int GetHashCode() {
         print("PredictedController Hash: " + base.GetHashCode());
@@ -597,7 +599,7 @@ protected void Log(string message){
                 return;
             }
 
-            var clientTime = (float)NetworkTime.time - (this.observerStatesBehindMargin * (1/this.serverToObserversUpdatesPerSecond));
+            var clientTime = NetworkTime.time - (this.observerStatesBehindMargin * (1f /this.serverToObserversUpdatesPerSecond));
             AirshipPredictedState prevState = null;
             AirshipPredictedState nextState = null;
 
@@ -619,9 +621,12 @@ protected void Log(string message){
                 print("no prev or next state");
                 return;
             }
-            
-            //TODO synce this animation state only once when there is a new prevState
-            //ProcessServerStateOnObserver(prevState);
+
+            if (prevState.tick != observerBaseTick.tick)
+            {
+                observerBaseTick = prevState;
+                ProcessServerStateOnObserver(prevState);
+            }
 
             //How far along are we in this interp? Minimum 1 frame so we arn't stuck at the starting position on fast network updates
             var timeDelta = (clientTime - GetTime(prevState.tick)) / GetTime(nextState.tick - prevState.tick);
@@ -634,7 +639,7 @@ protected void Log(string message){
             //     0, Mathf.Clamp(lastObserverSpeed, 1, 10)); //Let it extrapolate but not too crazy (10 is an arbitrary guess at what is too crazy)
 
             //Interpolate between prev position and the lateset server position
-            transform.position = Vector3.Lerp(prevState.position, nextState.position, timeDelta);
+            transform.position = Vector3.Lerp(prevState.position, nextState.position, (float) timeDelta);
             
             //How far along are we in this interp? Minimum 1 frame so we arn't stuck at the starting position on fast network updates
             // var timeDelta = Mathf.Max(Time.fixedDeltaTime, Time.time - lastObserverTime) / lastObserverDuration;
