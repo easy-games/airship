@@ -199,6 +199,9 @@ namespace Airship.DevConsole
         [SerializeField]
         private GameObject serverTabButton;
 
+        [SerializeField]
+        private GameObject clientMemoryTabButton;
+
         [SerializeField] private Color backgroundColorActive;
         [SerializeField] private Color backgroundColorInactive;
 
@@ -207,6 +210,7 @@ namespace Airship.DevConsole
 
         [SerializeField] private GameObject tabClient;
         [SerializeField] private GameObject tabServer;
+        [SerializeField] private GameObject tabClientMemory;
 
         [Header("Other")] public GameObject bottom;
 
@@ -1248,6 +1252,7 @@ namespace Airship.DevConsole
 
             this.tabClient.SetActive(context == LogContext.Client);
             this.tabServer.SetActive(context == LogContext.Server);
+            this.tabClientMemory.SetActive(context == LogContext.ClientMemory);
 
             this.bottom.SetActive(context == LogContext.Client);
         }
@@ -1258,6 +1263,10 @@ namespace Airship.DevConsole
 
         public void OnServerTabClick() {
             this.SetActiveContext(LogContext.Server);
+        }
+
+        public void OnClientMemoryTabClick() {
+            this.SetActiveContext(LogContext.ClientMemory);
         }
 
         private void UpdateTabButton(GameObject button, bool selected) {
@@ -1271,6 +1280,7 @@ namespace Airship.DevConsole
         private void UpdateTabButtons() {
             this.UpdateTabButton(clientTabButton, this.activeContext == LogContext.Client);
             this.UpdateTabButton(serverTabButton, this.activeContext == LogContext.Server);
+            this.UpdateTabButton(clientMemoryTabButton, this.activeContext == LogContext.ClientMemory);
         }
 
         private void Awake()
