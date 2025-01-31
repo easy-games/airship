@@ -438,6 +438,13 @@ namespace VoxelWorldStuff {
                         detailGameObjects[i] = null;
                     }
                 }
+
+                if (detailMeshes != null) {
+                    foreach (var detailMesh in detailMeshes) {
+                        Object.Destroy(detailMesh);
+                    }
+                }
+
                 obj = null;
             }
         }
@@ -550,8 +557,11 @@ namespace VoxelWorldStuff {
                         obj.transform.localPosition = Vector3.zero;
                         obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
-                        
-                        if (mesh == null) mesh = new Mesh();
+
+                        if (mesh == null) {
+                            mesh = new Mesh();
+                            mesh.name = "VoxelWorldChunk";
+                        }
                         // mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                         filter = obj.AddComponent<MeshFilter>();
@@ -597,6 +607,7 @@ namespace VoxelWorldStuff {
                                 detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
 
                                 detailMeshes[i] = new Mesh();
+                                detailMeshes[i].name = detailGameObjects[i].name;
                                 // detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                                 detailFilters[i].mesh = detailMeshes[i];

@@ -332,7 +332,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         if (world.voxelWorldFile != null) {
             if (GUILayout.Button("Load")) {
-                Load(world);
+                if (world.hasUnsavedChanges) {
+                    if (EditorUtility.DisplayDialog("Discarding Changes",
+                            "Are you sure you want to discard unsaved changes to the Voxel World?", "Discard", "Cancel")) {
+                        Load(world);
+                    }
+                } else {
+                    Load(world);
+                }
             }
 
             if (world.chunks.Count > 0) {
