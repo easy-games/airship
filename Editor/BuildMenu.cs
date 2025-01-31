@@ -22,14 +22,21 @@ namespace Editor {
         };
 
         private static string FormatBytes(BuildSummary summary) {
-            var size = summary.totalSize;
-            if (size < 1024) {
-                return $"{size} bytes";
+            var bytes = summary.totalSize;
+            if (bytes < 1024) {
+                return $"{bytes} bytes";
             }
-            if (size < 1024 * 1024) {
-                return $"{size / (1024.0 * 1024.0):F2} MB";
+            if (bytes < 1024 * 1024) {
+                var kb = bytes / 1024.0f;
+                return $"{kb:F2} KB [{bytes} bytes]";
             }
-            return $"{size / (1024.0 * 1024.0 * 1024.0):F2} GB";
+            if (bytes < 1024 * 1024 * 1024) {
+                var mb = bytes / (float)(1024 * 1024);
+                return $"{mb:F2} MB [{bytes} bytes]";
+            }
+
+            var gb = bytes / (float)(1024 * 1024 * 1024);
+            return $"{gb:F2} GB [{bytes} bytes]";
         }
 
         private static void OnBuild() {
