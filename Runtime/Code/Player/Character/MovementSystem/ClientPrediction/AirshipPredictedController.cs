@@ -39,8 +39,8 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     //Correcting clint state when out of sync with server
     [Header("Reconciliation")]
 
-    [Tooltip("Optimization. How long in seconds to wait between server state sends to the owning client. <= 1 to update the client as often as possible.")]
-    public int serverToClientSendDelay = 0;
+    [Tooltip("Optimization. How long in seconds to wait between server state sends to the owning client. <= 0 to update the client as often as possible.")]
+    public int serverToClientUpdatesPerSecond = 0;
     public int replayTickOffset = 0;
 
     [Tooltip("Correction threshold in meters. For example, 0.1 means that if the client is off by more than 10cm, it gets corrected.")]
@@ -53,8 +53,12 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
 
     [Header("Observers")]
 
-    [Tooltip("Optimization. How long in seconds to wait between server state sends to all observers. <= 1 to update the observers as often as possible.")]
-    public int serverToObserversSendDelay = 0;
+    [Tooltip("Optimization. How long in seconds to wait between server state sends to all observers. <= 0 to update the observers as often as possible.")]
+    public int serverToObserversUpdatesPerSecond = 10;
+
+    [Tooltip("How many states behind should we interpolate observers so they don't run out of data to visualize. A state is data being send from the server in intervals using serverToObserverSendDelay. Larger margins means no popping, Smaller margins means more accurate. Recommended value of 3. If very high update rate 2. If slower update rate (Mobile target) 4.")]
+    [Range(1,10)]
+    public int observerStatesBehindMargin = 3;
 
 
     [Header("Bandwidth")]
@@ -105,12 +109,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     private int newestTick = 0;
 
 	//Prediction Observers
-    private AirshipPredictedState[] observedStates = new AirshipPredictedState[2] {null, null};
-	private Vector3 prevObserverPosition;
-	private Vector3 nextObserverPosition;
-	private float lastObserverTime;
-	private float lastObserverDuration;
-	private float lastObserverSpeed;
+    private AirshipPredictedState[] observedStates;
 
     private AirshipPredictionRPC rpcCalls;
     
@@ -178,6 +177,7 @@ protected void Log(string message){
         velocitySnapThresholdSqr = velocitySnapThreshold * velocitySnapThreshold;
         velocityCorrectionThresholdSqr = velocityCorrectionThreshold * velocityCorrectionThreshold;
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
+        observedStates = new AirshipPredictedState[this.observerStatesBehindMargin];
     }
 
     public override void OnStartAuthority() {
@@ -191,6 +191,7 @@ protected void Log(string message){
     }
 
     protected virtual void OnEnable() {
+        serverTick = Mathf.FloorToInt((float)NetworkTime.time / Time.fixedDeltaTime);
         AirshipPredictionManager.OnPhysicsTick += OnPhysicsTick;
     }
 
@@ -474,8 +475,8 @@ protected void Log(string message){
                     // to send once per second anymore.
                 }
 
-                
-                if(Time.time - lastSendTimeClient > this.serverToClientSendDelay + optimizationDuration){
+                var clientUpdateDelay = serverToClientUpdatesPerSecond <= 0 ? 0 : ( 1f / serverToClientUpdatesPerSecond);
+                if(Time.time - lastSendTimeClient > clientUpdateDelay + optimizationDuration){
                     this.lastSendTimeClient = Time.time;
                     //print("Sending to client RPC: " + this.netId + ": " + serverTick);
                     rpcCalls.SendServerStateToClient(serverTick, forceNextReplay, currentPosition, currentVelocity);
@@ -483,7 +484,8 @@ protected void Log(string message){
                 }
 
                 
-                if(Time.time - lastSendTimeObservers > this.serverToObserversSendDelay){
+                var obeserverUpdateDelay = serverToObserversUpdatesPerSecond <= 0 ? 0 : ( 1f / serverToObserversUpdatesPerSecond);
+                if(Time.time - lastSendTimeObservers > obeserverUpdateDelay){
                     this.lastSendTimeObservers = Time.time;
                     //print("Sending to observers RPC: " + serverTick);
 
@@ -509,8 +511,6 @@ protected void Log(string message){
             if(tick < newestTick){
                 return false;
             }
-            newestTick = tick;
-            SetServerTick(tick);
             return true;
         }
 
@@ -523,6 +523,8 @@ protected void Log(string message){
             if(!IsLatestTick(tick)){
                 return;
             }
+            newestTick = tick;
+            SetServerTick(tick);
             
             var serverState = DeserializeState(tick, position, velocity);
             
@@ -556,23 +558,29 @@ protected void Log(string message){
         //OBSERVERS
         protected void OnObserverRecievedServerState(AirshipPredictedState serverState){
             if(!IsLatestTick(serverState.tick)){
+                Debug.LogWarning("Recieved out of date tick");
                 return;
             }
+            newestTick = serverState.tick;
+            SetServerTick(serverState.tick);
 
             //Store prev and next positions so we can lerp between the two to account for network lag
-            prevObserverPosition = transform.position; //Start lerping from where we currently are so we don't get popping
-            nextObserverPosition = serverState.position; //End at the latest server position
+            //prevObserverPosition = transform.position; //Start lerping from where we currently are so we don't get popping
+            //nextObserverPosition = serverState.position; //End at the latest server position
 
-            observedStates[0] = observedStates[1];
-            observedStates[1] = new AirshipPredictedState().Copy(serverState);
+            //Push out old states and add the new one
+            for(int i=0; i < this.observerStatesBehindMargin-1; i++){
+                observedStates[i] = observedStates[i+1];
+            }
+            observedStates[this.observerStatesBehindMargin-1] = new AirshipPredictedState().Copy(serverState);
 
             //So we can track how far its been since this server state recieve
-            lastObserverTime = Time.time;
-            lastObserverDuration = GetTime(serverState.tick - observedStates[0].tick) + .1f; //Get duration from the ticks they were sent on the server +100ms margin
-            lastObserverSpeed = serverState.velocity.magnitude;
+            // lastObserverTime = Time.time;
+            // lastObserverDuration = GetTime(serverState.tick - observedStates[0].tick) + .1f; //Get duration from the ticks they were sent on the server +100ms margin
+            // lastObserverSpeed = serverState.velocity.magnitude;
             
             //Debug.Log("prevTick: " + observedStates[0].tick + " new tick: " + serverState.tick + " duration: " + lastObserverDuration + " new pos: " + nextObserverPosition);
-            
+            //Debug.Log("at time: " + NetworkTime.time + " Received state: " + serverState.tick + " stateTime: " + GetTime(serverState.tick));
             //Let child classses handle the synced state
             ProcessServerStateOnObserver(serverState);
         }
@@ -585,19 +593,59 @@ protected void Log(string message){
         private void InterpolateObserverPosition(){
             //Don't process unless we have recieved data
             if(observedStates[0] == null){
+                print("Not enough observer states");
+                return;
+            }
+
+            var clientTime = (float)NetworkTime.time - (this.observerStatesBehindMargin * (1/this.serverToObserversUpdatesPerSecond));
+            AirshipPredictedState prevState = null;
+            AirshipPredictedState nextState = null;
+
+            //Find the states to lerp to based on our current time
+            var tickTime = 0f;
+            for(int i =0; i < this.observerStatesBehindMargin; i++) {
+                tickTime = GetTime(this.observedStates[i].tick);
+                //print("At time: " + clientTime + " Checkign state: " + i + " time: " + tickTime);
+                if(tickTime < clientTime) {
+                    prevState = this.observedStates[i];
+                } else if(tickTime > clientTime && nextState == null) {
+                    nextState = observedStates[i];
+                    break;
+                }
+            }
+
+            //No state in the past
+            if(prevState == null || nextState == null){
+                print("no prev or next state");
                 return;
             }
             
+            //TODO synce this animation state only once when there is a new prevState
+            //ProcessServerStateOnObserver(prevState);
+
             //How far along are we in this interp? Minimum 1 frame so we arn't stuck at the starting position on fast network updates
-            var timeDelta = Mathf.Max(Time.fixedDeltaTime, Time.time - lastObserverTime) / lastObserverDuration;
-            //Find where we are in time since the last observer update
-            var delta = Mathf.Clamp(
-                timeDelta,
-                0, Mathf.Clamp(lastObserverSpeed, 1, 10)); //Let it extrapolate but not too crazy (10 is an arbitrary guess at what is too crazy)
+            var timeDelta = (clientTime - GetTime(prevState.tick)) / GetTime(nextState.tick - prevState.tick);
+
+            print($"clientTime: {clientTime}, timeDelta: {timeDelta}, prevState: {prevState.tick}, {GetTime(prevState.tick)}, nextState: {nextState.tick}, {GetTime(nextState.tick)}");
+
+            //Clamp the delta for extrapolation. More speed = more extrapolation allowed No speed = hard stop when reach the state
+            // var clampedDelta = Mathf.Clamp(
+            //     timeDelta,
+            //     0, Mathf.Clamp(lastObserverSpeed, 1, 10)); //Let it extrapolate but not too crazy (10 is an arbitrary guess at what is too crazy)
+
             //Interpolate between prev position and the lateset server position
-            transform.position = Vector3.Lerp(
-                prevObserverPosition,
-                nextObserverPosition, delta);
+            transform.position = Vector3.Lerp(prevState.position, nextState.position, timeDelta);
+            
+            //How far along are we in this interp? Minimum 1 frame so we arn't stuck at the starting position on fast network updates
+            // var timeDelta = Mathf.Max(Time.fixedDeltaTime, Time.time - lastObserverTime) / lastObserverDuration;
+            // //Find where we are in time since the last observer update
+            // var delta = Mathf.Clamp(
+            //     timeDelta,
+            //     0, Mathf.Clamp(lastObserverSpeed, 1, 10)); //Let it extrapolate but not too crazy (10 is an arbitrary guess at what is too crazy)
+            // //Interpolate between prev position and the lateset server position
+            // transform.position = Vector3.Lerp(
+            //     prevObserverPosition,
+            //     nextObserverPosition, delta);
 
             //Debug.Log("Interp Observer time delta: " + timeDelta + " new Pos: " + transform.position);
         }
@@ -753,7 +801,7 @@ protected void Log(string message){
     }
 
     public float GetTime(int tick){
-        return tick * this.recordInterval;
+        return tick * Time.fixedDeltaTime;
     }
 
 #endregion

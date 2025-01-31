@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class AirshipPredictedState{
     public int tick;
+    //public double timeSent; 
     public Vector3 position;
     public Vector3 velocity;
 
