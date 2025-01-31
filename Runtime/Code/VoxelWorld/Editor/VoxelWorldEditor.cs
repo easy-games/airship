@@ -262,7 +262,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
 
         var rollbackManager = voxelWorldGo.GetComponent<VoxelRollbackManager>();
-        rollbackManager.voxelWorld = voxelWorld;
+        if(rollbackManager){
+            rollbackManager.voxelWorld = voxelWorld;
+        }
 
         //var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
         //voxelWorldGo.AddComponent<NetworkObject>();
@@ -310,8 +312,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     public override void OnInspectorGUI() {
         VoxelWorld world = (VoxelWorld)target;
         
-        //Add a field for voxelBlocks
-        world.voxelBlocks = (VoxelBlocks)EditorGUILayout.ObjectField("Voxel Blocks", world.voxelBlocks, typeof(VoxelBlocks), true);
         //Add big divider
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.LabelField("Save Files", EditorStyles.boldLabel);
@@ -323,10 +323,10 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         
         EditorGUILayout.Space(4);
 
-
+        
         //Add a file picker for  voxelWorldFile
         world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);
-
+        world.autoLoad = EditorGUILayout.Toggle("Auto Load On Enable", world.autoLoad);
         EditorGUILayout.Space(4);
 
 
@@ -356,6 +356,16 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
                 }
                 GUI.enabled = true;
+            }
+            if (GUILayout.Button("Unload")) {
+                if (world.hasUnsavedChanges) {
+                    if (EditorUtility.DisplayDialog("Discarding Changes",
+                            "Are you sure you want to discard unsaved changes to the Voxel World?", "Discard", "Cancel")) {
+                        world.DeleteRenderedGameObjects();
+                    }
+                } else {
+                    world.DeleteRenderedGameObjects();
+                }
             }
         }
         else {
@@ -396,6 +406,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         AirshipEditorGUI.HorizontalLine();
+
+        EditorGUILayout.LabelField("Editing", EditorStyles.boldLabel);
+
+        //Add a button for "Open editor"
+        if (GUILayout.Button("Open Editor")) {
+            //open theVoxelWorldEditor
+            VoxelBuilderEditorWindow.ShowWindow();
+        }
+
         EditorGUILayout.LabelField("Build Mods", EditorStyles.boldLabel);
         VoxelEditManager.Instance.buildModsEnabled =
             GUILayout.Toggle(VoxelEditManager.Instance.buildModsEnabled, "Enabled");
@@ -426,39 +445,32 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         EditorGUILayout.Space(10);
         AirshipEditorGUI.HorizontalLine();
 
-        //Add a button for "Open editor"
-        if (GUILayout.Button("Open Editor")) {
-            //open theVoxelWorldEditor
-            VoxelBuilderEditorWindow.ShowWindow();
-        }
 
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
 
-        if (GUILayout.Button("Reload Atlas")) {
-            world.ReloadTextureAtlas();
-        }
-
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
 
+        EditorGUILayout.LabelField("References", EditorStyles.boldLabel);
 
         // World Networker picker
         world.worldNetworker = (VoxelWorldNetworker)EditorGUILayout.ObjectField("Voxel World Networker", world.worldNetworker, typeof(VoxelWorldNetworker), true);
-
-        world.autoLoad = EditorGUILayout.Toggle("Auto Load", world.autoLoad);
-
         
+        //Add a field for voxelBlocks
+        world.voxelBlocks = (VoxelBlocks)EditorGUILayout.ObjectField("Voxel Blocks", world.voxelBlocks, typeof(VoxelBlocks), true);
+
+        EditorGUILayout.Space(5);
+
+        if (GUILayout.Button("Reload Block Atlas")) {
+            world.ReloadTextureAtlas();
+        }
+
+        EditorGUILayout.Space(5);
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.Space(5);
         EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
         EditorGUILayout.Space(5);
-        if (GUILayout.Button("Clear Visual Chunks")) {
-            world.DeleteRenderedGameObjects();
-        }
-        if (GUILayout.Button("Reload Atlas")) {
-            world.ReloadTextureAtlas();
-        }
         if (GUILayout.Button("Debug Emit block"))
         {
             MeshProcessor.ProduceSingleBlock(world.selectedBlockIndex, world);

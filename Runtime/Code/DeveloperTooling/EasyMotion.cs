@@ -3,7 +3,7 @@ using UnityEngine;
 [LuauAPI]
 [ExecuteInEditMode]
 public class EasyMotion : MonoBehaviour {
-    public EngineRunMode refreshMode = EngineRunMode.EDITOR;
+    public EngineRunMode refreshMode = EngineRunMode.PLAY;
     public Space transformSpace = Space.Self;
     
     [Header("Translation")]

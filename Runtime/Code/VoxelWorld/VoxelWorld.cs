@@ -18,7 +18,6 @@ using UnityEditor;
 #endif
 
 [ExecuteInEditMode]
-[RequireComponent(typeof(VoxelRollbackManager))]
 public partial class VoxelWorld : MonoBehaviour {
 
     public const bool runThreaded = true;       //Turn off if you suspect threading problems

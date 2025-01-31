@@ -9,6 +9,7 @@ using BlockId = System.UInt16;
 
 [Serializable]
 [LuauAPI]
+[CreateAssetMenu(fileName = "VoxelWorldSaveFile", menuName = "Airship/VoxelWorld/VoxelWorldSaveFile", order = 0)]
 public class WorldSaveFile : ScriptableObject {
     public List<SaveChunk> chunks = new List<SaveChunk>();
     public List<BlockIdToScopedName> blockIdToScopeName = new();
