@@ -659,9 +659,9 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
-            if (typeof(T) == typeof(object)) {
+            // if (typeof(T) == typeof(object)) {
                 return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
-            }
+            // }
         
             if (!cacheData.HasGetPropertyFunc) {
                 var getMethod = cacheData.propertyInfo.GetGetMethod();
@@ -689,6 +689,9 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
+        pi.SetValue(instance, value);
+        return;
+        
         var staticSet = instance == null;
         if (!_propertySetterCache.TryGetValue((staticSet, pi.DeclaringType, pi.Name), out var setter)) {
             setter = CreateSetter<T>(pi, staticSet);
