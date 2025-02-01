@@ -113,7 +113,7 @@ public abstract class AirshipPredictedController<T> : NetworkBehaviour, IPredict
     private AirshipPredictionRPC rpcCalls;
     
     //Observer Rendering
-    private AirshipPredictedState observerBaseTick; // This is the tick we are basing our rendering lerps on
+    private int observerBaseTick = 0; // This is the tick we are basing our rendering lerps on
     
     public override int GetHashCode() {
         print("PredictedController Hash: " + base.GetHashCode());
@@ -574,7 +574,7 @@ protected void Log(string message){
             for(int i=0; i < this.observerStatesBehindMargin-1; i++){
                 observedStates[i] = observedStates[i+1];
             }
-            observedStates[this.observerStatesBehindMargin-1] = new AirshipPredictedState().Copy(serverState);
+            observedStates[this.observerStatesBehindMargin-1] = serverState;
 
             //So we can track how far its been since this server state recieve
             // lastObserverTime = Time.time;
@@ -599,7 +599,7 @@ protected void Log(string message){
                 return;
             }
 
-            var clientTime = NetworkTime.time - (this.observerStatesBehindMargin * (1f /this.serverToObserversUpdatesPerSecond));
+            var clientTime = (float)NetworkTime.time - ((this.observerStatesBehindMargin - 1) * (1f / this.serverToObserversUpdatesPerSecond));
             AirshipPredictedState prevState = null;
             AirshipPredictedState nextState = null;
 
@@ -622,9 +622,8 @@ protected void Log(string message){
                 return;
             }
 
-            if (prevState.tick != observerBaseTick.tick)
-            {
-                observerBaseTick = prevState;
+            if (prevState.tick != observerBaseTick) {
+                observerBaseTick = prevState.tick;
                 ProcessServerStateOnObserver(prevState);
             }
 
