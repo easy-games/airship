@@ -8,8 +8,10 @@ namespace Airship.Editor {
     [InitializeOnLoad]
     public class TypescriptStatusbar {
         static TypescriptStatusbar() {
-      
-
+#if AIRSHIP_PLAYER
+            return;
+#endif
+            if (!TypescriptServices.IsValidServiceContext) return;
             EditorApplication.delayCall += MountStatusbar;
         }
 
