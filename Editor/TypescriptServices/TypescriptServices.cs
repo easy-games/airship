@@ -1,5 +1,7 @@
 ﻿#if UNITY_EDITOR
+using System;
 using System.Collections;
+using System.Linq;
 using Editor;
 using Editor.EditorInternal;
 using Editor.Packages;
@@ -24,13 +26,21 @@ namespace Airship.Editor {
     /// Main static class for handling the TypeScript services
     /// </summary>
     public static class TypescriptServices {
+        /// <summary>
+        /// Returns true if this is a valid editor window to run TSS in
+        /// </summary>
+        public static bool IsValidEditor =>
+            !ClonesManager.IsClone() &&
+            !Environment.GetCommandLineArgs().Contains("--virtual-project-clone");
+
         [InitializeOnLoadMethod]
         public static void OnLoad() {
-            var tags = CurrentPlayer.ReadOnlyTags();
-            var isCloneOrMPPM = tags.Length > 0 || ClonesManager.IsClone();
-            
+#if AIRSHIP_PLAYER
+            Debug.LogWarning("[TypescriptServices] Skipped, in Airship Player mode");
+            return;
+#endif
             // If a server or clone - ignore
-            if (isCloneOrMPPM) return;
+            if (!IsValidEditor) return;
             EditorApplication.delayCall += OnLoadDeferred;
 
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
