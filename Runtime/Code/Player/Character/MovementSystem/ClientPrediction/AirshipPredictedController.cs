@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Mirror;
 using Unity.Mathematics;
+using UnityEditorInternal;
 using UnityEngine;
 
 // PredictedController is based off of:
@@ -179,7 +180,7 @@ protected void Log(string message){
         velocitySnapThresholdSqr = velocitySnapThreshold * velocitySnapThreshold;
         velocityCorrectionThresholdSqr = velocityCorrectionThreshold * velocityCorrectionThreshold;
         positionCorrectionThresholdSqr = positionCorrectionThreshold * positionCorrectionThreshold;
-        observedStates = new AirshipPredictedState[this.observerStatesBehindMargin];
+        observedStates = new AirshipPredictedState[this.observerStatesBehindMargin + 1];
     }
 
     public override void OnStartAuthority() {
@@ -489,7 +490,7 @@ protected void Log(string message){
                 var obeserverUpdateDelay = serverToObserversUpdatesPerSecond <= 0 ? 0 : ( 1f / serverToObserversUpdatesPerSecond);
                 if(Time.time - lastSendTimeObservers > obeserverUpdateDelay){
                     this.lastSendTimeObservers = Time.time;
-                    //print("Sending to observers RPC: " + serverTick);
+                    // print("Sending to observers RPC: " + serverTick + " tick time " + GetTime(serverTick) + " real time " + NetworkTime.time);
 
                     //Send entire state data to OBSERVERS
                     rpcCalls.SendServerStateToObservers(CreateCurrentState(serverTick));
@@ -571,20 +572,18 @@ protected void Log(string message){
             //nextObserverPosition = serverState.position; //End at the latest server position
 
             //Push out old states and add the new one
-            for(int i=0; i < this.observerStatesBehindMargin-1; i++){
+            for(int i=0; i < this.observedStates.Length - 1; i++){
                 observedStates[i] = observedStates[i+1];
             }
-            observedStates[this.observerStatesBehindMargin-1] = serverState;
+            observedStates[this.observedStates.Length - 1] = serverState;
 
             //So we can track how far its been since this server state recieve
             // lastObserverTime = Time.time;
             // lastObserverDuration = GetTime(serverState.tick - observedStates[0].tick) + .1f; //Get duration from the ticks they were sent on the server +100ms margin
             // lastObserverSpeed = serverState.velocity.magnitude;
             
-            //Debug.Log("prevTick: " + observedStates[0].tick + " new tick: " + serverState.tick + " duration: " + lastObserverDuration + " new pos: " + nextObserverPosition);
-            //Debug.Log("at time: " + NetworkTime.time + " Received state: " + serverState.tick + " stateTime: " + GetTime(serverState.tick));
+            //Debug.Log("at time: " + NetworkTime.time + " Received state: " + serverState.tick + " stateTime: " + GetTime(serverState.tick) + " oldest state: " + GetTime(observedStates[0].tick));
             //Let child classses handle the synced state
-            ProcessServerStateOnObserver(serverState);
         }
 
         protected virtual void ProcessServerStateOnObserver(AirshipPredictedState serverState) {
@@ -599,24 +598,39 @@ protected void Log(string message){
                 return;
             }
 
-            var clientTime = (float)NetworkTime.time - ((this.observerStatesBehindMargin - 1) * (1f / this.serverToObserversUpdatesPerSecond));
+            var renderBuffer = (float) (this.observerStatesBehindMargin - 1) / this.serverToObserversUpdatesPerSecond;
+            var clientTime = (float)NetworkTime.time - renderBuffer;
             AirshipPredictedState prevState = null;
             AirshipPredictedState nextState = null;
 
+            //print("Render buffer is " + renderBuffer + ". Client render time: " + clientTime + ". Actual Time: " + NetworkTime.time);
+
+            // Debug
+            // for (int i = 0; i < this.observedStates.Length; i++) {
+            //     if (this.observedStates[i] == null) {
+            //         //print("Buffer position " + i + ": null");
+            //     } else {
+            //         //print("Buffer position " + i + ": " + GetTime(this.observedStates[i].tick));
+            //     }
+            // }
+
             //Find the states to lerp to based on our current time
             var tickTime = 0f;
-            for(int i =0; i < this.observerStatesBehindMargin; i++) {
-                tickTime = GetTime(this.observedStates[i].tick);
+            for(int i = 0; i < this.observedStates.Length; i++) {
+                var state = this.observedStates[i];
+                if (state == null) break;
+
+                tickTime = GetTime(state.tick);
                 //print("At time: " + clientTime + " Checkign state: " + i + " time: " + tickTime);
                 if(tickTime < clientTime) {
-                    prevState = this.observedStates[i];
+                    prevState = state;
                 } else if(tickTime > clientTime && nextState == null) {
-                    nextState = observedStates[i];
+                    nextState = state;
                     break;
                 }
             }
 
-            //No state in the past
+            // No state in the past
             if(prevState == null || nextState == null){
                 print("no prev or next state");
                 return;
@@ -627,10 +641,10 @@ protected void Log(string message){
                 ProcessServerStateOnObserver(prevState);
             }
 
-            //How far along are we in this interp? Minimum 1 frame so we arn't stuck at the starting position on fast network updates
+            // How far along are we in this interp?
             var timeDelta = (clientTime - GetTime(prevState.tick)) / GetTime(nextState.tick - prevState.tick);
 
-            print($"clientTime: {clientTime}, timeDelta: {timeDelta}, prevState: {prevState.tick}, {GetTime(prevState.tick)}, nextState: {nextState.tick}, {GetTime(nextState.tick)}");
+            // print($"clientTime: {clientTime}, timeDelta: {timeDelta}, prevState: {prevState.tick}, {GetTime(prevState.tick)}, nextState: {nextState.tick}, {GetTime(nextState.tick)}");
 
             //Clamp the delta for extrapolation. More speed = more extrapolation allowed No speed = hard stop when reach the state
             // var clampedDelta = Mathf.Clamp(
