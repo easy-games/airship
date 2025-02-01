@@ -11,7 +11,7 @@ namespace Airship.Editor {
 #if AIRSHIP_PLAYER
             return;
 #endif
-            if (!TypescriptServices.IsValidServiceContext) return;
+            if (!TypescriptServices.IsValidEditor) return;
             EditorApplication.delayCall += MountStatusbar;
         }
 
