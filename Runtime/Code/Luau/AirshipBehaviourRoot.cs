@@ -59,11 +59,12 @@ namespace Luau {
             
             componentIds.Remove(component.GetAirshipComponentId());
 
-            if (componentIds.Count == 0) {
-                // If no more components, we'll remove Id <-> GameObject mappings, tyvm
-                Ids.Remove(gameObject);
-                IdToGameObject.Remove(id);
-            }
+            if (componentIds.Count != 0) return;
+            
+            // If no more components, we'll remove Id <-> GameObject mappings, tyvm
+            Ids.Remove(gameObject);
+            IdToGameObject.Remove(id);
+            GameObjectComponentIds.Remove(id);
         }
 
         public static bool HasId(GameObject gameObject) {
