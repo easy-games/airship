@@ -481,6 +481,7 @@ namespace VoxelWorldStuff {
 
                 if (obj == null) {
                     obj = newChunk;
+                    obj.layer = world.gameObject.layer;
                     obj.transform.parent = parent.transform;
                     obj.transform.localRotation = Quaternion.identity;
                     obj.transform.localScale = Vector3.one;
