@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using System.Collections.Generic;
 
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -16,7 +17,13 @@ public class SelectionZone : MonoBehaviour
     [Range(0f, 3f)]
     public float thickness = 0.02f;
 
-    public Vector3 size = Vector3.one;
+    public Vector3Int size  {
+        get{
+            return Vector3Int.RoundToInt(Vector3.Max(Vector3.one, transform.localScale));
+        } set {
+            transform.localScale = Vector3.Max(Vector3.one, value);
+        }
+    }
 
     [NonSerialized]
     private Material material;
@@ -36,8 +43,24 @@ public class SelectionZone : MonoBehaviour
     [NonSerialized]
     public VoxelWorld voxelWorld;
 
+    private Transform selectionMeshTransform;
+
     void OnEnable()
     {
+        if(!selectionMeshTransform){
+            foreach(Transform child in transform){
+                DestroyImmediate(child.gameObject);
+            }
+            selectionMeshTransform = GameObject.CreatePrimitive(PrimitiveType.Cube).transform;
+            selectionMeshTransform.SetParent(transform);
+            selectionMeshTransform.localScale = Vector3.one * 1.01f;
+            selectionMeshTransform.localPosition = Vector3.zero;
+            var ren = selectionMeshTransform.gameObject.GetComponent<MeshRenderer>();
+            ren.material = Resources.Load<Material>("Selection");
+#if UNITY_EDITOR
+            SceneVisibilityManager.instance.DisablePicking(selectionMeshTransform.gameObject, false);
+#endif
+        }
         mesh = new Mesh();
         mesh.name = "Wire Cube";
         previousScale = transform.localScale;
@@ -61,6 +84,33 @@ public class SelectionZone : MonoBehaviour
         }
     }
 
+    public void SnapToGrid() {
+        Transform cubeTransform = transform;
+
+        //Snap the scale
+        cubeTransform.localScale = Vector3Int.RoundToInt(Vector3.Max(cubeTransform.localScale, Vector3.one));
+
+        // Snap the position to the nearest 0.5 unit grid
+        float x = Mathf.Floor(cubeTransform.localPosition.x);
+        float y = Mathf.Floor(cubeTransform.localPosition.y);
+        float z = Mathf.Floor(cubeTransform.localPosition.z);
+
+        // Adjust snapping if the size is even
+        if (Mathf.Round(size.x) % 2 == 1) {
+            x += 0.5f;
+        }
+        if (Mathf.Round(size.y) % 2 == 1) {
+            y += 0.5f;
+        }
+        if (Mathf.Round(size.z) % 2 == 1) {
+            z += 0.5f;
+        }
+
+        // Set the snapped position
+        cubeTransform.localPosition = new Vector3(x, y, z);
+        cubeTransform.localRotation = Quaternion.identity;
+    }
+
     public void BuildCube()
     {
         if (thickness > 0)
@@ -75,8 +125,7 @@ public class SelectionZone : MonoBehaviour
 
     void BuildWireCube()
     {
-        float size = Mathf.Min(transform.localScale.x, transform.localScale.y, transform.localScale.z);
-        Vector3 halfSize = new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
+        Vector3 halfSize = new Vector3(size.x * 0.5f, size.y * 0.5f, size.z * 0.5f);
 
         Vector3[] vertices = new Vector3[8]
         {
@@ -103,14 +152,15 @@ public class SelectionZone : MonoBehaviour
             colors[i] = new Color(color.r, color.g, color.b, alpha);
         }
 
-        if (gameObject.GetComponent<MeshFilter>() == null)
-        {
-            gameObject.AddComponent<MeshFilter>();
+        //Cube mesh 
+        var cubeMeshFilter = gameObject.GetComponent<MeshFilter>();
+        if (cubeMeshFilter == null) {
+            cubeMeshFilter = gameObject.AddComponent<MeshFilter>();
         }
 
-        if (gameObject.GetComponent<MeshRenderer>() == null)
-        {
-            gameObject.AddComponent<MeshRenderer>();
+        var cubeMeshRen = gameObject.GetComponent<MeshRenderer>();
+        if (cubeMeshRen == null) {
+            cubeMeshRen = gameObject.AddComponent<MeshRenderer>();
         }
 
         mesh.Clear();
@@ -118,18 +168,15 @@ public class SelectionZone : MonoBehaviour
         mesh.SetIndices(indices, MeshTopology.Lines, 0);
         mesh.colors = colors;
 
-        gameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
-
-        if (material != null)
-        {
-            gameObject.GetComponent<MeshRenderer>().sharedMaterial = material;
+        cubeMeshFilter.sharedMesh = mesh;
+        if (material != null) {
+            cubeMeshRen.sharedMaterial = material;
         }
     }
 
     void BuildPrismCube()
     {
-        //float size = Mathf.Min(transform.localScale.x, transform.localScale.y, transform.localScale.z);
-        Vector3 halfSize = new Vector3(size.x * 0.5f, size.y * 0.5f, size.z * 0.5f);
+        Vector3 halfSize = new Vector3(.5f, .5f, .5f);
 
         // 12 prisms, 10 verts each, 16 tris each
         Vector3[] vertices = new Vector3[10 * 12];
@@ -139,22 +186,22 @@ public class SelectionZone : MonoBehaviour
         int indexCount = 0;
 
         // Top face edges
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, halfSize.y, halfSize.z), new Vector3(halfSize.x, halfSize.y, halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, halfSize.y, halfSize.z), new Vector3(halfSize.x, halfSize.y, -halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, halfSize.y, -halfSize.z), new Vector3(-halfSize.x, halfSize.y, -halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, halfSize.y, -halfSize.z), new Vector3(-halfSize.x, halfSize.y, halfSize.z));
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, halfSize.y, halfSize.z), new Vector3(halfSize.x, halfSize.y, halfSize.z), new Vector3(1f/size.z, 1f/size.y, 1f/size.x)); //X
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, halfSize.y, halfSize.z), new Vector3(halfSize.x, halfSize.y, -halfSize.z), new Vector3(1f/size.x, 1f/size.y, 1f/size.z)); //Z
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, halfSize.y, -halfSize.z), new Vector3(-halfSize.x, halfSize.y, -halfSize.z), new Vector3(1f/size.z, 1f/size.y, 1f/size.x)); //X
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, halfSize.y, -halfSize.z), new Vector3(-halfSize.x, halfSize.y, halfSize.z), new Vector3(1f/size.x, 1f/size.y, 1f/size.z)); //Z
 
         // Bottom face edges
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, halfSize.z), new Vector3(halfSize.x, -halfSize.y, halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, halfSize.z), new Vector3(halfSize.x, -halfSize.y, -halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, -halfSize.z), new Vector3(-halfSize.x, -halfSize.y, -halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, -halfSize.z), new Vector3(-halfSize.x, -halfSize.y, halfSize.z));
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, halfSize.z), new Vector3(halfSize.x, -halfSize.y, halfSize.z), new Vector3(1f/size.z, 1f/size.y, 1f/size.x)); //X
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, halfSize.z), new Vector3(halfSize.x, -halfSize.y, -halfSize.z), new Vector3(1f/size.x, 1f/size.y, 1f/size.z)); //Z
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, -halfSize.z), new Vector3(-halfSize.x, -halfSize.y, -halfSize.z), new Vector3(1f/size.z, 1f/size.y, 1f/size.x)); //X
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, -halfSize.z), new Vector3(-halfSize.x, -halfSize.y, halfSize.z), new Vector3(1f/size.x, 1f/size.y, 1f/size.z)); //Z
 
         // Vertical edges
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, halfSize.z), new Vector3(-halfSize.x, halfSize.y, halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, halfSize.z), new Vector3(halfSize.x, halfSize.y, halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, -halfSize.z), new Vector3(halfSize.x, halfSize.y, -halfSize.z));
-        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, -halfSize.z), new Vector3(-halfSize.x, halfSize.y, -halfSize.z));
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, halfSize.z), new Vector3(-halfSize.x, halfSize.y, halfSize.z), new Vector3(1f/size.z, 1f/size.x, 1f/size.y)); //Y
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, halfSize.z), new Vector3(halfSize.x, halfSize.y, halfSize.z), new Vector3(1f/size.z, 1f/size.x, 1f/size.y)); //Y
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(halfSize.x, -halfSize.y, -halfSize.z), new Vector3(halfSize.x, halfSize.y, -halfSize.z), new Vector3(1f/size.z, 1f/size.x, 1f/size.y)); //Y
+        AddSegmenent(vertices, indices, ref vertexCount, ref indexCount, new Vector3(-halfSize.x, -halfSize.y, -halfSize.z), new Vector3(-halfSize.x, halfSize.y, -halfSize.z), new Vector3(1f/size.z, 1f/size.x, 1f/size.y)); //Y
 
 
         Color[] colors = new Color[vertices.Length];
@@ -194,16 +241,18 @@ public class SelectionZone : MonoBehaviour
         indices[indicesCount++] = c;
     }
 
-    void AddSegmenent(Vector3[] vertices, int[] indices, ref int vertexCount, ref int indexCount, Vector3 start, Vector3 end)
+    void AddSegmenent(Vector3[] vertices, int[] indices, ref int vertexCount, ref int indexCount, Vector3 start, Vector3 end, Vector3 thicknessMod)
     {
-
+        float segmentThicknessA = thickness * thicknessMod.x;
+        float segmentThicknessB = thickness * thicknessMod.y;
+        float segmentThicknessC = thickness * thicknessMod.z;
         Vector3 direction = start - end;
 
         Vector3 normal = direction.normalized;
 
         //Cap points are end +normal   and start - normal
-        Vector3 capPoint1 = end - normal * thickness;
-        Vector3 capPoint2 = start + normal * thickness;
+        Vector3 capPoint1 = end - normal * segmentThicknessC;
+        Vector3 capPoint2 = start + normal * segmentThicknessC;
 
         //We need two vectors perpendicular to the start - end line to place our body points
         Vector3 perp1 = Vector3.Cross(direction, Vector3.up).normalized;
@@ -222,15 +271,15 @@ public class SelectionZone : MonoBehaviour
         vertices[vertexCount++] = capPoint2;
         vertices[vertexCount++] = capPoint1;
 
-        vertices[vertexCount++] = start + perp1 * thickness;
-        vertices[vertexCount++] = start + perp2 * thickness;
-        vertices[vertexCount++] = start - perp1 * thickness;
-        vertices[vertexCount++] = start - perp2 * thickness;
+        vertices[vertexCount++] = start + perp1 * segmentThicknessA;
+        vertices[vertexCount++] = start + perp2 * segmentThicknessB;
+        vertices[vertexCount++] = start - perp1 * segmentThicknessA;
+        vertices[vertexCount++] = start - perp2 * segmentThicknessB;
 
-        vertices[vertexCount++] = end + perp1 * thickness;
-        vertices[vertexCount++] = end + perp2 * thickness;
-        vertices[vertexCount++] = end - perp1 * thickness;
-        vertices[vertexCount++] = end - perp2 * thickness;
+        vertices[vertexCount++] = end + perp1 * segmentThicknessA;
+        vertices[vertexCount++] = end + perp2 * segmentThicknessB;
+        vertices[vertexCount++] = end - perp1 * segmentThicknessA;
+        vertices[vertexCount++] = end - perp2 * segmentThicknessB;
 
         //Add 4 triangles to make each cap
         AddTriangle(indices, ref indexCount, startIndex, startIndex + 2, startIndex + 3);
@@ -288,11 +337,11 @@ public class SelectionZoneEditor : UnityEditor.Editor {
     };
 
     float[] handleOffset = new float[6] {
-        1,1,1,1,1,1
+        .5f,.5f,.5f,.5f,.5f,.5f
     };
 
     float[] trueHandleOffset = new float[6] {
-        1,1,1,1,1,1
+        .5f,.5f,.5f,.5f,.5f,.5f
     };
  
     //Gui
@@ -302,28 +351,26 @@ public class SelectionZoneEditor : UnityEditor.Editor {
 
         //Add typeins for size x y and z
         SelectionZone cube = (SelectionZone)target;
-        Vector3Int oldSize = new Vector3Int((int)cube.size.x, (int)cube.size.y, (int)cube.size.z);
-        Vector3Int newSize = EditorGUILayout.Vector3IntField("Size", oldSize);
 
         GUI.enabled = true;
 
-        if (newSize != oldSize) {
-            cube.size = newSize;
-            SnapToGrid();
-            cube.BuildCube();
-            ResetHandles();
-        }
+        // if (newSize != oldSize) {
+        //     cube.size = newSize;
+        //     SnapToGrid();
+        //     cube.BuildCube();
+        //     ResetHandles();
+        // }
          
         //Draw a reset button
         if (GUILayout.Button("Reset")) {
             handleOffset = new float[6] {
-              1,1,1,1,1,1
+              .5f,.5f,.5f,.5f,.5f,.5f
             };
             trueHandleOffset = new float[6] {
-              1,1,1,1,1,1
+              .5f,.5f,.5f,.5f,.5f,.5f
             };
             
-            cube.size = new Vector3(1, 1, 1);
+            cube.size = new Vector3Int(1, 1, 1);
             cube.BuildCube();
         }
         if (cube.voxelWorld == null) {
@@ -337,9 +384,9 @@ public class SelectionZoneEditor : UnityEditor.Editor {
         //Add Copy Button
         if (GUILayout.Button("Fill")) {
             //walk the bounds 
-            float dx = cube.size.x / 2;
-            float dy = cube.size.y / 2;
-            float dz = cube.size.z / 2;
+            float dx = cube.size.x / 2f;
+            float dy = cube.size.y / 2f;
+            float dz = cube.size.z / 2f;
             float px = cube.transform.localPosition.x;
             float py = cube.transform.localPosition.y;
             float pz = cube.transform.localPosition.z;
@@ -364,9 +411,9 @@ public class SelectionZoneEditor : UnityEditor.Editor {
 
         if (GUILayout.Button("Replace")) {
             //walk the bounds
-            float dx = cube.size.x / 2;
-            float dy = cube.size.y / 2;
-            float dz = cube.size.z / 2;
+            float dx = cube.size.x / 2f;
+            float dy = cube.size.y / 2f;
+            float dz = cube.size.z / 2f;
             float px = cube.transform.localPosition.x;
             float py = cube.transform.localPosition.y;
             float pz = cube.transform.localPosition.z;
@@ -393,17 +440,17 @@ public class SelectionZoneEditor : UnityEditor.Editor {
 
         void Copy(bool cut) {
             //walk the bounds
-            float dx = cube.size.x / 2;
-            float dy = cube.size.y / 2;
-            float dz = cube.size.z / 2;
+            float dx = cube.size.x / 2f;
+            float dy = cube.size.y / 2f;
+            float dz = cube.size.z / 2f;
             float px = cube.transform.localPosition.x;
             float py = cube.transform.localPosition.y;
             float pz = cube.transform.localPosition.z;
 
             haveCopiedData = true;
-            copiedSize = new Vector3Int((int)cube.size.x, (int)cube.size.y, (int)cube.size.z);
+            copiedSize = cube.size;
 
-            copiedData = new UInt16[(int)cube.size.x , (int)cube.size.y , (int)cube.size.z];
+            copiedData = new UInt16[cube.size.x , cube.size.y , cube.size.z];
 
             if (cube.voxelWorld) {
 
@@ -493,8 +540,8 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                 }
 
                 //resize the box to whatever we pasted
-                cube.size = new Vector3(copiedSize.x, copiedSize.y, copiedSize.z);
-                SnapToGrid();
+                cube.size = copiedSize;
+                cube.SnapToGrid();
                 cube.BuildCube();
                 ResetHandles();
             }
@@ -552,9 +599,9 @@ public class SelectionZoneEditor : UnityEditor.Editor {
                     copiedSize = newCopiedSize;
 
                     // Resize the cube and rebuild it
-                    cube.size = new Vector3(newCopiedSize.x, newCopiedSize.y, newCopiedSize.z);
+                    cube.size = newCopiedSize;
 
-                    SnapToGrid();
+                    cube.SnapToGrid();
                     cube.BuildCube();
                     ResetHandles();
 
@@ -569,50 +616,27 @@ public class SelectionZoneEditor : UnityEditor.Editor {
         // Add a handler for the gizmo refresh event
         SceneView.duringSceneGui += GizmoRefreshEvent;
 
-        SnapToGrid();
+        SelectionZone cube = (SelectionZone)target;
+        if(cube){
+            cube.SnapToGrid();
+        }
     }
 
     private void ResetHandles() {
-        SelectionZone cube = (SelectionZone)target;
-        trueHandleOffset[0] = (cube.size.x / 2) + 0.5f;
-        trueHandleOffset[1] = (cube.size.x / 2) + 0.5f;
-        trueHandleOffset[2] = (cube.size.y / 2) + 0.5f;
-        trueHandleOffset[3] = (cube.size.y / 2) + 0.5f;
-        trueHandleOffset[4] = (cube.size.z / 2) + 0.5f;
-        trueHandleOffset[5] = (cube.size.z / 2) + 0.5f;
-        for (int j = 0; j < 6; j++) {
-            handleOffset[j] = trueHandleOffset[j];
-        }
+        // SelectionZone cube = (SelectionZone)target;
+        // trueHandleOffset[0] = (cube.size.x / 2f) + 0.5f;
+        // trueHandleOffset[1] = (cube.size.x / 2f) + 0.5f;
+        // trueHandleOffset[2] = (cube.size.y / 2f) + 0.5f;
+        // trueHandleOffset[3] = (cube.size.y / 2f) + 0.5f;
+        // trueHandleOffset[4] = (cube.size.z / 2f) + 0.5f;
+        // trueHandleOffset[5] = (cube.size.z / 2f) + 0.5f;
+        // for (int j = 0; j < 6; j++) {
+        //     handleOffset[j] = trueHandleOffset[j];
+        // }
     }
     private void OnDestroy() {
 
         SceneView.duringSceneGui -= GizmoRefreshEvent;
-    }
-
-    public void SnapToGrid() {
-        SelectionZone cube = (SelectionZone)target;
-        Transform cubeTransform = cube.transform;
-
-        // Snap the position to the nearest 0.5 unit grid
-        float x = Mathf.Floor(cubeTransform.localPosition.x);
-        float y = Mathf.Floor(cubeTransform.localPosition.y);
-        float z = Mathf.Floor(cubeTransform.localPosition.z);
-
-        // Adjust snapping if the size is even
-        if (Mathf.Round(cube.size.x) % 2 == 1) {
-            x += 0.5f;
-        }
-        if (Mathf.Round(cube.size.y) % 2 == 1) {
-            y += 0.5f;
-        }
-        if (Mathf.Round(cube.size.z) % 2 == 1) {
-            z += 0.5f;
-        }
-
-        // Set the snapped position
-        cubeTransform.localPosition = new Vector3(x, y, z);
-        cubeTransform.localRotation = Quaternion.identity;
-        cubeTransform.localScale = Vector3.one;
     }
 
     void GizmoRefreshEvent(SceneView obj) {
@@ -623,7 +647,7 @@ public class SelectionZoneEditor : UnityEditor.Editor {
 
         if (cube.transform.hasChanged) {
             //Debug.Log("Has changed");
-            SnapToGrid();
+            cube.SnapToGrid();
             cube.transform.hasChanged = false;
             EditorUtility.SetDirty(target);
         }
@@ -672,43 +696,45 @@ public class SelectionZoneEditor : UnityEditor.Editor {
             Vector3 localHandlePos = cubeTransform.InverseTransformPoint(newWorldPos);
 
             bool moved = false;
+            //Have we drage to a new position
             if ((newWorldPos - worldHandleStartPos).magnitude > 0)  {
                 moved = true;
             }
 
-            if (mouseDown == false && Mathf.Abs(trueHandleOffset[i] - handleOffset[i]) > Mathf.Epsilon) {
+            var handleDiff = handleOffset[i] - trueHandleOffset[i];
+            if (mouseDown == false && Mathf.Abs(handleDiff) > Mathf.Epsilon) {
                 handleOffset[i] = trueHandleOffset[i]; //Reset it
             }
             
             if (moved == true) {
-                
-                float distance =  localHandlePos.magnitude - trueHandleOffset[i];
-                float steps = Mathf.Floor(distance);
+                float scaleMod = handleDiff * (axis.x * cubeTransform.localScale.x + axis.y * cubeTransform.localScale.y + axis.z * cubeTransform.localScale.z);
+                float steps = handleDiff < 0 ? Mathf.CeilToInt(scaleMod) : Mathf.FloorToInt(scaleMod);// );
 
-                handleOffset[i] = localHandlePos.magnitude;
+
+                 handleOffset[i] = localHandlePos.magnitude;
                 
                 if (steps != 0) {
-              
-                    cube.size += steps * axis;
-                    cube.transform.localPosition += (steps * axis / 2) * isNegativeHandle;
-                    SnapToGrid();
-                    
-                    //Recalc handle pos
-                    trueHandleOffset[0] = (cube.size.x / 2) + 0.5f; 
-                    trueHandleOffset[1] = (cube.size.x / 2) + 0.5f; 
-                    trueHandleOffset[2] = (cube.size.y / 2) + 0.5f; 
-                    trueHandleOffset[3] = (cube.size.y / 2) + 0.5f; 
-                    trueHandleOffset[4] = (cube.size.z / 2) + 0.5f; 
-                    trueHandleOffset[5] = (cube.size.z / 2) + 0.5f;
-                    for (int j = 0; j < 6; j++) {
-                        //Reset all handles except the one being dragged
-                        if (j==i) {
-                            continue;
-                        }
-                        handleOffset[j] = trueHandleOffset[j];
-                    }
+                    //Debug.Log("handleDiff: " + handleDiff + " steps: " + steps + " offset: " + Vector3Int.RoundToInt(steps * axis));
+                    cube.size += Vector3Int.RoundToInt(steps * axis);
+                    cube.transform.localPosition += steps * axis / 2f * isNegativeHandle;
 
-                    handleOffset[i] -= (steps * 0.5f);
+                    handleOffset[i] = trueHandleOffset[i];
+                    cube.SnapToGrid();
+                    
+                //     //Recalc handle pos
+                //     // trueHandleOffset[0] = (cube.size.x / 2f) + 0.5f; 
+                //     // trueHandleOffset[1] = (cube.size.x / 2f) + 0.5f; 
+                //     // trueHandleOffset[2] = (cube.size.y / 2f) + 0.5f; 
+                //     // trueHandleOffset[3] = (cube.size.y / 2f) + 0.5f; 
+                //     // trueHandleOffset[4] = (cube.size.z / 2f) + 0.5f; 
+                //     // trueHandleOffset[5] = (cube.size.z / 2f) + 0.5f;
+                //     for (int j = 0; j < 6; j++) {
+                //         //Reset all handles except the one being dragged
+                //         if (j==i) {
+                //             continue;
+                //         }
+                //         //handleOffset[j] = trueHandleOffset[j];
+                //     }
 
                 }
                 

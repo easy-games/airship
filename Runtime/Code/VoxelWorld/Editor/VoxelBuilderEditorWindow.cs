@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEditor.TerrainTools;
 using UnityEngine;
 
 namespace Code.Airship.Resources.VoxelRenderer.Editor {
@@ -134,6 +133,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                     selection.hideFlags = HideFlags.HideAndDontSave;
                     selection.transform.parent = world.transform;
                     selection.transform.localPosition = Vector3.zero;
+                    selection.transform.localScale = Vector3.one;
                     selection.voxelWorld = world;
                 }
                 //Select this
