@@ -20,6 +20,9 @@ public class AuthManager {
 #if AIRSHIP_STAGING
        stagingExtension = "_staging"; 
 #endif
+#if DEVELOPMENT_BUILD
+    return Path.Combine(Application.persistentDataPath, $"account_devbuild{stagingExtension}.json");
+#endif
 #if UNITY_EDITOR
       return Path.Combine(Application.persistentDataPath, $"account_editor{stagingExtension}.json");
 #endif
