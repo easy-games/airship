@@ -38,5 +38,6 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 		}
 		
 		LuauPlugin.LuauGetMemoryCategoryDump(context, dump);
+		ServerMemDump[context] = dump; // Force update
 	}
 }
