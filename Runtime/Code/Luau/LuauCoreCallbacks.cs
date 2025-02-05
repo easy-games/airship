@@ -1573,8 +1573,9 @@ public partial class LuauCore : MonoBehaviour {
         if (awaitingTask.Task.IsFaulted) {
             var result = -1;
             try {
-                LuauError(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
-                result = LuauPlugin.LuauResumeThread(thread, -1);
+                LuauPluginRaw.PushString(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
+                ThreadDataManager.Error(thread);
+                result = LuauPlugin.LuauResumeThreadError(thread);
             } catch (LuauException e) {
                 Debug.LogException(e);
             }
