@@ -41,6 +41,13 @@ namespace Airship.Editor {
 #endif
             // If a server or clone - ignore
             if (!IsValidEditor) return;
+
+            if (TypescriptCompilationService.NodePath == null) {
+                Debug.LogWarning("[TypescriptServices] Node.js could not be found on your path, please read https://docs.airship.gg/getting-started/installing-airship for how to set up Airship correctly.");
+                Debug.LogWarning("\tIf you already installed Node.js, restart Unity and Unity Hub and try again.");
+                return;
+            }
+            
             EditorApplication.delayCall += OnLoadDeferred;
 
             EditorApplication.playModeStateChanged += PlayModeStateChanged;

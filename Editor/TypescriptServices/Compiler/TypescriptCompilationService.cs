@@ -32,6 +32,23 @@ using Object = UnityEngine.Object;
         public static class TypescriptCompilationService {
             private const string TsCompilerService = "Typescript Compiler Service";
 
+            private static string _nodePath;
+            public static string NodePath {
+                get {
+                    if (_nodePath == null) {
+                        var executable = ShellProcess.FindNodeBinPath().Trim();
+                        if (executable != "") {
+                            _nodePath = Path.GetDirectoryName(executable);
+                            return _nodePath;
+                        }
+
+                        return null;
+                    }
+
+                    return _nodePath;
+                }   
+            }
+            
             /// <summary>
             /// True if the compiler is running in watch mode
             /// </summary>

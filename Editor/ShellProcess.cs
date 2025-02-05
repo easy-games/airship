@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Debug = UnityEngine.Debug;
 
 namespace Editor {
@@ -41,6 +42,42 @@ namespace Editor {
                 Arguments = arguments,
             };
             return procStartInfo;
+        }
+
+        public static string FindExecutableOnPath(string executable) {
+#if UNITY_EDITOR_WIN
+            var proc = new Process();
+            var startInfo = GetShellStartInfoForCommand($"where {executable}", Environment.CurrentDirectory);
+            startInfo.RedirectStandardOutput = true;
+            proc.StartInfo = startInfo;
+            proc.Start();
+            var res = proc.StandardOutput.ReadToEnd().Split("\r\n")[0];
+            return res;
+#else
+            var proc = new Process();
+            var startInfo = GetShellStartInfoForCommand($"command -v {executable}", Environment.CurrentDirectory);
+            startInfo.RedirectStandardOutput = true;
+            proc.StartInfo = startInfo;
+            proc.Start();
+            var res = proc.StandardOutput.ReadToEnd().Split("\n")[0];
+            return res;
+#endif
+        }
+
+        public static string FindNodeBinPath() {
+#if UNITY_EDITOR_WIN
+            // Windows is ensured to be in PATH
+            return FindExecutableOnPath("node");
+#else
+            // We can check via PATH first -
+            var pathExecutable = FindExecutableOnPath("node");
+            if (pathExecutable != null) {
+                return pathExecutable;
+            }
+                
+            Debug.LogWarning("Node is not on your PATH");
+            return null;
+#endif
         }
         
         /// <summary>
