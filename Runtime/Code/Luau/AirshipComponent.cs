@@ -366,7 +366,9 @@ public class AirshipComponent : MonoBehaviour {
     private void InitializeAirshipReference(IntPtr thread) {
         // Warmup the component first, creating a reference table
         var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(transform);
-        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, transformInstanceId);
+        AirshipBehaviourRootV2.LinkComponentToGameObject(this, out var unityInstanceId);
+        
+        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, unityInstanceId, _scriptBindingId, transformInstanceId);
     }
 
     private void InitializeAndAwakeAirshipComponent(IntPtr thread, bool usingExistingThread) {

@@ -76,9 +76,14 @@ namespace Assets.Luau.Network {
 			// if (clientId < 0) return;
 			var msg = new NetBroadcast { FromProtectedContext = context == LuauContext.Protected, Blob = blob };
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
-			var connection = NetworkServer.connections[clientId];
-			if (!connection.isReady) return;
-			connection.Send(msg, channel);
+			if (NetworkServer.connections.TryGetValue(clientId, out var connection)) {
+				if (!connection.isReady) return;
+				connection.Send(msg, channel);
+			} else {
+				throw new Exception(
+					"Tried to send send network packet to a client that isn't connected to the server. ClientId: " +
+					clientId);
+			}
 		}
 
 		[AttachContext]
@@ -87,8 +92,13 @@ namespace Assets.Luau.Network {
 			HashSet<NetworkConnection> connections = new();
 			foreach (var clientId in clientIds) {
 				// if (clientId < 0) continue;
-				var connection = NetworkServer.connections[clientId];
-				connections.Add(connection);
+				if (NetworkServer.connections.TryGetValue(clientId, out var connection)) {
+					connections.Add(connection);
+				} else {
+					throw new Exception(
+						"Tried to send send network packet to a client that isn't connected to the server. ClientId: " +
+						clientId);
+				}
 			}
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
 			foreach (var connection in connections) {

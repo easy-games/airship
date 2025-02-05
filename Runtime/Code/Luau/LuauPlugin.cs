@@ -73,11 +73,16 @@ public static class LuauPlugin {
 	}
 
 	public class LuauMemoryCategoryDumpItem {
-		public string Name { internal set; get; }
-		public ulong Bytes { internal set; get; }
-		
+		public string Name;
+		public ulong Bytes;
+
+		private string _shortName = null;
 		public string ShortName {
 			get {
+				if (_shortName != null) {
+					return _shortName;
+				}
+				
 				var full = "";
 				var names = Name.Split(',');
 				foreach (var name in names) {
@@ -101,7 +106,10 @@ public static class LuauPlugin {
 
 					full += transformedName;
 				}
-				return full;
+
+				_shortName = full;
+				
+				return _shortName;
 			}
 		}
 	}

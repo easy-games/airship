@@ -215,7 +215,7 @@ public class LoginApp : MonoBehaviour {
                     return;
                 }
 
-                if (selfRes.data.Length == 0) {
+                if (selfRes.data == "{}") {
                     this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                     return;
                 }
@@ -296,7 +296,7 @@ public class LoginApp : MonoBehaviour {
                         return;
                     }
 
-                    if (selfRes.data.Length == 0) {
+                    if (selfRes.data == "{}") {
                         this.loading = false;
                         this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                         this.steamLoginButton.SetLoading(false);
