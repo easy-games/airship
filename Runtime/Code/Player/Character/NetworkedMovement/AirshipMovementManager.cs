@@ -4,6 +4,7 @@ using Code.Player.Character.Net;
 using Mirror;
 using RSG.Promises;
 using UnityEngine;
+using Object = System.Object;
 
 namespace Code.Player.Character.NetworkedMovement
 {
@@ -14,10 +15,23 @@ namespace Code.Player.Character.NetworkedMovement
     {
         // Inspector settings
         public MovementSystem movementSystem;
+
+        // Size of the command buffer on the server
         public int maxServerCommandBuffer = 4;
+
+        // Amount of times in a row the server will fill in a missing command
+        public int maxServerCommandPrediction = 2;
+
+        // The size of the interpolation buffer for observers. Higher means smoother in bad network conditions, but more delayed visuals
         public int interpolationBufferSize = 3;
+
+        // The number of times per second the client sends it's input commands to the server
         public int clientInputRate = 30;
+
+        // The number of times per second the server sends snapshots of client positions to observers
         public int serverSnapshotRate = 20;
+
+        // Determines if the server has authority over the character
         public bool serverAuth = false;
 
         // Command number tracking for server and client
@@ -34,13 +48,13 @@ namespace Code.Player.Character.NetworkedMovement
 
         // Server processing for commands
         private Input lastProcessedCommand;
-        private LinkedList<Input> serverCommandBuffer = new LinkedList<Input>();
+        private int serverPredictedCommandCount = 0;
+        private SortedList<int, Input> serverCommandBuffer = new SortedList<int, Input>();
 
         // Client processing for input prediction
         private Queue<Input> clientInputHistory = new Queue<Input>();
         private Queue<State> clientPredictedHistory = new Queue<State>();
         private int clientLastConfirmedCommand = 0;
-        private int clientLastStoredCommandNumber = 0;
 
         // Networking actions to be used by subclass;
         protected Action<State> OnClientReceiveSnapshot;
@@ -66,70 +80,6 @@ namespace Code.Player.Character.NetworkedMovement
             if (isClient && !isOwned)
             {
                 this.Interpolate();
-            }
-        }
-
-        // Late update runs after the physics world has been updated. We use this
-        // to create our snapshots.
-        private void LateUpdate()
-        {
-            // We are a client and we are not authoritative. Enqueue history snapshots
-            // for input prediction processing.
-            if (isClient && isOwned && serverAuth)
-            {
-                // Ensure that we only store the command once since it represents a single
-                // tick and we may run LateUpdate more than once per fixed update.
-                if (this.clientCommandNumber != this.clientLastStoredCommandNumber)
-                {
-                    var state = this.movementSystem.GetCurrentState(clientCommandNumber, NetworkTime.time);
-                    Debug.Log("Processing command " + state.lastProcessedCommand + " resulted in " + state);
-                    this.clientPredictedHistory.Enqueue(state);
-                    this.clientLastStoredCommandNumber = state.lastProcessedCommand;
-                }
-            }
-
-            // We are a client and we are authoritative.
-            if (isClient && isOwned && !serverAuth)
-            {
-                // Report snapshot from movement system to server.
-                if (this.lastClientSend < NetworkTime.time - (1f / this.clientInputRate))
-                {
-                    var state = this.movementSystem.GetCurrentState(clientCommandNumber, NetworkTime.time);
-                    this.lastClientSend = NetworkTime.time;
-                    this.SendClientSnapshotToServer(state);
-                }
-            }
-
-
-            // We are the server and we are authoritative.
-            if (isServer && serverAuth)
-            {
-                // TODO: in the future, lag compensation may need to be recorded here.
-                // Depends on if we are able to use the default rigidbody lag compensation from mirror
-
-                if (this.lastServerSend < NetworkTime.time - (1f / this.serverSnapshotRate))
-                {
-                    // get snapshot to send to clients
-                    var state = this.movementSystem.GetCurrentState(this.lastProcessedCommand.commandNumber,
-                        NetworkTime.time);
-                    Debug.Log("Processing commands up to " + state.lastProcessedCommand + " resulted in " + state);
-
-                    this.lastServerSend = NetworkTime.time;
-                    this.SendServerSnapshotToClients(state);
-                }
-            }
-
-            // We are the server, but the client is authoritative. Simply forward to observers.
-            if (isServer && !serverAuth)
-            {
-                if (this.lastServerSend < NetworkTime.time - (1f / this.serverSnapshotRate))
-                {
-                    // read current state
-                    var state = this.movementSystem.GetCurrentState(serverLastProcessedCommandNumber,
-                        NetworkTime.time);
-                    this.lastServerSend = NetworkTime.time;
-                    this.SendServerSnapshotToClients(state);
-                }
             }
         }
 
@@ -185,8 +135,16 @@ namespace Code.Player.Character.NetworkedMovement
             // We are the client and we are authoritative. Report our state to the server.
             if (isClient && isOwned && !serverAuth)
             {
-                clientCommandNumber++;
+                // Report snapshot from movement system to server.
+                if (this.lastClientSend < NetworkTime.time - (1f / this.clientInputRate))
+                {
+                    var state = this.movementSystem.GetCurrentState(clientCommandNumber, NetworkTime.time);
+                    this.lastClientSend = NetworkTime.time;
+                    this.SendClientSnapshotToServer(state);
+                }
 
+                // Update our command number and process the next tick
+                clientCommandNumber++;
                 // Read input from movement system
                 var command = this.movementSystem.GetCommand(clientCommandNumber, NetworkTime.time);
                 // Tick movement system
@@ -197,38 +155,101 @@ namespace Code.Player.Character.NetworkedMovement
             // Process those commands and distribute and authoritative answer.
             if (isServer && serverAuth)
             {
+                var lastCommandNumber = 0;
+                if (this.lastProcessedCommand != null)
+                {
+                    lastCommandNumber = this.lastProcessedCommand.commandNumber;
+                }
+
+                // get snapshot to send to clients
+                var state = this.movementSystem.GetCurrentState(lastCommandNumber,
+                    NetworkTime.time);
+                Debug.Log("Processing commands up to " + state.lastProcessedCommand + " resulted in " + state);
+
+                // TODO: in the future, lag compensation may need to be recorded here.
+                // Depends on if we are able to use the default rigidbody lag compensation from mirror
+
+                // Send snapshot to clients if we need to.
+                if (this.lastServerSend < NetworkTime.time - (1f / this.serverSnapshotRate))
+                {
+                    this.lastServerSend = NetworkTime.time;
+                    this.SendServerSnapshotToClients(state);
+                }
+
                 // Attempt to get a new command out of the buffer.
-                var commandEntry = this.serverCommandBuffer.First;
+                var commandEntry = this.serverCommandBuffer.Count > 0 ? this.serverCommandBuffer.Values[0] : null;
 
                 // Todo: we could use the last command for a few frames if we run out of buffer.
                 // We would only want to do this for a short time though since it's not a real client
                 // command and will make people run forward forever etc. if they crash
 
+                // todo: We could also do something like sv_maxunlag where we process more than
+                // one command in a tick to catch up and make room in the buffer.
+
+                // If we have a new command to process
                 if (commandEntry != null)
                 {
-                    var command = this.serverCommandBuffer.First.Value;
-                    this.serverCommandBuffer.RemoveFirst();
-                    this.lastProcessedCommand = command;
+                    // Get the command to process
+                    var command = this.serverCommandBuffer.Values[0];
+                    // TODO: we have some kind of issue here with our command buffer content...
+                    // Check if that command is in sequence. If we have a gap of commands, we will fill it with the last
+                    // processed command up to the maxServerCommandPrediction size.
+                    if (this.lastProcessedCommand != null && command.commandNumber != lastCommandNumber + 1 &&
+                        this.serverPredictedCommandCount < this.maxServerCommandPrediction)
+                    {
+                        Debug.Log("Missing command " + (lastCommandNumber + this.serverPredictedCommandCount + 1) +
+                                  " in the command buffer. Using last command. Predicted " +
+                                  (this.serverPredictedCommandCount + 1) + " command(s) so far.");
+                        command = this.lastProcessedCommand;
+                        this.serverPredictedCommandCount++;
+                    }
+                    // We have a valid command that is in sequence, or we reached our max fill. Remove the next
+                    // valid command from the buffer and process it.
+                    else
+                    {
+                        this.serverPredictedCommandCount = 0;
+                        this.serverCommandBuffer.RemoveAt(0);
+                        this.lastProcessedCommand = command;
+                    }
 
                     // tick commands and todo: store history if lag compensating
+                    // todo: we may need to make sure that tick is always called and pass an empty command
                     this.movementSystem.Tick(command, false);
+                }
+                else
+                {
+                    Debug.Log("No commands left. Last command processed: " + this.lastProcessedCommand);
+                }
+            }
+
+            // We are the server, but the client is authoritative. Simply forward to observers.
+            if (isServer && !serverAuth)
+            {
+                if (this.lastServerSend < NetworkTime.time - (1f / this.serverSnapshotRate))
+                {
+                    // read current state
+                    var state = this.movementSystem.GetCurrentState(serverLastProcessedCommandNumber,
+                        NetworkTime.time);
+                    this.lastServerSend = NetworkTime.time;
+                    this.SendServerSnapshotToClients(state);
                 }
             }
 
             // We are the client and the server is authoritative. Send our input commands and handle prediction
             if (isClient && isOwned && serverAuth)
             {
+                // Store the current physics state for prediction
+                var state = this.movementSystem.GetCurrentState(clientCommandNumber, NetworkTime.time);
+                Debug.Log("Processing command " + state.lastProcessedCommand + " resulted in " + state);
+                this.clientPredictedHistory.Enqueue(state);
+
+                // Update our command number and process the next tick.
                 clientCommandNumber++;
-
-                // read input from movement system
                 var input = this.movementSystem.GetCommand(this.clientCommandNumber, NetworkTime.time);
-
-                // enqueue command to history if predicting
                 this.clientInputHistory.Enqueue(input);
-
-                // tick movement to get new state
                 this.movementSystem.Tick(input, false);
 
+                // TODO: we may need to reoder this?
                 if (this.lastClientSend < NetworkTime.time /*- (1f / this.clientInputRate)*/)
                 {
                     this.lastClientSend = NetworkTime.time;
@@ -331,24 +352,21 @@ namespace Code.Player.Character.NetworkedMovement
             // This should only occur if the server is authoritative.
             if (!serverAuth) return;
 
-            if (this.serverCommandBuffer.Last != null && this.serverCommandBuffer.Last.Value != null &&
-                this.serverCommandBuffer.Last.Value.commandNumber > command.commandNumber)
+            if (this.serverCommandBuffer.TryGetValue(command.commandNumber, out Input existingInput))
             {
-                // Command was received out of order. Ignore it for now.
-                Debug.Log("Received out of order command");
+                Debug.LogWarning("Received duplicate command number from client. This is unusual.");
                 return;
             }
 
             // Reject commands if our buffer is full.
-            // todo: We could also do something like sv_maxunlag where we process more than
-            // one command in a tick to catch up and make room in the buffer.
             if (this.serverCommandBuffer.Count > this.maxServerCommandBuffer)
             {
+                Debug.Log("Dropping command " + command.commandNumber + " due to exceeding command buffer size.");
                 return;
             }
 
             // Queue the command for processing
-            this.serverCommandBuffer.AddLast(command);
+            this.serverCommandBuffer.Add(command.commandNumber, command);
         }
 
         private void ServerReceiveSnapshot(State snapshot)

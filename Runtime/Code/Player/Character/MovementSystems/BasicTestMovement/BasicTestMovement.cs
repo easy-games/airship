@@ -36,8 +36,8 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         public override void Tick(BasicMovementInput command, bool replay)
         {
             if (replay) Debug.Log("Replaying" + command.commandNumber);
-            rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
-            //rb.position = rb.position + command.moveDirection * Time.fixedDeltaTime * 10f;
+            //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
+            rb.position = rb.position + command.moveDirection * Time.fixedDeltaTime * 10f;
         }
 
         public override void Interpolate(float delta, BasicMovementState stateOld, BasicMovementState stateNew)
