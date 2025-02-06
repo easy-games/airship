@@ -44,7 +44,7 @@ namespace Editor {
         }
 
         public static void BuildLinuxServerStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, "AIRSHIP_STAGING");
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
             BuildLinuxServer();
         }
 
@@ -95,7 +95,7 @@ namespace Editor {
         [MenuItem("Airship/Create Binary/Client/Mac (Staging)", priority = 80)]
 #endif
         public static void BuildMacClientStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER"});
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
             BuildMacClient();
         }
 
@@ -231,7 +231,7 @@ namespace Editor {
 #endif
 
         public static void BuildWindowsClientStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_STAGING");
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
             BuildWindowsClient();
         }
 

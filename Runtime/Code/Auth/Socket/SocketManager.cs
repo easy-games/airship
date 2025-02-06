@@ -53,7 +53,7 @@ public class SocketManager : Singleton<SocketManager> {
         if (Instance.socket == null) {
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;
-            // Debug.Log("Connecting to socket " + AirshipPlatformUrl.gameCoordinatorSocket);
+            // Debug.Log("Connecting to socket " + AirshipPlatformUrl.gameCoordinatorSocket + " with token "+ InternalHttpManager.authToken);
             Instance.socket = new SocketIOClient.SocketIO(AirshipPlatformUrl.gameCoordinatorSocket, new SocketIOOptions() {
                 Auth = new Dictionary<string, string> {
                     { "token", InternalHttpManager.authToken }
