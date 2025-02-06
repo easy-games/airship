@@ -80,7 +80,7 @@ public class OcclusionCam : MonoBehaviour
                 return distance;
             }
         }
-        print("cameraHitDistance: " + cameraHitInfo.distance + " attachedHitDistance: " + attachedHitInfo.distance);
+        //print("cameraHitDistance: " + cameraHitInfo.distance + " attachedHitDistance: " + attachedHitInfo.distance);
 
         //Move in from of obstruction
         distance = Mathf.Max(this.minAllowedDistance, attachedHitInfo.distance + .01f);
