@@ -147,7 +147,7 @@ public class MemoryDevConsole : MonoBehaviour {
 		text.color = sorted ? sortedButtonTextColorActive : sortedButtonTextColorInactive;
 
 		text.text = _sort switch {
-			MemorySort.Bytes => "Sort [Bytes]",
+			MemorySort.Bytes => "Sort [Size]",
 			MemorySort.Alphabetical => "Sort [A-Z]",
 			_ => "Sort"
 		};
