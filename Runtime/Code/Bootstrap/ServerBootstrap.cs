@@ -76,19 +76,20 @@ public class ServerBootstrap : MonoBehaviour
     private void Awake() {
         isServerReady = false;
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
 	    var gameConfig = GameConfig.Load();
 	    gameId = gameConfig.gameId;
 	    serverContext.gameId = gameConfig.gameId;
 #endif
-
-        Application.targetFrameRate = 90;
     }
 
 	private void Start() {
 		if (!RunCore.IsServer()) {
 			return;
 		}
+
+		Application.targetFrameRate = 90;
+
 #if AIRSHIP_PLAYER
             #if AIRSHIP_STAGING
             Debug.Log("Server starting with STAGING configuration.");

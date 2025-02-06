@@ -510,7 +510,7 @@ public class AirshipComponent : MonoBehaviour {
         if (scriptFile != null) {
             componentIdToScriptName[_scriptBindingId] = string.Intern(scriptFile.name);
         }
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
         if (!validatedSceneInGameConfig) {
             var scene = this.gameObject.scene;
             if (!LuauCore.IsProtectedScene(scene)) {
