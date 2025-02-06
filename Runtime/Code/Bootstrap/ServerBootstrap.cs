@@ -88,7 +88,10 @@ public class ServerBootstrap : MonoBehaviour
 			return;
 		}
 
-		Application.targetFrameRate = 90;
+		if (!RunCore.IsClient()) {
+			Application.targetFrameRate = 90;
+		}
+
 
 #if AIRSHIP_PLAYER
             #if AIRSHIP_STAGING
