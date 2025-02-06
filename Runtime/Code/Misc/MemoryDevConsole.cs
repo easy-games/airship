@@ -13,6 +13,7 @@ public class MemoryDevConsole : MonoBehaviour {
 	public GameObject logInstance;
 	public ScrollRect scrollRect;
 	public RectTransform contentFrame;
+	public TMP_InputField searchField;
 	public TMP_Text totalBytesLabel;
 
 	[SerializeField] private GameObject sortedButton;
@@ -31,6 +32,8 @@ public class MemoryDevConsole : MonoBehaviour {
 
 	private AirshipLuauDebugger _luauDebugger;
 	private bool _hasLuauDebugger = false;
+
+	private string _searchTerm = "";
 
 	private readonly List<TMP_InputField> _logItems = new();
 	private readonly List<TMP_InputField> _logItemsPool = new();
@@ -129,6 +132,11 @@ public class MemoryDevConsole : MonoBehaviour {
 		}
 	}
 
+	public void OnSearchFieldChanged(string text) {
+		_searchTerm = text.Trim();
+		_lastRefreshTime = 0;
+	}
+
 	private void OnServerMemDumpChanged(SyncDictionary<LuauContext, List<LuauPlugin.LuauMemoryCategoryDumpItem>>.Operation op, LuauContext ctx, List<LuauPlugin.LuauMemoryCategoryDumpItem> dump) {
 		if (_environment == MemoryEnvironment.Client || ctx != _context) {
 			return;
@@ -205,11 +213,14 @@ public class MemoryDevConsole : MonoBehaviour {
 
 		var totalBytes = 0UL;
 
-		var i = 0;
+		var itemsShown = 0;
+		var itemsCreated = false;
 		foreach (var item in dump) {
+			if (!string.IsNullOrEmpty(_searchTerm) && !item.ShortName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) continue;
+			
 			TMP_InputField instance;
-			if (i < _logItems.Count) {
-				instance = _logItems[i];
+			if (itemsShown < _logItems.Count) {
+				instance = _logItems[itemsShown];
 			} else if (_logItemsPool.Count > 0) {
 				instance = _logItemsPool[^1];
 				_logItemsPool.RemoveAt(_logItemsPool.Count - 1);
@@ -220,14 +231,15 @@ public class MemoryDevConsole : MonoBehaviour {
 				go.GetComponent<LogFieldInstance>().redirectTarget = scrollRect;
 				instance = go.GetComponent<TMP_InputField>();
 				_logItems.Add(instance);
+				itemsCreated = true;
 			}
 			instance.text = $"{item.ShortName}: <b><color=\"green\">{FormatBytes(item.Bytes)}</color></b>";
 			totalBytes += item.Bytes;
-			i++;
+			itemsShown++;
 		}
 
 		// Trim off unused labels:
-		while (_logItems.Count > i) {
+		while (_logItems.Count > itemsShown) {
 			var item = _logItems[^1];
 			item.transform.SetParent(null);
 			_logItemsPool.Add(item);
@@ -235,5 +247,9 @@ public class MemoryDevConsole : MonoBehaviour {
 		}
 		
 		totalBytesLabel.text = $"Total: <b><color=\"green\">{FormatBytes(totalBytes)}</color></b>";
+
+		if (itemsCreated) {
+			Bridge.UpdateLayout(contentFrame, true);
+		}
 	}
 }
