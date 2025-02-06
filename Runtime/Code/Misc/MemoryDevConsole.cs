@@ -134,7 +134,7 @@ public class MemoryDevConsole : MonoBehaviour {
 
 	public void OnSearchFieldChanged(string text) {
 		_searchTerm = text.Trim();
-		_lastRefreshTime = 0;
+		RefreshUI();
 	}
 
 	private void OnServerMemDumpChanged(SyncDictionary<LuauContext, List<LuauPlugin.LuauMemoryCategoryDumpItem>>.Operation op, LuauContext ctx, List<LuauPlugin.LuauMemoryCategoryDumpItem> dump) {
@@ -184,12 +184,11 @@ public class MemoryDevConsole : MonoBehaviour {
 		Refresh();
 	}
 
-	private void Refresh() {
+	private void RefreshUI() {
 		List<LuauPlugin.LuauMemoryCategoryDumpItem> dump = null;
 		switch (_environment) {
 			case MemoryEnvironment.Client:
 				dump = _dumps[_context];
-				LuauPlugin.LuauGetMemoryCategoryDump(_context, dump);
 				break;
 			case MemoryEnvironment.Server:
 				if (_hasLuauDebugger) {
@@ -200,7 +199,7 @@ public class MemoryDevConsole : MonoBehaviour {
 			default:
 				throw new Exception("unknown environment");
 		}
-
+		
 		if (_sort == MemorySort.Bytes) {
 			var sortedDump = new List<LuauPlugin.LuauMemoryCategoryDumpItem>(dump);
 			sortedDump.Sort(((itemA, itemB) => itemA.Bytes == itemB.Bytes ? 0 : itemA.Bytes < itemB.Bytes ? 1 : -1));
@@ -216,6 +215,8 @@ public class MemoryDevConsole : MonoBehaviour {
 		var itemsShown = 0;
 		var itemsCreated = false;
 		foreach (var item in dump) {
+			totalBytes += item.Bytes;
+			
 			if (!string.IsNullOrEmpty(_searchTerm) && !item.ShortName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) continue;
 			
 			TMP_InputField instance;
@@ -234,7 +235,6 @@ public class MemoryDevConsole : MonoBehaviour {
 				itemsCreated = true;
 			}
 			instance.text = $"{item.ShortName}: <b><color=\"green\">{FormatBytes(item.Bytes)}</color></b>";
-			totalBytes += item.Bytes;
 			itemsShown++;
 		}
 
@@ -251,5 +251,19 @@ public class MemoryDevConsole : MonoBehaviour {
 		if (itemsCreated) {
 			Bridge.UpdateLayout(contentFrame, true);
 		}
+	}
+
+	private void Refresh() {
+		switch (_environment) {
+			case MemoryEnvironment.Client:
+				LuauPlugin.LuauGetMemoryCategoryDump(_context, _dumps[_context]);
+				break;
+			case MemoryEnvironment.Server:
+				break;
+			default:
+				throw new Exception("unknown environment");
+		}
+		
+		RefreshUI();
 	}
 }
