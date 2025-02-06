@@ -108,7 +108,7 @@ public class AuthManager {
             clientSecret = clientSecret,
 
             redirectUri = redirectUri,
-            scope = "openid email profile"
+            scope = "openid email profile",
         });
 
         var crossPlatformBrowser = new CrossPlatformBrowser();
