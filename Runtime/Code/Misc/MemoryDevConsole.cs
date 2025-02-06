@@ -199,7 +199,7 @@ public class MemoryDevConsole : MonoBehaviour {
 			dump = sortedDump;
 		} else if (_sort == MemorySort.Alphabetical) {
 			var sortedDump = new List<LuauPlugin.LuauMemoryCategoryDumpItem>(dump);
-			sortedDump.Sort(((itemA, itemB) => string.Compare(itemA.ShortName, itemB.ShortName, StringComparison.Ordinal)));
+			sortedDump.Sort(((itemA, itemB) => string.Compare(itemA.ShortName, itemB.ShortName, StringComparison.OrdinalIgnoreCase)));
 			dump = sortedDump;
 		}
 
