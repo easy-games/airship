@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Mirror;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MemoryDevConsole : MonoBehaviour {
@@ -91,10 +92,17 @@ public class MemoryDevConsole : MonoBehaviour {
 
 	private void OnEnable() {
 		LuauCore.onResetInstance += OnLuauContextReset;
+		SceneManager.activeSceneChanged += OnActiveSceneChanged;
 	}
 
 	private void OnDisable() {
 		LuauCore.onResetInstance -= OnLuauContextReset;
+		SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+	}
+
+	private void OnActiveSceneChanged(Scene current, Scene next) {
+		_hasLuauDebugger = false;
+		_luauDebugger = null;
 	}
 
 	private void OnLuauContextReset(LuauContext ctx) {
