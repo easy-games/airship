@@ -9,7 +9,8 @@ namespace Code.Player.Character.NetworkedMovement
     {
        /**
         * Sets the current state to base movement ticks off of. Updates the associated
-        * rigidbody to match the state provided.
+        * rigidbody to match the state provided. It is important that the implementation
+        * if this method hard set any physics fields to match those in the provided state.
         */
         public abstract void SetCurrentState(State state);
 
@@ -21,7 +22,7 @@ namespace Code.Player.Character.NetworkedMovement
         /**
          * Gets the latest command retrieved during the update loop. This command will be sent to the server and predicted.
          */
-        public abstract Input GetCommand(int commandNumber);
+        public abstract Input GetCommand(int commandNumber, double time);
 
         /**
          * Ticks the predictable movement and advances the current movement state based on the move input data provided.
