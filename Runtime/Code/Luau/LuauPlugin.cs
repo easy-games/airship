@@ -832,6 +832,16 @@ public static class LuauPlugin {
 		DebugPrintStack(thread);
 	}
 	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern ulong GetUnityObjectCount();
+	public static ulong LuauGetUnityObjectCount() {
+		return GetUnityObjectCount();
+	}
+	
 	/// <summary>
 	/// Get the various memory categories from Luau. The memCatDump list should be unique per Luau context.
 	/// </summary>

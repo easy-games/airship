@@ -16,6 +16,7 @@ public class MemoryDevConsole : MonoBehaviour {
 	public RectTransform contentFrame;
 	public TMP_InputField searchField;
 	public TMP_Text totalBytesLabel;
+	public TMP_Text unityObjectsLabel;
 
 	[SerializeField] private GameObject sortedButton;
 	
@@ -255,6 +256,14 @@ public class MemoryDevConsole : MonoBehaviour {
 		}
 		
 		totalBytesLabel.text = $"Total: <b><color=\"green\">{FormatBytes(totalBytes)}</color></b>";
+
+		var unityObjects = 0UL;
+		if (_environment == MemoryEnvironment.Client) {
+			unityObjects = LuauPlugin.LuauGetUnityObjectCount();
+		} else if (_hasLuauDebugger) {
+			unityObjects = _luauDebugger.ServerUnityObjects;
+		}
+		unityObjectsLabel.text = $"Unity Objects: <b><color=\"green\">{unityObjects}</color></b>";
 
 		if (itemsCreated) {
 			Bridge.UpdateLayout(contentFrame, true);
