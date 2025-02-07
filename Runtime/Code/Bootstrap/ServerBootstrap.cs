@@ -472,7 +472,7 @@ public class ServerBootstrap : MonoBehaviour
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
 			agones.Shutdown();
-			Application.quit();
+			Application.Quit();
 		}
 	}
 
