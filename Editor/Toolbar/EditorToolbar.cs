@@ -233,7 +233,7 @@ namespace Airship.Editor
 
             if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode
                         ? "Server Mode: Dedicated"
-                        : "Server Mode: Shared", "Shared (default): both client and server run from the same window. This means the client is acting as a server host (peer-to-peer). Both RunUtil.IsServer() and RunUtil.IsClient() will return true. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),
+                        : "Server Mode: Shared", "Dedicated (default): client and server are run from different windows (requires MPPM or ParrelSync)\n\nShared (advanced): both client and server run from the same window. This means the client is acting as a server host (peer-to-peer). Both RunUtil.IsServer() and RunUtil.IsClient() will return true."),
                     RunCore.launchInDedicatedServerMode ? ToolbarStyles.serverModeDedicated : ToolbarStyles.serverModeShared)) {
                 RunCore.launchInDedicatedServerMode = !RunCore.launchInDedicatedServerMode;
                 EditorPrefs.SetBool("AirshipDedicatedServerMode", RunCore.launchInDedicatedServerMode);

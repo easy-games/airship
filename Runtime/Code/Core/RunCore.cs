@@ -10,7 +10,7 @@ using Unity.Multiplayer.Playmode;
 [LuauAPI]
 public class RunCore {
     // Launch params
-    public static bool launchInDedicatedServerMode = false;
+    public static bool launchInDedicatedServerMode = true;
 
     private static bool isServer = false;
     private static bool isClient = false;
