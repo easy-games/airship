@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine;
@@ -51,12 +52,18 @@ public partial class LuauCore : MonoBehaviour
         if (fileNameStr.ToLower().StartsWith("assets")) {
             fileNameStr = fileNameStr.Substring("assets".Length);
         }
+        fileNameStr = "Assets/" + fileNameStr;
         
         // Add .lua to the end
         if (!fileNameStr.EndsWith(".lua")) {
             fileNameStr += ".lua";
         }
         
+        
+        //Fully qualify it
+        fileNameStr = Path.GetFullPath(fileNameStr);
+        fileNameStr = Path.GetRelativePath(Application.dataPath, fileNameStr);
+
         //Remove the ../ off the front
         while (fileNameStr.StartsWith("..\\") || fileNameStr.StartsWith("../"))
         {
