@@ -147,7 +147,14 @@ public class ServerBootstrap : MonoBehaviour
 	public void InvokeOnProcessExit() {
 		if (this.isShutdownEventTriggered) return;
 		this.isShutdownEventTriggered = true;
-		this.onProcessExit?.Invoke();
+
+		if ((this.onProcessExit?.GetInvocationList().Length ?? 0) > 0) {
+			Debug.Log("Invoking OnProcessExit handlers.");
+			this.onProcessExit?.Invoke();
+		} else {
+			Debug.LogWarning("No OnProcessExit handlers were registered. Directly exiting process.");
+			this.Shutdown();
+		}
 	}
 
 	private void OnDestroy() {
