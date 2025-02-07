@@ -28,7 +28,9 @@ namespace Editor.Packages {
             EditorApplication.update += Update;
 
             lastChecked = EditorApplication.timeSinceStartup;
+#if !AIRSHIP_PLAYER
             CheckPackageVersions(ignoreUserSetting: RequiresPackageDownloads(GameConfig.Load()));
+#endif
         }
 
         static void Update() {

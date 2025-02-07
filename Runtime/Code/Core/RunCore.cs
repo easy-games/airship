@@ -10,7 +10,7 @@ using Unity.Multiplayer.Playmode;
 [LuauAPI]
 public class RunCore {
     // Launch params
-    public static bool launchInDedicatedServerMode = false;
+    public static bool launchInDedicatedServerMode = true;
 
     private static bool isServer = false;
     private static bool isClient = false;
@@ -68,6 +68,9 @@ public class RunCore {
     }
 
     private static bool IsMPPMClone() {
+#if !AIRSHIP_PLAYER
+        if (CurrentPlayer.IsMainEditor) return false;
+#endif
         return Environment.GetCommandLineArgs().Contains("--virtual-project-clone");
     }
 }
