@@ -55,12 +55,12 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
 
     public override Vector3 currentVelocity {
         get{
-            return rigid.velocity;
+            return rigid.linearVelocity;
         }
     }
 
     public override AirshipPredictedRigidbodyState CreateCurrentState(int currentTick) {
-        return new AirshipPredictedRigidbodyState(currentTick, rigid.position, rigid.rotation, rigid.velocity, rigid.angularVelocity);
+        return new AirshipPredictedRigidbodyState(currentTick, rigid.position, rigid.rotation, rigid.linearVelocity, rigid.angularVelocity);
     }
 
     public override void SnapTo(AirshipPredictedRigidbodyState newState){
@@ -71,7 +71,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
 
         // Set the velocities
         if (!rigid.isKinematic) {
-            rigid.velocity = newState.velocity;
+            rigid.linearVelocity = newState.velocity;
             rigid.angularVelocity = newState.angularVelocity;
         }
 
@@ -98,7 +98,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         waitingForOthers = true;
         wasKinematic = rigid.isKinematic;
         if(!wasKinematic){
-            storedVelocity = rigid.velocity;
+            storedVelocity = rigid.linearVelocity;
             storedAngularVelocity = rigid.angularVelocity;
             print("rigid " + gameObject.GetInstanceID() + " is kinematic");
         }
@@ -113,7 +113,7 @@ public class AirshipPredictedRigidbody : AirshipPredictedController<AirshipPredi
         waitingForOthers = false;
         rigid.isKinematic = wasKinematic;
         if(!wasKinematic){
-            rigid.velocity = storedVelocity;
+            rigid.linearVelocity = storedVelocity;
             rigid.angularVelocity = storedAngularVelocity;
             print("rigid " + gameObject.GetInstanceID() + " WAS kinematic");
         }

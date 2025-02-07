@@ -245,7 +245,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 			// Set the velocity
 			if (!rigidbody.isKinematic) {
-				rigidbody.velocity = newState.velocity;
+				rigidbody.linearVelocity = newState.velocity;
 			}
 		}
 	}
@@ -338,7 +338,7 @@ public class CharacterMovement : NetworkBehaviour {
 
 #region MOVE START
 	private void Move(MoveInputData md) {
-		var currentVelocity = this.rigidbody.velocity;
+		var currentVelocity = this.rigidbody.linearVelocity;
 		var newVelocity = currentVelocity;
 		var isIntersecting = IsIntersectingWithBlock();
 		var deltaTime = Time.fixedDeltaTime;
@@ -847,7 +847,7 @@ public class CharacterMovement : NetworkBehaviour {
 		//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>currentMoveState.prevState</b>: {currentMoveState.prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 		
 		//Execute the forces onto the rigidbody
-		this.rigidbody.velocity = newVelocity;
+		this.rigidbody.linearVelocity = newVelocity;
 #endregion
 
 		
@@ -953,7 +953,7 @@ public class CharacterMovement : NetworkBehaviour {
 			print("Setting velocity: " + velocity);
 		}
 
-		this.rigidbody.velocity = velocity;
+		this.rigidbody.linearVelocity = velocity;
 	}
 
 	[TargetRpc]
@@ -1098,7 +1098,7 @@ public class CharacterMovement : NetworkBehaviour {
 	}
 
 	public Vector3 GetVelocity() {
-		return this.rigidbody.velocity;
+		return this.rigidbody.linearVelocity;
 	}
 
 	public void IgnoreGroundCollider(Collider collider, bool ignore){
