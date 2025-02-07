@@ -144,7 +144,8 @@ public class AirshipPredictionManager : MonoBehaviour {
     }
 
     public void RegisterRigidbody(Rigidbody rigid, Transform graphicsHolder) {
-        rigid.interpolation = RigidbodyInterpolation.None;
+        Debug.Log("SOMETHING ELSE TRIGGERED ME");
+        // rigid.interpolation = RigidbodyInterpolation.None;
         this.currentTrackedRigidbodies.Add(rigid.GetInstanceID(), new RigidbodyState(rigid, graphicsHolder));
     }
     

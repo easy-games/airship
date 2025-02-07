@@ -6,7 +6,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
     public class BasicTestMovementManager: AirshipMovementManager<BasicTestMovement, BasicMovementState, BasicMovementInput>
     {
         
-        public override void SendClientInputToServer(BasicMovementInput input)
+        public override void SendClientInputToServer(BasicMovementInput[] input)
         {
             this.RpcClientInputToServer(input);
         }
@@ -29,7 +29,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientInputToServer(BasicMovementInput input)
+        private void RpcClientInputToServer(BasicMovementInput[] input)
         {
             this.OnServerReceiveInput?.Invoke(input);
         }

@@ -9,19 +9,56 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
     {
         private Rigidbody rb;
         private Vector3 moveVector;
+        private MovementMode mode;
 
         private void Awake()
         {
             rb = this.GetComponent<Rigidbody>();
-            rb.isKinematic = true;
+        }
+
+        public override void OnSetMode(MovementMode mode)
+        {
+            this.mode = mode;
+            
+            if (mode == MovementMode.Observer)
+            {
+                rb.isKinematic = true;
+                rb.interpolation = RigidbodyInterpolation.None;
+                rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            }
+
+            if (mode == MovementMode.Authority || mode == MovementMode.Input)
+            {
+                rb.isKinematic = false;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            }
+        }
+
+        public override void OnSetPaused(bool paused)
+        {
+            if (mode == MovementMode.Input || mode == MovementMode.Authority)
+            {
+                if (paused)
+                {
+                    this.rb.isKinematic = true;
+                }
+                else
+                {
+                    this.rb.isKinematic = false;
+                }
+            }
         }
 
         public override void SetCurrentState(BasicMovementState state)
         {
             rb.position = state.position;
             rb.rotation = state.rotation;
-            rb.velocity = state.velocity;
-            rb.angularVelocity = state.angularVelocity;
+            if (!rb.isKinematic)
+            {
+                rb.velocity = state.velocity;
+                rb.angularVelocity = state.angularVelocity;
+            }
         }
 
         public override BasicMovementState GetCurrentState(int commandNumber, double time)
@@ -36,8 +73,10 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         public override void Tick(BasicMovementInput command, bool replay)
         {
             if (replay) Debug.Log("Replaying" + command.commandNumber);
-            //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
-            rb.position = rb.position + command.moveDirection * Time.fixedDeltaTime * 10f;
+            rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
+            //rb.position = rb.position + command.moveDirection * Time.fixedDeltaTime * 10f;
+            
+            //rb.velocity = command.moveDirection * 5f;
         }
 
         public override void Interpolate(float delta, BasicMovementState stateOld, BasicMovementState stateNew)

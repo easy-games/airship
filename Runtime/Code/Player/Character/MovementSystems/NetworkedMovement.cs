@@ -4,14 +4,44 @@ using UnityEngine;
 
 namespace Code.Player.Character.NetworkedMovement
 {
-    [RequireComponent(typeof(NetworkIdentity))]
-    public abstract class NetworkedMovement<State, Input> : NetworkBehaviour where State: StateSnapshot where Input : InputCommand
+    public enum MovementMode
     {
-       /**
-        * Sets the current state to base movement ticks off of. Updates the associated
-        * rigidbody to match the state provided. It is important that the implementation
-        * if this method hard set any physics fields to match those in the provided state.
-        */
+        /** The movement system will be used as a way to generate commands to send to an authoritative server. */
+        Input,
+        /** The movement system is the authority. It will process commands either from itself, or a remote client. */
+        Authority,
+        /**
+         * The movement system is an observer. It will only be provided snapshots and will need to interpolate between
+         * them to display what has already happened.
+         */
+        Observer,
+    }
+
+    [RequireComponent(typeof(NetworkIdentity))]
+    public abstract class NetworkedMovement<State, Input> : NetworkBehaviour
+        where State : StateSnapshot where Input : InputCommand
+    {
+         /**
+         * This function is called to update the movement system on how it will be used.
+         * For example, if the mode is Observer, you may wish to set rigidbodies to kinematic
+         * or permanently disable certain effects when this function is called.
+         */
+        public abstract void OnSetMode(MovementMode mode);
+
+        /**
+         * Sets the current movement system to paused. This means that rigidbodies or other
+         * properties of the movement system should be set to stop or start updating when
+         * Physics.Simulate() is called. For most systems, this means setting any rigidbodies
+         * controlled by this system to kinematic when paused, and resetting them back
+         * to their default state when unpaused.
+         */
+        public abstract void OnSetPaused(bool paused);
+
+        /**
+         * Sets the current state to base movement ticks off of. Updates the associated
+         * rigidbody to match the state provided. It is important that the implementation
+         * if this method hard set any physics fields to match those in the provided state.
+         */
         public abstract void SetCurrentState(State state);
 
         /**

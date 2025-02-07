@@ -20,6 +20,9 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
         {
             if (snapshot is not BasicMovementState other) return false;
+            Debug.Log("Comparing " + this + " to " + snapshot + " result: " +
+                      (this.lastProcessedCommand == other.lastProcessedCommand) + " " +
+                      (this.position == other.position) + " " + (this.rotation == other.rotation));
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
                    this.rotation == other.rotation;
         }
