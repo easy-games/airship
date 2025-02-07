@@ -11,9 +11,11 @@ using UnityEngine;
 
 public class SignalHandler : MonoBehaviour {
     public ServerBootstrap serverBootstrap;
+    public UnityMainThreadDispatcher unityMainThread;
 
 #if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
     void Start() {
+        this.unityMainThread = UnityMainThreadDispatcher.Instance;
         var thread = new Thread(CheckForSignals);
         thread.Start();
     }
@@ -27,7 +29,7 @@ public class SignalHandler : MonoBehaviour {
 
             if (index >= 0 && signals[index].IsSet) {
                 Debug.Log("Sigterm.1");
-                UnityMainThreadDispatcher.Instance.Enqueue(HandleSigterm());
+                this.unityMainThread.Enqueue(HandleSigterm());
                 signals[index].Reset();
             }
         }
