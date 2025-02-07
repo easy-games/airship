@@ -71,7 +71,7 @@ namespace Editor {
             options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
             options.locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}";
             options.target = BuildTarget.StandaloneLinux64;
-            options.extraScriptingDefines = new[] { "UNITY_SERVER" };
+            options.extraScriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" };
             options.subtarget = (int)StandaloneBuildSubtarget.Server;
             options.options |= BuildOptions.Development; //Enable the profiler
             var report = BuildPipeline.BuildPlayer(options);
