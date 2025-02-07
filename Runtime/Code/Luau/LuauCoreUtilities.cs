@@ -46,28 +46,26 @@ public partial class LuauCore : MonoBehaviour
     /// Will add ".lua" to the end and lowercase the result. Intention is that two different paths
     /// pointing at the same file will result in the same output.
     /// </summary>
-    private static string GetTidyPathNameForLuaFile(string fileNameStr)
-    {
+    private static string GetTidyPathNameForLuaFile(string fileNameStr) {
+        var init = fileNameStr;
         // Make sure assets is properly capitalized for GetRelativePath call
         if (fileNameStr.ToLower().StartsWith("assets")) {
             fileNameStr = fileNameStr.Substring("assets".Length);
         }
-        fileNameStr = "Assets/" + fileNameStr;
         
         // Add .lua to the end
         if (!fileNameStr.EndsWith(".lua")) {
             fileNameStr += ".lua";
         }
-        
-        
-        //Fully qualify it
-        fileNameStr = Path.GetFullPath(fileNameStr);
-        fileNameStr = Path.GetRelativePath(Application.dataPath, fileNameStr);
 
         //Remove the ../ off the front
         while (fileNameStr.StartsWith("..\\") || fileNameStr.StartsWith("../"))
         {
             fileNameStr = fileNameStr.Substring(3);
+        }
+        // Remove all /'s
+        while (fileNameStr.StartsWith("/")) {
+            fileNameStr = fileNameStr.Substring(1);
         }
 
         //Replace backslashes
