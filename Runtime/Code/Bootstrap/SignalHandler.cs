@@ -1,4 +1,5 @@
 using System.Threading;
+using Code.Util;
 using UnityEngine;
 #if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
 using System;
@@ -13,9 +14,9 @@ public class SignalHandler : MonoBehaviour {
     public ServerBootstrap serverBootstrap;
     public UnityMainThreadDispatcher unityMainThread;
 
+
 #if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
     void Start() {
-        this.unityMainThread = UnityMainThreadDispatcher.Instance;
         var thread = new Thread(CheckForSignals);
         thread.Start();
     }
