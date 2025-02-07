@@ -68,6 +68,6 @@ public class RunCore {
     }
 
     private static bool IsMPPMClone() {
-        return Environment.GetCommandLineArgs().Contains("--virtual-project-clone");
+        return !CurrentPlayer.IsMainEditor || Environment.GetCommandLineArgs().Contains("--virtual-project-clone");
     }
 }
