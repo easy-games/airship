@@ -55,6 +55,8 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string gameId = "";
     [NonSerialized] public string serverId = "";
     [NonSerialized] public string organizationId = "";
+	[NonSerialized] public bool isShutdownEventTriggered = false;
+	[NonSerialized] public bool isAgonesShutdownTriggered = false;
 
     public ServerContext serverContext;
 
@@ -143,6 +145,8 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	public void InvokeOnProcessExit() {
+		if (this.isShutdownEventTriggered) return;
+		this.isShutdownEventTriggered = true;
 		this.onProcessExit?.Invoke();
 	}
 
@@ -151,7 +155,7 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void ProcessExit(object sender, EventArgs args) {
-		this.onProcessExit?.Invoke();
+		this.InvokeOnProcessExit();
 	}
 
 	public bool IsAgonesEnvironment() {
@@ -465,8 +469,10 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	public void Shutdown() {
-		if (agones) {
+		if (agones && !this.isAgonesShutdownTriggered) {
+			this.isAgonesShutdownTriggered = true;
 			agones.Shutdown();
+			Application.quit();
 		}
 	}
 
