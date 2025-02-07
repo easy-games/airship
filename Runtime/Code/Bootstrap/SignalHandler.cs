@@ -27,7 +27,7 @@ public class SignalHandler : MonoBehaviour {
 
             if (index >= 0 && signals[index].IsSet) {
                 Debug.Log("Sigterm.1");
-                UnityMainThreadDispatcher.Instance().Enqueue(HandleSigterm());
+                UnityMainThreadDispatcher.Instance.Enqueue(HandleSigterm());
                 signals[index].Reset();
             }
         }
