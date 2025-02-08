@@ -1,4 +1,5 @@
 using Code.Player.Character.Net;
+using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 
@@ -56,8 +57,10 @@ namespace Code.Player.Character.NetworkedMovement
 
         /**
          * Ticks the predictable movement and advances the current movement state based on the move input data provided.
+         * Tick will be called with a null command if a tick should occur but no command was available for that tick.
+         * This function is called at least as often as FixedUpdate, but may be called more often during re-simulations.
          */
-        public abstract void Tick(Input command, bool replay);
+        public abstract void Tick([CanBeNull] Input command, bool replay);
 
         /**
          * Set the state to be the interpolated state between these two snapshots.

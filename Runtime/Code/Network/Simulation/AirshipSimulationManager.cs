@@ -1,12 +1,19 @@
 using System;
-using Code.Player.Character.Net;
-using Code.Player.Character.NetworkedMovement;
-using Unity.VisualScripting;
+using System.Collections.Generic;
+using System.Linq;
+using Mirror;
 using UnityEngine;
 
 namespace Code.Network.Simulation
 {
-    public delegate void Simulate();
+    /**
+     * Advances the re-simulation by one tick. This call will return true if there
+     * are more ticks to simulate, and false if not.
+     *
+     * This call will trigger OnPerformTick(), Physics.Simulate(), and OnCaptureSnapshot()
+     * in that order.
+     */
+    public delegate bool Simulate();
 
     public delegate void FinishSimulation();
 
@@ -58,19 +65,18 @@ namespace Code.Network.Simulation
          * This action tells all watching components that they need to perform a tick.
          * A Physics.Simulate() call will be made after PerformTick completes.
          */
-        public static Action<int, bool> PerformTick;
+        public static Action<double, bool> OnPerformTick;
 
         /**
          * Informs all watching components that the simulation tick has been performed
          * and that a new snapshot of the resulting Physics.Simulate() should be captured.
          * This snapshot should be the state for the provided tick number in history.
          */
-        public static Action<int, bool> CaptureSnapshot;
-        
+        public static Action<double, bool> OnCaptureSnapshot;
 
         private bool simulationActive = false;
         private bool isActive = false;
-        private int tick = 0;
+        private List<double> tickTimes = new List<double>();
 
         public void ActivateSimulationManager()
         {
@@ -83,44 +89,124 @@ namespace Code.Network.Simulation
         {
             if (!isActive) return;
             if (Physics.simulationMode != SimulationMode.Script) return;
-            
-            PerformTick?.Invoke(this.tick, false);
+
+            if (simulationActive)
+            {
+                Debug.LogWarning(
+                    "Re-simulation was active during a new FixedUpdate. Canceling re-simulation. Report this.");
+                this.EndSimulation(true);
+            }
+
+            this.tickTimes.Add(NetworkTime.time);
+            while (this.tickTimes.Count > 0 && NetworkTime.time - this.tickTimes[0] > 1)
+            {
+                this.tickTimes.RemoveAt(0);
+            }
+
+            // this.tickTimes.Add(this.tick, NetworkTime.time);
+            // while (this.tickTimes.Values.Count > 0 && NetworkTime.time - this.tickTimes.Values[0] > 1)
+            // {
+            //     // Only keep 1 second of tick times. This limits how far into the future we can predict.
+            //     this.tickTimes.RemoveAt(0);
+            // }
+
+            // Todo: see when we need to do that SimulateTransforms thing that flushes changes
+            OnPerformTick?.Invoke(NetworkTime.time, false);
             Physics.Simulate(Time.fixedDeltaTime);
-            CaptureSnapshot?.Invoke(this.tick, false);
-            tick++;
+            OnCaptureSnapshot?.Invoke(NetworkTime.time, false);
         }
 
         /**
-         *
+         * Requests a simulation based on the provided time. Requesting a simulation will roll back the physics
+         * world to the snapshot just before or at the base time provided. Calling the returned tick function
+         * will advance the simulation and re-simulate the calls to OnPerformTick, Physics.Simulate(), and OnCaptureSnapshot
          */
-        public (Simulate, FinishSimulation) RequestSimulation(int startTick)
+        public (Simulate, FinishSimulation) RequestSimulation(double baseTime)
         {
             if (simulationActive)
             {
-                throw new ApplicationException("Re-simulation requested while a re-simulation is already active. Report this.");
+                throw new ApplicationException(
+                    "Re-simulation requested while a re-simulation is already active. Report this.");
+            }
+
+            if (this.tickTimes.Count == 0)
+            {
+                throw new ApplicationException("Re-simulation requested before any ticks have occured. Report this.");
             }
             
+            int afterIndex = this.tickTimes.FindIndex((time) =>
+            {
+                if (time > baseTime) return true;
+                return false;
+            });
+            if (afterIndex == -1)
+            {
+                throw new ApplicationException("Re-simulation request used a base time of " + baseTime +
+                                               ", but the last tick time was " + this.tickTimes[^1] + ". Current time is: "+ NetworkTime.time + ". Report this.");
+            }
+            int tickIndex = afterIndex == 0 ? 0 : afterIndex - 1;
+            var invalidateFunctions = false;
+            
             OnSetPaused?.Invoke(true);
-            OnSetSnapshot?.Invoke(startTick);
-            var resimTick = startTick + 1;
+            OnSetSnapshot?.Invoke(this.tickTimes[tickIndex]);
             return (
                 // Function to continue ticking the simulation.
                 () =>
                 {
-                    if (this.tick < resimTick)
+                    if (invalidateFunctions)
                     {
-                        Debug.LogWarning("A re-simulation has surpassed current tick. This shouldn't happen and may cause unusual behavior. Report this.");
+                        Debug.LogWarning("Attempted to tick simulation after the request was invalidated. Report this.");
+                        return false;
                     }
-                    PerformTick?.Invoke(resimTick, true);
+                    
+                    if (!simulationActive)
+                    {
+                        Debug.LogWarning("Attempted to tick simulation after the simulation has ended. Report this.");
+                        invalidateFunctions = true;
+                        return false;
+                    }
+                    
+                    if (this.tickTimes.Count <= tickIndex)
+                    {
+                        Debug.LogWarning(
+                            "A re-simulation has surpassed current tick. Report this.");
+                        this.EndSimulation(false);
+                        invalidateFunctions = true;
+                        return false;
+                    }
+
+                    OnPerformTick?.Invoke(this.tickTimes[tickIndex], true);
                     Physics.Simulate(Time.fixedDeltaTime);
-                    CaptureSnapshot?.Invoke(resimTick, true);
+                    OnCaptureSnapshot?.Invoke(this.tickTimes[tickIndex], true);
+                    tickIndex++;
+                    return this.tickTimes.Count == tickIndex;
                 },
                 // Function to finish the simulation.
                 () =>
                 {
-                    OnSetSnapshot?.Invoke(this.tick);
-                    OnSetPaused?.Invoke(false);
+                    if (invalidateFunctions)
+                    {
+                        Debug.LogWarning("Attempted to end simulation after the request was invalidated. Report this.");
+                        return;
+                    }
+                    this.EndSimulation(tickIndex != this.tickTimes.Count - 1);
+                    invalidateFunctions = true;
                 });
+        }
+
+        /**
+         * Ends a simulation if one is active.
+         */
+        private void EndSimulation(bool resetToPresent)
+        {
+            if (!simulationActive)
+            {
+                Debug.LogWarning("Attempted to end simulation when one was not active. Report this.");
+                return;
+            }
+            if (resetToPresent) OnSetSnapshot?.Invoke(this.tickTimes[^1]);
+            OnSetPaused?.Invoke(false);
+            this.simulationActive = false;
         }
     }
 }

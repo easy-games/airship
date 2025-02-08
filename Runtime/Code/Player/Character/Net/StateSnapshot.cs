@@ -6,6 +6,7 @@ namespace Code.Player.Character.Net
     public class StateSnapshot
     {
         public int lastProcessedCommand;
+        /** The time the snapshot was created */
         public double time;
 
         /**
