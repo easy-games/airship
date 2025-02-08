@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Codice.Client.Common;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -31,6 +32,13 @@ namespace Code.Managers {
             } catch (Exception e) {
                 Debug.LogError(e);
                 return false;
+            }
+        }
+
+        public static void EnsureDirectory(string path) {
+            var p = Path.Join(Application.persistentDataPath, path);
+            if (!Directory.Exists(p)) {
+                Directory.CreateDirectory(p);
             }
         }
     }
