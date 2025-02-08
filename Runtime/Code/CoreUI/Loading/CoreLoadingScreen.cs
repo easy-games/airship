@@ -93,7 +93,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
 
         if (gameImageCache.TryGetValue(imageUrl, out var tex)) {
             this.gameImage.texture = tex;
-            this.gameImage.color = new Color(1, 1, 1, 1);
+            NativeTween.GraphicAlpha(this.gameImage, 1, 0.7f);
             return;
         }
 
