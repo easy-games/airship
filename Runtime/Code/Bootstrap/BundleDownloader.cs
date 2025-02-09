@@ -163,6 +163,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			this.isDownloading = false;
 			Debug.Log($"Finished downloading bundle content in {downloadSt.ElapsedMilliseconds} ms.");
 
+			if (loadingScreen) {
+				loadingScreen.SetProgress("Loading Asset Bundles", 50);
+			}
+
 			HashSet<AirshipPackage> successfulDownloads = new();
 			int i = 0;
 			foreach (var request in requests) {
