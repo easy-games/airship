@@ -212,7 +212,9 @@ public class MainMenuSceneManager : MonoBehaviour {
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {
         var st = Stopwatch.StartNew();
         this.successfulTSLoad = false;
-        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true);
+        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true, (step) => {
+            loadingScreen.SetProgress(step, 50);
+        });
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
         //Setup project configurations from loaded package
