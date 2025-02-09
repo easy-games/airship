@@ -320,7 +320,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			}
 
 			if (loadingScreen) {
-				loadingScreen.SetProgress(String.Format("Downloading content ({0:0.00}/{1:0.00} mb)", new object[] {downloadedMb, totalMb}), 0);
+				loadingScreen.SetProgress(String.Format("Downloading Content ({0:0.00}/{1:0.00} MB)", new object[] {downloadedMb, totalMb}), 0);
 			}
 			yield return null;
 		}
