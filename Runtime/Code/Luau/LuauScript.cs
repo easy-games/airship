@@ -1,0 +1,94 @@
+﻿using System;
+using System.IO;
+using Luau;
+using UnityEngine;
+
+public enum LuauScriptCacheMode {
+	NotCached,
+	Cached,
+}
+
+[LuauAPI(LuauContext.Protected)]
+public class LuauScript : MonoBehaviour {
+	public AirshipScript script;
+
+	public IntPtr thread;
+	[HideInInspector] public LuauContext context = LuauContext.Game;
+	
+	private static string CleanupFilePath(string path) {
+		var extension = Path.GetExtension(path);
+		if (extension == string.Empty) {
+			path += ".lua";
+		}
+
+		if (path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
+			path = path.Substring("assets/".Length);
+		}
+		
+		return path;
+	}
+
+	private void Awake() {
+		LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script);
+	}
+
+	/// <summary>
+	/// Creates a new Luau thread from the given script. The thread is not yet executed. Returns a nullptr if the Luau
+	/// fails to create the new thread.
+	/// </summary>
+	public static IntPtr LoadScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script) {
+		if (ReferenceEquals(script, null)) {
+			throw new Exception("[LuauScript]: Script reference is null");
+		}
+
+		if (!script.m_compiled) {
+			throw new Exception($"[LuauScript]: Script reference cannot run due to compilation error: {script.m_compilationError}");
+		}
+		
+		var cleanPath = CleanupFilePath(script.m_path);
+		var id = ThreadDataManager.GetOrCreateObjectId(obj);
+		var nativeCodegen = script.HasDirective("native");
+		
+		// Tell Luau to load the bytecode onto a new Luau thread:
+		switch (cacheMode) {
+			case LuauScriptCacheMode.NotCached:
+				return LuauPlugin.LuauCreateThread(context, script.m_bytes, cleanPath, id, nativeCodegen);
+			case LuauScriptCacheMode.Cached:
+				var requirePath = LuauCore.GetRequirePath(script, cleanPath);
+				return LuauPlugin.LuauCreateThreadWithCachedModule(context, requirePath, id);
+			default:
+				throw new Exception($"[LuauScript]: Unhandled mode: {cacheMode}");
+		}
+	}
+
+	/// <summary>
+	/// Execute a thread. The thread must first be created with the LoadScript function.
+	/// </summary>
+	public static void ExecuteScript(IntPtr thread) {
+		// Execute the new thread. We don't need to do anything after this. If the thread errors, the error will be
+		// outputted. If the thread yields, whoever yielded it owns responsibility for resuming it (e.g. the task
+		// scheduler):
+		LuauPlugin.LuauRunThread(thread);
+	}
+
+	/// <summary>
+	/// Loads and executes the given script. The executed Luau thread is returned. If the thread is a nullptr, then
+	/// that indicates that Luau failed to load the script.
+	/// </summary>
+	public static IntPtr LoadAndExecuteScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script) {
+		var thread = LoadScript(obj, context, cacheMode, script);
+		
+		// A nullptr indicates that Luau failed to load the bytecode. Luau will write the error to the output, and we
+		// need to check for the nullptr and stop here:
+		if (thread == IntPtr.Zero) {
+			if (cacheMode == LuauScriptCacheMode.NotCached) {
+				Debug.LogError($"[LuauScript] Failed to create Luau thread for script: {script.m_path}");
+			}
+			return thread;
+		}
+		
+		ExecuteScript(thread);
+
+		return thread;
+	}
+}

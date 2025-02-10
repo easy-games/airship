@@ -610,8 +610,7 @@ public class AirshipComponent : MonoBehaviour {
             path += ".lua";
         }
 
-        path = path.ToLower();
-        if (path.StartsWith("assets/", StringComparison.Ordinal)) {
+        if (path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
             path = path.Substring("assets/".Length);
         }
 
@@ -703,7 +702,7 @@ public class AirshipComponent : MonoBehaviour {
         // We only want one instance of airship components, so let's see if it already exists
         // in our require cache first.
         if (_isAirshipComponent) {
-            var path = LuauCore.GetRequirePath(this, cleanPath);
+            var path = LuauCore.GetRequirePath(scriptFile, cleanPath);
             var thread = LuauPlugin.LuauCreateThreadWithCachedModule(context, path, id);
             
             // If thread exists, we've found the module and put it onto the top of the thread stack. Use
@@ -718,7 +717,7 @@ public class AirshipComponent : MonoBehaviour {
         var gch = GCHandle.Alloc(this.scriptFile.m_bytes, GCHandleType.Pinned); //Ok
         var nativeCodegen = scriptFile.HasDirective("native");
 
-        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, nativeCodegen);
+        m_thread = LuauPlugin.LuauCreateThread(context, scriptFile.m_bytes, cleanPath, id, nativeCodegen);
 
         Marshal.FreeCoTaskMem(filenameStr);
         gch.Free();
@@ -748,7 +747,7 @@ public class AirshipComponent : MonoBehaviour {
                 } else {
                     // Start airship component if applicable:
                     if (_isAirshipComponent) {
-                        var path = LuauCore.GetRequirePath(this, cleanPath);
+                        var path = LuauCore.GetRequirePath(scriptFile, cleanPath);
                         LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
                         InitializeAndAwakeAirshipComponent(m_thread, true);
                     }

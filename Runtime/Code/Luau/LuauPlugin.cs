@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using UnityEngine;
 using System.Threading;
 using Luau;
@@ -466,11 +467,22 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
-	public static IntPtr LuauCreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen) {
+	public static IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
-		IntPtr returnValue = CreateThread(context, script, scriptLength, filename, filenameLength, gameObjectId, nativeCodegen);
+		
+		var scriptBytecodeHandle = GCHandle.Alloc(scriptBytecode, GCHandleType.Pinned);
+		var scriptBytecodePtr = scriptBytecodeHandle.AddrOfPinnedObject();
+		
+		var filenameBytes = Encoding.UTF8.GetBytes(filename);
+		var filenameLength = Encoding.UTF8.GetByteCount(filename);
+		var filenameHandle = GCHandle.Alloc(filenameBytes, GCHandleType.Pinned);
+		var filenamePtr = filenameHandle.AddrOfPinnedObject();
+		
+		var returnValue = CreateThread(context, scriptBytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+		
         EndExecutionCheck();
+        
         return returnValue;
     }
 

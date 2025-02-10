@@ -1006,15 +1006,15 @@ public partial class LuauCore : MonoBehaviour {
         return false;
     }
     
-    public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
-        if (binding != null) {
+    public static string GetRequirePath(AirshipScript script, string fileNameStr) {
+        if (script != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
-                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(script.m_path);
                 fileNameStr = fname;
             } else if (fileNameStr.StartsWith("./")) {
                 //Get a stripped name
-                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(script.m_path);
 
                 //Remove just this filename off the end
                 var bits = new List<string>(fname.Split("/"));
@@ -1023,7 +1023,7 @@ public partial class LuauCore : MonoBehaviour {
 
                 fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
             } else if (fileNameStr.StartsWith("../")) {
-                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(script.m_path);
 
                 //Remove two bits of this filename off the end
                 var bits = new List<string>(fname.Split("/"));
@@ -1046,6 +1046,47 @@ public partial class LuauCore : MonoBehaviour {
 
         return fileNameStr;
     }
+    
+    // public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
+    //     if (binding != null) {
+    //         if (fileNameStr.Contains("/") == false) {
+    //             //Get a stripped name
+    //             var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+    //             fileNameStr = fname;
+    //         } else if (fileNameStr.StartsWith("./")) {
+    //             //Get a stripped name
+    //             var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+    //
+    //             //Remove just this filename off the end
+    //             var bits = new List<string>(fname.Split("/"));
+    //             bits.RemoveAt(bits.Count - 1);
+    //             var bindingPath = Path.Combine(bits.ToArray());
+    //
+    //             fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
+    //         } else if (fileNameStr.StartsWith("../")) {
+    //             var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+    //
+    //             //Remove two bits of this filename off the end
+    //             var bits = new List<string>(fname.Split("/"));
+    //             if (bits.Count > 0) {
+    //                 bits.RemoveAt(bits.Count - 1);
+    //             }
+    //
+    //             if (bits.Count > 0) {
+    //                 bits.RemoveAt(bits.Count - 1);
+    //             }
+    //
+    //             var bindingPath = Path.Combine(bits.ToArray());
+    //
+    //             fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
+    //         }
+    //     }
+    //     
+    //     //Fully qualify it
+    //     fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
+    //
+    //     return fileNameStr;
+    // }
 
     //Take a random path name from a require and transform it into its path relative to /assets/.
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
@@ -1056,7 +1097,7 @@ public partial class LuauCore : MonoBehaviour {
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         
         LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-        var fileRequirePath = GetRequirePath(binding, fileNameStr);
+        var fileRequirePath = GetRequirePath(binding.scriptFile, fileNameStr);
         
         LuauCore.WritePropertyToThread(thread, fileRequirePath, typeof(string));
         
