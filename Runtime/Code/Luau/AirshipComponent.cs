@@ -77,8 +77,6 @@ public class AirshipComponent : MonoBehaviour {
     private bool _airshipReadyToStart = false;
     private bool _airshipScheduledToStart = false;
     private bool _airshipStarted = false;
-    private bool _airshipWaitingForLuauCoreReady = false;
-    private bool _airshipRewaitForLuauCoreReady = false;
     private bool _scriptBindingStarted = false;
     private Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new(); 
     
@@ -501,7 +499,7 @@ public class AirshipComponent : MonoBehaviour {
         }
         
         _isAirshipComponent = this.scriptFile != null && this.scriptFile.airshipBehaviour;
-        InitWhenCoreReady();
+        InitWhenReady();
     }
 
     private void Awake() {
@@ -545,10 +543,10 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
         
-        InitWhenCoreReady();
+        InitWhenReady();
     }
 
-    private void InitWhenCoreReady() {
+    private void InitWhenReady() {
         if (IsDestroyed()) {
             DisconnectUnityEvents(); // Ensure any connected events are cleaned up
             return;
@@ -560,27 +558,12 @@ public class AirshipComponent : MonoBehaviour {
             if (_isAirshipComponent && isActiveAndEnabled) {
                 _airshipScheduledToStart = true;
             }
-            AwaitCoreThenInit();
+            AwaitReadyThenInit();
         }
     }
 
-    private void AwaitCoreThenInit() {
-        _airshipWaitingForLuauCoreReady = true;
-        LuauCore.OnInitialized += OnCoreInitialized;
-        if (LuauCore.IsReady) {
-            OnCoreInitialized();
-        }
-    }
-
-    private void OnCoreInitialized() {
-        if (IsDestroyed()) {
-            DisconnectUnityEvents(); // Ensure any connected events are cleaned up
-            return;
-        }
-        
-        LuauCore.OnInitialized -= OnCoreInitialized;
+    private void AwaitReadyThenInit() {
         if (IsReadyToStart()) {
-            _airshipWaitingForLuauCoreReady = false;
             Init();
         } else {
             SceneManager.activeSceneChanged += OnActiveSceneChanged;
@@ -590,8 +573,9 @@ public class AirshipComponent : MonoBehaviour {
     private void OnActiveSceneChanged(Scene current, Scene next) {
         if (IsReadyToStart()) {
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
-            _airshipWaitingForLuauCoreReady = false;
-            Init();
+            if (!IsDestroyed()) {
+                Init();
+            }
         }
     }
     
@@ -776,13 +760,6 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void OnEnable() {
-        // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
-        if (_airshipRewaitForLuauCoreReady) {
-            _airshipRewaitForLuauCoreReady = false;
-            _airshipScheduledToStart = false;
-            InitWhenCoreReady();
-        }
-        
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && IsReadyToStart()) {
             LuauPlugin.LuauSetAirshipComponentEnabled(context, m_thread, AirshipBehaviourRootV2.GetId(gameObject), _scriptBindingId, true);
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
@@ -807,12 +784,7 @@ public class AirshipComponent : MonoBehaviour {
             _airshipComponentEnabled = false;
         }
 
-        // OnDisable stopped the luau-core-ready coroutine, so reset some flags:
-        if (_airshipWaitingForLuauCoreReady) {
-            LuauCore.OnInitialized -= OnCoreInitialized;
-            _airshipWaitingForLuauCoreReady = false;
-            _airshipRewaitForLuauCoreReady = true;
-        }
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         
         LuauCore.UnregisterAirshipComponent(this);
     }

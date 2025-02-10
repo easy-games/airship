@@ -121,8 +121,7 @@ public partial class LuauCore : MonoBehaviour {
     public static event Action<LuauContext> onResetInstance;
 
     public static bool IsReady => !s_shutdown && _coreInstance != null && _coreInstance.initialized;
-    public static event Action OnInitialized;
-
+    
     public static LuauCore CoreInstance => _coreInstance;
 
     public static LuauState GetInstance(LuauContext context) {
@@ -219,10 +218,6 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         SetupNamespaceStrings();
-
-        StartCoroutine(InvokeOnInitializedNextFrame());
-        
-        print("LuauCore Initialized");
         
         return true;
     }
@@ -245,12 +240,6 @@ public partial class LuauCore : MonoBehaviour {
         if (IsProtectedSceneName(scene.name)) {
             protectedSceneHandles.Add(scene.handle);
         }
-    }
-
-    private IEnumerator InvokeOnInitializedNextFrame() {
-        yield return null;
-        OnInitialized?.Invoke();
-        print("LuauCore InvokeOnInitializedNextFrame");
     }
 
     public void OnDestroy() {
