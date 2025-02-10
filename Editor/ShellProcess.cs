@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using Debug = UnityEngine.Debug;
 
 namespace Editor {
@@ -44,7 +47,7 @@ namespace Editor {
             return procStartInfo;
         }
 
-        public static string FindExecutableOnPath(string executable) {
+        internal static string FindExecutableOnPath(string executable) {
 #if UNITY_EDITOR_WIN
             var proc = new Process();
             var startInfo = GetShellStartInfoForCommand($"where {executable}", Environment.CurrentDirectory);
@@ -64,6 +67,38 @@ namespace Editor {
 #endif
         }
 
+        public static string[] FindNodeBinaryPaths()
+        {
+            HashSet<string> nodeInstallPaths = new();
+
+            var nodeEnvironmentPath = FindExecutableOnPath("node");
+            if (nodeEnvironmentPath != "")
+            {
+                nodeInstallPaths.Add(Path.GetDirectoryName(nodeEnvironmentPath));
+            }
+            
+#if !UNITY_EDITOR_WIN
+            // Find NVM installs for unix
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var nvm = Path.Join(home, ".nvm/versions/node");
+            if (Directory.Exists(nvm))
+            {
+                foreach (var directory in Directory.GetDirectories(nvm))
+                {
+                    var binNodePath = Path.Join(directory, "bin/node");
+                    if (!File.Exists(binNodePath)) continue;
+                    
+                    nodeInstallPaths.Add(Path.Join(directory, "bin"));
+                }
+            }
+
+            if (File.Exists("/usr/bin/node")) nodeInstallPaths.Add("/usr/bin");
+            if (File.Exists("/usr/local/bin/node")) nodeInstallPaths.Add("/usr/local/bin");
+#endif
+            
+            return nodeInstallPaths.ToArray();
+        }
+
         public static string FindNodeBinPath() {
 #if UNITY_EDITOR_WIN
             // Windows is ensured to be in PATH
@@ -71,11 +106,17 @@ namespace Editor {
 #else
             // We can check via PATH first -
             var pathExecutable = FindExecutableOnPath("node");
-            if (pathExecutable != null) {
+            if (pathExecutable != "") {
                 return pathExecutable;
             }
+
+            var otherPaths = FindNodeBinaryPaths();
+            if (otherPaths.Length > 0)
+            {
+                return otherPaths[0];
+            }
                 
-            Debug.LogWarning("Node is not on your PATH");
+            Debug.LogWarning("Could not find the path of Node on your system");
             return null;
 #endif
         }

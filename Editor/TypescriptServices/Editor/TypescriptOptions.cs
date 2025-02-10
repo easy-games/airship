@@ -18,6 +18,14 @@ namespace Airship.Editor {
         VisualStudioCode,
         Custom,
     }
+
+    public enum TypescriptNodeTarget
+    {
+        [InspectorName("Automatic")]
+        FindInstallOnSystem,
+        [InspectorName("Custom Install Path...")]
+        UserDefinedPath,
+    }
     
     public enum TypescriptCompilerVersion {
         UseEditorVersion,
@@ -134,6 +142,47 @@ namespace Airship.Editor {
                 settings.typescriptPreventPlayOnError =
                     EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), settings.typescriptPreventPlayOnError);
             }
+            
+#if UNITY_EDITOR_OSX
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField("Node", EditorStyles.boldLabel);
+
+            {
+                var compilationServicesState = TypescriptCompilationServicesState.instance;
+                var currentNodeTarget = compilationServicesState.nodeTarget;
+                var selectedNodeTarget = (TypescriptNodeTarget) EditorGUILayout.EnumPopup(new GUIContent("Node Install"), compilationServicesState.nodeTarget,
+                    (checkEnabled) => true, false);
+                if (currentNodeTarget != selectedNodeTarget)
+                {
+                    switch (selectedNodeTarget)
+                    {
+                        case TypescriptNodeTarget.FindInstallOnSystem:
+                            TypescriptCompilationService.NodePath = null;
+                            TypescriptCompilationService.GetNodePath();
+                            break;
+                        case TypescriptNodeTarget.UserDefinedPath:
+                            TypescriptCompilationService.NodePath = TypescriptCompilationService.GetNodePath(); // lol
+                            break;
+                    }
+                    
+                    TypescriptCompilationService.RestartCompilers(() => {
+                        compilationServicesState.nodeTarget = selectedNodeTarget;
+                    });
+                }
+
+                if (currentNodeTarget == TypescriptNodeTarget.UserDefinedPath)
+                {
+                    var nodePath = TypescriptCompilationService.NodePath;
+                    var nextNodePath = EditorGUILayout.TextField(new GUIContent("Install Path"), nodePath);
+
+                    if (nodePath != nextNodePath)
+                        TypescriptCompilationService.NodePath = nextNodePath;
+                }
+            }
+#endif
+
+
+            
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {

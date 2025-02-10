@@ -389,8 +389,19 @@ namespace Airship.Editor
 
             var errorCount = TypescriptCompilationService.ErrorCount;
 
+            var nodePath = TypescriptCompilationService.NodePath;
             var project = TypescriptProjectsService.Project;
-            if (project != null) {
+
+            if (nodePath == null)
+            {
+                EditorGUILayout.LabelField(new GUIContent(""), new GUIStyle("CN EntryWarnIconSmall"), GUILayout.Width(20));
+                GUILayout.Button(
+                    new GUIContent("Cannot find Node.js"),
+                    new GUIStyle(ToolbarStyles.CompilerServicesStyle)
+                );
+            }
+            
+            if (project != null && nodePath != null) {
                 var compilerText = "";
                 if (errorCount > 0) {
                     if (isSmallScreen) {

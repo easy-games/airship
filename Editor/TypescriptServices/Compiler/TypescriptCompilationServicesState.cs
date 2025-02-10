@@ -9,6 +9,8 @@ namespace Airship.Editor {
         [SerializeField] 
         internal List<TypescriptCompilerWatchState> watchStates = new();
             
+        public TypescriptNodeTarget nodeTarget = TypescriptNodeTarget.FindInstallOnSystem;
+        
         public int CompilerCount => watchStates.Count(compiler => compiler.IsActive); // test
 
         internal void RegisterWatchCompiler(TypescriptCompilerWatchState watchState) {

@@ -33,20 +33,46 @@ using Object = UnityEngine.Object;
             private const string TsCompilerService = "Typescript Compiler Service";
 
             private static string _nodePath;
+
+            internal static string GetNodePath()
+            {
+                var compilerPath = EditorPrefs.GetString("AirshipNodePath");
+                if (!string.IsNullOrEmpty(compilerPath))
+                {
+                    _nodePath = compilerPath;
+                    return compilerPath;
+                }
+                        
+                var executable = ShellProcess.FindNodeBinPath();
+                if (executable == "") return null;
+                _nodePath = Path.GetDirectoryName(executable);
+                return _nodePath;
+
+            }
             public static string NodePath {
-                get {
-                    if (_nodePath == null) {
-                        var executable = ShellProcess.FindNodeBinPath().Trim();
-                        if (executable != "") {
-                            _nodePath = Path.GetDirectoryName(executable);
-                            return _nodePath;
-                        }
-
-                        return null;
+                get => _nodePath ?? GetNodePath();
+                internal set
+                {
+                    if (value == null)
+                    {
+                        EditorPrefs.DeleteKey("AirshipNodePath");
+                        _nodePath = null;
                     }
+                    else
+                    {
+                        EditorPrefs.SetString("AirshipNodePath", value);
+                        _nodePath = value;
+                    }
+                }
+            }
 
-                    return _nodePath;
-                }   
+            public static string NodeBinPath
+            {
+                get
+                {
+                    var nodePath = NodePath;
+                    return nodePath != null ? Path.Join(nodePath, "node") : null;
+                }
             }
             
             /// <summary>
@@ -415,7 +441,9 @@ using Object = UnityEngine.Object;
                 // Windows uses the .exe
                 var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, "node.exe", command);
 #else
-                var procStartInfo = ShellProcess.GetShellStartInfoForCommand(command, dir);
+                var nodePath = TypescriptCompilationService.NodeBinPath;
+                
+                var procStartInfo = ShellProcess.GetShellStartInfoForCommand($"{nodePath} {command}", dir);
 #endif
                 
                 var proc = new Process();

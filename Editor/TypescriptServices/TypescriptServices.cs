@@ -81,7 +81,7 @@ namespace Airship.Editor {
         }
         
         private static IEnumerator InitializeProject() {
-            TypescriptProjectsService.ReloadProjects();
+            TypescriptProjectsService.ReloadProject();
             TypescriptCompilationService.ClearIncrementalCache(); // clear incremental cache
             yield return new WaitUntil(HasAllPackagesDownloaded);
             yield return InitializeTypeScript();
