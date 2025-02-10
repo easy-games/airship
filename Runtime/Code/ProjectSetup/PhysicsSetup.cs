@@ -31,7 +31,8 @@ public static class PhysicsSetup {
         PhysicsLayerEditor.SetLayer(8, "VisuallyHidden");
         PhysicsLayerEditor.SetLayer(9, "IgnoreCollision");
         PhysicsLayerEditor.SetLayer(10, "AvatarEditor");
-        var lastCoreLayerNumber = 10; // Update this if we add more layers
+        PhysicsLayerEditor.SetLayer(11, "StencilMask");
+        var lastCoreLayerNumber = 11; // Update this if we add more layers
 
         // Clear all unused layers reserved for Airship core
         for (var i = lastCoreLayerNumber + 1; i <= 16; i++) {
