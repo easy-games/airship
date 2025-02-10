@@ -235,14 +235,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
 
             var decorators = metadataProperty.FindPropertyRelative("decorators");
-            if (originalProperty.decorators.Count != decorators.arraySize) {
+            if (originalProperty.GetDecorators().Count != decorators.arraySize) {
                 return true;
             }
 
             for (var j = 0; j < decorators.arraySize; j++)
             {
                 var decorator = decorators.GetArrayElementAtIndex(j);
-                var originalDecorator = originalProperty.decorators[j];
+                var originalDecorator = originalProperty.GetDecorators()[j];
                 if (originalDecorator.name != decorator.FindPropertyRelative("name").stringValue) {
                     return true;
                 }
@@ -390,7 +390,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         );
         
         // Loop over styling decorators to display them in same order they were passed in
-        foreach (var dec in bindingProp.decorators)
+        foreach (var dec in bindingProp.GetDecorators())
         {
             TryDrawDecorator(dec.name, dec.parameters);
         }
@@ -1064,7 +1064,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
      */
     private Dictionary<string, List<LuauMetadataDecoratorValue>> GetDecorators(LuauMetadataProperty binding)
     {
-        var decorators = binding.decorators;
+        var decorators = binding.GetDecorators();
         Dictionary<string, List<LuauMetadataDecoratorValue>> result = new();
         for (var i = 0; i < decorators.Count; i++)
         {

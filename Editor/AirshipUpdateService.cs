@@ -133,7 +133,6 @@ namespace Editor {
 
         static AirshipUpdateService() {
             if (RunCore.IsClone()) return;
-            if (CurrentPlayer.ReadOnlyTags().Length > 0 || ClonesManager.IsClone()) return;
 
             // Ensure this only runs ON LOAD. No script recompiling...
             if (!SessionState.GetBool("AirshipUpdateCheck", false)) {
