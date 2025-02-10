@@ -642,13 +642,14 @@ public class AccessoryBuilder : MonoBehaviour
     public Renderer[] GetAllAccessoryMeshes() {
         var renderers = new List<Renderer>();
         foreach (var keyValuePair in activeAccessories) {
-            foreach (var go in keyValuePair.Value.gameObjects) {
-                var rens = go.GetComponentsInChildren<Renderer>();
-                for (var i = 0; i < rens.Length; i++) renderers.Add(rens[i]);
+            foreach (var ren in keyValuePair.Value.renderers) {
+                renderers.Add(ren);
             }
         }
 
-        renderers.Add(meshCombiner.outputSkinnedMeshRenderers[0]);
+        if (meshCombiner.enabled) {
+            renderers.Add(meshCombiner.outputSkinnedMeshRenderers[0]);
+        }
         // if (meshCombiner.combinedSkinnedMeshRenderer) renderers.Add(meshCombiner.combinedStaticMeshRenderer);
 
         return renderers.ToArray();
