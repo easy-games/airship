@@ -245,8 +245,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Find packages to load
 		AssetBridge.useBundles = useUnityAssetBundles;
 		if (useUnityAssetBundles) {
-			onLoadingScreenStep?.Invoke("Loading Bundles");
-
 			// Resources
 			foreach (var package in packages) {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));

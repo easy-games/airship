@@ -33,5 +33,12 @@ namespace Code.Managers {
                 return false;
             }
         }
+
+        public static void EnsureDirectory(string path) {
+            var p = Path.Join(Application.persistentDataPath, path);
+            if (!Directory.Exists(p)) {
+                Directory.CreateDirectory(p);
+            }
+        }
     }
 }

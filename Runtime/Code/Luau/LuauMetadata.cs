@@ -136,14 +136,12 @@ namespace Luau {
         // Misc:
         public string serializedValue;
 
-        public void OnBeforeSerialize()
-        {
+        public void OnBeforeSerialize() {
             if (value == null) return;
             serializedValue = JsonConvert.SerializeObject(value);
         }
 
-        public void OnAfterDeserialize()
-        {
+        public void OnAfterDeserialize() {
             value = JsonConvert.DeserializeObject<object>(serializedValue);
         }
 
@@ -226,7 +224,10 @@ namespace Luau {
         /// </summary>
         public string fileRef;
         
-        public List<LuauMetadataDecoratorElement> decorators = new();
+        #if UNITY_EDITOR
+        [SerializeField]
+        #endif
+        private List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
         [JsonProperty("default")]
         public object defaultValue;
@@ -315,6 +316,10 @@ namespace Luau {
                 valueContainer = valuePtr,
                 modified = modified ? 1 : 0
             };
+        }
+
+        public List<LuauMetadataDecoratorElement> GetDecorators() {
+            return this.decorators;
         }
 
         private IntPtr ObjToIntPtr(object obj, string objTypeStr, AirshipComponentPropertyType componentType, List<GCHandle> gcHandles, List<IntPtr> stringPtrs) {
@@ -546,7 +551,10 @@ namespace Luau {
     public class LuauMetadata {
         public string name;
         public bool singleton;
-        public List<LuauMetadataDecoratorElement> decorators = new();
+        #if UNITY_EDITOR
+        [SerializeField]
+        #endif
+        private List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
         [CanBeNull] public Texture2D displayIcon;
 
@@ -591,6 +599,10 @@ namespace Luau {
             }
             
             return (metadata, null);
+        }
+
+        public List<LuauMetadataDecoratorElement> GetDecorators() {
+            return decorators;
         }
 
         public LuauMetadataDecoratorElement FindClassDecorator(string decoratorName) {
