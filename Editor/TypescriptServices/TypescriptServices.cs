@@ -5,6 +5,7 @@ using System.Linq;
 using Editor;
 using Editor.EditorInternal;
 using Editor.Packages;
+using Editor.Settings;
 using ParrelSync;
 using Unity.EditorCoroutines.Editor;
 using Unity.Multiplayer.Playmode;
@@ -42,7 +43,15 @@ namespace Airship.Editor {
             // If a server or clone - ignore
             if (!IsValidEditor) return;
 
-            if (TypescriptCompilationService.NodePath == null) {
+            if (TypescriptCompilationService.NodePath == null)
+            {
+                if (EditorUtility.DisplayDialog("Airship Requires Node.js",
+                        "Airship Could not locate your Node.js install",
+                        "Configure...", "Ignore"))
+                {
+                    SettingsService.OpenProjectSettings(AirshipScriptingSettingsProvider.Path);
+                }
+                
                 Debug.LogWarning("[TypescriptServices] Node.js could not be found on your path, please read https://docs.airship.gg/getting-started/installing-airship for how to set up Airship correctly.");
                 Debug.LogWarning("\tIf you already installed Node.js, restart Unity and Unity Hub and try again.");
                 return;

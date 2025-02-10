@@ -146,7 +146,8 @@ namespace Airship.Editor {
 #if UNITY_EDITOR_OSX
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Node", EditorStyles.boldLabel);
-
+            var nodePath = TypescriptCompilationService.NodePath;
+            
             {
                 var compilationServicesState = TypescriptCompilationServicesState.instance;
                 var currentNodeTarget = compilationServicesState.nodeTarget;
@@ -170,9 +171,25 @@ namespace Airship.Editor {
                     });
                 }
 
+                if (nodePath == null)
+                {
+                    EditorGUILayout.HelpBox("Could not locate your Node install", MessageType.Error);
+                    EditorGUILayout.BeginHorizontal();
+                    {
+                        GUILayout.FlexibleSpace();
+                        if (GUILayout.Button("Get Node.js"))
+                        {
+                            Application.OpenURL("https://nodejs.org/en/download");
+                            EditorUtility.DisplayDialog("Installing node.js from the web",
+                                "Ensure you restart both Unity and the Unity Hub after installing Node.js", "Got it");
+                        }
+                        GUILayout.FlexibleSpace();
+                    }
+                    EditorGUILayout.EndHorizontal();
+                }
+
                 if (currentNodeTarget == TypescriptNodeTarget.UserDefinedPath)
                 {
-                    var nodePath = TypescriptCompilationService.NodePath;
                     var nextNodePath = EditorGUILayout.TextField(new GUIContent("Install Path"), nodePath);
 
                     if (nodePath != nextNodePath)
