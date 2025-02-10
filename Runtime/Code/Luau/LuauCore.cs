@@ -163,8 +163,6 @@ public partial class LuauCore : MonoBehaviour {
         System.Text.Encoding utf8 = System.Text.Encoding.UTF8;
         eventConnections.Clear();
         
-        print($"UNITY API CLASSES: {unityAPIClasses.Count}");
-
         int counter = 0;
         foreach (var api in unityAPIClasses) {
             string apiName = api.Value.GetAPIType().Name;
