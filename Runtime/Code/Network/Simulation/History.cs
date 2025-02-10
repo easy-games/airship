@@ -3,11 +3,21 @@ using UnityEngine;
 
 namespace Code.Network.Simulation
 {
+    /**
+     * The history class can be used to store a value on a sorted timeline. This class works much like a SortedList,
+     * but includes additional convenience functions for working with SortedLists in the context of storing a history
+     * over time.
+     */
     public class History<T>
     {
         private int maxSize;
         private SortedList<double, T> history = new SortedList<double, T>();
 
+        public IList<T> Values => history.Values;
+        
+        /**
+         * Creates a history with the provided maximum entry size. You can set the max size to 0 for no maximum size.
+         */
         public History(int maxSize)
         {
             this.maxSize = maxSize;
@@ -15,7 +25,7 @@ namespace Code.Network.Simulation
 
         /**
          * Adds an entry at the provided time. Additionally makes room for the entry
-         * by removing the oldest entry if the list has reached it's maximum capacity.
+         * by removing the oldest entry if the list has reached its maximum capacity.
          */
         public T Add(double time, T entry)
         {
@@ -25,12 +35,29 @@ namespace Code.Network.Simulation
                 Debug.LogWarning("Attempted to add an entry to history that already exists. The new entry will be ignored.");
                 return this.GetExact(time);
             }
-            while (this.history.Count > this.maxSize)
+
+            if (maxSize != 0)
             {
-                this.history.RemoveAt(0);
+                while (this.history.Count > this.maxSize)
+                {
+                    this.history.RemoveAt(0);
+                }
             }
 
             return entry;
+        }
+
+        /**
+         * Overwrites an exact entry. If an existing entry can't be found, it will
+         * not create a new entry.
+         */
+        public void Overwrite(double time, T entry)
+        {
+            var removed = this.history.Remove(time);
+            if (removed)
+            {
+                this.history.Add(time, entry);
+            }
         }
 
         /**
@@ -83,6 +110,37 @@ namespace Code.Network.Simulation
         }
 
         /**
+         * Gets all entries after the provided time. Does _not_ get the
+         * entry at that time.
+         */
+        public T[] GetAllAfter(double time)
+        {
+            if (time > this.history.Keys[^1])
+            {
+                return new T[] {};
+            }
+
+            var after = new List<T>();
+            for (var i = this.history.Count - 1; i >= 0; i--)
+            {
+                if (this.history.Keys[i] < time)
+                {
+                    after.Reverse();
+                    return after.ToArray();
+                }
+                after.Add(this.history.Values[i]);
+            }
+
+            after.Reverse();
+            return after.ToArray();
+        }
+
+        public void RemoveAt(int index)
+        {
+            this.history.RemoveAt(index);
+        }
+
+        /**
          * Removes the entry directly at the given time.
          */
         public bool Remove(double time)
@@ -102,7 +160,7 @@ namespace Code.Network.Simulation
          * Clears all history entries before the provided time. Does _not_ clear
          * the entry at that time.
          */
-        public void ClearBefore(double time)
+        public void ClearAllBefore(double time)
         {
             while (this.history.Count > 0 && this.history.Keys[0] < time)
             {

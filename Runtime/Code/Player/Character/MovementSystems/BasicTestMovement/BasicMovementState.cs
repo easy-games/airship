@@ -10,6 +10,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         public Quaternion rotation;
         public Vector3 velocity;
         public Vector3 angularVelocity;
+        public int jumpTicksUntil;
 
         public override string ToString()
         {
