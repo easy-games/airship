@@ -46,11 +46,9 @@ public partial class LuauCore : MonoBehaviour {
         POD_AIRSHIP_COMPONENT = 17,
     };
 
-    public static bool s_shutdown = false;
+    private static bool s_shutdown = false;
  
     private static LuauCore _coreInstance;
-    private static GameObject gameObj;
-    
 
     private static Type stringType = System.Type.GetType("System.String");
     private static Type intType = System.Type.GetType("System.Int32");
@@ -125,21 +123,7 @@ public partial class LuauCore : MonoBehaviour {
     public static bool IsReady => !s_shutdown && _coreInstance != null && _coreInstance.initialized;
     public static event Action OnInitialized;
 
-    public static LuauCore CoreInstance {
-        get {
-            if (s_shutdown) {
-                return null;
-            }
-            if (_coreInstance == null) {
-                gameObj = new GameObject("LuauCore");
-// #if !UNITY_EDITOR
-                DontDestroyOnLoad(gameObj);
-// #endif
-                _coreInstance = gameObj.AddComponent<LuauCore>();
-            }
-            return _coreInstance;
-        }
-    }
+    public static LuauCore CoreInstance => _coreInstance;
 
     public static LuauState GetInstance(LuauContext context) {
         return LuauState.FromContext(context);
@@ -179,6 +163,8 @@ public partial class LuauCore : MonoBehaviour {
         GCHandle[] stringAllocations = new GCHandle[stringCount];
         System.Text.Encoding utf8 = System.Text.Encoding.UTF8;
         eventConnections.Clear();
+        
+        print($"UNITY API CLASSES: {unityAPIClasses.Count}");
 
         int counter = 0;
         foreach (var api in unityAPIClasses) {
@@ -236,6 +222,8 @@ public partial class LuauCore : MonoBehaviour {
 
         StartCoroutine(InvokeOnInitializedNextFrame());
         
+        print("LuauCore Initialized");
+        
         return true;
     }
 
@@ -262,6 +250,7 @@ public partial class LuauCore : MonoBehaviour {
     private IEnumerator InvokeOnInitializedNextFrame() {
         yield return null;
         OnInitialized?.Invoke();
+        print("LuauCore InvokeOnInitializedNextFrame");
     }
 
     public void OnDestroy() {
@@ -271,7 +260,7 @@ public partial class LuauCore : MonoBehaviour {
         Profiler.BeginSample("ShutdownLuauState");
         LuauState.ShutdownAll();
         Profiler.EndSample();
-        if (_coreInstance) {
+        if (_coreInstance && _coreInstance == this) {
             initialized = false;
             Profiler.BeginSample("ShutdownLuauPlugin");
             LuauPlugin.LuauShutdown();
@@ -283,7 +272,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    public static void ShutdownInstance() {
+    private static void ShutdownInstance() {
         if (_coreInstance) {
 #if UNITY_EDITOR
             DestroyImmediate(_coreInstance.gameObject);
@@ -296,12 +285,6 @@ public partial class LuauCore : MonoBehaviour {
     public static void ShutdownContext(LuauContext context) {
         LuauState.Shutdown(context);
     }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void OnSubsystemRegistration() {
-        ResetStaticFields();
-        LuauPlugin.LuauSubsystemRegistration();
-    }
     
     private static void ResetStaticFields() {
         _awaitingTasks.Clear();
@@ -310,6 +293,9 @@ public partial class LuauCore : MonoBehaviour {
         protectedSceneHandles.Clear();
         _propertySetterCache.Clear();
         WriteMethodFunctions.Clear();
+        CurrentContext = LuauContext.Game;
+        _coreInstance = null;
+        s_shutdown = false;
     }
 
     public static void ResetContext(LuauContext context) {
@@ -335,17 +321,22 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private void Awake() {
+        if (_coreInstance != null) {
+            // Ensure only one CoreInstance exists
+            Destroy(gameObject);
+            return;
+        }
+        
         _coreInstance = this;
+        DontDestroyOnLoad(gameObject);
         s_shutdown = false;
         CheckSetup();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetOnReload() {
-        CurrentContext = LuauContext.Game;
-        _coreInstance = null;
-        s_shutdown = false;
-        gameObj = null;
+        ResetStaticFields();
+        LuauPlugin.LuauSubsystemRegistration();
         Application.quitting -= Quit;
     }
 
