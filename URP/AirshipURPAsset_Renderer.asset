@@ -20,7 +20,7 @@ MonoBehaviour:
       RenderQueueType: 0
       LayerMask:
         serializedVersion: 2
-        m_Bits: 2048
+        m_Bits: 4096
       PassNames:
       - CharacterDepth
     overrideMaterial: {fileID: 0}
@@ -30,10 +30,53 @@ MonoBehaviour:
     overrideMode: 0
     overrideDepthState: 1
     depthCompareFunction: 4
-    enableWrite: 0
+    enableWrite: 1
     stencilSettings:
       overrideStencilState: 1
       stencilReference: 1
+      stencilCompareFunction: 8
+      passOperation: 2
+      failOperation: 0
+      zFailOperation: 0
+    cameraSettings:
+      overrideCamera: 0
+      restoreCamera: 1
+      offset: {x: 0, y: 0, z: 0, w: 0}
+      cameraFieldOfView: 60
+--- !u!114 &-1785112278215371326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
+  m_Name: Character Alpha Stencil
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    passTag: Character Alpha Stencil
+    Event: 500
+    filterSettings:
+      RenderQueueType: 0
+      LayerMask:
+        serializedVersion: 2
+        m_Bits: 2048
+      PassNames:
+      - CharacterDepth
+    overrideMaterial: {fileID: 0}
+    overrideMaterialPassIndex: 0
+    overrideShader: {fileID: 0}
+    overrideShaderPassIndex: 0
+    overrideMode: 0
+    overrideDepthState: 1
+    depthCompareFunction: 2
+    enableWrite: 1
+    stencilSettings:
+      overrideStencilState: 1
+      stencilReference: 10
       stencilCompareFunction: 8
       passOperation: 2
       failOperation: 0
@@ -63,7 +106,7 @@ MonoBehaviour:
       RenderQueueType: 0
       LayerMask:
         serializedVersion: 2
-        m_Bits: 2048
+        m_Bits: 6144
       PassNames:
       - CharacterBehindOpaque
     overrideMaterial: {fileID: 2100000, guid: 6d23112a8032af545b415eeb2888505b, type: 2}
@@ -113,12 +156,14 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 7807577358473915454}
   - {fileID: -4108515289623176950}
-  - {fileID: 6588304970068813492}
   - {fileID: 1638106660970555761}
+  - {fileID: -1785112278215371326}
+  - {fileID: 6588304970068813492}
+  - {fileID: 7557044006775780010}
   - {fileID: -1513890852522452910}
-  m_RendererFeatureMap: 3e6c38c03d165a6c0ad9bfa71c9ffbc6b466e4c4765c6e5b71e9593f54b9bb165298af624a94fdea
+  m_RendererFeatureMap: 3e6c38c03d165a6c0ad9bfa71c9ffbc671e9593f54b9bb16c2d5c844d7013ae7b466e4c4765c6e5baa72dd377c03e0685298af624a94fdea
   m_UseNativeRenderPass: 0
-  xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
+  xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 2
   m_OpaqueLayerMask:
@@ -152,17 +197,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
-  m_Name: Character Pass
+  m_Name: Character Depth Pass
   m_EditorClassIdentifier: 
   m_Active: 1
   settings:
-    passTag: Character Pass
+    passTag: Character Depth Pass
     Event: 450
     filterSettings:
       RenderQueueType: 0
       LayerMask:
         serializedVersion: 2
-        m_Bits: 2048
+        m_Bits: 4096
       PassNames: []
     overrideMaterial: {fileID: 2100000, guid: ff2f42e1397fe8a479eea2973e848d92, type: 2}
     overrideMaterialPassIndex: 0
@@ -171,12 +216,12 @@ MonoBehaviour:
     overrideMode: 0
     overrideDepthState: 0
     depthCompareFunction: 4
-    enableWrite: 1
+    enableWrite: 0
     stencilSettings:
       overrideStencilState: 1
-      stencilReference: 1
-      stencilCompareFunction: 2
-      passOperation: 0
+      stencilReference: 0
+      stencilCompareFunction: 8
+      passOperation: 3
       failOperation: 0
       zFailOperation: 0
     cameraSettings:
@@ -199,7 +244,7 @@ MonoBehaviour:
   m_Active: 1
   settings:
     passTag: Character Alpha
-    Event: 450
+    Event: 500
     filterSettings:
       RenderQueueType: 0
       LayerMask:
@@ -212,14 +257,56 @@ MonoBehaviour:
     overrideShader: {fileID: 0}
     overrideShaderPassIndex: 0
     overrideMode: 0
-    overrideDepthState: 0
-    depthCompareFunction: 8
+    overrideDepthState: 1
+    depthCompareFunction: 4
     enableWrite: 0
     stencilSettings:
       overrideStencilState: 1
-      stencilReference: 1
+      stencilReference: 10
       stencilCompareFunction: 3
       passOperation: 3
+      failOperation: 0
+      zFailOperation: 0
+    cameraSettings:
+      overrideCamera: 0
+      restoreCamera: 1
+      offset: {x: 0, y: 0, z: 0, w: 0}
+      cameraFieldOfView: 60
+--- !u!114 &7557044006775780010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
+  m_Name: Local Character Pass
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    passTag: Local Character Pass
+    Event: 500
+    filterSettings:
+      RenderQueueType: 0
+      LayerMask:
+        serializedVersion: 2
+        m_Bits: 2048
+      PassNames: []
+    overrideMaterial: {fileID: 0}
+    overrideMaterialPassIndex: 0
+    overrideShader: {fileID: 0}
+    overrideShaderPassIndex: 0
+    overrideMode: 0
+    overrideDepthState: 0
+    depthCompareFunction: 3
+    enableWrite: 0
+    stencilSettings:
+      overrideStencilState: 1
+      stencilReference: 11
+      stencilCompareFunction: 4
+      passOperation: 0
       failOperation: 0
       zFailOperation: 0
     cameraSettings:
