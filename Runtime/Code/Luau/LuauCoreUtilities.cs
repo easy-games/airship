@@ -49,12 +49,12 @@ public partial class LuauCore : MonoBehaviour
     private static string GetTidyPathNameForLuaFile(string fileNameStr) {
         var init = fileNameStr;
         // Make sure assets is properly capitalized for GetRelativePath call
-        if (fileNameStr.ToLower().StartsWith("assets")) {
+        if (fileNameStr.StartsWith("assets", StringComparison.OrdinalIgnoreCase)) {
             fileNameStr = fileNameStr.Substring("assets".Length);
         }
         
         // Add .lua to the end
-        if (!fileNameStr.EndsWith(".lua")) {
+        if (!fileNameStr.EndsWith(".lua", StringComparison.OrdinalIgnoreCase)) {
             fileNameStr += ".lua";
         }
 

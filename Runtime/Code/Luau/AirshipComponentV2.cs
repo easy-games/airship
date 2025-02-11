@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Assets.Code.Luau;
 using Luau;
 using UnityEngine;
 
 public class AirshipComponentV2 : MonoBehaviour {
-	public static AwakeData QueuedAwakeData = null;
+	public static LuauScript.AwakeData QueuedAwakeData = null;
 	private static int _airshipComponentIdGen = 10000000;
 	
 	public AirshipScript script;
@@ -22,14 +23,23 @@ public class AirshipComponentV2 : MonoBehaviour {
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void OnReload() {
 		_airshipComponentIdGen = 10000000;
+		QueuedAwakeData = null;
 	}
 	
 	private void Awake() {
 		if (QueuedAwakeData != null) {
-			script = QueuedAwakeData.script;
-			context = QueuedAwakeData.context;
+			script = QueuedAwakeData.Script;
+			context = QueuedAwakeData.Context;
 			QueuedAwakeData = null;
 		}
+		
+		ScriptingEntryPoint.InvokeOnLuauStartup();
+
+		// TODO:
+		// Assume protected context for bindings within CoreScene
+		// if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+		// 	context = LuauContext.Protected;
+		// }
 		
 		// Load the component onto the thread:
 		thread = LuauScript.LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.Cached, script, true);
@@ -95,12 +105,6 @@ public class AirshipComponentV2 : MonoBehaviour {
 
 	private void OnDisable() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
-		
-		// NOTE TO SELF: It seems like maybe the wrong LuauCore is being used at first?
-		// At least, if the AirshipComponent's GO starts inactive, then is activated, it works fine!
-		// But if it starts right away, subsequent calls to OnEnable/OnDisable/etc. fail because the thread is dead, even though the thread is pinned
-		// The only thing I can think of is that LuauCore might not exist.
-		// Yeah, removing the duplicate LuauCore seems to fix it...
 		
 		print("C# OnDisable");
 		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV3.GetId(gameObject), _airshipComponentId, false);
@@ -321,9 +325,4 @@ public class AirshipComponentV2 : MonoBehaviour {
         return false;
     }
 #endif
-
-	public class AwakeData {
-		public readonly AirshipScript script;
-		public readonly LuauContext context;
-	}
 }

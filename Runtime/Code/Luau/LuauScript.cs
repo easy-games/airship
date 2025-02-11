@@ -2,6 +2,9 @@
 using System.IO;
 using Luau;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public enum LuauScriptCacheMode {
 	NotCached,
@@ -10,10 +13,20 @@ public enum LuauScriptCacheMode {
 
 [LuauAPI(LuauContext.Protected)]
 public class LuauScript : MonoBehaviour {
+	public static AwakeData QueuedAwakeData = null;
+    
+	// Injected from LuauHelper
+	public static IAssetBridge AssetBridge;
+	
 	public AirshipScript script;
 
 	public IntPtr thread;
 	[HideInInspector] public LuauContext context = LuauContext.Game;
+	
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+	private static void OnReload() {
+		QueuedAwakeData = null;
+	}
 	
 	private static string CleanupFilePath(string path) {
 		var extension = Path.GetExtension(path);
@@ -28,7 +41,58 @@ public class LuauScript : MonoBehaviour {
 		return path;
 	}
 
+	private static AirshipScript LoadBinaryFileFromPath(string fullFilePath) {
+		var cleanPath = CleanupFilePath(fullFilePath);
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
+		return AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
+		       ?? AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath);
+#else
+		if (AssetBridge != null && AssetBridge.IsLoaded()) {
+			var luaPath = cleanPath.Replace(".ts", ".lua");
+			return AssetBridge.LoadAssetInternal<AirshipScript>(luaPath);
+		}
+
+		throw new Exception("AssetBridge not loaded");
+#endif
+	}
+
+	public static LuauScript AddNew(GameObject go, string scriptPath, LuauContext context) {
+		var script = LoadBinaryFileFromPath(scriptPath);
+		if (script == null) {
+			throw new Exception($"Failed to load script from file: {scriptPath}");
+		}
+
+		return AddNew(go, script, context);
+	}
+
+	public static LuauScript AddNew(GameObject go, AirshipScript script, LuauContext context) {
+		var awakeData = new AwakeData() {
+			Script = script,
+			Context = context,
+		};
+		QueuedAwakeData = awakeData;
+		
+		var luauScript = go.AddComponent<LuauScript>();
+
+		// If QueuedAwakeData is still set, then the LuauScript didn't awake right away.
+		// In this case, just set it ourselves. This would happen if the GameObject was
+		// in an inactive state.
+		if (QueuedAwakeData == awakeData) {
+			QueuedAwakeData = null;
+			luauScript.script = script;
+			luauScript.context = context;
+		}
+		
+		return luauScript;
+	}
+
 	private void Awake() {
+		if (QueuedAwakeData != null) {
+			script = QueuedAwakeData.Script;
+			context = QueuedAwakeData.Context;
+			QueuedAwakeData = null;
+		}
+		
 		LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, false);
 	}
 
@@ -54,7 +118,7 @@ public class LuauScript : MonoBehaviour {
 			case LuauScriptCacheMode.NotCached:
 				return LuauPlugin.LuauCreateThread(context, script.m_bytes, cleanPath, id, nativeCodegen);
 			case LuauScriptCacheMode.Cached:
-				var requirePath = LuauCore.GetRequirePath(script, cleanPath);
+				var requirePath = LuauCore.GetRequirePath(script.m_path, cleanPath);
 				return LuauPlugin.LuauCreateThreadWithCachedModule(context, requirePath, id);
 			default:
 				throw new Exception($"[LuauScript]: Unhandled mode: {cacheMode}");
@@ -91,7 +155,7 @@ public class LuauScript : MonoBehaviour {
 		}
 
 		if (shouldCacheValue) {
-			var requirePath = LuauCore.GetRequirePath(script, CleanupFilePath(script.m_path));
+			var requirePath = LuauCore.GetRequirePath(script.m_path, CleanupFilePath(script.m_path));
 			LuauPlugin.LuauCacheModuleOnThread(thread, requirePath);
 		}
 
@@ -102,5 +166,10 @@ public class LuauScript : MonoBehaviour {
 		ExecuteScript(thread);
 
 		return thread;
+	}
+
+	public class AwakeData {
+		public AirshipScript Script;
+		public LuauContext Context;
 	}
 }

@@ -39,30 +39,14 @@ namespace Assets.Code.Luau {
 
 			var coreCamera = GameObject.Find("AirshipCoreSceneCamera");
 			if (coreCamera && coreCamera.scene.name == "CoreScene") {
-				Object.Destroy(coreCamera);
+				Destroy(coreCamera);
 			}
-
-			LuauCore.CoreInstance.CheckSetup();
-
+			
 			// Main Menu
-			{
-				var go = new GameObject("MainMenuInGame");
-				var binding = go.AddComponent<AirshipComponent>();
-
-				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
-			}
+			LuauScript.AddNew(new GameObject("MainMenuInGame"), MainMenuEntryScript, LuauContext.Protected);
 
 			// Core
-			{
-				var go = new GameObject("@Easy/Core");
-				var binding = go.AddComponent<AirshipComponent>();
-
-				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
-			}
+			LuauScript.AddNew(new GameObject("@Easy/Core"), CoreEntryScript, LuauContext.Game);
 		}
 	}
 }

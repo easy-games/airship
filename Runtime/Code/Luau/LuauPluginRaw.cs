@@ -111,7 +111,7 @@ public static class LuauPluginRaw {
 	/// </summary>
 	public static void PushString(IntPtr thread, string str) {
 		var strPtr = Marshal.StringToCoTaskMemUTF8(str);
-		var len = Encoding.Unicode.GetByteCount(str);
+		var len = Encoding.UTF8.GetByteCount(str);
 		var res = LuaPushString(thread, strPtr, len);
 		Marshal.FreeCoTaskMem(strPtr);
 		ThrowIfNotNullPtr(res);
