@@ -2,6 +2,7 @@
 using System.IO;
 using Luau;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -13,6 +14,8 @@ public enum LuauScriptCacheMode {
 
 [LuauAPI(LuauContext.Protected)]
 public class LuauScript : MonoBehaviour {
+	private const bool ElevateToProtectedWithinCoreScene = true;
+	
 	public static AwakeData QueuedAwakeData = null;
     
 	// Injected from LuauHelper
@@ -22,6 +25,7 @@ public class LuauScript : MonoBehaviour {
 
 	public IntPtr thread;
 	[HideInInspector] public LuauContext context = LuauContext.Game;
+	[HideInInspector] public bool forceContext = false;
 	
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void OnReload() {
@@ -56,16 +60,16 @@ public class LuauScript : MonoBehaviour {
 #endif
 	}
 
-	public static LuauScript AddNew(GameObject go, string scriptPath, LuauContext context) {
+	public static LuauScript Create(GameObject go, string scriptPath, LuauContext context) {
 		var script = LoadBinaryFileFromPath(scriptPath);
 		if (script == null) {
 			throw new Exception($"Failed to load script from file: {scriptPath}");
 		}
 
-		return AddNew(go, script, context);
+		return Create(go, script, context);
 	}
 
-	public static LuauScript AddNew(GameObject go, AirshipScript script, LuauContext context) {
+	public static LuauScript Create(GameObject go, AirshipScript script, LuauContext context) {
 		var awakeData = new AwakeData() {
 			Script = script,
 			Context = context,
@@ -91,6 +95,11 @@ public class LuauScript : MonoBehaviour {
 			script = QueuedAwakeData.Script;
 			context = QueuedAwakeData.Context;
 			QueuedAwakeData = null;
+		}
+
+		// Assume protected context for bindings within CoreScene
+		if (!forceContext && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+			context = LuauContext.Protected;
 		}
 		
 		LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, false);
@@ -171,5 +180,6 @@ public class LuauScript : MonoBehaviour {
 	public class AwakeData {
 		public AirshipScript Script;
 		public LuauContext Context;
+		public bool ForceContext = false;
 	}
 }

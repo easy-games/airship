@@ -5,25 +5,35 @@ using System.Runtime.InteropServices;
 using Assets.Code.Luau;
 using Luau;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
+[AddComponentMenu("Airship/Airship Component")]
+[LuauAPI(LuauContext.Protected)]
 public class AirshipComponentV2 : MonoBehaviour {
+	private const bool ElevateToProtectedWithinCoreScene = true;
+	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
 	private static int _airshipComponentIdGen = 10000000;
+	private static bool _validatedSceneInGameConfig = false;
 	
 	public AirshipScript script;
 
 	public IntPtr thread;
 	[HideInInspector] public LuauContext context = LuauContext.Game;
-	
-	[HideInInspector] public LuauMetadata metadata = new();
+	[HideInInspector] public bool forceContext = false;
+	[FormerlySerializedAs("m_metadata")] [HideInInspector] public LuauMetadata metadata = new();
 	
 	private readonly int _airshipComponentId = _airshipComponentIdGen++;
 	private readonly Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new(); 
+	
+	public string TypescriptFilePath => script.m_path.Replace(".lua", ".ts");
 
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void OnReload() {
 		_airshipComponentIdGen = 10000000;
 		QueuedAwakeData = null;
+		_validatedSceneInGameConfig = false;
 	}
 	
 	private void Awake() {
@@ -34,12 +44,26 @@ public class AirshipComponentV2 : MonoBehaviour {
 		}
 		
 		ScriptingEntryPoint.InvokeOnLuauStartup();
+		
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
+		if (!_validatedSceneInGameConfig) {
+			var scene = gameObject.scene;
+			if (!LuauCore.IsProtectedScene(scene)) {
+				var sceneName = scene.name;
+				var gameConfig = GameConfig.Load();
+				if (gameConfig.gameScenes.ToList().Find((s) => s.name == sceneName) == null) {
+					throw new Exception(
+						$"Tried to load AirshipComponent ({name}) on GameObject ({gameObject.name}) in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
+				}
+			}
+			_validatedSceneInGameConfig = true;
+		}
+#endif
 
-		// TODO:
 		// Assume protected context for bindings within CoreScene
-		// if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
-		// 	context = LuauContext.Protected;
-		// }
+		if (!forceContext && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+			context = LuauContext.Protected;
+		}
 		
 		// Load the component onto the thread:
 		thread = LuauScript.LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.Cached, script, true);
