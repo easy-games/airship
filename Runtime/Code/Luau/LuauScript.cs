@@ -29,7 +29,7 @@ public class LuauScript : MonoBehaviour {
 	}
 
 	private void Awake() {
-		LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script);
+		LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, false);
 	}
 
 	/// <summary>
@@ -75,16 +75,28 @@ public class LuauScript : MonoBehaviour {
 	/// Loads and executes the given script. The executed Luau thread is returned. If the thread is a nullptr, then
 	/// that indicates that Luau failed to load the script.
 	/// </summary>
-	public static IntPtr LoadAndExecuteScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script) {
+	public static IntPtr LoadAndExecuteScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script, bool pinThread) {
 		var thread = LoadScript(obj, context, cacheMode, script);
+
+		var shouldCacheValue = thread == IntPtr.Zero && cacheMode == LuauScriptCacheMode.Cached;
+		if (shouldCacheValue) {
+			thread = LoadScript(obj, context, LuauScriptCacheMode.NotCached, script);
+		}
 		
 		// A nullptr indicates that Luau failed to load the bytecode. Luau will write the error to the output, and we
 		// need to check for the nullptr and stop here:
 		if (thread == IntPtr.Zero) {
-			if (cacheMode == LuauScriptCacheMode.NotCached) {
-				Debug.LogError($"[LuauScript] Failed to create Luau thread for script: {script.m_path}");
-			}
+			Debug.LogError($"[LuauScript] Failed to create Luau thread for script: {script.m_path}");
 			return thread;
+		}
+
+		if (shouldCacheValue) {
+			var requirePath = LuauCore.GetRequirePath(script, CleanupFilePath(script.m_path));
+			LuauPlugin.LuauCacheModuleOnThread(thread, requirePath);
+		}
+
+		if (pinThread) {
+			LuauPlugin.LuauPinThread(thread);
 		}
 		
 		ExecuteScript(thread);
