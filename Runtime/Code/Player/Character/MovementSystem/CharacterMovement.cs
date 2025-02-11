@@ -853,13 +853,20 @@ public class CharacterMovement : NetworkBehaviour {
             //print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
         }
 
+        var underMaxSpeed = velMagnitude < (moveData.useAccelerationMovement
+            ? currentSpeed
+            : Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1);
+
+        if (underMaxSpeed) {
+            currentMoveState.airborneFromImpulse = false;
+        }
+
+
         if (currentMoveState.isFlying) {
             newVelocity.x = md.moveDir.x * currentSpeed;
             newVelocity.z = md.moveDir.z * currentSpeed;
-        } else if (!isImpulsing && !currentMoveState.airborneFromImpulse && //Not impulsing AND under our max speed
-                   velMagnitude < (moveData.useAccelerationMovement
-                       ? currentSpeed
-                       : Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1)) {
+        } else if (!isImpulsing && !currentMoveState.airborneFromImpulse && underMaxSpeed) {
+            //Not impulsing AND under our max speed
             if (moveData.useAccelerationMovement) {
                 newVelocity += Vector3.ClampMagnitude(characterMoveVelocity, currentSpeed - velMagnitude);
             } else {
@@ -876,10 +883,9 @@ public class CharacterMovement : NetworkBehaviour {
             }
         } else {
             //Moving faster than max speed or using acceleration mode
-            newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) *
-                           (groundedState == CharacterState.Sprinting
-                               ? moveData.sprintAccelerationForce
-                               : moveData.accelerationForce);
+            newVelocity += normalizedMoveDir * (dirDot * dirDot / 2 * (groundedState == CharacterState.Sprinting
+                ? moveData.sprintAccelerationForce
+                : moveData.accelerationForce));
         }
 
         //print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
