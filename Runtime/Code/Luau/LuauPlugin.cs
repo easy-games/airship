@@ -474,12 +474,13 @@ public static class LuauPlugin {
 		var scriptBytecodeHandle = GCHandle.Alloc(scriptBytecode, GCHandleType.Pinned);
 		var scriptBytecodePtr = scriptBytecodeHandle.AddrOfPinnedObject();
 		
-		var filenameBytes = Encoding.UTF8.GetBytes(filename);
-		var filenameLength = Encoding.UTF8.GetByteCount(filename);
-		var filenameHandle = GCHandle.Alloc(filenameBytes, GCHandleType.Pinned);
-		var filenamePtr = filenameHandle.AddrOfPinnedObject();
+		var filenamePtr = Marshal.StringToCoTaskMemUTF8(filename);
+		var filenameLength = Encoding.Unicode.GetByteCount(filename);
 		
 		var returnValue = CreateThread(context, scriptBytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+		
+		Marshal.FreeCoTaskMem(filenamePtr);
+		scriptBytecodeHandle.Free();
 		
         EndExecutionCheck();
         
