@@ -474,7 +474,7 @@ public static class LuauPlugin {
 		var scriptBytecodePtr = scriptBytecodeHandle.AddrOfPinnedObject();
 		
 		var filenamePtr = Marshal.StringToCoTaskMemUTF8(filename);
-		var filenameLength = Encoding.Unicode.GetByteCount(filename);
+		var filenameLength = Encoding.UTF8.GetByteCount(filename);
 		
 		var returnValue = CreateThread(context, scriptBytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
 		

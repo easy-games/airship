@@ -38,7 +38,7 @@ public class LuauCompiler {
         IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
 
         // Compile
-        var len = Encoding.Unicode.GetByteCount(data);
+        var len = Encoding.UTF8.GetByteCount(data);
         IntPtr res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, path.Length, 1);
 
         Marshal.FreeCoTaskMem(dataStr);
