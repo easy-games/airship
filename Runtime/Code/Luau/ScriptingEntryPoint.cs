@@ -43,10 +43,16 @@ namespace Assets.Code.Luau {
 			}
 			
 			// Main Menu
-			LuauScript.Create(new GameObject("MainMenuInGame"), MainMenuEntryScript, LuauContext.Protected);
+			{
+				var go = new GameObject("MainMenuInGame");
+				LuauScript.Create(go, MainMenuEntryScript, LuauContext.Protected);
+			}
 
 			// Core
-			LuauScript.Create(new GameObject("@Easy/Core"), CoreEntryScript, LuauContext.Game);
+			{
+				var go = new GameObject("@Easy/Core");
+				LuauScript.Create(go, CoreEntryScript, LuauContext.Game);
+			}
 		}
 	}
 }

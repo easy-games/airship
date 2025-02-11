@@ -4,24 +4,7 @@ using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine;
 
-public partial class LuauCore : MonoBehaviour
-{
-    //Utilities
-    public static void OneshotScript(string path)
-    {
-        GameObject obj = new GameObject();
-        obj.name = "ScriptRunner";
-        AirshipComponent binding = obj.AddComponent<AirshipComponent>();
-        binding.CreateThreadFromPath(path, LuauContext.Game);  // "Resources/Editor/TestEditorScript.lua"
-
-        GameObject.DestroyImmediate(obj);
-
-        if (Application.isPlaying == false)
-        {
-            LuauCore.ShutdownInstance();
-        }
-    }
-
+public partial class LuauCore : MonoBehaviour {
     public int ResumeScript(LuauContext context, AirshipComponent binding) {
         var retValue = LuauState.FromContext(context).ResumeScript(binding);
 
