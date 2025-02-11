@@ -76,6 +76,15 @@ namespace Code.Player.Character.NetworkedMovement
         // private SortedList<double, Input> clientInputHistory = new SortedList<double, Input>();
         // private SortedList<double, State> clientPredictedHistory = new SortedList<double, State>();
         private State clientLastConfirmedState;
+        // Flag for if we are the resimulation requestor.
+        // For predicted objects, we don't overwrite the predicted state if we didn't request resimulation
+        // TODO: in the future, we might get better resims in cases where there is more than one predicted
+        // component by resimulating both, but it would require us to ensure that we have accurate intermediate
+        // data and don't overwrite authoritative snapshots in our prediction history.
+        private bool clientPredictionResimRequestor = false;
+        // When the client doesn't recieve confirmation of it's commands for an extended time, we pause
+        // predictions until we receive more commands from the server.
+        private bool clientPausePrediction = false;
 
         // Fields for managing re-simulations
         // We store a max of 1 second of history
@@ -166,6 +175,15 @@ namespace Code.Player.Character.NetworkedMovement
             AirshipSimulationManager.OnSetSnapshot -= this.OnSetSnapshot;
             AirshipSimulationManager.OnCaptureSnapshot -= this.OnCaptureSnapshot;
         }
+        
+        private void LateUpdate()
+        {
+            // Unowned clients should interpolate the observed character
+            if (isClient && !isOwned)
+            {
+                this.Interpolate();
+            }
+        }
 
         #endregion
 
@@ -251,15 +269,6 @@ namespace Code.Player.Character.NetworkedMovement
             if (isClient && isOwned && serverAuth)
             {
                 this.NonAuthClientSetSnapshot(time);
-            }
-        }
-
-        private void LateUpdate()
-        {
-            // Unowned clients should interpolate the observed character
-            if (isClient && !isOwned)
-            {
-                this.Interpolate();
             }
         }
 
@@ -389,33 +398,26 @@ namespace Code.Player.Character.NetworkedMovement
             // Before we start our tick update, make sure our current predicted state is the most correct it can be.
             if (this.clientLastConfirmedState != null)
             {
-                // TODO: triggering resimulations here is probably not the best if we have more than one component that
-                // will trigger re-sims. In the case where there are two components, both could trigger
-                // a resim at different times and overwrite the updates state of the other.
-                // We could try to resolve this in the simulation manager by having requests submitted then processed
-                // at the correct time, but it wouldn't solve the overwriting issue.
-                // Perhaps only overwriting state history if you are the one that triggered the resim is the way to go
                 this.ReconcileInputHistory(this.clientLastConfirmedState);
                 // We set this to null so that we don't re-reconcile on ticks where there's no new information
                 // to base our prediction off of.
                 this.clientLastConfirmedState = null;
             }
             
-            // TODO: we may want to avoid recording and sending commands to the server until we've 
-            // received at least one or two snapshots from the server so that we know our clock is synced
-            // and that we have accurate state history to base our predictions on.
+            // If the prediction is paused, we still tick the movement system, but we include no command
+            // for the tick. We want to wait for our current set of commands to be confirmed before
+            // we start predicting again, so it's important that we do not add anything else to
+            // inputHistory.
+            if (this.clientPausePrediction)
+            {
+                this.movementSystem.GetCommand(this.clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
+                this.movementSystem.Tick(null, false);
+                return;
+            }
 
             // Update our command number and process the next tick.
             clientCommandNumber++;
             var input = this.movementSystem.GetCommand(this.clientCommandNumber, time);
-            // var added = this.clientInputHistory.TryAdd(time, input);
-            // if (!added)
-            // {
-            //     Debug.LogWarning(
-            //         "Attempted to add a command at a time that already contained a command. Using the existing command for that time instead.");
-            //     this.clientInputHistory.TryGetValue(time, out input);
-            // }
-            
             input = this.inputHistory.Add(time, input);
             this.movementSystem.Tick(input, false);
             
@@ -440,12 +442,32 @@ namespace Code.Player.Character.NetworkedMovement
                 // If we didn't have any input, just skip capturing the tick since we won't expect
                 // to see it in our state history either.
                 if (input == null) return;
-                // Capture the state and overwrite our history for this tick since it may be different
-                // due to corrected collisions or positions of other objects.
-                var replayState = this.movementSystem.GetCurrentState(input.commandNumber, time);
-                var oldState = this.stateHistory.GetExact(time);
-                Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
-                this.stateHistory.Overwrite(time, replayState);
+
+                // If we did request this resimulation, we will process the new state history
+                if (this.clientPredictionResimRequestor)
+                {
+                    // Capture the state and overwrite our history for this tick since it may be different
+                    // due to corrected collisions or positions of other objects.
+                    var replayState = this.movementSystem.GetCurrentState(input.commandNumber, time);
+                    var oldState = this.stateHistory.GetExact(time);
+                    Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
+                    this.stateHistory.Overwrite(time, replayState);
+                    return;
+                }
+                // If we didn't request this resimulation, reset our state to the one we previously captured for this tick.
+                else
+                {
+                    var oldState = this.stateHistory.GetExact(time);
+                    if (oldState == null) return;
+                    this.movementSystem.SetCurrentState(oldState);
+                }
+            }
+
+            // If prediction is disabled, we are waiting for our current stateHistory to be confirmed
+            // by the server, so we tick the networked command system, but we don't store the state.
+            if (this.clientPausePrediction)
+            {
+                this.movementSystem.GetCurrentState(clientCommandNumber, time);
                 return;
             }
 
@@ -453,7 +475,6 @@ namespace Code.Player.Character.NetworkedMovement
             var state = this.movementSystem.GetCurrentState(clientCommandNumber, time);
             this.stateHistory.Add(time, state);
             Debug.Log("Processing command " + state.lastProcessedCommand + " resulted in " + state);
-            // this.clientPredictedHistory.TryAdd(time, state);
         }
 
         public void NonAuthClientSetSnapshot(double time)
@@ -622,7 +643,6 @@ namespace Code.Player.Character.NetworkedMovement
             // var tickProgress = (clientTick - prevState.tick) / ticksBetweenSnapshots;
             // var currentTickProgress = (Time.time - Time.fixedTime) / Time.fixedDeltaTime;
             // var timeDelta = tickProgress + (currentTickProgress / ticksBetweenSnapshots);
-
             this.movementSystem.Interpolate((float)timeDelta, prevState, nextState);
         }
 
@@ -634,11 +654,13 @@ namespace Code.Player.Character.NetworkedMovement
         {
             if (this.stateHistory.Values.Count == 0)
             {
-                // We have no predicted state history. This would be highly unusual and occur only in a situation where
+                // We have no predicted state history. Occurs only in a situation where
                 // we have somehow cleared this history (and not added more), or we haven't started predicting yet and the server
-                // is sending us snapshots. It's probably best to assume we will get out of this state later after we've
-                // run some client ticks, so we just return early.
-                Debug.LogWarning("Reconciling with no prediction history. This is unusual.");
+                // is sending us snapshots.
+                // Since we now know where we should be authoritatively, set the current state. Since this isn't a prediction,
+                // we don't add it to the stateHistory.
+                this.movementSystem.SetCurrentState(state);
+                Physics.SyncTransforms();
                 return;
             }
 
@@ -650,11 +672,16 @@ namespace Code.Player.Character.NetworkedMovement
                 // was correct, because we literally don't have the prediction anymore.
                 // TODO: Perhaps we should stop predicting until we receive one we can confirm one of our
                 // predictions?
+                this.clientPausePrediction = true;
+                Debug.LogWarning("Prediction paused due to a large number of unconfirmed commands to the server. Is there something wrong with the network?");
                 return;
             }
 
             // Find our client predicted state in our state history so we can compare it with what the server
             // provided us.
+            // Our predicted state history will only have frame that matches the lastProcessedCommand, but
+            // keep in mind that the server may send us more than one frame with the same lastProcessedCommand
+            // due to packet loss/delay. We have to re-simulate in those cases too if the state has changed
             State clientPredictedState = null;
             foreach (var predictedState in this.stateHistory.Values)
             {
@@ -678,6 +705,10 @@ namespace Code.Player.Character.NetworkedMovement
                 return;
             }
 
+            // No matter what, if we get here, we are safe to send commands since we have a command that has been
+            // confirmed by the server that we have locally in our state history.
+            this.clientPausePrediction = false;
+
             // Check if our predicted state matches up with our new authoritative state.
             if (clientPredictedState.CompareWithMargin(0f, state))
             {
@@ -698,13 +729,17 @@ namespace Code.Player.Character.NetworkedMovement
             this.stateHistory.Overwrite(clientPredictedState.time, updatedState);
             // Resimulate all commands performed after the incorrect prediction so that
             // our future predictions are (hopefully) correct.
+            this.clientPredictionResimRequestor = true;
             AirshipSimulationManager.instance.PerformResimulation(clientPredictedState.time);
+            this.clientPredictionResimRequestor = false;
         }
 
         #endregion
 
         #region Networking
 
+        // TODO: consider sending all tick data from the last snapshot time to the new time so
+        // we can rebuild a completely accurate history for other re-simulations
         private void ClientReceiveSnapshot(State state)
         {
             if (lastReceivedSnapshotTime > state.time)

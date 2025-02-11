@@ -22,7 +22,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
             if (mode == MovementMode.Observer)
             {
                 rb.isKinematic = true;
-                rb.interpolation = RigidbodyInterpolation.None;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
             }
 
