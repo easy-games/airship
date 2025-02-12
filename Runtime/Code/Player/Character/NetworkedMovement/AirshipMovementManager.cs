@@ -378,7 +378,6 @@ namespace Code.Player.Character.NetworkedMovement
             // get snapshot to send to clients
             var state = this.movementSystem.GetCurrentState(this.lastProcessedCommandNumber,
                 time);
-            // Todo: expose state history for lag compensation use
             this.stateHistory.Add(time, state);
             Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
 
@@ -409,31 +408,21 @@ namespace Code.Player.Character.NetworkedMovement
             {
                 // Get the command that we used at this tick previously
                 var command = this.inputHistory.GetExact(time);
-                // If we can't find a command, return since that means we just won't process an input.
-                if (command == null) return;
                 // Process the command again like before, but pass replay into the network system so that
                 // it doesn't replay effects or animations, etc.
-                this.movementSystem.Tick(command, replay);
+                this.movementSystem.Tick(command, true);
                 return;
             }
             
-            // Before we start our tick update, make sure our current predicted state is the most correct it can be.
-            // if (this.clientLastConfirmedState != null)
-            // {
-            //     this.ReconcileInputHistory(this.clientLastConfirmedState);
-            //     // We set this to null so that we don't re-reconcile on ticks where there's no new information
-            //     // to base our prediction off of.
-            //     this.clientLastConfirmedState = null;
-            // }
-            
             // If the prediction is paused, we still tick the movement system, but we include no command
             // for the tick. We want to wait for our current set of commands to be confirmed before
-            // we start predicting again, so it's important that we do not add anything else to
-            // inputHistory.
+            // we start predicting again, so it's important that we do not continue processing new commands
+            // and incrementing our commandNumber.
             if (this.clientPausePrediction)
             {
                 this.movementSystem.GetCommand(this.clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
                 this.movementSystem.Tick(null, false);
+                this.inputHistory.Add(time, null);
                 return;
             }
 
@@ -483,14 +472,6 @@ namespace Code.Player.Character.NetworkedMovement
                     if (oldState == null) return;
                     this.movementSystem.SetCurrentState(oldState);
                 }
-            }
-
-            // If prediction is disabled, we are waiting for our current stateHistory to be confirmed
-            // by the server, so we tick the networked command system, but we don't store the state.
-            if (this.clientPausePrediction)
-            {
-                this.movementSystem.GetCurrentState(clientCommandNumber, time);
-                return;
             }
 
             // Store the current physics state for prediction
@@ -714,7 +695,6 @@ namespace Code.Player.Character.NetworkedMovement
                 }
             }
 
-            // TODO: we somehow hit this case early on. It checked lastProcesssed = 5 against lastProcessed = 2. Weird.
             if (clientPredictedState == null)
             {
                 // This should never happen since our checks above confirm that our command should be in our history.
@@ -789,6 +769,7 @@ namespace Code.Player.Character.NetworkedMovement
                         // Reconcile when this callback is executed. Use the last confirmed state received,
                         // (since more could come in from the network while we are waiting for the callback)
                         this.ReconcileInputHistory(resimulate, this.clientLastConfirmedState);
+                        this.clientLastConfirmedState = null;
                     });
                 }
                 // We received a new state update before we were able to reconcile, just update the stored
@@ -827,6 +808,8 @@ namespace Code.Player.Character.NetworkedMovement
                 Debug.Log("Server received command " + command.commandNumber);
                 // This should only occur if the server is authoritative.
                 if (!serverAuth) continue;
+                
+                if (command == null) continue;
 
                 if (this.serverCommandBuffer.TryGetValue(command.commandNumber, out Input existingInput))
                 {
