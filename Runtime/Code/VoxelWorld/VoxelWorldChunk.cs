@@ -6,6 +6,7 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Mirror;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
@@ -229,10 +230,25 @@ namespace VoxelWorldStuff {
                             continue;
                         }
 
+                        var isNetworked = false;
                         GameObject prefabDef = blockDefinition.definition.prefab;
+                        if (prefabDef.GetComponent<NetworkIdentity>()) isNetworked = true;
+                        
+                        // If client and networked prefab, do not spawn on client
+                        if ((!RunCore.IsServer() && isNetworked) && Application.isPlaying) {
+                            continue;
+                        }
+                        
                         var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
                         var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
-                        GameObject prefab = GameObject.Instantiate(prefabDef, origin + localChunkPos, rot,  obj.transform);
+                        
+                        var prefab = Object.Instantiate(prefabDef, origin + localChunkPos, rot,  obj.transform);
+                        if (isNetworked && Application.isPlaying) {
+                            NetworkServer.Spawn(prefab);
+                            var networker = world.worldNetworker;
+                            // Probably need to signal to client to add this as well :s
+                        }
+                        
                         prefab.transform.parent = obj.transform;
                         prefab.transform.localScale = Vector3.one;
 
