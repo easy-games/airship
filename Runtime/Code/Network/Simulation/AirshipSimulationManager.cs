@@ -142,6 +142,7 @@ namespace Code.Network.Simulation
         {
             if (!isActive) return;
             if (Physics.simulationMode != SimulationMode.Script) return;
+            // TODO: consider skipping fixed updates where the clock has not advanced.
             
             // Before running any commands, we perform any resimulation requests that were made during
             // the last tick. This ensures that resimulations don't affect command processing and
