@@ -145,7 +145,6 @@ namespace Code.Player.Character
                 var originalClip = overrides[i].Key;
                 if (animationMap.TryGetValue(originalClip.name, out var newClip))
                 {
-                    Debug.Log("Replacing " + originalClip.name + " in favor of " + newClip.name);
                     if (newClip != null)
                     {
                         newOverrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(originalClip, newClip);
