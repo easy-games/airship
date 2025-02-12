@@ -35,6 +35,25 @@ public class AccessoryBuilder : MonoBehaviour {
 
     private readonly Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new();
 
+    //EVENTS
+    /// <summary>
+    ///     Called whenever the accessory builder combines the mesh
+    /// </summary>
+    /// used mesh combiner: bool, combined skin mesh: SkinnedMeshRenderer, combined rigid mesh: MeshRenderer
+    public event Action<object, object, object> OnMeshCombined;
+
+    /// <summary>
+    ///     Called whenever an accessory was added
+    /// </summary>
+    /// willCombine: bool, new accessories: ActiveAccessory[]
+    public event Action<object, object> OnAccessoryAdded;
+
+    /// <summary>
+    ///     Called whenever an accessory was removed
+    /// </summary>
+    /// willCombine: bool, removed accessories: ActiveAccessory[]
+    public event Action<object, object> OnAccessoryRemoved;
+
     [NonSerialized]
     public AccessorySlot[] firstPersonAllowedSlots = {
         AccessorySlot.LeftHand, AccessorySlot.RightHand, AccessorySlot.Root, AccessorySlot.LeftWrist,
@@ -101,12 +120,6 @@ public class AccessoryBuilder : MonoBehaviour {
         meshCombiner = null;
     }
 
-    //EVENTS
-    /// <summary>
-    ///     Called whenever the accessory builder combines the mesh
-    /// </summary>
-    /// used mesh combiner: bool, combined skin mesh: SkinnedMeshRenderer, combined rigid mesh: MeshRenderer
-    public event Action<object, object, object> OnMeshCombined;
 
     private ActiveAccessory MakeActiveAccessoryFromInstantiatedAccessory(AccessoryComponent accessoryComponent) {
         MeshRenderer[] meshRenderers;
@@ -179,6 +192,9 @@ public class AccessoryBuilder : MonoBehaviour {
             DestroyActiveAccessory(pair.Value);
         }
 
+        //Fire event with removed elements
+        OnAccessoryRemoved?.Invoke(rebuildMeshImmediately, activeAccessories.Values.ToArray());
+
         activeAccessories.Clear();
 
         if (rebuildMeshImmediately) {
@@ -208,6 +224,9 @@ public class AccessoryBuilder : MonoBehaviour {
 
         currentOutfit = null;
 
+        //Fire event with removed elements
+        OnAccessoryRemoved?.Invoke(rebuildMeshImmediately, toDelete.ToArray());
+
         if (rebuildMeshImmediately) {
             TryCombineMeshes();
         }
@@ -221,6 +240,11 @@ public class AccessoryBuilder : MonoBehaviour {
         if (activeAccessories.TryGetValue(slot, out var activeAccessory)) {
             DestroyActiveAccessory(activeAccessory);
             activeAccessories.Remove(slot);
+
+            //Fire event with removed elements
+            OnAccessoryRemoved?.Invoke(rebuildMeshImmediately, new[] {
+                activeAccessory
+            });
         }
 
         if (rebuildMeshImmediately) {
@@ -388,11 +412,15 @@ public class AccessoryBuilder : MonoBehaviour {
             activeAccessories[accessoryTemplate.accessorySlot].lods = lods.ToArray();
         }
 
+        //Fire event for added accessories
+        var arrayAccessories = addedAccessories.ToArray();
+        OnAccessoryAdded?.Invoke(rebuildMeshImmediately, arrayAccessories);
+
         if (rebuildMeshImmediately) {
             TryCombineMeshes();
         }
 
-        return addedAccessories.ToArray();
+        return arrayAccessories;
     }
 
     // public void AddSkinAccessory(AccessorySkin skin, bool rebuildMeshImmediately) {
