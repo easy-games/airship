@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class PhysicsSetup {
     public static readonly Vector3 defaultGravity = new(0, -9.81f, 0);
-    private const int NumberOfCoreLayers = 12;
+    private const int NumberOfCoreLayers = 13;
     private const int GameLayerStartIndex = 17;
     private static List<int> corelayers;
     private static List<int> gameLayers;
@@ -33,12 +33,6 @@ public static class PhysicsSetup {
         PhysicsLayerEditor.SetLayer(10, "AvatarEditor");
         PhysicsLayerEditor.SetLayer(11, "LocalStencilMask");
         PhysicsLayerEditor.SetLayer(12, "StencilMask");
-        var lastCoreLayerNumber = 12; // Update this if we add more layers
-
-        // Clear all unused layers reserved for Airship core
-        for (var i = lastCoreLayerNumber + 1; i <= 16; i++) {
-            PhysicsLayerEditor.SetLayer(i, "");
-        }
 
         //Reserved for future use
         for (var i = NumberOfCoreLayers; i < GameLayerStartIndex; i++) {
@@ -58,6 +52,8 @@ public static class PhysicsSetup {
         IgnoreAllLayers(LayerMask.NameToLayer("WorldUI"), true);
         //Only collide with game layers
         IgnoreAllLayers(LayerMask.NameToLayer("Character"), false);
+        IgnoreAllLayers(LayerMask.NameToLayer("LocalStencilMask"), false);
+        IgnoreAllLayers(LayerMask.NameToLayer("StencilMask"), false);
 
         //Character
         //Collides with
@@ -65,6 +61,15 @@ public static class PhysicsSetup {
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VisuallyHidden"),
             false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Water"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("LocalStencilMask"), LayerMask.NameToLayer("Default"),
+            false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("LocalStencilMask"), LayerMask.NameToLayer("VisuallyHidden"),
+            false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("LocalStencilMask"), LayerMask.NameToLayer("Water"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("Default"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("VisuallyHidden"),
+            false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("Water"), false);
     }
 
 

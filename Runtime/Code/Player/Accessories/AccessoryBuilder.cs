@@ -637,7 +637,7 @@ public class AccessoryBuilder : MonoBehaviour {
             meshCombiner.outputSkinnedMeshRenderers[0]);
     }
 
-    public Renderer[] GetAllAccessoryMeshes() {
+    public Renderer[] GetAllAccessoryRenderers() {
         var renderers = new List<Renderer>();
 
         //Main renderers
@@ -666,7 +666,7 @@ public class AccessoryBuilder : MonoBehaviour {
         return renderers.ToArray();
     }
 
-    public Renderer[] GetAccessoryMeshes(AccessorySlot slot) {
+    public Renderer[] GetAccessoryRenderers(AccessorySlot slot) {
         var activeAccessory = GetActiveAccessoryBySlot(slot);
         if (activeAccessory == null) {
             return Array.Empty<Renderer>();
