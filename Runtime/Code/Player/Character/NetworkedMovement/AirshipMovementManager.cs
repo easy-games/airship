@@ -24,9 +24,11 @@ namespace Code.Player.Character.NetworkedMovement
         [Range(1, 10)]
         public int maxServerCommandCatchup = 1;
 
-        // Amount of times in a row the server will fill in a missing command
-        // TODO: make this a function of snapshot rate
-        public int maxServerCommandPrediction = 2;
+        // Amount of times in a row the server will fill in a missing commands. This is calculated to be a function of client input rate,
+        // so a lower input rate will have a higher number of actual commands predicted. A value of 1 is "1 input packets worth of commands".
+        [Tooltip("The number of inputs the server will predict if it doesn't receive any for a time. This helps connections with loss, but may cause undesired movement in bad network conditions. It's best to keep this value low.")]
+        [Range(0, 3)]
+        public uint maxServerCommandPrediction = 1;
 
         // The size of the interpolation buffer for observers. Higher means smoother in bad network conditions, but more delayed visuals
         public int interpolationBufferSize = 3;
@@ -330,8 +332,10 @@ namespace Code.Player.Character.NetworkedMovement
 
                     // Check if that command is in sequence. If we have a gap of commands, we will fill it with the last
                     // processed command up to the maxServerCommandPrediction size.
+                    // this.maxServerCommandPrediction * (1f / this.clientInputRate / Time.fixedDeltaTime)) is the number of
+                    // commands contained in a single input message
                     if (this.lastProcessedCommand != null && command.commandNumber != expectedNextCommandNumber &&
-                        this.serverPredictedCommandCount < this.maxServerCommandPrediction)
+                        this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction * (1f / this.clientInputRate / Time.fixedDeltaTime)))
                     {
                         Debug.LogWarning("Missing command " + expectedNextCommandNumber +
                                          " in the command buffer. Next command was: " + command.commandNumber +
@@ -697,13 +701,11 @@ namespace Code.Player.Character.NetworkedMovement
 
             if (clientPredictedState == null)
             {
-                // This should never happen since our checks above confirm that our command should be in our history.
-                // If it's not, that means someone cleared the history or we've got something weird going on with our commands.
-                // The server should never send us a lastProcessedCommand larger than what we've predicted since the
-                // client controls the command number.
-                Debug.LogWarning(
-                    "Unable to find predicted command result in snapshot history. This shouldn't happen. Command number: " +
-                    state.lastProcessedCommand + ". Last predicted command: " + this.stateHistory.Values[^1] + " Oldest predicted command: " + this.stateHistory.Values[0]);
+                // If we can't find a predicted state entry, we will consider this prediction to be correct since
+                // we wouldn't be able to reconcile it with an actual prediction.
+                // This may happen from time to time if the client clock gets out of sync with the server for a moment.
+                // Generally a situation like this is recoverable by processing an additional state snapshot from the
+                // server.
                 return;
             }
 
