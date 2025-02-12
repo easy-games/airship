@@ -8,8 +8,9 @@ namespace Code.Player.Character
 {
     [ExecuteInEditMode]
     [LuauAPI]
-    public class AnimatorClipReplacer : MonoBehaviour
-    {
+    public class AnimatorClipReplacer : MonoBehaviour {
+        private static Dictionary<Animator, AnimatorOverrideController> _overrideControllers = new ();
+        
         /// <summary>
         /// Holds a reference to the animator-related object, which can be an <see cref="Animator"/>, 
         /// <see cref="GameObject"/>, or <see cref="AnimatorOverrideController"/>.
@@ -73,7 +74,10 @@ namespace Code.Player.Character
             }
         }
 
-
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void ResetOnLoad() {
+            _overrideControllers.Clear();
+        }
 
         /// <summary>
         /// Overload that directly applies clip replacements to the given <see cref="AnimatorOverrideController"/>.
@@ -141,6 +145,7 @@ namespace Code.Player.Character
                 var originalClip = overrides[i].Key;
                 if (animationMap.TryGetValue(originalClip.name, out var newClip))
                 {
+                    Debug.Log("Replacing " + originalClip.name + " in favor of " + newClip.name);
                     if (newClip != null)
                     {
                         newOverrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(originalClip, newClip);
@@ -273,8 +278,12 @@ namespace Code.Player.Character
         {
             overrideController = null;
 
-            if (controller is Animator animator)
-            {      
+            if (controller is Animator animator) {
+                if (_overrideControllers.TryGetValue(animator, out var oc)) {
+                    overrideController = oc;
+                    return true;
+                }
+                
                 overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
 
                 if (Application.isPlaying)
@@ -283,9 +292,10 @@ namespace Code.Player.Character
                     AnimatorOverrideController instanaceAnimator = new(animator.runtimeAnimatorController);
                     var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
                     overrideController.GetOverrides(overrides);
-
+                    
                     instanaceAnimator.ApplyOverrides(overrides);
                     animator.runtimeAnimatorController = instanaceAnimator;
+                    _overrideControllers[animator] = instanaceAnimator; 
 
                     overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
                 }

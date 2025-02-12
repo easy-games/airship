@@ -62,19 +62,19 @@ public class CharacterAnimationHelper : MonoBehaviour {
         }
 
      //   // Make a new instance of the animator override controller
-     //   if (!this.animatorOverride) {
-     //       if (this.animator.runtimeAnimatorController is AnimatorOverrideController over) {
-     //           // Copy all the overrides if we already have an override controller in use
-     //           var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(over.overridesCount);
-     //           over.GetOverrides(overrides);
-     //           this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
-     //           this.animator.runtimeAnimatorController = this.animatorOverride;
-     //           this.animatorOverride.ApplyOverrides(overrides);
-     //       } else {
-     //           this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
-     //           this.animator.runtimeAnimatorController = this.animatorOverride;
-     //       }
-     //   }
+     if (!this.animatorOverride) {
+         if (this.animator.runtimeAnimatorController is AnimatorOverrideController over) {
+             // Copy all the overrides if we already have an override controller in use
+             var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(over.overridesCount);
+             over.GetOverrides(overrides);
+             this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+             this.animator.runtimeAnimatorController = this.animatorOverride;
+             this.animatorOverride.ApplyOverrides(overrides);
+         } else {
+             this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+             this.animator.runtimeAnimatorController = this.animatorOverride;
+         }
+     }
     }
 
     private void Start() {
@@ -257,6 +257,7 @@ public class CharacterAnimationHelper : MonoBehaviour {
         }
 
         animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
+        // Debug.Log($"Inst id: {animator.runtimeAnimatorController.GetInstanceID()}");
 
         var stateName = "Override" + (int)layer;
 
