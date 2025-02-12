@@ -245,8 +245,6 @@ namespace VoxelWorldStuff {
                         var prefab = Object.Instantiate(prefabDef, origin + localChunkPos, rot,  obj.transform);
                         if (isNetworked && Application.isPlaying) {
                             NetworkServer.Spawn(prefab);
-                            var networker = world.worldNetworker;
-                            // Probably need to signal to client to add this as well :s
                         }
                         
                         prefab.transform.parent = obj.transform;
