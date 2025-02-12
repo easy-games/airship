@@ -18,13 +18,6 @@ namespace Code.Player.Character.NetworkedMovement
         // Inspector settings
         public MovementSystem movementSystem;
 
-        // Size of the command buffer on the server
-        // TODO: we might want to make this a function of command rate
-        [Tooltip(
-            "Amount of commands the server will store for later processing. Increasing this value will help players with a poor network connection, but will result in delayed inputs.")]
-        [Range(1, 10)]
-        public int maxServerCommandBuffer = 4;
-
         // Todo: consider making a negative number drop that many frames per tick in order to correct instead of processing them.
         [Tooltip(
             "Amount of extra commands that can be processed per tick to catch up when there is a backup of commands in the command buffer. Increasing this value will help players with a poor network connection, but will result in irregular movement for observers.")]
@@ -32,6 +25,7 @@ namespace Code.Player.Character.NetworkedMovement
         public int maxServerCommandCatchup = 1;
 
         // Amount of times in a row the server will fill in a missing command
+        // TODO: make this a function of snapshot rate
         public int maxServerCommandPrediction = 2;
 
         // The size of the interpolation buffer for observers. Higher means smoother in bad network conditions, but more delayed visuals
@@ -118,6 +112,7 @@ namespace Code.Player.Character.NetworkedMovement
             AirshipSimulationManager.OnPerformTick += this.OnPerformTick;
             AirshipSimulationManager.OnSetSnapshot += this.OnSetSnapshot;
             AirshipSimulationManager.OnCaptureSnapshot += this.OnCaptureSnapshot;
+            AirshipSimulationManager.OnLagCompensationCheck += this.OnLagCompensationCheck;
 
             this.interpolationBuffer = new State[this.interpolationBufferSize + 1];
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
@@ -174,6 +169,7 @@ namespace Code.Player.Character.NetworkedMovement
             AirshipSimulationManager.OnPerformTick -= this.OnPerformTick;
             AirshipSimulationManager.OnSetSnapshot -= this.OnSetSnapshot;
             AirshipSimulationManager.OnCaptureSnapshot -= this.OnCaptureSnapshot;
+            AirshipSimulationManager.OnLagCompensationCheck += this.OnLagCompensationCheck;
         }
         
         private void LateUpdate()
@@ -269,6 +265,32 @@ namespace Code.Player.Character.NetworkedMovement
             if (isClient && isOwned && serverAuth)
             {
                 this.NonAuthClientSetSnapshot(time);
+            }
+        }
+
+        private void OnLagCompensationCheck(int clientId, double currentTime, double latency)
+        {
+            // We are the server, and we are the authority.
+            if (isServer && serverAuth)
+            {
+                // If we are viewing the world as the client who is predicting this system,
+                // we don't want to include any rollback on their player since they predicted
+                // all of the commands up to the one that triggered the check. They
+                // saw themselves where the server sees them at the current time.
+                if (clientId == this.netIdentity.connectionToClient.connectionId)
+                {
+                    this.OnSetSnapshot(currentTime);
+                    return;
+                }
+                
+                // If we are viewing the world as a client who is an observer of this object,
+                // calculate the position that was being rendered at the time by subtracting.
+                // out their estimated latency and the interpolation buffer time. This
+                // ensures that we are rolling back to the time the user actually saw on their
+                // client when they issued the command.
+                var bufferTime = this.interpolationBufferSize * Time.fixedDeltaTime;
+                var lagCompensatedTickTime = AirshipSimulationManager.instance.GetLastSimulationTime(currentTime - latency - bufferTime);
+                this.OnSetSnapshot(lagCompensatedTickTime);
             }
         }
 
@@ -396,13 +418,13 @@ namespace Code.Player.Character.NetworkedMovement
             }
             
             // Before we start our tick update, make sure our current predicted state is the most correct it can be.
-            if (this.clientLastConfirmedState != null)
-            {
-                this.ReconcileInputHistory(this.clientLastConfirmedState);
-                // We set this to null so that we don't re-reconcile on ticks where there's no new information
-                // to base our prediction off of.
-                this.clientLastConfirmedState = null;
-            }
+            // if (this.clientLastConfirmedState != null)
+            // {
+            //     this.ReconcileInputHistory(this.clientLastConfirmedState);
+            //     // We set this to null so that we don't re-reconcile on ticks where there's no new information
+            //     // to base our prediction off of.
+            //     this.clientLastConfirmedState = null;
+            // }
             
             // If the prediction is paused, we still tick the movement system, but we include no command
             // for the tick. We want to wait for our current set of commands to be confirmed before
@@ -650,7 +672,7 @@ namespace Code.Player.Character.NetworkedMovement
         * Uses a server snapshot to reconcile client prediction with the actual authoritative
         * server history.
         */
-        private void ReconcileInputHistory(State state)
+        private void ReconcileInputHistory(PerformResimulate resimulate, State state)
         {
             if (this.stateHistory.Values.Count == 0)
             {
@@ -730,7 +752,7 @@ namespace Code.Player.Character.NetworkedMovement
             // Resimulate all commands performed after the incorrect prediction so that
             // our future predictions are (hopefully) correct.
             this.clientPredictionResimRequestor = true;
-            AirshipSimulationManager.instance.PerformResimulation(clientPredictedState.time);
+            resimulate(clientPredictedState.time);
             this.clientPredictionResimRequestor = false;
         }
 
@@ -755,8 +777,26 @@ namespace Code.Player.Character.NetworkedMovement
             // their local state with the authoritative state from the server.
             if (isOwned && serverAuth)
             {
-                // We store the most up to date state to be reconciled on the next client tick.
-                clientLastConfirmedState = state;
+                // We just got a new confirmed state and we have already processed
+                // our most recent reconcile.
+                if (this.clientLastConfirmedState == null)
+                {
+                    // Store the state so we can use it when the callback is fired.
+                    this.clientLastConfirmedState = state;
+                    // Schedule the resimulation with the simulation manager.
+                    AirshipSimulationManager.instance.ScheduleResimulation((resimulate) =>
+                    {
+                        // Reconcile when this callback is executed. Use the last confirmed state received,
+                        // (since more could come in from the network while we are waiting for the callback)
+                        this.ReconcileInputHistory(resimulate, this.clientLastConfirmedState);
+                    });
+                }
+                // We received a new state update before we were able to reconcile, just update the stored
+                // latest state so we use the latest in our scheduled resimulation.
+                else
+                {
+                    clientLastConfirmedState = state;
+                }
                 return;
             }
 
