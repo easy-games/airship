@@ -15,15 +15,12 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         public override string ToString()
         {
             return "lastcmd: " + this.lastProcessedCommand + " pos: " + position.ToString() + " rot: " +
-                   rotation.ToString() + " vel: " + this.velocity + " angVel: " + this.angularVelocity;
+                   rotation.ToString() + " vel: " + this.velocity + " angVel: " + this.angularVelocity + " time: " + this.time;
         }
 
         public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
         {
             if (snapshot is not BasicMovementState other) return false;
-            Debug.Log("Comparing " + this + " to " + snapshot + " result: " +
-                      (this.lastProcessedCommand == other.lastProcessedCommand) + " " +
-                      (this.position == other.position) + " " + (this.rotation == other.rotation));
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
                    this.rotation == other.rotation;
         }

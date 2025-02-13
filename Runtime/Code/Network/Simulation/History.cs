@@ -103,6 +103,53 @@ namespace Code.Network.Simulation
             return prev;
         }
 
+        // TODO: implement GetAround and use stateHistory on observers for interpolation on LateUpdate()
+        public bool GetAround(double time, out T before, out T after)
+        {
+            before = default;
+            after  = default;
+            
+            if (history.Count < 2) {
+                return false;
+            }
+
+            // older than oldest
+            if (time < history.Keys[0]) {
+                return false;
+            }
+            
+            int index = 0; // manually count when iterating. easier than for-int loop.
+            KeyValuePair<double, T> prev = new KeyValuePair<double, T>();
+            
+            for (int i = 0; i < history.Count; ++i)
+            {
+                double key = history.Keys[i];
+                T value = history.Values[i];
+
+                // exact match?
+                if (time == key)
+                {
+                    before = value;
+                    after = value;
+                    return true;
+                }
+
+                // did we check beyond timestamp? then return the previous two.
+                if (key > time)
+                {
+                    before = prev.Value;
+                    after = value;
+                    return true;
+                }
+
+                // remember the last
+                prev = new KeyValuePair<double, T>(key, value);
+                index += 1;
+            }
+
+            return false;
+        }
+
         public T GetExact(double time)
         {
             this.history.TryGetValue(time, out T value);

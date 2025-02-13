@@ -51,13 +51,13 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
 
         public override void SetCurrentState(BasicMovementState state)
         {
-            Debug.Log("Setting state to match: " + state);
+            // Debug.Log("Setting state to match: " + state);
             jumpTicksUntil = state.jumpTicksUntil;
             rb.position = state.position;
             rb.rotation = state.rotation;
             if (!rb.isKinematic)
             {
-                Debug.Log("Updating velocities on non-kinematic rigidbody");
+                // Debug.Log("Updating velocities on non-kinematic rigidbody");
                 rb.velocity = state.velocity;
                 rb.angularVelocity = state.angularVelocity;
             }
@@ -75,7 +75,6 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         public override void Tick(BasicMovementInput command, bool replay)
         {
             if (command == null) return;
-            if (replay) Debug.Log("Replaying" + command.commandNumber);
             //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
             //rb.position = rb.position + command.moveDirection * Time.fixedDeltaTime * 10f;
 

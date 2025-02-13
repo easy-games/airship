@@ -64,7 +64,6 @@ namespace Code.Network.Simulation
             {
                 if (!_instance)
                 {
-                    Debug.Log("Creating Prediction Singleton");
                     var go = new GameObject("AirshipSimulationManager");
                     DontDestroyOnLoad(go);
                     _instance = go.AddComponent<AirshipSimulationManager>();
@@ -161,7 +160,7 @@ namespace Code.Network.Simulation
 
             // Perform the standard tick behavior
             OnPerformTick?.Invoke(NetworkTime.time, false);
-            Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
+            // Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
             Physics.Simulate(Time.fixedDeltaTime);
             OnCaptureSnapshot?.Invoke(NetworkTime.time, false);
 
@@ -265,7 +264,7 @@ namespace Code.Network.Simulation
                 while (tickIndex < this.tickTimes.Count)
                 {
                     OnPerformTick?.Invoke(this.tickTimes[tickIndex], true);
-                    Debug.Log("Simulate call. Replay Tick: " + this.tickTimes[tickIndex]);
+                    // Debug.Log("Simulate call. Replay Tick: " + this.tickTimes[tickIndex]);
                     Physics.Simulate(Time.fixedDeltaTime);
                     OnCaptureSnapshot?.Invoke(this.tickTimes[tickIndex], true);
                     tickIndex++;
