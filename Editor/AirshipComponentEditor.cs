@@ -31,7 +31,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
     public void OnEnable() {
         var comp = (Component)serializedObject.targetObject;
-        var metadata = serializedObject.FindProperty("m_metadata");
+        var metadata = serializedObject.FindProperty("metadata");
         var metadataProperties = metadata.FindPropertyRelative("properties");
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var serializedProperty = metadataProperties.GetArrayElementAtIndex(i);
@@ -73,7 +73,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
 
         if (binding.script != null) {
-            var metadata = serializedObject.FindProperty("m_metadata");
+            var metadata = serializedObject.FindProperty("metadata");
             var metadataName = metadata.FindPropertyRelative("name");
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
                 DrawBinaryFileMetadata(binding, metadata);
@@ -157,7 +157,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     }
 
     private void CheckDefaults(AirshipComponent binding) {
-        var metadata = serializedObject.FindProperty("m_metadata");
+        var metadata = serializedObject.FindProperty("metadata");
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
         var originalMetadataProperties = binding.script.m_metadata.properties;
@@ -205,7 +205,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private bool ShouldReconcile(AirshipComponent binding) {
         if (binding.metadata == null || binding.script.m_metadata == null) return false;
 
-        var metadata = serializedObject.FindProperty("m_metadata");
+        var metadata = serializedObject.FindProperty("metadata");
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
         var originalMetadataProperties = binding.script.m_metadata?.properties;
@@ -285,10 +285,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         EditorGUILayout.Space(5);
 
         var script = binding.script;
-        var scriptPath = serializedObject.FindProperty("m_fileFullPath");
         var content = new GUIContent {
             text = "Script",
-            tooltip = scriptPath.stringValue,
+            tooltip = script == null ? "" : script.m_path,
         };
 
         if (script != null && (binding.metadata != null || Application.isPlaying)) {
@@ -298,7 +297,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         var newScript = EditorGUILayout.ObjectField(content, script, typeof(AirshipScript), true);
         if (newScript != script) {
             binding.script = (AirshipScript)newScript;
-            scriptPath.stringValue = newScript == null ? "" : ((AirshipScript)newScript).assetPath;
             serializedObject.ApplyModifiedProperties();
         }
 

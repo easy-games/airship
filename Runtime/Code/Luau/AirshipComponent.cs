@@ -22,7 +22,7 @@ public class AirshipComponent : MonoBehaviour {
 	private const bool ElevateToProtectedWithinCoreScene = true;
 	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
-	public static Dictionary<int, string> ComponentIdToScriptName = new();
+	public static readonly Dictionary<int, string> ComponentIdToScriptName = new();
 	private static int _airshipComponentIdGen = 10000000;
 	private static bool _validatedSceneInGameConfig = false;
 	
@@ -81,6 +81,11 @@ public class AirshipComponent : MonoBehaviour {
 			script = QueuedAwakeData.Script;
 			context = QueuedAwakeData.Context;
 			QueuedAwakeData = null;
+		}
+
+		if (script == null) {
+			Debug.LogError($"No script assigned to AirshipComponent ({gameObject.name})", gameObject);
+			return;
 		}
 
 		ComponentIdToScriptName[_airshipComponentId] = string.Intern(script.name);
