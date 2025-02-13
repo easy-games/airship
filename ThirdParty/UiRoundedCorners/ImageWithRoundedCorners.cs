@@ -11,8 +11,7 @@ namespace Nobi.UiRoundedCorners {
 
         public float radius = 40f;
 		
-        // [NonSerialized]
-        [SerializeField]
+        [NonSerialized]
         private Material material;
 
 		[HideInInspector, SerializeField] private MaskableGraphic image;
