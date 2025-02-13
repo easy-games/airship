@@ -83,9 +83,19 @@ namespace Nobi.UiRoundedCorners {
 		public void Refresh() {
 			var rect = ((RectTransform)transform).rect;
 			RecalculateProps(rect.size);
-			material.SetVector(prop_rect2props, rect2props);
-			material.SetVector(prop_halfSize, rect.size * .5f);
-			material.SetVector(prop_radiuses, r);
+
+			if ((material.GetVector(prop_rect2props) - rect2props).magnitude > 0.1f) {
+				material.SetVector(prop_rect2props, rect2props);
+			}
+
+			var half = (Vector4)rect.size * 0.5f;
+			if ((material.GetVector(prop_halfSize) - half).magnitude > 0.1f) {
+				material.SetVector(prop_halfSize, half);
+			}
+
+			if ((material.GetVector(prop_radiuses) - r).magnitude > 0.1f) {
+				material.SetVector(prop_radiuses, r);
+			}
 		}
 
 		private void RecalculateProps(Vector2 size) {
