@@ -18,7 +18,7 @@ namespace Nobi.UiRoundedCorners {
 		private static readonly Vector2 hNorm = new Vector2(.7071068f, .7071068f);
 
         public Vector4 r = new Vector4(40f, 40f, 40f, 40f);
-        private Material material;
+	    [SerializeField] private Material material;
 
 		// xy - position,
 		// zw - halfSize
