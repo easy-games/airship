@@ -122,6 +122,19 @@ public static class LuauPluginRaw {
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern IntPtr LuaPushThread(IntPtr thread);
+	/// <summary>
+	/// Pushes the thread to its own Lua stack.
+	/// </summary>
+	public static void PushThread(IntPtr thread) {
+		ThrowIfNotNullPtr(LuaPushThread(thread));
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern IntPtr LuaRawSetI(IntPtr thread, int idx, int n);
 	/// <summary>
 	/// Sets the nth table index to the value at the top of the stack. The table is located at "idx."
@@ -154,5 +167,46 @@ public static class LuauPluginRaw {
 	/// </summary>
 	public static void SetReadonly(IntPtr thread, int idx, bool enabled) {
 		ThrowIfNotNullPtr(LuaSetReadonly(thread, idx, enabled ? 1 : 0));
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaRef(IntPtr thread, int idx, ref int refVal);
+	/// <summary>
+	/// Creates a reference to the value at index "idx."
+	/// </summary>
+	public static int Ref(IntPtr thread, int idx) {
+		var refVal = 0;
+		ThrowIfNotNullPtr(LuaRef(thread, idx, ref refVal));
+		return refVal;
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaUnref(IntPtr thread, int refVal);
+	/// <summary>
+	/// Removes "refVal" reference.
+	/// </summary>
+	public static void Unref(IntPtr thread, int refVal) {
+		ThrowIfNotNullPtr(LuaUnref(thread, refVal));
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaGetRef(IntPtr thread, int refVal);
+	/// <summary>
+	/// Pushes the value referenced by "refVal" to the top of the thread's stack.
+	/// </summary>
+	public static void GerRef(IntPtr thread, int refVal) {
+		ThrowIfNotNullPtr(LuaGetRef(thread, refVal));
 	}
 }

@@ -135,7 +135,7 @@ namespace Luau {
         }
 
         public int ResumeScript(AirshipComponent binding) {
-            return LuauPlugin.LuauRunThread(binding.m_thread);
+            return LuauPlugin.LuauRunThread(binding.thread);
         }
 
         public bool TryGetScriptBindingFromThread(IntPtr thread, out AirshipComponent binding) {

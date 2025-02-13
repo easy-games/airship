@@ -453,7 +453,6 @@ namespace Luau {
                             var foundAny = false;
                             foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
                                 foundAny = true;
-                                binding.InitEarly();
                             }
                         
                             // Retry getting AirshipBehaviourRoot:

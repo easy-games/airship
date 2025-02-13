@@ -50,6 +50,7 @@ public partial class LuauCore : MonoBehaviour {
         public string DebugName;
 #endif
         public IntPtr Thread;
+        public int ThreadRef;
         public Task Task;
         public MethodInfo Method;
         public LuauContext Context;
@@ -206,7 +207,7 @@ public partial class LuauCore : MonoBehaviour {
         }
         
 
-        if (AirshipComponent.componentIdToScriptName.TryGetValue(componentId, out var componentName)) {
+        if (AirshipComponent.ComponentIdToScriptName.TryGetValue(componentId, out var componentName)) {
             if (strLen > 0) {
                 var str = PtrToStringUTF8(strPtr, strLen);
                 Profiler.BeginSample($"{componentName}{str}");
@@ -1070,29 +1071,37 @@ public partial class LuauCore : MonoBehaviour {
 
         var obj = new GameObject($"require({fileNameStr})");
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        var newBinding = obj.AddComponent<AirshipComponent>();
+        // var newBinding = obj.AddComponent<AirshipComponent>();
+        //
+        // if (newBinding.CreateThreadFromPath(fileNameStr, context) == false) {
+        //     ThreadDataManager.Error(thread);
+        //     Debug.LogError("Error require(" + fileNameStr + ") not found.");
+        //     GetLuauDebugTrace(thread);
+        //     return IntPtr.Zero;
+        // }
+        //
+        // if (newBinding.m_error == true) {
+        //     ThreadDataManager.Error(thread);
+        //     Debug.LogError("Error trying to execute module script during require for " + fileNameStr + ". Context=" + LuauCore.CurrentContext);
+        //     GetLuauDebugTrace(thread);
+        //     return IntPtr.Zero;
+        // }
+        // if (newBinding.m_canResume == true) {
+        //     ThreadDataManager.Error(thread);
+        //     Debug.LogError("Require() yielded; did not return with a table for " + fileNameStr);
+        //     GetLuauDebugTrace(thread);
+        //     return IntPtr.Zero;
+        // }
+        //
+        // return newBinding.m_thread;
 
-        if (newBinding.CreateThreadFromPath(fileNameStr, context) == false) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error require(" + fileNameStr + ") not found.");
-            GetLuauDebugTrace(thread);
+        try {
+            var newScript = LuauScript.Create(obj, fileNameStr, context);
+            return newScript.thread;
+        } catch (Exception e) {
+            Debug.LogException(e);
             return IntPtr.Zero;
         }
-
-        if (newBinding.m_error == true) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error trying to execute module script during require for " + fileNameStr + ". Context=" + LuauCore.CurrentContext);
-            GetLuauDebugTrace(thread);
-            return IntPtr.Zero;
-        }
-        if (newBinding.m_canResume == true) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Require() yielded; did not return with a table for " + fileNameStr);
-            GetLuauDebugTrace(thread);
-            return IntPtr.Zero;
-        }
-
-        return newBinding.m_thread;
     }
 
     public static void DisconnectEvent(int eventId) {
@@ -1509,6 +1518,7 @@ public partial class LuauCore : MonoBehaviour {
                 DebugName = $"{method.Name} ({method.DeclaringType.FullName})",
 #endif
                 Thread = thread,
+                ThreadRef = 0,
                 Task = task,
                 Method = method,
                 Context = context,
@@ -1524,16 +1534,19 @@ public partial class LuauCore : MonoBehaviour {
                 return 0;
             }
 
-            _awaitingTasks.Add(awaitingTask);
-            LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-            
-            if (binding != null) {
-                binding.m_asyncYield = true;
-            } else {
-                LuauPlugin.LuauPinThread(thread);
-            }
+            LuauPluginRaw.PushThread(thread);
+            awaitingTask.ThreadRef = LuauPluginRaw.Ref(thread, -1);
+            LuauPluginRaw.Pop(thread, 1);
 
-            ThreadDataManager.SetThreadYielded(thread, true);
+            _awaitingTasks.Add(awaitingTask);
+            // LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
+            //
+            // if (binding != null) {
+            //     binding.m_asyncYield = true;
+            // } else {
+            //     LuauPlugin.LuauPinThread(thread);
+            // }
+            // ThreadDataManager.SetThreadYielded(thread, true);
 
             shouldYield = true;
             return 0;
@@ -1546,28 +1559,17 @@ public partial class LuauCore : MonoBehaviour {
     private static void ResumeAsyncTask(AwaitingTask awaitingTask, bool immediate = false) {
         var thread = awaitingTask.Thread;
 
-        if (!immediate) {
-            ThreadDataManager.SetThreadYielded(thread, false);
-        }
-
-        LuauState.FromContext(awaitingTask.Context).TryGetScriptBindingFromThread(thread, out var binding);
-        if (binding == null) {
-            LuauPlugin.LuauUnpinThread(thread);
+        if (awaitingTask.ThreadRef != 0) {
+            LuauPluginRaw.Unref(thread, awaitingTask.ThreadRef);
         }
 
         if (awaitingTask.Task.IsFaulted) {
-            var result = -1;
             try {
                 LuauPluginRaw.PushString(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
                 ThreadDataManager.Error(thread);
-                result = LuauPlugin.LuauResumeThreadError(thread);
+                LuauPlugin.LuauResumeThreadError(thread);
             } catch (LuauException e) {
                 Debug.LogException(e);
-            }
-            if (binding != null) {
-                binding.m_asyncYield = false;
-                binding.m_canResume = result == 1;
-                binding.m_error = true;
             }
             
             return;
@@ -1589,15 +1591,10 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         if (!immediate) {
-            var result = -1;
             try {
-                result = LuauPlugin.LuauResumeThread(thread, nArgs);
+                LuauPlugin.LuauResumeThread(thread, nArgs);
             } catch (LuauException e) {
                 Debug.LogException(e);
-            }
-            if (binding != null) {
-                binding.m_asyncYield = false;
-                binding.m_canResume = result == 1;
             }
         }
     }

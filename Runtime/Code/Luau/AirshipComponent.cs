@@ -22,6 +22,7 @@ public class AirshipComponent : MonoBehaviour {
 	private const bool ElevateToProtectedWithinCoreScene = true;
 	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
+	public static Dictionary<int, string> ComponentIdToScriptName = new();
 	private static int _airshipComponentIdGen = 10000000;
 	private static bool _validatedSceneInGameConfig = false;
 	
@@ -40,8 +41,9 @@ public class AirshipComponent : MonoBehaviour {
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void OnReload() {
 		_airshipComponentIdGen = 10000000;
-		QueuedAwakeData = null;
 		_validatedSceneInGameConfig = false;
+		QueuedAwakeData = null;
+		ComponentIdToScriptName.Clear();
 	}
 	
 	private void Awake() {
@@ -50,6 +52,8 @@ public class AirshipComponent : MonoBehaviour {
 			context = QueuedAwakeData.Context;
 			QueuedAwakeData = null;
 		}
+
+		ComponentIdToScriptName[_airshipComponentId] = string.Intern(script.name);
 		
 		ScriptingEntryPoint.InvokeOnLuauStartup();
 		
@@ -144,6 +148,8 @@ public class AirshipComponent : MonoBehaviour {
 	}
 
 	private void OnDestroy() {
+		ComponentIdToScriptName.Remove(_airshipComponentId);
+		
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
 		print("C# OnDestroy");
