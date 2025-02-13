@@ -25,6 +25,8 @@ public class AirshipComponent : MonoBehaviour {
 	public static readonly Dictionary<int, string> ComponentIdToScriptName = new();
 	private static int _airshipComponentIdGen = 10000000;
 	private static bool _validatedSceneInGameConfig = false;
+
+	private bool _init = false;
 	
 	public AirshipScript script;
 
@@ -78,8 +80,15 @@ public class AirshipComponent : MonoBehaviour {
 		
 		return component;
 	}
-	
+
 	private void Awake() {
+		Init();
+	}
+	
+	public void Init() {
+		if (_init) return;
+		_init = true;
+		
 		if (QueuedAwakeData != null) {
 			script = QueuedAwakeData.Script;
 			context = QueuedAwakeData.Context;
@@ -130,6 +139,10 @@ public class AirshipComponent : MonoBehaviour {
 
 	private void AwakeAirshipComponent() {
 		InitializeAirshipReference();
+
+		foreach (var dependency in GetDependencies()) {
+			dependency.Init();
+		}
 		
 		var properties = new List<LuauMetadataProperty>(metadata.properties);
         
@@ -199,6 +212,27 @@ public class AirshipComponent : MonoBehaviour {
 
 	private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
 		LuauPlugin.LuauUpdateIndividualAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, 0, true);
+	}
+
+	private IReadOnlyList<AirshipComponent> GetDependencies() {
+		List<AirshipComponent> dependencies = new();
+		
+		foreach (var property in metadata.properties) {
+			if (property.ComponentType == AirshipComponentPropertyType.AirshipComponent) {
+				var obj = property.serializedObject;
+				if (obj == null) continue;
+				dependencies.Add(obj as AirshipComponent);
+			} else if (property.ComponentType == AirshipComponentPropertyType.AirshipArray && property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipComponent) {
+				if (property.items.objectRefs == null) continue;
+				foreach (var arrayItem in property.items.objectRefs) {
+					if (arrayItem != null) {
+						dependencies.Add(arrayItem as AirshipComponent);
+					}
+				}
+			}
+		}
+
+		return dependencies;
 	}
 
 	private bool HasAirshipMethod(AirshipComponentUpdateType updateType) {
