@@ -125,7 +125,6 @@ public class AirshipComponent : MonoBehaviour {
 		
 		LuauCore.onResetInstance += OnLuauReset;
 		
-		print("C# Awake");
 		AwakeAirshipComponent();
 	}
 
@@ -166,14 +165,12 @@ public class AirshipComponent : MonoBehaviour {
 	private void Start() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		print("C# Start");
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
 	}
 
 	private void OnEnable() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		print("C# OnEnable");
 		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, true);
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
 	}
@@ -181,7 +178,6 @@ public class AirshipComponent : MonoBehaviour {
 	private void OnDisable() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		print("C# OnDisable");
 		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, false);
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
 	}
@@ -191,7 +187,6 @@ public class AirshipComponent : MonoBehaviour {
 		
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		print("C# OnDestroy");
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
 		LuauPlugin.LuauRemoveAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId);
 		AirshipBehaviourRootV2.CleanIdOnDestroy(gameObject, this);
