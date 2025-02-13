@@ -49,16 +49,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         AirshipComponent binding = (AirshipComponent)target;
 
-        /*
-        if (binding.script == null && !string.IsNullOrEmpty(binding.m_fileFullPath)) {
-            // Debug.Log("Setting Script File from Path: " + binding.m_fileFullPath);
-            // binding.SetScriptFromPath(binding.m_fileFullPath, LuauContext.Game);
+        if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
+            // Debug.Log("Setting Script File from Path: " + binding.scriptPath);
+            // binding.SetScriptFromPath(binding.scriptPath, LuauContext.Game);
             if (binding.script == null) {
-                Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
-                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.m_fileFullPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
+                Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
+                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
             }
         }
-        */
 
         DrawScriptBindingProperties(binding);
 
@@ -285,9 +283,10 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         EditorGUILayout.Space(5);
 
         var script = binding.script;
+        var scriptPath = serializedObject.FindProperty("scriptPath");
         var content = new GUIContent {
             text = "Script",
-            tooltip = script == null ? "" : script.m_path,
+            tooltip = scriptPath.stringValue,
         };
 
         if (script != null && (binding.metadata != null || Application.isPlaying)) {
@@ -297,6 +296,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         var newScript = EditorGUILayout.ObjectField(content, script, typeof(AirshipScript), true);
         if (newScript != script) {
             binding.script = (AirshipScript)newScript;
+            scriptPath.stringValue = newScript == null ? "" : binding.script.m_path;
             serializedObject.ApplyModifiedProperties();
         }
 
@@ -314,6 +314,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             if (GUILayout.Button("Select Airship Component", style)) {
                 AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (airshipScript) => {
                     binding.script = airshipScript;
+                    binding.scriptPath = airshipScript.m_path;
                     serializedObject.ApplyModifiedProperties();
                     EditorUtility.SetDirty(serializedObject.targetObject);
                 });

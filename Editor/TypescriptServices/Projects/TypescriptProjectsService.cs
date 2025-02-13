@@ -186,6 +186,7 @@ namespace Airship.Editor {
                 
                 Debug.LogWarning($"File was renamed, changed reference of {oldFileName} to {newFileName} in {component.name}");
                 component.script = LuauScript.LoadAirshipScriptFromPath(newFileName);
+                component.scriptPath = newFileName;
                 EditorUtility.SetDirty(component);
             }
         }

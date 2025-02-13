@@ -43,6 +43,7 @@ namespace Airship.Editor {
             if (binding == null || binding.metadata == null) return;
 
             binding.script = null;
+            binding.scriptPath = null;
         }
     }
 

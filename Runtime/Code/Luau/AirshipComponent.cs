@@ -28,6 +28,8 @@ public class AirshipComponent : MonoBehaviour {
 	
 	public AirshipScript script;
 
+	[FormerlySerializedAs("m_fileFullPath")] [HideInInspector] public string scriptPath;
+
 	public IntPtr thread;
 	[HideInInspector] public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
@@ -70,6 +72,7 @@ public class AirshipComponent : MonoBehaviour {
 		if (QueuedAwakeData == awakeData) {
 			QueuedAwakeData = null;
 			component.script = script;
+			component.scriptPath = script.m_path;
 			component.context = context;
 		}
 		
@@ -87,7 +90,8 @@ public class AirshipComponent : MonoBehaviour {
 			Debug.LogError($"No script assigned to AirshipComponent ({gameObject.name})", gameObject);
 			return;
 		}
-
+		
+		scriptPath = script.m_path;
 		ComponentIdToScriptName[_airshipComponentId] = string.Intern(script.name);
 		
 		ScriptingEntryPoint.InvokeOnLuauStartup();
@@ -247,22 +251,21 @@ public class AirshipComponent : MonoBehaviour {
         }
 #endif
         // Clear out script if file path doesn't match script path
-        // if (scriptFile != null) {
-        //     if (scriptFile.m_path != m_fileFullPath) {
-        //         scriptFile = null;
-        //     }
-        // }
-        // // Set script from file path
-        // if (scriptFile == null) {
-        //     if (!string.IsNullOrEmpty(m_fileFullPath)) {
-        //         scriptFile = LoadBinaryFileFromPath(m_fileFullPath);
-        //         
-        //     }
-        //
-        //     if (scriptFile == null) {
-        //         return;
-        //     }
-        // }
+        if (script != null) {
+            if (script.m_path != scriptPath) {
+                script = null;
+            }
+        }
+        // Set script from file path
+        if (script == null) {
+            if (!string.IsNullOrEmpty(scriptPath)) {
+                script = LuauScript.LoadAirshipScriptFromPath(scriptPath);
+            }
+        
+            if (script == null) {
+                return;
+            }
+        }
 
         ReconcileMetadata();
 
@@ -277,6 +280,10 @@ public class AirshipComponent : MonoBehaviour {
 
     private void Validate() {
         if (this == null) return;
+
+        if (script != null && string.IsNullOrEmpty(scriptPath)) {
+	        scriptPath = script.m_path;
+        }
         
         SetupMetadata();
     }

@@ -126,15 +126,16 @@ namespace Editor {
         private static void AddScriptBinding(GameObject target, AirshipScript airshipScript, string path) {
             if (HasScriptBinding(target, path)) return;
             
-            var scriptBinding = target.AddComponent<AirshipComponent>();
-            scriptBinding.script = airshipScript;
-            EditorUtility.SetDirty(scriptBinding);
+            var component = target.AddComponent<AirshipComponent>();
+            component.script = airshipScript;
+            component.scriptPath = airshipScript.m_path;
+            EditorUtility.SetDirty(component);
         }
 
         private static bool HasScriptBinding(GameObject target, string path) {
-            var scriptBindings = target.GetComponents<AirshipComponent>();
-            foreach (var binding in scriptBindings) {
-                if (binding.script != null && binding.script.m_path == path) {
+            var components = target.GetComponents<AirshipComponent>();
+            foreach (var component in components) {
+                if (component.scriptPath == path) {
                     return true;
                 }
             }
