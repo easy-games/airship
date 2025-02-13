@@ -102,7 +102,7 @@ public class LuauScript : MonoBehaviour {
 			context = LuauContext.Protected;
 		}
 		
-		LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, false);
+		thread = LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, false);
 	}
 
 	/// <summary>
