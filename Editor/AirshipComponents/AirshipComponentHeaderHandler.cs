@@ -21,8 +21,7 @@ public class AirshipComponentHeaderHandler {
             if (inspectorMode == InspectorMode.Debug) return;
    
             var component = editorAndHeader.editor.target as Component;
-            if (component is not AirshipComponent binding || binding.scriptFile == null ||
-                !binding.scriptFile.airshipBehaviour) continue;
+            if (component is not AirshipComponent binding || binding.script == null || !binding.script.airshipBehaviour) continue;
             
             if(onGUIHandler.Method is { Name: "DrawWrappedHeaderGUI" }) continue;
                 

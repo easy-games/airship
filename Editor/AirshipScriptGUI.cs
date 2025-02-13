@@ -10,6 +10,10 @@ using Object = UnityEngine.Object;
 namespace Code.Luau {
     public static class AirshipScriptGUI {
         internal delegate Object AirshipBehaviourValidator(Object[] references, SerializedProperty property);
+        
+        private static bool IsBindableAsComponent(AirshipComponent component, AirshipScript file) {
+            return file.assetPath == component.script.assetPath;
+        }
 
         private static Object Validate(Object[] references, AirshipScript script, AirshipComponent binding) {
             if (references.Length <= 0) return null;
@@ -21,13 +25,13 @@ namespace Code.Luau {
                 references = gameObject.GetComponents(typeof(AirshipComponent));
                 foreach (var reference in references) {
                     if (reference != null && reference is AirshipComponent bindingComponent &&
-                        (bindingComponent.IsBindableAsComponent(script) ||
+                        (IsBindableAsComponent(bindingComponent, script) ||
                          buildInfo.ComponentIsValidInheritance(bindingComponent, script))) {
                         return reference;
                     }
                 }
             }
-            else if (objectReference is AirshipComponent otherBinding && (otherBinding.IsBindableAsComponent(script) || buildInfo.ComponentIsValidInheritance(otherBinding, script))) {
+            else if (objectReference is AirshipComponent otherBinding && (IsBindableAsComponent(otherBinding, script) || buildInfo.ComponentIsValidInheritance(otherBinding, script))) {
                 return otherBinding;
             }
             
@@ -130,8 +134,7 @@ namespace Code.Luau {
                                 },
                                 item => {
                                     var itemScriptBinding = item.ToObject<AirshipComponent>();
-                                    return itemScriptBinding != null &&
-                                           itemScriptBinding.IsBindableAsComponent(script);
+                                    return itemScriptBinding != null && IsBindableAsComponent(itemScriptBinding, script);
                                 }, null, script.m_metadata?.displayName ?? "AirshipBehaviour");
                             view.SetSearchText($"h:t:ScriptBinding"); // #m_fileFullPath={script.m_path}
 
@@ -168,7 +171,7 @@ namespace Code.Luau {
                 case EventType.Repaint: {
                     var temp = EditorGUIUtility.ObjectContent(obj, typeof(AirshipComponent));
 
-                    var scriptInfo = airshipComponent && airshipComponent.scriptFile ? airshipComponent.scriptFile : script;
+                    var scriptInfo = airshipComponent && airshipComponent.script ? airshipComponent.script : script;
                     
                     var displayName = scriptInfo.m_metadata != null && !string.IsNullOrEmpty(scriptInfo.m_metadata.displayName)
                         ? scriptInfo.m_metadata.displayName

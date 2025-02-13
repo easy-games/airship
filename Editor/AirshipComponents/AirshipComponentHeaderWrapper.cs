@@ -15,7 +15,7 @@ internal static class AirshipComponentHeader {
     private static readonly GUIContent label = new GUIContent("");
     
     internal static float AfterComponentHeader(AirshipComponent component, Rect headerRect, bool isHeaderSelected) {
-        var scriptFile = component.scriptFile;
+        var scriptFile = component.script;
         var metadata = scriptFile.m_metadata;
 
         if (metadata == null) return 0f;
@@ -69,25 +69,23 @@ internal class AirshipComponentHeaderWrapper {
     }
 
     public void DrawWrappedHeaderGUI() {
-        if (component == null || component.scriptFile == null || !component.scriptFile.airshipBehaviour) {
+        if (component == null || component.script == null || !component.script.airshipBehaviour) {
             RemoveOverrideHeader();
             return;
         }
         
         Rect headerRect = headerElement.contentRect;
-        bool HeaderIsSelected = headerElement.focusController.focusedElement == headerElement;
+        bool headerIsSelected = headerElement.focusController.focusedElement == headerElement;
         
         unityOnGUIHandler.Invoke();
 
-        if (component.m_metadata.name != "") {
-            AirshipComponentHeader.AfterComponentHeader(component, headerRect, HeaderIsSelected);
+        if (component.metadata.name != "") {
+            AirshipComponentHeader.AfterComponentHeader(component, headerRect, headerIsSelected);
         }
     }
     
-    private void RemoveOverrideHeader()
-    {
-        if(headerElement is null)
-        {
+    private void RemoveOverrideHeader() {
+        if (headerElement is null) {
             return;
         }
 

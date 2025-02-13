@@ -45,7 +45,7 @@ public class LuauScript : MonoBehaviour {
 		return path;
 	}
 
-	private static AirshipScript LoadBinaryFileFromPath(string fullFilePath) {
+	public static AirshipScript LoadAirshipScriptFromPath(string fullFilePath) {
 		var cleanPath = CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
 		return AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
@@ -61,7 +61,7 @@ public class LuauScript : MonoBehaviour {
 	}
 
 	public static LuauScript Create(GameObject go, string scriptPath, LuauContext context) {
-		var script = LoadBinaryFileFromPath(scriptPath);
+		var script = LoadAirshipScriptFromPath(scriptPath);
 		if (script == null) {
 			throw new Exception($"Failed to load script from file: {scriptPath}");
 		}

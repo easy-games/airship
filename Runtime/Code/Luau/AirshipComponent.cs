@@ -46,6 +46,36 @@ public class AirshipComponent : MonoBehaviour {
 		ComponentIdToScriptName.Clear();
 	}
 	
+	public static AirshipComponent Create(GameObject go, string scriptPath, LuauContext context) {
+		var script = LuauScript.LoadAirshipScriptFromPath(scriptPath);
+		if (script == null) {
+			throw new Exception($"Failed to load script from file: {scriptPath}");
+		}
+
+		return Create(go, script, context);
+	}
+
+	public static AirshipComponent Create(GameObject go, AirshipScript script, LuauContext context) {
+		var awakeData = new LuauScript.AwakeData() {
+			Script = script,
+			Context = context,
+		};
+		QueuedAwakeData = awakeData;
+		
+		var component = go.AddComponent<AirshipComponent>();
+
+		// If QueuedAwakeData is still set, then the component didn't awake right away.
+		// In this case, just set it ourselves. This would happen if the GameObject was
+		// in an inactive state.
+		if (QueuedAwakeData == awakeData) {
+			QueuedAwakeData = null;
+			component.script = script;
+			component.context = context;
+		}
+		
+		return component;
+	}
+	
 	private void Awake() {
 		if (QueuedAwakeData != null) {
 			script = QueuedAwakeData.Script;
