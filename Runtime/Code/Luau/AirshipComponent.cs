@@ -125,15 +125,20 @@ public class AirshipComponent : MonoBehaviour {
 			context = LuauContext.Protected;
 		}
 		
-		// Load the component onto the thread:
-		thread = LuauScript.LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.Cached, script, true);
-		if (thread == IntPtr.Zero) {
-			Debug.LogError($"Component failed to load: {script.m_path}");
+		// Load the component onto the thread
+		thread = LuauScript.LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.Cached, script, out var status);
+		if (status != 0) {
+			thread = IntPtr.Zero;
+			if (status == 1) {
+				Debug.LogError($"AirshipComponent constructor cannot yield: {script.m_path}");
+			} else {
+				Debug.LogError($"Component failed to load: {script.m_path}");
+			}
 			return;
 		}
 		
 		LuauCore.onResetInstance += OnLuauReset;
-		
+
 		AwakeAirshipComponent();
 	}
 
@@ -172,7 +177,7 @@ public class AirshipComponent : MonoBehaviour {
 		}
 		
 		LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
-		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
+		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake); // TODO: Maybe move this to the actual Awake method?
 	}
 
 	private void Start() {

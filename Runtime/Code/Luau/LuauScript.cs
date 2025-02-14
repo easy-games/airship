@@ -102,7 +102,7 @@ public class LuauScript : MonoBehaviour {
 			context = LuauContext.Protected;
 		}
 		
-		thread = LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, false);
+		thread = LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, out var status);
 	}
 
 	/// <summary>
@@ -137,18 +137,20 @@ public class LuauScript : MonoBehaviour {
 	/// <summary>
 	/// Execute a thread. The thread must first be created with the LoadScript function.
 	/// </summary>
-	public static void ExecuteScript(IntPtr thread) {
+	public static int ExecuteScript(IntPtr thread) {
 		// Execute the new thread. We don't need to do anything after this. If the thread errors, the error will be
 		// outputted. If the thread yields, whoever yielded it owns responsibility for resuming it (e.g. the task
 		// scheduler):
-		LuauPlugin.LuauRunThread(thread);
+		return LuauPlugin.LuauRunThread(thread);
 	}
 
 	/// <summary>
 	/// Loads and executes the given script. The executed Luau thread is returned. If the thread is a nullptr, then
 	/// that indicates that Luau failed to load the script.
 	/// </summary>
-	public static IntPtr LoadAndExecuteScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script, bool pinThread) {
+	public static IntPtr LoadAndExecuteScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script, out int status) {
+		status = -1;
+		
 		var thread = LoadScript(obj, context, cacheMode, script);
 
 		var shouldCacheValue = thread == IntPtr.Zero && cacheMode == LuauScriptCacheMode.Cached;
@@ -163,16 +165,16 @@ public class LuauScript : MonoBehaviour {
 			return thread;
 		}
 
-		if (shouldCacheValue) {
+		if (!shouldCacheValue) {
+			status = 0;
+		} else {
+			status = ExecuteScript(thread);
+		}
+
+		if (shouldCacheValue && status == 0) {
 			var requirePath = LuauCore.GetRequirePath(script.m_path, CleanupFilePath(script.m_path));
 			LuauPlugin.LuauCacheModuleOnThread(thread, requirePath);
 		}
-
-		if (pinThread) {
-			LuauPlugin.LuauPinThread(thread);
-		}
-		
-		ExecuteScript(thread);
 
 		return thread;
 	}

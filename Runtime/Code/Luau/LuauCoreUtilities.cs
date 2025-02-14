@@ -5,12 +5,6 @@ using Luau;
 using UnityEngine;
 
 public partial class LuauCore : MonoBehaviour {
-    public int ResumeScript(LuauContext context, AirshipComponent binding) {
-        var retValue = LuauState.FromContext(context).ResumeScript(binding);
-
-        return retValue;
-    }
-
     public void AddThread(LuauContext context, IntPtr thread, AirshipComponent binding) {
         LuauState.FromContext(context).AddThread(thread, binding);
     }
