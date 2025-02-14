@@ -6,6 +6,7 @@ using Code.Player.Character.Net;
 using Mirror;
 using RSG.Promises;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character.NetworkedMovement
 {
@@ -24,12 +25,13 @@ namespace Code.Player.Character.NetworkedMovement
         [Range(1, 10)]
         public int maxServerCommandCatchup = 1;
 
-        // Amount of times in a row the server will fill in a missing commands. This is calculated to be a function of client input rate,
+        // Amount of times in a row the server will fill in a missing command. This is calculated to be a function of client input rate,
         // so a lower input rate will have a higher number of actual commands predicted. A value of 1 is "1 input packets worth of commands".
-        [Tooltip("The number of inputs the server will predict if it doesn't receive any for a time. This helps connections with loss, but may cause undesired movement in bad network conditions. It's best to keep this value low.")]
+        [Tooltip(
+            "The number of inputs the server will predict if it doesn't receive any for a time. This helps smooth movement in connections with loss, but may cause undesired movement. It's best to keep this value low.")]
         [Range(0, 3)]
         public uint maxServerCommandPrediction = 1;
-        
+
         // Determines if the server has authority over the character
         public bool serverAuth = false;
 
@@ -40,7 +42,7 @@ namespace Code.Player.Character.NetworkedMovement
         // Command number tracking for server and client
         private int serverLastProcessedCommandNumber = 0;
         private int clientCommandNumber = 0;
-        
+
         // Send rate tracking fields
         private double lastClientSend = 0;
         private double lastServerSend = 0;
@@ -54,17 +56,21 @@ namespace Code.Player.Character.NetworkedMovement
         private int lastProcessedCommandNumber;
         private int serverPredictedCommandCount = 0;
         private SortedList<int, Input> serverCommandBuffer = new SortedList<int, Input>();
+        private int serverCommandBufferMaxSize = 0;
+        private int serverCommandBufferTargetSize = 0;
 
         // Client processing for input prediction
         // private SortedList<double, Input> clientInputHistory = new SortedList<double, Input>();
         // private SortedList<double, State> clientPredictedHistory = new SortedList<double, State>();
         private State clientLastConfirmedState;
+
         // Flag for if we are the resimulation requestor.
         // For predicted objects, we don't overwrite the predicted state if we didn't request resimulation
         // TODO: in the future, we might get better resims in cases where there is more than one predicted
         // component by resimulating both, but it would require us to ensure that we have accurate intermediate
         // data and don't overwrite authoritative snapshots in our prediction history.
         private bool clientPredictionResimRequestor = false;
+
         // When the client doesn't recieve confirmation of it's commands for an extended time, we pause
         // predictions until we receive more commands from the server.
         private bool clientPausePrediction = false;
@@ -104,10 +110,16 @@ namespace Code.Player.Character.NetworkedMovement
             AirshipSimulationManager.OnCaptureSnapshot += this.OnCaptureSnapshot;
             AirshipSimulationManager.OnLagCompensationCheck += this.OnLagCompensationCheck;
 
-            // TODO: need to figure out how to calculate this buffer size or use Mirrors buffer algo.
-            // Right now it's too small and is running out of room and pushing out the before time we need.
-            var bufferSize = (int) Math.Ceiling(NetworkClient.bufferTime / NetworkClient.sendInterval);
-            // this.interpolationBuffer = new State[bufferSize + 1];
+            // We will keep up to 1 second of commands in the buffer. After that, we will start dropping new commands.
+            // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
+            this.serverCommandBufferMaxSize = NetworkClient.sendRate;
+            // Use 2 times the command buffer size as the target size for the buffer. We will process additional ticks when
+            // the buffer is larger than this number. A multiple of 2 means that we may end up delaying command processing
+            // by up to two sendIntervals. A higher multiple would cause more obvious delay, but result in smoother movement
+            // in poor network conditions.
+            this.serverCommandBufferTargetSize =
+                Math.Min(this.serverCommandBufferMaxSize, ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 3);
+
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
 
@@ -119,7 +131,7 @@ namespace Code.Player.Character.NetworkedMovement
         public void Start()
         {
             print(("Gravity is " + Physics.gravity));
-            
+
             // We are a shared client and server
             if (isClient && isServer)
             {
@@ -164,7 +176,7 @@ namespace Code.Player.Character.NetworkedMovement
             AirshipSimulationManager.OnCaptureSnapshot -= this.OnCaptureSnapshot;
             AirshipSimulationManager.OnLagCompensationCheck += this.OnLagCompensationCheck;
         }
-        
+
         private void LateUpdate()
         {
             // Unowned clients should interpolate the observed character
@@ -203,6 +215,12 @@ namespace Code.Player.Character.NetworkedMovement
             if (isServer && !serverAuth)
             {
                 this.NonAuthServerTick(time, replay);
+            }
+
+            // We are an observing client
+            if (isClient && !isOwned)
+            {
+                this.ObservingClientTick(time, replay);
             }
         }
 
@@ -287,13 +305,15 @@ namespace Code.Player.Character.NetworkedMovement
                     this.OnSetSnapshot(currentTime);
                     return;
                 }
-                
+
                 // If we are viewing the world as a client who is an observer of this object,
                 // calculate the position that was being rendered at the time by subtracting.
                 // out their estimated latency and the interpolation buffer time. This
                 // ensures that we are rolling back to the time the user actually saw on their
                 // client when they issued the command.
-                var lagCompensatedTickTime = AirshipSimulationManager.instance.GetLastSimulationTime(currentTime - latency - NetworkClient.bufferTime);
+                var lagCompensatedTickTime =
+                    AirshipSimulationManager.instance.GetLastSimulationTime(currentTime - latency -
+                                                                            NetworkClient.bufferTime);
                 this.OnSetSnapshot(lagCompensatedTickTime);
             }
         }
@@ -337,7 +357,9 @@ namespace Code.Player.Character.NetworkedMovement
                     // this.maxServerCommandPrediction * (1f / this.clientInputRate / Time.fixedDeltaTime)) is the number of
                     // commands contained in a single input message
                     if (this.lastProcessedCommand != null && command.commandNumber != expectedNextCommandNumber &&
-                        this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction * (NetworkServer.sendInterval / Time.fixedDeltaTime)))
+                        this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction *
+                                                                        (NetworkServer.sendInterval /
+                                                                         Time.fixedDeltaTime)))
                     {
                         Debug.LogWarning("Missing command " + expectedNextCommandNumber +
                                          " in the command buffer. Next command was: " + command.commandNumber +
@@ -368,9 +390,9 @@ namespace Code.Player.Character.NetworkedMovement
                     this.movementSystem.Tick(null, false);
                 }
             } while (this.serverCommandBuffer.Count >
-                     Math.Ceiling((NetworkServer.sendInterval / Time.fixedDeltaTime) * 1.5) &&
+                     this.serverCommandBufferTargetSize &&
                      commandsProcessed < 1 + this.maxServerCommandCatchup);
-            // ^ we process up to maxServerCommandCatchup commands per tick if our buffer has more than 1.5 snapshots worth of additional commands.
+            // ^ we process up to maxServerCommandCatchup commands per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
         }
 
         public void AuthServerCaptureSnapshot(double time, bool replay)
@@ -408,7 +430,6 @@ namespace Code.Player.Character.NetworkedMovement
 
         public void NonAuthClientTick(double time, bool replay)
         {
-
             // If it's a replay, we will take inputs from our input history for this tick
             if (replay)
             {
@@ -419,14 +440,15 @@ namespace Code.Player.Character.NetworkedMovement
                 this.movementSystem.Tick(command, true);
                 return;
             }
-            
+
             // If the prediction is paused, we still tick the movement system, but we include no command
             // for the tick. We want to wait for our current set of commands to be confirmed before
             // we start predicting again, so it's important that we do not continue processing new commands
             // and incrementing our commandNumber.
             if (this.clientPausePrediction)
             {
-                this.movementSystem.GetCommand(this.clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
+                this.movementSystem.GetCommand(this.clientCommandNumber,
+                    time); // We tick GetCommand to clear any input, but we don't use it
                 this.movementSystem.Tick(null, false);
                 this.inputHistory.Add(time, null);
                 return;
@@ -437,13 +459,14 @@ namespace Code.Player.Character.NetworkedMovement
             var input = this.movementSystem.GetCommand(this.clientCommandNumber, time);
             input = this.inputHistory.Add(time, input);
             this.movementSystem.Tick(input, false);
-            
+
             if (this.lastClientSend <= NetworkTime.time - NetworkClient.sendInterval)
             {
                 this.lastClientSend = NetworkTime.time;
                 // We will sometimes resend unconfirmed commands. The server should ignore these if
                 // it has them already.
-                this.SendClientInputToServer(this.inputHistory.GetAllAfter(NetworkTime.time - (NetworkClient.sendInterval * 2)));
+                this.SendClientInputToServer(
+                    this.inputHistory.GetAllAfter(NetworkTime.time - (NetworkClient.sendInterval * 2)));
             }
         }
 
@@ -608,13 +631,18 @@ namespace Code.Player.Character.NetworkedMovement
                 this.movementSystem.SetCurrentState(authoritativeState);
                 return;
             }
-            
-            
+
+
             // We don't do anything on regular captures since the interp function called
             // every frame will be handling updating state.
             // We could theoretically also set the state here, but it would be overwritten
             // on the next frame anyway.
             // TODO: Is the interp function the easiest way for a networked system to keep it's effects/animations up to date?
+        }
+
+        public void ObservingClientTick(double time, bool replay)
+        {
+            // No actions on observing tick.
         }
 
         public void ObservingClientSetSnapshot(double time)
@@ -633,8 +661,8 @@ namespace Code.Player.Character.NetworkedMovement
         private void Interpolate()
         {
             // Get the time we should render on the client.
-            var clientTime = (float)NetworkTime.time -  NetworkClient.bufferTime;
-            
+            var clientTime = (float)NetworkTime.time - NetworkClient.bufferTime;
+
             // Get the state history around the time that's currently being rendered.
             if (!this.stateHistory.GetAround(clientTime, out State prevState, out State nextState))
             {
@@ -644,7 +672,7 @@ namespace Code.Player.Character.NetworkedMovement
 
             // How far along are we in this interp?
             var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time);
-            
+
             // Call interp on the networked state system so it can place things properly for the render.
             this.movementSystem.Interpolate((float)timeDelta, prevState, nextState);
         }
@@ -676,7 +704,8 @@ namespace Code.Player.Character.NetworkedMovement
                 // TODO: Perhaps we should stop predicting until we receive one we can confirm one of our
                 // predictions?
                 this.clientPausePrediction = true;
-                Debug.LogWarning("Prediction paused due to a large number of unconfirmed commands to the server. Is there something wrong with the network?");
+                Debug.LogWarning(
+                    "Prediction paused due to a large number of unconfirmed commands to the server. Is there something wrong with the network?");
                 return;
             }
 
@@ -716,6 +745,8 @@ namespace Code.Player.Character.NetworkedMovement
                 return;
             }
             
+            Debug.LogWarning("Resimulating command " + state.lastProcessedCommand);
+
             // Correct our networked system state to match the authoritative answer from the server
             this.movementSystem.SetCurrentState(state);
             Physics.SyncTransforms();
@@ -776,6 +807,7 @@ namespace Code.Player.Character.NetworkedMovement
                 {
                     clientLastConfirmedState = state;
                 }
+
                 return;
             }
 
@@ -789,14 +821,6 @@ namespace Code.Player.Character.NetworkedMovement
             // This client is an observer and should store and interpolate the snapshot.
             if (!isOwned)
             {
-                // // Shift the buffer and put in the new snapshot.
-                // for (int i = 0; i < this.interpolationBuffer.Length - 1; i++)
-                // {
-                //     interpolationBuffer[i] = interpolationBuffer[i + 1];
-                // }
-                //
-                // interpolationBuffer[this.interpolationBuffer.Length - 1] = state;
-                // print("added " + state + " to buffer");
                 this.stateHistory.Add(state.time, state);
             }
         }
@@ -808,8 +832,11 @@ namespace Code.Player.Character.NetworkedMovement
                 // Debug.Log("Server received command " + command.commandNumber);
                 // This should only occur if the server is authoritative.
                 if (!serverAuth) continue;
-                
-                if (command == null) continue; // TODO: we may need to enter null commands? Lots of skips and catchups in server processing
+
+                // We may get null commands when the client pauses command sending because of unconfirmed commands.
+                // We basically ignore these as this is the client telling us "nothing". We could consider filtering
+                // these on the client before sending.
+                if (command == null) continue;
 
                 if (this.serverCommandBuffer.TryGetValue(command.commandNumber, out Input existingInput))
                 {
@@ -818,10 +845,10 @@ namespace Code.Player.Character.NetworkedMovement
                 }
 
                 // Reject commands if our buffer is full.
-                var maxCommandBuffer = Math.Ceiling((NetworkServer.sendInterval / Time.fixedDeltaTime) * 2);
-                if (this.serverCommandBuffer.Count > maxCommandBuffer)
+                if (this.serverCommandBuffer.Count > this.serverCommandBufferMaxSize)
                 {
-                    Debug.LogWarning("Dropping command " + command.commandNumber + " due to exceeding command buffer size.");
+                    Debug.LogWarning("Dropping command " + command.commandNumber +
+                                     " due to exceeding command buffer size.");
                     continue;
                 }
 

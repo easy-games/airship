@@ -52,13 +52,16 @@ namespace Code.Player.Character.NetworkedMovement
 
         /**
          * Gets the latest command retrieved during the update loop. This command will be sent to the server and predicted.
+         * This is called generally at the rate of FixedUpdate, but may not be called in situations where we are waiting
+         * for commands from the server.
          */
         public abstract Input GetCommand(int commandNumber, double time);
 
         /**
          * Ticks the predictable movement and advances the current movement state based on the move input data provided.
          * Tick will be called with a null command if a tick should occur but no command was available for that tick.
-         * This function is called at least as often as FixedUpdate, but may be called more often during re-simulations.
+         * This function is called at least as often as FixedUpdate, but may be called more often during re-simulations
+         * or on the server when there is a backup of commands.
          */
         public abstract void Tick([CanBeNull] Input command, bool replay);
 
