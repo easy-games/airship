@@ -41,6 +41,11 @@ public class CoreLoadingScreen : BundleLoadingScreen
         _canvas = GetComponent<Canvas>();
     }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    public void OnReload() {
+        gameImageCache.Clear();
+    }
+
     private void Start() {
         if (!RunCore.IsClient()) {
             Close();
@@ -51,9 +56,9 @@ public class CoreLoadingScreen : BundleLoadingScreen
 #if AIRSHIP_PLAYER
         this.UpdateGameImage();
 #else
-        // if (Application.isEditor) {
-        //     this.gameImage.enabled = false;
-        // }
+        if (Application.isEditor) {
+            this.gameImage.enabled = false;
+        }
 #endif
 
         this.startTime = 0f;
