@@ -252,14 +252,14 @@ namespace Code.VoiceChat {
             this.audioNonce++;
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.connectionId);
             // print("[server] received audio from peer " + senderPeerId);
-            RpcSendAudioToClient(null, senderPeerId, bytes, this.audioNonce);
+            RpcSendAudioToClient(senderPeerId, bytes, this.audioNonce);
 
             // var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             // OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
-        [TargetRpc(channel = Channels.Reliable)]
-        void RpcSendAudioToClient(NetworkConnectionToClient conn, short senderPeerId, byte[] bytes, uint nonce) {
+        [ClientRpc(channel = Channels.Reliable)]
+        void RpcSendAudioToClient(short senderPeerId, byte[] bytes, uint nonce) {
             print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
