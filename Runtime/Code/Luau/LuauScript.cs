@@ -165,7 +165,7 @@ public class LuauScript : MonoBehaviour {
 			return thread;
 		}
 
-		if (!shouldCacheValue) {
+		if (cacheMode == LuauScriptCacheMode.Cached && !shouldCacheValue) {
 			status = 0;
 		} else {
 			status = ExecuteScript(thread);
