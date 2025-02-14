@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Mirror;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MemoryDevConsole : MonoBehaviour {
@@ -13,7 +14,9 @@ public class MemoryDevConsole : MonoBehaviour {
 	public GameObject logInstance;
 	public ScrollRect scrollRect;
 	public RectTransform contentFrame;
+	public TMP_InputField searchField;
 	public TMP_Text totalBytesLabel;
+	public TMP_Text unityObjectsLabel;
 
 	[SerializeField] private GameObject sortedButton;
 	
@@ -31,6 +34,8 @@ public class MemoryDevConsole : MonoBehaviour {
 
 	private AirshipLuauDebugger _luauDebugger;
 	private bool _hasLuauDebugger = false;
+
+	private string _searchTerm = "";
 
 	private readonly List<TMP_InputField> _logItems = new();
 	private readonly List<TMP_InputField> _logItemsPool = new();
@@ -88,10 +93,17 @@ public class MemoryDevConsole : MonoBehaviour {
 
 	private void OnEnable() {
 		LuauCore.onResetInstance += OnLuauContextReset;
+		SceneManager.activeSceneChanged += OnActiveSceneChanged;
 	}
 
 	private void OnDisable() {
 		LuauCore.onResetInstance -= OnLuauContextReset;
+		SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+	}
+
+	private void OnActiveSceneChanged(Scene current, Scene next) {
+		_hasLuauDebugger = false;
+		_luauDebugger = null;
 	}
 
 	private void OnLuauContextReset(LuauContext ctx) {
@@ -129,6 +141,11 @@ public class MemoryDevConsole : MonoBehaviour {
 		}
 	}
 
+	public void OnSearchFieldChanged(string text) {
+		_searchTerm = text.Trim();
+		RefreshUI();
+	}
+
 	private void OnServerMemDumpChanged(SyncDictionary<LuauContext, List<LuauPlugin.LuauMemoryCategoryDumpItem>>.Operation op, LuauContext ctx, List<LuauPlugin.LuauMemoryCategoryDumpItem> dump) {
 		if (_environment == MemoryEnvironment.Client || ctx != _context) {
 			return;
@@ -147,7 +164,7 @@ public class MemoryDevConsole : MonoBehaviour {
 		text.color = sorted ? sortedButtonTextColorActive : sortedButtonTextColorInactive;
 
 		text.text = _sort switch {
-			MemorySort.Bytes => "Sort [Bytes]",
+			MemorySort.Bytes => "Sort [Size]",
 			MemorySort.Alphabetical => "Sort [A-Z]",
 			_ => "Sort"
 		};
@@ -176,12 +193,11 @@ public class MemoryDevConsole : MonoBehaviour {
 		Refresh();
 	}
 
-	private void Refresh() {
+	private void RefreshUI() {
 		List<LuauPlugin.LuauMemoryCategoryDumpItem> dump = null;
 		switch (_environment) {
 			case MemoryEnvironment.Client:
 				dump = _dumps[_context];
-				LuauPlugin.LuauGetMemoryCategoryDump(_context, dump);
 				break;
 			case MemoryEnvironment.Server:
 				if (_hasLuauDebugger) {
@@ -192,24 +208,29 @@ public class MemoryDevConsole : MonoBehaviour {
 			default:
 				throw new Exception("unknown environment");
 		}
-
+		
 		if (_sort == MemorySort.Bytes) {
 			var sortedDump = new List<LuauPlugin.LuauMemoryCategoryDumpItem>(dump);
 			sortedDump.Sort(((itemA, itemB) => itemA.Bytes == itemB.Bytes ? 0 : itemA.Bytes < itemB.Bytes ? 1 : -1));
 			dump = sortedDump;
 		} else if (_sort == MemorySort.Alphabetical) {
 			var sortedDump = new List<LuauPlugin.LuauMemoryCategoryDumpItem>(dump);
-			sortedDump.Sort(((itemA, itemB) => string.Compare(itemA.ShortName, itemB.ShortName, StringComparison.Ordinal)));
+			sortedDump.Sort(((itemA, itemB) => string.Compare(itemA.ShortName, itemB.ShortName, StringComparison.OrdinalIgnoreCase)));
 			dump = sortedDump;
 		}
 
 		var totalBytes = 0UL;
 
-		var i = 0;
+		var itemsShown = 0;
+		var itemsCreated = false;
 		foreach (var item in dump) {
+			totalBytes += item.Bytes;
+			
+			if (!string.IsNullOrEmpty(_searchTerm) && !item.ShortName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) continue;
+			
 			TMP_InputField instance;
-			if (i < _logItems.Count) {
-				instance = _logItems[i];
+			if (itemsShown < _logItems.Count) {
+				instance = _logItems[itemsShown];
 			} else if (_logItemsPool.Count > 0) {
 				instance = _logItemsPool[^1];
 				_logItemsPool.RemoveAt(_logItemsPool.Count - 1);
@@ -220,14 +241,14 @@ public class MemoryDevConsole : MonoBehaviour {
 				go.GetComponent<LogFieldInstance>().redirectTarget = scrollRect;
 				instance = go.GetComponent<TMP_InputField>();
 				_logItems.Add(instance);
+				itemsCreated = true;
 			}
 			instance.text = $"{item.ShortName}: <b><color=\"green\">{FormatBytes(item.Bytes)}</color></b>";
-			totalBytes += item.Bytes;
-			i++;
+			itemsShown++;
 		}
 
 		// Trim off unused labels:
-		while (_logItems.Count > i) {
+		while (_logItems.Count > itemsShown) {
 			var item = _logItems[^1];
 			item.transform.SetParent(null);
 			_logItemsPool.Add(item);
@@ -235,5 +256,31 @@ public class MemoryDevConsole : MonoBehaviour {
 		}
 		
 		totalBytesLabel.text = $"Total: <b><color=\"green\">{FormatBytes(totalBytes)}</color></b>";
+
+		var unityObjects = 0UL;
+		if (_environment == MemoryEnvironment.Client) {
+			unityObjects = LuauPlugin.LuauGetUnityObjectCount();
+		} else if (_hasLuauDebugger) {
+			unityObjects = _luauDebugger.ServerUnityObjects;
+		}
+		unityObjectsLabel.text = $"Unity Objects: <b><color=\"green\">{unityObjects}</color></b>";
+
+		if (itemsCreated) {
+			Bridge.UpdateLayout(contentFrame, true);
+		}
+	}
+
+	private void Refresh() {
+		switch (_environment) {
+			case MemoryEnvironment.Client:
+				LuauPlugin.LuauGetMemoryCategoryDump(_context, _dumps[_context]);
+				break;
+			case MemoryEnvironment.Server:
+				break;
+			default:
+				throw new Exception("unknown environment");
+		}
+		
+		RefreshUI();
 	}
 }

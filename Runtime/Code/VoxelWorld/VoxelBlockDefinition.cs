@@ -31,6 +31,7 @@ public class VoxelBlockDefinition : ScriptableObject {
 
     public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.Block;
     public Material meshMaterial; //Used by quarterBlocks, Pipes, StaticMesh and regular blocks
+    public bool halfBlock = false; // Used by quarter blocks
 
     public TextureSet topTexture = new();
     public TextureSet sideTexture = new();
@@ -202,6 +203,8 @@ public class VoxelBlockDefinitionEditor : Editor {
             
             SerializedProperty quarterBlockMeshesProp = serializedObject.FindProperty("quarterBlockMeshes");
             EditorGUILayout.PropertyField(quarterBlockMeshesProp, new GUIContent("QuarterBlock Meshes"), true);
+            
+            block.halfBlock = EditorGUILayout.Toggle("Half block", block.halfBlock);
         }
         
         if (block.contextStyle == VoxelBlocks.ContextStyle.Block) {

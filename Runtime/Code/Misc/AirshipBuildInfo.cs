@@ -121,7 +121,7 @@ namespace Luau {
                 if (_instance != null) {
                     return _instance;
                 }
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
                 if (_instance == null) {
                     _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
                 }
@@ -145,7 +145,7 @@ namespace Luau {
         }
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetOnLoad() {
+        public static void ResetOnLoad() {
             _instance = null;
         }
 

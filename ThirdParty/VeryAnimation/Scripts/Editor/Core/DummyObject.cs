@@ -261,7 +261,7 @@ namespace VeryAnimation
                 {
                     Shader shader;
 #if UNITY_2018_1_OR_NEWER
-                    if (GraphicsSettings.renderPipelineAsset != null)
+                    if (GraphicsSettings.defaultRenderPipeline != null)
                     {
                         shader = Shader.Find("Very Animation/OnionSkin-1pass");
                     }

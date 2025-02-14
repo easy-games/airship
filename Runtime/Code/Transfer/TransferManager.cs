@@ -3,6 +3,7 @@ using System.Collections;
 using Airship.DevConsole;
 using Code.Authentication;
 using Code.Analytics;
+using Luau;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -27,6 +28,7 @@ public class TransferManager : Singleton<TransferManager> {
 
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
+        AirshipBuildInfo.ResetOnLoad();
 
         if (NetworkClient.isConnected || NetworkClient.isConnecting) {
             NetworkManager.singleton.StopClient();
@@ -81,6 +83,7 @@ public class TransferManager : Singleton<TransferManager> {
         yield return null;
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
+        AirshipBuildInfo.ResetOnLoad();
 
         AnalyticsRecorder.Reset();
 

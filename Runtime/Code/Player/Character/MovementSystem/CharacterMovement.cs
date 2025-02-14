@@ -23,7 +23,7 @@ public class CharacterMovement : NetworkBehaviour {
 	public bool drawDebugGizmos_GROUND = false;
 	public bool drawDebugGizmos_STEPUP = false;
 	public bool drawDebugGizmos_STATES= false;
-	public bool useExtraLogging = true;
+	public bool useExtraLogging = false;
 
 	[Header("Visual Variables")]
 	public bool autoCalibrateSkiddingSpeed = true;
@@ -185,10 +185,9 @@ public class CharacterMovement : NetworkBehaviour {
 		//Observers are kinematic rigidbodies
 		var isKinematic = IsObserver();
 		if(isKinematic){
-			Debug.Log("SOMETHING TRIGGERED ME!!");
 			//Have to disable these or you will get an error when setting to kinematic
-			// rigidbody.interpolation = RigidbodyInterpolation.None;
-			// rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
+			rigidbody.interpolation = RigidbodyInterpolation.None;
+			rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 		}
 		rigidbody.isKinematic = isKinematic;
 

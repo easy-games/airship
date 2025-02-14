@@ -441,7 +441,7 @@ namespace VoxelWorldStuff {
 
                 if (detailMeshes != null) {
                     foreach (var detailMesh in detailMeshes) {
-                        Object.Destroy(detailMesh);
+                        Object.DestroyImmediate(detailMesh);
                     }
                 }
 

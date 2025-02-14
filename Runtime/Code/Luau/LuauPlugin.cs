@@ -578,6 +578,19 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern IntPtr ResumeThreadError(IntPtr thread, ref int result);
+	public static int LuauResumeThreadError(IntPtr thread) {
+		ThreadSafetyCheck();
+		var returnValue = 0;
+		ThrowIfNotNullPtr(ResumeThreadError(thread, ref returnValue));
+		return returnValue;
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern IntPtr CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters, ref int result);
 	public static int LuauCallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters) {
         ThreadSafetyCheck();
@@ -817,6 +830,16 @@ public static class LuauPlugin {
 	private static extern void DebugPrintStack(IntPtr thread);
 	public static void LuauDebugPrintStack(IntPtr thread) {
 		DebugPrintStack(thread);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern ulong GetUnityObjectCount();
+	public static ulong LuauGetUnityObjectCount() {
+		return GetUnityObjectCount();
 	}
 	
 	/// <summary>

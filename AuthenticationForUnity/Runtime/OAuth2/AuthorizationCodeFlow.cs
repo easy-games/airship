@@ -104,7 +104,8 @@ namespace Cdm.Authentication.OAuth2
                 clientId = configuration.clientId,
                 redirectUri = configuration.redirectUri,
                 scope = configuration.scope,
-                state = state
+                state = state,
+                prompt = "select_account"
             });
         }
 

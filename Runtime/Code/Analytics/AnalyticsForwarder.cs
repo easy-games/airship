@@ -32,7 +32,7 @@ namespace Code.Analytics {
             AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) => {
                 isAlreadySending = false;
                 if (!t.Result.success) {
-                    Debug.LogError("Failed to send analytics: " + t.Result.error);
+                    Debug.LogError("airship-analytics-forwarder - Failed to send error analytics: " + t.Result.error);
                 }
             });
 #endif
@@ -53,7 +53,7 @@ namespace Code.Analytics {
             AnalyticsServiceClient.SendClientAnalytics(message).ContinueWith((t) => {
                 isAlreadySending = false;
                 if (!t.Result.success) {
-                    Debug.LogError("Failed to send analytics: " + t.Result.error);
+                    Debug.LogError("airship-analytics-forwarder - Failed to send error analytics: " + t.Result.error);
                 }
             });
 #endif

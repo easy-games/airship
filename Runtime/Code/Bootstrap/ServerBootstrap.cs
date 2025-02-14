@@ -55,6 +55,8 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string gameId = "";
     [NonSerialized] public string serverId = "";
     [NonSerialized] public string organizationId = "";
+	[NonSerialized] public bool isShutdownEventTriggered = false;
+	[NonSerialized] public bool isAgonesShutdownTriggered = false;
 
     public ServerContext serverContext;
 
@@ -76,19 +78,23 @@ public class ServerBootstrap : MonoBehaviour
     private void Awake() {
         isServerReady = false;
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
 	    var gameConfig = GameConfig.Load();
 	    gameId = gameConfig.gameId;
 	    serverContext.gameId = gameConfig.gameId;
 #endif
-
-        Application.targetFrameRate = 90;
     }
 
 	private void Start() {
 		if (!RunCore.IsServer()) {
 			return;
 		}
+
+		if (!RunCore.IsClient()) {
+			Application.targetFrameRate = 90;
+		}
+
+
 #if AIRSHIP_PLAYER
             #if AIRSHIP_STAGING
             Debug.Log("Server starting with STAGING configuration.");
@@ -139,7 +145,16 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	public void InvokeOnProcessExit() {
-		this.onProcessExit?.Invoke();
+		if (this.isShutdownEventTriggered) return;
+		this.isShutdownEventTriggered = true;
+
+		if ((this.onProcessExit?.GetInvocationList().Length ?? 0) > 0) {
+			Debug.Log("Invoking OnProcessExit handlers.");
+			this.onProcessExit?.Invoke();
+		} else {
+			Debug.LogWarning("No OnProcessExit handlers were registered. Directly exiting process.");
+			this.Shutdown();
+		}
 	}
 
 	private void OnDestroy() {
@@ -147,7 +162,7 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void ProcessExit(object sender, EventArgs args) {
-		this.onProcessExit?.Invoke();
+		this.InvokeOnProcessExit();
 	}
 
 	public bool IsAgonesEnvironment() {
@@ -461,8 +476,10 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	public void Shutdown() {
-		if (agones) {
+		if (agones && !this.isAgonesShutdownTriggered) {
+			this.isAgonesShutdownTriggered = true;
 			agones.Shutdown();
+			Application.Quit();
 		}
 	}
 

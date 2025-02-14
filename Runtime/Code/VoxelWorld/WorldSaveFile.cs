@@ -252,7 +252,7 @@ public class WorldSaveFile : ScriptableObject {
 #if UNITY_EDITOR
                 //Fix the solid bit - we have to do this in case someone has already placed a bunch of blocks and then changes their solid bit, which is usually only set when the voxel is written
                 var definition = world.voxelBlocks.GetBlockDefinitionFromBlockId(updatedBlockId);
-                vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid);
+                vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid && !definition.definition.halfBlock);
 #endif
 
                 writeChunk.readWriteVoxel[i] = vox;

@@ -15,6 +15,8 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 		[LuauContext.Game] = 0,
 		[LuauContext.Protected] = 0,
 	};
+
+	[NonSerialized] [SyncVar] public ulong ServerUnityObjects = LuauPlugin.LuauGetUnityObjectCount();
 	
 	private const float MinServerMemDumpUpdateInterval = 1; 
 
@@ -22,6 +24,7 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 		luauPluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
 		bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
 		serverPlayerVersion = AirshipVersion.GetVersionHash();
+		ServerUnityObjects = LuauPlugin.LuauGetUnityObjectCount();
 	}
 
 	[Command(requiresAuthority = false)]
@@ -39,5 +42,7 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 		
 		LuauPlugin.LuauGetMemoryCategoryDump(context, dump);
 		ServerMemDump[context] = dump; // Force update
+		
+		ServerUnityObjects = LuauPlugin.LuauGetUnityObjectCount();
 	}
 }

@@ -66,7 +66,7 @@ public class ClientNetworkConnector : MonoBehaviour {
         this.reconnectAttempt = 0;
 
         var loading = FindAnyObjectByType<CoreLoadingScreen>();
-        loading.SetProgress("Receiving Data...", 30);
+        loading.SetProgress("Waiting for server...", 30);
     }
 
     public void NetworkClient_OnDisconnected() {

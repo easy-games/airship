@@ -657,31 +657,31 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
-            if (typeof(T) == typeof(object) || cacheData.IsNativeClass) {
-                return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
-            }
-        
-            if (!cacheData.HasGetPropertyFunc) {
-                var getMethod = cacheData.propertyInfo.GetGetMethod();
+        if (typeof(T) == typeof(object) || cacheData.IsNativeClass) {
+            return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
+        }
+    
+        if (!cacheData.HasGetPropertyFunc) {
+            var getMethod = cacheData.propertyInfo.GetGetMethod();
 
-                unsafe {
-                    delegate*<object, T> funcPtr = (delegate*<object, T>)getMethod
-                        .MethodHandle
-                        .GetFunctionPointer()
-                        .ToPointer();
-                
-                    // Create a delegate that wraps the function pointer
-                    var getter = new Getter<T>(obj => {
-                        unsafe {
-                            return funcPtr(obj);
-                        }
-                    });
-                
-                    cacheData.HasGetPropertyFunc = true;
-                    cacheData.GetProperty = getter;
-                    LuauCore.propertyGetCache[new PropertyCacheKey(instance.GetType(), cacheData.propertyInfo.Name)] = cacheData;
-                }
+            unsafe {
+                delegate*<object, T> funcPtr = (delegate*<object, T>)getMethod
+                    .MethodHandle
+                    .GetFunctionPointer()
+                    .ToPointer();
+            
+                // Create a delegate that wraps the function pointer
+                var getter = new Getter<T>(obj => {
+                    unsafe {
+                        return funcPtr(obj);
+                    }
+                });
+            
+                cacheData.HasGetPropertyFunc = true;
+                cacheData.GetProperty = getter;
+                LuauCore.propertyGetCache[new PropertyCacheKey(instance.GetType(), cacheData.propertyInfo.Name)] = cacheData;
             }
+        }
             
         return ((Getter<T>) cacheData.GetProperty)(instance);
     }
@@ -1573,8 +1573,9 @@ public partial class LuauCore : MonoBehaviour {
         if (awaitingTask.Task.IsFaulted) {
             var result = -1;
             try {
-                LuauError(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
-                result = LuauPlugin.LuauResumeThread(thread, -1);
+                LuauPluginRaw.PushString(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
+                ThreadDataManager.Error(thread);
+                result = LuauPlugin.LuauResumeThreadError(thread);
             } catch (LuauException e) {
                 Debug.LogException(e);
             }

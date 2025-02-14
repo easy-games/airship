@@ -49,5 +49,9 @@ namespace Cdm.Authentication.OAuth2
         [Preserve]
         [DataMember(Name = "state")]
         public string state { get; set; }
+
+        [Preserve]
+        [DataMember(Name = "prompt")]
+        public string prompt { get; set; }
     }
 }

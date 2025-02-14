@@ -196,6 +196,7 @@ public class LoginApp : MonoBehaviour {
             Uri = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",
             Params = new Dictionary<string, string>() {
                 { "key", AirshipPlatformUrl.firebaseApiKey },
+                { "prompt", "select_account"}
             },
             ContentType = "application/json",
             BodyString = JsonUtility.ToJson(reqBody),

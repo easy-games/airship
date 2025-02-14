@@ -44,7 +44,7 @@ namespace Editor {
         }
 
         public static void BuildLinuxServerStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, "AIRSHIP_STAGING");
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
             BuildLinuxServer();
         }
 
@@ -71,7 +71,7 @@ namespace Editor {
             options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
             options.locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}";
             options.target = BuildTarget.StandaloneLinux64;
-            options.extraScriptingDefines = new[] { "UNITY_SERVER" };
+            options.extraScriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" };
             options.subtarget = (int)StandaloneBuildSubtarget.Server;
             options.options |= BuildOptions.Development; //Enable the profiler
             var report = BuildPipeline.BuildPlayer(options);
@@ -95,7 +95,7 @@ namespace Editor {
         [MenuItem("Airship/Create Binary/Client/Mac (Staging)", priority = 80)]
 #endif
         public static void BuildMacClientStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER"});
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
             BuildMacClient();
         }
 
@@ -231,7 +231,7 @@ namespace Editor {
 #endif
 
         public static void BuildWindowsClientStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_STAGING");
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
             BuildWindowsClient();
         }
 
