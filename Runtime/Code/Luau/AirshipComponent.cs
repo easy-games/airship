@@ -83,6 +83,9 @@ public class AirshipComponent : MonoBehaviour {
 
 	private void Awake() {
 		Init();
+		
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
 	}
 	
 	public void Init() {
@@ -177,7 +180,6 @@ public class AirshipComponent : MonoBehaviour {
 		}
 		
 		LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
-		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake); // TODO: Maybe move this to the actual Awake method?
 	}
 
 	private void Start() {

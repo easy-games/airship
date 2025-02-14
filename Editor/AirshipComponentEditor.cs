@@ -302,7 +302,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         GUI.enabled = true;
         
-        if (newScript == null) {
+        if (newScript == null && !Application.isPlaying) {
             EditorGUILayout.Space(5);
             
             var rect = GUILayoutUtility.GetLastRect();
