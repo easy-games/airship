@@ -30,15 +30,6 @@ namespace Code.Player.Character.NetworkedMovement
         public abstract void OnSetMode(MovementMode mode);
 
         /**
-         * Sets the current movement system to paused. This means that rigidbodies or other
-         * properties of the movement system should be set to stop or start updating when
-         * Physics.Simulate() is called. For most systems, this means setting any rigidbodies
-         * controlled by this system to kinematic when paused, and resetting them back
-         * to their default state when unpaused.
-         */
-        public abstract void OnSetPaused(bool paused);
-
-        /**
          * Sets the current state to base movement ticks off of. Updates the associated
          * rigidbody to match the state provided. It is important that the implementation
          * if this method hard set any physics fields to match those in the provided state.

@@ -7,7 +7,6 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         private Rigidbody rb;
         private Vector3 moveVector;
         private bool jump;
-        private MovementMode mode;
         private int jumpTicksUntil = 0;
 
         private void Awake()
@@ -17,13 +16,11 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
 
         public override void OnSetMode(MovementMode mode)
         {
-            this.mode = mode;
-
             if (mode == MovementMode.Observer)
             {
                 rb.isKinematic = true;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 
             if (mode == MovementMode.Authority || mode == MovementMode.Input)
@@ -31,21 +28,6 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
                 rb.isKinematic = false;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            }
-        }
-
-        public override void OnSetPaused(bool paused)
-        {
-            if (mode == MovementMode.Input || mode == MovementMode.Authority)
-            {
-                if (paused)
-                {
-                    this.rb.isKinematic = true;
-                }
-                else
-                {
-                    this.rb.isKinematic = false;
-                }
             }
         }
 
