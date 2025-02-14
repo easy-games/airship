@@ -183,6 +183,16 @@ public partial class VoxelWorld : MonoBehaviour {
         return Quaternion.identity;
     }
 
+    /// <summary>
+    /// Half blocks are scaled based on their flip bits
+    /// </summary>
+    public static Vector3 GetScaleFromFlipBits(int flipBits) {
+        if (flipBits % 4 == 0) return new Vector3(1, 0.5f, 1);
+        if (flipBits % 4 == 1) return new Vector3(0.5f, 1, 1);
+        if (flipBits % 4 == 2) return new Vector3(1, 1, 0.5f);
+        return Vector3.one;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int SetVoxelFlippedBits(int voxel, int flippedBits) {
         // Ensure flippedBits is a 3-bit value (0-7)
