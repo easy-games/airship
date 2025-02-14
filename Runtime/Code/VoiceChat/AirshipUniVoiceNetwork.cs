@@ -260,7 +260,7 @@ namespace Code.VoiceChat {
 
         [ClientRpc(channel = Channels.Reliable)]
         void RpcSendAudioToClient(short senderPeerId, byte[] bytes, uint nonce) {
-            print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
+            // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }
