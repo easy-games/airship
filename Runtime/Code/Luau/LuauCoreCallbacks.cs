@@ -1096,7 +1096,7 @@ public partial class LuauCore : MonoBehaviour {
         // return newBinding.m_thread;
 
         try {
-            var newScript = LuauScript.Create(obj, fileNameStr, context);
+            var newScript = LuauScript.Create(obj, fileNameStr, context, false);
             return newScript.thread;
         } catch (Exception e) {
             Debug.LogException(e);

@@ -1,16 +1,15 @@
 ﻿using System;
-using Luau;
+using System.Diagnostics;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using Object = UnityEngine.Object;
+using Debug = UnityEngine.Debug;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
 		public static bool IsLoaded = false;
-		public static event Action onScriptBindingRun;
+		public static event Action OnScriptBindingRun;
 
 		public static void InvokeOnLuauStartup() {
-			onScriptBindingRun?.Invoke();
+			OnScriptBindingRun?.Invoke();
 		}
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -24,11 +23,11 @@ namespace Assets.Code.Luau {
 		private void Awake() {
 			if (IsLoaded) return;
 
-			onScriptBindingRun += StartCoreScripts;
+			OnScriptBindingRun += StartCoreScripts;
 		}
 
 		private void OnDestroy() {
-			onScriptBindingRun -= StartCoreScripts;
+			OnScriptBindingRun -= StartCoreScripts;
 		}
 
 		private void StartCoreScripts() {
@@ -43,16 +42,19 @@ namespace Assets.Code.Luau {
 			}
 			
 			// Main Menu
+			var stopwatch = Stopwatch.StartNew();
 			{
 				var go = new GameObject("MainMenuInGame");
-				LuauScript.Create(go, MainMenuEntryScript, LuauContext.Protected);
+				LuauScript.Create(go, MainMenuEntryScript, LuauContext.Protected, true);
 			}
 
 			// Core
 			{
 				var go = new GameObject("@Easy/Core");
-				LuauScript.Create(go, CoreEntryScript, LuauContext.Game);
+				LuauScript.Create(go, CoreEntryScript, LuauContext.Game, true);
 			}
+			stopwatch.Stop();
+			Debug.Log($"ScriptingEntryPoint elapsed time: {stopwatch.ElapsedMilliseconds}ms");
 		}
 	}
 }

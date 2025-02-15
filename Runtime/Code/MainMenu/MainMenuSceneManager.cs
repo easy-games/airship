@@ -231,7 +231,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         // coreLuauBinding.Init();
 
         var coreLuauBindingGo = new GameObject("CoreLuauBinding");
-        LuauScript.Create(coreLuauBindingGo, "AirshipPackages/@Easy/Core/Shared/MainMenu.ts", LuauContext.Protected);
+        LuauScript.Create(coreLuauBindingGo, "AirshipPackages/@Easy/Core/Shared/MainMenu.ts", LuauContext.Protected, false);
         
         StartCoroutine(CheckForFailedStartup());
     }

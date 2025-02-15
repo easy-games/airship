@@ -24,7 +24,7 @@ public class LuauScript : MonoBehaviour {
 	public AirshipScript script;
 
 	public IntPtr thread;
-	[HideInInspector] public LuauContext context = LuauContext.Game;
+	public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
 	
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -60,19 +60,20 @@ public class LuauScript : MonoBehaviour {
 #endif
 	}
 
-	public static LuauScript Create(GameObject go, string scriptPath, LuauContext context) {
+	public static LuauScript Create(GameObject go, string scriptPath, LuauContext context, bool forceContext) {
 		var script = LoadAirshipScriptFromPath(scriptPath);
 		if (script == null) {
 			throw new Exception($"Failed to load script from file: {scriptPath}");
 		}
 
-		return Create(go, script, context);
+		return Create(go, script, context, forceContext);
 	}
 
-	public static LuauScript Create(GameObject go, AirshipScript script, LuauContext context) {
+	public static LuauScript Create(GameObject go, AirshipScript script, LuauContext context, bool forceContext) {
 		var awakeData = new AwakeData() {
 			Script = script,
 			Context = context,
+			ForceContext = forceContext,
 		};
 		QueuedAwakeData = awakeData;
 		
@@ -85,6 +86,7 @@ public class LuauScript : MonoBehaviour {
 			QueuedAwakeData = null;
 			luauScript.script = script;
 			luauScript.context = context;
+			luauScript.forceContext = forceContext;
 		}
 		
 		return luauScript;
@@ -94,11 +96,13 @@ public class LuauScript : MonoBehaviour {
 		if (QueuedAwakeData != null) {
 			script = QueuedAwakeData.Script;
 			context = QueuedAwakeData.Context;
+			forceContext = QueuedAwakeData.ForceContext;
 			QueuedAwakeData = null;
 		}
 
 		// Assume protected context for bindings within CoreScene
-		if (!forceContext && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+		// if (!forceContext && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+		if (!forceContext && gameObject.scene.name is "CoreScene" or "MainMenu" && ElevateToProtectedWithinCoreScene) {
 			context = LuauContext.Protected;
 		}
 		
@@ -182,6 +186,6 @@ public class LuauScript : MonoBehaviour {
 	public class AwakeData {
 		public AirshipScript Script;
 		public LuauContext Context;
-		public bool ForceContext = false;
+		public bool ForceContext;
 	}
 }

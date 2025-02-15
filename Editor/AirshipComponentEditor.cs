@@ -87,6 +87,10 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 EditorGUILayout.LabelField("Component Id", binding.GetAirshipComponentId().ToString());
             }
             EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Context", binding.context.ToString());
+            EditorGUILayout.EndHorizontal();
         }        
 #endif
         

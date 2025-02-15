@@ -33,7 +33,7 @@ public class AirshipComponent : MonoBehaviour {
 	[FormerlySerializedAs("m_fileFullPath")] [HideInInspector] public string scriptPath;
 
 	public IntPtr thread;
-	[HideInInspector] public LuauContext context = LuauContext.Game;
+	public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
 	[FormerlySerializedAs("m_metadata")] [HideInInspector] public LuauMetadata metadata = new();
 	
@@ -63,6 +63,7 @@ public class AirshipComponent : MonoBehaviour {
 		var awakeData = new LuauScript.AwakeData() {
 			Script = script,
 			Context = context,
+			ForceContext = false,
 		};
 		QueuedAwakeData = awakeData;
 		
@@ -95,6 +96,7 @@ public class AirshipComponent : MonoBehaviour {
 		if (QueuedAwakeData != null) {
 			script = QueuedAwakeData.Script;
 			context = QueuedAwakeData.Context;
+			forceContext = QueuedAwakeData.ForceContext;
 			QueuedAwakeData = null;
 		}
 
@@ -124,7 +126,7 @@ public class AirshipComponent : MonoBehaviour {
 #endif
 
 		// Assume protected context for bindings within CoreScene
-		if (!forceContext && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+		if (!forceContext && gameObject.scene.name is "CoreScene" or "MainMenu" && ElevateToProtectedWithinCoreScene) {
 			context = LuauContext.Protected;
 		}
 		
@@ -265,7 +267,7 @@ public class AirshipComponent : MonoBehaviour {
 		var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(transform);
 		AirshipBehaviourRootV2.LinkComponentToGameObject(this, out var unityInstanceId);
         
-		LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, thread, unityInstanceId, _airshipComponentId, transformInstanceId);
+		LuauPlugin.LuauPrewarmAirshipComponent(context, thread, unityInstanceId, _airshipComponentId, transformInstanceId);
 	}
 
 	public string GetAirshipComponentName() {
