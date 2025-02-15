@@ -89,6 +89,10 @@ public class AirshipComponent : MonoBehaviour {
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
 	}
 	
+	// Init is separate from Awake because there are instances where an AirshipComponent
+	// is fetched using GetComponent BEFORE its Awake method is called. Those areas in
+	// the code can call Init() here to ensure everything is set up in time, even if
+	// Awake() hasn't been called yet.
 	public void Init() {
 		if (_init) return;
 		_init = true;
@@ -108,6 +112,7 @@ public class AirshipComponent : MonoBehaviour {
 		scriptPath = script.m_path;
 		ComponentIdToScriptName[_airshipComponentId] = string.Intern(script.name);
 		
+		// Invoke startup scripts if they haven't been executed yet
 		ScriptingEntryPoint.InvokeOnLuauStartup();
 		
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
@@ -144,12 +149,13 @@ public class AirshipComponent : MonoBehaviour {
 		
 		LuauCore.onResetInstance += OnLuauReset;
 
-		AwakeAirshipComponent();
+		InitAirshipComponent();
 	}
-
-	private void AwakeAirshipComponent() {
+	
+	private void InitAirshipComponent() {
 		InitializeAirshipReference();
 
+		// Ensure all AirshipComponent dependencies are ready first
 		foreach (var dependency in GetDependencies()) {
 			dependency.Init();
 		}
