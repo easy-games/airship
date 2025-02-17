@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Code.Accessories.Clothing;
 using Code.Bootstrap;
@@ -19,6 +20,7 @@ namespace Editor.Accessories.Clothing {
     [CustomEditor(typeof(ClothingBundleManifest))]
     [CanEditMultipleObjects]
     public class ClothingBundleManifestEditor : UnityEditor.Editor {
+        private static string easyOrgId = "6b62d6e3-9d74-449c-aeac-b4feed2012b1";
         public override void OnInspectorGUI() {
             base.DrawDefaultInspector();
 
@@ -33,14 +35,14 @@ namespace Editor.Accessories.Clothing {
 
         private async void BuildAllPlatforms() {
             var st = Stopwatch.StartNew();
-            bool failed = false;
+            bool success = true;
             // foreach (var platform in AirshipPlatformUtil.livePlatforms) {
             //     await this.BuildPlatform(platform);
             // }
 
-            failed = await this.BuildPlatform(AirshipPlatform.Mac);
+            success = await this.BuildPlatform(AirshipPlatform.Mac);
 
-            if (failed) {
+            if (!success) {
                 return;
             }
             Debug.Log($"<color=green>Finished building asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color>");
@@ -51,21 +53,26 @@ namespace Editor.Accessories.Clothing {
             var manifest = (ClothingBundleManifest)this.target;
             string airId = manifest.GetAirIdForPlatform(platform);
 
+            var contentName = manifest.clothingList[0].name;
+            var contentDescription = "Clothing";
+
             if (string.IsNullOrEmpty(airId)) {
                 // Create new air asset
-                var res = await InternalHttpManager.PostAsync(AirshipPlatformUrl.deploymentService + $"/air-assets/owner-type/ORGANIZATION/owner-id/easy", JsonUtility.ToJson(new AirAssetCreateRequest() {
+                var res = await InternalHttpManager.PostAsync(AirshipPlatformUrl.deploymentService + $"/air-assets/owner-type/ORGANIZATION/owner-id/{easyOrgId}", JsonUtility.ToJson(new AirAssetCreateRequest() {
                     contentType = "application/airasset",
-                    contentLength = 0,
-                    name = manifest.clothingList[0].name,
-                    description = "Clothing",
+                    contentLength = 1,
+                    name = contentName,
+                    description = contentDescription,
                 }));
                 Debug.Log("create response: " + res.data);
                 var data = JsonUtility.FromJson<AirAssetCreateResponse>(res.data);
                 manifest.SetAirIdForPlatform(platform, data.airAssetId);
-                return true;
+                this.SaveChanges();
+                airId = data.airAssetId;
             }
 
-            var buildOutputPath = $"bundles/clothing/{airId}.bundle";
+            var buildOutputFolder = "bundles/clothing/";
+            var buildOutputFile = $"bundles/clothing/{airId}.bundle";
             var sourceFolderPath = Path.GetRelativePath(".", Directory.GetParent(AssetDatabase.GetAssetPath(manifest))!.FullName);
 
             List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds();
@@ -85,41 +92,81 @@ namespace Editor.Accessories.Clothing {
                 .Select((p) => p.ToLower())
                 .ToArray();
             builds.Add(new AssetBundleBuild() {
-                assetBundleName = airId,
+                assetBundleName = airId + ".bundle",
                 assetNames = assetPaths,
                 addressableNames = addressableNames
             });
 
-            // ---------- //
+            // --------------------- //
+            // Build
+            if (false) {
+                var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
+                var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
+                if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
+                    buildTargetGroup = BuildTargetGroup.Standalone;
+                }
+                EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, buildTarget);
+                var buildParams = new BundleBuildParameters(
+                    buildTarget,
+                    buildTargetGroup,
+                    buildOutputFolder
+                );
+                buildParams.UseCache = true;
+                EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
+                buildParams.BundleCompression = BuildCompression.LZ4;
+                var buildContent = new BundleBuildContent(builds);
 
-            var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
-            var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
-            if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
-                buildTargetGroup = BuildTargetGroup.Standalone;
+                AirshipPackagesWindow.buildingPackageId = "game";
+                CreateAssetBundles.buildingBundles = true;
+                AirshipScriptableBuildPipelineConfig.buildingGameBundles = true;
+                ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
+                CreateAssetBundles.buildingBundles = false;
+                AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
+                if (returnCode != ReturnCode.Success) {
+                    Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
+                    return false;
+                }
+                Debug.Log($"Finished building {platform} in {st.Elapsed.TotalSeconds} seconds.");
             }
-            EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, buildTarget);
-            var buildParams = new BundleBuildParameters(
-                buildTarget,
-                buildTargetGroup,
-                buildOutputPath
-            );
-            buildParams.UseCache = true;
-            EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
-            buildParams.BundleCompression = BuildCompression.LZ4;
-            var buildContent = new BundleBuildContent(builds);
 
-            AirshipPackagesWindow.buildingPackageId = "game";
-            CreateAssetBundles.buildingBundles = true;
-            AirshipScriptableBuildPipelineConfig.buildingGameBundles = true;
-            ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
-            CreateAssetBundles.buildingBundles = false;
-            AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
-            if (returnCode != ReturnCode.Success) {
-                Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
-                return false;
+
+            // --------------------- //
+            // Update air asset
+
+            var bytes = await File.ReadAllBytesAsync(buildOutputFile);
+            Debug.Log("bytes length: " + bytes.Length + ", path: " + buildOutputFile);
+            var updateReq = UnityWebRequest.Put(AirshipPlatformUrl.deploymentService + $"/air-assets/{airId}",
+                JsonUtility.ToJson(new AirAssetCreateRequest() {
+                    contentType = "application/airasset",
+                    contentLength = bytes.Length,
+                    name = contentName,
+                    description = contentDescription,
+                }));
+            updateReq.SetRequestHeader("Content-Type", "application/json");
+            updateReq.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+            await updateReq.SendWebRequest();
+            Debug.Log("Update response: " + updateReq.downloadHandler.text);
+            var updateData = JsonUtility.FromJson<AirAssetCreateResponse>(updateReq.downloadHandler.text);
+            var uploadUrl = updateData.url;
+            Debug.Log("Got update url: " + uploadUrl);
+
+            // --------------------- //
+            // Upload asset bundle
+
+            {
+                UnityWebRequest putReq = UnityWebRequest.Put(uploadUrl, bytes);
+                putReq.SetRequestHeader("Content-Type", "application/airasset");
+                // putReq.SetRequestHeader("x-goog-content-length-range", "0,200000000");
+                await putReq.SendWebRequest();
+                Debug.Log("Upload result: " + putReq.result);
+
+                if (putReq.result != UnityWebRequest.Result.Success) {
+                    Debug.LogError(putReq.error);
+                    Debug.LogError(putReq.downloadHandler.text);
+                    return false;
+                }
             }
 
-            Debug.Log($"Finished building {platform} in {st.Elapsed.TotalSeconds} seconds.");
             return true;
         }
     }

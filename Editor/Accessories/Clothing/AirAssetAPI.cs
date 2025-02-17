@@ -4,7 +4,7 @@ namespace Editor.Accessories.Clothing {
     [Serializable]
     public class AirAssetCreateRequest {
         public string contentType;
-        public long contentLength;
+        public int contentLength;
         public string name;
         public string description;
     }
