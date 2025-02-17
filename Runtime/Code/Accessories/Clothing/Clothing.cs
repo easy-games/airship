@@ -3,17 +3,19 @@ using Code.Platform.Shared;
 using Code.Player.Accessories;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Serialization;
 
 namespace Code.Accessories.Clothing {
     /**
      * Clothing exists on the backend and consists of one or many accessories.
      * Usually it's just one accessory (ie: a hat)
      */
+    [CreateAssetMenu(menuName = "Airship/Clothing")]
     public class Clothing : ScriptableObject {
-        public string className;
+        public string classId;
         public AccessoryComponent[] accessoryPrefabs;
 
-        public static async Task<Clothing> DownloadAsync(string className, string airId, string versionHash) {
+        public static async Task<Clothing> DownloadAsync(string classId, string airId, string versionHash) {
             var url = $"{AirshipPlatformUrl.cdn}/airassets/${airId}";
             var hash = Hash128.Parse(versionHash);
 
@@ -30,7 +32,7 @@ namespace Code.Accessories.Clothing {
             await manifestReq;
             var manifest = (ClothingBundleManifest) manifestReq.asset;
             foreach (var clothing in manifest.clothingList) {
-                if (clothing.className == className) {
+                if (clothing.classId == classId) {
                     return clothing;
                 }
             }
@@ -38,7 +40,5 @@ namespace Code.Accessories.Clothing {
             return null;
         }
     }
-
-
 
 }
