@@ -27,5 +27,25 @@ namespace Code.Accessories.Clothing {
                     return "";
             }
         }
+
+        public void SetAirIdForPlatform(AirshipPlatform platform, string airId) {
+            switch (platform) {
+                case AirshipPlatform.Android:
+                    this.androidAirId = airId;
+                    return;
+                case AirshipPlatform.Linux:
+                    this.linuxAirId = airId;
+                    return;
+                case AirshipPlatform.Mac:
+                    this.macAirId = airId;
+                    return;
+                case AirshipPlatform.Windows:
+                    this.windowsAirId = airId;
+                    return;
+                case AirshipPlatform.iOS:
+                    this.iosAirId = airId;
+                    return;
+            }
+        }
     }
 }
