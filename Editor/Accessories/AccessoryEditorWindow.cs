@@ -24,8 +24,8 @@ namespace Editor.Accessories {
             RUNNING
         }
         // Path to the human entity asset:
-        private static readonly string AccessoryHumanEntityPrefabPath = "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/CharacterDummy.prefab";
-        private static GameObject HumanEntityPrefab;
+        private static readonly string CharacterDummyPrefabPath = "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/CharacterDummy.prefab";
+        private static GameObject CharacterPrefab;
 
         // Path to the accessory prefab editor asset:
         private static readonly string AccessoryPrefabEditorPath = "Packages/gg.easy.airship/Editor/Resources/AccessoryPrefabEditor.prefab";
@@ -76,20 +76,20 @@ namespace Editor.Accessories {
                 return;
             }
 
-            if (!HumanEntityPrefab){
-                HumanEntityPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AccessoryHumanEntityPrefabPath);
+            if (!CharacterPrefab){
+                CharacterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterDummyPrefabPath);
             }
 
-            Selection.activeGameObject = HumanEntityPrefab;
+            Selection.activeGameObject = CharacterPrefab;
             SceneView.FrameLastActiveSceneView();
 
-            var existingEntity = _prefabStage.prefabContentsRoot.transform.Find(HumanEntityPrefab.name);
+            var existingEntity = _prefabStage.prefabContentsRoot.transform.Find(CharacterPrefab.name);
             if (existingEntity != null) {
                 DestroyImmediate(existingEntity.gameObject);
             }
         
-            characterGO = Instantiate(HumanEntityPrefab, _prefabStage.prefabContentsRoot.transform);
-            characterGO.name = HumanEntityPrefab.name;
+            characterGO = Instantiate(CharacterPrefab, _prefabStage.prefabContentsRoot.transform);
+            characterGO.name = CharacterPrefab.name;
             characterGO.hideFlags = HideFlags.DontSave;
             OnFocus();
         }
