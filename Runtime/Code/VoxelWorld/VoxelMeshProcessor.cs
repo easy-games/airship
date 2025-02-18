@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 
 using VoxelData = System.UInt16;
@@ -16,6 +17,9 @@ using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine.Rendering;
+using Quaternion = UnityEngine.Quaternion;
+using Vector2 = UnityEngine.Vector2;
+using Vector3 = UnityEngine.Vector3;
 
 namespace VoxelWorldStuff {
     [LuauAPI]
@@ -790,7 +794,8 @@ namespace VoxelWorldStuff {
             return (byte)(Mathf.Lerp(left, right, a) * 255.0f);
         }
 
-        private static int EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv, Color32 col, float[] lerps = null) {
+        private static int EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv, Color32 col, float[] lerps = null, Vector3 scale = default) {
+            if (scale.magnitude == 0) scale = Vector3.one;
             if (mesh == null) {
                 return 0;
             }
@@ -799,7 +804,8 @@ namespace VoxelWorldStuff {
             }
             
             //Grab the flipped surface
-            VoxelMeshCopy.PrecalculatedFlip flipSurface = mesh.flip[flip];
+            // Quarter blocks shouldn't actually be flipped.
+            VoxelMeshCopy.PrecalculatedFlip flipSurface = mesh.flip[block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks ? 0 : flip];
             if (flipSurface == null) {
                 return 0;
             }
@@ -870,7 +876,11 @@ namespace VoxelWorldStuff {
             var isColored = col.r != 0 || col.g != 0 || col.b != 0 || col.a != 0; 
      
             for (int i = 0; i < count; i++) {
-                Vector3 transformedPosition = sourceVertices[i] + offset;
+                Vector3 srcVec = sourceVertices[i];
+                var scaledOffset = -(Vector3.one - scale) / 2;
+                srcVec.Scale(scale);
+                if (flip >= 4) scaledOffset += (Vector3.one - scale);
+                Vector3 transformedPosition = srcVec + offset + scaledOffset;
                 //write the transformed position (well, translated)
                 target.vertices[target.verticesCount++] = transformedPosition;
 
@@ -1097,6 +1107,12 @@ namespace VoxelWorldStuff {
                         if (block == null) {
                             continue;
                         }
+                        
+                        int flip = VoxelWorld.GetVoxelFlippedBits(vox);
+                        var scale = Vector3.one;
+                        if (block.definition.halfBlock) {
+                            scale = VoxelWorld.GetScaleFromFlipBits(flip);
+                        }
 
                         var lodOffset = 0; // How much do we offset lod index for default placement. 
                         switch (block.definition.contextStyle) {
@@ -1110,10 +1126,10 @@ namespace VoxelWorldStuff {
                             case VoxelBlocks.ContextStyle.QuarterBlocks:
                                 InitDetailMeshes();
                                 lodOffset = 1;
-                                if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, detailMeshData[0], world, origin, damageUv, voxelColor) == true) {
+                                if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, detailMeshData[0], world, origin, damageUv, voxelColor, scale, flip) == true) {
                                     // don't continue; we'll place a normal block in lod mesh
                                 }
-                            break;
+                                break;
                             case VoxelBlocks.ContextStyle.GreedyMeshingTiles:
                                 InitDetailMeshes();
                             
@@ -1127,9 +1143,7 @@ namespace VoxelWorldStuff {
                                             int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
 
                                             VoxelBlocks.LodSet set = block.meshTiles[index];
-
-                                            int flip = 0;
-                                           
+                                            
                                             if (set.lod1 != null) {
                                                 EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv, voxelColor);
                                                 EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], rotation, flip, damageUv, voxelColor);
@@ -1153,7 +1167,6 @@ namespace VoxelWorldStuff {
                                         int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
                                         VoxelBlocks.LodSet set = block.meshTiles[0];
 
-                                        int flip = 0;
                                         if (set.lod1 != null) {
                                             EmitMesh(block, set.lod0, detailMeshData[0], world, origin, rotation, flip, damageUv, voxelColor);
                                             EmitMesh(block, set.lod1, detailMeshData[1], world, origin, rotation, flip, damageUv, voxelColor);
@@ -1173,7 +1186,6 @@ namespace VoxelWorldStuff {
                         
                         //where we put this mesh is variable!
                         if (block.mesh != null) {
-                            int flip = VoxelWorld.GetVoxelFlippedBits(vox);
                             int rotation = 0;
                             if (block.definition.randomRotation) {
                                 rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
@@ -1185,20 +1197,20 @@ namespace VoxelWorldStuff {
                                 InitDetailMeshes();
                                 
                                 if (block.mesh != null && block.mesh.lod0 != null) {
-                                    EmitMesh(block, block.mesh.lod0, detailMeshData[0 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor);
+                                    EmitMesh(block, block.mesh.lod0, detailMeshData[0 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor, null, scale);
 
                                     if (block.mesh.lod1 != null && lodOffset <= 1) {
-                                        EmitMesh(block, block.mesh.lod1, detailMeshData[1 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor);
+                                        EmitMesh(block, block.mesh.lod1, detailMeshData[1 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor, null, scale);
                                     }
                                     if (block.mesh.lod2 != null && lodOffset <= 0) {
-                                        EmitMesh(block, block.mesh.lod2, detailMeshData[2 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor);
+                                        EmitMesh(block, block.mesh.lod2, detailMeshData[2 + lodOffset], world, origin, rotation, flip, damageUv, voxelColor, null, scale);
                                     }
                                 }
                                 
                             }
                             else {
                                 //same mesh that the voxels use (think stairs etc)
-                                EmitMesh(block, block.mesh.lod0, temporaryMeshData, world, origin, rotation, flip, damageUv, voxelColor);
+                                EmitMesh(block, block.mesh.lod0, temporaryMeshData, world, origin, rotation, flip, damageUv, voxelColor,null, scale);
                             }
                             //No code past here
                             continue;
@@ -1245,7 +1257,9 @@ namespace VoxelWorldStuff {
 
                                 int vertexCount = faceMeshData.verticesCount;
                                 for (int j = 0; j < 4; j++) {
-                                    faceMeshData.vertices[faceMeshData.verticesCount++] = srcVertices[(faceIndex * 4) + j] + origin;
+                                    var srcVert = srcVertices[(faceIndex * 4) + j];
+                                    srcVert.Scale(scale);
+                                    faceMeshData.vertices[faceMeshData.verticesCount++] = srcVert + origin;
                                     faceMeshData.normals[faceMeshData.normalsCount++] = srcNormals[faceIndex];
                                     
                                     // Mark as colored

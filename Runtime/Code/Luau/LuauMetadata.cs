@@ -225,7 +225,7 @@ namespace Luau {
         public string fileRef;
         
         #if UNITY_EDITOR
-        [SerializeField]
+        [JsonProperty][SerializeField]
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
@@ -551,7 +551,7 @@ namespace Luau {
         public string name;
         public bool singleton;
         #if UNITY_EDITOR
-        [SerializeField]
+        [JsonProperty][SerializeField]
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();

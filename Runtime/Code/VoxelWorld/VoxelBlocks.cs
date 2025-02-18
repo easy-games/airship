@@ -1110,7 +1110,7 @@ public class VoxelBlocks : MonoBehaviour {
             return voxelValue;
         }
         //Set bit 0x8000 based on wether block.solid is true
-        if (block.definition.solid) {
+        if (block.definition.solid && !block.definition.halfBlock) {
             return (VoxelData)(voxelValue | 0x8000);
         }
         else {
