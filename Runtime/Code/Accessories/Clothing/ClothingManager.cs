@@ -12,6 +12,7 @@ namespace Code.Accessories.Clothing {
         }
     }
 
+    [LuauAPI(LuauContext.Protected)]
     public class ClothingManager : Singleton<ClothingManager> {
         /// <summary>
         /// AirId to asset bundle

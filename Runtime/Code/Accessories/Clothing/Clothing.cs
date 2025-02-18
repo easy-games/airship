@@ -12,11 +12,12 @@ namespace Code.Accessories.Clothing {
      */
     [CreateAssetMenu(menuName = "Airship/Clothing")]
     [Icon("Packages/gg.easy.airship/Editor/icons/hat-wizard-solid.png")]
+    [LuauAPI(LuauContext.Protected)]
     public class Clothing : ScriptableObject {
         public string classId;
         public AccessoryComponent[] accessoryPrefabs;
 
-        public static async Task<Clothing> DownloadAsync(string classId, string airId, string versionHash) {
+        public static async Task<Clothing> DownloadYielding(string classId, string airId, string versionHash) {
             var url = $"{AirshipPlatformUrl.cdn}/airassets/${airId}";
             var hash = Hash128.Parse(versionHash);
 

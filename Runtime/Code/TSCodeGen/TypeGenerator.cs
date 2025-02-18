@@ -320,6 +320,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkTime$",
             "UnityEngine.TextCore.Text.Character",
             "\\.VolumeProfile$",
+            "\\.Clothing$",
+            "\\.ClothingManager$",
         };
 
         var options = new TypeScriptOptions
