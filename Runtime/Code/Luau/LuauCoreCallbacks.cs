@@ -1477,7 +1477,6 @@ public partial class LuauCore : MonoBehaviour {
         
         LuauCore instance = LuauCore.CoreInstance;
 
-        System.Object reflectionObject = null;
         Type type = null;
 
         //Cast/marshal parameter data
