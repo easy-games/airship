@@ -1,3 +1,4 @@
+using System;
 using Code.Player.Character.Net;
 using JetBrains.Annotations;
 using Mirror;
@@ -9,8 +10,10 @@ namespace Code.Player.Character.NetworkedMovement
     {
         /** The movement system will be used as a way to generate commands to send to an authoritative server. */
         Input,
+
         /** The movement system is the authority. It will process commands either from itself, or a remote client. */
         Authority,
+
         /**
          * The movement system is an observer. It will only be provided snapshots and will need to interpolate between
          * them to display what has already happened.
@@ -22,11 +25,13 @@ namespace Code.Player.Character.NetworkedMovement
     public abstract class NetworkedMovement<State, Input> : NetworkBehaviour
         where State : StateSnapshot where Input : InputCommand
     {
-         /**
-         * This function is called to update the movement system on how it will be used.
-         * For example, if the mode is Observer, you may wish to set rigidbodies to kinematic
-         * or permanently disable certain effects when this function is called.
-         */
+        [NonSerialized] public MovementMode mode;
+
+        /**
+        * This function is called to update the movement system on how it will be used.
+        * For example, if the mode is Observer, you may wish to set rigidbodies to kinematic
+        * or permanently disable certain effects when this function is called.
+        */
         public abstract void OnSetMode(MovementMode mode);
 
         /**

@@ -43,6 +43,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 using Code.Player.Accessories;
+using Code.Player.Character.NetworkedMovement;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -252,6 +253,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementState),
             typeof(AirshipPredictionManager),
             typeof(VisualGraphComponent),
+            typeof(BasicCharacterMovementState),
+            typeof(BasicCharacterInputData),
+            typeof(BasicCharacterMovementSettings),
             
             // Steam
             typeof(AirshipSteamFriendInfo),

@@ -135,31 +135,37 @@ namespace Code.Player.Character.NetworkedMovement
             // We are a shared client and server
             if (isClient && isServer)
             {
+                this.movementSystem.mode = MovementMode.Authority;
                 this.movementSystem.OnSetMode(MovementMode.Authority);
             }
             // We are an authoritative client
             else if (isClient && isOwned && !serverAuth)
             {
+                this.movementSystem.mode = MovementMode.Authority;
                 this.movementSystem.OnSetMode(MovementMode.Authority);
             }
             // We are a non-authoritative client
             else if (isClient && isOwned && serverAuth)
             {
+                this.movementSystem.mode = MovementMode.Input;
                 this.movementSystem.OnSetMode(MovementMode.Input);
             }
             // We are an observing client
             else if (isClient && !isOwned)
             {
+                this.movementSystem.mode = MovementMode.Observer;
                 this.movementSystem.OnSetMode(MovementMode.Observer);
             }
             // We are an authoritative server
             else if (isServer && serverAuth)
             {
+                this.movementSystem.mode = MovementMode.Authority;
                 this.movementSystem.OnSetMode(MovementMode.Authority);
             }
             // We are a non-authoritative server
             else if (isServer && !serverAuth)
             {
+                this.movementSystem.mode = MovementMode.Observer;
                 this.movementSystem.OnSetMode(MovementMode.Observer);
             }
             else
@@ -731,6 +737,7 @@ namespace Code.Player.Character.NetworkedMovement
                 // This may happen from time to time if the client clock gets out of sync with the server for a moment.
                 // Generally a situation like this is recoverable by processing an additional state snapshot from the
                 // server.
+                Debug.LogWarning("Couldn't find client predicted state for command " + state.lastProcessedCommand);
                 return;
             }
 

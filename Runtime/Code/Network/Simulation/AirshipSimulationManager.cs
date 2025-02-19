@@ -309,9 +309,10 @@ namespace Code.Network.Simulation
             });
             if (afterIndex == -1)
             {
-                throw new ApplicationException("Time calculation request used a base time of " + baseTime +
-                                               ", but the last tick time was " + this.tickTimes[^1] +
-                                               ". Current time is: " + NetworkTime.time + ". Report this.");
+                Debug.LogWarning("Time calculation request used a base time of " + baseTime +
+                                 ", but the last tick time was " + this.tickTimes[^1] +
+                                 ". Current time is: " + NetworkTime.time + ". Is your network ok?");
+                return this.tickTimes.Count - 1;
             }
 
             // If the base time further in the past that our history goes, we reset to the oldest history we have (0) instead.

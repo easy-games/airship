@@ -2,7 +2,7 @@ using Code.Player.Character;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class CharacterMovementTests : MonoBehaviour {
+public class BasicCharacterMovementTests : MonoBehaviour {
     public float impulseStrength = 10;
     public AnimationClip testAnim;
 

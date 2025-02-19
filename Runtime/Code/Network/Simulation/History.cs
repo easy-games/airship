@@ -32,7 +32,7 @@ namespace Code.Network.Simulation
             var added = this.history.TryAdd(time, entry);
             if (!added)
             {
-                Debug.LogWarning("Attempted to add an entry to history that already exists. The new entry will be ignored.");
+                Debug.LogWarning("Attempted to add an entry to history that already exists. The new entry will be ignored. Time: " + time);
                 return this.GetExact(time);
             }
 
