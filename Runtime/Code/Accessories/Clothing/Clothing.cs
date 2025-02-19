@@ -17,9 +17,8 @@ namespace Code.Accessories.Clothing {
         public string classId;
         public AccessoryComponent[] accessoryPrefabs;
 
-        public static async Task<Clothing> DownloadYielding(string classId, string airId, string versionHash) {
-            var url = $"{AirshipPlatformUrl.cdn}/airassets/${airId}";
-            var hash = Hash128.Parse(versionHash);
+        public static async Task<Clothing> DownloadYielding(string classId, string airId) {
+            var url = $"{AirshipPlatformUrl.gameCdn}/airassets/{airId}";
 
             // Check if we already loaded an asset bundle that contains this clothing piece.
             if (ClothingManager.Instance.loadedClothingBundles.TryGetValue(airId, out var loadedBundleInfo)) {
@@ -28,6 +27,24 @@ namespace Code.Accessories.Clothing {
                         return clothing;
                     }
                 }
+            }
+
+            // Get latest hash
+            Hash128 hash;
+            {
+                var headReq = UnityWebRequest.Head(url);
+                await headReq.SendWebRequest();
+
+                var etag = headReq.GetResponseHeader("ETag");
+                if (string.IsNullOrEmpty(etag)) {
+                    Debug.LogError("Failed to get latest version hash for airId " + airId);
+                    return null;
+                }
+
+                hash = Hash128.Parse(etag);
+                // foreach (var pair in headReq.GetResponseHeaders()) {
+                //     Debug.Log($"{pair.Key}: {pair.Value}");
+                // }
             }
 
             var req = UnityWebRequestAssetBundle.GetAssetBundle(url, hash);
@@ -39,7 +56,11 @@ namespace Code.Accessories.Clothing {
             }
 
             AssetBundle bundle = DownloadHandlerAssetBundle.GetContent(req);
-            var manifestReq = bundle.LoadAssetAsync<ClothingBundleManifest>("ClothingBundleManifest");
+            // foreach (var asset in bundle.GetAllAssetNames()) {
+            //     Debug.Log("  - " + asset);
+            // }
+            var manifestReq = bundle.LoadAssetAsync<ClothingBundleManifest>("clothing bundle manifest");
+
             await manifestReq;
             var manifest = (ClothingBundleManifest) manifestReq.asset;
             ClothingManager.Instance.loadedClothingBundles[airId] = new ClothingBundleInfo(bundle, manifest);

@@ -68,6 +68,7 @@ namespace Editor.Accessories.Clothing {
                 Debug.Log("create response: " + res.data);
                 var data = JsonUtility.FromJson<AirAssetCreateResponse>(res.data);
                 manifest.SetAirIdForPlatform(platform, data.airAssetId);
+                EditorUtility.SetDirty(this.target);
                 this.SaveChanges();
                 airId = data.airAssetId;
             }
@@ -91,6 +92,13 @@ namespace Editor.Accessories.Clothing {
             }
             var addressableNames = assetPaths
                 .Select((p) => p.ToLower())
+                .Select((p) => {
+                    if (p.Contains("clothing bundle manifest")) {
+                        // strip the path so it's easier to load later
+                        return "clothing bundle manifest";
+                    }
+                    return p;
+                })
                 .ToArray();
             builds.Add(new AssetBundleBuild() {
                 assetBundleName = airId + ".bundle",
@@ -100,7 +108,7 @@ namespace Editor.Accessories.Clothing {
 
             // --------------------- //
             // Build
-            if (false) {
+            if (true) {
                 var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
                 var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
                 if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
