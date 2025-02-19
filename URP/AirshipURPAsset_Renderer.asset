@@ -34,10 +34,10 @@ MonoBehaviour:
     stencilSettings:
       overrideStencilState: 1
       stencilReference: 1
-      stencilCompareFunction: 8
+      stencilCompareFunction: 5
       passOperation: 2
       failOperation: 0
-      zFailOperation: 0
+      zFailOperation: 1
     cameraSettings:
       overrideCamera: 0
       restoreCamera: 1
@@ -175,9 +175,9 @@ MonoBehaviour:
     enableWrite: 1
     stencilSettings:
       overrideStencilState: 1
-      stencilReference: 0
+      stencilReference: 1
       stencilCompareFunction: 8
-      passOperation: 3
+      passOperation: 2
       failOperation: 0
       zFailOperation: 0
     cameraSettings:
@@ -213,14 +213,14 @@ MonoBehaviour:
     overrideShader: {fileID: 0}
     overrideShaderPassIndex: 0
     overrideMode: 0
-    overrideDepthState: 0
-    depthCompareFunction: 8
+    overrideDepthState: 1
+    depthCompareFunction: 4
     enableWrite: 0
     stencilSettings:
       overrideStencilState: 1
       stencilReference: 1
       stencilCompareFunction: 3
-      passOperation: 0
+      passOperation: 1
       failOperation: 0
       zFailOperation: 0
     cameraSettings:
@@ -255,15 +255,15 @@ MonoBehaviour:
     overrideShader: {fileID: 0}
     overrideShaderPassIndex: 0
     overrideMode: 0
-    overrideDepthState: 1
-    depthCompareFunction: 3
+    overrideDepthState: 0
+    depthCompareFunction: 4
     enableWrite: 0
     stencilSettings:
       overrideStencilState: 1
       stencilReference: 1
       stencilCompareFunction: 3
       passOperation: 2
-      failOperation: 0
+      failOperation: 1
       zFailOperation: 0
     cameraSettings:
       overrideCamera: 0
