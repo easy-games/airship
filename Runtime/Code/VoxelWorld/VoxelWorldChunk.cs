@@ -218,7 +218,17 @@ namespace VoxelWorldStuff {
                             } 
                             
                             prefabObjects.Remove(localChunkPos);
-                            Object.Destroy(existingPrefab.Item1);
+
+                            var (prefabGameObject, _) = existingPrefab;
+                            if (prefabGameObject.GetComponent<NetworkIdentity>()) {
+                                // If it's a NetworkIdentity & is server we do NetworkServer.Destroy to ensure it's destroyed properly.
+                                if (RunCore.IsServer()) {
+                                    NetworkServer.Destroy(prefabGameObject);
+                                }
+                            }
+                            else {
+                                Object.Destroy(prefabGameObject);
+                            }
                         }
 
                         if (blockId == 0) {
