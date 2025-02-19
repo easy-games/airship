@@ -43,7 +43,7 @@ public static class MiscProjectSetup
     /// Editor only
     /// </summary>
     public static GameConfig GetOrCreateGameConfig(){
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
         var gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
         if (gameBundleConfig == null)
         {
