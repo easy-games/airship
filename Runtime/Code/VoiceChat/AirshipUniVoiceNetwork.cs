@@ -62,6 +62,15 @@ namespace Code.VoiceChat {
             PeerIDs.Clear();
             peerIdToClientIdMap.Clear();
 
+            if (RunCore.IsClient()) {
+                this.ClientSendReadyWhenAble();
+            }
+        }
+
+        private async void ClientSendReadyWhenAble() {
+            while (!NetworkClient.ready) {
+                await Awaitable.NextFrameAsync();
+            }
             OnReadyCommand();
         }
 

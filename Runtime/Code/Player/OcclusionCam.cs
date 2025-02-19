@@ -46,46 +46,24 @@ public class OcclusionCam : MonoBehaviour
 
     // Called from TS/Lua side
     // Returns the ending distance from the target
-    public float BumpForOcclusion(Vector3 attachToPos, int mask)
-    {
-        var thisTransform = transform;
-        var camPos = thisTransform.position;
-
+    public void BumpForOcclusion(Vector3 attachToPos, int mask) {
+        var t = transform;
+        var camPos = t.position;
         var distance = Vector3.Distance(camPos, attachToPos);
+        // If cam is too far above attach pos snap up
+        if (attachToPos.y - camPos.y > 0.45) {
+            distance /= (attachToPos.y - camPos.y) / 0.45f;
+        }
         var adjusted = false;
-
         var diff = camPos - attachToPos;
         var boxHalfExtents = new Vector3(_projectionX * 0.05f, _projectionY * 0.05f, 0f);
-
-        //Cast from target attached position to camera position 
         if (!Physics.BoxCast(attachToPos,
-                boxHalfExtents, diff, out var attachedHitInfo, thisTransform.rotation, distance,
-                mask, QueryTriggerInteraction.Ignore))
-        {
-            return distance;
+                boxHalfExtents, diff, out var hitInfo, t.rotation, distance,
+                mask, QueryTriggerInteraction.Ignore)) {
+            t.position = attachToPos + diff.normalized * distance;
+            return;
         }
-
-        //Cast from camera to target attached pos
-        if (Physics.BoxCast(camPos,
-                boxHalfExtents, diff * -1, out var cameraHitInfo, thisTransform.rotation, distance,
-                mask, QueryTriggerInteraction.Ignore))
-        {
-            //Determine if we should use the adjusted position or look from the outside of it
-            //Use distance to hit to determine which side of the obstrution we should be at 
-            if (cameraHitInfo.distance > attachedHitInfo.distance &&
-                cameraHitInfo.distance > minAllowedDistance &&
-                cameraHitInfo.colliderInstanceID == attachedHitInfo.colliderInstanceID)
-            {
-                //Closer to camera and camera position is useable
-                return distance;
-            }
-        }
-        //print("cameraHitDistance: " + cameraHitInfo.distance + " attachedHitDistance: " + attachedHitInfo.distance);
-
-        //Move in from of obstruction
-        distance = Mathf.Max(this.minAllowedDistance, attachedHitInfo.distance + .01f);
-        thisTransform.position = attachToPos + diff.normalized * distance;
-        return distance;
-
+		
+        t.position = attachToPos + diff.normalized * hitInfo.distance;
     }
 }
