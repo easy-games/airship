@@ -376,12 +376,18 @@ public class AccessoryBuilder : MonoBehaviour {
                 var goList = new List<GameObject>();
                 for (var i = 0; i < meshRenderers.Length; i++) {
                     goList.Add(meshRenderers[i].gameObject);
-                    meshRenderers[i].gameObject.layer = gameObject.layer;
+                    //If layer is not specified than set it to be the same as the root game object
+                    if (meshRenderers[i].gameObject.layer == 0) {
+                        meshRenderers[i].gameObject.layer = gameObject.layer;
+                    }
                 }
 
                 for (var i = 0; i < skinnedMeshRenderers.Length; i++) {
                     goList.Add(skinnedMeshRenderers[i].gameObject);
-                    skinnedMeshRenderers[i].gameObject.layer = gameObject.layer;
+                    //If layer is not specified than set it to be the same as the root game object
+                    if (skinnedMeshRenderers[i].gameObject.layer == 0) {
+                        skinnedMeshRenderers[i].gameObject.layer = gameObject.layer;
+                    }
                 }
 
                 // Any type of renderer
