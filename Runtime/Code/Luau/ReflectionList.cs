@@ -217,6 +217,7 @@ namespace Luau {
             ["ElRaccoone.Tweens.NativeTween+LocalRotationDriver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
             ["TubeRendererCS"] = LuauContextAll,
+            ["AudioMixerSnapshotController"] = LuauContextAll,
         };
 
         public static Dictionary<Type, LuauContext> allowedTypesInternal;
