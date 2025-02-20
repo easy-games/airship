@@ -246,7 +246,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementData),
             typeof(AnimationEventData),
             typeof(VoxelWorld),
-            typeof(AccessorySkin),
+            // typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
             typeof(CharacterMovementState),

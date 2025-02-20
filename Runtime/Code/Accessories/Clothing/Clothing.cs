@@ -16,6 +16,7 @@ namespace Code.Accessories.Clothing {
     public class Clothing : ScriptableObject {
         public string classId;
         public AccessoryComponent[] accessoryPrefabs;
+        public AccessoryFace face;
 
         public static async Task<Clothing> DownloadYielding(string classId, string airId) {
             var url = $"{AirshipPlatformUrl.gameCdn}/airassets/{airId}";

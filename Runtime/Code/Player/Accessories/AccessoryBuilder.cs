@@ -389,17 +389,6 @@ public class AccessoryBuilder : MonoBehaviour {
         return arrayAccessories;
     }
 
-    public void SetSkin(AccessorySkin skin) {
-        if (skin.skinTextureDiffuse == null) Debug.LogError("Trying to set entity skin to empty texture");
-
-        if (rig.baseMeshes != null) {
-            foreach (var mesh in rig.baseMeshes) {
-                mesh.material.mainTexture = skin.skinTextureDiffuse;
-                if (skin.skinTextureORM) mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
-            }
-        }
-    }
-
     public void SetSkinColor(Color color) {
         skinColor = color;
         // foreach (var mesh in this.rig.bodyMeshLOD) {
