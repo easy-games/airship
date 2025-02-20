@@ -252,6 +252,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementState),
             typeof(AirshipPredictionManager),
             typeof(VisualGraphComponent),
+            typeof(AccessoryAddMode),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
@@ -322,6 +323,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.VolumeProfile$",
             "\\.Clothing$",
             "\\.ClothingManager$",
+            "\\.MonoBehaviour$",
         };
 
         var options = new TypeScriptOptions

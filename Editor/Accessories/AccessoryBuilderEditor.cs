@@ -24,7 +24,8 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         if (GUILayout.Button("Equip Referenced Outfit")) {
             if(builder.currentOutfit != null){
                 Debug.Log("Equipping outfit " + builder.currentOutfit.name);
-                builder.EquipAccessoryOutfit(builder.currentOutfit, true, true);
+                builder.LoadOutfit(builder.currentOutfit);
+                builder.UpdateCombinedMesh();
             }
         }
         
@@ -51,8 +52,9 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
                 downloading = false;
             }
             Debug.Log("Clearing outfit.");
-            builder.RemoveAllAccessories();
-            builder.SetSkinColor(new Color(0.7169812f, 0.5064722f, 0.3754005f), true);
+            builder.RemoveAll();
+            builder.SetSkinColor(new Color(0.7169812f, 0.5064722f, 0.3754005f));
+            builder.UpdateCombinedMesh();
         }
 
 
