@@ -2,6 +2,7 @@ using System;
 using Assets.Luau;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character.NetworkedMovement
 {
@@ -22,7 +23,7 @@ namespace Code.Player.Character.NetworkedMovement
         public Transform airshipTransform; //The visual transform controlled by this script
         public Transform graphicTransform; //A transform that games can animate
         public BasicCharacterAnimationHelper animationHelper;
-        public BasicCharacterMovementSettings moveData;
+        public BasicCharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
         public Transform slopeVisualizer;
         
@@ -42,8 +43,6 @@ namespace Code.Player.Character.NetworkedMovement
         #region PRIVATE REFS
 
         private BasicCharacterPhysics physics;
-        private NetworkAnimator networkAnimator;
-        private AirshipPredictedCharacterMovement predictedMovement;
 
         #endregion
 
@@ -93,15 +92,10 @@ namespace Code.Player.Character.NetworkedMovement
         /// </summary>
         public event Action<object> OnNewLookVector;
         #endregion
-
-        //Locally tracked variables
-        private float currentSpeed;
-        private Vector3 currentLocalVelocity;
-        private Vector3 lastPos = Vector3.zero;
-        private Vector3 impulseVelocity;
+        
+        // step up + forward constant
         private float forwardMargin = .05f;
-        private BinaryBlob queuedCustomData = null;
-
+        
         //Input Controls
         private bool jumpInput;
         private Vector3 moveDirInput;
@@ -112,17 +106,14 @@ namespace Code.Player.Character.NetworkedMovement
 
         // State information
         public BasicCharacterMovementState currentMoveState = new BasicCharacterMovementState() {};
-        public BasicCharacterAnimationSyncData currentAnimState = new BasicCharacterAnimationSyncData() { };
+        public BasicCharacterAnimationSyncData currentAnimState = new BasicCharacterAnimationSyncData() {};
 
         #region PUBLIC GET
         public float currentCharacterHeight { get; private set; }
-        public float standingCharacterHeight => moveData.characterHeight;
-        public float characterRadius => moveData.characterRadius;
+        public float standingCharacterHeight => movementSettings.characterHeight;
+        public float characterRadius => movementSettings.characterRadius;
         public Vector3 characterHalfExtents { get; private set; }
         public RaycastHit groundedRaycastHit { get; private set; }
-        public bool isGrounded { get; private set; }
-        public bool isSprinting { get; private set; }
-        public bool isCrouching { get; private set; }
 
         public bool disableInput
         {
@@ -134,8 +125,6 @@ namespace Code.Player.Character.NetworkedMovement
 
         private void Awake()
         {
-            networkAnimator = transform.GetComponent<NetworkAnimator>();
-            predictedMovement = gameObject.GetComponent<AirshipPredictedCharacterMovement>();
             if(this.physics == null){
                 this.physics = new BasicCharacterPhysics(this);
             }
@@ -143,6 +132,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         public override void OnSetMode(MovementMode mode)
         {
+            Debug.Log("Running movement in " + mode + " mode.");
             if (mode == MovementMode.Observer)
             {
                 rigidbody.isKinematic = true;
@@ -162,6 +152,10 @@ namespace Code.Player.Character.NetworkedMovement
         {
             this.currentMoveState.CopyFrom(state);
             this.rigidbody.position = state.position;
+            if (!this.rigidbody.isKinematic)
+            {
+                this.rigidbody.linearVelocity = state.velocity;
+            }
         }
 
         public override BasicCharacterMovementState GetCurrentState(int commandNumber, double time)
@@ -172,6 +166,8 @@ namespace Code.Player.Character.NetworkedMovement
             snapshot.CopyFrom(this.currentMoveState);
             snapshot.time = time;
             snapshot.lastProcessedCommand = commandNumber;
+            snapshot.position = this.rigidbody.position;
+            snapshot.velocity = this.rigidbody.linearVelocity;
             return snapshot;
         }
 
@@ -191,12 +187,12 @@ namespace Code.Player.Character.NetworkedMovement
             };
         }
 
-        public override void Tick(BasicCharacterInputData md, bool replay)
+        public override void Tick(BasicCharacterInputData command, bool replay)
         {
-            if (md == null) return;
+            if (command == null) return;
             // Use custom data from command
-            this.currentMoveState.customData = md.customData;
-            this.currentMoveState.lookVector = md.lookVector;
+            this.currentMoveState.customData = command.customData;
+            this.currentMoveState.lookVector = command.lookVector;
             
             OnBeginMove?.Invoke(this.currentMoveState, replay);
 
@@ -204,30 +200,30 @@ namespace Code.Player.Character.NetworkedMovement
             var newVelocity = currentVelocity;
             var isIntersecting = false; // TODO: this was "IsIntersectingWithBlock" which just returned false
             var deltaTime = Time.fixedDeltaTime;
-            var isImpulsing = impulseVelocity != Vector3.zero;
-            var rootPosition = this.rigidbody.transform.position;
+            var isImpulsing = currentMoveState.impulseVelocity != Vector3.zero;
+            var rootPosition = this.rigidbody.position;
 
             //Ground checks
             var (grounded, groundHit, detectedGround) =
-                physics.CheckIfGrounded(rootPosition, newVelocity * deltaTime, md.moveDir);
+                physics.CheckIfGrounded(rootPosition, newVelocity * deltaTime, command.moveDir);
             if (isIntersecting)
             {
                 grounded = true;
             }
 
-            this.isGrounded = grounded;
+            currentMoveState.isGrounded = grounded;
             this.groundedRaycastHit = groundHit;
 
             if (grounded)
             {
                 //Store this move dir
-                currentMoveState.lastGroundedMoveDir = md.moveDir;
+                currentMoveState.lastGroundedMoveDir = command.moveDir;
 
                 //Snap to the ground if you are falling into the ground
                 if (newVelocity.y < 1 &&
-                    ((!currentMoveState.prevGrounded && this.moveData.colliderGroundOffset > 0) ||
+                    ((!currentMoveState.isGrounded && this.movementSettings.colliderGroundOffset > 0) ||
                      //Snap if we always snap to ground
-                     (moveData.alwaysSnapToGround && !currentMoveState.prevStepUp && !isImpulsing &&
+                     (movementSettings.alwaysSnapToGround && !currentMoveState.prevStepUp && !isImpulsing &&
                       !currentMoveState.airborneFromImpulse)))
                 {
                     this.SnapToY(groundHit.point.y);
@@ -240,11 +236,11 @@ namespace Code.Player.Character.NetworkedMovement
             else
             {
                 //While in the air how much control do we have over our direction?
-                md.moveDir = Vector3.Lerp(currentMoveState.lastGroundedMoveDir, md.moveDir,
-                    moveData.inAirDirectionalControl);
+                command.moveDir = Vector3.Lerp(currentMoveState.lastGroundedMoveDir, command.moveDir,
+                    movementSettings.inAirDirectionalControl);
             }
 
-            if (grounded && !currentMoveState.prevGrounded)
+            if (grounded && !currentMoveState.isGrounded)
             {
                 currentMoveState.jumpCount = 0;
                 currentMoveState.timeSinceBecameGrounded = 0f;
@@ -263,21 +259,21 @@ namespace Code.Player.Character.NetworkedMovement
 
             var canStand = physics.CanStand();
 
-            var normalizedMoveDir = Vector3.ClampMagnitude(md.moveDir, 1);
+            var normalizedMoveDir = Vector3.ClampMagnitude(command.moveDir, 1);
             var characterMoveVelocity = normalizedMoveDir;
 
             #region GRAVITY
 
-            if (moveData.useGravity)
+            if (movementSettings.useGravity)
             {
                 if (!currentMoveState.isFlying && !currentMoveState.prevStepUp &&
-                    (moveData.useGravityWhileGrounded ||
+                    (movementSettings.useGravityWhileGrounded ||
                      ((!grounded || newVelocity.y > .01f) && !currentMoveState.isFlying)))
                 {
                     //print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
                     //apply gravity
-                    var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMultiplier : 1;
-                    newVelocity.y += Physics.gravity.y * moveData.gravityMultiplier * verticalGravMod * deltaTime;
+                    var verticalGravMod = !grounded && currentVelocity.y > .1f ? movementSettings.upwardsGravityMultiplier : 1;
+                    newVelocity.y += Physics.gravity.y * movementSettings.gravityMultiplier * verticalGravMod * deltaTime;
                 }
             }
 
@@ -287,7 +283,7 @@ namespace Code.Player.Character.NetworkedMovement
 
             #region JUMPING
 
-            var requestJump = md.jump;
+            var requestJump = command.jump;
             //Don't try to jump again until they stop requesting this jump
             if (!requestJump)
             {
@@ -296,8 +292,8 @@ namespace Code.Player.Character.NetworkedMovement
 
             var didJump = false;
             var canJump = false;
-            if (moveData.numberOfJumps > 0 && requestJump && !currentMoveState.alreadyJumped &&
-                (!currentMoveState.prevCrouch || canStand))
+            if (movementSettings.numberOfJumps > 0 && requestJump && !currentMoveState.alreadyJumped &&
+                (!currentMoveState.isCrouching || canStand))
             {
                 //On the ground
                 if (grounded || currentMoveState.prevStepUp)
@@ -309,8 +305,8 @@ namespace Code.Player.Character.NetworkedMovement
                     //In the air
                     // coyote jump
                     if (normalizedMoveDir.y <= 0.02f &&
-                        currentMoveState.timeSinceWasGrounded <= moveData.jumpCoyoteTime && currentVelocity.y <= 0 &&
-                        currentMoveState.timeSinceJump > moveData.jumpCoyoteTime)
+                        currentMoveState.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime && currentVelocity.y <= 0 &&
+                        currentMoveState.timeSinceJump > movementSettings.jumpCoyoteTime)
                     {
                         canJump = true;
                     }
@@ -323,7 +319,7 @@ namespace Code.Player.Character.NetworkedMovement
                         }
 
                         //Multi Jump
-                        if (currentMoveState.jumpCount < moveData.numberOfJumps)
+                        if (currentMoveState.jumpCount < movementSettings.numberOfJumps)
                         {
                             canJump = true;
                         }
@@ -353,7 +349,7 @@ namespace Code.Player.Character.NetworkedMovement
                     didJump = true;
                     currentMoveState.alreadyJumped = true;
                     currentMoveState.jumpCount++;
-                    newVelocity.y = moveData.jumpSpeed;
+                    newVelocity.y = movementSettings.jumpSpeed;
                     currentMoveState.airborneFromImpulse = false;
                     OnJumped?.Invoke(newVelocity);
                 }
@@ -372,21 +368,21 @@ namespace Code.Player.Character.NetworkedMovement
              */
             var isMoving = currentVelocity.sqrMagnitude > .1f;
             var inAir = didJump || (!detectedGround && !currentMoveState.prevStepUp);
-            var tryingToSprint = moveData.onlySprintForward
-                ? md.sprint && this.graphicTransform.InverseTransformVector(md.moveDir).z > 0.1f
+            var tryingToSprint = movementSettings.onlySprintForward
+                ? command.sprint && this.graphicTransform.InverseTransformVector(command.moveDir).z > 0.1f
                 : //Only sprint if you are moving forward
-                md.sprint && md.moveDir.magnitude > 0.1f; //Only sprint if you are moving
+                command.sprint && command.moveDir.magnitude > 0.1f; //Only sprint if you are moving
 
             BasicCharacterState
                 groundedState =
                     BasicCharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
             //Check to see if we can stand up from a crouch
-            if ((moveData.autoCrouch || currentMoveState.prevState == BasicCharacterState.Crouching) && !canStand)
+            if ((movementSettings.autoCrouch || currentMoveState.prevState == BasicCharacterState.Crouching) && !canStand)
             {
                 groundedState = BasicCharacterState.Crouching;
             }
-            else if (md.crouch && grounded)
+            else if (command.crouch && grounded)
             {
                 groundedState = BasicCharacterState.Crouching;
             }
@@ -395,7 +391,7 @@ namespace Code.Player.Character.NetworkedMovement
                 if (tryingToSprint)
                 {
                     groundedState = BasicCharacterState.Sprinting;
-                    isSprinting = true;
+                    currentMoveState.isSprinting = true;
                 }
                 else
                 {
@@ -425,7 +421,7 @@ namespace Code.Player.Character.NetworkedMovement
 
             if (!tryingToSprint)
             {
-                isSprinting = false;
+                currentMoveState.isSprinting = false;
             }
 
             /*
@@ -454,8 +450,8 @@ namespace Code.Player.Character.NetworkedMovement
             #region CROUCH
 
             // Prevent falling off blocks while crouching
-            this.isCrouching = groundedState == BasicCharacterState.Crouching;
-            if (moveData.preventFallingWhileCrouching && !currentMoveState.prevStepUp && isCrouching && isMoving &&
+            currentMoveState.isCrouching = groundedState == BasicCharacterState.Crouching;
+            if (movementSettings.preventFallingWhileCrouching && !currentMoveState.prevStepUp && currentMoveState.isCrouching && isMoving &&
                 grounded)
             {
                 var posInMoveDirection = rootPosition + normalizedMoveDir * 0.2f;
@@ -465,8 +461,8 @@ namespace Code.Player.Character.NetworkedMovement
                 if (!groundedInMoveDirection)
                 {
                     // Determine which direction we're mainly moving toward
-                    var xFirst = Math.Abs(md.moveDir.x) > Math.Abs(md.moveDir.z);
-                    Vector3[] vecArr = { new(md.moveDir.x, 0, 0), new(0, 0, md.moveDir.z) };
+                    var xFirst = Math.Abs(command.moveDir.x) > Math.Abs(command.moveDir.z);
+                    Vector3[] vecArr = { new(command.moveDir.x, 0, 0), new(0, 0, command.moveDir.z) };
                     for (int i = 0; i < 2; i++)
                     {
                         // We will try x dir first if x magnitude is greater
@@ -490,12 +486,12 @@ namespace Code.Player.Character.NetworkedMovement
             #endregion
 
             // Modify colliders size based on movement state
-            var offsetExtent = this.moveData.colliderGroundOffset / 2;
-            this.currentCharacterHeight = isCrouching
-                ? standingCharacterHeight * moveData.crouchHeightMultiplier
+            var offsetExtent = this.movementSettings.colliderGroundOffset / 2;
+            this.currentCharacterHeight = currentMoveState.isCrouching
+                ? standingCharacterHeight * movementSettings.crouchHeightMultiplier
                 : standingCharacterHeight;
-            characterHalfExtents = new Vector3(moveData.characterRadius,
-                this.currentCharacterHeight / 2f - offsetExtent, moveData.characterRadius);
+            characterHalfExtents = new Vector3(movementSettings.characterRadius,
+                this.currentCharacterHeight / 2f - offsetExtent, movementSettings.characterRadius);
             mainCollider.transform.localScale = characterHalfExtents * 2;
             mainCollider.transform.localPosition = new Vector3(0, this.currentCharacterHeight / 2f + offsetExtent, 0);
 
@@ -506,14 +502,14 @@ namespace Code.Player.Character.NetworkedMovement
             //Flying movement
             if (currentMoveState.isFlying)
             {
-                if (md.jump)
+                if (command.jump)
                 {
-                    newVelocity.y += moveData.verticalFlySpeed;
+                    newVelocity.y += movementSettings.verticalFlySpeed;
                 }
 
-                if (md.crouch)
+                if (command.crouch)
                 {
-                    newVelocity.y -= moveData.verticalFlySpeed;
+                    newVelocity.y -= movementSettings.verticalFlySpeed;
                 }
 
                 newVelocity.y *= Mathf.Clamp(.98f - deltaTime, 0, 1);
@@ -526,7 +522,7 @@ namespace Code.Player.Character.NetworkedMovement
             var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
             // Calculate drag:
             var dragForce = physics.CalculateDrag(currentVelocity,
-                currentMoveState.isFlying ? .5f : (moveData.drag * (inAir ? moveData.airDragMultiplier : 1)));
+                currentMoveState.isFlying ? .5f : (movementSettings.drag * (inAir ? movementSettings.airDragMultiplier : 1)));
             if (!currentMoveState.isFlying)
             {
                 //Ignore vertical drag so we have full control over jump and fall speeds
@@ -572,12 +568,12 @@ namespace Code.Player.Character.NetworkedMovement
                 //impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
 
                 //Apply the impulse to the velocity
-                newVelocity += impulseVelocity;
-                currentMoveState.airborneFromImpulse = !grounded || impulseVelocity.y > .01f;
-                impulseVelocity = Vector3.zero;
+                newVelocity += currentMoveState.impulseVelocity;
+                currentMoveState.airborneFromImpulse = !grounded || currentMoveState.impulseVelocity.y > .01f;
+                currentMoveState.impulseVelocity = Vector3.zero;
                 if (useExtraLogging)
                 {
-                    print(" isImpulsing: " + isImpulsing + " impulse force: " + impulseVelocity + "New Vel: " +
+                    print(" isImpulsing: " + isImpulsing + " impulse force: " + currentMoveState.impulseVelocity + "New Vel: " +
                           newVelocity);
                 }
             }
@@ -591,49 +587,49 @@ namespace Code.Player.Character.NetworkedMovement
             var currentAcc = 0f;
             if (tryingToSprint)
             {
-                currentSpeed = moveData.sprintSpeed;
-                currentAcc = moveData.sprintAccelerationForce;
+                currentMoveState.currentSpeed = movementSettings.sprintSpeed;
+                currentAcc = movementSettings.sprintAccelerationForce;
             }
             else
             {
-                currentSpeed = moveData.speed;
-                currentAcc = moveData.accelerationForce;
+                currentMoveState.currentSpeed = movementSettings.speed;
+                currentAcc = movementSettings.accelerationForce;
             }
 
             if (currentMoveState.state == BasicCharacterState.Crouching)
             {
-                currentSpeed *= moveData.crouchSpeedMultiplier;
-                currentAcc *= moveData.crouchSpeedMultiplier;
+                currentMoveState.currentSpeed *= movementSettings.crouchSpeedMultiplier;
+                currentAcc *= movementSettings.crouchSpeedMultiplier;
             }
 
             if (currentMoveState.isFlying)
             {
-                currentSpeed *= moveData.flySpeedMultiplier;
+                currentMoveState.currentSpeed *= movementSettings.flySpeedMultiplier;
             }
             else if (inAir)
             {
-                currentSpeed *= moveData.airSpeedMultiplier;
+                currentMoveState.currentSpeed *= movementSettings.airSpeedMultiplier;
             }
 
             //Apply speed
-            if (moveData.useAccelerationMovement)
+            if (movementSettings.useAccelerationMovement)
             {
                 characterMoveVelocity *= currentAcc;
             }
             else
             {
-                characterMoveVelocity *= currentSpeed;
+                characterMoveVelocity *= currentMoveState.currentSpeed;
             }
 
             #region SLOPE
 
-            if (moveData.detectSlopes && detectedGround)
+            if (movementSettings.detectSlopes && detectedGround)
             {
                 //On Ground and detecting slopes
-                if (slopeDot < 1 && slopeDot > moveData.minSlopeDelta)
+                if (slopeDot < 1 && slopeDot > movementSettings.minSlopeDelta)
                 {
-                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
-                    if (slopeDot > moveData.maxSlopeDelta)
+                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
+                    if (slopeDot > movementSettings.maxSlopeDelta)
                     {
                         slopeVel.y = 0;
                     }
@@ -684,17 +680,17 @@ namespace Code.Player.Character.NetworkedMovement
             //print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 
             //Don't drift if you are turning the character
-            if (moveData.accelerationTurnFriction > 0 && moveData.useAccelerationMovement && !isImpulsing && grounded &&
+            if (movementSettings.accelerationTurnFriction > 0 && movementSettings.useAccelerationMovement && !isImpulsing && grounded &&
                 tryingToMove)
             {
                 var parallelDot = 1 - Mathf.Abs(Mathf.Clamp01(rawMoveDot));
                 //print("DOT: " + parallelDot);
-                newVelocity += -Vector3.ClampMagnitude(flatVelocity, currentSpeed) * parallelDot *
-                               moveData.accelerationTurnFriction;
+                newVelocity += -Vector3.ClampMagnitude(flatVelocity, currentMoveState.currentSpeed) * parallelDot *
+                               movementSettings.accelerationTurnFriction;
             }
 
             //Stop character from moveing into colliders (Helps prevent axis aligned box colliders from colliding when they shoudln't like jumping in a voxel world)
-            if (moveData.preventWallClipping)
+            if (movementSettings.preventWallClipping)
             {
                 //Do raycasting after we have claculated our move direction
                 (bool didHitForward, RaycastHit forwardHit) =
@@ -703,7 +699,7 @@ namespace Code.Player.Character.NetworkedMovement
                 if (!currentMoveState.prevStepUp && didHitForward)
                 {
                     var isVerticalWall = 1 - Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >=
-                                         moveData.maxSlopeDelta;
+                                         movementSettings.maxSlopeDelta;
                     var isKinematic = forwardHit.collider?.attachedRigidbody == null ||
                                       forwardHit.collider.attachedRigidbody.isKinematic;
 
@@ -745,7 +741,7 @@ namespace Code.Player.Character.NetworkedMovement
             //Don't move character in direction its already moveing
             //Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
             //Multipy by 2 so perpendicular movement is still fully applied rather than half applied
-            var dirDot = Mathf.Max(moveData.minAccelerationDelta, Mathf.Clamp01((1 - rawMoveDot) * 2));
+            var dirDot = Mathf.Max(movementSettings.minAccelerationDelta, Mathf.Clamp01((1 - rawMoveDot) * 2));
 
             if (useExtraLogging)
             {
@@ -754,17 +750,17 @@ namespace Code.Player.Character.NetworkedMovement
 
             if (currentMoveState.isFlying)
             {
-                newVelocity.x = md.moveDir.x * currentSpeed;
-                newVelocity.z = md.moveDir.z * currentSpeed;
+                newVelocity.x = command.moveDir.x * currentMoveState.currentSpeed;
+                newVelocity.z = command.moveDir.z * currentMoveState.currentSpeed;
             }
             else if (!isImpulsing && !currentMoveState.airborneFromImpulse && //Not impulsing AND under our max speed
-                     (velMagnitude < (moveData.useAccelerationMovement
-                         ? currentSpeed
-                         : Mathf.Max(moveData.sprintSpeed, currentSpeed) + 1)))
+                     (velMagnitude < (movementSettings.useAccelerationMovement
+                         ? currentMoveState.currentSpeed
+                         : Mathf.Max(movementSettings.sprintSpeed, currentMoveState.currentSpeed) + 1)))
             {
-                if (moveData.useAccelerationMovement)
+                if (movementSettings.useAccelerationMovement)
                 {
-                    newVelocity += Vector3.ClampMagnitude(characterMoveVelocity, currentSpeed - velMagnitude);
+                    newVelocity += Vector3.ClampMagnitude(characterMoveVelocity, currentMoveState.currentSpeed - velMagnitude);
                 }
                 else
                 {
@@ -786,8 +782,8 @@ namespace Code.Player.Character.NetworkedMovement
                 //Moving faster than max speed or using acceleration mode
                 newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) *
                                (groundedState == BasicCharacterState.Sprinting
-                                   ? this.moveData.sprintAccelerationForce
-                                   : moveData.accelerationForce);
+                                   ? this.movementSettings.sprintAccelerationForce
+                                   : movementSettings.accelerationForce);
             }
 
             //print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
@@ -800,9 +796,9 @@ namespace Code.Player.Character.NetworkedMovement
 
             //Step up as the last step so we have the most up to date velocity to work from
             var didStepUp = false;
-            if (moveData.detectStepUps && //Want to check step ups
-                (!md.crouch || !moveData.preventStepUpWhileCrouching) && //Not blocked by crouch
-                (moveData.assistedLedgeJump || currentMoveState.timeSinceBecameGrounded > .05) && //Grounded
+            if (movementSettings.detectStepUps && //Want to check step ups
+                (!command.crouch || !movementSettings.preventStepUpWhileCrouching) && //Not blocked by crouch
+                (movementSettings.assistedLedgeJump || currentMoveState.timeSinceBecameGrounded > .05) && //Grounded
                 (Mathf.Abs(newVelocity.x) + Mathf.Abs(newVelocity.z)) > .05f)
             {
                 //Moveing
@@ -841,11 +837,11 @@ namespace Code.Player.Character.NetworkedMovement
             #region APPLY FORCES
 
             //Clamp the velocity
-            newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
+            newVelocity = Vector3.ClampMagnitude(newVelocity, movementSettings.terminalVelocity);
             var magnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
-            var canStopVel = !currentMoveState.airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) &&
+            var canStopVel = !currentMoveState.airborneFromImpulse && (!inAir || movementSettings.useMinimumVelocityInAir) &&
                              !isImpulsing;
-            var underMin = magnitude <= moveData.minimumVelocity && magnitude > .01f;
+            var underMin = magnitude <= movementSettings.minimumVelocity && magnitude > .01f;
             //print("currentMoveState.airborneFromImpulse: " + currentMoveState.airborneFromImpulse + " unerMin: " +underMin + " notTryingToMove: " + notTryingToMove);
             if (canStopVel && !tryingToMove && underMin)
             {
@@ -870,37 +866,45 @@ namespace Code.Player.Character.NetworkedMovement
             // 	print("LANDED! prevVel: " + currentVelocity + " newVel: " + newVelocity);
             // }
 
-            //Calculate the local velocity for animations ease
-            currentLocalVelocity = graphicTransform.InverseTransformDirection(newVelocity);
-
             // only update animations if we are not in a replay
             if (!replay)
             {
-                TrySetState(new BasicCharacterAnimationSyncData()
+                var newState = new BasicCharacterAnimationSyncData()
                 {
                     state = currentMoveState.state,
                     grounded = !inAir || didStepUp,
-                    sprinting = isSprinting,
-                    crouching = isCrouching,
-                    localVelocity = currentLocalVelocity,
+                    sprinting = currentMoveState.isSprinting,
+                    crouching = currentMoveState.isCrouching,
+                    localVelocity = graphicTransform.InverseTransformDirection(newVelocity),
                     lookVector = lookVector,
                     jumping = didJump,
-                });
+                };
+                if (newState.state != this.currentAnimState.state)
+                {
+                    stateChanged?.Invoke((int)newState.state);
+                    animationHelper.SetState(newState);
+                }
+                else
+                {
+                    this.animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
+                }
+                this.currentAnimState = newState;
             }
 
             // Handle OnMoveDirectionChanged event
-            if (currentMoveState.prevMoveDir != md.moveDir)
+            if (currentMoveState.prevMoveDir != command.moveDir)
             {
-                OnMoveDirectionChanged?.Invoke(md.moveDir);
+                OnMoveDirectionChanged?.Invoke(command.moveDir);
             }
 
             currentMoveState.prevState = currentMoveState.state;
-            currentMoveState.prevCrouch = md.crouch;
-            currentMoveState.prevMoveDir = md.moveDir;
-            currentMoveState.prevGrounded = grounded;
+            currentMoveState.isCrouching = command.crouch;
+            currentMoveState.prevMoveDir = command.moveDir;
+            currentMoveState.isGrounded = grounded;
+            currentMoveState.animGrounded = !inAir || didStepUp;
             currentMoveState.prevStepUp = didStepUp;
-            currentMoveState.position = rootPosition;
-            currentMoveState.velocity = newVelocity;
+            // currentMoveState.position = rootPosition;
+            // currentMoveState.velocity = newVelocity;
 
             #endregion
 
@@ -909,8 +913,6 @@ namespace Code.Player.Character.NetworkedMovement
             {
                 //print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
             }
-
-            lastPos = rootPosition;
             
             OnEndMove?.Invoke(currentMoveState, replay);
         }
@@ -918,16 +920,33 @@ namespace Code.Player.Character.NetworkedMovement
         public override void Interpolate(float delta, BasicCharacterMovementState stateOld,
             BasicCharacterMovementState stateNew)
         {
-            throw new System.NotImplementedException();
+            this.rigidbody.position = Vector3.Lerp(stateOld.position, stateNew.position, delta);
+            airshipTransform.rotation = Quaternion.Lerp(
+                Quaternion.LookRotation( new Vector3(stateOld.lookVector.x, 0, stateOld.lookVector.z)),
+                Quaternion.LookRotation( new Vector3(stateNew.lookVector.x, 0, stateNew.lookVector.z)),
+                delta);
+        }
+
+        public override void InterpolateReachedState(BasicCharacterMovementState state)
+        {
+            var newState = new BasicCharacterAnimationSyncData()
+            {
+                state = state.state,
+                grounded = state.isGrounded,
+                sprinting = state.isSprinting,
+                crouching = state.isCrouching,
+                localVelocity = graphicTransform.InverseTransformDirection(state.velocity),
+                lookVector = state.lookVector,
+                jumping = state.jumpCount > this.currentMoveState.jumpCount,
+            };
+            var changed = newState.state != this.currentAnimState.state;
             
-            // var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
-            // if(lookTarget == Vector3.zero){
-            //     lookTarget = new Vector3(0,0,.01f);
-            // }
-            // airshipTransform.rotation = Quaternion.Lerp(
-            //     airshipTransform.rotation,
-            //     Quaternion.LookRotation(lookTarget),
-            //     observerRotationLerpMod * Time.deltaTime);
+            animationHelper.SetState(newState);
+            
+            this.currentMoveState = state;
+            this.currentAnimState = newState;
+            
+            if (changed) stateChanged?.Invoke((int)newState.state);
         }
 
         public void LateUpdate()
@@ -950,16 +969,6 @@ namespace Code.Player.Character.NetworkedMovement
             var newPos = this.rigidbody.position;
             newPos.y = newY;
             this.rigidbody.position = newPos;
-        }
-        
-        private void TrySetState(BasicCharacterAnimationSyncData newStateData)
-        {
-            if (newStateData.state == this.currentAnimState.state) return;
-            
-            stateChanged?.Invoke((int)newStateData.state);
-            
-            //Update our local visuals
-            animationHelper.SetState(newStateData);
         }
 
         #endregion
@@ -995,12 +1004,22 @@ namespace Code.Player.Character.NetworkedMovement
         /// <param name="lookVector"></param>
         public void SetLookVectorRecurring(Vector3 lookVector)
         {
-            if (mode == MovementMode.Input)
+            // Don't set look vectors on observed characters
+            if (mode == MovementMode.Observer) return;
+            
+            // If we are the client creating input, we want to set the actual local look vector.
+            // It will be moved into the state and sent to the server in the next snapshot.
+            if (mode == MovementMode.Input || (mode == MovementMode.Authority && isClient))
             {
                 this.lookVector = lookVector;
                 return;
             }
 
+            // If we are an authoritative server, we set the current move state to use this new look vector.
+            // This will get sent to the client as the authoritative truth and reconciled on the next snapshot.
+            // Keep in mind that the client overwrites this on each tick, so the timing of this set is important.
+            // It's generally better to just force a look vector on the client because reconciled camera
+            // rotation makes people nauseous.
             if (mode == MovementMode.Authority)
             {
                 this.currentMoveState.lookVector = this.lookVector;
@@ -1027,14 +1046,11 @@ namespace Code.Player.Character.NetworkedMovement
         
         public void SetMovementEnabled(bool isEnabled){
             this.disableInput = !isEnabled;
-            if(this.predictedMovement) {
-                this.predictedMovement.enabled = false;
-            }
             this.netIdentity.enabled = isEnabled;
         }
 
         public void SetDebugFlying(bool flying){
-            if (!this.moveData.allowDebugFlying) {
+            if (!this.movementSettings.allowDebugFlying) {
                 // Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
                 return;
             }
@@ -1050,14 +1066,11 @@ namespace Code.Player.Character.NetworkedMovement
             if(useExtraLogging){
                 print("Adding impulse: " + impulse);
             }
-            SetImpulse(this.impulseVelocity + impulse);
+            SetImpulse(this.currentMoveState.impulseVelocity + impulse);
         }
 
         public void SetImpulse(Vector3 impulse){
-            if(useExtraLogging){
-                print("setting impulse: " + impulse + " at tick: " + this.predictedMovement?.GetCurrentTick());
-            }
-            impulseVelocity = impulse;
+            currentMoveState.impulseVelocity = impulse;
         }
         
         public void IgnoreGroundCollider(Collider collider, bool ignore){

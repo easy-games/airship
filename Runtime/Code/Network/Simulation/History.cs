@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -65,6 +66,8 @@ namespace Code.Network.Simulation
          */
         public T Get(double time)
         {
+            if (history.Count == 0) return default;
+            
             // older than oldest
             if (time < history.Keys[0]) {
                 return history.Values[0];

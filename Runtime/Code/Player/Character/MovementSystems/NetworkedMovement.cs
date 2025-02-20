@@ -62,8 +62,16 @@ namespace Code.Player.Character.NetworkedMovement
         public abstract void Tick([CanBeNull] Input command, bool replay);
 
         /**
-         * Set the state to be the interpolated state between these two snapshots.
+         * Set the state to be the interpolated state between these two snapshots. This is called every frame
+         * during LateUpdate.
          */
         public abstract void Interpolate(float delta, State stateOld, State stateNew);
+
+        /**
+         * This function is called when the interpolation on an observing client passes the provided state.
+         * It will be called at a similar frequency to FixedUpdate (maybe more or less depending on simulation timing)
+         * and can be used for things like playing effects or updating animation state.
+         */
+        public abstract void InterpolateReachedState(State state);
     }
 }

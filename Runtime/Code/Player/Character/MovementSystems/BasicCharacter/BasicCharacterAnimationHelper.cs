@@ -275,7 +275,7 @@ namespace Code.Player.Character.NetworkedMovement
             {
                 if (newState == BasicCharacterState.Sprinting)
                 {
-                    if (this.IsInParticleDistance())
+                    if (this.IsInParticleDistance() && !sprintVfx.isPlaying)
                     {
                         sprintVfx.Play();
                     }

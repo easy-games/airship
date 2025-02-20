@@ -60,8 +60,6 @@ namespace Code.Player.Character.NetworkedMovement
         private int serverCommandBufferTargetSize = 0;
 
         // Client processing for input prediction
-        // private SortedList<double, Input> clientInputHistory = new SortedList<double, Input>();
-        // private SortedList<double, State> clientPredictedHistory = new SortedList<double, State>();
         private State clientLastConfirmedState;
 
         // Flag for if we are the resimulation requestor.
@@ -83,6 +81,12 @@ namespace Code.Player.Character.NetworkedMovement
         private History<Input> inputHistory;
         private History<State> stateHistory;
         private double lastReceivedSnapshotTime = 0;
+        
+        // Client interpolation fields
+        private double clientLastInterpolatedStateTime = 0;
+        
+        // Non-auth server command tracking
+        private State serverLastReceivedState;
 
         #endregion
 
@@ -130,8 +134,6 @@ namespace Code.Player.Character.NetworkedMovement
 
         public void Start()
         {
-            print(("Gravity is " + Physics.gravity));
-
             // We are a shared client and server
             if (isClient && isServer)
             {
@@ -541,13 +543,36 @@ namespace Code.Player.Character.NetworkedMovement
                 return;
             }
 
+            // If we received new authoritative state, process it
+            if (this.serverLastReceivedState != null)
+            {
+                // Set the snapshots time to be the same as the server to make it effectively
+                // the current authoritative state for all observers
+                this.serverLastReceivedState.time = time;
+                // Use this as the current state for the server
+                this.movementSystem.SetCurrentState(this.serverLastReceivedState);
+                // Since it's new, update our server interpolation functions
+                this.movementSystem.InterpolateReachedState(this.serverLastReceivedState);
+                // Add the state to our history as we would in a authoritative setup
+                this.stateHistory.Add(time, this.serverLastReceivedState);
+                // Wait for new messages to be received before adding more state history
+                this.serverLastReceivedState = null;
+            }
+            
+            // TODO: We'll have to do something more complicated for this...
+            // I think the general process will be to log all received snapshots into a buffer
+            // much like what we do with the commands we receive in auth mode. We then pop these
+            // out of the buffer and turn them into the "authoritative" state for the current tick
+            // if we run out, we can reuse the last.
+            // This makes it so that we keep a smooth motion of ticks from the client and we are able
+            // to then send smooth ticks to the observers.
+            
             if (this.lastServerSend <= NetworkTime.time - NetworkServer.sendInterval)
             {
-                // read current state
-                var state = this.movementSystem.GetCurrentState(serverLastProcessedCommandNumber,
-                    time);
-                this.stateHistory.Add(time, state);
+                // read latest state
+                var state = this.stateHistory.Get(time);
                 this.lastServerSend = NetworkTime.time;
+                // Send state to clients
                 this.SendServerSnapshotToClients(state);
             }
         }
@@ -609,7 +634,6 @@ namespace Code.Player.Character.NetworkedMovement
             // Report snapshot from movement system to server.
             if (this.lastClientSend <= NetworkTime.time - NetworkClient.sendInterval)
             {
-                this.stateHistory.Add(time, state);
                 this.lastClientSend = NetworkTime.time;
                 this.SendClientSnapshotToServer(state);
             }
@@ -637,13 +661,19 @@ namespace Code.Player.Character.NetworkedMovement
                 this.movementSystem.SetCurrentState(authoritativeState);
                 return;
             }
+            
+            // Get the authoritative state received just before the current observer time. (remember interpolation is buffered by bufferTime)
+            var state = this.stateHistory.Get(time - NetworkClient.bufferTime);
+            if (state == null || this.clientLastInterpolatedStateTime == state.time)
+            {
+                // We don't have state to use for interping or we haven't reached a new state yet.
+                return;
+            }
 
-
-            // We don't do anything on regular captures since the interp function called
-            // every frame will be handling updating state.
-            // We could theoretically also set the state here, but it would be overwritten
-            // on the next frame anyway.
-            // TODO: Is the interp function the easiest way for a networked system to keep it's effects/animations up to date?
+            // Update our last state time so we don't call InterpolateReachedState more than once on the same state.
+            this.clientLastInterpolatedStateTime = state.time;
+            // Notify the movement system of a new reached state
+            this.movementSystem.InterpolateReachedState(state);
         }
 
         public void ObservingClientTick(double time, bool replay)
@@ -752,7 +782,7 @@ namespace Code.Player.Character.NetworkedMovement
                 return;
             }
             
-            Debug.LogWarning("Resimulating command " + state.lastProcessedCommand);
+            // Debug.LogWarning("Resimulating command " + state.lastProcessedCommand);
 
             // Correct our networked system state to match the authoritative answer from the server
             this.movementSystem.SetCurrentState(state);
@@ -885,7 +915,7 @@ namespace Code.Player.Character.NetworkedMovement
             }
 
             this.serverLastProcessedCommandNumber = snapshot.lastProcessedCommand;
-            this.movementSystem.SetCurrentState(snapshot);
+            this.serverLastReceivedState = snapshot;
 
             // TODO: consider interpolating on the server as well...
             // I think client authed characters are currently freezing between snapshots

@@ -256,6 +256,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(BasicCharacterMovementState),
             typeof(BasicCharacterInputData),
             typeof(BasicCharacterMovementSettings),
+            typeof(BasicCharacterAnimationSyncData),
             
             // Steam
             typeof(AirshipSteamFriendInfo),

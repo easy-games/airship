@@ -79,6 +79,11 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
             this.rb.rotation = Quaternion.Lerp(stateOld.rotation, stateNew.rotation, delta);
         }
 
+        public override void InterpolateReachedState(BasicMovementState state)
+        {
+            // Noop
+        }
+
         public override BasicMovementInput GetCommand(int commandNumber, double time)
         {
             var command = new BasicMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, time = time, jump = jump};

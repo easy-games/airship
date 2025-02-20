@@ -142,6 +142,11 @@ namespace Code.Network.Simulation
             if (!isActive) return;
             if (Physics.simulationMode != SimulationMode.Script) return;
             // TODO: consider skipping fixed updates where the clock has not advanced.
+            if (this.tickTimes.Count > 0 && NetworkTime.time <= this.tickTimes[^1])
+            {
+                Debug.LogWarning("Skipping simulation due to clock correction.");
+                return;
+            }
             
             // Before running any commands, we perform any resimulation requests that were made during
             // the last tick. This ensures that resimulations don't affect command processing and
