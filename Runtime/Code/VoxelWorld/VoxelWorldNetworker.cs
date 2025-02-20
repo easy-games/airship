@@ -28,6 +28,15 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     }
 
     private void Start() {
+        if (RunCore.IsClient()) {
+            this.ClientSendReadyWhenAble();
+        }
+    }
+
+    private async void ClientSendReadyWhenAble() {
+        while (!NetworkClient.ready) {
+            await Awaitable.NextFrameAsync();
+        }
         OnReadyCommand();
     }
 

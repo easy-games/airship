@@ -6,6 +6,7 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Mirror;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
@@ -217,7 +218,20 @@ namespace VoxelWorldStuff {
                             } 
                             
                             prefabObjects.Remove(localChunkPos);
-                            Object.Destroy(existingPrefab.Item1);
+
+                            var (prefabGameObject, _) = existingPrefab;
+                            if (Application.isPlaying && prefabGameObject.GetComponent<NetworkIdentity>()) {
+                                // If it's a NetworkIdentity & is server we do NetworkServer.Destroy to ensure it's destroyed properly.
+                                if (RunCore.IsServer()) {
+                                    NetworkServer.Destroy(prefabGameObject);
+                                }
+                                else {
+                                    prefabGameObject.SetActive(false);
+                                }
+                            }
+                            else {
+                                Object.Destroy(prefabGameObject);
+                            }
                         }
 
                         if (blockId == 0) {
@@ -229,10 +243,23 @@ namespace VoxelWorldStuff {
                             continue;
                         }
 
+                        var isNetworked = false;
                         GameObject prefabDef = blockDefinition.definition.prefab;
+                        if (prefabDef.GetComponent<NetworkIdentity>()) isNetworked = true;
+                        
+                        // If client and networked prefab, do not spawn on client
+                        if ((!RunCore.IsServer() && isNetworked) && Application.isPlaying) {
+                            continue;
+                        }
+                        
                         var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
                         var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
-                        GameObject prefab = GameObject.Instantiate(prefabDef, origin + localChunkPos, rot,  obj.transform);
+                        
+                        var prefab = Object.Instantiate(prefabDef, origin + localChunkPos, rot,  obj.transform);
+                        if (isNetworked && Application.isPlaying) {
+                            NetworkServer.Spawn(prefab);
+                        }
+                        
                         prefab.transform.parent = obj.transform;
                         prefab.transform.localScale = Vector3.one;
 

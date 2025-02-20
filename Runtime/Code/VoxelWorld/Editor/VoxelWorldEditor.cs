@@ -664,7 +664,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Event e = Event.current;
 
         //Only allow editing if both the editor window is active and the gizmo toolbar is active
-        bool enabled = VoxelBuilderEditorWindow.Enabled() && (VoxelWorldEditorToolBase.buttonActive || VoxelWorldBrushToolBase.buttonActive);
+        bool enabled = VoxelBuilderEditorWindow.Enabled() && (VoxelWorldEditorToolBase.buttonActive || VoxelWorldBrushToolBase.buttonActive || VoxelWorldPaintBucketToolBase.buttonActive);
         
         if (enabled != lastEnabled) {
             CleanupHandles();
@@ -776,6 +776,24 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 }
             }
         }
+        
+        if (VoxelWorldPaintBucketToolBase.buttonActive) {
+            if (e.type == EventType.MouseDown && e.button == 0) {
+                // Create a ray from the mouse position
+                if (validPosition) {
+                    // Add voxel
+                    Vector3Int voxelPos = lastPos;
+                    ushort oldValue =
+                        world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
+                    ushort oldBlockId = VoxelWorld.VoxelDataToBlockId(oldValue);
+                    if (oldBlockId > 0) {
+                        var edits = new List<EditInfo>();
+                        PaintBucket(world, edits, lastPos, oldValue, (ushort) world.selectedBlockIndex, new HashSet<Vector3>());
+                        VoxelEditManager.Instance.AddEdits(world, edits, "Paint Bucket");
+                    }
+                }
+            }
+        }
 
         if (Event.current.GetTypeForControl(controlID) == EventType.KeyUp) {
             if (Event.current.keyCode == KeyCode.LeftControl) {
@@ -828,6 +846,28 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 UpdateHandlePosition(world);
                 //Repaint
                 SceneView.RepaintAll();
+            }
+        }
+    }
+
+    public void PaintBucket(VoxelWorld world, List<EditInfo> edits, Vector3 pos, ushort from, ushort target, HashSet<Vector3> visited) {
+        visited.Add(pos);
+
+        var voxelAtPos = world.GetVoxelAt(pos);
+        // Debug.Log("Voxel at pos: " + VoxelWorld.VoxelDataToBlockId(voxelAtPos) + " where from=" + from);
+        if (VoxelWorld.VoxelDataToBlockId(voxelAtPos) != VoxelWorld.VoxelDataToBlockId(from)) return;
+            
+        edits.Add(new EditInfo(VoxelWorld.FloorInt(pos), from, target));
+
+        for (var axis = 0; axis < 3; axis++) {
+            for (var sign = -1; sign <= 1; sign += 2) {
+                var newPos = pos;
+                newPos[axis] += sign; // Cool Vector3 accessor!
+                // Debug.Log("Check out pos: " + newPos);
+                
+                if (visited.Contains(newPos)) continue;
+                
+                PaintBucket(world, edits, newPos, from, target, visited);
             }
         }
     }
@@ -952,6 +992,32 @@ public class VoxelWorldSelectionToolBase : EditorTool {
     }
 }
 
+public class VoxelWorldPaintBucketToolBase : EditorTool {
+
+    public static bool buttonActive = false;
+
+    static GUIContent iconContent = null;
+
+    public override void OnActivated() {
+        buttonActive = true;
+
+    }
+    public override void OnWillBeDeactivated() {
+        buttonActive = false;
+    }
+    public override GUIContent toolbarIcon {
+        get {
+            if (iconContent == null) {
+                iconContent = new GUIContent() {
+                    image = Resources.Load<Texture>("PaintBucketIcon"),
+                    tooltip = "Paint Bucket"
+                };
+            }
+            return iconContent;
+        }
+    }
+}
+
 public class VoxelWorldBrushToolBase : EditorTool {
 
     public static bool buttonActive = false;
@@ -984,6 +1050,10 @@ public class VoxelWorldSelectionToolVW : VoxelWorldSelectionToolBase {
 
 [EditorTool("Edit Voxel Selection", typeof(VoxelWorld))]
 public class VoxelWorldEditorToolVW : VoxelWorldEditorToolBase {
+}
+
+[EditorTool("Paint Bucket", typeof(VoxelWorld))]
+public class VoxelWorldPaintBucketToolVW : VoxelWorldPaintBucketToolBase {
 }
 
 [EditorTool("Paint Voxels", typeof(VoxelWorld))]

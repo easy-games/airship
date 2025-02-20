@@ -86,10 +86,12 @@ public class Deploy {
 			yield break;
 		}
 
-		var didVerify = AirshipPackagesWindow.VerifyBuildModules();
-		if (!didVerify) {
-			Debug.LogErrorFormat("Missing build modules. Install missing modules in Unity Hub and restart Unity to publish game.");
-			yield break;
+		if (!skipBuild) {
+			var didVerify = AirshipPackagesWindow.VerifyBuildModules();
+			if (!didVerify) {
+				Debug.LogErrorFormat("Missing build modules. Install missing modules in Unity Hub and restart Unity to publish game.");
+				yield break;
+			}
 		}
 
 		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
