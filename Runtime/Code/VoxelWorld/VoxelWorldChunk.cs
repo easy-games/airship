@@ -225,6 +225,9 @@ namespace VoxelWorldStuff {
                                 if (RunCore.IsServer()) {
                                     NetworkServer.Destroy(prefabGameObject);
                                 }
+                                else {
+                                    prefabGameObject.SetActive(false);
+                                }
                             }
                             else {
                                 Object.Destroy(prefabGameObject);
