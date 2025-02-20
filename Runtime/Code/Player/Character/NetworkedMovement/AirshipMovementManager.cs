@@ -40,7 +40,6 @@ namespace Code.Player.Character.NetworkedMovement
         #region Internal State
 
         // Command number tracking for server and client
-        private int serverLastProcessedCommandNumber = 0;
         private int clientCommandNumber = 0;
 
         // Send rate tracking fields
@@ -53,11 +52,15 @@ namespace Code.Player.Character.NetworkedMovement
         // This may advance faster than last processed command if we predicted command inputs.
         // The data in lastProcessedCommand will be the command used for ticking even if the number
         // does not match.
-        private int lastProcessedCommandNumber;
+        private int serverLastProcessedCommandNumber;
         private int serverPredictedCommandCount = 0;
         private SortedList<int, Input> serverCommandBuffer = new SortedList<int, Input>();
         private int serverCommandBufferMaxSize = 0;
         private int serverCommandBufferTargetSize = 0;
+
+        // Non-auth server command tracking
+        // Note: we also re-use some of the above command buffer fields
+        private SortedList<int, State> serverRecievedStateBuffer = new SortedList<int, State>();
 
         // Client processing for input prediction
         private State clientLastConfirmedState;
@@ -81,12 +84,9 @@ namespace Code.Player.Character.NetworkedMovement
         private History<Input> inputHistory;
         private History<State> stateHistory;
         private double lastReceivedSnapshotTime = 0;
-        
+
         // Client interpolation fields
         private double clientLastInterpolatedStateTime = 0;
-        
-        // Non-auth server command tracking
-        private State serverLastReceivedState;
 
         #endregion
 
@@ -122,7 +122,8 @@ namespace Code.Player.Character.NetworkedMovement
             // by up to two sendIntervals. A higher multiple would cause more obvious delay, but result in smoother movement
             // in poor network conditions.
             this.serverCommandBufferTargetSize =
-                Math.Min(this.serverCommandBufferMaxSize, ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 3);
+                Math.Min(this.serverCommandBufferMaxSize,
+                    ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 3);
 
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
@@ -358,7 +359,7 @@ namespace Code.Player.Character.NetworkedMovement
                     // Get the command to process
                     var command = this.serverCommandBuffer.Values[0];
                     // Get the expected next command number
-                    var expectedNextCommandNumber = this.lastProcessedCommandNumber + 1;
+                    var expectedNextCommandNumber = this.serverLastProcessedCommandNumber + 1;
 
                     // Check if that command is in sequence. If we have a gap of commands, we will fill it with the last
                     // processed command up to the maxServerCommandPrediction size.
@@ -373,7 +374,7 @@ namespace Code.Player.Character.NetworkedMovement
                                          " in the command buffer. Next command was: " + command.commandNumber +
                                          ". Predicted " +
                                          (this.serverPredictedCommandCount + 1) + " command(s) so far.");
-                        this.lastProcessedCommandNumber = expectedNextCommandNumber;
+                        this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
                         command = this.lastProcessedCommand;
                         this.serverPredictedCommandCount++;
                     }
@@ -385,7 +386,7 @@ namespace Code.Player.Character.NetworkedMovement
                         this.serverPredictedCommandCount = 0;
                         this.serverCommandBuffer.RemoveAt(0);
                         this.lastProcessedCommand = command;
-                        this.lastProcessedCommandNumber = command.commandNumber;
+                        this.serverLastProcessedCommandNumber = command.commandNumber;
                     }
 
                     // tick command
@@ -412,7 +413,7 @@ namespace Code.Player.Character.NetworkedMovement
             }
 
             // get snapshot to send to clients
-            var state = this.movementSystem.GetCurrentState(this.lastProcessedCommandNumber,
+            var state = this.movementSystem.GetCurrentState(this.serverLastProcessedCommandNumber,
                 time);
             this.stateHistory.Add(time, state);
             // Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
@@ -544,21 +545,21 @@ namespace Code.Player.Character.NetworkedMovement
             }
 
             // If we received new authoritative state, process it
-            if (this.serverLastReceivedState != null)
-            {
-                // Set the snapshots time to be the same as the server to make it effectively
-                // the current authoritative state for all observers
-                this.serverLastReceivedState.time = time;
-                // Use this as the current state for the server
-                this.movementSystem.SetCurrentState(this.serverLastReceivedState);
-                // Since it's new, update our server interpolation functions
-                this.movementSystem.InterpolateReachedState(this.serverLastReceivedState);
-                // Add the state to our history as we would in a authoritative setup
-                this.stateHistory.Add(time, this.serverLastReceivedState);
-                // Wait for new messages to be received before adding more state history
-                this.serverLastReceivedState = null;
-            }
-            
+            // if (this.serverLastReceivedState != null)
+            // {
+            //     // Set the snapshots time to be the same as the server to make it effectively
+            //     // the current authoritative state for all observers
+            //     this.serverLastReceivedState.time = time;
+            //     // Use this as the current state for the server
+            //     this.movementSystem.SetCurrentState(this.serverLastReceivedState);
+            //     // Since it's new, update our server interpolation functions
+            //     this.movementSystem.InterpolateReachedState(this.serverLastReceivedState);
+            //     // Add the state to our history as we would in a authoritative setup
+            //     this.stateHistory.Add(time, this.serverLastReceivedState);
+            //     // Wait for new messages to be received before adding more state history
+            //     this.serverLastReceivedState = null;
+            // }
+
             // TODO: We'll have to do something more complicated for this...
             // I think the general process will be to log all received snapshots into a buffer
             // much like what we do with the commands we receive in auth mode. We then pop these
@@ -566,7 +567,62 @@ namespace Code.Player.Character.NetworkedMovement
             // if we run out, we can reuse the last.
             // This makes it so that we keep a smooth motion of ticks from the client and we are able
             // to then send smooth ticks to the observers.
-            
+
+
+            // TODO: we won't get states for every tick, but we still need to keep a buffer. 
+
+            State latestState = null;
+            var statesProcessed = 0;
+            do
+            {
+                statesProcessed++;
+                if (statesProcessed > 1)
+                {
+                    Debug.Log("Processing additional client auth state for catchup.");
+                }
+
+                // Attempt to get a new state out of the buffer.
+                latestState = this.serverRecievedStateBuffer.Count > 0
+                    ? this.serverRecievedStateBuffer.Values[0]
+                    : null;
+
+                // If we have a new state to process
+                if (latestState != null)
+                {
+                    // mark this as our latest state and remove it. We will do the real processing on the final
+                    // state retrieved during this loop later.
+                    this.serverLastProcessedCommandNumber = latestState.lastProcessedCommand;
+                    this.serverRecievedStateBuffer.RemoveAt(0);
+                }
+
+                // If we don't have a new state to process, that's ok. It just means that the client hasn't sent us
+                // their updated state yet because the update rate is lower than the tick rate.
+                
+                // TODO: in the future, we may want to buffer an additional snapshot so that we can interpolate and smooth
+                // out movement between client updates on the server. If the client update rate is very low, there will be obvious pauses
+                // in movement from the server point of view. Observers will actually smooth out the movement because they buffer
+                // the snapshots locally and always smoothly interpolate between two snapshots, so this would mainly help for things
+                // like server side hit registration.
+            } while (this.serverRecievedStateBuffer.Count >
+                     this.serverCommandBufferTargetSize &&
+                     statesProcessed < 1 + this.maxServerCommandCatchup);
+            // ^ we process up to maxServerCommandCatchup states per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
+            // We re-use the command buffer settings since they are calculated to smooth out command processing in the same
+            // way we are attempting to smooth out state processing.
+
+            if (latestState != null)
+            {
+                // Set the snapshots time to be the same as the server to make it effectively
+                // the current authoritative state for all observers
+                latestState.time = time;
+                // Use this as the current state for the server
+                this.movementSystem.SetCurrentState(latestState);
+                // Since it's new, update our server interpolation functions
+                this.movementSystem.InterpolateReachedState(latestState);
+                // Add the state to our history as we would in a authoritative setup
+                this.stateHistory.Add(time, latestState);
+            }
+
             if (this.lastServerSend <= NetworkTime.time - NetworkServer.sendInterval)
             {
                 // read latest state
@@ -661,7 +717,7 @@ namespace Code.Player.Character.NetworkedMovement
                 this.movementSystem.SetCurrentState(authoritativeState);
                 return;
             }
-            
+
             // Get the authoritative state received just before the current observer time. (remember interpolation is buffered by bufferTime)
             var state = this.stateHistory.Get(time - NetworkClient.bufferTime);
             if (state == null || this.clientLastInterpolatedStateTime == state.time)
@@ -702,7 +758,7 @@ namespace Code.Player.Character.NetworkedMovement
             // Get the state history around the time that's currently being rendered.
             if (!this.stateHistory.GetAround(clientTime, out State prevState, out State nextState))
             {
-                Debug.LogWarning("Not enough state history for rendering.");
+                Debug.LogWarning("Not enough state history for rendering. " + this.stateHistory.Keys.Count + " entries. First " + this.stateHistory.Keys[0] + " Last " + this.stateHistory.Keys[^1] + " Target " + clientTime);
                 return;
             }
 
@@ -781,7 +837,7 @@ namespace Code.Player.Character.NetworkedMovement
                 // If it does, we can just return since our predictions have all been correct so far.
                 return;
             }
-            
+
             // Debug.LogWarning("Resimulating command " + state.lastProcessedCommand);
 
             // Correct our networked system state to match the authoritative answer from the server
@@ -810,6 +866,8 @@ namespace Code.Player.Character.NetworkedMovement
         // we can rebuild a completely accurate history for other re-simulations
         private void ClientReceiveSnapshot(State state)
         {
+            if (state == null) return;
+
             if (lastReceivedSnapshotTime > state.time)
             {
                 print("Ignoring out of order snapshot");
@@ -889,7 +947,7 @@ namespace Code.Player.Character.NetworkedMovement
                     continue;
                 }
 
-                if (this.lastProcessedCommandNumber >= command.commandNumber)
+                if (this.serverLastProcessedCommandNumber >= command.commandNumber)
                 {
                     // Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
                     continue;
@@ -906,6 +964,8 @@ namespace Code.Player.Character.NetworkedMovement
             // This should only occur if the server is not authoritative.
             if (serverAuth) return;
 
+            if (snapshot == null) return;
+
             // The server is receiving an update from the authoritative client owner.
             // Update our state so we can distribute it to all observers.
             if (serverLastProcessedCommandNumber >= snapshot.lastProcessedCommand)
@@ -914,16 +974,15 @@ namespace Code.Player.Character.NetworkedMovement
                 return;
             }
 
-            this.serverLastProcessedCommandNumber = snapshot.lastProcessedCommand;
-            this.serverLastReceivedState = snapshot;
+            // Reject new states if our buffer is full
+            if (serverRecievedStateBuffer.Count > this.serverCommandBufferMaxSize)
+            {
+                Debug.LogWarning("Dropping state " + snapshot.lastProcessedCommand +
+                                 " due to exceeding state buffer size.");
+                return;
+            }
 
-            // TODO: consider interpolating on the server as well...
-            // I think client authed characters are currently freezing between snapshots
-            // which would make things like server hit registration be a bit behind.
-            // Consider implementing interpolation in the fixed update of the server using
-            // lag compensation history so that we have some reasonable in-between frames
-            // Or maybe just only do that when lag compensating? It doesn't matter to observers
-            // since they do their own interpolation of the snapshots forwarded to them by the server.
+            this.serverRecievedStateBuffer.Add(snapshot.lastProcessedCommand, snapshot);
         }
 
         #endregion

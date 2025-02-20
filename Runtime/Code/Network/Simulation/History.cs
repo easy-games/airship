@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ namespace Code.Network.Simulation
         private SortedList<double, T> history = new SortedList<double, T>();
 
         public IList<T> Values => history.Values;
+        public IList<double> Keys => history.Keys;
         
         /**
          * Creates a history with the provided maximum entry size. You can set the max size to 0 for no maximum size.
