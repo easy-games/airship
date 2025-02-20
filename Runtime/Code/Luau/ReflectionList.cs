@@ -7,6 +7,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
+using UnityEngine.Audio;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Experimental.Rendering;
@@ -166,6 +167,9 @@ namespace Luau {
             [typeof(AudioListener)] = LuauContextAll,
             [typeof(AudioRolloffMode)] = LuauContextAll,
             [typeof(AudioSource)] = LuauContextAll,
+            [typeof(AudioResource)] = LuauContextAll,
+            [typeof(AudioMixerGroup)] = LuauContextAll,
+            [typeof(AudioMixerSnapshot)] = LuauContextAll,
             //Rendering
             [typeof(Graphics)] = LuauContextAll,
             [typeof(Material)] = LuauContextAll,
