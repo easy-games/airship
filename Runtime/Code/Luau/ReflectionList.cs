@@ -218,6 +218,7 @@ namespace Luau {
             ["ActiveAccessory[]"] = LuauContextAll,
             ["TubeRendererCS"] = LuauContextAll,
             ["AudioMixerSnapshotController"] = LuauContextAll,
+            ["AudioMixerController"] = LuauContextAll,
         };
 
         public static Dictionary<Type, LuauContext> allowedTypesInternal;
