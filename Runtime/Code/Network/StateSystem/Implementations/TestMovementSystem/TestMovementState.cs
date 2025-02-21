@@ -1,10 +1,9 @@
-using System;
-using Code.Player.Character.Net;
+using Code.Network.StateSystem.Structures;
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement.BasicTest
+namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class BasicMovementState : StateSnapshot
+    public class TestMovementState : StateSnapshot
     {
         public Vector3 position;
         public Quaternion rotation;
@@ -20,7 +19,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
 
         public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
         {
-            if (snapshot is not BasicMovementState other) return false;
+            if (snapshot is not TestMovementState other) return false;
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
                    this.rotation == other.rotation;
         }

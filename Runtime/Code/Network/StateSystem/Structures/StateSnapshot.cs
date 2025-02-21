@@ -1,8 +1,11 @@
 using System;
 using UnityEngine;
 
-namespace Code.Player.Character.Net
+namespace Code.Network.StateSystem.Structures
 {
+    /**
+     * Base class for state snapshots when using a networked state system.
+     */
     public class StateSnapshot
     {
         public int lastProcessedCommand;

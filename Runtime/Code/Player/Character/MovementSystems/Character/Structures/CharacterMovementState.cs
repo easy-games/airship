@@ -1,13 +1,14 @@
 using System;
 using Assets.Luau;
+using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror.BouncyCastle.Asn1.X9;
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement
+namespace Code.Player.Character.MovementSystems.Character
 {
     [LuauAPI]
-    public class BasicCharacterMovementState : StateSnapshot
+    public class CharacterMovementState : StateSnapshot
     {
         public Vector3 position;
         public Vector3 velocity;
@@ -28,8 +29,8 @@ namespace Code.Player.Character.NetworkedMovement
         public bool prevStepUp;
         public bool isGrounded;
         public bool animGrounded;
-        public BasicCharacterState state = BasicCharacterState.Idle;
-        public BasicCharacterState prevState = BasicCharacterState.Idle;
+        public CharacterState state = CharacterState.Idle;
+        public CharacterState prevState = CharacterState.Idle;
         public float timeSinceBecameGrounded;
         public float timeSinceWasGrounded;
         public float timeSinceJump;
@@ -39,7 +40,7 @@ namespace Code.Player.Character.NetworkedMovement
         public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
         {
             // TODO: could probably be optimized?
-            if (snapshot is not BasicCharacterMovementState other) return false;
+            if (snapshot is not CharacterMovementState other) return false;
 
             string message = "";
 
@@ -84,7 +85,7 @@ namespace Code.Player.Character.NetworkedMovement
             //&& timeSinceJump == other.timeSinceJump && customData.Equals(other.customData);
         }
 
-        public void CopyFrom(BasicCharacterMovementState copyState)
+        public void CopyFrom(CharacterMovementState copyState)
         {
             this.time = copyState.time;
             this.lastProcessedCommand = copyState.lastProcessedCommand;

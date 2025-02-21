@@ -1,9 +1,9 @@
 using Code.Player.Character.Net;
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement.BasicTest
+namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class BasicMovementInput : InputCommand
+    public class TestMovementInput : InputCommand
     {
         public Vector3 moveDirection;
         public bool jump;

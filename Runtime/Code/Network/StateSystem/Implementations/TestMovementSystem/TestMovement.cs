@@ -1,8 +1,8 @@
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement.BasicTest
+namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class BasicTestMovement : NetworkedMovement<BasicMovementState, BasicMovementInput>
+    public class TestMovement : NetworkedStateSystem<TestMovementState, TestMovementInput>
     {
         private Rigidbody rb;
         private Vector3 moveVector;
@@ -14,16 +14,16 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
             rb = this.GetComponent<Rigidbody>();
         }
 
-        public override void OnSetMode(MovementMode mode)
+        public override void OnSetMode(NetworkedStateSystemMode mode)
         {
-            if (mode == MovementMode.Observer)
+            if (mode == NetworkedStateSystemMode.Observer)
             {
                 rb.isKinematic = true;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 
-            if (mode == MovementMode.Authority || mode == MovementMode.Input)
+            if (mode == NetworkedStateSystemMode.Authority || mode == NetworkedStateSystemMode.Input)
             {
                 rb.isKinematic = false;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
@@ -31,7 +31,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
             }
         }
 
-        public override void SetCurrentState(BasicMovementState state)
+        public override void SetCurrentState(TestMovementState state)
         {
             // Debug.Log("Setting state to match: " + state);
             jumpTicksUntil = state.jumpTicksUntil;
@@ -45,16 +45,16 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
             }
         }
 
-        public override BasicMovementState GetCurrentState(int commandNumber, double time)
+        public override TestMovementState GetCurrentState(int commandNumber, double time)
         {
-            return new BasicMovementState()
+            return new TestMovementState()
             {
                 position = rb.position, rotation = rb.rotation, velocity = rb.linearVelocity,
                 angularVelocity = rb.angularVelocity, lastProcessedCommand = commandNumber, time = time, jumpTicksUntil = jumpTicksUntil
             };
         }
 
-        public override void Tick(BasicMovementInput command, bool replay)
+        public override void Tick(TestMovementInput command, bool replay)
         {
             if (command == null) return;
             //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
@@ -73,20 +73,20 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
             if (jumpTicksUntil > 0) jumpTicksUntil--;
         }
 
-        public override void Interpolate(float delta, BasicMovementState stateOld, BasicMovementState stateNew)
+        public override void Interpolate(float delta, TestMovementState stateOld, TestMovementState stateNew)
         {
             this.rb.position = Vector3.Lerp(stateOld.position, stateNew.position, delta);
             this.rb.rotation = Quaternion.Lerp(stateOld.rotation, stateNew.rotation, delta);
         }
 
-        public override void InterpolateReachedState(BasicMovementState state)
+        public override void InterpolateReachedState(TestMovementState state)
         {
             // Noop
         }
 
-        public override BasicMovementInput GetCommand(int commandNumber, double time)
+        public override TestMovementInput GetCommand(int commandNumber, double time)
         {
-            var command = new BasicMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, time = time, jump = jump};
+            var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, time = time, jump = jump};
             jump = false;
             return command;
         }

@@ -2,22 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Code.Network.Simulation;
+using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror;
 using RSG.Promises;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Code.Player.Character.NetworkedMovement
+namespace Code.Network.StateSystem
 {
     [RequireComponent(typeof(NetworkIdentity))]
-    public abstract class AirshipMovementManager<MovementSystem, State, Input> : NetworkBehaviour
-        where State : StateSnapshot where Input : InputCommand where MovementSystem : NetworkedMovement<State, Input>
+    public abstract class AirshipNetworkedStateManager<StateSystem, State, Input> : NetworkBehaviour
+        where State : StateSnapshot where Input : InputCommand where StateSystem : NetworkedStateSystem<State, Input>
     {
         #region Inspector Settings
 
         // Inspector settings
-        public MovementSystem movementSystem;
+        public StateSystem stateSystem;
 
         // Todo: consider making a negative number drop that many frames per tick in order to correct instead of processing them.
         [Tooltip(
@@ -138,42 +139,42 @@ namespace Code.Player.Character.NetworkedMovement
             // We are a shared client and server
             if (isClient && isServer)
             {
-                this.movementSystem.mode = MovementMode.Authority;
-                this.movementSystem.OnSetMode(MovementMode.Authority);
+                this.stateSystem.mode = NetworkedStateSystemMode.Authority;
+                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Authority);
             }
             // We are an authoritative client
             else if (isClient && isOwned && !serverAuth)
             {
-                this.movementSystem.mode = MovementMode.Authority;
-                this.movementSystem.OnSetMode(MovementMode.Authority);
+                this.stateSystem.mode = NetworkedStateSystemMode.Authority;
+                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative client
             else if (isClient && isOwned && serverAuth)
             {
-                this.movementSystem.mode = MovementMode.Input;
-                this.movementSystem.OnSetMode(MovementMode.Input);
+                this.stateSystem.mode = NetworkedStateSystemMode.Input;
+                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Input);
             }
             // We are an observing client
             else if (isClient && !isOwned)
             {
-                this.movementSystem.mode = MovementMode.Observer;
-                this.movementSystem.OnSetMode(MovementMode.Observer);
+                this.stateSystem.mode = NetworkedStateSystemMode.Observer;
+                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Observer);
             }
             // We are an authoritative server
             else if (isServer && serverAuth)
             {
-                this.movementSystem.mode = MovementMode.Authority;
-                this.movementSystem.OnSetMode(MovementMode.Authority);
+                this.stateSystem.mode = NetworkedStateSystemMode.Authority;
+                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative server
             else if (isServer && !serverAuth)
             {
-                this.movementSystem.mode = MovementMode.Observer;
-                this.movementSystem.OnSetMode(MovementMode.Observer);
+                this.stateSystem.mode = NetworkedStateSystemMode.Observer;
+                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Observer);
             }
             else
             {
-                Debug.LogWarning("Unable to determine networked movement mode. Did we miss a case? " + isServer + " " +
+                Debug.LogWarning("Unable to determine networked state system mode. Did we miss a case? " + isServer + " " +
                                  isClient + " " + isOwned + " " + serverAuth);
             }
         }
@@ -411,13 +412,13 @@ namespace Code.Player.Character.NetworkedMovement
                     }
 
                     // tick command
-                    this.movementSystem.Tick(command, false);
+                    this.stateSystem.Tick(command, false);
                 }
                 else
                 {
                     Debug.LogWarning("No commands left. Last command processed: " + this.lastProcessedCommand);
                     // Ensure that we always tick the system even if there's no command to process.
-                    this.movementSystem.Tick(null, false);
+                    this.stateSystem.Tick(null, false);
                 }
             } while (this.serverCommandBuffer.Count >
                      this.serverCommandBufferTargetSize &&
@@ -434,7 +435,7 @@ namespace Code.Player.Character.NetworkedMovement
             }
 
             // get snapshot to send to clients
-            var state = this.movementSystem.GetCurrentState(this.serverLastProcessedCommandNumber,
+            var state = this.stateSystem.GetCurrentState(this.serverLastProcessedCommandNumber,
                 time);
             this.stateHistory.Add(time, state);
             // Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
@@ -467,28 +468,28 @@ namespace Code.Player.Character.NetworkedMovement
                 var command = this.inputHistory.GetExact(time);
                 // Process the command again like before, but pass replay into the network system so that
                 // it doesn't replay effects or animations, etc.
-                this.movementSystem.Tick(command, true);
+                this.stateSystem.Tick(command, true);
                 return;
             }
 
-            // If the prediction is paused, we still tick the movement system, but we include no command
+            // If the prediction is paused, we still tick the system, but we include no command
             // for the tick. We want to wait for our current set of commands to be confirmed before
             // we start predicting again, so it's important that we do not continue processing new commands
             // and incrementing our commandNumber.
             if (this.clientPausePrediction)
             {
-                this.movementSystem.GetCommand(this.clientCommandNumber,
+                this.stateSystem.GetCommand(this.clientCommandNumber,
                     time); // We tick GetCommand to clear any input, but we don't use it
-                this.movementSystem.Tick(null, false);
+                this.stateSystem.Tick(null, false);
                 this.inputHistory.Add(time, null);
                 return;
             }
 
             // Update our command number and process the next tick.
             clientCommandNumber++;
-            var input = this.movementSystem.GetCommand(this.clientCommandNumber, time);
+            var input = this.stateSystem.GetCommand(this.clientCommandNumber, time);
             input = this.inputHistory.Add(time, input);
-            this.movementSystem.Tick(input, false);
+            this.stateSystem.Tick(input, false);
 
             if (this.lastClientSend <= NetworkTime.time - NetworkClient.sendInterval)
             {
@@ -518,7 +519,7 @@ namespace Code.Player.Character.NetworkedMovement
                 {
                     // Capture the state and overwrite our history for this tick since it may be different
                     // due to corrected collisions or positions of other objects.
-                    var replayState = this.movementSystem.GetCurrentState(input.commandNumber, time);
+                    var replayState = this.stateSystem.GetCurrentState(input.commandNumber, time);
                     var oldState = this.stateHistory.GetExact(time);
                     // Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
                     this.stateHistory.Overwrite(time, replayState);
@@ -529,12 +530,12 @@ namespace Code.Player.Character.NetworkedMovement
                 {
                     var oldState = this.stateHistory.GetExact(time);
                     if (oldState == null) return;
-                    this.movementSystem.SetCurrentState(oldState);
+                    this.stateSystem.SetCurrentState(oldState);
                 }
             }
 
             // Store the current physics state for prediction
-            var state = this.movementSystem.GetCurrentState(clientCommandNumber, time);
+            var state = this.stateSystem.GetCurrentState(clientCommandNumber, time);
             this.stateHistory.Add(time, state);
             // Debug.Log("Processing command " + state.lastProcessedCommand + " resulted in " + state);
         }
@@ -544,7 +545,7 @@ namespace Code.Player.Character.NetworkedMovement
             // Use Get() so that we use the oldest state possible
             // if our history does not include the time
             var state = this.stateHistory.Get(time);
-            this.movementSystem.SetCurrentState(state);
+            this.stateSystem.SetCurrentState(state);
         }
 
         #endregion
@@ -565,33 +566,7 @@ namespace Code.Player.Character.NetworkedMovement
                 return;
             }
 
-            // If we received new authoritative state, process it
-            // if (this.serverLastReceivedState != null)
-            // {
-            //     // Set the snapshots time to be the same as the server to make it effectively
-            //     // the current authoritative state for all observers
-            //     this.serverLastReceivedState.time = time;
-            //     // Use this as the current state for the server
-            //     this.movementSystem.SetCurrentState(this.serverLastReceivedState);
-            //     // Since it's new, update our server interpolation functions
-            //     this.movementSystem.InterpolateReachedState(this.serverLastReceivedState);
-            //     // Add the state to our history as we would in a authoritative setup
-            //     this.stateHistory.Add(time, this.serverLastReceivedState);
-            //     // Wait for new messages to be received before adding more state history
-            //     this.serverLastReceivedState = null;
-            // }
-
-            // TODO: We'll have to do something more complicated for this...
-            // I think the general process will be to log all received snapshots into a buffer
-            // much like what we do with the commands we receive in auth mode. We then pop these
-            // out of the buffer and turn them into the "authoritative" state for the current tick
-            // if we run out, we can reuse the last.
-            // This makes it so that we keep a smooth motion of ticks from the client and we are able
-            // to then send smooth ticks to the observers.
-
-
-            // TODO: we won't get states for every tick, but we still need to keep a buffer. 
-
+            // Process the buffer of states that we've gotten from the authoritative client
             State latestState = null;
             var statesProcessed = 0;
             do
@@ -631,15 +606,16 @@ namespace Code.Player.Character.NetworkedMovement
             // We re-use the command buffer settings since they are calculated to smooth out command processing in the same
             // way we are attempting to smooth out state processing.
 
+            // Commit the last processed snapshot to our state history
             if (latestState != null)
             {
                 // Set the snapshots time to be the same as the server to make it effectively
                 // the current authoritative state for all observers
                 latestState.time = time;
                 // Use this as the current state for the server
-                this.movementSystem.SetCurrentState(latestState);
+                this.stateSystem.SetCurrentState(latestState);
                 // Since it's new, update our server interpolation functions
-                this.movementSystem.InterpolateReachedState(latestState);
+                this.stateSystem.InterpolateReachedState(latestState);
                 // Add the state to our history as we would in a authoritative setup
                 this.stateHistory.Add(time, latestState);
             }
@@ -677,17 +653,17 @@ namespace Code.Player.Character.NetworkedMovement
                 // TODO: do we need to make sure of that by making it kinematic? Or ensuring that we always
                 // reset the object to the last snapshot somehow after the tick is over?
                 if (input == null) return;
-                this.movementSystem.Tick(input, true);
+                this.stateSystem.Tick(input, true);
                 return;
             }
 
             // Update our command number and process the next tick
             clientCommandNumber++;
-            // Read input from movement system
-            var command = this.movementSystem.GetCommand(clientCommandNumber, time);
+            // Read input from system
+            var command = this.stateSystem.GetCommand(clientCommandNumber, time);
             this.inputHistory.Add(time, command);
-            // Tick movement system
-            this.movementSystem.Tick(command, false);
+            // Tick system
+            this.stateSystem.Tick(command, false);
         }
 
         public void AuthClientCaptureSnapshot(double time, bool replay)
@@ -701,14 +677,14 @@ namespace Code.Player.Character.NetworkedMovement
             if (replay)
             {
                 var authoritativeState = this.stateHistory.Get(time);
-                this.movementSystem.SetCurrentState(authoritativeState);
+                this.stateSystem.SetCurrentState(authoritativeState);
                 return;
             }
 
-            var state = this.movementSystem.GetCurrentState(clientCommandNumber, time);
+            var state = this.stateSystem.GetCurrentState(clientCommandNumber, time);
             this.stateHistory.Add(time, state);
 
-            // Report snapshot from movement system to server.
+            // Report snapshot from system to server.
             if (this.lastClientSend <= NetworkTime.time - NetworkClient.sendInterval)
             {
                 this.lastClientSend = NetworkTime.time;
@@ -721,7 +697,7 @@ namespace Code.Player.Character.NetworkedMovement
             // Clients rolling back for resims on predicted objects will want to
             // have those resims properly affected by client auth objects.
             var state = this.stateHistory.Get(time);
-            this.movementSystem.SetCurrentState(state);
+            this.stateSystem.SetCurrentState(state);
         }
 
         #endregion
@@ -735,7 +711,7 @@ namespace Code.Player.Character.NetworkedMovement
             if (replay)
             {
                 var authoritativeState = this.stateHistory.Get(time);
-                this.movementSystem.SetCurrentState(authoritativeState);
+                this.stateSystem.SetCurrentState(authoritativeState);
                 return;
             }
 
@@ -749,8 +725,8 @@ namespace Code.Player.Character.NetworkedMovement
 
             // Update our last state time so we don't call InterpolateReachedState more than once on the same state.
             this.clientLastInterpolatedStateTime = state.time;
-            // Notify the movement system of a new reached state
-            this.movementSystem.InterpolateReachedState(state);
+            // Notify the system of a new reached state
+            this.stateSystem.InterpolateReachedState(state);
         }
 
         public void ObservingClientTick(double time, bool replay)
@@ -761,7 +737,7 @@ namespace Code.Player.Character.NetworkedMovement
         public void ObservingClientSetSnapshot(double time)
         {
             var authoritativeState = this.stateHistory.Get(time);
-            this.movementSystem.SetCurrentState(authoritativeState);
+            this.stateSystem.SetCurrentState(authoritativeState);
         }
 
         #endregion
@@ -769,7 +745,7 @@ namespace Code.Player.Character.NetworkedMovement
         #region Utility Functions
 
         /**
-         * Handles triggering interpolation in the movement system for observers
+         * Handles triggering interpolation in the system for observers
          */
         private void Interpolate()
         {
@@ -787,7 +763,7 @@ namespace Code.Player.Character.NetworkedMovement
             var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time);
 
             // Call interp on the networked state system so it can place things properly for the render.
-            this.movementSystem.Interpolate((float)timeDelta, prevState, nextState);
+            this.stateSystem.Interpolate((float)timeDelta, prevState, nextState);
         }
 
         /**
@@ -803,7 +779,7 @@ namespace Code.Player.Character.NetworkedMovement
                 // is sending us snapshots.
                 // Since we now know where we should be authoritatively, set the current state. Since this isn't a prediction,
                 // we don't add it to the stateHistory.
-                this.movementSystem.SetCurrentState(state);
+                this.stateSystem.SetCurrentState(state);
                 Physics.SyncTransforms();
                 return;
             }
@@ -862,11 +838,11 @@ namespace Code.Player.Character.NetworkedMovement
             // Debug.LogWarning("Resimulating command " + state.lastProcessedCommand);
 
             // Correct our networked system state to match the authoritative answer from the server
-            this.movementSystem.SetCurrentState(state);
+            this.stateSystem.SetCurrentState(state);
             Physics.SyncTransforms();
             // Build an updated state entry for the command that was processed by the server.
             // We use the client prediction time so we can act like we got this right in our history
-            var updatedState = this.movementSystem.GetCurrentState(state.lastProcessedCommand,
+            var updatedState = this.stateSystem.GetCurrentState(state.lastProcessedCommand,
                 clientPredictedState.time);
             // Debug.Log("Generated updated state for prediction history: " + updatedState + " based on authed state: " + state);
             // Overwrite the time we should have predicted this on the client so it

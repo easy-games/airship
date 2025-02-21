@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Code.Player.Character.MovementSystems.Character;
 using Mirror;
 using UnityEngine;
 
@@ -40,7 +41,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         private float nextIdleReactionLength = 0;
         private AnimatorOverrideController animatorOverride;
-        private BasicCharacterState currentState = BasicCharacterState.Idle;
+        private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentVelNormalized = Vector2.zero;
         private Vector2 targetVelNormalized;
         private float verticalVel = 0;
@@ -126,7 +127,7 @@ namespace Code.Player.Character.NetworkedMovement
             GetRandomReactionLength();
 
             //Enter default state
-            SetState(new BasicCharacterAnimationSyncData());
+            SetState(new CharacterAnimationSyncData());
         }
 
         private void OnDisable()
@@ -160,11 +161,11 @@ namespace Code.Player.Character.NetworkedMovement
             }
 
             //Don't vary animation speeds if we are in the air or not moving
-            if (currentState == BasicCharacterState.Airborne)
+            if (currentState == CharacterState.Airborne)
             {
                 targetPlaybackSpeed = 1;
             }
-            else if ((currentState == BasicCharacterState.Crouching && targetPlaybackSpeed < .1) ||
+            else if ((currentState == CharacterState.Crouching && targetPlaybackSpeed < .1) ||
                      targetPlaybackSpeed < .03)
             {
                 targetVelNormalized = Vector2.zero;
@@ -212,7 +213,7 @@ namespace Code.Player.Character.NetworkedMovement
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
 
-            if (idleRectionLength > 0 && currentState == BasicCharacterState.Idle &&
+            if (idleRectionLength > 0 && currentState == CharacterState.Idle &&
                 Time.time - lastStateTime > nextIdleReactionLength)
             {
                 //Idle reaction
@@ -236,11 +237,11 @@ namespace Code.Player.Character.NetworkedMovement
         {
             //The target speed is the movement speed the animations were built for
             var targetSpeed = 4.4444445f;
-            if (currentState == BasicCharacterState.Sprinting)
+            if (currentState == CharacterState.Sprinting)
             {
                 targetSpeed = 6.6666667f;
             }
-            else if (currentState == BasicCharacterState.Crouching)
+            else if (currentState == CharacterState.Crouching)
             {
                 targetSpeed = 2.1233335f;
             }
@@ -252,7 +253,7 @@ namespace Code.Player.Character.NetworkedMovement
             //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
         }
 
-        public void SetState(BasicCharacterAnimationSyncData syncedState)
+        public void SetState(CharacterAnimationSyncData syncedState)
         {
             if (!enabled || !this.gameObject.activeInHierarchy)
             {
@@ -262,9 +263,9 @@ namespace Code.Player.Character.NetworkedMovement
             var newState = syncedState.state;
             this.grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
-            animator.SetBool("Crouching", syncedState.crouching || syncedState.state == BasicCharacterState.Crouching);
+            animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
             animator.SetBool("Sprinting",
-                !syncedState.crouching && (syncedState.sprinting || syncedState.state == BasicCharacterState.Sprinting));
+                !syncedState.crouching && (syncedState.sprinting || syncedState.state == CharacterState.Sprinting));
 
             if (syncedState.jumping)
             {
@@ -273,7 +274,7 @@ namespace Code.Player.Character.NetworkedMovement
 
             if (sprintVfx)
             {
-                if (newState == BasicCharacterState.Sprinting)
+                if (newState == CharacterState.Sprinting)
                 {
                     if (this.IsInParticleDistance() && !sprintVfx.isPlaying)
                     {

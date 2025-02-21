@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Code.Player.Character.NetworkedMovement
+namespace Code.Player.Character.MovementSystems.Character
 {
     [LuauAPI]
-    public class BasicCharacterMovementSettings: MonoBehaviour
+    public class CharacterMovementSettings: MonoBehaviour
     {
         [Header("Collider Size")] [Tooltip("Height of the character hit box")] [Min(.01f)]
         public float characterHeight = 1.8f;

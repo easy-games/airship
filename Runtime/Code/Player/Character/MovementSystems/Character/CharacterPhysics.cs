@@ -1,22 +1,22 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement
+namespace Code.Player.Character.MovementSystems.Character
 {
-    public class BasicCharacterPhysics
+    public class CharacterPhysics
     {
         private const float offsetMargin = .02f;
         private const float gizmoDuration = 4f;
 
-        private BasicCharacterMovement movement;
+        private CharacterMovement _movement;
         private Vector3 uniformHalfExtents;
         private Vector3 uniformFullExtents;
 
         public Dictionary<int, Collider> ignoredColliders = new();
 
-        public BasicCharacterPhysics(BasicCharacterMovement movement)
+        public CharacterPhysics(CharacterMovement movement)
         {
-            this.movement = movement;
+            this._movement = movement;
             uniformHalfExtents =
                 new Vector3(movement.characterRadius, movement.characterRadius, movement.characterRadius);
             uniformFullExtents = uniformHalfExtents * 2f;
@@ -33,7 +33,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         public Vector3 CalculateDrag(Vector3 velocity, float dragConstant)
         {
-            var drag = 1 * dragConstant + velocity.magnitude / movement.movementSettings.terminalVelocity * dragConstant;
+            var drag = 1 * dragConstant + velocity.magnitude / _movement.movementSettings.terminalVelocity * dragConstant;
             return -velocity.normalized * drag;
         }
 
@@ -47,16 +47,16 @@ namespace Code.Player.Character.NetworkedMovement
 
         public bool IsPointVerticallyInCharacter(Vector3 worldPosition, bool avoidStepHeight = false)
         {
-            Vector3 localPoint = movement.transform.InverseTransformPoint(worldPosition);
-            float minHeight = avoidStepHeight ? movement.movementSettings.maxStepUpHeight : 0;
+            Vector3 localPoint = _movement.transform.InverseTransformPoint(worldPosition);
+            float minHeight = avoidStepHeight ? _movement.movementSettings.maxStepUpHeight : 0;
             //var distance = Vector3.Distance(Vector3.zero, localHit);
             //var inCylinder =  distance <= standingCharacterRadius+.01f && localHit.y >= movement.moveData.maxSlopeDelta;
-            return localPoint.y >= minHeight && localPoint.y < movement.currentCharacterHeight;
+            return localPoint.y >= minHeight && localPoint.y < _movement.currentCharacterHeight;
         }
 
         public bool IsPointInCharacterRadius(Vector3 worldPosition)
         {
-            return GetFlatDistance(worldPosition, movement.transform.position) < movement.characterRadius;
+            return GetFlatDistance(worldPosition, _movement.transform.position) < _movement.characterRadius;
         }
 
         public float GetFlatDistance(Vector3 A, Vector3 B)
@@ -68,7 +68,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         public bool IsWalkableSurface(Vector3 normal)
         {
-            return (1 - Vector3.Dot(normal, movement.transform.up)) < movement.movementSettings.maxSlopeDelta;
+            return (1 - Vector3.Dot(normal, _movement.transform.up)) < _movement.movementSettings.maxSlopeDelta;
         }
 
         public static Vector3 CalculateRealNormal(Vector3 currentNormal, Vector3 origin, Vector3 direction,
@@ -102,14 +102,14 @@ namespace Code.Player.Character.NetworkedMovement
                 Mathf.Max(0, -vel.y) +
                 offsetMargin; // Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
 
-            var gravityDir = -movement.transform.up;
+            var gravityDir = -_movement.transform.up;
             var gravityDirOffset = gravityDir.normalized * .1f;
 
             //Check directly below character as an early out and for comparison information
             if (Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, castDistance,
-                    movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
+                    _movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
             {
-                if (movement.drawDebugGizmos_GROUND)
+                if (_movement.drawDebugGizmos_GROUND)
                 {
                     GizmoUtils.DrawLine(castStartPos, castStartPos + gravityDir * castDistance, Color.gray,
                         gizmoDuration);
@@ -128,7 +128,7 @@ namespace Code.Player.Character.NetworkedMovement
             extents.y = verticalExtents;
             castStartPos.y += verticalExtents;
 
-            if (movement.drawDebugGizmos_GROUND)
+            if (_movement.drawDebugGizmos_GROUND)
             {
                 GizmoUtils.DrawBox(castStartPos, Quaternion.identity, extents, Color.magenta, gizmoDuration);
                 GizmoUtils.DrawBox(castStartPos + gravityDir * castDistance, Quaternion.identity, extents,
@@ -137,23 +137,23 @@ namespace Code.Player.Character.NetworkedMovement
 
             //Check down around the entire character
             if (Physics.BoxCast(castStartPos, extents, gravityDir, out var hitInfo, Quaternion.identity, castDistance,
-                    movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
+                    _movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
             {
-                if (movement.drawDebugGizmos_GROUND)
+                if (_movement.drawDebugGizmos_GROUND)
                 {
                     GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
                 }
 
-                if (!movement.currentMoveState.isGrounded)
+                if (!_movement.currentMoveState.isGrounded)
                 {
-                    if (movement.drawDebugGizmos_GROUND)
+                    if (_movement.drawDebugGizmos_GROUND)
                     {
                         GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, gizmoDuration);
                     }
 
-                    if (movement.useExtraLogging)
+                    if (_movement.useExtraLogging)
                     {
-                        Debug.Log("hitInfo GROUND. UpDot: " + Vector3.Dot(hitInfo.normal, movement.transform.up) +
+                        Debug.Log("hitInfo GROUND. UpDot: " + Vector3.Dot(hitInfo.normal, _movement.transform.up) +
                                   " Start: " + castStartPos + " distance: " + castDistance + " hitInfo point: " +
                                   hitInfo.collider.gameObject.name + " at: " + hitInfo.point);
                     }
@@ -164,9 +164,9 @@ namespace Code.Player.Character.NetworkedMovement
                     //Physics Casts give you interpolated normals. This uses a ray to find an exact normal
                     hitInfo.normal = CalculateRealNormal(hitInfo.normal,
                         hitInfo.point + gravityDirOffset + moveDir.normalized * .01f, gravityDir, .11f,
-                        movement.movementSettings.groundCollisionLayerMask);
+                        _movement.movementSettings.groundCollisionLayerMask);
 
-                    if (movement.drawDebugGizmos_GROUND)
+                    if (_movement.drawDebugGizmos_GROUND)
                     {
                         GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.red, gizmoDuration);
                     }
@@ -195,18 +195,18 @@ namespace Code.Player.Character.NetworkedMovement
             RaycastHit hitInfo;
             //BOX CASTING
             Vector3 normalizedForward = forwardVector.normalized;
-            float distance = forwardVector.magnitude - movement.characterRadius;
+            float distance = forwardVector.magnitude - _movement.characterRadius;
             float centerHeight = ignoreStepUp
-                ? (movement.movementSettings.maxStepUpHeight + movement.currentCharacterHeight) / 2f
-                : movement.currentCharacterHeight / 2f;
+                ? (_movement.movementSettings.maxStepUpHeight + _movement.currentCharacterHeight) / 2f
+                : _movement.currentCharacterHeight / 2f;
             //Move from root to center of collider
             var startPos = rootPos + new Vector3(0, centerHeight, 0);
             var extents = ignoreStepUp
-                ? new Vector3(movement.characterHalfExtents.x,
-                    movement.characterHalfExtents.y - movement.movementSettings.maxStepUpHeight / 2f,
-                    movement.characterHalfExtents.z)
-                : movement.characterHalfExtents;
-            if (drawGizmo && movement.drawDebugGizmos_FORWARD)
+                ? new Vector3(_movement.characterHalfExtents.x,
+                    _movement.characterHalfExtents.y - _movement.movementSettings.maxStepUpHeight / 2f,
+                    _movement.characterHalfExtents.z)
+                : _movement.characterHalfExtents;
+            if (drawGizmo && _movement.drawDebugGizmos_FORWARD)
             {
                 GizmoUtils.DrawBox(startPos, Quaternion.identity, extents, Color.blue, gizmoDuration);
                 GizmoUtils.DrawBox(startPos + normalizedForward * distance, Quaternion.identity, extents, Color.green,
@@ -214,19 +214,19 @@ namespace Code.Player.Character.NetworkedMovement
             }
 
             if (Physics.BoxCast(startPos, extents, forwardVector, out hitInfo, Quaternion.identity, distance,
-                    movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
+                    _movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
             {
                 if (!this.ignoredColliders.ContainsKey(hitInfo.collider.GetInstanceID()))
                 {
                     //bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
                     //var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
                     var isVerticalWall = 1 - Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >=
-                                         movement.movementSettings.maxSlopeDelta;
+                                         _movement.movementSettings.maxSlopeDelta;
                     //localHit.y = 0;
                     hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point - forwardVector, forwardVector,
-                        forwardVector.magnitude, movement.movementSettings.groundCollisionLayerMask);
+                        forwardVector.magnitude, _movement.movementSettings.groundCollisionLayerMask);
 
-                    if (drawGizmo && movement.drawDebugGizmos_FORWARD)
+                    if (drawGizmo && _movement.drawDebugGizmos_FORWARD)
                     {
                         GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.black, 4, gizmoDuration);
                         GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.black, gizmoDuration);
@@ -251,28 +251,28 @@ namespace Code.Player.Character.NetworkedMovement
             var velDir = vel.normalized;
             var flatDir = new Vector3(velDir.x, 0, velDir.z).normalized;
             var velFrame = vel / deltaTime;
-            float stepUpRampDistance = movement.movementSettings.stepUpRampDistance;
+            float stepUpRampDistance = _movement.movementSettings.stepUpRampDistance;
             (bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(
                 startPos + new Vector3(0, offsetMargin, 0) - velDir * offsetMargin,
                 flatDir * (stepUpRampDistance + offsetMargin), false, false);
 
-            if (didHitForward && movement.useExtraLogging)
+            if (didHitForward && _movement.useExtraLogging)
             {
                 Debug.Log("currentUpNormal: " + currentUpNormal + " forwardHitInfo: " + forwardHitInfo.normal +
                           " EQUAL: " + (currentUpNormal == forwardHitInfo.normal));
             }
 
-            if (didHitForward && movement.drawDebugGizmos_STEPUP)
+            if (didHitForward && _movement.drawDebugGizmos_STEPUP)
             {
                 GizmoUtils.DrawSphere(forwardHitInfo.point, .025f, Color.cyan, 4, gizmoDuration);
             }
 
             var heightDiff = Mathf.Abs(forwardHitInfo.point.y - startPos.y);
-            var flatDistance = GetFlatDistance(movement.rootTransform.position, forwardHitInfo.point);
+            var flatDistance = GetFlatDistance(_movement.rootTransform.position, forwardHitInfo.point);
             //See if we can do ramp based step up
             if (didHitForward &&
                 //lower than the step up height
-                heightDiff <= movement.movementSettings.maxStepUpHeight &&
+                heightDiff <= _movement.movementSettings.maxStepUpHeight &&
                 //Thats not the same surface we are standing on
                 (heightDiff < offsetMargin || currentUpNormal != forwardHitInfo.normal) &&
                 //The hit wall isn't a walkable surface
@@ -280,9 +280,9 @@ namespace Code.Player.Character.NetworkedMovement
             {
                 //See if there is a surface to step up onto
                 var stepUpRayStart = forwardHitInfo.point + velDir * (forwardHitInfo.distance + offsetMargin);
-                stepUpRayStart.y = startPos.y + movement.movementSettings.maxStepUpHeight + movement.characterRadius;
+                stepUpRayStart.y = startPos.y + _movement.movementSettings.maxStepUpHeight + _movement.characterRadius;
 
-                if (movement.drawDebugGizmos_STEPUP)
+                if (_movement.drawDebugGizmos_STEPUP)
                 {
                     //Where the character is in this moment
                     GizmoUtils.DrawSphere(startPos, .04f, Color.blue, 4, gizmoDuration);
@@ -291,11 +291,11 @@ namespace Code.Player.Character.NetworkedMovement
                 //if(Physics.BoxCast(stepUpRayStart, new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
                 //Vector3.down, out RaycastHit stepUpRayHitInfo, Quaternion.identity, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
                 if (Physics.Raycast(stepUpRayStart, new Vector3(0, -1, 0), out RaycastHit stepUpRayHitInfo,
-                        movement.movementSettings.characterHeight, movement.movementSettings.groundCollisionLayerMask,
+                        _movement.movementSettings.characterHeight, _movement.movementSettings.groundCollisionLayerMask,
                         QueryTriggerInteraction.Ignore))
                 {
                     //Hit a surface that is in range
-                    if (movement.drawDebugGizmos_STEPUP)
+                    if (_movement.drawDebugGizmos_STEPUP)
                     {
                         //A line to where the step up was hit
                         GizmoUtils.DrawSphere(stepUpRayStart, .05f, Color.yellow, 4, gizmoDuration);
@@ -305,20 +305,20 @@ namespace Code.Player.Character.NetworkedMovement
                     //Make sure the surface is valid
                     if (stepUpRayHitInfo.point.y > startPos.y + Mathf.Min(0, velFrame.y)
                         && IsWalkableSurface(stepUpRayHitInfo.normal)
-                        && !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight,
-                            movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
+                        && !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, _movement.currentCharacterHeight,
+                            _movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
                     {
                         //CAN STEP UP HERE
                         //Find the slope direction that the character needs to walk up to the step
                         var cornerPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin,
                             forwardHitInfo.point.z);
-                        var topPoint = cornerPoint - flatDir * (offsetMargin + movement.characterRadius);
+                        var topPoint = cornerPoint - flatDir * (offsetMargin + _movement.characterRadius);
                         topPoint.y += offsetMargin + offsetMargin;
 
                         var bottompoint = topPoint - flatDir * stepUpRampDistance;
-                        bottompoint.y = topPoint.y - movement.movementSettings.maxStepUpHeight;
+                        bottompoint.y = topPoint.y - _movement.movementSettings.maxStepUpHeight;
                         if (Physics.Raycast(startPos + Vector3.up, new Vector3(0, -1, 0), out var originalFloorHitInfo,
-                                1 + movement.movementSettings.maxStepUpHeight, movement.movementSettings.groundCollisionLayerMask,
+                                1 + _movement.movementSettings.maxStepUpHeight, _movement.movementSettings.groundCollisionLayerMask,
                                 QueryTriggerInteraction.Ignore))
                         {
                             bottompoint.y = originalFloorHitInfo.point.y;
@@ -333,7 +333,7 @@ namespace Code.Player.Character.NetworkedMovement
                         var pointOnRampDelta = Mathf.Clamp01(rawDelta);
                         var pointOnRamp =
                             Vector3.Lerp(bottompoint, topPoint, pointOnRampDelta); // + new Vector3(0,offsetMargin,0);
-                        if (movement.drawDebugGizmos_STEPUP)
+                        if (_movement.drawDebugGizmos_STEPUP)
                         {
                             //Where we consider the corner of the ledge
                             GizmoUtils.DrawBox(cornerPoint, Quaternion.identity, Vector3.one * .02f, Color.red, 4);
@@ -352,7 +352,7 @@ namespace Code.Player.Character.NetworkedMovement
                         return (true, rawDelta >= 0 && rawDelta <= 1, pointOnRamp,
                             Vector3.ProjectOnPlane(vel, rampNormal));
                     }
-                    else if (movement.useExtraLogging)
+                    else if (_movement.useExtraLogging)
                     {
                         Debug.Log("Can't step up here. hitPoint: " + stepUpRayHitInfo.point + " startPos: " + startPos +
                                   " isWalkable: " + IsWalkableSurface(stepUpRayHitInfo.normal));
@@ -364,9 +364,9 @@ namespace Code.Player.Character.NetworkedMovement
                 startPos - velDir * offsetMargin, velDir * (stepUpRampDistance + offsetMargin), false, false);
 
             //See if we should fallback to simplified stepup
-            if (movement.movementSettings.alwaysStepUp ||
-                (didHitExactForward && movement.currentMoveState.isGrounded &&
-                 flatDistance < velFrame.magnitude + movement.characterRadius
+            if (_movement.movementSettings.alwaysStepUp ||
+                (didHitExactForward && _movement.currentMoveState.isGrounded &&
+                 flatDistance < velFrame.magnitude + _movement.characterRadius
                  && (Vector3.Equals(currentUpNormal, Vector3.up) || !IsWalkableSurface(forwardExactHitInfo.normal))))
             {
                 //We hit something but don't qualify for the advanced ramp step up
@@ -374,12 +374,12 @@ namespace Code.Player.Character.NetworkedMovement
                 if (!didHitExactForward)
                 {
                     startPoint = startPos;
-                    startPoint.y += movement.movementSettings.maxStepUpHeight + movement.standingCharacterHeight;
+                    startPoint.y += _movement.movementSettings.maxStepUpHeight + _movement.standingCharacterHeight;
                 }
                 else
                 {
                     startPoint = new Vector3(forwardExactHitInfo.point.x,
-                        startPos.y + movement.movementSettings.maxStepUpHeight + movement.standingCharacterHeight,
+                        startPos.y + _movement.movementSettings.maxStepUpHeight + _movement.standingCharacterHeight,
                         forwardExactHitInfo.point.z);
                 }
 
@@ -387,19 +387,19 @@ namespace Code.Player.Character.NetworkedMovement
 
                 //Cast a ray down from where the character will be next frame
                 if (Physics.Raycast(startPoint, Vector3.down, out RaycastHit quickStepHitInfo,
-                        movement.movementSettings.maxStepUpHeight + movement.standingCharacterHeight,
-                        movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
+                        _movement.movementSettings.maxStepUpHeight + _movement.standingCharacterHeight,
+                        _movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
                 {
                     //make sure there isn't an obstruction above us
                     if (!Physics.Raycast(quickStepHitInfo.point, Vector3.up,
-                            movement.standingCharacterHeight + offsetMargin, movement.movementSettings.groundCollisionLayerMask,
+                            _movement.standingCharacterHeight + offsetMargin, _movement.movementSettings.groundCollisionLayerMask,
                             QueryTriggerInteraction.Ignore)
                         && IsWalkableSurface(quickStepHitInfo.normal)
-                        && Mathf.Abs(quickStepHitInfo.point.y - movement.transform.position.y) <
-                        movement.movementSettings.maxStepUpHeight)
+                        && Mathf.Abs(quickStepHitInfo.point.y - _movement.transform.position.y) <
+                        _movement.movementSettings.maxStepUpHeight)
                     {
                         var hitPoint = quickStepHitInfo.point + new Vector3(0, offsetMargin + offsetMargin, 0);
-                        if (movement.drawDebugGizmos_STEPUP)
+                        if (_movement.drawDebugGizmos_STEPUP)
                         {
                             GizmoUtils.DrawSphere(startPoint, .1f, Color.white, 4, gizmoDuration);
                             GizmoUtils.DrawSphere(hitPoint, .05f, Color.white, 4, gizmoDuration);
@@ -420,12 +420,12 @@ namespace Code.Player.Character.NetworkedMovement
         public bool CanStand()
         {
             if (Physics.BoxCast(
-                    movement.rootTransform.position + new Vector3(0, movement.characterRadius + offsetMargin, 0),
-                    new Vector3(movement.characterRadius, movement.characterRadius, movement.characterRadius),
+                    _movement.rootTransform.position + new Vector3(0, _movement.characterRadius + offsetMargin, 0),
+                    new Vector3(_movement.characterRadius, _movement.characterRadius, _movement.characterRadius),
                     Vector3.up, out RaycastHit hitInfo, Quaternion.identity,
-                    movement.standingCharacterHeight - movement.characterRadius - movement.characterRadius -
+                    _movement.standingCharacterHeight - _movement.characterRadius - _movement.characterRadius -
                     offsetMargin,
-                    movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
+                    _movement.movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
             {
                 if (!this.ignoredColliders.ContainsKey(hitInfo.collider.GetInstanceID()))
                 {

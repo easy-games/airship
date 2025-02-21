@@ -1,12 +1,12 @@
 using System;
 using Assets.Luau;
-using Mirror;
+using Code.Network.StateSystem;
+using Code.Player.Character.NetworkedMovement;
 using UnityEngine;
-using UnityEngine.Serialization;
 
-namespace Code.Player.Character.NetworkedMovement
+namespace Code.Player.Character.MovementSystems.Character
 {
-    public enum BasicCharacterState
+    public enum CharacterState
     {
         Idle = 0,
         Running = 1,
@@ -16,14 +16,14 @@ namespace Code.Player.Character.NetworkedMovement
     }
 
     [LuauAPI]
-    public class BasicCharacterMovement : NetworkedMovement<BasicCharacterMovementState, BasicCharacterInputData>
+    public class CharacterMovement : NetworkedStateSystem<CharacterMovementState, CharacterInputData>
     {
         public Rigidbody rigidbody;
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
         public Transform graphicTransform; //A transform that games can animate
         public CharacterAnimationHelper animationHelper;
-        public BasicCharacterMovementSettings movementSettings;
+        public CharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
         public Transform slopeVisualizer;
         
@@ -42,7 +42,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         #region PRIVATE REFS
 
-        private BasicCharacterPhysics physics;
+        private CharacterPhysics physics;
 
         #endregion
 
@@ -105,8 +105,8 @@ namespace Code.Player.Character.NetworkedMovement
         private BinaryBlob customData;
 
         // State information
-        public BasicCharacterMovementState currentMoveState = new BasicCharacterMovementState() {};
-        public BasicCharacterAnimationSyncData currentAnimState = new BasicCharacterAnimationSyncData() {};
+        public CharacterMovementState currentMoveState = new CharacterMovementState() {};
+        public CharacterAnimationSyncData currentAnimState = new CharacterAnimationSyncData() {};
 
         #region PUBLIC GET
         public float currentCharacterHeight { get; private set; }
@@ -126,21 +126,21 @@ namespace Code.Player.Character.NetworkedMovement
         private void Awake()
         {
             if(this.physics == null){
-                this.physics = new BasicCharacterPhysics(this);
+                this.physics = new CharacterPhysics(this);
             }
         }
 
-        public override void OnSetMode(MovementMode mode)
+        public override void OnSetMode(NetworkedStateSystemMode mode)
         {
             Debug.Log("Running movement in " + mode + " mode.");
-            if (mode == MovementMode.Observer)
+            if (mode == NetworkedStateSystemMode.Observer)
             {
                 rigidbody.isKinematic = true;
                 rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
                 rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 
-            if (mode == MovementMode.Authority || mode == MovementMode.Input)
+            if (mode == NetworkedStateSystemMode.Authority || mode == NetworkedStateSystemMode.Input)
             {
                 rigidbody.isKinematic = false;
                 rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
@@ -148,7 +148,7 @@ namespace Code.Player.Character.NetworkedMovement
             }
         }
 
-        public override void SetCurrentState(BasicCharacterMovementState state)
+        public override void SetCurrentState(CharacterMovementState state)
         {
             this.currentMoveState.CopyFrom(state);
             this.rigidbody.position = state.position;
@@ -158,11 +158,11 @@ namespace Code.Player.Character.NetworkedMovement
             }
         }
 
-        public override BasicCharacterMovementState GetCurrentState(int commandNumber, double time)
+        public override CharacterMovementState GetCurrentState(int commandNumber, double time)
         {
             // Custom data may be changed during the tick. We store the result of the tick
             // (and any custom data changes) in the snapshot.
-            var snapshot = new BasicCharacterMovementState();
+            var snapshot = new CharacterMovementState();
             snapshot.CopyFrom(this.currentMoveState);
             snapshot.time = time;
             snapshot.lastProcessedCommand = commandNumber;
@@ -171,10 +171,10 @@ namespace Code.Player.Character.NetworkedMovement
             return snapshot;
         }
 
-        public override BasicCharacterInputData GetCommand(int commandNumber, double time)
+        public override CharacterInputData GetCommand(int commandNumber, double time)
         {
             OnSetCustomData?.Invoke();
-            return new BasicCharacterInputData()
+            return new CharacterInputData()
             {
                 commandNumber = commandNumber,
                 time = time,
@@ -187,7 +187,7 @@ namespace Code.Player.Character.NetworkedMovement
             };
         }
 
-        public override void Tick(BasicCharacterInputData command, bool replay)
+        public override void Tick(CharacterInputData command, bool replay)
         {
             if (command == null) return;
             // Use custom data from command
@@ -373,40 +373,40 @@ namespace Code.Player.Character.NetworkedMovement
                 : //Only sprint if you are moving forward
                 command.sprint && command.moveDir.magnitude > 0.1f; //Only sprint if you are moving
 
-            BasicCharacterState
+            CharacterState
                 groundedState =
-                    BasicCharacterState.Idle; //So you can know the desired state even if we are technically in the air
+                    CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
             //Check to see if we can stand up from a crouch
-            if ((movementSettings.autoCrouch || currentMoveState.prevState == BasicCharacterState.Crouching) && !canStand)
+            if ((movementSettings.autoCrouch || currentMoveState.prevState == CharacterState.Crouching) && !canStand)
             {
-                groundedState = BasicCharacterState.Crouching;
+                groundedState = CharacterState.Crouching;
             }
             else if (command.crouch && grounded)
             {
-                groundedState = BasicCharacterState.Crouching;
+                groundedState = CharacterState.Crouching;
             }
             else if (isMoving)
             {
                 if (tryingToSprint)
                 {
-                    groundedState = BasicCharacterState.Sprinting;
+                    groundedState = CharacterState.Sprinting;
                     currentMoveState.isSprinting = true;
                 }
                 else
                 {
-                    groundedState = BasicCharacterState.Running;
+                    groundedState = CharacterState.Running;
                 }
             }
             else
             {
-                groundedState = BasicCharacterState.Idle;
+                groundedState = CharacterState.Idle;
             }
 
             //If you are in the air override the state
             if (inAir)
             {
-                currentMoveState.state = BasicCharacterState.Airborne;
+                currentMoveState.state = CharacterState.Airborne;
             }
             else
             {
@@ -450,7 +450,7 @@ namespace Code.Player.Character.NetworkedMovement
             #region CROUCH
 
             // Prevent falling off blocks while crouching
-            currentMoveState.isCrouching = groundedState == BasicCharacterState.Crouching;
+            currentMoveState.isCrouching = groundedState == CharacterState.Crouching;
             if (movementSettings.preventFallingWhileCrouching && !currentMoveState.prevStepUp && currentMoveState.isCrouching && isMoving &&
                 grounded)
             {
@@ -596,7 +596,7 @@ namespace Code.Player.Character.NetworkedMovement
                 currentAcc = movementSettings.accelerationForce;
             }
 
-            if (currentMoveState.state == BasicCharacterState.Crouching)
+            if (currentMoveState.state == CharacterState.Crouching)
             {
                 currentMoveState.currentSpeed *= movementSettings.crouchSpeedMultiplier;
                 currentAcc *= movementSettings.crouchSpeedMultiplier;
@@ -781,7 +781,7 @@ namespace Code.Player.Character.NetworkedMovement
             {
                 //Moving faster than max speed or using acceleration mode
                 newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) *
-                               (groundedState == BasicCharacterState.Sprinting
+                               (groundedState == CharacterState.Sprinting
                                    ? this.movementSettings.sprintAccelerationForce
                                    : movementSettings.accelerationForce);
             }
@@ -869,7 +869,7 @@ namespace Code.Player.Character.NetworkedMovement
             // only update animations if we are not in a replay
             if (!replay)
             {
-                var newState = new BasicCharacterAnimationSyncData()
+                var newState = new CharacterAnimationSyncData()
                 {
                     state = currentMoveState.state,
                     grounded = !inAir || didStepUp,
@@ -917,8 +917,8 @@ namespace Code.Player.Character.NetworkedMovement
             OnEndMove?.Invoke(currentMoveState, replay);
         }
 
-        public override void Interpolate(float delta, BasicCharacterMovementState stateOld,
-            BasicCharacterMovementState stateNew)
+        public override void Interpolate(float delta, CharacterMovementState stateOld,
+            CharacterMovementState stateNew)
         {
             this.rigidbody.position = Vector3.Lerp(stateOld.position, stateNew.position, delta);
             airshipTransform.rotation = Quaternion.Lerp(
@@ -927,9 +927,9 @@ namespace Code.Player.Character.NetworkedMovement
                 delta);
         }
 
-        public override void InterpolateReachedState(BasicCharacterMovementState state)
+        public override void InterpolateReachedState(CharacterMovementState state)
         {
-            var newState = new BasicCharacterAnimationSyncData()
+            var newState = new CharacterAnimationSyncData()
             {
                 state = state.state,
                 grounded = state.isGrounded,
@@ -953,7 +953,7 @@ namespace Code.Player.Character.NetworkedMovement
         {
             // We only update rotation in late update if we are running on a client that is controlling
             // this system
-            if (mode != MovementMode.Authority && mode != MovementMode.Input) return;
+            if (mode != NetworkedStateSystemMode.Authority && mode != NetworkedStateSystemMode.Input) return;
             
             var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
             if(lookTarget == Vector3.zero){
@@ -1005,11 +1005,11 @@ namespace Code.Player.Character.NetworkedMovement
         public void SetLookVectorRecurring(Vector3 lookVector)
         {
             // Don't set look vectors on observed characters
-            if (mode == MovementMode.Observer) return;
+            if (mode == NetworkedStateSystemMode.Observer) return;
             
             // If we are the client creating input, we want to set the actual local look vector.
             // It will be moved into the state and sent to the server in the next snapshot.
-            if (mode == MovementMode.Input || (mode == MovementMode.Authority && isClient))
+            if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient))
             {
                 this.lookVector = lookVector;
                 return;
@@ -1020,7 +1020,7 @@ namespace Code.Player.Character.NetworkedMovement
             // Keep in mind that the client overwrites this on each tick, so the timing of this set is important.
             // It's generally better to just force a look vector on the client because reconciled camera
             // rotation makes people nauseous.
-            if (mode == MovementMode.Authority)
+            if (mode == NetworkedStateSystemMode.Authority)
             {
                 this.currentMoveState.lookVector = this.lookVector;
             }
@@ -1033,7 +1033,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         public void Teleport(Vector3 position)
         {
-            TeleportAndLook(position, mode == MovementMode.Input ? this.lookVector : this.currentMoveState.lookVector);
+            TeleportAndLook(position, mode == NetworkedStateSystemMode.Input ? this.lookVector : this.currentMoveState.lookVector);
         }
 
         public void TeleportAndLook(Vector3 position, Vector3 lookVector)
@@ -1117,7 +1117,7 @@ namespace Code.Player.Character.NetworkedMovement
         public Vector3 GetLookVector()
         {
             // this.lookVector will only get populated when we are the one's creating the inputs
-            return mode == MovementMode.Input ? this.lookVector : this.currentMoveState.lookVector;
+            return mode == NetworkedStateSystemMode.Input ? this.lookVector : this.currentMoveState.lookVector;
         }
 
         #endregion

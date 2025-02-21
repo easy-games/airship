@@ -43,6 +43,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 using Code.Player.Accessories;
+using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.NetworkedMovement;
 
 public class TypeGenerator : MonoBehaviour
@@ -237,7 +238,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(ConstantForce),
             typeof(ConstantForce2D),
             typeof(FixedJoint),
-            typeof(MoveInputData),
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
@@ -249,10 +249,10 @@ public class TypeGenerator : MonoBehaviour
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
             typeof(VisualGraphComponent),
-            typeof(BasicCharacterMovementState),
-            typeof(BasicCharacterInputData),
-            typeof(BasicCharacterMovementSettings),
-            typeof(BasicCharacterAnimationSyncData),
+            typeof(CharacterMovementState),
+            typeof(CharacterInputData),
+            typeof(CharacterMovementSettings),
+            typeof(CharacterAnimationSyncData),
             
             // Steam
             typeof(AirshipSteamFriendInfo),

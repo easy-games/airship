@@ -1,12 +1,12 @@
 using System;
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement
+namespace Code.Player.Character.MovementSystems.Character
 {
     [LuauAPI]
-    public class BasicCharacterAnimationSyncData
+    public class CharacterAnimationSyncData
     {
-        public BasicCharacterState state = BasicCharacterState.Idle;
+        public CharacterState state = CharacterState.Idle;
         public bool grounded = true;
         public bool sprinting = false;
         public bool crouching = false;
@@ -17,7 +17,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         // override object.Equals
         public override bool Equals(object obj) {
-            BasicCharacterAnimationSyncData data = (BasicCharacterAnimationSyncData)obj;
+            CharacterAnimationSyncData data = (CharacterAnimationSyncData)obj;
             return this.state == data.state &&
                    this.grounded == data.grounded &&
                    this.sprinting == data.sprinting &&

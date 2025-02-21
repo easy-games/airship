@@ -3,7 +3,7 @@ using Assets.Luau;
 using Code.Player.Character.Net;
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement
+namespace Code.Player.Character.MovementSystems.Character
 {
 	/// <summary>
 	/// MoveInputData is the movement command stream that keeps track of what the
@@ -12,7 +12,7 @@ namespace Code.Player.Character.NetworkedMovement
 	/// TS/Luau can use the CustomData interface to write arbitrary data to this stream.
 	/// </summary>
 	[LuauAPI]
-	public class BasicCharacterInputData : InputCommand
+	public class CharacterInputData : InputCommand
 	{
 		public Vector3 moveDir;
 		public bool jump;
