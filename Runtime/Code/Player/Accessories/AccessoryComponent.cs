@@ -53,6 +53,13 @@ namespace Code.Player.Accessories {
             UNUSED14 = 1 << 30,
         }
 
+        private void Start() {
+            var renderers = this.gameObject.GetComponentsInChildren<Renderer>();
+            foreach (var renderer in renderers) {
+                renderer.material.shader = Shader.Find(renderer.material.shader.name);
+            }
+        }
+
         public struct BodyMaskInspectorData {
             public BodyMaskInspectorData(BodyMask mask, string name) {
                 this.name = name;

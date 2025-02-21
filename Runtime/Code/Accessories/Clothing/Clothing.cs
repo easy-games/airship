@@ -28,16 +28,13 @@ namespace Code.Accessories.Clothing {
         }
 
         public static async Task<Clothing> DownloadYielding(string classId, string airId) {
-            Debug.Log("Clothing.DownloadYielding");
             var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatformUtil.GetLocalPlatform());
             var url = $"{AirshipPlatformUrl.gameCdn}/airassets/{airId}/{platformString}";
 
             // Check for in-progress downloads
             if (inProgressDownloads.TryGetValue(airId, out var task)) {
                 // By the time we've finished awaiting this, the below existing bundle check will handle this.
-                Debug.Log("Waiting for in-progress...");
                 await task;
-                Debug.Log("Done waiting for in-progress.");
             }
 
             // Check if we already loaded an asset bundle that contains this clothing piece.
@@ -66,12 +63,8 @@ namespace Code.Accessories.Clothing {
                 }
 
                 hash = Hash128.Parse(etag);
-                // foreach (var pair in headReq.GetResponseHeaders()) {
-                //     Debug.Log($"{pair.Key}: {pair.Value}");
-                // }
             }
 
-            Debug.Log("Clothing -> Send web request: " + url);
             var req = UnityWebRequestAssetBundle.GetAssetBundle(url, hash);
             await req.SendWebRequest();
 
@@ -82,6 +75,7 @@ namespace Code.Accessories.Clothing {
             }
 
             AssetBundle bundle = DownloadHandlerAssetBundle.GetContent(req);
+            // Uncomment to list all assets inside the bundle.
             // foreach (var asset in bundle.GetAllAssetNames()) {
             //     Debug.Log("  - " + asset);
             // }

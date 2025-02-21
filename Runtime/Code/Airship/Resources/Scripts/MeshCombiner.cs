@@ -406,6 +406,12 @@ namespace Airship {
                 Material[] finalMaterials = new Material[finalSkinnedMeshCopy.subMeshes.Count];
                 for (int i = 0; i < finalSkinnedMeshCopy.subMeshes.Count; i++) {
                     finalMaterials[i] = finalSkinnedMeshCopy.subMeshes[i].material;
+
+                    if (!finalMaterials[i].shader.isSupported) {
+                        finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
+                    }
+                    // finalMaterials[i].shader = Shader.Find(finalMaterials[i].shader.name);
+                    // finalMaterials[i].name = finalMaterials[i].name + " (Modified)";
                 }
 
                 var outputSkinnedMeshRenderer = this.outputSkinnedMeshRenderers[lodLevel];

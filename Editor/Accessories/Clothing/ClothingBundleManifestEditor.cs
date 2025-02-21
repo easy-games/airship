@@ -174,7 +174,7 @@ namespace Editor.Accessories.Clothing {
 
             // --------------------- //
             // Build
-            if (false) {
+            if (true) {
                 var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
                 var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
                 if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
