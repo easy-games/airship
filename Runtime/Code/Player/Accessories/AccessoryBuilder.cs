@@ -520,7 +520,7 @@ public class AccessoryBuilder : MonoBehaviour {
             }
 
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
-            meshCombiner.CombineMeshes(skinColor);
+            meshCombiner.CombineMeshes(this.skinColor);
         } else {
             // print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();
