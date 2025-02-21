@@ -202,7 +202,7 @@ public class AccessoryBuilder : MonoBehaviour {
     ///     Remove all clothing accessories from the character.
     ///     Not clothing: right and left hands.
     /// </summary>
-    public void RemoveClothingSlots() {
+    public void RemoveClothingAccessories() {
         var toDelete = new List<AccessorySlot>();
         foreach (var pair in activeAccessories) {
             if (pair.Key is AccessorySlot.RightHand or AccessorySlot.LeftHand) {
@@ -430,7 +430,7 @@ public class AccessoryBuilder : MonoBehaviour {
     }
 
     public void UpdateCombinedMesh() {
-        // Debug.Log("UpdateCombinedMesh");
+        Debug.Log("UpdateCombinedMesh");
         Profiler.BeginSample("AB.TryCombineMeshes");
         if (meshCombiner.enabled && Application.isPlaying) {
             meshCombiner.ClearSourceReferences();
@@ -702,7 +702,7 @@ public class AccessoryBuilder : MonoBehaviour {
             return new ActiveAccessory[0];
         }
 
-        RemoveClothingSlots();
+        RemoveClothingAccessories();
         //Skin color
         if (ColorUtility.TryParseHtmlString(outfitDto.skinColor, out var skinColor)) {
             SetSkinColor(skinColor);

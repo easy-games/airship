@@ -14,7 +14,7 @@ namespace Code.Accessories.Clothing {
      */
     [CreateAssetMenu(menuName = "Airship/Clothing")]
     [Icon("Packages/gg.easy.airship/Editor/icons/hat-wizard-solid.png")]
-    [LuauAPI(LuauContext.Protected)]
+    [LuauAPI]
     public class Clothing : ScriptableObject {
         public string classId;
         public AccessoryComponent[] accessoryPrefabs;
