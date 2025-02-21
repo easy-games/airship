@@ -1071,6 +1071,8 @@ public partial class LuauCore : MonoBehaviour {
 
         var obj = new GameObject($"require({fileNameStr})");
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
+        // var obj = LuauState.FromContext(context).GetRequireGameObject();
+        
         // var newBinding = obj.AddComponent<AirshipComponent>();
         //
         // if (newBinding.CreateThreadFromPath(fileNameStr, context) == false) {
