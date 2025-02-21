@@ -201,6 +201,13 @@ namespace Code.Player.Character.NetworkedMovement
 
         private void OnPerformTick(double time, bool replay)
         {
+            // We are in shared mode
+            if (isServer && isClient)
+            {
+                this.AuthClientTick(time, replay);
+                return;
+            }
+            
             // We are the client and we are authoritative. Report our state to the server.
             if (isClient && isOwned && !serverAuth)
             {
@@ -235,6 +242,13 @@ namespace Code.Player.Character.NetworkedMovement
 
         private void OnCaptureSnapshot(double time, bool replay)
         {
+            // We are in shared mode
+            if (isClient && isServer)
+            {
+                this.AuthClientCaptureSnapshot(time, replay);
+                return;
+            }
+            
             // We are the client and we are authoritative. Report our state to the server.
             if (isClient && isOwned && !serverAuth)
             {
@@ -269,6 +283,13 @@ namespace Code.Player.Character.NetworkedMovement
 
         private void OnSetSnapshot(double time)
         {
+            // we are in shared mode
+            if (isClient && isServer)
+            {
+                this.AuthClientSetSnapshot(time);
+                return;
+            }
+            
             // We are the client and we are authoritative.
             if (isClient && isOwned && !serverAuth)
             {
