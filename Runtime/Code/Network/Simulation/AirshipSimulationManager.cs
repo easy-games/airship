@@ -156,7 +156,7 @@ namespace Code.Network.Simulation
 
             // Perform the standard tick behavior
             OnPerformTick?.Invoke(NetworkTime.time, false);
-            Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
+            // Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
             Physics.Simulate(Time.fixedDeltaTime);
             OnCaptureSnapshot?.Invoke(NetworkTime.time, false);
 

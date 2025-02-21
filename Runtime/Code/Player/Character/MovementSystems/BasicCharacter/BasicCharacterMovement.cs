@@ -22,7 +22,7 @@ namespace Code.Player.Character.NetworkedMovement
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
         public Transform graphicTransform; //A transform that games can animate
-        public BasicCharacterAnimationHelper animationHelper;
+        public CharacterAnimationHelper animationHelper;
         public BasicCharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
         public Transform slopeVisualizer;

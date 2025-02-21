@@ -203,7 +203,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(UIOutline),
             typeof(EventTrigger),
             typeof(EasyShake),
-            typeof(CharacterMovementData),
             typeof(TreeInstance),
             typeof(Terrain),
             typeof(GameServer),
@@ -244,14 +243,11 @@ public class TypeGenerator : MonoBehaviour
             typeof(VisualEffect),
 
             // Airship
-            typeof(CharacterMovementData),
             typeof(AnimationEventData),
             typeof(VoxelWorld),
             typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
-            typeof(CharacterMovementState),
-            typeof(AirshipPredictionManager),
             typeof(VisualGraphComponent),
             typeof(BasicCharacterMovementState),
             typeof(BasicCharacterInputData),
