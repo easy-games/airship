@@ -40,7 +40,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
             if (!rb.isKinematic)
             {
                 // Debug.Log("Updating velocities on non-kinematic rigidbody");
-                rb.velocity = state.velocity;
+                rb.linearVelocity = state.velocity;
                 rb.angularVelocity = state.angularVelocity;
             }
         }
@@ -49,7 +49,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
         {
             return new BasicMovementState()
             {
-                position = rb.position, rotation = rb.rotation, velocity = rb.velocity,
+                position = rb.position, rotation = rb.rotation, velocity = rb.linearVelocity,
                 angularVelocity = rb.angularVelocity, lastProcessedCommand = commandNumber, time = time, jumpTicksUntil = jumpTicksUntil
             };
         }
@@ -62,7 +62,7 @@ namespace Code.Player.Character.NetworkedMovement.BasicTest
 
             // Good for slow small desync checking
             // rb.velocity = command.moveDirection * 5f;
-            rb.velocity = new Vector3(command.moveDirection.x * 5f, rb.velocity.y, command.moveDirection.z * 5f);
+            rb.linearVelocity = new Vector3(command.moveDirection.x * 5f, rb.linearVelocity.y, command.moveDirection.z * 5f);
 
             if (command.jump && this.jumpTicksUntil == 0)
             {

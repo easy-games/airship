@@ -196,7 +196,7 @@ namespace Code.Player.Character.NetworkedMovement
             
             OnBeginMove?.Invoke(this.currentMoveState, replay);
 
-            var currentVelocity = this.rigidbody.velocity;
+            var currentVelocity = this.rigidbody.linearVelocity;
             var newVelocity = currentVelocity;
             var isIntersecting = false; // TODO: this was "IsIntersectingWithBlock" which just returned false
             var deltaTime = Time.fixedDeltaTime;
@@ -855,7 +855,7 @@ namespace Code.Player.Character.NetworkedMovement
             //print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>currentMoveState.prevState</b>: {currentMoveState.prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 
             //Execute the forces onto the rigidbody
-            this.rigidbody.velocity = newVelocity;
+            this.rigidbody.linearVelocity = newVelocity;
 
             #endregion
 
@@ -1094,11 +1094,11 @@ namespace Code.Player.Character.NetworkedMovement
         }
         
         public void SetVelocity(Vector3 velocity) {
-            this.rigidbody.velocity = velocity;
+            this.rigidbody.linearVelocity = velocity;
         }
         
         public Vector3 GetVelocity() {
-            return this.rigidbody.velocity;
+            return this.rigidbody.linearVelocity;
         }
         
         public int GetState() {

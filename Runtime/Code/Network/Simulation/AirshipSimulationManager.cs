@@ -18,7 +18,7 @@ namespace Code.Network.Simulation
      * Callback used to modify physics in the next server tick. The physics world is set to the most recent
      * server tick, and can be modified freely. These modifications will be reconciled to the clients as part
      * of the next server tick.
-     * 
+     *
      * Use this callback to do things like add impulses to hit characters, move them, or anything else that
      * changes physics results.
      */
@@ -54,24 +54,10 @@ namespace Code.Network.Simulation
      * The simulation manager is responsible for calling Physics.Simulate and providing generic hooks for other systems to use.
      * Server authoritative networking uses the simulation manager to perform resimulations of its client predictions.
      */
+    [LuauAPI]
     public class AirshipSimulationManager : MonoBehaviour
     {
-        private static AirshipSimulationManager _instance = null;
-
-        public static AirshipSimulationManager instance
-        {
-            get
-            {
-                if (!_instance)
-                {
-                    var go = new GameObject("AirshipSimulationManager");
-                    DontDestroyOnLoad(go);
-                    _instance = go.AddComponent<AirshipSimulationManager>();
-                }
-
-                return _instance;
-            }
-        }
+        public static AirshipSimulationManager instance = null;
 
         /**
          * This function notifies all watching components that a re-simulation
@@ -137,6 +123,11 @@ namespace Code.Network.Simulation
             this.isActive = true;
         }
 
+        private void Awake()
+        {
+            instance = this;
+        }
+
         public void FixedUpdate()
         {
             if (!isActive) return;
@@ -147,7 +138,7 @@ namespace Code.Network.Simulation
                 Debug.LogWarning("Skipping simulation due to clock correction.");
                 return;
             }
-            
+
             // Before running any commands, we perform any resimulation requests that were made during
             // the last tick. This ensures that resimulations don't affect command processing and
             // that all commands run on the most up to date predictions.
@@ -165,7 +156,7 @@ namespace Code.Network.Simulation
 
             // Perform the standard tick behavior
             OnPerformTick?.Invoke(NetworkTime.time, false);
-            // Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
+            Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
             Physics.Simulate(Time.fixedDeltaTime);
             OnCaptureSnapshot?.Invoke(NetworkTime.time, false);
 
@@ -200,7 +191,7 @@ namespace Code.Network.Simulation
                     this.lagCompensationRequests.RemoveAt(0);
                 }
             }
-            
+
             // Add our completed tick time into our history
             this.tickTimes.Add(NetworkTime.time);
             // Keep the tick history around only for 1 second. This limits our lag compensation amount.
@@ -219,7 +210,8 @@ namespace Code.Network.Simulation
          * seeing and rolls back Physics to that tick. Once physics is rolled back, the callback function
          * is executed.
          */
-        public void ScheduleLagCompensation(NetworkConnectionToClient client, CheckWorld checkCallback, RollbackComplete completeCallback)
+        public void ScheduleLagCompensation(NetworkConnectionToClient client, CheckWorld checkCallback,
+            RollbackComplete completeCallback)
         {
             this.lagCompensationRequests.Add(new LagCompensationRequest()
             {

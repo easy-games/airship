@@ -29,7 +29,7 @@ namespace Code.Network.Simulation
                 this.rigidbody.isKinematic = true;
                 this.position = this.rigidbody.position;
                 this.rotation = this.rigidbody.rotation;
-                this.linearVelocity = this.rigidbody.velocity;
+                this.linearVelocity = this.rigidbody.linearVelocity;
                 this.angularVelocity = this.rigidbody.angularVelocity;
             }
             else
@@ -37,7 +37,7 @@ namespace Code.Network.Simulation
                 this.rigidbody.isKinematic = this.kinematicSetting;
                 this.rigidbody.position = this.position;
                 this.rigidbody.rotation = this.rotation;
-                this.rigidbody.velocity = this.linearVelocity;
+                this.rigidbody.linearVelocity = this.linearVelocity;
                 this.rigidbody.angularVelocity = this.angularVelocity;
             }
         }
