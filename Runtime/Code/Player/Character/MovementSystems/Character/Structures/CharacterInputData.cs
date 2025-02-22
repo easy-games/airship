@@ -20,5 +20,10 @@ namespace Code.Player.Character.MovementSystems.Character
 		public bool sprint;
 		public Vector3 lookVector;
 		public BinaryBlob customData;
+
+		public override string ToString()
+		{
+			return "command: " + this.commandNumber + " time: " + this.time;
+		}
 	}
 }
