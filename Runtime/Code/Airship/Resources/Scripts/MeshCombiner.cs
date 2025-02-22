@@ -410,7 +410,7 @@ namespace Airship {
                     if (!finalMaterials[i].shader.isSupported) {
                         finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
                     }
-                    // finalMaterials[i].shader = Shader.Find(finalMaterials[i].shader.name);
+                    // finalMaterials[i].shader = 1(finalMaterials[i].shader.name);
                     // finalMaterials[i].name = finalMaterials[i].name + " (Modified)";
                 }
 
@@ -440,7 +440,7 @@ namespace Airship {
                 //     }
                 // }
 
-                if(lodLevel >= this.outputBaseMeshMatColors.Length){
+                if (lodLevel >= this.outputBaseMeshMatColors.Length){
                     continue;
                 }
                 var matColor = this.outputBaseMeshMatColors[lodLevel];
@@ -457,6 +457,8 @@ namespace Airship {
             if (debugText) {
                 Debug.Log($"[{this.gameObject.GetInstanceID()}] MeshCombiner: Finalize (main thread): {st.Elapsed.TotalMilliseconds} ms");
             }
+
+            this.DisableBaseRenderers();
 
             // We're all done
             this.runningUpdate = false;
@@ -521,7 +523,11 @@ namespace Airship {
         public void CombineMeshes(Color skinColor) {
             this.skinColor = skinColor;
 
-            // Disable renderers we will combine
+            Dirty();
+        }
+
+        public void DisableBaseRenderers() {
+            // Disable the old source renderers on the character.
             if (this.firstPerson) {
                 this.rig.viewmodelArmsMesh.gameObject.SetActive(false);
             } else {
@@ -529,8 +535,6 @@ namespace Airship {
                 this.rig.bodyMesh.gameObject.SetActive(false);
                 this.rig.armsMesh.gameObject.SetActive(false);
             }
-
-            Dirty();
         }
 
         // internal void BuildReferencesFromBaseMesh() {
