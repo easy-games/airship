@@ -29,22 +29,22 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
             }
         }
         
-        GUILayout.Space(10);
-        GUI.enabled = true;
-        builder.currentUserName = EditorGUILayout.TextField("Username", builder.currentUserName);
-        builder.currentUserId = EditorGUILayout.TextField("User ID", builder.currentUserId);
-        GUI.enabled = !downloading;
-        if (GUILayout.Button("Equip User Outfit")) {
-            if(!string.IsNullOrEmpty(builder.currentUserName)){
-                DownloadUsernameOutfit(builder);
-            }   
-            if(!string.IsNullOrEmpty(builder.currentUserId)){
-                Debug.Log("Equipping user outfit " + builder.currentUserId);
-                DownloadUserOutfit(builder);
-            }
-        }
-        GUI.enabled = true;
-        GUILayout.Space(30);
+        // GUILayout.Space(10);
+        // GUI.enabled = true;
+        // builder.currentUserName = EditorGUILayout.TextField("Username", builder.currentUserName);
+        // builder.currentUserId = EditorGUILayout.TextField("User ID", builder.currentUserId);
+        // GUI.enabled = !downloading;
+        // if (GUILayout.Button("Equip User Outfit")) {
+        //     if(!string.IsNullOrEmpty(builder.currentUserName)){
+        //         DownloadUsernameOutfit(builder);
+        //     }
+        //     if(!string.IsNullOrEmpty(builder.currentUserId)){
+        //         Debug.Log("Equipping user outfit " + builder.currentUserId);
+        //         DownloadUserOutfit(builder);
+        //     }
+        // }
+        // GUI.enabled = true;
+        // GUILayout.Space(30);
 
         if (GUILayout.Button("Clear Outfit")) {
             if(downloading){
@@ -63,19 +63,19 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
         }
     }
 
-    private async Task DownloadUserOutfit(AccessoryBuilder builder) {
-        Debug.Log("Starting download");
-        downloading = true;
-        await builder.AddOutfitFromUserId(builder.currentUserId);
-        Debug.Log("Done with download");
-        downloading = false;
-    }
-
-    private async Task DownloadUsernameOutfit(AccessoryBuilder builder) {
-        Debug.Log("Starting download");
-        downloading = true;
-        await builder.EquipOutfitFromUsername(builder.currentUserName);
-        Debug.Log("Done with download");
-        downloading = false;
-    }
+    // private async Task DownloadUserOutfit(AccessoryBuilder builder) {
+    //     Debug.Log("Starting download");
+    //     downloading = true;
+    //     await builder.AddOutfitFromUserId(builder.currentUserId);
+    //     Debug.Log("Done with download");
+    //     downloading = false;
+    // }
+    //
+    // private async Task DownloadUsernameOutfit(AccessoryBuilder builder) {
+    //     Debug.Log("Starting download");
+    //     downloading = true;
+    //     await builder.EquipOutfitFromUsername(builder.currentUserName);
+    //     Debug.Log("Done with download");
+    //     downloading = false;
+    // }
 }

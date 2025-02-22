@@ -97,7 +97,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
     private static async Task<string> GenerateServerItem(string orgResourceId, string accName, bool staging){
         Debug.Log("Creating item on server " + (staging ? "STAGING" : "PRODUCTION") + ": " + accName);
         
-		var res = await AirshipInventoryServiceBackend.CreateItem(orgResourceId, new AccessoryClassInput(){
+		var res = await AirshipInventoryServiceBackend.CreateGearItem(orgResourceId, new GearCreateRequest(){
             name = accName,
             description = "Avatar Item",
             @default = true,
@@ -106,7 +106,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
 
         if(res.success && res.data.Length > 0){
             Debug.Log("Parsing json: " + res.data);
-            var accData = JsonUtility.FromJson<AccessoryClass>(res.data);
+            var accData = JsonUtility.FromJson<GearClass>(res.data);
             if(accData != null){
                 Debug.Log("Created item: " + accData.name + " id: " + accData.classId);
                 return accData.classId;
@@ -161,7 +161,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             var mesh = meshSimplifier.ToMesh();
 
             var selfPath = AssetDatabase.GetAssetPath(sourceMesh);
-            if (selfPath.StartsWith("Assets/Clothing")) {
+            if (selfPath.StartsWith("Assets/Gear")) {
                 // New logic for clothing bundles
                 var split = selfPath.Split("/");
                 selfPath = selfPath.Replace("/" + split[split.Length - 1], "");

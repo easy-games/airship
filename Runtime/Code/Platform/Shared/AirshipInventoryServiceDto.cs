@@ -1,6 +1,7 @@
 using System;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Platform.Shared {
     [Serializable ]
@@ -36,8 +37,8 @@ namespace Code.Platform.Shared {
         public Permitted marketable;
     }
 
-    [Serializable ]
-     public class ItemClassInput {
+    [Serializable]
+    public class PlatformItemCreateRequest {
         public string name;
         public string imageId; // thumbnail ID (https://easy-cdn/images/{imageId})
         public string[] tags;
@@ -48,14 +49,19 @@ namespace Code.Platform.Shared {
 
         public bool tradable;
         public bool marketable;
-     }
 
-    [Serializable ]
-     public class AccessoryClassInput : ItemClassInput {
+        public GearCreateRequest gear;
     }
 
-    [Serializable ]
-     public class AccessoryClass : ItemClass {
+    [Serializable]
+    public class GearCreateRequest : PlatformItemCreateRequest {
+        public string[] airAssets;
+        public string category;
+        public string subcategory;
+    }
+
+    [Serializable]
+    public class GearClass : ItemClass {
     }
 
     [Serializable]
@@ -63,7 +69,7 @@ namespace Code.Platform.Shared {
         public string imageId;
     }
 
-    [Serializable ]
+    [Serializable]
      public class ItemInstanceDto {
         public string ownerId;
         public string classId;
@@ -74,8 +80,8 @@ namespace Code.Platform.Shared {
     }
 
     [Serializable ]
-     public class AccessoryInstanceDto  {
-        public AccessoryClass @class;
+     public class GearInstanceDto  {
+        public GearClass @class;
         public string ownerId;    
         public string instanceId;
         public string createdAt;
@@ -84,7 +90,7 @@ namespace Code.Platform.Shared {
 
     [Serializable ]
      public class OutfitPatch {
-        public string[] accessories;
+        public string[] gear;
         public string skinColor;
         public string name;
     }
@@ -102,7 +108,7 @@ namespace Code.Platform.Shared {
         public string name;
         /** Hex public string */
         public string skinColor;
-        public AccessoryInstanceDto[] accessories;
+        public GearInstanceDto[] gear;
 
         public bool equipped;
     }

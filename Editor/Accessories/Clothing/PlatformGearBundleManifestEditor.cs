@@ -18,9 +18,9 @@ using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 
 namespace Editor.Accessories.Clothing {
-    [CustomEditor(typeof(ClothingBundleManifest))]
+    [CustomEditor(typeof(PlatformGearBundleManifest))]
     [CanEditMultipleObjects]
-    public class ClothingBundleManifestEditor : UnityEditor.Editor {
+    public class PlatformGearBundleManifestEditor : UnityEditor.Editor {
         private static string easyOrgId = "6b62d6e3-9d74-449c-aeac-b4feed2012b1";
         public override void OnInspectorGUI() {
             base.DrawDefaultInspector();
@@ -43,11 +43,41 @@ namespace Editor.Accessories.Clothing {
             platforms.Add(AirshipPlatform.Mac); // debug
 
             // ********************************* //
-            var manifest = (ClothingBundleManifest)this.target;
+            var manifest = (PlatformGearBundleManifest)this.target;
+
+
+            // Create Class ID's for each gear piece
+            foreach (var gear in manifest.gearList) {
+                if (!string.IsNullOrEmpty(gear.classId)) continue;
+
+                // Grab class id from the old accessory.classId
+                if (gear.accessoryPrefabs.Length > 0 &&
+                    !string.IsNullOrEmpty(gear.accessoryPrefabs[0].serverClassId)) {
+                    gear.classId = gear.accessoryPrefabs[0].serverClassId;
+                    EditorUtility.SetDirty(gear);
+                    AssetDatabase.SaveAssets();
+                    continue;
+                }
+
+                // Create a new class id
+                {
+                    var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}",
+                        JsonUtility.ToJson(new GearCreateRequest() {
+                            name = gear.name,
+                            imageId = "c0e07e88-09d4-4962-b42d-7794a7ad4cb2",
+                            description = "Clothing",
+                            gear = new GearCreateRequest() {
+                                airAssets = new string[]{},
+                                category = "Clothing",
+                                subcategory = "Shirt", // todo: group this based on accessory slot
+                            }
+                        }));
+                }
+            }
 
             string airId = manifest.airId;
 
-            var contentName = manifest.clothingList[0].name;
+            var contentName = manifest.gearList[0].name;
             var contentDescription = "Clothing";
 
             if (string.IsNullOrEmpty(airId)) {
@@ -137,10 +167,10 @@ namespace Editor.Accessories.Clothing {
         /// <returns>Path to built bundle. Empty string if it failed.</returns>
         private async Task<string> BuildPlatform(AirshipPlatform platform, string airId) {
             var st = Stopwatch.StartNew();
-            var manifest = (ClothingBundleManifest)this.target;
+            var manifest = (PlatformGearBundleManifest)this.target;
 
-            var buildOutputFolder = "bundles/clothing/";
-            var buildOutputFile = $"bundles/clothing/{airId}_{AirshipPlatformUtil.GetStringName(platform)}.bundle";
+            var buildOutputFolder = "bundles/gear/";
+            var buildOutputFile = $"bundles/gear/{airId}_{AirshipPlatformUtil.GetStringName(platform)}.bundle";
             var sourceFolderPath = Path.GetRelativePath(".", Directory.GetParent(AssetDatabase.GetAssetPath(manifest))!.FullName);
 
             List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds();
@@ -159,9 +189,9 @@ namespace Editor.Accessories.Clothing {
             var addressableNames = assetPaths
                 .Select((p) => p.ToLower())
                 .Select((p) => {
-                    if (p.Contains("clothing bundle manifest")) {
+                    if (p.Contains("gear bundle manifest")) {
                         // strip the path so it's easier to load later
-                        return "clothing bundle manifest";
+                        return "gear bundle manifest";
                     }
                     return p;
                 })

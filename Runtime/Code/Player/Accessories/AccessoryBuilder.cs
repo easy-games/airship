@@ -658,88 +658,88 @@ public class AccessoryBuilder : MonoBehaviour {
     [HideInInspector]
     public bool cancelPendingDownload;
 
-    [HideFromTS]
-    public async Task<ActiveAccessory[]> EquipOutfitFromUsername(string username) {
-        var res = await UsersServiceBackend.GetUserByUsername(username);
+    // [HideFromTS]
+    // public async Task<ActiveAccessory[]> EquipOutfitFromUsername(string username) {
+    //     var res = await UsersServiceBackend.GetUserByUsername(username);
+    //
+    //     if (!res.success) {
+    //         Debug.LogError("failed to load username: " + username + " error: " + (res.error ?? "Empty Error"));
+    //         return new ActiveAccessory[0];
+    //     }
+    //
+    //     var data = JsonUtility.FromJson<UserResponse>(res.data).user;
+    //
+    //     if (data == null) {
+    //         Debug.LogError("failed to load username: " + username + " error: " + (res.error ?? "Empty Data"));
+    //         return new ActiveAccessory[0];
+    //     }
+    //
+    //     currentUserName = username;
+    //     currentUserId = data.uid;
+    //     return await AddOutfitFromUserId(currentUserId);
+    // }
 
-        if (!res.success) {
-            Debug.LogError("failed to load username: " + username + " error: " + (res.error ?? "Empty Error"));
-            return new ActiveAccessory[0];
-        }
-
-        var data = JsonUtility.FromJson<UserResponse>(res.data).user;
-
-        if (data == null) {
-            Debug.LogError("failed to load username: " + username + " error: " + (res.error ?? "Empty Data"));
-            return new ActiveAccessory[0];
-        }
-
-        currentUserName = username;
-        currentUserId = data.uid;
-        return await AddOutfitFromUserId(currentUserId);
-    }
-
-    [HideFromTS]
-    public async Task<ActiveAccessory[]> AddOutfitFromUserId(string userId) {
-        currentUserId = userId;
-        cancelPendingDownload = false;
-        AccessoryOutfit outfit; //Load outfit from server
-        var res = await AirshipInventoryServiceBackend.GetEquippedOutfitByUserId(userId);
-        if (cancelPendingDownload) {
-            cancelPendingDownload = false;
-            return new ActiveAccessory[0];
-        }
-
-        if (!res.success) {
-            Debug.LogError("failed to load player equipped outfit, http call failed");
-            return new ActiveAccessory[0];
-        }
-
-        var outfitDto = JsonUtility.FromJson<OutfitResponse>(res.data).outfit;
-
-        if (outfitDto == null) {
-            Debug.LogError("failed to load player equipped outfit, no data");
-            return new ActiveAccessory[0];
-        }
-
-        RemoveClothingAccessories();
-        //Skin color
-        if (ColorUtility.TryParseHtmlString(outfitDto.skinColor, out var skinColor)) {
-            SetSkinColor(skinColor);
-        }
-
-        //Accessories
-        var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(
-            "Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset");
-        //print("Found collection: " + collection.accessories.Length);
-        foreach (var acc in outfitDto.accessories) {
-            var foundItem = false;
-            foreach (var face in collection.faces) {
-                if (face && face.serverClassId == acc.@class.classId) {
-                    foundItem = true;
-                    SetFaceTexture(face.decalTexture);
-                    break;
-                }
-            }
-
-            if (!foundItem) {
-                foreach (var accComponent in collection.accessories) {
-                    if (accComponent && accComponent.serverClassId == acc.@class.classId) {
-                        foundItem = true;
-                        this.Add(accComponent);
-                        break;
-                    }
-                }
-            }
-
-            if (!foundItem) {
-                Debug.LogError("Unable to load acc: " + acc.@class.classId);
-            }
-        }
-
-        this.UpdateCombinedMesh();
-
-        return new ActiveAccessory[0];
-    }
+    // [HideFromTS]
+    // public async Task<ActiveAccessory[]> AddOutfitFromUserId(string userId) {
+    //     currentUserId = userId;
+    //     cancelPendingDownload = false;
+    //     AccessoryOutfit outfit; //Load outfit from server
+    //     var res = await AirshipInventoryServiceBackend.GetEquippedOutfitByUserId(userId);
+    //     if (cancelPendingDownload) {
+    //         cancelPendingDownload = false;
+    //         return new ActiveAccessory[0];
+    //     }
+    //
+    //     if (!res.success) {
+    //         Debug.LogError("failed to load player equipped outfit, http call failed");
+    //         return new ActiveAccessory[0];
+    //     }
+    //
+    //     var outfitDto = JsonUtility.FromJson<OutfitResponse>(res.data).outfit;
+    //
+    //     if (outfitDto == null) {
+    //         Debug.LogError("failed to load player equipped outfit, no data");
+    //         return new ActiveAccessory[0];
+    //     }
+    //
+    //     RemoveClothingAccessories();
+    //     //Skin color
+    //     if (ColorUtility.TryParseHtmlString(outfitDto.skinColor, out var skinColor)) {
+    //         SetSkinColor(skinColor);
+    //     }
+    //
+    //     //Accessories
+    //     var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(
+    //         "Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset");
+    //     //print("Found collection: " + collection.accessories.Length);
+    //     foreach (var acc in outfitDto.gear) {
+    //         var foundItem = false;
+    //         foreach (var face in collection.faces) {
+    //             if (face && face.serverClassId == acc.@class.classId) {
+    //                 foundItem = true;
+    //                 SetFaceTexture(face.decalTexture);
+    //                 break;
+    //             }
+    //         }
+    //
+    //         if (!foundItem) {
+    //             foreach (var accComponent in collection.accessories) {
+    //                 if (accComponent && accComponent.serverClassId == acc.@class.classId) {
+    //                     foundItem = true;
+    //                     this.Add(accComponent);
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //
+    //         if (!foundItem) {
+    //             Debug.LogError("Unable to load acc: " + acc.@class.classId);
+    //         }
+    //     }
+    //
+    //     this.UpdateCombinedMesh();
+    //
+    //     return new ActiveAccessory[0];
+    // }
 #endif
 }

@@ -12,10 +12,10 @@ namespace Code.Accessories.Clothing {
      * Clothing exists on the backend and consists of one or many accessories.
      * Usually it's just one accessory (ie: a hat)
      */
-    [CreateAssetMenu(menuName = "Airship/Clothing")]
+    [CreateAssetMenu(menuName = "Airship/PlatformGear")]
     [Icon("Packages/gg.easy.airship/Editor/icons/hat-wizard-solid.png")]
     [LuauAPI]
-    public class Clothing : ScriptableObject {
+    public class PlatformGear : ScriptableObject {
         public string classId;
         public AccessoryComponent[] accessoryPrefabs;
         public AccessoryFace face;
@@ -27,7 +27,7 @@ namespace Code.Accessories.Clothing {
             inProgressDownloads.Clear();
         }
 
-        public static async Task<Clothing> DownloadYielding(string classId, string airId) {
+        public static async Task<PlatformGear> DownloadYielding(string classId, string airId) {
             var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatformUtil.GetLocalPlatform());
             var url = $"{AirshipPlatformUrl.gameCdn}/airassets/{airId}/{platformString}";
 
@@ -38,8 +38,8 @@ namespace Code.Accessories.Clothing {
             }
 
             // Check if we already loaded an asset bundle that contains this clothing piece.
-            if (ClothingManager.Instance.loadedClothingBundles.TryGetValue(airId, out var loadedBundleInfo)) {
-                foreach (var clothing in loadedBundleInfo.manifest.clothingList) {
+            if (PlatformGearManager.Instance.loadedPlatformGearBundles.TryGetValue(airId, out var loadedBundleInfo)) {
+                foreach (var clothing in loadedBundleInfo.manifest.gearList) {
                     if (clothing.classId == classId) {
                         return clothing;
                     }
@@ -79,12 +79,12 @@ namespace Code.Accessories.Clothing {
             // foreach (var asset in bundle.GetAllAssetNames()) {
             //     Debug.Log("  - " + asset);
             // }
-            var manifestReq = bundle.LoadAssetAsync<ClothingBundleManifest>("clothing bundle manifest");
+            var manifestReq = bundle.LoadAssetAsync<PlatformGearBundleManifest>("gear bundle manifest");
 
             await manifestReq;
-            var manifest = (ClothingBundleManifest) manifestReq.asset;
-            ClothingManager.Instance.loadedClothingBundles[airId] = new ClothingBundleInfo(bundle, manifest);
-            foreach (var clothing in manifest.clothingList) {
+            var manifest = (PlatformGearBundleManifest) manifestReq.asset;
+            PlatformGearManager.Instance.loadedPlatformGearBundles[airId] = new PlatformGearBundleInfo(bundle, manifest);
+            foreach (var clothing in manifest.gearList) {
                 if (clothing.classId == classId) {
                     inProgressTask.SetResult(true);
                     return clothing;
