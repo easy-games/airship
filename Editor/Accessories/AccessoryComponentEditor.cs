@@ -160,34 +160,58 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             meshSimplifier.SimplifyMesh(quality);
             var mesh = meshSimplifier.ToMesh();
 
-            string path;
-            string parentPath;
-            string parentParentPath;
             var selfPath = AssetDatabase.GetAssetPath(sourceMesh);
-            if (selfPath.StartsWith("Assets/AirshipPackages")) {
+            if (selfPath.StartsWith("Assets/Clothing")) {
+                // New logic for clothing bundles
                 var split = selfPath.Split("/");
-                parentParentPath = $"{split[0]}/{split[1]}/{split[2]}/{split[3]}";
-                parentPath = $"{parentParentPath}/Accessory LOD";
-                path = $"{parentPath}/{sourceMesh.name} (LOD {lodLevel})";
-            } else {
-                parentParentPath = "Assets";
-                parentPath = $"Assets/Accessory LOD";
-                path = $"{parentPath}/{sourceMesh.name} (LOD {lodLevel})";
-            }
+                selfPath = selfPath.Replace("/" + split[split.Length - 1], "");
 
-            if (!AssetDatabase.AssetPathExists(parentPath)) {
-                AssetDatabase.CreateFolder(parentParentPath, "Accessory LOD");
-            }
-
-            if (AssetDatabase.AssetPathExists(path + ".asset")) {
-                int i = 1;
-                while (AssetDatabase.AssetPathExists(path + $" ({i}).asset")) {
-                    i++;
+                var lodFolderPath = $"{selfPath}/LOD";
+                if (!AssetDatabase.AssetPathExists(lodFolderPath)) {
+                    AssetDatabase.CreateFolder(selfPath, "LOD");
                 }
-                path += $" ({i})";
+
+                var path = $"{selfPath}/LOD/{sourceMesh.name} (LOD {lodLevel})";
+                Debug.Log("path: " + path);
+                if (AssetDatabase.AssetPathExists(path + ".asset")) {
+                    int i = 1;
+                    while (AssetDatabase.AssetPathExists(path + $" ({i}).asset")) {
+                        i++;
+                    }
+                    path += $" ({i})";
+                }
+                AssetDatabase.CreateAsset(mesh, path + ".asset");
+                target.meshLods.Add(mesh);
+            } else {
+                string path;
+                string parentPath;
+                string parentParentPath;
+
+                if (selfPath.StartsWith("Assets/AirshipPackages")) {
+                    var split = selfPath.Split("/");
+                    parentParentPath = $"{split[0]}/{split[1]}/{split[2]}/{split[3]}";
+                    parentPath = $"{parentParentPath}/Accessory LOD";
+                    path = $"{parentPath}/{sourceMesh.name} (LOD {lodLevel})";
+                } else {
+                    parentParentPath = "Assets";
+                    parentPath = $"Assets/Accessory LOD";
+                    path = $"{parentPath}/{sourceMesh.name} (LOD {lodLevel})";
+                }
+
+                if (!AssetDatabase.AssetPathExists(parentPath)) {
+                    AssetDatabase.CreateFolder(parentParentPath, "Accessory LOD");
+                }
+
+                if (AssetDatabase.AssetPathExists(path + ".asset")) {
+                    int i = 1;
+                    while (AssetDatabase.AssetPathExists(path + $" ({i}).asset")) {
+                        i++;
+                    }
+                    path += $" ({i})";
+                }
+                AssetDatabase.CreateAsset(mesh, path + ".asset");
+                target.meshLods.Add(mesh);
             }
-            AssetDatabase.CreateAsset(mesh, path + ".asset");
-            target.meshLods.Add(mesh);
         }
 
         MakeLOD(1, 0.3f);
@@ -266,10 +290,10 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         var serializedObject = new SerializedObject(target);
 
         EditorGUILayout.LabelField("Single Character Accessory");
-        #if AIRSHIP_INTERNAL
+#if AIRSHIP_INTERNAL
         myTarget.serverClassId = EditorGUILayout.TextField("Class Id", myTarget.serverClassId);
         myTarget.serverClassIdStaging = EditorGUILayout.TextField("Class Id (Staging)", myTarget.serverClassIdStaging);
-        #endif
+#endif
 
         //Accessory Slot
         myTarget.accessorySlot = (AccessorySlot)EditorGUILayout.EnumPopup("Slot", myTarget.accessorySlot);
@@ -280,24 +304,25 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         //Skinned To Character
         myTarget.skinnedToCharacter = EditorGUILayout.Toggle("Skinned", myTarget.skinnedToCharacter);
 
-        EditorGUILayout.Space(10);
-        {
+        if (myTarget.skinnedToCharacter) {
+            EditorGUILayout.Space(10);
+            EditorGUI.indentLevel++;
+
             GUIStyle buttonStyle = new GUIStyle(EditorStyles.miniButton);
             buttonStyle.margin = new RectOffset(EditorGUI.indentLevel * 15, 0, 0, 0);
             if (GUILayout.Button("Generate LODs", buttonStyle)) {
                 GenerateLODs(myTarget);
                 this.SaveChanges();
             }
+
+            var property = serializedObject.FindProperty("meshLods");
+            serializedObject.Update();
+            EditorGUILayout.PropertyField(property, true);
+            serializedObject.ApplyModifiedProperties();
+            EditorGUI.indentLevel--;
+
+            EditorGUI.indentLevel--;
         }
-
-        var property = serializedObject.FindProperty("meshLods");
-        serializedObject.Update();
-        EditorGUILayout.PropertyField(property, true);
-        serializedObject.ApplyModifiedProperties();
-        EditorGUI.indentLevel--;
-
-            //Allow mesh combine
-        // myTarget.canMeshCombine = EditorGUILayout.Toggle("Can Mesh Combine", myTarget.canMeshCombine);
 
         // Add the Open Editor button:
         EditorGUILayout.Space(10);
@@ -347,7 +372,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             EditorGUI.indentLevel--;
         }
 
-        if(GUI.changed){
+        if (GUI.changed){
             EditorUtility.SetDirty(myTarget);
         }
     }
