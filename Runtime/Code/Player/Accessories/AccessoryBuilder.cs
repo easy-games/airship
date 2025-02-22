@@ -430,7 +430,7 @@ public class AccessoryBuilder : MonoBehaviour {
     }
 
     public void UpdateCombinedMesh() {
-        Debug.Log("UpdateCombinedMesh");
+        // Debug.Log("UpdateCombinedMesh (" + this.gameObject.name + ")");
         Profiler.BeginSample("AB.TryCombineMeshes");
         if (meshCombiner.enabled && Application.isPlaying) {
             meshCombiner.ClearSourceReferences();
