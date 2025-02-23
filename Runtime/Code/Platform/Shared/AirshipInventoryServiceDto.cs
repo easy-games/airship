@@ -63,6 +63,7 @@ namespace Code.Platform.Shared {
     [Serializable]
     public class GearPatchRequest {
         public string[] airAssets;
+        public string subcategory;
     }
 
     [Serializable]

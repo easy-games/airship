@@ -46,6 +46,17 @@ namespace Editor.Accessories.Clothing {
             // ********************************* //
             var manifest = (PlatformGearBundleManifest)this.target;
 
+            string GetGearSubCategory(PlatformGear gear) {
+                string subcategory = "";
+                if (gear.accessoryPrefabs.Length > 0) {
+                    subcategory = gear.accessoryPrefabs[0].accessorySlot.ToString();
+                } else if (gear.face != null) {
+                    subcategory = "FaceDecal";
+                }
+
+                return subcategory;
+            }
+
 
             // Create Class ID's for each gear piece
             foreach (var gear in manifest.gearList) {
@@ -61,12 +72,7 @@ namespace Editor.Accessories.Clothing {
                 }
 
                 string category = "Clothing";
-                string subcategory = "";
-                if (gear.accessoryPrefabs.Length > 0) {
-                    subcategory = gear.accessoryPrefabs[0].accessorySlot.ToString();
-                } else if (gear.face != null) {
-                    subcategory = "FaceDecal";
-                }
+                string subcategory = GetGearSubCategory(gear);
 
                 // Create a new class id
                 var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}",
@@ -174,9 +180,11 @@ namespace Editor.Accessories.Clothing {
             // ******************** //
             // Update all ClassID's to point to the airId
             foreach (var gear in manifest.gearList) {
+                string subcategory = GetGearSubCategory(gear);
                 var req = UnityWebRequest.Put($"{AirshipPlatformUrl.contentService}/gear/class-id/{gear.classId}",
                     JsonUtility.ToJson(new GearPatchRequest() {
                         airAssets = new string[] { airId },
+                        subcategory = subcategory,
                     }));
                 req.method = "PATCH";
                 req.SetRequestHeader("Content-Type","application/json");
