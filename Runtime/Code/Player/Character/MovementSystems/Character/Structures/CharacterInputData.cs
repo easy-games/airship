@@ -23,7 +23,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
 		public override string ToString()
 		{
-			return "command: " + this.commandNumber + " time: " + this.time;
+			return "command: " + this.commandNumber + " time: ";//+ this.time;
 		}
 	}
 }

@@ -39,11 +39,13 @@ namespace Code.Network.StateSystem
          * Sets the current state to base ticks off of. Updates the associated
          * rigidbody to match the state provided. It is important that the implementation
          * if this method hard set any physics fields to match those in the provided state.
+         *
+         * The time in the state value is the local time the state was captured (Time.unscaledTimeAsDouble)
          */
         public abstract void SetCurrentState(State state);
 
         /**
-         * Gets the current state of the system.
+         * Gets the current state of the system. The time value provided is the local time for the tick (Time.unscaledTimeAsDouble)
          */
         public abstract State GetCurrentState(int commandNumber, double time);
 
@@ -52,7 +54,7 @@ namespace Code.Network.StateSystem
          * This is called generally at the rate of FixedUpdate, but may not be called in situations where we are waiting
          * for commands from the server.
          */
-        public abstract Input GetCommand(int commandNumber, double time);
+        public abstract Input GetCommand(int commandNumber);
 
         /**
          * Ticks the system and advances the current state based on the move input data provided.
@@ -65,6 +67,8 @@ namespace Code.Network.StateSystem
         /**
          * Set the state to be the interpolated state between these two snapshots. This is called every frame
          * during LateUpdate.
+         *
+         * The time value of the states is the time on the server when the state was generated (NetworkTime.time).
          */
         public abstract void Interpolate(float delta, State stateOld, State stateNew);
 
@@ -72,6 +76,8 @@ namespace Code.Network.StateSystem
          * This function is called when the interpolation on an observing client passes the provided state.
          * It will be called at a similar frequency to FixedUpdate (maybe more or less depending on simulation timing)
          * and can be used for things like playing effects or updating animation state.
+         *
+         * The time value of the state is the time on the server when the state was generated (NetworkTime.time).
          */
         public abstract void InterpolateReachedState(State state);
     }

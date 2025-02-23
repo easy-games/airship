@@ -7,8 +7,7 @@ namespace Code.Player.Character.Net
      */
     public class InputCommand
     {
+        /** The number this command is in the clients stream of commands. */
         public int commandNumber;
-        /** The time the input was recorded */
-        public double time;
     }
 }

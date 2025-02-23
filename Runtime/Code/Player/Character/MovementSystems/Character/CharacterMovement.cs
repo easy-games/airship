@@ -171,13 +171,12 @@ namespace Code.Player.Character.MovementSystems.Character
             return snapshot;
         }
 
-        public override CharacterInputData GetCommand(int commandNumber, double time)
+        public override CharacterInputData GetCommand(int commandNumber)
         {
             OnSetCustomData?.Invoke();
             return new CharacterInputData()
             {
                 commandNumber = commandNumber,
-                time = time,
                 moveDir = moveDirInput,
                 jump = jumpInput,
                 crouch = crouchInput,

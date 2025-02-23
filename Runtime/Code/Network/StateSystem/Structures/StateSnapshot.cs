@@ -9,7 +9,9 @@ namespace Code.Network.StateSystem.Structures
     public class StateSnapshot
     {
         public int lastProcessedCommand;
-        /** The time the snapshot was created */
+        /**
+         * The time the snapshot was created. This time is local to the client/server that created it.
+         */
         public double time;
 
         /**

@@ -6,6 +6,7 @@ using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror;
 using RSG.Promises;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -84,6 +85,10 @@ namespace Code.Network.StateSystem
         // doesn't process inputs).
         private History<Input> inputHistory;
         private History<State> stateHistory;
+        // Observer history stores authoritative state and uses the server's times. This data can be interpolated
+        // with NetworkTime.time. It is converted into state history on the local clients physics timeline
+        // in the observer snapshot function.
+        private History<State> observerHistory;
         private double lastReceivedSnapshotTime = 0;
 
         // Client interpolation fields
@@ -128,6 +133,7 @@ namespace Code.Network.StateSystem
 
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
+            this.observerHistory = new History<State>((int)Math.Ceiling(1f / Time.fixedDeltaTime));
 
             this.OnClientReceiveSnapshot += ClientReceiveSnapshot;
             this.OnServerReceiveSnapshot += ServerReceiveSnapshot;
@@ -441,9 +447,9 @@ namespace Code.Network.StateSystem
             // Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
 
             // Send snapshot to clients if we need to.
-            if (this.lastServerSend <= NetworkTime.time - NetworkServer.sendInterval)
+            if (this.lastServerSend <= time - NetworkServer.sendInterval)
             {
-                this.lastServerSend = NetworkTime.time;
+                this.lastServerSend = time;
                 this.SendServerSnapshotToClients(state);
             }
         }
@@ -478,8 +484,7 @@ namespace Code.Network.StateSystem
             // and incrementing our commandNumber.
             if (this.clientPausePrediction)
             {
-                this.stateSystem.GetCommand(this.clientCommandNumber,
-                    time); // We tick GetCommand to clear any input, but we don't use it
+                this.stateSystem.GetCommand(this.clientCommandNumber); // We tick GetCommand to clear any input, but we don't use it
                 this.stateSystem.Tick(null, false);
                 this.inputHistory.Add(time, null);
                 return;
@@ -487,17 +492,17 @@ namespace Code.Network.StateSystem
 
             // Update our command number and process the next tick.
             clientCommandNumber++;
-            var input = this.stateSystem.GetCommand(this.clientCommandNumber, time);
+            var input = this.stateSystem.GetCommand(this.clientCommandNumber);
             input = this.inputHistory.Add(time, input);
             this.stateSystem.Tick(input, false);
 
-            if (this.lastClientSend <= NetworkTime.time - NetworkClient.sendInterval)
+            if (this.lastClientSend <= time - NetworkClient.sendInterval)
             {
-                this.lastClientSend = NetworkTime.time;
+                this.lastClientSend = time;
                 // We will sometimes resend unconfirmed commands. The server should ignore these if
                 // it has them already.
                 this.SendClientInputToServer(
-                    this.inputHistory.GetAllAfter(NetworkTime.time - (NetworkClient.sendInterval * 2)));
+                    this.inputHistory.GetAllAfter(time - (NetworkClient.sendInterval * 2)));
             }
         }
 
@@ -562,7 +567,7 @@ namespace Code.Network.StateSystem
             if (replay)
             {
                 Debug.LogWarning(
-                    "Non-authoritative server should not replay ticks. It should only observer and report observed snapshots.");
+                    "Non-authoritative server should not replay ticks. It should only observe and report observed snapshots.");
                 return;
             }
 
@@ -582,7 +587,7 @@ namespace Code.Network.StateSystem
                     ? this.serverRecievedStateBuffer.Values[0]
                     : null;
 
-                // If we have a new state to process
+                // If we have a new state to process, update our last processed command and then remove it.
                 if (latestState != null)
                 {
                     // mark this as our latest state and remove it. We will do the real processing on the final
@@ -611,6 +616,8 @@ namespace Code.Network.StateSystem
             {
                 // Set the snapshots time to be the same as the server to make it effectively
                 // the current authoritative state for all observers
+                // Remember that state snapshots use the local simulation time where they were created,
+                // not a shared timeline.
                 latestState.time = time;
                 // Use this as the current state for the server
                 this.stateSystem.SetCurrentState(latestState);
@@ -620,11 +627,11 @@ namespace Code.Network.StateSystem
                 this.stateHistory.Add(time, latestState);
             }
 
-            if (this.lastServerSend <= NetworkTime.time - NetworkServer.sendInterval)
+            if (this.lastServerSend <= time - NetworkServer.sendInterval)
             {
                 // read latest state
                 var state = this.stateHistory.Get(time);
-                this.lastServerSend = NetworkTime.time;
+                this.lastServerSend = time;
                 // Send state to clients
                 this.SendServerSnapshotToClients(state);
             }
@@ -660,7 +667,7 @@ namespace Code.Network.StateSystem
             // Update our command number and process the next tick
             clientCommandNumber++;
             // Read input from system
-            var command = this.stateSystem.GetCommand(clientCommandNumber, time);
+            var command = this.stateSystem.GetCommand(clientCommandNumber);
             this.inputHistory.Add(time, command);
             // Tick system
             this.stateSystem.Tick(command, false);
@@ -685,9 +692,9 @@ namespace Code.Network.StateSystem
             this.stateHistory.Add(time, state);
 
             // Report snapshot from system to server.
-            if (this.lastClientSend <= NetworkTime.time - NetworkClient.sendInterval)
+            if (this.lastClientSend <= time - NetworkClient.sendInterval)
             {
-                this.lastClientSend = NetworkTime.time;
+                this.lastClientSend = time;
                 this.SendClientSnapshotToServer(state);
             }
         }
@@ -707,7 +714,8 @@ namespace Code.Network.StateSystem
         public void ObservingClientCaptureSnapshot(double time, bool replay)
         {
             // No matter what, an observing client should always have the state
-            // in the authoritative state from the server during resims
+            // in the authoritative state from the server during resims. We use our
+            // local timeline record for this.
             if (replay)
             {
                 var authoritativeState = this.stateHistory.Get(time);
@@ -716,17 +724,28 @@ namespace Code.Network.StateSystem
             }
 
             // Get the authoritative state received just before the current observer time. (remember interpolation is buffered by bufferTime)
-            var state = this.stateHistory.Get(time - NetworkClient.bufferTime);
-            if (state == null || this.clientLastInterpolatedStateTime == state.time)
+            // Note: if we get multiple fixed update calls per frame, we will use the same state for all fixedUpdate calls
+            // because NetworkTime.time is only advanced on Update(). This might cause resim issues with low framerates...
+            var observedState = this.observerHistory.Get(NetworkTime.time - NetworkClient.bufferTime);
+            if (observedState == null)
             {
-                // We don't have state to use for interping or we haven't reached a new state yet.
+                // We don't have state to use for interping or we haven't reached a new state yet. Don't add any
+                // data to our state history.
                 return;
             }
 
+            // Clone the observed state and update it to be on the local physics timeline.
+            var state = observedState.CloneViaSerialization();
+            state.time = time;
+            // Store the state in our state history for re-simulation later if needed.
+            this.stateHistory.Add(time, state);
+
+            // Handle observer interpolation as well. We use observedState for this since we want the interp to be able
+            // to use NetworkTime.time with this state.
             // Update our last state time so we don't call InterpolateReachedState more than once on the same state.
-            this.clientLastInterpolatedStateTime = state.time;
+            this.clientLastInterpolatedStateTime = observedState.time;
             // Notify the system of a new reached state
-            this.stateSystem.InterpolateReachedState(state);
+            this.stateSystem.InterpolateReachedState(observedState);
         }
 
         public void ObservingClientTick(double time, bool replay)
@@ -749,13 +768,15 @@ namespace Code.Network.StateSystem
          */
         private void Interpolate()
         {
+            if (this.observerHistory.Values.Count == 0) return;
+            
             // Get the time we should render on the client.
             var clientTime = (float)NetworkTime.time - NetworkClient.bufferTime;
 
             // Get the state history around the time that's currently being rendered.
-            if (!this.stateHistory.GetAround(clientTime, out State prevState, out State nextState))
+            if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
             {
-                Debug.LogWarning("Not enough state history for rendering. " + this.stateHistory.Keys.Count + " entries. First " + this.stateHistory.Keys[0] + " Last " + this.stateHistory.Keys[^1] + " Target " + clientTime);
+                Debug.LogWarning("Not enough state history for rendering. " + this.observerHistory.Keys.Count + " entries. First " + this.observerHistory.Keys[0] + " Last " + this.observerHistory.Keys[^1] + " Target " + clientTime);
                 return;
             }
 
@@ -835,7 +856,7 @@ namespace Code.Network.StateSystem
                 return;
             }
 
-            // Debug.LogWarning("Resimulating command " + state.lastProcessedCommand);
+            Debug.LogWarning("Re-simulating command " + state.lastProcessedCommand);
 
             // Correct our networked system state to match the authoritative answer from the server
             this.stateSystem.SetCurrentState(state);
@@ -913,7 +934,8 @@ namespace Code.Network.StateSystem
             // This client is an observer and should store and interpolate the snapshot.
             if (!isOwned)
             {
-                this.stateHistory.Add(state.time, state);
+                // Observers will render using the server's timeline via NetworkTime
+                this.observerHistory.Add(state.time, state);
             }
         }
 
@@ -979,6 +1001,8 @@ namespace Code.Network.StateSystem
                 return;
             }
 
+            // We order by clients last processed command. This is effectively the same as ordering
+            // by time, but avoids the confusion around client vs server timelines.
             this.serverRecievedStateBuffer.Add(snapshot.lastProcessedCommand, snapshot);
         }
 

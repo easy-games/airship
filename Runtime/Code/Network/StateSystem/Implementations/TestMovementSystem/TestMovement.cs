@@ -84,9 +84,9 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             // Noop
         }
 
-        public override TestMovementInput GetCommand(int commandNumber, double time)
+        public override TestMovementInput GetCommand(int commandNumber)
         {
-            var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, time = time, jump = jump};
+            var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, jump = jump};
             jump = false;
             return command;
         }

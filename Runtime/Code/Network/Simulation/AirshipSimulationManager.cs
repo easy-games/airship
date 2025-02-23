@@ -34,7 +34,12 @@ namespace Code.Network.Simulation
     public delegate void PerformResimulate(double baseTime);
 
     /**
-     * Function that will be run when the simulation manager is ready to perform a resimulation.
+     * Function that will be run when the simulation manager is ready to perform a resimulation. Remember that
+     * the simulation base time provided to the resimulate function is the **local time** you wish to resimulate from.
+     * The local time should be one provided by the SimulationManager during a tick.
+     * Do not pass NetworkTime.time or a similar server derived time to this resimulate function.
+     *
+     * This function should not be used on the server.
      */
     public delegate void PerformResimulationCallback(PerformResimulate simulateFunction);
 
@@ -113,6 +118,7 @@ namespace Code.Network.Simulation
         private bool resimulationSimulationActive = false;
         private bool isActive = false;
         private List<double> tickTimes = new List<double>();
+        private List<double> frameTimes = new List<double>();
         private List<LagCompensationRequest> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
 
@@ -127,18 +133,18 @@ namespace Code.Network.Simulation
         {
             instance = this;
         }
-
+        
         public void FixedUpdate()
         {
+            // Clients use their own timelines for physics. Do not compare times generated on a client with a time generated
+            // on the server. The Server should estimate when a client created a command using it's own timeline and ping calculations
+            // and a client should convert server authoritative state received to its own timeline by interpolating with NetworkTime.time
+            // and capturing snapshots of the interpolated state on its own timeline.
+            var time = NetworkServer.active ? NetworkTime.time : Time.unscaledTimeAsDouble;
+            
             if (!isActive) return;
             if (Physics.simulationMode != SimulationMode.Script) return;
-            // TODO: consider skipping fixed updates where the clock has not advanced.
-            if (this.tickTimes.Count > 0 && NetworkTime.time <= this.tickTimes[^1])
-            {
-                Debug.LogWarning("Skipping simulation due to clock correction.");
-                return;
-            }
-
+            
             // Before running any commands, we perform any resimulation requests that were made during
             // the last tick. This ensures that resimulations don't affect command processing and
             // that all commands run on the most up to date predictions.
@@ -155,10 +161,10 @@ namespace Code.Network.Simulation
             }
 
             // Perform the standard tick behavior
-            OnPerformTick?.Invoke(NetworkTime.time, false);
+            OnPerformTick?.Invoke(time, false);
             // Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
             Physics.Simulate(Time.fixedDeltaTime);
-            OnCaptureSnapshot?.Invoke(NetworkTime.time, false);
+            OnCaptureSnapshot?.Invoke(time, false);
 
             // Process any lag compensation requests now that we have completed the ticking and snapshot creation
             // Note: This process is placed after snapshot processing so that changes made to physics (like an impulse)
@@ -183,7 +189,7 @@ namespace Code.Network.Simulation
             if (processedLagCompensation)
             {
                 // Reset back to the server view of the world at the current time.
-                OnSetSnapshot?.Invoke(NetworkTime.time);
+                OnSetSnapshot?.Invoke(time);
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
                 while (this.lagCompensationRequests.Count > 0)
                 {
@@ -193,14 +199,14 @@ namespace Code.Network.Simulation
             }
 
             // Add our completed tick time into our history
-            this.tickTimes.Add(NetworkTime.time);
+            this.tickTimes.Add(time);
             // Keep the tick history around only for 1 second. This limits our lag compensation amount.
-            while (this.tickTimes.Count > 0 && NetworkTime.time - this.tickTimes[0] > 1)
+            while (this.tickTimes.Count > 0 && time - this.tickTimes[0] > 1)
             {
                 this.tickTimes.RemoveAt(0);
             }
         }
-
+        
         /**
          * Submits callbacks to be run later that will be able to view the physics world as the client
          * would have seen it at the current tick. This allows you to confirm if a clients input would
