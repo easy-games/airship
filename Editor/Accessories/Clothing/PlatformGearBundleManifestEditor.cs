@@ -23,6 +23,12 @@ namespace Editor.Accessories.Clothing {
     [CanEditMultipleObjects]
     public class PlatformGearBundleManifestEditor : UnityEditor.Editor {
         private static string easyOrgId = "6b62d6e3-9d74-449c-aeac-b4feed2012b1";
+        private bool skipBuild = false;
+
+        private void OnEnable() {
+            skipBuild = false;
+        }
+
         public override void OnInspectorGUI() {
             base.DrawDefaultInspector();
 
@@ -33,6 +39,9 @@ namespace Editor.Accessories.Clothing {
             if (GUILayout.Button("Publish")) {
                 this.BuildAllPlatforms();
             }
+
+            GUILayout.Space(10);
+            this.skipBuild = EditorGUILayout.Toggle("Skip Build", this.skipBuild);
         }
 
         private async void BuildAllPlatforms() {
@@ -55,6 +64,19 @@ namespace Editor.Accessories.Clothing {
                 }
 
                 return subcategory;
+            }
+
+            // Pre-build check: Make sure all gear accessory LOD's are in the right folder
+            foreach (var gear in manifest.gearList) {
+                foreach (var accessory in gear.accessoryPrefabs) {
+                    foreach (var mesh in accessory.meshLods) {
+                        var path = AssetDatabase.GetAssetPath(mesh);
+                        if (!path.StartsWith("Assets/Gear")) {
+                            Debug.LogError($"{accessory.gameObject.name} has an LOD mesh outside of the gear folder. Place all assets (including LOD meshes) inside of the gear folder. Invalid mesh path: " + path);
+                            return;
+                        }
+                    }
+                }
             }
 
 
@@ -132,6 +154,7 @@ namespace Editor.Accessories.Clothing {
 
             // ******************** //
 
+            int bytesCount = 0;
             for (int i = 0; i < platforms.Count; i++) {
                 var platform = platforms[i];
                 var buildOutputFile = bundlePaths[i];
@@ -139,6 +162,7 @@ namespace Editor.Accessories.Clothing {
                 // Update air asset
                 var bytes = await File.ReadAllBytesAsync(buildOutputFile);
                 Debug.Log("bytes length: " + bytes.Length + ", path: " + buildOutputFile);
+                bytesCount = bytes.Length;
                 var updateReq = UnityWebRequest.Put(AirshipPlatformUrl.deploymentService + $"/air-assets/{airId}",
                     JsonUtility.ToJson(new AirAssetCreateRequest() {
                         contentType = "application/airasset",
@@ -156,7 +180,6 @@ namespace Editor.Accessories.Clothing {
                 }
                 var updateData = JsonUtility.FromJson<AirAssetCreateResponse>(updateReq.downloadHandler.text);
                 var uploadUrl = updateData.urls.UrlFromPlatform(platform);
-                Debug.Log("Got update url: " + uploadUrl);
 
                 // Upload asset bundle
                 {
@@ -196,7 +219,7 @@ namespace Editor.Accessories.Clothing {
                 }
             }
 
-            Debug.Log($"<color=green>Finished building {bundlePaths.Count} asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color>");
+            Debug.Log($"<color=green>Finished building {bundlePaths.Count} asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color> File size: " + AirshipEditorUtil.GetFileSizeText(bytesCount));
         }
 
         /// <summary>
@@ -243,7 +266,7 @@ namespace Editor.Accessories.Clothing {
 
             // --------------------- //
             // Build
-            if (true) {
+            if (!this.skipBuild) {
                 var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
                 var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
                 if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
