@@ -56,15 +56,17 @@ namespace Editor.Accessories.Clothing {
             // ********************************* //
             var manifest = (PlatformGearBundleManifest)this.target;
 
-            string GetGearSubCategory(PlatformGear gear) {
+            (string category, string subcategory) GetGearCategory(PlatformGear gear) {
+                string category = "Clothing";
                 string subcategory = "";
                 if (gear.accessoryPrefabs.Length > 0) {
                     subcategory = gear.accessoryPrefabs[0].accessorySlot.ToString();
                 } else if (gear.face != null) {
-                    subcategory = "FaceDecal";
+                    category = "FaceDecal";
+                    subcategory = "None";
                 }
 
-                return subcategory;
+                return (category, subcategory);
             }
 
             // Pre-build check: Make sure all gear accessory LOD's are in the right folder
@@ -100,8 +102,7 @@ namespace Editor.Accessories.Clothing {
                     continue;
                 }
 
-                string category = "Clothing";
-                string subcategory = GetGearSubCategory(gear);
+                (string category, string subcategory) = GetGearCategory(gear);
 
                 // Create a new class id
                 var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}",
@@ -210,12 +211,14 @@ namespace Editor.Accessories.Clothing {
             // ******************** //
             // Update all ClassID's to point to the airId
             foreach (var gear in manifest.gearList) {
-                string subcategory = GetGearSubCategory(gear);
+                (string category, string subcategory) = GetGearCategory(gear);
+                var data = new GearPatchRequest() {
+                    airAssets = new string[] { airId },
+                    category = category,
+                    subcategory = subcategory,
+                };
                 var req = UnityWebRequest.Put($"{AirshipPlatformUrl.contentService}/gear/class-id/{gear.classId}",
-                    JsonUtility.ToJson(new GearPatchRequest() {
-                        airAssets = new string[] { airId },
-                        subcategory = subcategory,
-                    }));
+                    JsonUtility.ToJson(data));
                 req.method = "PATCH";
                 req.SetRequestHeader("Content-Type","application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
