@@ -84,6 +84,8 @@ namespace Editor.Accessories.Clothing {
                 }
             }
 
+            if (!CreateAssetBundles.PrePublishChecks()) return;
+
 
             // Create Class ID's for each gear piece
             foreach (var gear in manifest.gearList) {
