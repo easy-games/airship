@@ -119,6 +119,7 @@ namespace Editor.Accessories.Clothing {
                         }
                     }));
                 req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
                 Debug.Log("Create classId response: " + req.downloadHandler.text);
             }
@@ -183,6 +184,7 @@ namespace Editor.Accessories.Clothing {
                     }));
                 updateReq.SetRequestHeader("Content-Type", "application/json");
                 updateReq.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                updateReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await updateReq.SendWebRequest();
                 if (updateReq.result != UnityWebRequest.Result.Success) {
                     Debug.LogError("Failed to update air asset: " + updateReq.downloadHandler.text);
@@ -197,6 +199,7 @@ namespace Editor.Accessories.Clothing {
                     foreach (var pair in updateData.headers) {
                         putReq.SetRequestHeader(pair.key, pair.value);
                     }
+                    putReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
 
                     Debug.Log("Uploading asset bundle...");
                     await putReq.SendWebRequest();
@@ -224,6 +227,7 @@ namespace Editor.Accessories.Clothing {
                 req.method = "PATCH";
                 req.SetRequestHeader("Content-Type","application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success) {
                     Debug.LogError("patch classId response: " + req.downloadHandler.text);
