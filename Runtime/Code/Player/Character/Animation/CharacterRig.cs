@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Code.Player.Accessories;
 using UnityEngine;
 using UnityEngine.Serialization;
 

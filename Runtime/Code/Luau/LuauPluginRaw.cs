@@ -155,4 +155,73 @@ public static class LuauPluginRaw {
 	public static void SetReadonly(IntPtr thread, int idx, bool enabled) {
 		ThrowIfNotNullPtr(LuaSetReadonly(thread, idx, enabled ? 1 : 0));
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaPushThread(IntPtr thread);
+	/// <summary>
+	/// Pushes the thread to its own Lua stack.
+	/// </summary>
+	public static void PushThread(IntPtr thread) {
+		ThrowIfNotNullPtr(LuaPushThread(thread));
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaRef(IntPtr thread, int idx, ref int refVal);
+	/// <summary>
+	/// Creates a reference to the value at index "idx."
+	/// </summary>
+	public static int Ref(IntPtr thread, int idx) {
+		var refVal = 0;
+		ThrowIfNotNullPtr(LuaRef(thread, idx, ref refVal));
+		return refVal;
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaUnref(IntPtr thread, int refVal);
+	/// <summary>
+	/// Removes "refVal" reference.
+	/// </summary>
+	public static void Unref(IntPtr thread, int refVal) {
+		ThrowIfNotNullPtr(LuaUnref(thread, refVal));
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaGetRef(IntPtr thread, int refVal);
+	/// <summary>
+	/// Pushes the value referenced by "refVal" to the top of the thread's stack.
+	/// </summary>
+	public static void GetRef(IntPtr thread, int refVal) {
+		ThrowIfNotNullPtr(LuaGetRef(thread, refVal));
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaGetTop(IntPtr thread, ref int top);
+	/// <summary>
+	/// Gets the top index of the thread's stack (which can also be seen as the stack size).
+	/// </summary>
+	public static int GetTop(IntPtr thread) {
+		var top = 0;
+		ThrowIfNotNullPtr(LuaGetTop(thread, ref top));
+		return top;
+	}
 }

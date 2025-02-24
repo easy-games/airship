@@ -8,6 +8,7 @@ namespace Luau
     public class CallbackWrapper {
         public LuauContext context;
         public int handle;
+        public int luauRef;
         public IntPtr thread;
         public string methodName;
         /// <summary>
@@ -30,6 +31,10 @@ namespace Luau
             this.handle = handle;
             this.validateContext = validateContext;
 
+            LuauPluginRaw.PushThread(thread);
+            this.luauRef = LuauPluginRaw.Ref(thread, -1);
+            LuauPluginRaw.Pop(thread, 1);
+
             m_threadPinCount.TryAdd(this.thread, 0);
             m_threadPinCount[this.thread] += 1;
         }
@@ -38,6 +43,8 @@ namespace Luau
         // ~CallbackWrapper() {
         public void Destroy() {
             m_threadPinCount[thread] -= 1;
+
+            LuauPluginRaw.Unref(thread, luauRef);
             
             if (m_threadPinCount[thread] <= 0)
             {

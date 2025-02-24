@@ -22,6 +22,34 @@ namespace Code.Bootstrap {
             AirshipPlatform.Linux
         };
 
+        /// <summary>
+        /// Just another list that includes mobile.
+        /// You probably shouldn't use this -- instead use livePlatforms.
+        /// </summary>
+        public static AirshipPlatform[] betaPlatforms = new[] {
+            AirshipPlatform.iOS,
+            AirshipPlatform.Mac,
+            AirshipPlatform.Windows,
+            AirshipPlatform.Linux,
+        };
+
+        public static string GetStringName(AirshipPlatform platform) {
+            switch (platform) {
+                case AirshipPlatform.iOS:
+                    return "iOS";
+                case AirshipPlatform.Android:
+                    return "Android";
+                case AirshipPlatform.Windows:
+                    return "Windows";
+                case AirshipPlatform.Mac:
+                    return "Mac";
+                case AirshipPlatform.Linux:
+                    return "Linux";
+                default:
+                    return "Windows";
+            }
+        }
+
         public static AirshipPlatform GetLocalPlatform() {
 #if UNITY_IOS
             return AirshipPlatform.iOS;

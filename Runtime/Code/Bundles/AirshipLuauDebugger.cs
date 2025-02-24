@@ -9,7 +9,7 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 	[NonSerialized] [SyncVar] public LuauPlugin.LuauBytecodeVersion bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
 	[NonSerialized] [SyncVar] public string serverPlayerVersion = "";
 
-	[NonSerialized] [SyncVar]
+	[NonSerialized]
 	public readonly SyncDictionary<LuauContext, List<LuauPlugin.LuauMemoryCategoryDumpItem>> ServerMemDump = new();
 	private readonly Dictionary<LuauContext, float> _lastServerMemDumpUpdate = new() {
 		[LuauContext.Game] = 0,

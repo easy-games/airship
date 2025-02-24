@@ -322,13 +322,7 @@ public class Deploy {
 				totalCodeSize += uploadInfo.sizeBytes;
 			}
 		}
-		
-		string getSizeText(float sizeBytes) {
-			if (sizeBytes < Math.Pow(10, 3)) return $"{sizeBytes}b";
-			if (sizeBytes < Math.Pow(10, 6)) return $"{Math.Round(sizeBytes / Math.Pow(10, 3), 1)}kb";
-			return $"{Math.Round(sizeBytes / Math.Pow(10, 6), 1)}mb";
-		}
-		
+
 		long prevCheckTime = 0;
 		while (!finishedUpload) {
 			long diff = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - prevCheckTime;
@@ -365,14 +359,14 @@ public class Deploy {
 				yield break;
 			}
 			*/
-			Debug.Log($"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}");
+			Debug.Log($"Uploading Game: {AirshipEditorUtil.GetFileSizeText(totalBytes)} / {AirshipEditorUtil.GetFileSizeText(totalSize)}");
 			yield return null;
 		}
 		EditorUtility.ClearProgressBar();
 
-		string sizeSnippet = $" (game size: {getSizeText(totalMacSize)})";
+		string sizeSnippet = $" (game size: {AirshipEditorUtil.GetFileSizeText(totalMacSize)})";
 		if (platforms.Length == 0) {
-			sizeSnippet = $" (code size: {getSizeText(totalCodeSize)})";
+			sizeSnippet = $" (code size: {AirshipEditorUtil.GetFileSizeText(totalCodeSize)})";
 		}
 
 		Debug.Log($"Completed upload{sizeSnippet}. Finalizing publish...");

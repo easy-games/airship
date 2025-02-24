@@ -245,7 +245,7 @@ public class TypeGenerator : MonoBehaviour
             // Airship
             typeof(AnimationEventData),
             typeof(VoxelWorld),
-            typeof(AccessorySkin),
+            // typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
             typeof(VisualGraphComponent),
@@ -253,6 +253,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterInputData),
             typeof(CharacterMovementSettings),
             typeof(CharacterAnimationSyncData),
+            typeof(AccessoryAddMode),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
@@ -321,6 +322,9 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkTime$",
             "UnityEngine.TextCore.Text.Character",
             "\\.VolumeProfile$",
+            "\\.Clothing$",
+            "\\.ClothingManager$",
+            "\\.MonoBehaviour$",
         };
 
         var options = new TypeScriptOptions
