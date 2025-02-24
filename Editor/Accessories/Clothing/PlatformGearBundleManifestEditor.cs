@@ -71,12 +71,14 @@ namespace Editor.Accessories.Clothing {
 
             // Pre-build check: Make sure all gear accessory LOD's are in the right folder
             foreach (var gear in manifest.gearList) {
-                foreach (var accessory in gear.accessoryPrefabs) {
-                    foreach (var mesh in accessory.meshLods) {
-                        var path = AssetDatabase.GetAssetPath(mesh);
-                        if (!path.StartsWith("Assets/Gear")) {
-                            Debug.LogError($"{accessory.gameObject.name} has an LOD mesh outside of the gear folder. Place all assets (including LOD meshes) inside of the gear folder. Invalid mesh path: " + path);
-                            return;
+                if (gear.accessoryPrefabs != null) {
+                    foreach (var accessory in gear.accessoryPrefabs) {
+                        foreach (var mesh in accessory.meshLods) {
+                            var path = AssetDatabase.GetAssetPath(mesh);
+                            if (!path.StartsWith("Assets/Gear")) {
+                                Debug.LogError($"{accessory.gameObject.name} has an LOD mesh outside of the gear folder. Place all assets (including LOD meshes) inside of the gear folder. Invalid mesh path: " + path);
+                                return;
+                            }
                         }
                     }
                 }
