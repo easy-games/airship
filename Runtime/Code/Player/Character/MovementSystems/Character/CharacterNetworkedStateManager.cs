@@ -5,12 +5,12 @@ namespace Code.Player.Character.MovementSystems.Character
 {
     public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterMovementState, CharacterInputData>
     {
-        public override void SendClientInputToServer(CharacterInputData[] input)
+        public override void SendClientInputToServer(CharacterInputData input)
         {
             this.RpcClientInputToServer(input);
         }
 
-        public override void SendClientSnapshotToServer(CharacterMovementState[] snapshot)
+        public override void SendClientSnapshotToServer(CharacterMovementState snapshot)
         {
             this.RpcClientSnapshotToServer(snapshot);
         }
@@ -28,13 +28,13 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientInputToServer(CharacterInputData[] input)
+        private void RpcClientInputToServer(CharacterInputData input)
         {
             this.OnServerReceiveInput?.Invoke(input);
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientSnapshotToServer(CharacterMovementState[] state)
+        private void RpcClientSnapshotToServer(CharacterMovementState state)
         {
             this.OnServerReceiveSnapshot?.Invoke(state);
         }

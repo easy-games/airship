@@ -104,12 +104,12 @@ namespace Code.Network.StateSystem
 
         // Networking actions to be used by subclass;
         protected Action<State> OnClientReceiveSnapshot;
-        protected Action<State[]> OnServerReceiveSnapshot;
-        protected Action<Input[]> OnServerReceiveInput;
+        protected Action<State> OnServerReceiveSnapshot;
+        protected Action<Input> OnServerReceiveInput;
 
         // Functions to be implemented by subclass that perform networking actions
-        public abstract void SendClientInputToServer(Input[] input);
-        public abstract void SendClientSnapshotToServer(State[] snapshot);
+        public abstract void SendClientInputToServer(Input input);
+        public abstract void SendClientSnapshotToServer(State snapshot);
         public abstract void SendServerSnapshotToClients(State snapshot);
 
         #endregion
@@ -227,9 +227,11 @@ namespace Code.Network.StateSystem
                         // Debug.LogWarning("Sending no commands on interval");
                     }
 
-                    // TODO: there is a size limit for our sends. We should make sure that we don't go over it
-                    // and break up large messages
-                    this.SendClientInputToServer(commands);
+                    // We make multiple calls so that Mirror can batch the commands efficiently
+                    foreach (var command in commands)
+                    {
+                        this.SendClientInputToServer(command);
+                    }
                 }
 
                 // We are an authoritative client and should send our latest state
@@ -241,7 +243,12 @@ namespace Code.Network.StateSystem
                     {
                         this.clientLastSentLocalTime = this.stateHistory.Keys[^1];
                     }
-                    this.SendClientSnapshotToServer(states);
+
+                    // We make multiple calls so that Mirror can batch the snapshots efficiently
+                    foreach (var state in states)
+                    {
+                        this.SendClientSnapshotToServer(state);
+                    }
                 }
             }
 
@@ -507,13 +514,6 @@ namespace Code.Network.StateSystem
                 time);
             this.stateHistory.Add(time, state);
             // Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
-
-            // Send snapshot to clients if we need to.
-            // if (this.lastServerSend <= time - NetworkServer.sendInterval)
-            // {
-            //     this.lastServerSend = time;
-            //     this.SendServerSnapshotToClients(state);
-            // }
         }
 
         public void AuthServerSetSnapshot(double time)
@@ -558,15 +558,6 @@ namespace Code.Network.StateSystem
             var input = this.stateSystem.GetCommand(this.clientCommandNumber);
             input = this.inputHistory.Add(time, input);
             this.stateSystem.Tick(input, false);
-
-            // if (this.lastClientSend <= time - NetworkClient.sendInterval)
-            // {
-            //     this.lastClientSend = time;
-            //     // We will sometimes resend unconfirmed commands. The server should ignore these if
-            //     // it has them already.
-            //     this.SendClientInputToServer(
-            //         this.inputHistory.GetAllAfter(time - (NetworkClient.sendInterval * 2)));
-            // }
         }
 
         public void NonAuthClientCaptureSnapshot(double time, bool replay)
@@ -577,7 +568,6 @@ namespace Code.Network.StateSystem
                 // Check if we had input for that tick. If we did, we will want to use the command number for that
                 // input to capture our snapshot
                 var input = this.inputHistory.GetExact(time);
-                // TODO: null can be in the command now
                 // If we didn't have any input, just skip capturing the tick since we won't expect
                 // to see it in our state history either.
                 if (input == null) return;
@@ -633,15 +623,6 @@ namespace Code.Network.StateSystem
                     "Non-authoritative server should not replay ticks. It should only observe and report observed snapshots.");
                 return;
             }
-            
-            // TODO: this doesn't really work how we would want. The client sends snapshots less frequently that 1 per tick
-            // so we end up with ticks where the client doesn't move. This gets smoothed out on observers due to buffer,
-            // but it means we sometimes send the same state data to observers twice. We could interpolate on the server
-            // and convert the state history here like we do on the observers. That's probably best. The problem is that
-            // the client sends snapshots in it's local timeline which we can't use on the server.
-            // An alternative solution is to have the client send all states to the server in it's updates, then we can
-            // expect to have a client auth state for all ticks and fill in the blanks if we don't. (this might actually be
-            // the only way to have a true client auth state system)
 
             // Process the buffer of states that we've gotten from the authoritative client
             State latestState = null;
@@ -669,13 +650,7 @@ namespace Code.Network.StateSystem
                 }
 
                 // If we don't have a new state to process, that's ok. It just means that the client hasn't sent us
-                // their updated state yet because the update rate is lower than the tick rate.
-
-                // TODO: in the future, we may want to buffer an additional snapshot so that we can interpolate and smooth
-                // out movement between client updates on the server. If the client update rate is very low, there will be obvious pauses
-                // in movement from the server point of view. Observers will actually smooth out the movement because they buffer
-                // the snapshots locally and always smoothly interpolate between two snapshots, so this would mainly help for things
-                // like server side hit registration.
+                // their updated state yet.
             } while (this.serverRecievedStateBuffer.Count >
                      this.serverCommandBufferTargetSize &&
                      statesProcessed < 1 + this.maxServerCommandCatchup);
@@ -698,15 +673,6 @@ namespace Code.Network.StateSystem
                 // Add the state to our history as we would in a authoritative setup
                 this.stateHistory.Add(time, latestState);
             }
-
-            // if (this.lastServerSend <= time - NetworkServer.sendInterval)
-            // {
-            //     // read latest state
-            //     var state = this.stateHistory.Get(time);
-            //     this.lastServerSend = time;
-            //     // Send state to clients
-            //     this.SendServerSnapshotToClients(state);
-            // }
         }
 
         public void NonAuthServerSetSnapshot(double time)
@@ -728,9 +694,8 @@ namespace Code.Network.StateSystem
                 // In the case of ticks, we simply replay the tick as if it was a predicted object.
                 var input = this.inputHistory.GetExact(time);
                 // Ignore if we don't have any input history for this tick. The object will remain as
-                // it was on it's last snapshot
-                // TODO: do we need to make sure of that by making it kinematic? Or ensuring that we always
-                // reset the object to the last snapshot somehow after the tick is over?
+                // it was on it's last snapshot (we will also set the authoritative position on snapshot capture
+                // later)
                 if (input == null) return;
                 this.stateSystem.Tick(input, true);
                 return;
@@ -762,13 +727,6 @@ namespace Code.Network.StateSystem
 
             var state = this.stateSystem.GetCurrentState(clientCommandNumber, time);
             this.stateHistory.Add(time, state);
-
-            // Report snapshot from system to server.
-            // if (this.lastClientSend <= time - NetworkClient.sendInterval)
-            // {
-            //     this.lastClientSend = time;
-            //     this.SendClientSnapshotToServer(state);
-            // }
         }
 
         public void AuthClientSetSnapshot(double time)
@@ -885,8 +843,10 @@ namespace Code.Network.StateSystem
                 // command by the server. That means that the server took more time to process the command
                 // than we store in our client state history. In this case, we can't confirm our prediction
                 // was correct, because we literally don't have the prediction anymore.
-                // TODO: Perhaps we should stop predicting until we receive one we can confirm one of our
-                // predictions?
+                // If we hit this case, we want to stop predicting new commands and wait for the server to confirm
+                // one of our previous predictions. Once one is confirmed, we can start predicting again.
+                // On extremely high ping, this will mean that the local player will freeze in place while we wait for
+                // confirmation from the server.
                 this.clientPausePrediction = true;
                 Debug.LogWarning(
                     "Prediction paused due to a large number of unconfirmed commands to the server. Is there something wrong with the network?");
@@ -999,7 +959,7 @@ namespace Code.Network.StateSystem
             }
 
             // This client is an authoritative owner and should ignore the snapshot,
-            // it is only meant for observers (todo, ignore owner in this case?)
+            // it is only meant for observers
             if (isOwned && !serverAuth)
             {
                 return;
@@ -1013,80 +973,73 @@ namespace Code.Network.StateSystem
             }
         }
 
-        private void ServerReceiveInputCommand(Input[] commands)
+        private void ServerReceiveInputCommand(Input command)
         {
-            foreach (var command in commands)
+            // Debug.Log("Server received command " + command.commandNumber);
+            // This should only occur if the server is authoritative.
+            if (!serverAuth) return;
+
+            // We may get null commands when the client pauses command sending because of unconfirmed commands.
+            // We basically ignore these as this is the client telling us "nothing". We could consider filtering
+            // these on the client before sending.
+            if (command == null) return;
+
+            if (this.serverCommandBuffer.TryGetValue(command.commandNumber, out Input existingInput))
             {
-                // Debug.Log("Server received command " + command.commandNumber);
-                // This should only occur if the server is authoritative.
-                if (!serverAuth) continue;
-
-                // We may get null commands when the client pauses command sending because of unconfirmed commands.
-                // We basically ignore these as this is the client telling us "nothing". We could consider filtering
-                // these on the client before sending.
-                if (command == null) continue;
-
-                if (this.serverCommandBuffer.TryGetValue(command.commandNumber, out Input existingInput))
-                {
-                    // Debug.Log("Received duplicate command number from client. Ignoring");
-                    continue;
-                }
-
-                // Reject commands if our buffer is full.
-                if (this.serverCommandBuffer.Count > this.serverCommandBufferMaxSize)
-                {
-                    Debug.LogWarning("Dropping command " + command.commandNumber +
-                                     " due to exceeding command buffer size.");
-                    continue;
-                }
-
-                if (this.serverLastProcessedCommandNumber >= command.commandNumber)
-                {
-                    // Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
-                    continue;
-                }
-
-                // Queue the command for processing
-                this.serverCommandBuffer.Add(command.commandNumber, command);
+                // Debug.Log("Received duplicate command number from client. Ignoring");
+                return;
             }
+
+            // Reject commands if our buffer is full.
+            if (this.serverCommandBuffer.Count > this.serverCommandBufferMaxSize)
+            {
+                Debug.LogWarning("Dropping command " + command.commandNumber +
+                                 " due to exceeding command buffer size.");
+                return;
+            }
+
+            if (this.serverLastProcessedCommandNumber >= command.commandNumber)
+            {
+                // Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
+                return;
+            }
+
+            // Queue the command for processing
+            this.serverCommandBuffer.Add(command.commandNumber, command);
         }
 
-        private void ServerReceiveSnapshot(State[] snapshots)
+        private void ServerReceiveSnapshot(State snapshot)
         {
-            // The server is receiving updates from the authoritative client owner.
-            foreach (var snapshot in snapshots)
-            {
-                // Debug.Log("Server receive snapshot" + snapshot.lastProcessedCommand + " data: " + snapshot.ToString());
-                // This should only occur if the server is not authoritative.
-                if (serverAuth) return;
+            // Debug.Log("Server receive snapshot" + snapshot.lastProcessedCommand + " data: " + snapshot.ToString());
+            // This should only occur if the server is not authoritative.
+            if (serverAuth) return;
 
-                if (snapshot == null) return;
+            if (snapshot == null) return;
                 
-                if (this.serverRecievedStateBuffer.TryGetValue(snapshot.lastProcessedCommand, out State existingInput))
-                {
-                    // Debug.Log("Received duplicate state from client. Ignoring. " + snapshot.lastProcessedCommand);
-                    continue;
-                }
-               
-                // Update our state so we can distribute it to all observers.
-                if (serverLastProcessedCommandNumber >= snapshot.lastProcessedCommand)
-                {
-                    // We already have this state, so this should be ignored.
-                    return;
-                }
-
-                // Reject new states if our buffer is full
-                if (serverRecievedStateBuffer.Count > this.serverCommandBufferMaxSize)
-                {
-                    Debug.LogWarning("Dropping state " + snapshot.lastProcessedCommand +
-                                     " due to exceeding state buffer size.");
-                    return;
-                }
-
-                // We order by clients last processed command. This is effectively the same as ordering
-                // by time, but avoids the confusion around client vs server timelines.
-                this.serverRecievedStateBuffer.Add(snapshot.lastProcessedCommand, snapshot);
+            if (this.serverRecievedStateBuffer.TryGetValue(snapshot.lastProcessedCommand, out State existingInput))
+            {
+                // Debug.Log("Received duplicate state from client. Ignoring. " + snapshot.lastProcessedCommand);
+                return;
             }
+               
+            // Update our state so we can distribute it to all observers.
+            if (serverLastProcessedCommandNumber >= snapshot.lastProcessedCommand)
+            {
+                // We already have this state, so this should be ignored.
+                return;
+            }
+
+            // Reject new states if our buffer is full
+            if (serverRecievedStateBuffer.Count > this.serverCommandBufferMaxSize)
+            {
+                Debug.LogWarning("Dropping state " + snapshot.lastProcessedCommand +
+                                 " due to exceeding state buffer size.");
+                return;
+            }
+
+            // We order by clients last processed command. This is effectively the same as ordering
+            // by time, but avoids the confusion around client vs server timelines.
+            this.serverRecievedStateBuffer.Add(snapshot.lastProcessedCommand, snapshot);
         }
 
         #endregion

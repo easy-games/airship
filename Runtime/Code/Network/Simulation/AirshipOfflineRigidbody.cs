@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Code.Network.Simulation
@@ -18,6 +19,12 @@ namespace Code.Network.Simulation
         public void Start()
         {
             this.rigidbody = this.GetComponent<Rigidbody>();
+            AirshipSimulationManager.OnSetPaused += OnPause;
+        }
+
+        private void OnDestroy()
+        {
+            AirshipSimulationManager.OnSetPaused -= OnPause;
         }
 
         private void OnPause(bool paused)

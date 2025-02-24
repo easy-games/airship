@@ -6,12 +6,12 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
     public class TestNetworkedStateManager: AirshipNetworkedStateManager<TestMovement, TestMovementState, TestMovementInput>
     {
         
-        public override void SendClientInputToServer(TestMovementInput[] input)
+        public override void SendClientInputToServer(TestMovementInput input)
         {
             this.RpcClientInputToServer(input);
         }
 
-        public override void SendClientSnapshotToServer(TestMovementState[] snapshot)
+        public override void SendClientSnapshotToServer(TestMovementState snapshot)
         {
             this.RpcClientSnapshotToServer(snapshot);
         }
@@ -29,13 +29,13 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientInputToServer(TestMovementInput[] input)
+        private void RpcClientInputToServer(TestMovementInput input)
         {
             this.OnServerReceiveInput?.Invoke(input);
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientSnapshotToServer(TestMovementState[] state)
+        private void RpcClientSnapshotToServer(TestMovementState state)
         {
             this.OnServerReceiveSnapshot?.Invoke(state);
         }

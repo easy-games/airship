@@ -107,8 +107,7 @@ namespace Code.Network.Simulation
 
             return prev;
         }
-
-        // TODO: implement GetAround and use stateHistory on observers for interpolation on LateUpdate()
+        
         public bool GetAround(double time, out T before, out T after)
         {
             before = default;
