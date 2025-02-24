@@ -289,12 +289,6 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         AccessoryComponent myTarget = (AccessoryComponent)target;
         var serializedObject = new SerializedObject(target);
 
-        EditorGUILayout.LabelField("Single Character Accessory");
-#if AIRSHIP_INTERNAL
-        myTarget.serverClassId = EditorGUILayout.TextField("Class Id", myTarget.serverClassId);
-        myTarget.serverClassIdStaging = EditorGUILayout.TextField("Class Id (Staging)", myTarget.serverClassIdStaging);
-#endif
-
         //Accessory Slot
         myTarget.accessorySlot = (AccessorySlot)EditorGUILayout.EnumPopup("Slot", myTarget.accessorySlot);
 
@@ -371,6 +365,13 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
 
             EditorGUI.indentLevel--;
         }
+
+#if AIRSHIP_INTERNAL
+        EditorGUILayout.Space(20);
+        EditorGUILayout.LabelField("Legacy IDs");
+        myTarget.serverClassId = EditorGUILayout.TextField("Class Id", myTarget.serverClassId);
+        myTarget.serverClassIdStaging = EditorGUILayout.TextField("Class Id (Staging)", myTarget.serverClassIdStaging);
+#endif
 
         if (GUI.changed){
             EditorUtility.SetDirty(myTarget);

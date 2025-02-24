@@ -53,10 +53,12 @@ namespace Code.Player.Accessories {
             UNUSED14 = 1 << 30,
         }
 
-        private void Start() {
-            var renderers = this.gameObject.GetComponentsInChildren<Renderer>();
-            foreach (var renderer in renderers) {
-                renderer.material.shader = Shader.Find(renderer.material.shader.name);
+        void Start() {
+            var renderers = this.gameObject.GetComponentsInChildren<MeshRenderer>();
+            foreach (var r in renderers) {
+                if (!r.sharedMaterial.shader.isSupported) {
+                    r.sharedMaterial.shader = Shader.Find("Universal Render Pipeline/Lit");
+                }
             }
         }
 
@@ -109,14 +111,6 @@ namespace Code.Player.Accessories {
         }
 
 
-        [HideFromTS]
-        public string serverClassId;
-
-        [HideFromTS]
-        public string serverClassIdStaging;
-
-        private string serverInstanceId;
-
         public AccessorySlot accessorySlot = AccessorySlot.RightHand;
         public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
@@ -131,6 +125,13 @@ namespace Code.Player.Accessories {
         //Array of (bones?) that get hidden on body mesh when this accessory is worn
         [HideInInspector]
         public int bodyMask = 0;
+
+        [Header("Legacy IDs")]
+        [HideFromTS]
+        public string serverClassId;
+        [HideFromTS]
+        public string serverClassIdStaging;
+        private string serverInstanceId;
 
         public Vector3 localPosition {
             get {
