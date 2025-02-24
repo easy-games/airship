@@ -12,7 +12,7 @@ namespace Code.Accessories.Clothing {
      * Clothing exists on the backend and consists of one or many accessories.
      * Usually it's just one accessory (ie: a hat)
      */
-    [CreateAssetMenu(menuName = "Airship/PlatformGear")]
+    [CreateAssetMenu(menuName = "Airship/Platform Gear")]
     [Icon("Packages/gg.easy.airship/Editor/icons/hat-wizard-solid.png")]
     [LuauAPI]
     public class PlatformGear : ScriptableObject {

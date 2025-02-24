@@ -17,6 +17,7 @@ using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 
 namespace Editor.Accessories.Clothing {
     [CustomEditor(typeof(PlatformGearBundleManifest))]
@@ -88,6 +89,12 @@ namespace Editor.Accessories.Clothing {
                 if (gear.accessoryPrefabs.Length > 0 &&
                     !string.IsNullOrEmpty(gear.accessoryPrefabs[0].serverClassId)) {
                     gear.classId = gear.accessoryPrefabs[0].serverClassId;
+                    EditorUtility.SetDirty(gear);
+                    AssetDatabase.SaveAssets();
+                    continue;
+                }
+                if (gear.face != null && !string.IsNullOrEmpty(gear.face.serverClassId)) {
+                    gear.classId = gear.face.serverClassId;
                     EditorUtility.SetDirty(gear);
                     AssetDatabase.SaveAssets();
                     continue;
@@ -297,6 +304,43 @@ namespace Editor.Accessories.Clothing {
             }
 
             return buildOutputFile;
+        }
+
+        [MenuItem("Assets/Airship/Migrate Face Decals")]
+        private static void MigrateFaceDecal() {
+            Object[] selectedObjects = Selection.objects;
+            foreach (Object obj in selectedObjects) {
+                if (!(obj is AccessoryFace accessoryFace)) continue;
+
+                var path = AssetDatabase.GetAssetPath(accessoryFace);
+                var split = path.Split("/");
+                var parentPath = path.Replace("/" + split[split.Length - 1], "");
+                var newFolderName = accessoryFace.name;
+                if (newFolderName.Contains(".")) {
+                    newFolderName = newFolderName.Split(".")[0];
+                }
+
+                var newFolderPath = parentPath + "/" + newFolderName;
+                AssetDatabase.CreateFolder(parentPath, newFolderName);
+
+                var texturePath = AssetDatabase.GetAssetPath(accessoryFace.decalTexture);
+                AssetDatabase.MoveAsset(path, newFolderPath + "/" + accessoryFace.name + ".asset");
+                AssetDatabase.MoveAsset(texturePath, newFolderPath + "/" + accessoryFace.decalTexture.name + ".png");
+
+                // -------- //
+
+                var gear = ScriptableObject.CreateInstance<PlatformGear>();
+                gear.face = accessoryFace;
+                EditorUtility.SetDirty(gear);
+                AssetDatabase.CreateAsset(gear, newFolderPath + "/" + accessoryFace.name + " Gear.asset");
+                AssetDatabase.SaveAssets();
+
+                var manifest = ScriptableObject.CreateInstance<PlatformGearBundleManifest>();
+                manifest.gearList = new PlatformGear[] { gear };
+                EditorUtility.SetDirty(manifest);
+                AssetDatabase.CreateAsset(manifest, newFolderPath + "/Gear Bundle Manifest.asset");
+                AssetDatabase.SaveAssets();
+            }
         }
     }
 }
