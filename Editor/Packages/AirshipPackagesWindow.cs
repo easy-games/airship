@@ -739,13 +739,6 @@ namespace Editor.Packages {
             urlUploadProgress[url] = 0;
             uploadSizeBytes += bytes.Length;
 
-            List<IMultipartFormSection> formData = new();
-            formData.Add(new MultipartFormFileSection(
-                filePath,
-                bytes,
-                "bundle",
-                "multipart/form-data"));
-
             using var req = UnityWebRequest.Put(url, bytes);
             req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
             req.SendWebRequest();

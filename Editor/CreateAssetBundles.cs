@@ -356,7 +356,7 @@ public static class CreateAssetBundles {
 				});
 			}
 		}
-		var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
+		// var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
 		var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
 		var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
 		if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {

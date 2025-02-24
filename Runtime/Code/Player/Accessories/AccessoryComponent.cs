@@ -53,6 +53,15 @@ namespace Code.Player.Accessories {
             UNUSED14 = 1 << 30,
         }
 
+        void Start() {
+            var renderers = this.gameObject.GetComponentsInChildren<MeshRenderer>();
+            foreach (var r in renderers) {
+                if (!r.sharedMaterial.shader.isSupported) {
+                    r.sharedMaterial.shader = Shader.Find("Universal Render Pipeline/Lit");
+                }
+            }
+        }
+
         public struct BodyMaskInspectorData {
             public BodyMaskInspectorData(BodyMask mask, string name) {
                 this.name = name;
@@ -102,22 +111,12 @@ namespace Code.Player.Accessories {
         }
 
 
-        [HideFromTS]
-        public string serverClassId;
-
-        [HideFromTS]
-        public string serverClassIdStaging;
-
-        private string serverInstanceId;
-
         public AccessorySlot accessorySlot = AccessorySlot.RightHand;
         public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
 
         [SerializeField]
         public List<Mesh> meshLods = new();
-
-        [SerializeField] public MaterialColorURP[] matColors;
 
         [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
         [Obsolete]
@@ -126,6 +125,13 @@ namespace Code.Player.Accessories {
         //Array of (bones?) that get hidden on body mesh when this accessory is worn
         [HideInInspector]
         public int bodyMask = 0;
+
+        [Header("Legacy IDs")]
+        [HideFromTS]
+        public string serverClassId;
+        [HideFromTS]
+        public string serverClassIdStaging;
+        private string serverInstanceId;
 
         public Vector3 localPosition {
             get {
@@ -160,10 +166,6 @@ namespace Code.Player.Accessories {
 #else
             return this.serverClassId;
 #endif
-        }
-
-        private void OnValidate() {
-            this.matColors = GetComponentsInChildren<MaterialColorURP>();
         }
 
         public void Copy(AccessoryComponent other) {
