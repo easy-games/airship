@@ -10,7 +10,7 @@ namespace Code.Player.Character.MovementSystems.Character
             this.RpcClientInputToServer(input);
         }
 
-        public override void SendClientSnapshotToServer(CharacterMovementState snapshot)
+        public override void SendClientSnapshotToServer(CharacterMovementState[] snapshot)
         {
             this.RpcClientSnapshotToServer(snapshot);
         }
@@ -34,7 +34,7 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientSnapshotToServer(CharacterMovementState state)
+        private void RpcClientSnapshotToServer(CharacterMovementState[] state)
         {
             this.OnServerReceiveSnapshot?.Invoke(state);
         }

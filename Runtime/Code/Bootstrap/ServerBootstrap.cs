@@ -126,8 +126,10 @@ public class ServerBootstrap : MonoBehaviour
 				// use random port in shared mode
 				transport.port = (ushort)Random.Range(7770, 7870);
 				// print("Listening on port " + transport.port);
+				print("Starting mirror host mode");
 				AirshipNetworkManager.singleton.StartHost();
 			} else {
+				print("starting mirror server");
 				AirshipNetworkManager.singleton.StartServer();
 				Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
 			}
@@ -135,6 +137,7 @@ public class ServerBootstrap : MonoBehaviour
 			var transport = AirshipNetworkManager.singleton.transport as KcpTransport;
 			transport.port = 7654;
 
+			print("non editor start server");
 			AirshipNetworkManager.singleton.StartServer();
 			Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
 		}

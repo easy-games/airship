@@ -173,6 +173,7 @@ namespace Code.Network.Simulation
             }
 
             var after = new List<T>();
+            // Iterate in reverse since our return values will likely include the end
             for (var i = this.history.Count - 1; i >= 0; i--)
             {
                 if (this.history.Keys[i] < time)

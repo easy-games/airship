@@ -11,7 +11,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             this.RpcClientInputToServer(input);
         }
 
-        public override void SendClientSnapshotToServer(TestMovementState snapshot)
+        public override void SendClientSnapshotToServer(TestMovementState[] snapshot)
         {
             this.RpcClientSnapshotToServer(snapshot);
         }
@@ -35,7 +35,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientSnapshotToServer(TestMovementState state)
+        private void RpcClientSnapshotToServer(TestMovementState[] state)
         {
             this.OnServerReceiveSnapshot?.Invoke(state);
         }
