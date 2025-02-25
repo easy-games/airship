@@ -109,7 +109,7 @@ namespace Editor.Accessories.Clothing {
                 (string category, string subcategory) = GetGearCategory(gear);
 
                 // Create a new class id
-                var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}",
+                var req = UnityWebRequest.PostWwwForm($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}",
                     JsonUtility.ToJson(new GearCreateRequest() {
                         name = gear.name,
                         imageId = "c0e07e88-09d4-4962-b42d-7794a7ad4cb2",
@@ -133,7 +133,7 @@ namespace Editor.Accessories.Clothing {
 
             if (string.IsNullOrEmpty(airId)) {
                 // Create new air asset
-                var req = UnityWebRequest.Post(
+                var req = UnityWebRequest.PostWwwForm(
                     AirshipPlatformUrl.deploymentService + $"/air-assets/owner-type/ORGANIZATION/owner-id/{easyOrgId}",
                     JsonUtility.ToJson(new AirAssetCreateRequest() {
                         contentType = "application/airasset",

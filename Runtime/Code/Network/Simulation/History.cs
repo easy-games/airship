@@ -166,7 +166,7 @@ namespace Code.Network.Simulation
          */
         public T[] GetAllAfter(double time)
         {
-            if (time > this.history.Keys[^1])
+            if (this.history.Keys.Count == 0 || time > this.history.Keys[^1])
             {
                 return new T[] {};
             }
