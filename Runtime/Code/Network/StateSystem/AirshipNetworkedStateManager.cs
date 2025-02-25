@@ -764,8 +764,10 @@ namespace Code.Network.StateSystem
                 return;
             }
 
+            
+            
             // Clone the observed state and update it to be on the local physics timeline.
-            var state = observedState.CloneViaSerialization();
+            var state = (State) observedState.Clone();
             state.time = time;
             // Store the state in our state history for re-simulation later if needed.
             this.stateHistory.Add(time, state);

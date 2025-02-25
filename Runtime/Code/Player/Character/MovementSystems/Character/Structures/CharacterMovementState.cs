@@ -118,5 +118,41 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             return "Pos: " + this.position + " Vel: " + velocity;
         }
+
+        public override object Clone()
+        {
+            return new CharacterMovementState()
+            {
+                time = time,
+                lastProcessedCommand = lastProcessedCommand,
+                position = position,
+                velocity = velocity,
+                currentSpeed = currentSpeed,
+                impulseVelocity =  impulseVelocity,
+                timeSinceJump = timeSinceJump,
+                timeSinceWasGrounded = timeSinceWasGrounded,
+                timeSinceBecameGrounded = timeSinceBecameGrounded,
+                prevState = prevState,
+                state = state,
+                isGrounded = isGrounded,
+                animGrounded = animGrounded,
+                prevStepUp = prevStepUp,
+                isCrouching = isCrouching,
+                isSprinting = isSprinting,
+                lastGroundedMoveDir = lastGroundedMoveDir,
+                prevMoveDir = prevMoveDir,
+                alreadyJumped = alreadyJumped,
+                airborneFromImpulse = airborneFromImpulse,
+                jumpCount = jumpCount,
+                isFlying = isFlying,
+                inputDisabled = inputDisabled,
+                lookVector = lookVector,
+                customData = customData != null ? new BinaryBlob()
+                {
+                    m_dataSize = customData.m_dataSize,
+                    m_data = (byte[]) customData.m_data.Clone(),
+                } : default,
+            };
+        }
     }
 }

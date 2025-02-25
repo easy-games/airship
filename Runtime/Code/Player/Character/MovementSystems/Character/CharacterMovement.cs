@@ -920,9 +920,11 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterMovementState stateNew)
         {
             this.rigidbody.position = Vector3.Lerp(stateOld.position, stateNew.position, delta);
+            var oldLook = stateOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : stateOld.lookVector;
+            var newLook = stateNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : stateNew.lookVector;
             airshipTransform.rotation = Quaternion.Lerp(
-                Quaternion.LookRotation( new Vector3(stateOld.lookVector.x, 0, stateOld.lookVector.z)),
-                Quaternion.LookRotation( new Vector3(stateNew.lookVector.x, 0, stateNew.lookVector.z)),
+                Quaternion.LookRotation( new Vector3(oldLook.x, 0, oldLook.z)),
+                Quaternion.LookRotation( new Vector3(newLook.x, 0, newLook.z)),
                 delta);
         }
 

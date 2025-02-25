@@ -25,5 +25,23 @@ namespace Code.Player.Character.MovementSystems.Character
 		{
 			return "command: " + this.commandNumber + " time: ";//+ this.time;
 		}
+
+		public override object Clone()
+		{
+			return new CharacterInputData()
+			{
+				commandNumber = commandNumber,
+				moveDir = moveDir,
+				jump = jump,
+				crouch = crouch,
+				sprint = sprint,
+				lookVector = lookVector,
+				customData = customData != null ?  new BinaryBlob()
+				{
+					m_dataSize = customData.m_dataSize,
+					m_data = (byte[])customData.m_data.Clone(),
+				} : default,
+			};
+		}
 	}
 }

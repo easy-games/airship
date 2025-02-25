@@ -12,5 +12,15 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         {
             return "cmd: " + this.commandNumber + " mov: " + this.moveDirection.ToString();
         }
+
+        public override object Clone()
+        {
+            return new TestMovementInput()
+            {
+                commandNumber = commandNumber,
+                moveDirection = moveDirection,
+                jump = jump,
+            };
+        }
     }
 }

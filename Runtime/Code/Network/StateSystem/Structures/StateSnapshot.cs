@@ -6,7 +6,7 @@ namespace Code.Network.StateSystem.Structures
     /**
      * Base class for state snapshots when using a networked state system.
      */
-    public class StateSnapshot
+    public class StateSnapshot: ICloneable
     {
         public int lastProcessedCommand;
         /**
@@ -18,6 +18,11 @@ namespace Code.Network.StateSystem.Structures
          * Compares two snapshots with a given % margin.
          */
         public virtual bool CompareWithMargin(float margin, StateSnapshot snapshot)
+        {
+            throw new NotImplementedException("Subclasses should implement this method.");
+        }
+
+        public virtual object Clone()
         {
             throw new NotImplementedException("Subclasses should implement this method.");
         }

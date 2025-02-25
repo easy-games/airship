@@ -1,4 +1,5 @@
 using Code.Network.StateSystem.Structures;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Code.Network.StateSystem.Implementations.TestMovementSystem
@@ -14,7 +15,8 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         public override string ToString()
         {
             return "lastcmd: " + this.lastProcessedCommand + " pos: " + position.ToString() + " rot: " +
-                   rotation.ToString() + " vel: " + this.velocity + " angVel: " + this.angularVelocity + " time: " + this.time;
+                   rotation.ToString() + " vel: " + this.velocity + " angVel: " + this.angularVelocity + " time: " +
+                   this.time;
         }
 
         public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
@@ -22,6 +24,20 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             if (snapshot is not TestMovementState other) return false;
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
                    this.rotation == other.rotation;
+        }
+
+        public override object Clone()
+        {
+            return new TestMovementState()
+            {
+                time = time,
+                lastProcessedCommand = lastProcessedCommand,
+                position = position,
+                rotation = rotation,
+                velocity = velocity,
+                angularVelocity = angularVelocity,
+                jumpTicksUntil = jumpTicksUntil
+            };
         }
     }
 }
