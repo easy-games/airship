@@ -1088,7 +1088,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         {
             case "Header":
                 EditorGUILayout.Space();
-                EditorGUILayout.LabelField((String) parameters[0].value, EditorStyles.boldLabel);
+                var guiStyle = EditorStyles.boldLabel;
+                guiStyle.richText = true;
+                EditorGUILayout.LabelField((String) parameters[0].value, guiStyle);
                 return;
             case "Spacing":
                 if (parameters.Count == 0)
