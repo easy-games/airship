@@ -204,6 +204,59 @@ namespace Luau {
              return true;
          }
      }
+
+
+    [Serializable]
+    public class LuauMetadataDocComment {
+        public string comment;
+        public List<LuauMetadataDocComment> comments = new();
+        public List<LuauMetadataDocTag> tags = new();
+
+        public string Text {
+            get {
+                var result = new List<string>();
+                if (comment != null) {
+                    result.Add(comment);
+                }
+
+                result.AddRange(comments.Select(innerComment => innerComment.Text));
+                return string.Join(" ", result);
+            }
+        }
+    }
+    
+    [Serializable]
+    public class LuauMetadataDocTag {
+        public string name;
+        [CanBeNull] public string value;
+    }
+    
+    [Serializable]
+    public class LuauMetadataDoc {
+        public List<LuauMetadataDocComment> comments = new();
+        public List<LuauMetadataDocTag> tags = new();
+        
+        /// <summary>
+        /// Gets the documentation formatted as a tooltip
+        /// </summary>
+        public string Tooltip {
+            get {
+                if (comments.Count == 0) return null;
+
+                var result = string.Join("", comments.Select(comment => comment.Text));
+                return result;
+            }
+        }
+        
+        public override string ToString() {
+            if (comments.Count > 0) {
+                return $"/**\n{string.Join(", ", comments.Select(comment => " * " + comment.comment))}\n*/";
+            }
+            else {
+                return "<No Documentation>";
+            }
+        }
+    }
     
     [Serializable]
     public class LuauMetadataProperty {
@@ -223,6 +276,12 @@ namespace Luau {
         /// Path to a file
         /// </summary>
         public string fileRef;
+
+#if UNITY_EDITOR
+        [JsonProperty][SerializeField]
+#endif
+        private LuauMetadataDoc docs;
+        public LuauMetadataDoc Documentation => docs;
         
         #if UNITY_EDITOR
         [JsonProperty][SerializeField]
