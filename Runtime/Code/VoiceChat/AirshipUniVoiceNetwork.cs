@@ -77,7 +77,7 @@ namespace Code.VoiceChat {
                     if (peerId > -1) {
                         peerIdStr = "peerId: " + peerId;
                     }
-                    Debug.Log($"  {i}. {player.username} | {peerIdStr}, connectionId: {player.connectionId}");
+                    Debug.Log($"  {i}. {player.username} - {peerIdStr}, connectionId: {player.connectionId}");
                     i++;
                 }
             }));
