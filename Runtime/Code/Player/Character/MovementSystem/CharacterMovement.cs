@@ -18,8 +18,9 @@ public class CharacterMovement : NetworkBehaviour {
 
     public Transform graphicTransform; //A transform that games can animate
     public CharacterMovementData moveData;
-    public CharacterAnimationHelper animationHelper;
     public BoxCollider mainCollider;
+    [Header("Optional Refs")]
+    public CharacterAnimationHelper animationHelper;
     public Transform slopeVisualizer;
 
     [Header("Debug")]
@@ -264,15 +265,17 @@ public class CharacterMovement : NetworkBehaviour {
 
         if (IsObserver()) {
             //Update visuals to match new state
-            animationHelper.SetState(new CharacterAnimationSyncData() {
-                state = newState.state,
-                grounded = newState.prevGrounded,
-                sprinting = newState.currentMoveInput.sprint,
-                crouching = newState.currentMoveInput.crouch,
-                localVelocity = graphicTransform.InverseTransformDirection(newState.velocity),
-                lookVector = newState.currentMoveInput.lookVector,
-                jumping = didJump
-            });
+            if(animationHelper) {
+                animationHelper.SetState(new CharacterAnimationSyncData() {
+                    state = newState.state,
+                    grounded = newState.prevGrounded,
+                    sprinting = newState.currentMoveInput.sprint,
+                    crouching = newState.currentMoveInput.crouch,
+                    localVelocity = graphicTransform.InverseTransformDirection(newState.velocity),
+                    lookVector = newState.currentMoveInput.lookVector,
+                    jumping = didJump
+                });
+            }
         } else {
             // apply the state to the Rigidbody instantly
             rigidbody.position = newState.position;
@@ -1093,7 +1096,9 @@ public class CharacterMovement : NetworkBehaviour {
 
 
     public void SetReplicatedState(CharacterAnimationSyncData oldData, CharacterAnimationSyncData newData) {
-        animationHelper.SetState(newData);
+        if(animationHelper) {
+            animationHelper.SetState(newData);
+        }
         if (oldData.state != newData.state) {
             stateChanged?.Invoke((int)newData.state);
         }
@@ -1305,8 +1310,10 @@ public class CharacterMovement : NetworkBehaviour {
             stateChanged?.Invoke((int)newStateData.state);
         }
 
-        //Update our local visuals
-        animationHelper.SetState(newStateData);
+        if(animationHelper) {
+            //Update our local visuals
+            animationHelper.SetState(newStateData);
+        }
     }
 
     // Called by owner to update the state data. This is then sent to all observers
@@ -1338,7 +1345,9 @@ public class CharacterMovement : NetworkBehaviour {
             stateChanged?.Invoke((int)data.state);
         }
 
-        animationHelper.SetState(data);
+        if(animationHelper) {
+            animationHelper.SetState(data);
+        }
     }
 
     /**
