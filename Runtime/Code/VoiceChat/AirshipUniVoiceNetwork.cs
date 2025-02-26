@@ -40,7 +40,7 @@ namespace Code.VoiceChat {
 
         // UniVoice peer ID <-> FishNet connection ID mapping
         short peerCount = 0;
-        private readonly Dictionary<short, int> peerIdToClientIdMap = new Dictionary<short, int>();
+        private readonly Dictionary<short, int> peerIdToConnectionIdMap = new Dictionary<short, int>();
 
         public ChatroomAgent agent;
 
@@ -60,7 +60,7 @@ namespace Code.VoiceChat {
             );
 
             PeerIDs.Clear();
-            peerIdToClientIdMap.Clear();
+            peerIdToConnectionIdMap.Clear();
 
             if (RunCore.IsClient()) {
                 this.ClientSendReadyWhenAble();
@@ -95,7 +95,7 @@ namespace Code.VoiceChat {
             if (OwnID >= 0) {
                 OwnID = -1;
                 PeerIDs.Clear();
-                peerIdToClientIdMap.Clear();
+                peerIdToConnectionIdMap.Clear();
                 OnLeftChatroom?.Invoke();
             }
 
@@ -103,7 +103,7 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc]
-        void TargetNewClientInit(NetworkConnectionToClient connection, short assignedPeerId, short[] existingPeers, int[] existingPeerClientIds) {
+        void TargetNewClientInit(NetworkConnectionToClient connection, short assignedPeerId, short[] existingPeers, int[] existingPeerConnectionIds) {
             this.Log($"Initialized self with PeerId {assignedPeerId} and peers: {string.Join(", ", existingPeers)}");
 
             // Get self ID and fire that joined chatroom event
@@ -111,7 +111,7 @@ namespace Code.VoiceChat {
             OnJoinedChatroom?.Invoke(OwnID);
 
             for (int i = 0; i < existingPeers.Length; i++) {
-                peerIdToClientIdMap.TryAdd(existingPeers[i], existingPeerClientIds[i]);
+                peerIdToConnectionIdMap.TryAdd(existingPeers[i], existingPeerConnectionIds[i]);
             }
 
             // Get the existing peer IDs from the message and fire
@@ -120,11 +120,11 @@ namespace Code.VoiceChat {
                 await Awaitable.MainThreadAsync();
                 for (int i = 0; i < existingPeers.Length; i++) {
                     var peerId = existingPeers[i];
-                    var clientId = existingPeerClientIds[i];
-                    var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(clientId);
+                    var connectionId = existingPeerConnectionIds[i];
+                    var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(connectionId);
                     if (playerInfo != null) {
-                        // print($"Player joined voice name={playerInfo.username.Value} clientId={clientId} peerId={peerId}");
-                        OnPeerJoinedChatroom?.Invoke(peerId, clientId, playerInfo.voiceChatAudioSource);
+                        // print($"Player joined voice name={playerInfo.username.Value} connectionId={connectionId} peerId={peerId}");
+                        OnPeerJoinedChatroom?.Invoke(peerId, connectionId, playerInfo.voiceChatAudioSource);
                     }
                 }
             });
@@ -144,25 +144,25 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc]
-        void ObserversClientJoined(NetworkConnectionToClient targetConn, int peerId, int clientId) {
-            this.Log($"New peer joined with PeerId: {peerId}, ClientId: {clientId}");
+        void TargetClientJoined(NetworkConnectionToClient connection, int peerId, int connectionId) {
+            this.Log($"New peer joined with peerId: {peerId}, connectionId: {connectionId}");
 
             var joinedPeerId = (short)peerId;
             if (!PeerIDs.Contains(joinedPeerId)) {
                 PeerIDs.Add(joinedPeerId);
             }
-            peerIdToClientIdMap.TryAdd(joinedPeerId, clientId);
+            peerIdToConnectionIdMap.TryAdd(joinedPeerId, connectionId);
 
-            var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(clientId).ContinueWith(
+            var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(connectionId).ContinueWith(
                 async result => {
                     await Awaitable.MainThreadAsync();
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " clientId=" + result.Result.connectionId);
-                    OnPeerJoinedChatroom?.Invoke(joinedPeerId, clientId, result.Result.voiceChatAudioSource);
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " connectionId=" + result.Result.connectionId);
+                    OnPeerJoinedChatroom?.Invoke(joinedPeerId, connectionId, result.Result.voiceChatAudioSource);
                 }));
         }
 
         [ClientRpc]
-        void ObserversClientLeft(int peerId, int clientId) {
+        void ObserversClientLeft(int peerId, int connectionId) {
             var leftId = (short)peerId;
             if (PeerIDs.Contains(leftId))
                 PeerIDs.Remove(leftId);
@@ -176,7 +176,7 @@ namespace Code.VoiceChat {
             var existingPeersInitPacket = PeerIDs
                         // .Where(x => x != peerId)
                         .ToList();
-            var clientIds = PeerIDs.Select((pId) => {
+            var connectionIds = PeerIDs.Select((pId) => {
                 var conn = GetNetworkConnectionFromPeerId(pId);
 
                 if (conn == null) {
@@ -192,7 +192,7 @@ namespace Code.VoiceChat {
             // existingPeersInitPacket.Add(0);
             // clientIds.Add(0);
 
-            TargetNewClientInit(sender, peerId, existingPeersInitPacket.ToArray(), clientIds.ToArray());
+            TargetNewClientInit(sender, peerId, existingPeersInitPacket.ToArray(), connectionIds.ToArray());
 
             // Server_OnClientConnected gets invoked as soon as a client connects
             // to the server. But we use NetworkServer.SendToAll to send our packets
@@ -205,7 +205,7 @@ namespace Code.VoiceChat {
 
             foreach (var otherConn in NetworkServer.connections.Values) {
                 if (otherConn != sender) {
-                    ObserversClientJoined(otherConn, peerId, sender.connectionId);
+                    TargetClientJoined(otherConn, peerId, sender.connectionId);
                 }
             }
 
@@ -231,8 +231,8 @@ namespace Code.VoiceChat {
                 PeerIDs.Remove(leftPeerId);
 
             // Remove the peer-connection ID pair from the map
-            if (peerIdToClientIdMap.ContainsKey(leftPeerId))
-                peerIdToClientIdMap.Remove(leftPeerId);
+            if (peerIdToConnectionIdMap.ContainsKey(leftPeerId))
+                peerIdToConnectionIdMap.Remove(leftPeerId);
 
             // Notify all remaining peers that a peer has left
             // so they can update their peer lists
@@ -291,7 +291,7 @@ namespace Code.VoiceChat {
         /// <param name="connId">The connection Id to lookup</param>
         /// <returns>THe UniVoice Peer ID</returns>
         short GetPeerIdFromConnectionId(int connId) {
-            foreach (var pair in peerIdToClientIdMap) {
+            foreach (var pair in peerIdToConnectionIdMap) {
                 if (pair.Value == connId)
                     return pair.Key;
             }
@@ -299,11 +299,11 @@ namespace Code.VoiceChat {
         }
 
         NetworkConnectionToClient GetNetworkConnectionFromPeerId(short peerId) {
-            if (!peerIdToClientIdMap.ContainsKey(peerId)) {
+            if (!peerIdToConnectionIdMap.ContainsKey(peerId)) {
                 return null;
             }
 
-            if (NetworkServer.connections.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
+            if (NetworkServer.connections.TryGetValue(peerIdToConnectionIdMap[peerId], out var connection)) {
                 return connection;
             }
 
@@ -320,7 +320,7 @@ namespace Code.VoiceChat {
         /// <returns>The UniVoice Peer ID after registration</returns>
         short RegisterConnectionId(int connId) {
             peerCount++;
-            peerIdToClientIdMap.Add(peerCount, connId);
+            peerIdToConnectionIdMap.Add(peerCount, connId);
             PeerIDs.Add(peerCount);
             return peerCount;
         }
