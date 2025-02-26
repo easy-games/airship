@@ -8,6 +8,7 @@ using Adrenak.UniMic;
 using Adrenak.UniVoice;
 using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.UniMicInput;
+using Airship.DevConsole;
 using Code.Player;
 using Mirror;
 using UnityEngine;
@@ -65,6 +66,21 @@ namespace Code.VoiceChat {
             if (RunCore.IsClient()) {
                 this.ClientSendReadyWhenAble();
             }
+
+            DevConsole.AddCommand(Command.Create("voicechat", "vc", "", () => {
+                var players = PlayerManagerBridge.Instance.GetPlayers();
+                Debug.Log($"VoiceChat Players ({players.Length}):");
+                int i = 1;
+                foreach (var player in players) {
+                    var peerId = this.GetPeerIdFromConnectionId(player.connectionId);
+                    var peerIdStr = "<color=red>disconnected</color>";
+                    if (peerId > -1) {
+                        peerIdStr = "peerId: " + peerId;
+                    }
+                    Debug.Log($"  {i}. {player.username} | {peerIdStr}, connectionId: {player.connectionId}");
+                    i++;
+                }
+            }));
         }
 
         private async void ClientSendReadyWhenAble() {
@@ -221,18 +237,19 @@ namespace Code.VoiceChat {
         }
 
         public void NetworkServer_OnDisconnected(NetworkConnectionToClient connection) {
-
             // We use the peer map to get the peer ID for this connection ID
             var leftPeerId = GetPeerIdFromConnectionId(connection.connectionId);
 
             // We now go ahead with the server handling a client leaving
             // Remove the peer from our peer list
-            if (PeerIDs.Contains(leftPeerId))
+            if (PeerIDs.Contains(leftPeerId)) {
                 PeerIDs.Remove(leftPeerId);
+            }
 
             // Remove the peer-connection ID pair from the map
-            if (peerIdToConnectionIdMap.ContainsKey(leftPeerId))
+            if (peerIdToConnectionIdMap.ContainsKey(leftPeerId)) {
                 peerIdToConnectionIdMap.Remove(leftPeerId);
+            }
 
             // Notify all remaining peers that a peer has left
             // so they can update their peer lists
