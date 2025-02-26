@@ -326,6 +326,8 @@ namespace Editor.Packages {
                 yield break;
             }
             
+            Debug.Log("Starting deploy of " + packageDoc.id + "...");
+            
             List<string> possibleKeys;
             if (currentEnvironment == "Staging") {
                 possibleKeys = new List<string> { AuthConfig.instance.stagingApiKey, InternalHttpManager.editorAuthToken };
@@ -367,8 +369,6 @@ namespace Editor.Packages {
                     continue;
                 }
 
-                Debug.Log("Deployment: ");
-                Debug.Log(req.downloadHandler.text);
                 deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
                 break;
             }
