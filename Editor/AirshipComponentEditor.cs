@@ -382,7 +382,12 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         var propNameDisplay = ObjectNames.NicifyVariableName(propName.stringValue);
         var decoratorDictionary = GetDecorators(bindingProp);
-        var guiContent = new GUIContent(propNameDisplay, GetTooltip("", decoratorDictionary));
+
+        var documentation = bindingProp.Documentation;
+        var tooltip = GetTooltip(documentation.Tooltip ?? "", decoratorDictionary);
+        
+        
+        var guiContent = new GUIContent(propNameDisplay, tooltip);
         
         var arrayElementType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(
             items.FindPropertyRelative("type").stringValue, 
