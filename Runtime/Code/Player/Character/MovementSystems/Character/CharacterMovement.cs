@@ -2,6 +2,7 @@ using System;
 using Assets.Luau;
 using Code.Network.StateSystem;
 using Code.Player.Character.NetworkedMovement;
+using Mirror;
 using UnityEngine;
 
 namespace Code.Player.Character.MovementSystems.Character
@@ -1034,11 +1035,19 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public void Teleport(Vector3 position)
         {
-            TeleportAndLook(position, mode == NetworkedStateSystemMode.Input ? this.lookVector : this.currentMoveState.lookVector);
+            if (mode == NetworkedStateSystemMode.Observer && isServer) {
+                RpcTeleport(position);
+                return;
+            }
+            TeleportAndLook(position, isClient && mode != NetworkedStateSystemMode.Observer ? this.lookVector : this.currentMoveState.lookVector);
         }
 
         public void TeleportAndLook(Vector3 position, Vector3 lookVector)
         {
+            if (mode == NetworkedStateSystemMode.Observer && isServer) {
+                RpcTeleportAndLook(position, lookVector);
+                return;
+            }
             // TODO: why? Coppied from old movement
             currentMoveState.airborneFromImpulse = true;
             this.rigidbody.MovePosition(position);
@@ -1060,17 +1069,29 @@ namespace Code.Player.Character.MovementSystems.Character
         
         public void SetFlying(bool flyModeEnabled)
         {
-            this.currentMoveState.isFlying = true;
+            if (mode == NetworkedStateSystemMode.Observer && isServer) {
+                RpcSetFlying(flyModeEnabled);
+                return;
+            }
+            currentMoveState.isFlying = flyModeEnabled;
         }
         
         public void AddImpulse(Vector3 impulse){
             if(useExtraLogging){
                 print("Adding impulse: " + impulse);
             }
+            if (mode == NetworkedStateSystemMode.Observer && isServer) {
+                RpcAddImpulse(impulse);
+                return;
+            }
             SetImpulse(this.currentMoveState.impulseVelocity + impulse);
         }
 
         public void SetImpulse(Vector3 impulse){
+            if (mode == NetworkedStateSystemMode.Observer && isServer) {
+                RpcSetImpulse(impulse);
+                return;
+            }
             currentMoveState.impulseVelocity = impulse;
         }
         
@@ -1095,9 +1116,14 @@ namespace Code.Player.Character.MovementSystems.Character
         }
         
         public void SetVelocity(Vector3 velocity) {
+            if (mode == NetworkedStateSystemMode.Observer && isServer) {
+                RpcVelocity(velocity);
+                return;
+            }
             this.rigidbody.linearVelocity = velocity;
         }
         
+        // TODO: check if we should have this or make people use movement.currentMoveState.velocity
         public Vector3 GetVelocity() {
             return this.rigidbody.linearVelocity;
         }
@@ -1114,11 +1140,66 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             return this.currentMoveState.isFlying;
         }
-
+        
         public Vector3 GetLookVector()
         {
-            // this.lookVector will only get populated when we are the one's creating the inputs
-            return mode == NetworkedStateSystemMode.Input ? this.lookVector : this.currentMoveState.lookVector;
+            // this.lookVector will only get populated when we are the one creating the inputs
+            if (mode == NetworkedStateSystemMode.Input) return this.lookVector;
+            if (mode == NetworkedStateSystemMode.Authority && isClient) return this.lookVector;
+            return this.currentMoveState.lookVector;
+        }
+
+        public Vector3 GetMoveDir()
+        {
+            // this.moveDirInput will only get populated when we are the one creating the inputs
+            if (mode == NetworkedStateSystemMode.Input) return this.moveDirInput;
+            if (mode == NetworkedStateSystemMode.Authority && isClient) return this.moveDirInput;
+            return this.currentMoveState.prevMoveDir;
+        }
+
+        #endregion
+        
+        #region RPCs
+        
+        /**
+         * RPCs are used in client authoritative networking to allow server side code to move clients. These
+         * RPCs are not used in server authoritative mode.
+         */
+
+        [TargetRpc]
+        public void RpcSetImpulse(Vector3 impulse)
+        {
+            this.SetImpulse(impulse);
+        }
+
+        [TargetRpc]
+        public void RpcAddImpulse(Vector3 impulse)
+        {
+            this.AddImpulse(impulse);
+        }
+
+        [TargetRpc]
+        public void RpcVelocity(Vector3 velocity)
+        {
+            this.SetVelocity(velocity);
+        }
+
+        [TargetRpc]
+        public void RpcTeleport(Vector3 position)
+        {
+            this.Teleport(position);
+        }
+
+        [TargetRpc]
+        public void RpcTeleportAndLook(Vector3 position, Vector3 look)
+        {
+            this.TeleportAndLook(position, look);
+        }
+
+        [TargetRpc]
+        public void RpcSetFlying(bool flying)
+        {
+            this.SetFlying(flying);
         }
 
         #endregion
