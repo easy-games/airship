@@ -23,9 +23,11 @@ namespace Code.Player.Character.MovementSystems.Character
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
         public Transform graphicTransform; //A transform that games can animate
-        public CharacterAnimationHelper animationHelper;
         public CharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
+        
+        [Header("Optional Refs")]
+        public CharacterAnimationHelper animationHelper;
         public Transform slopeVisualizer;
         
         [Header("Debug")]
@@ -882,11 +884,11 @@ namespace Code.Player.Character.MovementSystems.Character
                 if (newState.state != this.currentAnimState.state)
                 {
                     stateChanged?.Invoke((int)newState.state);
-                    animationHelper.SetState(newState);
+                    if (animationHelper) animationHelper.SetState(newState);
                 }
                 else
                 {
-                    this.animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
+                    if (animationHelper) this.animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
                 }
                 this.currentAnimState = newState;
             }
@@ -943,7 +945,7 @@ namespace Code.Player.Character.MovementSystems.Character
             };
             var changed = newState.state != this.currentAnimState.state;
             
-            animationHelper.SetState(newState);
+            if (animationHelper) animationHelper.SetState(newState);
             
             this.currentMoveState = state;
             this.currentAnimState = newState;

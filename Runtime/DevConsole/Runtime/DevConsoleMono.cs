@@ -617,6 +617,8 @@ namespace Airship.DevConsole
             DevConsole.InvokeOnConsoleDisabled();
         }
 
+        private bool firstOpen = true;
+
         /// <summary>
         ///     Open the dev console - making it visible.
         /// </summary>
@@ -641,6 +643,12 @@ namespace Airship.DevConsole
             this.canvas.enabled = true;
             ConsoleIsShowing = true;
             _focusInputField = true;
+
+            if (this.firstOpen) {
+                this.firstOpen = false;
+                this._inputField.text = "";
+                this._inputField.caretPosition = 0;
+            }
 
             DevConsole.InvokeOnConsoleOpened();
         }
@@ -667,6 +675,7 @@ namespace Airship.DevConsole
             if (_inputField.isFocused && EventSystem.current != null)
             {
                 EventSystem.current.SetSelectedGameObject(null);
+                this._inputField.textComponent.alignment = TextAnchor.MiddleLeft;
             }
 
             DevConsole.InvokeOnConsoleClosed();
@@ -1364,7 +1373,7 @@ namespace Airship.DevConsole
             // Force the input field to be focused by the event system
             if (_focusInputField && !Application.isMobilePlatform)
             {
-                EventSystem.current.SetSelectedGameObject(_inputField.gameObject, null);
+                EventSystem.current.SetSelectedGameObject(_inputField.gameObject);
                 _focusInputField = false;
             }
 

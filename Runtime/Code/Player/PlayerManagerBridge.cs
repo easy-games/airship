@@ -79,7 +79,6 @@ namespace Code.Player {
 					NetworkServer_OnConnected(connection);
 				}
 				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
-				NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
 
 				if (this.serverBootstrap && this.serverBootstrap.IsAgonesEnvironment())
 				{
@@ -152,7 +151,6 @@ namespace Code.Player {
         
 		private void OnDestroy() {
 			NetworkServer.OnConnectedEvent -= NetworkServer_OnConnected;
-			NetworkServer.OnDisconnectedEvent -= NetworkServer_OnDisconnected;
 		}
 
 		public void AddBotPlayer(string username, string tag, string userId) {
@@ -231,23 +229,16 @@ namespace Code.Player {
 			return playerInfo;
 		}
 
-		private async void NetworkServer_OnDisconnected(NetworkConnectionToClient conn) {
-			if (!_clientIdToObject.ContainsKey(conn.connectionId)) return;
-
-#if UNITY_SERVER
-			Debug.Log("Player disconnected: " + conn.connectionId);
-#endif
+		public async void HandlePlayerLeave(PlayerInfo playerInfo) {
+			Debug.Log(playerInfo.username + " disconnected.");
 
 			// Dispatch an event that the player has left:
-			var networkObj = _clientIdToObject[conn.connectionId];
-			var playerInfo = networkObj.GetComponent<PlayerInfo>();
 			var dto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Remove(dto.connectionId);
 			this.players.Remove(playerInfo);
 			playerRemoved?.Invoke(dto);
 			playerChanged?.Invoke(dto, (object)false);
-			NetworkServer.Destroy(networkObj.gameObject);
-			_clientIdToObject.Remove(conn.connectionId);
+			_clientIdToObject.Remove(playerInfo.netIdentity.connectionToClient.connectionId);
 
 			if (this.agones) {
 				await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
@@ -255,11 +246,9 @@ namespace Code.Player {
 			}
 		}
 
-		public PlayerInfoDto[] GetPlayers()
-		{
+		public PlayerInfoDto[] GetPlayers() {
 			List<PlayerInfoDto> list = new();
-			foreach (var playerInfo in this.players)
-			{
+			foreach (var playerInfo in this.players) {
 				list.Add(playerInfo.BuildDto());
 			}
 

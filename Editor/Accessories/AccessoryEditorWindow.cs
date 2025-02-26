@@ -223,7 +223,10 @@ namespace Editor.Accessories {
                 DestroyImmediate(_editingAccessoryComponent.gameObject);
                 _editingAccessoryComponent = null;
             }
-            _selectedItemLabel.text = "No selected item";
+
+            if (_selectedItemLabel != null) {
+                _selectedItemLabel.text = "No selected item";
+            }
         }
 
         private void BuildScene(AccessoryComponent accessoryComponent, bool forceRedraw = false) {

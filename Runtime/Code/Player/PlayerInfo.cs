@@ -56,6 +56,11 @@ public class PlayerInfo : NetworkBehaviour {
 		}
 	}
 
+	public override void OnStopServer() {
+		PlayerManagerBridge.Instance.HandlePlayerLeave(this);
+		base.OnStopServer();
+	}
+
 
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
@@ -63,7 +68,7 @@ public class PlayerInfo : NetworkBehaviour {
 			userId = this.userId,
 			username = this.username,
 			profileImageId = this.profileImageId,
-			gameObject = gameObject,
+			gameObject = this.gameObject,
 		};
 	}
 }

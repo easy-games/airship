@@ -23,19 +23,19 @@ namespace Code.Player.Character.NetworkedMovement
 
         [SerializeField] public NetworkAnimator? networkAnimator;
         public AnimationEventListener? animationEvents;
-        public ParticleSystem sprintVfx;
-        public ParticleSystem jumpPoofVfx;
-        public ParticleSystem slideVfx;
+        public ParticleSystem? sprintVfx;
+        public ParticleSystem? jumpPoofVfx;
+        public ParticleSystem? slideVfx;
 
-        [Header("Variables")] public float minAirborneTime = .4f;
+        [Header("Variables")] public float minAirborneTime = .25f;
         public float particleMaxDistance = 25f;
-        public float directionalBlendLerpMod = 8f;
+        public float directionalBlendLerpMod = 15f;
 
         [Tooltip("At what speed should we be considered skidding")]
         public float skiddingSpeed = 7.5f;
 
         [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
-        public float idleRectionLength = 3;
+        public float idleRectionLength = 15;
 
         public bool isSkidding { get; private set; } = false;
 
@@ -83,7 +83,7 @@ namespace Code.Player.Character.NetworkedMovement
                     this.animator.runtimeAnimatorController = this.animatorOverride;
                     this.animatorOverride.ApplyOverrides(overrides);
                 }
-                else
+                else if (animator.runtimeAnimatorController)
                 {
                     this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
                     this.animator.runtimeAnimatorController = this.animatorOverride;
