@@ -384,14 +384,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         var decoratorDictionary = GetDecorators(bindingProp);
 
         var documentation = bindingProp.Documentation;
-        var tooltip = GetTooltip(documentation.Tooltip ?? "", decoratorDictionary);
+        var tooltip = GetTooltip(documentation?.Tooltip ?? "", decoratorDictionary);
         
         
         var guiContent = new GUIContent(propNameDisplay, tooltip);
         
         var arrayElementType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(
             items.FindPropertyRelative("type").stringValue, 
-            HasDecorator(decorators, "int")
+            false
         );
         
         // Loop over styling decorators to display them in same order they were passed in

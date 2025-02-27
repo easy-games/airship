@@ -209,7 +209,9 @@ namespace Luau {
     [Serializable]
     public class LuauMetadataDocComment {
         public string comment;
+        [SerializeReference]
         public List<LuauMetadataDocComment> comments = new();
+        [SerializeReference]
         public List<LuauMetadataDocTag> tags = new();
 
         public string Text {
@@ -233,7 +235,9 @@ namespace Luau {
     
     [Serializable]
     public class LuauMetadataDoc {
+        [SerializeReference]
         public List<LuauMetadataDocComment> comments = new();
+        [SerializeReference]
         public List<LuauMetadataDocTag> tags = new();
         
         /// <summary>
@@ -278,13 +282,13 @@ namespace Luau {
         public string fileRef;
 
 #if UNITY_EDITOR
-        [JsonProperty][SerializeField]
+        [JsonProperty][SerializeReference]
 #endif
         private LuauMetadataDoc docs;
         public LuauMetadataDoc Documentation => docs;
         
         #if UNITY_EDITOR
-        [JsonProperty][SerializeField]
+        [JsonProperty][SerializeReference]
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
