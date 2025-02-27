@@ -288,7 +288,7 @@ namespace Luau {
         public LuauMetadataDoc Documentation => docs;
         
         #if UNITY_EDITOR
-        [JsonProperty][SerializeReference]
+        [JsonProperty][SerializeField]
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
