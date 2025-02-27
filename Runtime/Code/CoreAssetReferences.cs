@@ -16,7 +16,7 @@ public class CoreAssetReferences : MonoBehaviour
 
 #if UNITY_EDITOR
 [CustomEditor(typeof(CoreAssetReferences))]
-public class CoreAssetReferencesEditor : Editor
+public class CoreAssetReferencesEditor : UnityEditor.Editor
 {
     public override void OnInspectorGUI()
     {

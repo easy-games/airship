@@ -120,7 +120,7 @@ public class LayoutMaxSize : LayoutElement
 
 #if UNITY_EDITOR
 [CustomEditor(typeof(LayoutMaxSize))]
-public class LayoutMaxSizeEditor : Editor
+public class LayoutMaxSizeEditor : UnityEditor.Editor
 {
     public override void OnInspectorGUI()
     {
