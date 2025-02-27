@@ -333,7 +333,7 @@ namespace Luau {
             }
         }
         public bool HasDecorator(string modifier) {
-            return decorators.Exists((element) => element.name == modifier);
+            return decorators != null && decorators.Exists((element) => element.name == modifier);
         }
         
         public LuauMetadataProperty Clone() {
