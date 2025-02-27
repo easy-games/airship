@@ -382,7 +382,7 @@ namespace Luau {
         }
 
         public List<LuauMetadataDecoratorElement> GetDecorators() {
-            return this.decorators;
+            return this.decorators ?? new List<LuauMetadataDecoratorElement>();
         }
 
         private IntPtr ObjToIntPtr(object obj, string objTypeStr, AirshipComponentPropertyType componentType, List<GCHandle> gcHandles, List<IntPtr> stringPtrs) {

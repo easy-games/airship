@@ -234,38 +234,44 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 return true;
             }
 
-            var decorators = metadataProperty.FindPropertyRelative("decorators");
-            if (originalProperty.GetDecorators().Count != decorators.arraySize) {
-                return true;
-            }
+            // var decorators = metadataProperty.FindPropertyRelative("decorators");
+            // if (originalProperty.GetDecorators().Count != decorators.arraySize) {
+            //     return true;
+            // }
 
-            for (var j = 0; j < decorators.arraySize; j++)
-            {
-                var decorator = decorators.GetArrayElementAtIndex(j);
-                var originalDecorator = originalProperty.GetDecorators()[j];
-                if (originalDecorator.name != decorator.FindPropertyRelative("name").stringValue) {
-                    return true;
-                }
-
-                var parameters = decorator.FindPropertyRelative("parameters");
-                if (originalDecorator.parameters.Count != parameters.arraySize)
-                {
-                    return true;
-                }
-
-                for (var k = 0; k < originalDecorator.parameters.Count; k++)
-                {
-                    var originalParameter = originalDecorator.parameters[k];
-                    var newParameter = parameters.GetArrayElementAtIndex(k);
-                    if (originalParameter.type != newParameter.FindPropertyRelative("type").stringValue)
-                    {
-                        return true;
-                    }
-                    if (!originalParameter.serializedValue.Equals(newParameter.FindPropertyRelative("serializedValue").stringValue)) {
-                        return true;
-                    }
-                }
-            }
+            // for (var j = 0; j < decorators.arraySize; j++)
+            // {
+            //     var decorator = decorators.GetArrayElementAtIndex(j);
+            //     var originalDecorators = originalProperty.GetDecorators();
+            //     if (j > originalDecorators.Count) {
+            //         break;
+            //     }
+            //
+            //     var originalDecorator = originalDecorators[j];
+            //     
+            //     if (originalDecorator.name != decorator.FindPropertyRelative("name").stringValue) {
+            //         return true;
+            //     }
+            //
+            //     var parameters = decorator.FindPropertyRelative("parameters");
+            //     if (originalDecorator.parameters.Count != parameters.arraySize)
+            //     {
+            //         return true;
+            //     }
+            //
+            //     for (var k = 0; k < originalDecorator.parameters.Count; k++)
+            //     {
+            //         var originalParameter = originalDecorator.parameters[k];
+            //         var newParameter = parameters.GetArrayElementAtIndex(k);
+            //         if (originalParameter.type != newParameter.FindPropertyRelative("type").stringValue)
+            //         {
+            //             return true;
+            //         }
+            //         if (!originalParameter.serializedValue.Equals(newParameter.FindPropertyRelative("serializedValue").stringValue)) {
+            //             return true;
+            //         }
+            //     }
+            // }
             
             // TODO: originalProperty.items
             if (originalProperty.items.type != metadataProperty.FindPropertyRelative("items").FindPropertyRelative("type").stringValue) {
