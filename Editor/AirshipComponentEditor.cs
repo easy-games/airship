@@ -356,6 +356,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private bool HasDecorator(SerializedProperty modifiers, string modifier) {
         for (var i = 0; i < modifiers.arraySize; i++) {
             var element = modifiers.GetArrayElementAtIndex(i).FindPropertyRelative("name");
+            if (element == null) continue;
+            
             if (element.stringValue == modifier) {
                 return true;
             }
