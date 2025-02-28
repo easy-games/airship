@@ -161,7 +161,7 @@ public class CharacterMovementData : MonoBehaviour {
 	public bool assistedLedgeJump = true;
 
 	[Tooltip("How high in units can you auto step up")] 
-	[Range(.05f, 1)]
+	[Range(.05f, 5f)]
 	public float maxStepUpHeight = .5f;
 
 	[Tooltip("How far away to check for a step up")]
