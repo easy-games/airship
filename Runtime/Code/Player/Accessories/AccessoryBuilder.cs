@@ -87,6 +87,10 @@ public class AccessoryBuilder : MonoBehaviour {
         //print("AccessoryBuilder OnEnable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete += OnMeshCombineCompleted;
 
+        if (this.rig.faceMesh.material.mainTexture == null) {
+            this.rig.faceMesh.gameObject.SetActive(false);
+        }
+
         // update list of accessories
         // var accessoryComponents = rig.transform.GetComponentsInChildren<AccessoryComponent>();
         // foreach (var accessoryComponent in accessoryComponents) {
@@ -425,8 +429,9 @@ public class AccessoryBuilder : MonoBehaviour {
 
     public void SetFaceTexture(Texture2D texture) {
         var propertyBlock = new MaterialPropertyBlock();
-        propertyBlock.SetTexture("_BaseMap", texture);
+        propertyBlock.SetTexture(FaceBaseMapTexture, texture);
         rig.faceMesh.SetPropertyBlock(propertyBlock);
+        rig.faceMesh.gameObject.SetActive(true);
     }
 
     public void UpdateCombinedMesh() {
@@ -657,6 +662,8 @@ public class AccessoryBuilder : MonoBehaviour {
 #if UNITY_EDITOR
     [HideInInspector]
     public bool cancelPendingDownload;
+
+    private static readonly int FaceBaseMapTexture = Shader.PropertyToID("_BaseMap");
 
     // [HideFromTS]
     // public async Task<ActiveAccessory[]> EquipOutfitFromUsername(string username) {
