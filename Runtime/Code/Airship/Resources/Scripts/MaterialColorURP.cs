@@ -200,7 +200,7 @@ public class MaterialColorURP : MonoBehaviour {
 // Editor for MaterialColor
 [CustomEditor(typeof(MaterialColorURP))]
 [CanEditMultipleObjects]
-public class MaterialColorURPEditor : Editor {
+public class MaterialColorURPEditor : UnityEditor.Editor {
     public override void OnInspectorGUI() {
         if (targets.Length == 1) {
             //single object

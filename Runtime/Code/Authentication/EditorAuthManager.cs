@@ -1,17 +1,16 @@
+#if UNITY_EDITOR
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Http.Internal;
 using Code.Platform.Shared;
 using JetBrains.Annotations;
-using PlasticGui.Configuration.CloudEdition.Welcome;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace Editor.Auth {
+namespace Code.Authentication {
     [Serializable]
     public struct LiveStatsDto {
         int playerCount;
@@ -66,7 +65,7 @@ namespace Editor.Auth {
     
     [InitializeOnLoad]
     public static class EditorAuthManager {
-        public static User localUser;
+        public static User localUser { get; set; }
         /// <summary>
         /// Fires on sign in / out. User might be undefined on sign in if not yet setup. Check signInStatus to confirm. 
         /// </summary>
@@ -123,6 +122,7 @@ namespace Editor.Auth {
                 
                 localUser = JsonUtility.FromJson<TransferUserResponse>(t.Result.data).user;
                 if (localUser == null) return;
+                SessionState.SetString("Airship:EditorLocalUser", t.Result.data);
 
                 signInStatus = EditorAuthSignInStatus.SIGNED_IN;
                 localUserChanged.Invoke(localUser);
@@ -199,3 +199,4 @@ namespace Editor.Auth {
         }
     }
 }
+#endif

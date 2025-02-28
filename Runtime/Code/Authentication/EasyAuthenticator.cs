@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 using Code.Http.Internal;
 using Code.Platform.Shared;
 using Code.Player;
-using Editor.Auth;
 using Mirror;
 using Proyecto26;
-using RSG;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
@@ -173,7 +171,6 @@ namespace Code.Authentication {
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
                 this.connectionCounter++;
                 if (this.connectionCounter == 1 && loginMessage.editorUserId != null) {
-                    print("Using editor userId: " + loginMessage.editorUserId);
                     tcs.SetResult(new UserData() {
                         uid = InternalHttpManager.editorUserId,
                         username = loginMessage.editorUsername,
