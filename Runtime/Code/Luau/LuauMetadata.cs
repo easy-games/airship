@@ -280,10 +280,8 @@ namespace Luau {
         /// Path to a file
         /// </summary>
         public string fileRef;
-
-#if UNITY_EDITOR
+        
         [JsonProperty][SerializeReference]
-#endif
         private LuauMetadataDoc docs;
         public LuauMetadataDoc Documentation => docs;
         
