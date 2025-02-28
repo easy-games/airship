@@ -35,6 +35,8 @@ public class AccessoryBuilder : MonoBehaviour {
 
     private readonly Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new();
 
+    private static readonly int FaceBaseMapTexture = Shader.PropertyToID("_BaseMap");
+
     //EVENTS
     /// <summary>
     ///     Called whenever the accessory builder combines the mesh
@@ -662,8 +664,6 @@ public class AccessoryBuilder : MonoBehaviour {
 #if UNITY_EDITOR
     [HideInInspector]
     public bool cancelPendingDownload;
-
-    private static readonly int FaceBaseMapTexture = Shader.PropertyToID("_BaseMap");
 
     // [HideFromTS]
     // public async Task<ActiveAccessory[]> EquipOutfitFromUsername(string username) {
