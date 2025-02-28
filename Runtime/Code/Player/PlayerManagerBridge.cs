@@ -240,10 +240,12 @@ namespace Code.Player {
 			playerChanged?.Invoke(dto, (object)false);
 			_clientIdToObject.Remove(playerInfo.netIdentity.connectionToClient.connectionId);
 
+#if UNITY_SERVER
 			if (this.agones) {
 				await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
 				await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
 			}
+#endif
 		}
 
 		public PlayerInfoDto[] GetPlayers() {
