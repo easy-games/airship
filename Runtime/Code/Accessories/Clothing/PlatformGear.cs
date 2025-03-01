@@ -47,7 +47,7 @@ namespace Code.Accessories.Clothing {
             }
 
             var inProgressTask = new TaskCompletionSource<bool>();
-            inProgressDownloads.Add(airId, inProgressTask.Task);
+            inProgressDownloads.TryAdd(airId, inProgressTask.Task);
 
             // Get latest hash
             Hash128 hash;
