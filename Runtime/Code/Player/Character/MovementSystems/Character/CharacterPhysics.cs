@@ -144,7 +144,7 @@ namespace Code.Player.Character.MovementSystems.Character
                     GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
                 }
 
-                if (!_movement.currentMoveState.isGrounded)
+                if (!_movement.currentMoveSnapshot.isGrounded)
                 {
                     if (_movement.drawDebugGizmos_GROUND)
                     {
@@ -365,7 +365,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             //See if we should fallback to simplified stepup
             if (_movement.movementSettings.alwaysStepUp ||
-                (didHitExactForward && _movement.currentMoveState.isGrounded &&
+                (didHitExactForward && _movement.currentMoveSnapshot.isGrounded &&
                  flatDistance < velFrame.magnitude + _movement.characterRadius
                  && (Vector3.Equals(currentUpNormal, Vector3.up) || !IsWalkableSurface(forwardExactHitInfo.normal))))
             {

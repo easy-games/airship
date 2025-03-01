@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Code.Player.Character.MovementSystems.Character
 {
     [LuauAPI]
-    public class CharacterMovementState : StateSnapshot
+    public class CharacterSnapshotData : StateSnapshot
     {
         public Vector3 position;
         public Vector3 velocity;
@@ -40,7 +40,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
         {
             // TODO: could probably be optimized?
-            if (snapshot is not CharacterMovementState other) return false;
+            if (snapshot is not CharacterSnapshotData other) return false;
 
             string message = "";
 
@@ -70,48 +70,55 @@ namespace Code.Player.Character.MovementSystems.Character
             if (prevState != other.prevState) message += $"prevState: {prevState} != {other.prevState}\n";
 
             if (message.Length != 0) Debug.Log(message.TrimEnd());
+            
+            var same =  this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
+                        this.velocity == other.velocity && this.currentSpeed == other.currentSpeed &&
+                        inputDisabled == other.inputDisabled
+                        && isFlying == other.isFlying && isSprinting == other.isSprinting && jumpCount == other.jumpCount &&
+                        airborneFromImpulse == other.airborneFromImpulse &&
+                        alreadyJumped == other.alreadyJumped && prevMoveDir == other.prevMoveDir &&
+                        lastGroundedMoveDir == other.lastGroundedMoveDir
+                        && isCrouching == other.isCrouching && animGrounded == other.animGrounded && prevStepUp == other.prevStepUp &&
+                        isGrounded == other.isGrounded && state == other.state
+                        && prevState == other.prevState;
 
-            return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
-                   this.velocity == other.velocity && this.currentSpeed == other.currentSpeed &&
-                   inputDisabled == other.inputDisabled
-                   && isFlying == other.isFlying && isSprinting == other.isSprinting && jumpCount == other.jumpCount &&
-                   airborneFromImpulse == other.airborneFromImpulse &&
-                   alreadyJumped == other.alreadyJumped && prevMoveDir == other.prevMoveDir &&
-                   lastGroundedMoveDir == other.lastGroundedMoveDir
-                   && isCrouching == other.isCrouching && animGrounded == other.animGrounded && prevStepUp == other.prevStepUp &&
-                   isGrounded == other.isGrounded && state == other.state
-                   && prevState == other.prevState;
+            if (same)
+            {
+                // TODO: fire compare function
+            }
+
+            return same;
             //&& timeSinceBecameGrounded == other.timeSinceBecameGrounded && timeSinceWasGrounded == other.timeSinceWasGrounded
             //&& timeSinceJump == other.timeSinceJump && customData.Equals(other.customData);
         }
 
-        public void CopyFrom(CharacterMovementState copyState)
+        public void CopyFrom(CharacterSnapshotData copySnapshot)
         {
-            this.time = copyState.time;
-            this.lastProcessedCommand = copyState.lastProcessedCommand;
-            this.position = copyState.position;
-            this.velocity = copyState.velocity;
-            this.currentSpeed = copyState.currentSpeed;
-            this.impulseVelocity = copyState.impulseVelocity;
-            this.timeSinceJump = copyState.timeSinceJump;
-            this.timeSinceWasGrounded = copyState.timeSinceWasGrounded;
-            this.timeSinceBecameGrounded = copyState.timeSinceBecameGrounded;
-            this.prevState = copyState.prevState;
-            this.state = copyState.state;
-            this.isGrounded = copyState.isGrounded;
-            this.animGrounded = copyState.animGrounded;
-            this.prevStepUp = copyState.prevStepUp;
-            this.isCrouching = copyState.isCrouching;
-            this.isSprinting = copyState.isSprinting;
-            this.lastGroundedMoveDir = copyState.lastGroundedMoveDir;
-            this.prevMoveDir = copyState.prevMoveDir;
-            this.alreadyJumped = copyState.alreadyJumped;
-            this.airborneFromImpulse = copyState.airborneFromImpulse;
-            this.jumpCount = copyState.jumpCount;
-            this.isFlying = copyState.isFlying;
-            this.inputDisabled = copyState.inputDisabled;
-            this.lookVector = copyState.lookVector;
-            this.customData = copyState.customData;
+            this.time = copySnapshot.time;
+            this.lastProcessedCommand = copySnapshot.lastProcessedCommand;
+            this.position = copySnapshot.position;
+            this.velocity = copySnapshot.velocity;
+            this.currentSpeed = copySnapshot.currentSpeed;
+            this.impulseVelocity = copySnapshot.impulseVelocity;
+            this.timeSinceJump = copySnapshot.timeSinceJump;
+            this.timeSinceWasGrounded = copySnapshot.timeSinceWasGrounded;
+            this.timeSinceBecameGrounded = copySnapshot.timeSinceBecameGrounded;
+            this.prevState = copySnapshot.prevState;
+            this.state = copySnapshot.state;
+            this.isGrounded = copySnapshot.isGrounded;
+            this.animGrounded = copySnapshot.animGrounded;
+            this.prevStepUp = copySnapshot.prevStepUp;
+            this.isCrouching = copySnapshot.isCrouching;
+            this.isSprinting = copySnapshot.isSprinting;
+            this.lastGroundedMoveDir = copySnapshot.lastGroundedMoveDir;
+            this.prevMoveDir = copySnapshot.prevMoveDir;
+            this.alreadyJumped = copySnapshot.alreadyJumped;
+            this.airborneFromImpulse = copySnapshot.airborneFromImpulse;
+            this.jumpCount = copySnapshot.jumpCount;
+            this.isFlying = copySnapshot.isFlying;
+            this.inputDisabled = copySnapshot.inputDisabled;
+            this.lookVector = copySnapshot.lookVector;
+            this.customData = copySnapshot.customData;
         }
 
         public override string ToString()
@@ -121,7 +128,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public override object Clone()
         {
-            return new CharacterMovementState()
+            return new CharacterSnapshotData()
             {
                 time = time,
                 lastProcessedCommand = lastProcessedCommand,

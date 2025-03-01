@@ -763,8 +763,6 @@ namespace Code.Network.StateSystem
                 // data to our state history.
                 return;
             }
-
-            
             
             // Clone the observed state and update it to be on the local physics timeline.
             var state = (State) observedState.Clone();

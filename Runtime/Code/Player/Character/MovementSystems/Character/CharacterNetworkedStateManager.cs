@@ -3,28 +3,28 @@ using Mirror;
 
 namespace Code.Player.Character.MovementSystems.Character
 {
-    public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterMovementState, CharacterInputData>
+    public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterSnapshotData, CharacterInputData>
     {
         public override void SendClientInputToServer(CharacterInputData input)
         {
             this.RpcClientInputToServer(input);
         }
 
-        public override void SendClientSnapshotToServer(CharacterMovementState snapshot)
+        public override void SendClientSnapshotToServer(CharacterSnapshotData snapshot)
         {
             this.RpcClientSnapshotToServer(snapshot);
         }
 
-        public override void SendServerSnapshotToClients(CharacterMovementState snapshot)
+        public override void SendServerSnapshotToClients(CharacterSnapshotData snapshot)
         {
             this.RpcServerSnapshotToClients(snapshot);
         }
 
 
         [ClientRpc(channel = Channels.Unreliable)]
-        private void RpcServerSnapshotToClients(CharacterMovementState state)
+        private void RpcServerSnapshotToClients(CharacterSnapshotData snapshot)
         {
-            this.OnClientReceiveSnapshot?.Invoke(state);
+            this.OnClientReceiveSnapshot?.Invoke(snapshot);
         }
 
         [Command(channel = Channels.Unreliable)]
@@ -34,9 +34,9 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientSnapshotToServer(CharacterMovementState state)
+        private void RpcClientSnapshotToServer(CharacterSnapshotData snapshot)
         {
-            this.OnServerReceiveSnapshot?.Invoke(state);
+            this.OnServerReceiveSnapshot?.Invoke(snapshot);
         }
     }
 }

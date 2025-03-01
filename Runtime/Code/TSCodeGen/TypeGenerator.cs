@@ -14,6 +14,7 @@ using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
 using Code.Network;
+using Code.Network.Simulation;
 using Code.RemoteConsole;
 using Code.VoiceChat;
 using ElRaccoone.Tweens;
@@ -249,11 +250,12 @@ public class TypeGenerator : MonoBehaviour
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
             typeof(VisualGraphComponent),
-            typeof(CharacterMovementState),
+            typeof(CharacterSnapshotData),
             typeof(CharacterInputData),
             typeof(CharacterMovementSettings),
             typeof(CharacterAnimationSyncData),
             typeof(AccessoryAddMode),
+            typeof(AirshipSimulationManager),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
