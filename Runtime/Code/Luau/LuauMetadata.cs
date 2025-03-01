@@ -281,7 +281,7 @@ namespace Luau {
         /// </summary>
         public string fileRef;
         
-        [JsonProperty][SerializeReference]
+        // [JsonProperty][SerializeReference]
         private LuauMetadataDoc docs;
         public LuauMetadataDoc Documentation => docs;
         
