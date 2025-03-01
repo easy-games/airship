@@ -30,7 +30,7 @@ using Object = UnityEngine.Object;
         /// </summary>
         // [InitializeOnLoad]
         public static class TypescriptCompilationService {
-            private const string TsCompilerService = "Typescript Compiler Service";
+            private const string TsCompilerService = "Typescript Compilation Service";
 
             /// <summary>
             /// True if the compiler is running in watch mode
@@ -310,7 +310,7 @@ using Object = UnityEngine.Object;
                         return;
                     }
 
-                    UpdateCompilerProgressBarText($"Compiling Typescript project '{packageInfo.Name}'...");
+                    UpdateCompilerProgressBarText($"Compiling TypeScript project...");
                     var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
@@ -371,13 +371,13 @@ using Object = UnityEngine.Object;
                         Project = project.Directory,
                         Package = project.TsConfig.airship.PackageFolderPath,
                         Json = true,
+                        Publishing = (compileFlags & TypeScriptCompileFlags.Publishing) != 0,
                         Incremental = (compileFlags & TypeScriptCompileFlags.Incremental) != 0,
                         Verbose = (compileFlags & TypeScriptCompileFlags.Verbose) != 0 || EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
                     
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling '{project.Name}' ({compiled} of {totalCompileCount})");
+                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling TypeScript...");
                     CompileTypeScriptProject(project, buildArguments, compileFlags); 
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled '{project.Name}' ({compiled} of {totalCompileCount})");
                 }
                 
                 EditorUtility.ClearProgressBar();
@@ -653,5 +653,6 @@ using Object = UnityEngine.Object;
             SkipPackages = 1 << 3,
             Incremental = 1 << 4,
             Verbose = 1 << 5,
+            Publishing = 1 << 6,
         }
     }
