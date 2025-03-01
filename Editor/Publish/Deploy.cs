@@ -124,16 +124,12 @@ public class Deploy {
 		}
 
 		// Rebuild Typescript
-		var isUsingIncremental = EditorIntegrationsConfig.instance.typescriptIncremental;
-		var shouldResumeTypescriptWatch = isUsingIncremental && TypescriptCompilationService.IsWatchModeRunning;
-		var compileFlags = TypeScriptCompileFlags.FullClean; // FullClean will clear the incremental file
-		
-		if (isUsingIncremental) {
-			compileFlags |= TypeScriptCompileFlags.Incremental;
-			
-			TypescriptCompilationService.StopCompilers();
-			TypescriptCompilationService.BuildTypescript(compileFlags);
-		}
+		var shouldResumeTypescriptWatch = TypescriptCompilationService.IsWatchModeRunning;
+		var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Publishing; // FullClean will clear the incremental file & Publishing will omit editor data
+
+		// We want to do a full publish
+		TypescriptCompilationService.StopCompilers();
+		TypescriptCompilationService.BuildTypescript(compileFlags);
 		
 		if (TypescriptCompilationService.ErrorCount > 0) {
 			Debug.LogError($"Could not publish the project with {TypescriptCompilationService.ErrorCount} compilation error{(TypescriptCompilationService.ErrorCount == 1 ? "" : "s")}");
@@ -253,6 +249,7 @@ public class Deploy {
 		}
 
 		if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
+			if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
 			Debug.Log("Build without upload is enabled. Ending early. You can now view bundles using AssetBundle browser.");
 			yield break;
 		}
