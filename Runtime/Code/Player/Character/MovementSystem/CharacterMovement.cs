@@ -1149,8 +1149,10 @@ public class CharacterMovement : NetworkBehaviour {
                 queueReplay = true;
             }
         } else if (!isServerAuth && isServerOnly) {
-            //Tell client
-            RpcSetImpulse(connectionToClient, impulse);
+            if(connectionToClient != null){
+                //Tell client
+                RpcSetImpulse(connectionToClient, impulse);
+            }
         } else if (isClientOnly) {
             Debug.LogError("Trying to set impulse on client without authority");
         }
@@ -1188,7 +1190,7 @@ public class CharacterMovement : NetworkBehaviour {
     public void SetLookVector(Vector3 lookVector) {
         OnNewLookVector?.Invoke(lookVector);
         SetLookVectorRecurring(lookVector);
-        if (isServerOnly) {
+        if (isServerOnly && connectionToClient != null) {
             RpcSetLookVector(connectionToClient, lookVector);
         }
     }
@@ -1267,7 +1269,10 @@ public class CharacterMovement : NetworkBehaviour {
         if (!isServerAuth && isClientOnly && hasMovementAuth) {
             CommandSetFlying(flyModeEnabled);
         } else if (isServerOnly) {
-            RpcSetFlying(connectionToClient, flyModeEnabled);
+            if(connectionToClient != null){
+                print("server flying");
+                RpcSetFlying(connectionToClient, flyModeEnabled);
+            }
         }
     }
 
