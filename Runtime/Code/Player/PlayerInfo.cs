@@ -61,6 +61,13 @@ public class PlayerInfo : NetworkBehaviour {
 		base.OnStopServer();
 	}
 
+	public override void OnStopClient() {
+		base.OnStopClient();
+		if (!RunCore.IsServer()) {
+			PlayerManagerBridge.Instance.HandlePlayerLeave(this);
+		}
+	}
+
 
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {

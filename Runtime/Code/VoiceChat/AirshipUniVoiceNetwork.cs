@@ -75,7 +75,7 @@ namespace Code.VoiceChat {
                     var peerId = this.GetPeerIdFromConnectionId(player.connectionId);
                     var peerIdStr = "<color=red>disconnected</color>";
                     if (peerId > -1) {
-                        peerIdStr = "peerId: " + peerId;
+                        peerIdStr = "<color=green>connected</color>, peerId: " + peerId;
                     }
                     Debug.Log($"  {i}. {player.username} - {peerIdStr}, connectionId: {player.connectionId}");
                     i++;
@@ -116,6 +116,7 @@ namespace Code.VoiceChat {
             }
 
             NetworkServer.OnDisconnectedEvent -= NetworkServer_OnDisconnected;
+            DevConsole.RemoveCommand("voicechat");
         }
 
         [TargetRpc]
@@ -127,7 +128,7 @@ namespace Code.VoiceChat {
             OnJoinedChatroom?.Invoke(OwnID);
 
             for (int i = 0; i < existingPeers.Length; i++) {
-                peerIdToConnectionIdMap.TryAdd(existingPeers[i], existingPeerConnectionIds[i]);
+                this.peerIdToConnectionIdMap[existingPeers[i]] = existingPeerConnectionIds[i];
             }
 
             // Get the existing peer IDs from the message and fire
@@ -172,7 +173,7 @@ namespace Code.VoiceChat {
             var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(connectionId).ContinueWith(
                 async result => {
                     await Awaitable.MainThreadAsync();
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " connectionId=" + result.Result.connectionId);
+                    // print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " connectionId=" + result.Result.connectionId);
                     OnPeerJoinedChatroom?.Invoke(joinedPeerId, connectionId, result.Result.voiceChatAudioSource);
                 }));
         }
@@ -312,6 +313,11 @@ namespace Code.VoiceChat {
                 if (pair.Value == connId)
                     return pair.Key;
             }
+
+            // print($"full peerIdMap ({this.peerIdToConnectionIdMap.Count}):");
+            // foreach (var pair in this.peerIdToConnectionIdMap) {
+            //     Debug.Log($"  {pair.Key} --> {pair.Value}");
+            // }
             return -1;
         }
 
