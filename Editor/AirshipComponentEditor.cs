@@ -384,7 +384,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         var decoratorDictionary = GetDecorators(bindingProp);
 
         var documentation = bindingProp.Documentation;
-        var tooltip = GetTooltip(documentation?.Tooltip ?? "", decoratorDictionary);
+        var tooltip = GetTooltip(documentation ?? "", decoratorDictionary);
         
         
         var guiContent = new GUIContent(propNameDisplay, tooltip);
