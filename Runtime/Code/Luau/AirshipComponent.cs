@@ -288,12 +288,6 @@ public class AirshipComponent : MonoBehaviour {
     private readonly Dictionary<string, PropertyValueState> _trackCustomProperties = new();
 
     private void SetupMetadata() {
-#if AIRSHIP_PLAYER
-        if (AssetBridge == null) {
-            print("MISSING ASSET BRIDGE: " + gameObject?.name);
-            return;
-        }
-#endif
         // Clear out script if file path doesn't match script path
         if (script != null) {
             if (script.m_path != scriptPath) {

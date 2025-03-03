@@ -260,7 +260,6 @@ public partial class LuauCore : MonoBehaviour {
         _propertySetterCache.Clear();
         WriteMethodFunctions.Clear();
         CurrentContext = LuauContext.Game;
-        _coreInstance = null;
         s_shutdown = false;
     }
 
@@ -302,6 +301,7 @@ public partial class LuauCore : MonoBehaviour {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetOnReload() {
         ResetStaticFields();
+        _coreInstance = null;
         LuauPlugin.LuauSubsystemRegistration();
         Application.quitting -= Quit;
     }
