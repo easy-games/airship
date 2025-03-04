@@ -1,9 +1,12 @@
-﻿using UnityEditor;
+﻿#if UNITY_EDITOR
+using UnityEditor;
 using UnityEditor.SceneManagement;
+#endif
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Code.Luau.Editor {
+#if UNITY_EDITOR
 	[InitializeOnLoad]
 	public class LuauCoreEditor {
 		static LuauCoreEditor() {
@@ -23,4 +26,5 @@ namespace Code.Luau.Editor {
 			PrefabUtility.InstantiatePrefab(luauCorePrefab, SceneManager.GetActiveScene());
 		}
 	}
+#endif
 }
