@@ -58,6 +58,7 @@ public static class ChunkSerializer {
                 }
             }
         }
+        chunk.MarkKeysWithVoxelsDirty();
         return chunk;
     }
 }
