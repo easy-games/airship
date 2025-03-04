@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Accessories.Clothing;
@@ -5,13 +6,14 @@ using Code.Bootstrap;
 using Code.Platform.Shared;
 using UnityEngine;
 using UnityEngine.Networking;
+using Object = UnityEngine.Object;
 
 namespace Code.AirAsset {
     [CreateAssetMenu(menuName = "Airship/Air Asset Bundle")]
     [Icon("Packages/gg.easy.airship/Editor/icons/hat-wizard-solid.png")]
     public class AirAssetBundle : ScriptableObject {
         public string airId;
-        private AssetBundle assetBundle;
+        [NonSerialized] private AssetBundle assetBundle;
 
         private static Dictionary<string, Task<bool>> inProgressDownloads = new();
         private static Dictionary<string, AirAssetBundle> loadedBundles = new();
@@ -23,7 +25,7 @@ namespace Code.AirAsset {
         }
 
         public async Task<Object> LoadAsync(string assetPath) {
-            var res = this.assetBundle.LoadAssetAsync(assetPath);
+            var res = this.assetBundle.LoadAssetAsync(assetPath.ToLower());
             await res;
             return res.asset;
         }
@@ -79,6 +81,7 @@ namespace Code.AirAsset {
             var loadReq = bundle.LoadAssetAsync<AirAssetBundle>("_AirAssetBundle");
             await loadReq;
             var airAssetBundle = (AirAssetBundle) loadReq.asset;
+            airAssetBundle.assetBundle = bundle;
             loadedBundles[airId] = airAssetBundle;
 
             inProgressTask.SetResult(true);
