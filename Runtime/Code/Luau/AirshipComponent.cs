@@ -333,8 +333,7 @@ public class AirshipComponent : MonoBehaviour {
     public void ReconcileMetadata() {
 #if AIRSHIP_PLAYER
         return;
-#endif
-
+#else
         if (script == null || script.m_metadata == null || script.m_metadata.name == "") {
             return;
         }
@@ -405,6 +404,7 @@ public class AirshipComponent : MonoBehaviour {
                 metadata.properties.Remove(serializedProperty);
             }
         }
+#endif
     }
 
     private void WriteChangedComponentProperties() {
