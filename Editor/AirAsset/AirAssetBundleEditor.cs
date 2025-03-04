@@ -1,4 +1,3 @@
-#if AIRSHIP_INTERNAL
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,7 +15,6 @@ using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
-using Object = UnityEngine.Object;
 
 namespace Editor.AirAsset {
     [CustomEditor(typeof(AirAssetBundle))]
@@ -85,7 +83,7 @@ namespace Editor.AirAsset {
 
             List<string> bundlePaths = new();
             foreach (var platform in platforms) {
-                var path = await this.BuildPlatform(airAssetBundle, platform, airId);
+                var path = await this.BuildPlatform(platform, airId);
                 if (string.IsNullOrEmpty(path)) {
                     success = false;
                     return;
@@ -152,13 +150,13 @@ namespace Editor.AirAsset {
         /// </summary>
         /// <param name="platform"></param>
         /// <returns>Path to built bundle. Empty string if it failed.</returns>
-        private async Task<string> BuildPlatform(AirAssetBundle target, AirshipPlatform platform, string airId) {
+        private async Task<string> BuildPlatform(AirshipPlatform platform, string airId) {
             var st = Stopwatch.StartNew();
-            var manifest = (PlatformGearBundleManifest)this.target;
+            var airAssetBundle = (AirAssetBundle)this.target;
 
             var buildOutputFolder = "bundles/airassetbundle/";
             var buildOutputFile = $"bundles/airassetbundle/{airId}_{AirshipPlatformUtil.GetStringName(platform)}.bundle";
-            var sourceFolderPath = Path.GetRelativePath(".", Directory.GetParent(AssetDatabase.GetAssetPath(manifest))!.FullName);
+            var sourceFolderPath = Path.GetRelativePath(".", Directory.GetParent(AssetDatabase.GetAssetPath(airAssetBundle))!.FullName);
 
             List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds();
 
@@ -225,4 +223,3 @@ namespace Editor.AirAsset {
         }
     }
 }
-#endif

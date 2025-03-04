@@ -7,6 +7,8 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Code.AirAsset {
+    [CreateAssetMenu(menuName = "Airship/Air Asset Bundle")]
+    [Icon("Packages/gg.easy.airship/Editor/icons/hat-wizard-solid.png")]
     public class AirAssetBundle : ScriptableObject {
         public string airId;
         private AssetBundle assetBundle;
@@ -27,7 +29,7 @@ namespace Code.AirAsset {
         }
 
         public static async Task<AirAssetBundle> DownloadYielding(string airId) {
-             var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatformUtil.GetLocalPlatform());
+            var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatformUtil.GetLocalPlatform());
             var url = $"{AirshipPlatformUrl.gameCdn}/airassets/{airId}/{platformString}";
 
             // Check for in-progress downloads
