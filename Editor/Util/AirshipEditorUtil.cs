@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -43,5 +44,11 @@ public class AirshipEditorUtil {
     {
         var consoleWindow = GetConsoleWindow();
         consoleWindow.Focus();
+    }
+
+    public static string GetFileSizeText(float sizeBytes) {
+        if (sizeBytes < Math.Pow(10, 3)) return $"{sizeBytes}b";
+        if (sizeBytes < Math.Pow(10, 6)) return $"{Math.Round(sizeBytes / Math.Pow(10, 3), 1)}kb";
+        return $"{Math.Round(sizeBytes / Math.Pow(10, 6), 1)}mb";
     }
 }

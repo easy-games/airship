@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Threading.Tasks;
+using Code.Authentication;
 using Code.Http.Internal;
-using Editor.Auth;
 using Editor.Packages;
 using ParrelSync;
 using UnityEditor;

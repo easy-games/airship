@@ -387,11 +387,16 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         var propNameDisplay = ObjectNames.NicifyVariableName(propName.stringValue);
         var decoratorDictionary = GetDecorators(bindingProp);
-        var guiContent = new GUIContent(propNameDisplay, GetTooltip("", decoratorDictionary));
+
+        var documentation = bindingProp.Documentation;
+        var tooltip = GetTooltip(documentation ?? "", decoratorDictionary);
+        
+        
+        var guiContent = new GUIContent(propNameDisplay, tooltip);
         
         var arrayElementType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(
             items.FindPropertyRelative("type").stringValue, 
-            HasDecorator(decorators, "int")
+            false
         );
         
         // Loop over styling decorators to display them in same order they were passed in
@@ -1088,7 +1093,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         {
             case "Header":
                 EditorGUILayout.Space();
-                EditorGUILayout.LabelField((String) parameters[0].value, EditorStyles.boldLabel);
+                var guiStyle = EditorStyles.boldLabel;
+                guiStyle.richText = true;
+                EditorGUILayout.LabelField((String) parameters[0].value, guiStyle);
                 return;
             case "Spacing":
                 if (parameters.Count == 0)

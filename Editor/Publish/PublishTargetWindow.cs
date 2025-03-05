@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Editor.Auth;
+using Code.Authentication;
 using UnityEditor;
 using UnityEngine;
 

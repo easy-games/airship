@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using VoxelData = System.UInt16;
@@ -52,15 +51,48 @@ namespace VoxelWorldStuff {
         static int chunkSize = VoxelWorld.chunkSize;
 
         //Permanent data
+        /// <summary>
+        /// The main source of voxel data for this chunk. This is not necessarily what
+        /// is currently rendered if geometryDirty is true.
+        /// </summary>
         public UInt16[] readWriteVoxel = new UInt16[chunkSize * chunkSize * chunkSize];
+        /// <summary>
+        /// A uint (32 bits) for the color of each voxel. Vertex color is determined by
+        /// nearest neighboring voxel colors. Format is 1 byte for r,g,b,a.
+        /// </summary>
         public uint[] color = new uint[chunkSize * chunkSize * chunkSize];
+        /// <summary>
+        /// Voxel damage, a float stored to represent a damaged state (or any other
+        /// arbitrary float data). This is useful for rendering but likely wouldn't
+        /// be a good candidate for handling game logic.
+        /// </summary>
         public Dictionary<ushort, float> damageMap = new();
+        /// <summary>
+        /// Used to track a list all keys that contain voxels. This is effectively
+        /// a copy of the same information you could fetch from readWriteVoxel but in
+        /// a more condensed structure for faster access.
+        /// </summary>
+        public HashSet<int> keysWithVoxels = new();
+        /// <summary>
+        /// Flag to control whether we need to repopulate keysWithVoxels from
+        /// readWriteVoxel before next use. This is used because we copy bytes into
+        /// readWriteVoxel when streaming a chunk. When that happens we'll need to
+        /// repopulate keysWithVoxels to make it match the state of the chunk.
+        /// </summary>
+        private bool keysWithVoxelsDirty = true;
 
-        //Currently instantiated prefabs
+        /// <summary>
+        /// Currently instantiated prefabs, of the format:
+        /// Key = Local chunk position
+        /// Value = (Prefab object, block id) 
+        /// </summary>
         private Dictionary<Vector3Int, (GameObject, int)> prefabObjects;
 
         public bool materialPropertiesDirty = true;
 
+        /// <summary>
+        /// Reference to voxel world this chunk belongs to.
+        /// </summary>
         public VoxelWorld world;
 
         public Vector3Int bottomLeftInt;
@@ -70,7 +102,8 @@ namespace VoxelWorldStuff {
         private bool geometryDirty = true;
         private bool geometryDirtyPriorityUpdate = false;
         /// <summary>
-        /// This is true if the chunk has been built once
+        /// This is true if the chunk has been built once. This is primarily used
+        /// for waiting for a chunk to load before some game logic.
         /// </summary>
         private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
  
@@ -380,10 +413,60 @@ namespace VoxelWorldStuff {
             int key = WorldPosToVoxelIndex(worldPos);
 
             if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                keysWithVoxels.Remove(key);
                 return;
             }
 
             readWriteVoxel[key] = num;
+            keysWithVoxels.Add(key);
+        }
+
+        /// <summary>
+        /// Returns a set of all chunk position keys that have non-air voxels.
+        /// This may require looping over all positions in chunk if it is being run
+        /// for the first time.
+        /// </summary>
+        private HashSet<int> GetKeysWithVoxels() {
+            if (keysWithVoxelsDirty) {
+                keysWithVoxels.Clear();
+                for (int x = 0; x < chunkSize; x++) {
+                    for (int y = 0; y < chunkSize; y++) {
+                        for (int z = 0; z < chunkSize; z++) {
+                            var key = GetLocalPositionKey(x, y, z);
+                            // Skip air
+                            if (VoxelWorld.VoxelDataToBlockId(readWriteVoxel[key]) == 0) continue;
+
+                            keysWithVoxels.Add(key);
+                        }
+                    }
+                }
+
+                keysWithVoxelsDirty = false;
+            }
+            return keysWithVoxels;
+        }
+
+        /// <summary>
+        /// Marks keysWithVoxels as needing to be refreshed. This should be
+        /// used when copying bytes into readWriteVoxels. Typical use of WriteVoxelAt
+        /// <b>would not</b> require this to be called.
+        /// </summary>
+        public void MarkKeysWithVoxelsDirty() {
+            keysWithVoxelsDirty = true;
+        }
+
+        /// <summary>
+        /// Fetches and returns the position of a random occupied voxel within this chunk.
+        /// If the chunk is entirely air this will throw an exception.
+        /// </summary>
+        public Vector3 GetRandomOccupiedVoxelPosition() {
+            var rand = new System.Random();
+            
+            var keysWithVoxels = GetKeysWithVoxels();
+            if (keysWithVoxels.Count == 0) throw new InvalidOperationException("GetRandomVoxel");
+            var possibilities = new List<int>(keysWithVoxels);
+            var key = possibilities[rand.Next(0, possibilities.Count)];
+            return chunkKey * chunkSize + GetLocalPositionVector(key);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -443,13 +526,28 @@ namespace VoxelWorldStuff {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt16 GetLocalVoxelAt(int localX, int localY, int localZ) {
-            int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
+            int key = GetLocalPositionKey(localX, localY, localZ);
             return readWriteVoxel[key];
+        }
+
+        /// <returns>
+        /// Local position key from a local x, y, z (starting from 0, 0, 0 => 0).
+        /// </returns>
+        private int GetLocalPositionKey(int localX, int localY, int localZ) {
+            return localX + localY * chunkSize + localZ * chunkSize * chunkSize;
+        }
+
+        /// <summary>
+        /// Takes in a local position key and returns the corresponding local vector.
+        /// </summary>
+        private Vector3Int GetLocalPositionVector(int key) {
+            return new Vector3Int(key % chunkSize, (key / chunkSize) % chunkSize,
+                (key / (chunkSize * chunkSize)) % chunkSize);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Color32 GetLocalColorAt(int localX, int localY, int localZ) {
-            int key = localX + localY * chunkSize + localZ * chunkSize * chunkSize;
+            int key = GetLocalPositionKey(localX, localY, localZ);
             var col = color[key];
             if (col == 0) return default;
             return UIntToColor32(col);

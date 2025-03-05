@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Editor.Auth;
+using Code.Authentication;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;

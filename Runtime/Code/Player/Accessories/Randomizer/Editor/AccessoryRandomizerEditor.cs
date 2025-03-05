@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(AccessoryRandomizer))]
-public class AccessoryRandomizerEditor : Editor
+public class AccessoryRandomizerEditor : UnityEditor.Editor
 {
     public override void OnInspectorGUI()
     {

@@ -206,6 +206,27 @@ namespace Luau {
      }
     
     [Serializable]
+    public class LuauMetadataJsDocTag {
+        public string name;
+        [CanBeNull] public string value;
+    }
+    
+    [Serializable]
+    public class LuauMetadataJsDoc {
+        [JsonProperty("text")][SerializeField]
+        private List<string> text = new();
+        
+        [SerializeField]
+        private List<LuauMetadataJsDocTag> tags = new();
+        
+        /// <summary>
+        /// Gets the documentation formatted as a tooltip
+        /// </summary>
+        public string RichText => string.Join("", text);
+        public IReadOnlyList<LuauMetadataJsDocTag> Tags => tags;
+    }
+    
+    [Serializable]
     public class LuauMetadataProperty {
         // From the JSON:
         public string name;
@@ -223,6 +244,11 @@ namespace Luau {
         /// Path to a file
         /// </summary>
         public string fileRef;
+        
+        [JsonProperty("jsdoc")][SerializeField]
+        private LuauMetadataJsDoc jsDocs;
+        public LuauMetadataJsDoc JsDoc => jsDocs;
+        public string Documentation => JsDoc?.RichText;
         
         #if UNITY_EDITOR
         [JsonProperty][SerializeField]

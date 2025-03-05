@@ -6,10 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Airship.Editor;
+using Code.Authentication;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Platform.Shared;
-using Editor.Auth;
 using Editor.Packages;
 using Luau;
 using Proyecto26;
@@ -124,16 +124,12 @@ public class Deploy {
 		}
 
 		// Rebuild Typescript
-		var isUsingIncremental = EditorIntegrationsConfig.instance.typescriptIncremental;
-		var shouldResumeTypescriptWatch = isUsingIncremental && TypescriptCompilationService.IsWatchModeRunning;
-		var compileFlags = TypeScriptCompileFlags.FullClean; // FullClean will clear the incremental file
-		
-		if (isUsingIncremental) {
-			compileFlags |= TypeScriptCompileFlags.Incremental;
-			
-			TypescriptCompilationService.StopCompilers();
-			TypescriptCompilationService.BuildTypescript(compileFlags);
-		}
+		var shouldResumeTypescriptWatch = TypescriptCompilationService.IsWatchModeRunning;
+		var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Publishing; // FullClean will clear the incremental file & Publishing will omit editor data
+
+		// We want to do a full publish
+		TypescriptCompilationService.StopCompilers();
+		TypescriptCompilationService.BuildTypescript(compileFlags);
 		
 		if (TypescriptCompilationService.ErrorCount > 0) {
 			Debug.LogError($"Could not publish the project with {TypescriptCompilationService.ErrorCount} compilation error{(TypescriptCompilationService.ErrorCount == 1 ? "" : "s")}");
@@ -253,6 +249,7 @@ public class Deploy {
 		}
 
 		if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
+			if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
 			Debug.Log("Build without upload is enabled. Ending early. You can now view bundles using AssetBundle browser.");
 			yield break;
 		}
@@ -322,13 +319,7 @@ public class Deploy {
 				totalCodeSize += uploadInfo.sizeBytes;
 			}
 		}
-		
-		string getSizeText(float sizeBytes) {
-			if (sizeBytes < Math.Pow(10, 3)) return $"{sizeBytes}b";
-			if (sizeBytes < Math.Pow(10, 6)) return $"{Math.Round(sizeBytes / Math.Pow(10, 3), 1)}kb";
-			return $"{Math.Round(sizeBytes / Math.Pow(10, 6), 1)}mb";
-		}
-		
+
 		long prevCheckTime = 0;
 		while (!finishedUpload) {
 			long diff = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - prevCheckTime;
@@ -365,14 +356,14 @@ public class Deploy {
 				yield break;
 			}
 			*/
-			Debug.Log($"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}");
+			Debug.Log($"Uploading Game: {AirshipEditorUtil.GetFileSizeText(totalBytes)} / {AirshipEditorUtil.GetFileSizeText(totalSize)}");
 			yield return null;
 		}
 		EditorUtility.ClearProgressBar();
 
-		string sizeSnippet = $" (game size: {getSizeText(totalMacSize)})";
+		string sizeSnippet = $" (game size: {AirshipEditorUtil.GetFileSizeText(totalMacSize)})";
 		if (platforms.Length == 0) {
-			sizeSnippet = $" (code size: {getSizeText(totalCodeSize)})";
+			sizeSnippet = $" (code size: {AirshipEditorUtil.GetFileSizeText(totalCodeSize)})";
 		}
 
 		Debug.Log($"Completed upload{sizeSnippet}. Finalizing publish...");

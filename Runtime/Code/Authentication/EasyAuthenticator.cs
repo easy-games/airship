@@ -3,11 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Code.Http.Internal;
 using Code.Platform.Shared;
 using Code.Player;
 using Mirror;
 using Proyecto26;
-using RSG;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
@@ -16,6 +16,10 @@ namespace Code.Authentication {
     public struct LoginMessage : NetworkMessage {
         public string authToken;
         public int playerVersion;
+
+        public string editorUserId;
+        public string editorUsername;
+        public string editorProfileImageId;
     }
     public struct LoginResponseMessage : NetworkMessage
     {
@@ -60,6 +64,18 @@ namespace Code.Authentication {
             string authToken = StateManager.GetString("firebase_idToken");
 
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
+#if UNITY_EDITOR
+                if (EditorAuthManager.localUser != null) {
+                    NetworkClient.Send(new LoginMessage {
+                        authToken = "dummy",
+                        playerVersion = AirshipConst.playerVersion,
+                        editorUserId = EditorAuthManager.localUser.uid,
+                        editorUsername = EditorAuthManager.localUser.username,
+                        editorProfileImageId = EditorAuthManager.localUser.profileImageId,
+                    });
+                    return;
+                }
+#endif
                 authToken = "dummy";
             }
 
@@ -103,7 +119,7 @@ namespace Code.Authentication {
             Debug.Log("Authenticating " + conn);
 #endif
             try {
-                var userData = await LoadUserData(loginData.authToken);
+                var userData = await LoadUserData(loginData);
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) {
                     Debug.LogError("No reserved agones slot for player " + userData.username);
@@ -149,11 +165,19 @@ namespace Code.Authentication {
             connectionsPendingDisconnect.Remove(conn);
         }
 
-        private async Task<UserData> LoadUserData(string userIdToken) {
+        private async Task<UserData> LoadUserData(LoginMessage loginMessage) {
             var tcs = new TaskCompletionSource<UserData>();
 
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
                 this.connectionCounter++;
+                if (this.connectionCounter == 1 && loginMessage.editorUserId != null) {
+                    tcs.SetResult(new UserData() {
+                        uid = InternalHttpManager.editorUserId,
+                        username = loginMessage.editorUsername,
+                        profileImageId = loginMessage.editorProfileImageId
+                    });
+                    return await tcs.Task;
+                }
                 tcs.SetResult(new UserData() {
                     uid = this.connectionCounter + "",
                     username = "Player" + this.connectionCounter,
@@ -173,7 +197,7 @@ namespace Code.Authentication {
 
             RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
                 Uri = AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/validate",
-                BodyString = "{\"userIdToken\": \"" + userIdToken + "\"}",
+                BodyString = "{\"userIdToken\": \"" + loginMessage.authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }

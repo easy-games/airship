@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Agones;
+using Airship.DevConsole;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -15,7 +16,7 @@ namespace Code.Player {
 
 		private Dictionary<int, UserData> _userData = new();
 
-		private Dictionary<int, NetworkIdentity> _clientIdToObject = new();
+		private Dictionary<int, NetworkIdentity> connectionIdToPlayerNetId = new();
 		public delegate void PlayerRemovingDelegate(PlayerInfoDto playerInfo);
 
 		public delegate void PlayerChangedDelegate(PlayerInfoDto playerInfo, object entered);
@@ -27,7 +28,6 @@ namespace Code.Player {
 		public PlayerInfo localPlayer;
 		public bool localPlayerReady = false;
 
-		private Dictionary<int, GameObject> clientToPlayerGO = new();
 		private List<PlayerInfo> players = new();
 
 		private int botPlayerIdCounter = -1;
@@ -45,8 +45,8 @@ namespace Code.Player {
 
 		private ServerBootstrap serverBootstrap;
 
-		public PlayerInfo GetPlayerInfoByConnectionId(int clientId) {
-			return this.players.Find((p) => p.connectionId == clientId);
+		public PlayerInfo GetPlayerInfoByConnectionId(int connectionId) {
+			return this.players.Find((p) => p.connectionId == connectionId);
 		}
 
 		public void AddUserData(int connectionId, UserData userData) {
@@ -79,7 +79,6 @@ namespace Code.Player {
 					NetworkServer_OnConnected(connection);
 				}
 				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
-				NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
 
 				if (this.serverBootstrap && this.serverBootstrap.IsAgonesEnvironment())
 				{
@@ -104,6 +103,15 @@ namespace Code.Player {
 					}
 				}
 			}
+
+			DevConsole.AddCommand(Command.Create("players", "", "List all connected players", () => {
+				Debug.Log($"Players ({this.players.Count}):");
+				int i = 1;
+				foreach (var player in this.players) {
+					Debug.Log($"  {i}. {player.username} - connectionId: {player.connectionId}, userId: {player.userId}");
+					i++;
+				}
+			}));
 		}
 
 		/// <summary>
@@ -152,7 +160,6 @@ namespace Code.Player {
         
 		private void OnDestroy() {
 			NetworkServer.OnConnectedEvent -= NetworkServer_OnConnected;
-			NetworkServer.OnDisconnectedEvent -= NetworkServer_OnDisconnected;
 		}
 
 		public void AddBotPlayer(string username, string tag, string userId) {
@@ -187,7 +194,7 @@ namespace Code.Player {
 
 			var go = GameObject.Instantiate(this.playerPrefab, PlayerManagerBridge.Instance.transform.parent);
 			var identity = go.GetComponent<NetworkIdentity>();
-			_clientIdToObject[conn.connectionId] = identity;
+			this.connectionIdToPlayerNetId[conn.connectionId] = identity;
 			var playerInfo = go.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.connectionId);
 			if (userData != null) {
@@ -204,7 +211,6 @@ namespace Code.Player {
 			NetworkServer.AddPlayerForConnection(conn, go);
 
 			var playerInfoDto = playerInfo.BuildDto();
-			this.clientToPlayerGO.Add(conn.connectionId, go);
 			// this.players.Add(playerInfo);
 
 			OnPlayerAdded?.Invoke(playerInfoDto);
@@ -219,6 +225,7 @@ namespace Code.Player {
 			if (!this.players.Contains(playerInfo)) {
 				this.players.Add(playerInfo);
 			}
+			this.connectionIdToPlayerNetId[playerInfo.connectionId] = playerInfo.gameObject.GetComponent<NetworkIdentity>();
 		}
 
 		public async Task<PlayerInfo> GetPlayerInfoFromConnectionIdAsync(int clientId) {
@@ -231,35 +238,27 @@ namespace Code.Player {
 			return playerInfo;
 		}
 
-		private async void NetworkServer_OnDisconnected(NetworkConnectionToClient conn) {
-			if (!_clientIdToObject.ContainsKey(conn.connectionId)) return;
-
-#if UNITY_SERVER
-			Debug.Log("Player disconnected: " + conn.connectionId);
-#endif
+		public async void HandlePlayerLeave(PlayerInfo playerInfo) {
+			Debug.Log(playerInfo.username + " disconnected.");
 
 			// Dispatch an event that the player has left:
-			var networkObj = _clientIdToObject[conn.connectionId];
-			var playerInfo = networkObj.GetComponent<PlayerInfo>();
 			var dto = playerInfo.BuildDto();
-			this.clientToPlayerGO.Remove(dto.connectionId);
 			this.players.Remove(playerInfo);
 			playerRemoved?.Invoke(dto);
 			playerChanged?.Invoke(dto, (object)false);
-			NetworkServer.Destroy(networkObj.gameObject);
-			_clientIdToObject.Remove(conn.connectionId);
+			this.connectionIdToPlayerNetId.Remove(playerInfo.connectionId);
 
+#if UNITY_SERVER
 			if (this.agones) {
 				await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
 				await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
 			}
+#endif
 		}
 
-		public PlayerInfoDto[] GetPlayers()
-		{
+		public PlayerInfoDto[] GetPlayers() {
 			List<PlayerInfoDto> list = new();
-			foreach (var playerInfo in this.players)
-			{
+			foreach (var playerInfo in this.players) {
 				list.Add(playerInfo.BuildDto());
 			}
 
