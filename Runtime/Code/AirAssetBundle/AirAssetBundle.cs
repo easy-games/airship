@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Code.Accessories.Clothing;
 using Code.Bootstrap;
 using Code.Platform.Shared;
 using UnityEngine;
 using UnityEngine.Networking;
 using Object = UnityEngine.Object;
 
-namespace Code.AirAsset {
+namespace Code.AirAssetBundle {
     [CreateAssetMenu(menuName = "Airship/Air Asset Bundle")]
     [Icon("Packages/gg.easy.airship/Editor/icons/hat-wizard-solid.png")]
+    [LuauAPI]
     public class AirAssetBundle : ScriptableObject {
         public string airId;
         [NonSerialized] private AssetBundle assetBundle;
@@ -28,6 +28,10 @@ namespace Code.AirAsset {
             var res = this.assetBundle.LoadAssetAsync(assetPath.ToLower());
             await res;
             return res.asset;
+        }
+
+        public string[] GetPaths() {
+            return this.assetBundle.GetAllAssetNames();
         }
 
         public static async Task<AirAssetBundle> DownloadYielding(string airId) {
@@ -75,9 +79,9 @@ namespace Code.AirAsset {
 
             AssetBundle bundle = DownloadHandlerAssetBundle.GetContent(req);
             // Uncomment to list all assets inside the bundle.
-            // foreach (var asset in bundle.GetAllAssetNames()) {
-            //     Debug.Log("  - " + asset);
-            // }
+            foreach (var asset in bundle.GetAllAssetNames()) {
+                Debug.Log("  - " + asset);
+            }
             var loadReq = bundle.LoadAssetAsync<AirAssetBundle>("_AirAssetBundle");
             await loadReq;
             var airAssetBundle = (AirAssetBundle) loadReq.asset;
