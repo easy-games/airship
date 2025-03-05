@@ -348,7 +348,7 @@ public class AccessoryBuilder : MonoBehaviour {
                     goList.Add(meshRenderers[i].gameObject);
                     //If layer is not specified than set it to be the same as the root game object
                     if (meshRenderers[i].gameObject.layer == 0) {
-                        meshRenderers[i].gameObject.layer = gameObject.layer;
+                        meshRenderers[i].gameObject.layer = rig.gameObject.layer;
                     }
                 }
 
@@ -356,7 +356,7 @@ public class AccessoryBuilder : MonoBehaviour {
                     goList.Add(skinnedMeshRenderers[i].gameObject);
                     //If layer is not specified than set it to be the same as the root game object
                     if (skinnedMeshRenderers[i].gameObject.layer == 0) {
-                        skinnedMeshRenderers[i].gameObject.layer = gameObject.layer;
+                        skinnedMeshRenderers[i].gameObject.layer = rig.gameObject.layer;
                     }
                 }
 
