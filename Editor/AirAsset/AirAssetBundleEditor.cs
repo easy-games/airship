@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Code.Accessories.Clothing;
-using Code.AirAsset;
+using Code.AirAssetBundle;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Platform.Shared;
@@ -174,7 +174,7 @@ namespace Editor.AirAsset {
             var addressableNames = assetPaths
                 .Select((p) => p.ToLower())
                 .Select((p) => {
-                    if (p.Contains(target.name + ".asset")) {
+                    if (p.Contains(target.name.ToLower() + ".asset")) {
                         // custom name so it's easier to find when loading
                         return "_AirAssetBundle";
                     }
