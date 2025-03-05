@@ -884,7 +884,7 @@ namespace Code.Network.StateSystem
             this.clientPausePrediction = false;
 
             // Check if our predicted state matches up with our new authoritative state.
-            if (clientPredictedState.CompareWithMargin(0f, state))
+            if (clientPredictedState.Compare(this.stateSystem, state))
             {
                 // If it does, we can just return since our predictions have all been correct so far.
                 return;

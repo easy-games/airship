@@ -1,4 +1,5 @@
 using System;
+using Code.Player.Character.Net;
 using UnityEngine;
 
 namespace Code.Network.StateSystem.Structures
@@ -17,7 +18,8 @@ namespace Code.Network.StateSystem.Structures
         /**
          * Compares two snapshots with a given % margin.
          */
-        public virtual bool CompareWithMargin(float margin, StateSnapshot snapshot)
+        public virtual bool Compare<TState, TInput>(NetworkedStateSystem<TState, TInput> system, TState snapshot) where TState : StateSnapshot
+            where TInput : InputCommand
         {
             throw new NotImplementedException("Subclasses should implement this method.");
         }

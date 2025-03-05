@@ -1,5 +1,6 @@
 using System;
 using Assets.Luau;
+using Code.Network.StateSystem;
 using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror.BouncyCastle.Asn1.X9;
@@ -37,10 +38,20 @@ namespace Code.Player.Character.MovementSystems.Character
         public Vector3 lookVector;
         public BinaryBlob customData;
 
-        public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
+        public override bool Compare<TState, TInput>(NetworkedStateSystem<TState, TInput> system, TState snapshot)
         {
             // TODO: could probably be optimized?
-            if (snapshot is not CharacterSnapshotData other) return false;
+            if (system.GetType() != typeof(CharacterMovement))
+            {
+                Debug.LogWarning("Character snapshot comparison did not receive the correct state system. Report this.");
+                return false;
+            }
+
+            if (snapshot is not CharacterSnapshotData other)
+            {
+                Debug.LogWarning("Character snapshot comparison did not receive the correct snapshot type. Report this.");
+                return false;
+            }
 
             string message = "";
 
@@ -68,8 +79,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 message += $"prevGrounded: {isGrounded} != {other.isGrounded}\n";
             if (state != other.state) message += $"state: {state} != {other.state}\n";
             if (prevState != other.prevState) message += $"prevState: {prevState} != {other.prevState}\n";
-
-            if (message.Length != 0) Debug.Log(message.TrimEnd());
             
             var same =  this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
                         this.velocity == other.velocity && this.currentSpeed == other.currentSpeed &&
@@ -84,12 +93,16 @@ namespace Code.Player.Character.MovementSystems.Character
 
             if (same)
             {
-                // TODO: fire compare function
+                var movement = system as CharacterMovement;
+                movement.compareResult = true;
+                movement.FireTsCompare(this, other);
+                same = movement.compareResult;
+                if (same == false) message += $"customData: a != b";
             }
+            
+            if (message.Length != 0) Debug.Log(message.TrimEnd());
 
             return same;
-            //&& timeSinceBecameGrounded == other.timeSinceBecameGrounded && timeSinceWasGrounded == other.timeSinceWasGrounded
-            //&& timeSinceJump == other.timeSinceJump && customData.Equals(other.customData);
         }
 
         public void CopyFrom(CharacterSnapshotData copySnapshot)
@@ -118,7 +131,13 @@ namespace Code.Player.Character.MovementSystems.Character
             this.isFlying = copySnapshot.isFlying;
             this.inputDisabled = copySnapshot.inputDisabled;
             this.lookVector = copySnapshot.lookVector;
-            this.customData = copySnapshot.customData;
+            this.customData = copySnapshot.customData != null
+                ? new BinaryBlob()
+                {
+                    m_dataSize = copySnapshot.customData.m_dataSize,
+                    m_data = (byte[])copySnapshot.customData.m_data.Clone(),
+                }
+                : default;
         }
 
         public override string ToString()

@@ -19,7 +19,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
                    this.time;
         }
 
-        public override bool CompareWithMargin(float margin, StateSnapshot snapshot)
+        public override bool Compare<TState, TInput>(NetworkedStateSystem<TState, TInput> system, TState snapshot)
         {
             if (snapshot is not TestMovementState other) return false;
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&

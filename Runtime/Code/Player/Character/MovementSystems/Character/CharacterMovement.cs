@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Assets.Luau;
 using Code.Network.StateSystem;
 using Code.Player.Character.NetworkedMovement;
@@ -134,7 +135,7 @@ namespace Code.Player.Character.MovementSystems.Character
         // State information
         public CharacterSnapshotData currentMoveSnapshot = new CharacterSnapshotData() {};
         public CharacterAnimationSyncData currentAnimState = new CharacterAnimationSyncData() {};
-        private BinaryBlob customStateData;
+        private BinaryBlob customSnapshotData;
 
         #region PUBLIC GET
         public float currentCharacterHeight { get; private set; }
@@ -192,9 +193,10 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             // We reset the custom data to make sure earlier calls outside of our
             // specific state capture function don't find their way into our state record.
-            this.customStateData = null;
+            this.customSnapshotData = null;
             OnCaptureSnapshot?.Invoke();
-            this.currentMoveSnapshot.customData = this.customStateData;
+            this.currentMoveSnapshot.customData = this.customSnapshotData;
+            if (this.customSnapshotData != null) Debug.Log(("Got C# custom state: " + this.customSnapshotData.m_dataSize + " data: " + this.customSnapshotData.GetDictionary().Keys.ToArray()));
             var snapshot = new CharacterSnapshotData();
             snapshot.CopyFrom(this.currentMoveSnapshot);
             snapshot.time = time;
@@ -202,7 +204,7 @@ namespace Code.Player.Character.MovementSystems.Character
             snapshot.position = this.rigidbody.position;
             snapshot.velocity = this.rigidbody.linearVelocity;
             // Reset the custom data again
-            this.customStateData = null;
+            this.customSnapshotData = null;
             return snapshot;
         }
 
@@ -1074,7 +1076,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public void SetCustomSnapshotData(BinaryBlob data)
         {
-            currentMoveSnapshot.customData = data;
+            this.customSnapshotData = data;
         }
 
         public void Teleport(Vector3 position)
@@ -1199,6 +1201,19 @@ namespace Code.Player.Character.MovementSystems.Character
             if (mode == NetworkedStateSystemMode.Input) return this.moveDirInput;
             if (mode == NetworkedStateSystemMode.Authority && isClient) return this.moveDirInput;
             return this.currentMoveSnapshot.prevMoveDir;
+        }
+
+        // This is used by typescript to allow custom data to be compared in TS and the result used
+        // in C#. See the CharacterSnapshotData file for how compareResult is used.
+        public bool compareResult = false;
+        public void SetComparisonResult(bool result)
+        {
+            this.compareResult = result;
+        }
+
+        public void FireTsCompare(CharacterSnapshotData a, CharacterSnapshotData b)
+        {
+            this.OnCompareSnapshots?.Invoke(a, b);
         }
 
         #endregion
