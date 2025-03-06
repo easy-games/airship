@@ -224,7 +224,8 @@ namespace Editor.Accessories.Clothing {
                     category = category,
                     subcategory = subcategory,
                 };
-                var req = UnityWebRequest.Put($"{AirshipPlatformUrl.contentService}/gear/class-id/{gear.classId}",
+                var url = $"{AirshipPlatformUrl.contentService}/gear/class-id/{gear.classId}";
+                var req = UnityWebRequest.Put(url,
                     JsonUtility.ToJson(data));
                 req.method = "PATCH";
                 req.SetRequestHeader("Content-Type","application/json");
@@ -232,7 +233,7 @@ namespace Editor.Accessories.Clothing {
                 req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError("patch classId response: " + req.downloadHandler.text);
+                    Debug.LogError($"patch classId. url: {url}, response: " + req.downloadHandler.text);
                     return;
                 }
             }
