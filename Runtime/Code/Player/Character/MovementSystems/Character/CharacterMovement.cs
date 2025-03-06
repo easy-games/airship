@@ -196,7 +196,6 @@ namespace Code.Player.Character.MovementSystems.Character
             this.customSnapshotData = null;
             OnCaptureSnapshot?.Invoke();
             this.currentMoveSnapshot.customData = this.customSnapshotData;
-            if (this.customSnapshotData != null) Debug.Log(("Got C# custom state: " + this.customSnapshotData.m_dataSize + " data: " + this.customSnapshotData.GetDictionary().Keys.ToArray()));
             var snapshot = new CharacterSnapshotData();
             snapshot.CopyFrom(this.currentMoveSnapshot);
             snapshot.time = time;
