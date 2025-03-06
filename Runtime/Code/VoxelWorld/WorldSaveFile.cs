@@ -168,6 +168,7 @@ public class WorldSaveFile : ScriptableObject {
 
             for (int j = 0; j < data.Length; j++) {
                 if (data[j] != 0) {
+                    finalChunk.keysWithVoxels.Add(j);
                     finalChunk.readWriteVoxel[j] = data[j];
                     finalChunk.color[j] = color[j];
                 }
@@ -256,6 +257,7 @@ public class WorldSaveFile : ScriptableObject {
 #endif
 
                 writeChunk.readWriteVoxel[i] = vox;
+                writeChunk.keysWithVoxels.Add(i);
                 if (color != null && color.Count > 0) {
                     writeChunk.color[i] = color[i];
                 }

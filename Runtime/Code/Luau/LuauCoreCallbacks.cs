@@ -890,6 +890,9 @@ public partial class LuauCore : MonoBehaviour {
                         $"Failed reflection when getting property \"{propName}\". Please note that ref types are not supported. " +
                         e);
                 }
+                catch (TargetInvocationException e) {
+                    return LuauError(thread, "Error fetching property " + propName + ": " + e.InnerException);
+                }
                 catch (Exception e) {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
                     if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {

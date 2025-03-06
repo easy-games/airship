@@ -35,6 +35,8 @@ public class AccessoryBuilder : MonoBehaviour {
 
     private readonly Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new();
 
+    private static readonly int FaceBaseMapTexture = Shader.PropertyToID("_BaseMap");
+
     //EVENTS
     /// <summary>
     ///     Called whenever the accessory builder combines the mesh
@@ -86,6 +88,10 @@ public class AccessoryBuilder : MonoBehaviour {
     private void OnEnable() {
         //print("AccessoryBuilder OnEnable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete += OnMeshCombineCompleted;
+
+        if (Application.isPlaying && this.rig.faceMesh.material.mainTexture == null) {
+            this.rig.faceMesh.gameObject.SetActive(false);
+        }
 
         // update list of accessories
         // var accessoryComponents = rig.transform.GetComponentsInChildren<AccessoryComponent>();
@@ -342,7 +348,7 @@ public class AccessoryBuilder : MonoBehaviour {
                     goList.Add(meshRenderers[i].gameObject);
                     //If layer is not specified than set it to be the same as the root game object
                     if (meshRenderers[i].gameObject.layer == 0) {
-                        meshRenderers[i].gameObject.layer = gameObject.layer;
+                        meshRenderers[i].gameObject.layer = rig.gameObject.layer;
                     }
                 }
 
@@ -350,7 +356,7 @@ public class AccessoryBuilder : MonoBehaviour {
                     goList.Add(skinnedMeshRenderers[i].gameObject);
                     //If layer is not specified than set it to be the same as the root game object
                     if (skinnedMeshRenderers[i].gameObject.layer == 0) {
-                        skinnedMeshRenderers[i].gameObject.layer = gameObject.layer;
+                        skinnedMeshRenderers[i].gameObject.layer = rig.gameObject.layer;
                     }
                 }
 
@@ -425,8 +431,9 @@ public class AccessoryBuilder : MonoBehaviour {
 
     public void SetFaceTexture(Texture2D texture) {
         var propertyBlock = new MaterialPropertyBlock();
-        propertyBlock.SetTexture("_BaseMap", texture);
+        propertyBlock.SetTexture(FaceBaseMapTexture, texture);
         rig.faceMesh.SetPropertyBlock(propertyBlock);
+        rig.faceMesh.gameObject.SetActive(true);
     }
 
     public void UpdateCombinedMesh() {

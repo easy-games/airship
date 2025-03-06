@@ -5,7 +5,6 @@ using System.Linq;
 using Code.Player.Accessories;
 using Code.Platform.Server;
 using Code.Platform.Shared;
-using Editor.Auth;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Diagnostics;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelWorldStuff;
@@ -483,6 +484,15 @@ public partial class VoxelWorld : MonoBehaviour {
         return chunk;
     }
 
+    /// <summary>
+    /// Returns a random occupied voxel position in the world.
+    /// </summary>
+    public Vector3 GetRandomVoxelInWorld() {
+        var rand = new System.Random();
+        var randomChunk = chunks.ElementAt(rand.Next(0, chunks.Count)).Value;
+        return randomChunk.GetRandomOccupiedVoxelPosition();
+    }
+
     [HideFromTS]
     public VoxelData ReadVoxelAtInternal(Vector3Int pos) {
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
@@ -957,10 +967,17 @@ public partial class VoxelWorld : MonoBehaviour {
         
 
         if (Application.isPlaying && this.autoLoad) {
-            if (voxelWorldFile != null) {
-                this.LoadWorldFromSaveFile(voxelWorldFile);
+            if (this.voxelWorldFile != null) {
+                this.LoadWorldFromSaveFile(this.voxelWorldFile);
             }
             return;
+        }
+
+        if (!Application.isPlaying) {
+            if (this.voxelWorldFile != null) {
+                this.LoadWorldFromSaveFile(this.voxelWorldFile);
+                return;
+            }
         }
 
         /*

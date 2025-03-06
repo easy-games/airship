@@ -14,6 +14,11 @@ namespace Airship.Editor {
         public string Package { get; set; }
 
         /// <summary>
+        /// If true, tell the compiler we're compiling for a publish
+        /// </summary>
+        public bool Publishing { get; set; }
+
+        /// <summary>
         /// The location of tsconfig.json (aka -p or --project)
         /// </summary>
         public string Project { get; set; }
@@ -69,7 +74,11 @@ namespace Airship.Editor {
 
             if (Json) {
                 args.Add("--json");
-            } 
+            }
+
+            if (Publishing) {
+                args.Add("--publish");
+            }
             
             if (Verbose) {
                 args.Add("--verbose");

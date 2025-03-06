@@ -22,9 +22,11 @@ namespace Code.Http.Internal {
         }
 
         public static Task<HttpResponse> GetAsync(string url) {
-            #if UNITY_EDITOR
-            if (!EditorApplication.isPlayingOrWillChangePlaymode) return HttpManager.GetAsync(url, GetHeaders());
-            #endif
+#if UNITY_EDITOR
+            if (!EditorApplication.isPlayingOrWillChangePlaymode) {
+                return HttpManager.GetAsync(url, GetHeaders());
+            }
+#endif
             
             return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
                 return HttpManager.GetAsync(url, GetHeaders());

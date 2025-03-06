@@ -204,58 +204,26 @@ namespace Luau {
              return true;
          }
      }
-
-
-    [Serializable]
-    public class LuauMetadataDocComment {
-        public string comment;
-        public List<LuauMetadataDocComment> comments = new();
-        public List<LuauMetadataDocTag> tags = new();
-
-        public string Text {
-            get {
-                var result = new List<string>();
-                if (comment != null) {
-                    result.Add(comment);
-                }
-
-                result.AddRange(comments.Select(innerComment => innerComment.Text));
-                return string.Join(" ", result);
-            }
-        }
-    }
     
     [Serializable]
-    public class LuauMetadataDocTag {
+    public class LuauMetadataJsDocTag {
         public string name;
         [CanBeNull] public string value;
     }
     
     [Serializable]
-    public class LuauMetadataDoc {
-        public List<LuauMetadataDocComment> comments = new();
-        public List<LuauMetadataDocTag> tags = new();
+    public class LuauMetadataJsDoc {
+        [JsonProperty("text")][SerializeField]
+        private List<string> text = new();
+        
+        [SerializeField]
+        private List<LuauMetadataJsDocTag> tags = new();
         
         /// <summary>
         /// Gets the documentation formatted as a tooltip
         /// </summary>
-        public string Tooltip {
-            get {
-                if (comments.Count == 0) return null;
-
-                var result = string.Join("", comments.Select(comment => comment.Text));
-                return result;
-            }
-        }
-        
-        public override string ToString() {
-            if (comments.Count > 0) {
-                return $"/**\n{string.Join(", ", comments.Select(comment => " * " + comment.comment))}\n*/";
-            }
-            else {
-                return "<No Documentation>";
-            }
-        }
+        public string RichText => string.Join("", text);
+        public IReadOnlyList<LuauMetadataJsDocTag> Tags => tags;
     }
     
     [Serializable]
@@ -276,12 +244,11 @@ namespace Luau {
         /// Path to a file
         /// </summary>
         public string fileRef;
-
-#if UNITY_EDITOR
-        [JsonProperty][SerializeField]
-#endif
-        private LuauMetadataDoc docs;
-        public LuauMetadataDoc Documentation => docs;
+        
+        [JsonProperty("jsdoc")][SerializeField]
+        private LuauMetadataJsDoc jsDocs;
+        public LuauMetadataJsDoc JsDoc => jsDocs;
+        public string Documentation => JsDoc?.RichText;
         
         #if UNITY_EDITOR
         [JsonProperty][SerializeField]
