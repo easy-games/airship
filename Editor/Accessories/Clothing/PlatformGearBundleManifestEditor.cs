@@ -233,7 +233,7 @@ namespace Editor.Accessories.Clothing {
                 req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError($"patch classId. url: {url}, response: " + req.downloadHandler.text);
+                    Debug.LogError($"patch classId. url: {url}, response: {req.downloadHandler.text}, authToken: {InternalHttpManager.editorAuthToken}");
                     return;
                 }
             }
