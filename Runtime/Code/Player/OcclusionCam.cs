@@ -9,7 +9,6 @@ public class OcclusionCam : MonoBehaviour
     public Camera targetCamera;
 
     [Header("Variables")]
-    public float minAllowedDistance = .5f;
     public bool clampYToHeadHeight = false;
 
     private float _fov;
@@ -53,8 +52,8 @@ public class OcclusionCam : MonoBehaviour
         var camPos = t.position;
         var distance = Vector3.Distance(camPos, attachToPos);
         // If cam is too far above attach pos snap up
-        if (this.clampYToHeadHeight && attachToPos.y - camPos.y > 0.4f) {
-            distance /= (attachToPos.y - camPos.y) / 0.4f;
+        if (this.clampYToHeadHeight && attachToPos.y - camPos.y > 0.45f) {
+            distance /= (attachToPos.y - camPos.y) / 0.45f;
         }
         var adjusted = false;
         var diff = camPos - attachToPos;
