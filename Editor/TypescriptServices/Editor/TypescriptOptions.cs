@@ -88,7 +88,7 @@ namespace Airship.Editor {
                 if (GUILayout.Button(
                         new GUIContent(" Build", BuildIcon, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
-                    var compileFlags = TypeScriptCompileFlags.FullClean;
+                    var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.DisplayProgressBar;
                     if (EditorIntegrationsConfig.instance.typescriptIncremental) {
                         compileFlags |= TypeScriptCompileFlags.Incremental;
                     }
@@ -129,16 +129,30 @@ namespace Airship.Editor {
         };
         
         internal static void RenderSettings() {
-            var settings = EditorIntegrationsConfig.instance;
+            var projectSettings = EditorIntegrationsConfig.instance;
+            var localSettings = TypescriptServicesLocalConfig.instance;
+            
             EditorGUI.indentLevel += 1;
 
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Service Options", EditorStyles.boldLabel);
+            
             {
-                settings.typescriptAutostartCompiler =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), settings.typescriptAutostartCompiler);
-                settings.typescriptPreventPlayOnError =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), settings.typescriptPreventPlayOnError);
+                EditorGUILayout.LabelField(new GUIContent("Project Settings", "Settings that will save to the project itself"), EditorStyles.helpBox);
+                projectSettings.typescriptAutostartCompiler =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), projectSettings.typescriptAutostartCompiler);
+                projectSettings.typescriptPreventPlayOnError =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), projectSettings.typescriptPreventPlayOnError);
+
+
+                EditorGUILayout.LabelField(new GUIContent("Local Project Settings", "Settings that are only for your local computer, for this local project"), EditorStyles.helpBox);
+                
+                localSettings.skipCompileOnCodeDeploy =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Skip Compile on Code Publish", "This will skip compilation on code publish"), localSettings.skipCompileOnCodeDeploy);
+
+                if (localSettings.skipCompileOnCodeDeploy) {
+                    EditorGUILayout.HelpBox("Skipping compilation on code deploy may speed up the deploy, but it has a very small chance of publishing broken code if the watch state is incorrect.", MessageType.Warning);
+                }
             }
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
@@ -170,19 +184,19 @@ namespace Airship.Editor {
 
                 EditorGUILayout.BeginHorizontal();
                 {
-                    var prevIncremental = settings.typescriptIncremental;
+                    var prevIncremental = projectSettings.typescriptIncremental;
                     var nextIncremental = EditorGUILayout.ToggleLeft(
                         new GUIContent("Incremental Compilation",
                             "Speeds up compilation times by skipping unchanged files (This is skipped when publishing)"),
                         prevIncremental);
 
-                    settings.typescriptIncremental = nextIncremental;
+                    projectSettings.typescriptIncremental = nextIncremental;
                     if (prevIncremental != nextIncremental) {
                         TypescriptCompilationService.RestartCompilers();
                     }
                 
 
-                    settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
+                    projectSettings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  projectSettings.typescriptVerbose );
                 }
                 EditorGUILayout.EndHorizontal();
                 
@@ -235,7 +249,8 @@ namespace Airship.Editor {
             }
             
             if (GUI.changed) {
-                EditorIntegrationsConfig.instance.Modify();
+                projectSettings.Modify();
+                localSettings.Modify();
             }
             
             EditorGUI.indentLevel -= 1;
