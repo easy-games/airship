@@ -4,30 +4,7 @@ using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine;
 
-public partial class LuauCore : MonoBehaviour
-{
-    //Utilities
-    public static void OneshotScript(string path)
-    {
-        GameObject obj = new GameObject();
-        obj.name = "ScriptRunner";
-        AirshipComponent binding = obj.AddComponent<AirshipComponent>();
-        binding.CreateThreadFromPath(path, LuauContext.Game);  // "Resources/Editor/TestEditorScript.lua"
-
-        GameObject.DestroyImmediate(obj);
-
-        if (Application.isPlaying == false)
-        {
-            LuauCore.ShutdownInstance();
-        }
-    }
-
-    public int ResumeScript(LuauContext context, AirshipComponent binding) {
-        var retValue = LuauState.FromContext(context).ResumeScript(binding);
-
-        return retValue;
-    }
-
+public partial class LuauCore : MonoBehaviour {
     public void AddThread(LuauContext context, IntPtr thread, AirshipComponent binding) {
         LuauState.FromContext(context).AddThread(thread, binding);
     }
@@ -49,12 +26,12 @@ public partial class LuauCore : MonoBehaviour
     private static string GetTidyPathNameForLuaFile(string fileNameStr) {
         var init = fileNameStr;
         // Make sure assets is properly capitalized for GetRelativePath call
-        if (fileNameStr.ToLower().StartsWith("assets")) {
+        if (fileNameStr.StartsWith("assets", StringComparison.OrdinalIgnoreCase)) {
             fileNameStr = fileNameStr.Substring("assets".Length);
         }
         
         // Add .lua to the end
-        if (!fileNameStr.EndsWith(".lua")) {
+        if (!fileNameStr.EndsWith(".lua", StringComparison.OrdinalIgnoreCase)) {
             fileNameStr += ".lua";
         }
 

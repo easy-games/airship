@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Assets.Luau.Network;
 using Code.Bootstrap;
 using Code.RemoteConsole;
@@ -92,7 +93,7 @@ public class AirshipNetworkManager : NetworkManager {
         NetworkServer.isLoadingScene = true;
 
         loadingSceneAsync = SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Additive);
-        // SetSceneActiveOnceLoaded(loadingSceneAsync, newSceneName);
+        SetSceneActiveOnceLoaded(loadingSceneAsync, newSceneName);
 
         // ServerChangeScene can be called when stopping the server
         // when this happens the server is not active so does not need to tell clients about the change
@@ -111,10 +112,8 @@ public class AirshipNetworkManager : NetworkManager {
         startPositions.Clear();
     }
 
-    private async void SetSceneActiveOnceLoaded(AsyncOperation ao, string sceneName) {
-        while (!ao.isDone) {
-            await Awaitable.NextFrameAsync();
-        }
+    private async Task SetSceneActiveOnceLoaded(AsyncOperation ao, string sceneName) {
+        await ao;
 
         var scene = SceneManager.GetSceneByName(sceneName);
         if (scene.IsValid() && scene.isLoaded) {

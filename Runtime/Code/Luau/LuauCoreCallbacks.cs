@@ -50,6 +50,7 @@ public partial class LuauCore : MonoBehaviour {
         public string DebugName;
 #endif
         public IntPtr Thread;
+        public int ThreadRef;
         public Task Task;
         public MethodInfo Method;
         public LuauContext Context;
@@ -206,7 +207,7 @@ public partial class LuauCore : MonoBehaviour {
         }
         
 
-        if (AirshipComponent.componentIdToScriptName.TryGetValue(componentId, out var componentName)) {
+        if (AirshipComponent.ComponentIdToScriptName.TryGetValue(componentId, out var componentName)) {
             if (strLen > 0) {
                 var str = PtrToStringUTF8(strPtr, strLen);
                 Profiler.BeginSample($"{componentName}{str}");
@@ -1009,27 +1010,26 @@ public partial class LuauCore : MonoBehaviour {
         return false;
     }
     
-    public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
-        if (binding != null) {
-            if (fileNameStr.Contains("/") == false) {
-                //Get a stripped name
-                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
-                fileNameStr = fname;
+    public static string GetRequirePath(string originalScriptPath, string fileNameStr) {
+        if (!string.IsNullOrEmpty(originalScriptPath)) {
+            if (!fileNameStr.Contains("/")) {
+                // Get a stripped name
+                fileNameStr = GetTidyPathNameForLuaFile(originalScriptPath);
             } else if (fileNameStr.StartsWith("./")) {
-                //Get a stripped name
-                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+                // Get a stripped name
+                var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
                 //Remove just this filename off the end
-                var bits = new List<string>(fname.Split("/"));
+                var bits = new List<string>(fName.Split("/"));
                 bits.RemoveAt(bits.Count - 1);
                 var bindingPath = Path.Combine(bits.ToArray());
-
+                
                 fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
             } else if (fileNameStr.StartsWith("../")) {
-                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
+                var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
                 //Remove two bits of this filename off the end
-                var bits = new List<string>(fname.Split("/"));
+                var bits = new List<string>(fName.Split("/"));
                 if (bits.Count > 0) {
                     bits.RemoveAt(bits.Count - 1);
                 }
@@ -1053,64 +1053,60 @@ public partial class LuauCore : MonoBehaviour {
     //Take a random path name from a require and transform it into its path relative to /assets/.
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
-    static unsafe int RequirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
+    private static void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen) {
         CurrentContext = context;
         
-        var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
+        var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameLen);
+        var scriptNameStr = LuauCore.PtrToStringUTF8(scriptName, scriptNameLen);
         
-        LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-        var fileRequirePath = GetRequirePath(binding, fileNameStr);
+        // LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
+        var fileRequirePath = GetRequirePath(scriptNameStr, fileNameStr);
         
-        LuauCore.WritePropertyToThread(thread, fileRequirePath, typeof(string));
-        
-        return 1;
+        // LuauCore.WritePropertyToThread(thread, fileRequirePath, typeof(string));
+        LuauPluginRaw.PushString(thread, fileRequirePath);
     }
-
-
+    
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
-    static unsafe IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
+    private static IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
         CurrentContext = context;
 
-        string fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
-        // Debug.Log("require " + fileNameStr);
+        var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
 
-        GameObject obj = new GameObject($"require({fileNameStr})");
-        // if (luauModulesFolder == null) {
-        //     var coreGo = GameObject.Find("AirshipCore");
-        //     if (!coreGo) {
-        //         coreGo = new GameObject("AirshipCore");
-        //     }
-        //     luauModulesFolder = new GameObject("LuauModules");
-        //     luauModulesFolder.transform.SetParent(coreGo.transform);
-        // }
-        // obj.transform.parent = luauModulesFolder.transform;
+        var obj = new GameObject($"require({fileNameStr})");
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        AirshipComponent newBinding = obj.AddComponent<AirshipComponent>();
+        // var obj = LuauState.FromContext(context).GetRequireGameObject();
+        
+        // var newBinding = obj.AddComponent<AirshipComponent>();
+        //
+        // if (newBinding.CreateThreadFromPath(fileNameStr, context) == false) {
+        //     ThreadDataManager.Error(thread);
+        //     Debug.LogError("Error require(" + fileNameStr + ") not found.");
+        //     GetLuauDebugTrace(thread);
+        //     return IntPtr.Zero;
+        // }
+        //
+        // if (newBinding.m_error == true) {
+        //     ThreadDataManager.Error(thread);
+        //     Debug.LogError("Error trying to execute module script during require for " + fileNameStr + ". Context=" + LuauCore.CurrentContext);
+        //     GetLuauDebugTrace(thread);
+        //     return IntPtr.Zero;
+        // }
+        // if (newBinding.m_canResume == true) {
+        //     ThreadDataManager.Error(thread);
+        //     Debug.LogError("Require() yielded; did not return with a table for " + fileNameStr);
+        //     GetLuauDebugTrace(thread);
+        //     return IntPtr.Zero;
+        // }
+        //
+        // return newBinding.m_thread;
 
-        if (newBinding.CreateThreadFromPath(fileNameStr, context) == false)
-        {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error require(" + fileNameStr + ") not found.");
-            GetLuauDebugTrace(thread);
+        try {
+            var newScript = LuauScript.Create(obj, fileNameStr, context, false);
+            return newScript.thread;
+        } catch (Exception e) {
+            Debug.LogException(e);
             return IntPtr.Zero;
         }
-
-        if (newBinding.m_error == true)
-        {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error trying to execute module script during require for " + fileNameStr + ". Context=" + LuauCore.CurrentContext);
-            GetLuauDebugTrace(thread);
-            return IntPtr.Zero;
-        }
-        if (newBinding.m_canResume == true)
-        {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Require() yielded; did not return with a table for " + fileNameStr);
-            GetLuauDebugTrace(thread);
-            return IntPtr.Zero;
-        }
-
-        return newBinding.m_thread;
     }
 
     public static void DisconnectEvent(int eventId) {
@@ -1486,7 +1482,6 @@ public partial class LuauCore : MonoBehaviour {
         
         LuauCore instance = LuauCore.CoreInstance;
 
-        System.Object reflectionObject = null;
         Type type = null;
 
         //Cast/marshal parameter data
@@ -1527,6 +1522,7 @@ public partial class LuauCore : MonoBehaviour {
                 DebugName = $"{method.Name} ({method.DeclaringType.FullName})",
 #endif
                 Thread = thread,
+                ThreadRef = 0,
                 Task = task,
                 Method = method,
                 Context = context,
@@ -1542,16 +1538,19 @@ public partial class LuauCore : MonoBehaviour {
                 return 0;
             }
 
-            _awaitingTasks.Add(awaitingTask);
-            LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-            
-            if (binding != null) {
-                binding.m_asyncYield = true;
-            } else {
-                LuauPlugin.LuauPinThread(thread);
-            }
+            LuauPluginRaw.PushThread(thread);
+            awaitingTask.ThreadRef = LuauPluginRaw.Ref(thread, -1);
+            LuauPluginRaw.Pop(thread, 1);
 
-            ThreadDataManager.SetThreadYielded(thread, true);
+            _awaitingTasks.Add(awaitingTask);
+            // LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
+            //
+            // if (binding != null) {
+            //     binding.m_asyncYield = true;
+            // } else {
+            //     LuauPlugin.LuauPinThread(thread);
+            // }
+            // ThreadDataManager.SetThreadYielded(thread, true);
 
             shouldYield = true;
             return 0;
@@ -1564,28 +1563,17 @@ public partial class LuauCore : MonoBehaviour {
     private static void ResumeAsyncTask(AwaitingTask awaitingTask, bool immediate = false) {
         var thread = awaitingTask.Thread;
 
-        if (!immediate) {
-            ThreadDataManager.SetThreadYielded(thread, false);
-        }
-
-        LuauState.FromContext(awaitingTask.Context).TryGetScriptBindingFromThread(thread, out var binding);
-        if (binding == null) {
-            LuauPlugin.LuauUnpinThread(thread);
+        if (awaitingTask.ThreadRef != 0) {
+            LuauPluginRaw.Unref(thread, awaitingTask.ThreadRef);
         }
 
         if (awaitingTask.Task.IsFaulted) {
-            var result = -1;
             try {
                 LuauPluginRaw.PushString(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
                 ThreadDataManager.Error(thread);
-                result = LuauPlugin.LuauResumeThreadError(thread);
+                LuauPlugin.LuauResumeThreadError(thread);
             } catch (LuauException e) {
                 Debug.LogException(e);
-            }
-            if (binding != null) {
-                binding.m_asyncYield = false;
-                binding.m_canResume = result == 1;
-                binding.m_error = true;
             }
             
             return;
@@ -1607,15 +1595,10 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         if (!immediate) {
-            var result = -1;
             try {
-                result = LuauPlugin.LuauResumeThread(thread, nArgs);
+                LuauPlugin.LuauResumeThread(thread, nArgs);
             } catch (LuauException e) {
                 Debug.LogException(e);
-            }
-            if (binding != null) {
-                binding.m_asyncYield = false;
-                binding.m_canResume = result == 1;
             }
         }
     }

@@ -62,12 +62,13 @@ namespace Airship.Editor {
                 try {
                     if (GUI.Button(rect, content, "AC Button")) {
                         var airshipComponentDropdown = new AirshipComponentDropdown(new AdvancedDropdownState(),
-                            (binaryFile) => {
+                            (airshipScript) => {
                                 var targetGo = firstPropertyEditor.target as GameObject;
                                 if (!targetGo) return;
 
-                                var binding = targetGo.AddComponent<AirshipComponent>();
-                                binding.SetScript(binaryFile, Application.isPlaying);
+                                var component = targetGo.AddComponent<AirshipComponent>();
+                                component.script = airshipScript;
+                                component.scriptPath = airshipScript.m_path;
 
                                 EditorUtility.SetDirty(targetGo);
                             });

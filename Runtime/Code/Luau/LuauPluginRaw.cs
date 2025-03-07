@@ -111,10 +111,23 @@ public static class LuauPluginRaw {
 	/// </summary>
 	public static void PushString(IntPtr thread, string str) {
 		var strPtr = Marshal.StringToCoTaskMemUTF8(str);
-		var len = Encoding.Unicode.GetByteCount(str);
+		var len = Encoding.UTF8.GetByteCount(str);
 		var res = LuaPushString(thread, strPtr, len);
 		Marshal.FreeCoTaskMem(strPtr);
 		ThrowIfNotNullPtr(res);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr LuaPushThread(IntPtr thread);
+	/// <summary>
+	/// Pushes the thread to its own Lua stack.
+	/// </summary>
+	public static void PushThread(IntPtr thread) {
+		ThrowIfNotNullPtr(LuaPushThread(thread));
 	}
 	
 #if UNITY_IPHONE
@@ -161,19 +174,6 @@ public static class LuauPluginRaw {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr LuaPushThread(IntPtr thread);
-	/// <summary>
-	/// Pushes the thread to its own Lua stack.
-	/// </summary>
-	public static void PushThread(IntPtr thread) {
-		ThrowIfNotNullPtr(LuaPushThread(thread));
-	}
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
 	private static extern IntPtr LuaRef(IntPtr thread, int idx, ref int refVal);
 	/// <summary>
 	/// Creates a reference to the value at index "idx."
@@ -183,7 +183,7 @@ public static class LuauPluginRaw {
 		ThrowIfNotNullPtr(LuaRef(thread, idx, ref refVal));
 		return refVal;
 	}
-
+	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
@@ -196,7 +196,7 @@ public static class LuauPluginRaw {
 	public static void Unref(IntPtr thread, int refVal) {
 		ThrowIfNotNullPtr(LuaUnref(thread, refVal));
 	}
-
+	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
@@ -209,7 +209,7 @@ public static class LuauPluginRaw {
 	public static void GetRef(IntPtr thread, int refVal) {
 		ThrowIfNotNullPtr(LuaGetRef(thread, refVal));
 	}
-
+	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else

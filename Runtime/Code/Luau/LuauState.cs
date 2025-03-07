@@ -104,8 +104,13 @@ namespace Luau {
                         coreGo = new GameObject("AirshipCore");
                     }
 
-                    _luauCoreModulesFolder = new GameObject("LuauModules");
-                    _luauCoreModulesFolder.transform.SetParent(coreGo.transform);
+                    var modulesFolder = GameObject.Find("LuauModules");
+                    if (modulesFolder == null) {
+                        modulesFolder = new GameObject("LuauModules");
+                        modulesFolder.transform.SetParent(coreGo.transform);
+                    }
+
+                    _luauCoreModulesFolder = modulesFolder;
                 }
                 _luauModulesFolder = new GameObject(Context.ToString());
                 _luauModulesFolder.transform.SetParent(_luauCoreModulesFolder.transform);
@@ -135,7 +140,7 @@ namespace Luau {
         }
 
         public int ResumeScript(AirshipComponent binding) {
-            return LuauPlugin.LuauRunThread(binding.m_thread);
+            return LuauPlugin.LuauRunThread(binding.thread);
         }
 
         public bool TryGetScriptBindingFromThread(IntPtr thread, out AirshipComponent binding) {

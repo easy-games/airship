@@ -132,7 +132,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         // Compile
         StopwatchCompile.Start();
-        var len = Encoding.Unicode.GetByteCount(data);
+        var len = Encoding.UTF8.GetByteCount(data);
         IntPtr res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, ctx.assetPath.Length, 1);
         StopwatchCompile.Stop();
 

@@ -46,7 +46,7 @@ namespace Airship
 			if(!this.assetBundlesLoaded)
 			{
 				AgonesCore.Agones.Shutdown();
-				Debug.Log($"Agones has been shutdown because not bundles were loaded.");
+				Debug.Log($"Agones has been shutdown because no bundles were loaded.");
 			}
 		}
 

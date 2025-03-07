@@ -162,7 +162,7 @@ namespace Luau {
         /// <param name="parentScript">The script to check against</param>
         /// <returns>True if component inherits script</returns>
         public bool ComponentIsValidInheritance(AirshipComponent component, AirshipScript parentScript) {
-            return Inherits(component.scriptFile, parentScript);
+            return Inherits(component.script, parentScript);
         }
 
         private string StripAssetPrefix(string path) {

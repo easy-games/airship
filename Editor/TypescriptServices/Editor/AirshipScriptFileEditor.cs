@@ -11,8 +11,8 @@ namespace Airship.Editor {
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Reset", priority = 0)]
         public static void Test(MenuCommand command) {
             var binding = command.context as AirshipComponent;
-            if (binding == null || binding.m_metadata == null) return;
-            foreach (var property in binding.m_metadata.properties.Where(property => property.modified)) {
+            if (binding == null || binding.metadata == null) return;
+            foreach (var property in binding.metadata.properties.Where(property => property.modified)) {
                 property.SetDefaultAsValue();
                 property.modified = false;
             }
@@ -25,25 +25,25 @@ namespace Airship.Editor {
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Edit Script")]
         public static void EditScript(MenuCommand command) {
             var binding = command.context as AirshipComponent;
-            if (binding == null || binding.m_metadata == null) return;
+            if (binding == null || binding.metadata == null) return;
 
-            TypescriptProjectsService.OpenFileInEditor(binding.scriptFile.assetPath);
+            TypescriptProjectsService.OpenFileInEditor(binding.script.assetPath);
         }
 
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Edit Script", validate = true)]
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Remove Script", validate = true)]
         public static bool ValidateRemoveScript(MenuCommand command) {
             var binding = command.context as AirshipComponent;
-            return binding != null && binding.scriptFile != null;
+            return binding != null && binding.script != null;
         }
         
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Remove Script")]
         public static void RemoveScript(MenuCommand command) {
             var binding = command.context as AirshipComponent;
-            if (binding == null || binding.m_metadata == null) return;
+            if (binding == null || binding.metadata == null) return;
 
-            binding.scriptFile = null;
-            binding.m_fileFullPath = null;
+            binding.script = null;
+            binding.scriptPath = null;
         }
     }
 

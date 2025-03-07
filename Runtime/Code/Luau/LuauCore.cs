@@ -14,7 +14,6 @@ using UnityEditor;
 #endif
 
 //Singleton
-[RequireComponent(typeof(AirshipComponentUpdater))]
 public partial class LuauCore : MonoBehaviour {
 #if UNITY_EDITOR
     [InitializeOnLoad]
@@ -46,11 +45,9 @@ public partial class LuauCore : MonoBehaviour {
         POD_AIRSHIP_COMPONENT = 17,
     };
 
-    public static bool s_shutdown = false;
+    private static bool s_shutdown = false;
  
     private static LuauCore _coreInstance;
-    private static GameObject gameObj;
-    
 
     private static Type stringType = System.Type.GetType("System.String");
     private static Type intType = System.Type.GetType("System.Int32");
@@ -100,8 +97,6 @@ public partial class LuauCore : MonoBehaviour {
 
     private Dictionary<Type, Dictionary<ulong, PropertyInfo>> unityPropertyAlias = new();
     private Dictionary<Type, Dictionary<ulong, FieldInfo>> unityFieldAlias = new();
-    
-    private AirshipComponentUpdater _airshipComponentUpdater;
 
     private class CallbackRecord {
         public IntPtr callback;
@@ -123,42 +118,11 @@ public partial class LuauCore : MonoBehaviour {
     public static event Action<LuauContext> onResetInstance;
 
     public static bool IsReady => !s_shutdown && _coreInstance != null && _coreInstance.initialized;
-    public static event Action OnInitialized;
-
-    public static LuauCore CoreInstance {
-        get {
-            if (s_shutdown) {
-                return null;
-            }
-            if (_coreInstance == null) {
-                gameObj = new GameObject("LuauCore");
-// #if !UNITY_EDITOR
-                DontDestroyOnLoad(gameObj);
-// #endif
-                _coreInstance = gameObj.AddComponent<LuauCore>();
-            }
-            return _coreInstance;
-        }
-    }
+    
+    public static LuauCore CoreInstance => _coreInstance;
 
     public static LuauState GetInstance(LuauContext context) {
         return LuauState.FromContext(context);
-    }
-
-    public static void RegisterAirshipComponent(AirshipComponent component) {
-        var instance = CoreInstance;
-        if (ReferenceEquals(instance, null)) return;
-        
-        instance._airshipComponentUpdater ??= instance.GetComponent<AirshipComponentUpdater>();
-        instance._airshipComponentUpdater.Register(component);
-    }
-
-    public static void UnregisterAirshipComponent(AirshipComponent component) {
-        var instance = CoreInstance;
-        if (ReferenceEquals(instance, null)) return;
-        
-        instance._airshipComponentUpdater ??= instance.GetComponent<AirshipComponentUpdater>();
-        instance._airshipComponentUpdater.Unregister(component);
     }
 
     public bool CheckSetup() {
@@ -179,7 +143,7 @@ public partial class LuauCore : MonoBehaviour {
         GCHandle[] stringAllocations = new GCHandle[stringCount];
         System.Text.Encoding utf8 = System.Text.Encoding.UTF8;
         eventConnections.Clear();
-
+        
         int counter = 0;
         foreach (var api in unityAPIClasses) {
             string apiName = api.Value.GetAPIType().Name;
@@ -233,8 +197,6 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         SetupNamespaceStrings();
-
-        StartCoroutine(InvokeOnInitializedNextFrame());
         
         return true;
     }
@@ -259,31 +221,24 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    private IEnumerator InvokeOnInitializedNextFrame() {
-        yield return null;
-        OnInitialized?.Invoke();
-    }
-
     public void OnDestroy() {
 #if UNITY_EDITOR
         EditorApplication.pauseStateChanged -= OnPauseStateChanged;
 #endif
-        Profiler.BeginSample("ShutdownLuauState");
-        LuauState.ShutdownAll();
-        Profiler.EndSample();
-        if (_coreInstance) {
+        if (_coreInstance == this) {
+            _coreInstance = null;
             initialized = false;
+            LuauState.ShutdownAll();
             Profiler.BeginSample("ShutdownLuauPlugin");
             LuauPlugin.LuauShutdown();
             Profiler.EndSample();
-            _coreInstance = null;
             if (endOfFrameCoroutine != null) {
                 StopCoroutine(endOfFrameCoroutine);
             }
         }
     }
 
-    public static void ShutdownInstance() {
+    private static void ShutdownInstance() {
         if (_coreInstance) {
 #if UNITY_EDITOR
             DestroyImmediate(_coreInstance.gameObject);
@@ -296,12 +251,6 @@ public partial class LuauCore : MonoBehaviour {
     public static void ShutdownContext(LuauContext context) {
         LuauState.Shutdown(context);
     }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void OnSubsystemRegistration() {
-        ResetStaticFields();
-        LuauPlugin.LuauSubsystemRegistration();
-    }
     
     private static void ResetStaticFields() {
         _awaitingTasks.Clear();
@@ -310,6 +259,8 @@ public partial class LuauCore : MonoBehaviour {
         protectedSceneHandles.Clear();
         _propertySetterCache.Clear();
         WriteMethodFunctions.Clear();
+        CurrentContext = LuauContext.Game;
+        s_shutdown = false;
     }
 
     public static void ResetContext(LuauContext context) {
@@ -335,17 +286,23 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private void Awake() {
+        if (_coreInstance != null) {
+            // Ensure only one CoreInstance exists
+            Destroy(gameObject);
+            return;
+        }
+        
         _coreInstance = this;
+        DontDestroyOnLoad(gameObject);
         s_shutdown = false;
         CheckSetup();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetOnReload() {
-        CurrentContext = LuauContext.Game;
+        ResetStaticFields();
         _coreInstance = null;
-        s_shutdown = false;
-        gameObj = null;
+        LuauPlugin.LuauSubsystemRegistration();
         Application.quitting -= Quit;
     }
 
@@ -360,8 +317,6 @@ public partial class LuauCore : MonoBehaviour {
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
         StartCoroutine(PrintReferenceAssemblies());
         endOfFrameCoroutine = StartCoroutine(RunAtVeryEndOfFrame());
-
-        _airshipComponentUpdater = GetComponent<AirshipComponentUpdater>();
         
 #if UNITY_EDITOR
         EditorApplication.pauseStateChanged += OnPauseStateChanged;

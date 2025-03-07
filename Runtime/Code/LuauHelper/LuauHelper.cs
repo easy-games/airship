@@ -73,7 +73,8 @@ public class LuauHelper : Singleton<LuauHelper> {
                     ReflectionList.AddToReflectionList(instance.GetAPIType(), typeAttribute.AllowedContextsMask);
                     LuauCore.CoreInstance.RegisterBaseAPI(instance);
                 } else {
-                    LuauCore.CoreInstance.RegisterBaseAPI(new UnityCustomAPI(type));
+                    var customApi = new UnityCustomAPI(type);
+                    LuauCore.CoreInstance.RegisterBaseAPI(customApi);
                 }
             }
         }

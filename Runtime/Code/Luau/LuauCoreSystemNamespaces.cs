@@ -20,9 +20,12 @@ public partial class LuauCore
     public void RegisterBaseAPI(BaseLuaAPIClass api)
     {
         string name = api.GetAPIType().Name;
+        if (!shortTypeNames.TryAdd(name, api.GetAPIType())) {
+            return;
+        }
         unityAPIClasses[name] = api;
         unityAPIClassesByType[api.GetAPIType()] = api;
-        shortTypeNames.Add(name, api.GetAPIType());
+        // shortTypeNames.Add(name, api.GetAPIType());
 
         Type[] list = api.GetDescendantTypes();
 

@@ -1,16 +1,15 @@
 ﻿using System;
-using Luau;
+using System.Diagnostics;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using Object = UnityEngine.Object;
+using Debug = UnityEngine.Debug;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
 		public static bool IsLoaded = false;
-		public static event Action onScriptBindingRun;
+		public static event Action OnScriptBindingRun;
 
 		public static void InvokeOnLuauStartup() {
-			onScriptBindingRun?.Invoke();
+			OnScriptBindingRun?.Invoke();
 		}
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -24,11 +23,11 @@ namespace Assets.Code.Luau {
 		private void Awake() {
 			if (IsLoaded) return;
 
-			onScriptBindingRun += StartCoreScripts;
+			OnScriptBindingRun += StartCoreScripts;
 		}
 
 		private void OnDestroy() {
-			onScriptBindingRun -= StartCoreScripts;
+			OnScriptBindingRun -= StartCoreScripts;
 		}
 
 		private void StartCoreScripts() {
@@ -39,30 +38,23 @@ namespace Assets.Code.Luau {
 
 			var coreCamera = GameObject.Find("AirshipCoreSceneCamera");
 			if (coreCamera && coreCamera.scene.name == "CoreScene") {
-				Object.Destroy(coreCamera);
+				Destroy(coreCamera);
 			}
-
-			LuauCore.CoreInstance.CheckSetup();
-
+			
 			// Main Menu
+			var stopwatch = Stopwatch.StartNew();
 			{
 				var go = new GameObject("MainMenuInGame");
-				var binding = go.AddComponent<AirshipComponent>();
-
-				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
+				LuauScript.Create(go, MainMenuEntryScript, LuauContext.Protected, true);
 			}
 
 			// Core
 			{
 				var go = new GameObject("@Easy/Core");
-				var binding = go.AddComponent<AirshipComponent>();
-
-				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
+				LuauScript.Create(go, CoreEntryScript, LuauContext.Game, true);
 			}
+			stopwatch.Stop();
+			Debug.Log($"ScriptingEntryPoint elapsed time: {stopwatch.ElapsedMilliseconds}ms");
 		}
 	}
 }
