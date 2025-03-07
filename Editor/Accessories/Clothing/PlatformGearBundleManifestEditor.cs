@@ -123,7 +123,15 @@ namespace Editor.Accessories.Clothing {
                 req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
                 req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
+                if (req.result != UnityWebRequest.Result.Success) {
+                    Debug.LogError("Failed to update air asset: " + req.downloadHandler.text);
+                    return;
+                }
                 Debug.Log("Create classId response: " + req.downloadHandler.text);
+                var createResponse = JsonUtility.FromJson<GearCreateResponse>(req.downloadHandler.text);
+                gear.classId = createResponse.classId;
+                EditorUtility.SetDirty(gear);
+                AssetDatabase.SaveAssets();
             }
 
             string airId = manifest.airId;

@@ -61,6 +61,12 @@ namespace Code.Platform.Shared {
     }
 
     [Serializable]
+    public class GearCreateResponse {
+        public string classId;
+        public GearClass gear;
+    }
+
+    [Serializable]
     public class GearPatchRequest {
         public string[] airAssets;
         public string category;
@@ -69,6 +75,7 @@ namespace Code.Platform.Shared {
 
     [Serializable]
     public class GearClass : ItemClass {
+
     }
 
     [Serializable]
