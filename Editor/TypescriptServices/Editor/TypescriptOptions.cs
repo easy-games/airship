@@ -118,6 +118,11 @@ namespace Airship.Editor {
             EditorGUILayout.EndHorizontal();
         }
     }
+
+    enum TypescriptOptionsTab {
+        ProjectSettings,
+        LocalSettings,
+    }
     
     public static class TypescriptOptions {
         private static string[] args = {
@@ -127,28 +132,24 @@ namespace Airship.Editor {
             "{line} - The line of the file",
             "{column} - The column of the file"
         };
-        
-        internal static void RenderSettings() {
+
+        private static TypescriptOptionsTab selectedTab = TypescriptOptionsTab.ProjectSettings;
+
+
+        internal static void RenderProjectSettings() {
             var projectSettings = EditorIntegrationsConfig.instance;
             var localSettings = TypescriptServicesLocalConfig.instance;
             
-            EditorGUI.indentLevel += 1;
-
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Service Options", EditorStyles.boldLabel);
-            
             {
-                EditorGUILayout.LabelField(new GUIContent("Project Settings", "Settings that will save to the project itself"), EditorStyles.helpBox);
                 projectSettings.typescriptAutostartCompiler =
                     EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), projectSettings.typescriptAutostartCompiler);
                 projectSettings.typescriptPreventPlayOnError =
                     EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), projectSettings.typescriptPreventPlayOnError);
-
-
-                EditorGUILayout.LabelField(new GUIContent("Local Project Settings", "Settings that are only for your local computer, for this local project"), EditorStyles.helpBox);
                 
                 localSettings.skipCompileOnCodeDeploy =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Skip Compile on Code Publish", "This will skip compilation on code publish"), localSettings.skipCompileOnCodeDeploy);
+                    EditorGUILayout.ToggleLeft(new GUIContent("Skip Compile on Code Publish *", "This will skip compilation on code publish"), localSettings.skipCompileOnCodeDeploy);
 
                 if (localSettings.skipCompileOnCodeDeploy) {
                     EditorGUILayout.HelpBox("Skipping compilation on code deploy may speed up the deploy, but it has a very small chance of publishing broken code if the watch state is incorrect.", MessageType.Warning);
@@ -157,30 +158,7 @@ namespace Airship.Editor {
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
-                var currentCompiler = TypescriptCompilationService.CompilerVersion;
-                if (TypescriptCompilationService.UsableVersions.Length > 1) {
-                    var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
-                        new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
-                        currentCompiler,
-                        (version) => {
-                            switch ((TypescriptCompilerVersion)version) {
-                                case TypescriptCompilerVersion.UseEditorVersion:
-                                    return File.Exists(TypescriptCompilationService.EditorCompilerPath);
-                                case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
-                                    return TypescriptCompilationService.HasDevelopmentCompiler;
-                                default:
-                                    return false;
-                            }
-                        },
-                        false
-                    );
-                    
-                    if (currentCompiler != selectedCompiler) {
-                        TypescriptCompilationService.RestartCompilers(() => {
-                            TypescriptCompilationService.CompilerVersion = selectedCompiler;
-                        });
-                    }
-                }
+
 
                 EditorGUILayout.BeginHorizontal();
                 {
@@ -204,6 +182,50 @@ namespace Airship.Editor {
                 #if AIRSHIP_INTERNAL
                 settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
                 #endif    
+            }
+            
+            EditorGUILayout.Space(20);
+            EditorGUILayout.LabelField("* This property only applies to your instance of the project");
+            
+            if (GUI.changed) {
+                projectSettings.Modify();
+                localSettings.Modify();
+            }
+        }
+
+        internal static void RenderLocalSettings() {
+            var localSettings = TypescriptServicesLocalConfig.instance;
+            
+            // EditorGUILayout.Space(5);
+            // EditorGUILayout.LabelField("Service Options", EditorStyles.boldLabel);
+            //
+            //
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
+            
+            var currentCompiler = TypescriptCompilationService.CompilerVersion;
+            if (TypescriptCompilationService.UsableVersions.Length > 1) {
+                var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
+                    new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
+                    currentCompiler,
+                    (version) => {
+                        switch ((TypescriptCompilerVersion)version) {
+                            case TypescriptCompilerVersion.UseEditorVersion:
+                                return File.Exists(TypescriptCompilationService.EditorCompilerPath);
+                            case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
+                                return TypescriptCompilationService.HasDevelopmentCompiler;
+                            default:
+                                return false;
+                        }
+                    },
+                    false
+                );
+                    
+                if (currentCompiler != selectedCompiler) {
+                    TypescriptCompilationService.RestartCompilers(() => {
+                        TypescriptCompilationService.CompilerVersion = selectedCompiler;
+                    });
+                }
             }
             
             EditorGUILayout.Space(10);
@@ -249,8 +271,31 @@ namespace Airship.Editor {
             }
             
             if (GUI.changed) {
-                projectSettings.Modify();
                 localSettings.Modify();
+            }
+        }
+        
+        internal static void RenderSettings() {
+            var projectSettings = EditorIntegrationsConfig.instance;
+            var localSettings = TypescriptServicesLocalConfig.instance;
+            
+            EditorGUI.indentLevel += 1;
+            
+            GUILayout.BeginHorizontal();
+            {
+                if (GUILayout.Toggle(selectedTab ==  TypescriptOptionsTab.ProjectSettings, "Project Settings", EditorStyles.toolbarButton))
+                    selectedTab =  TypescriptOptionsTab.ProjectSettings;
+
+                if (GUILayout.Toggle(selectedTab ==  TypescriptOptionsTab.LocalSettings, "Local Settings", EditorStyles.toolbarButton))
+                    selectedTab =  TypescriptOptionsTab.LocalSettings;
+            }
+            GUILayout.EndHorizontal();
+
+            if (selectedTab == TypescriptOptionsTab.ProjectSettings) {
+                RenderProjectSettings();
+            }
+            else {
+                RenderLocalSettings();
             }
             
             EditorGUI.indentLevel -= 1;
