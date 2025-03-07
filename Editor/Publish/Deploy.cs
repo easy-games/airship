@@ -124,21 +124,14 @@ public class Deploy {
 		}
 
 		// Rebuild Typescript
-		var typescriptPublishFlags = EditorIntegrationsConfig.instance.typescriptPublishFlags;
-
-		var shouldRecompile = skipBuild
-			? (typescriptPublishFlags & TypescriptPublishFlags.RecompileOnCodePublish) != 0
-			: (typescriptPublishFlags & TypescriptPublishFlags.RecompileOnFullPublish) != 0;
-		var shouldResumeTypescriptWatch = TypescriptCompilationService.IsWatchModeRunning;
+		var shouldRecompile = !skipBuild;
+		var shouldResumeTypescriptWatch = TypescriptCompilationService.IsWatchModeRunning && shouldRecompile;
 		
 		// We want to do a full publish
 		TypescriptCompilationService.StopCompilers();
 		if (shouldRecompile) {
 			const TypeScriptCompileFlags compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Publishing; // FullClean will clear the incremental file & Publishing will omit editor data
 			TypescriptCompilationService.BuildTypescript(compileFlags);
-		}
-		else {
-			Debug.Log("[TypescriptServices] Skipping recompile...");
 		}
 		
 		if (TypescriptCompilationService.ErrorCount > 0) {
