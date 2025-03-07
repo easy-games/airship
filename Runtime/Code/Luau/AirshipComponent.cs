@@ -103,6 +103,18 @@ public class AirshipComponent : MonoBehaviour {
 			forceContext = QueuedAwakeData.ForceContext;
 			QueuedAwakeData = null;
 		}
+		
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+		// Grab the script from code.zip at runtime
+		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(script.m_path.ToLower());
+		if (runtimeScript) {
+			script = runtimeScript;
+		}
+		else {
+			Debug.LogError($"Failed to find code.zip compiled script. Path: {script.m_path.ToLower()}, GameObject: {gameObject.name}", gameObject);
+			return;
+		}
+#endif
 
 		if (script == null) {
 			Debug.LogError($"No script assigned to AirshipComponent ({gameObject.name})", gameObject);
