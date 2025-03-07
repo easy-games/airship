@@ -173,7 +173,7 @@ namespace Airship.Editor {
             
                 
                 #if AIRSHIP_INTERNAL
-                settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
+                projectSettings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), projectSettings.typescriptWriteOnlyChanged);
                 #endif    
             }
             AirshipEditorGUI.EndSettingGroup();
