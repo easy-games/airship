@@ -20,11 +20,11 @@ public class CharacterAnimationHelper : MonoBehaviour {
 
     [Header("Optional Refs")]
     [SerializeField]
-    public NetworkAnimator? networkAnimator;
-    public AnimationEventListener? animationEvents;
-    public ParticleSystem? sprintVfx;
-    public ParticleSystem? jumpPoofVfx;
-    public ParticleSystem? slideVfx;
+    public NetworkAnimator networkAnimator;
+    public AnimationEventListener animationEvents;
+    public ParticleSystem sprintVfx;
+    public ParticleSystem jumpPoofVfx;
+    public ParticleSystem slideVfx;
 
     [Header("Variables")] 
     public float minAirborneTime = .25f;
