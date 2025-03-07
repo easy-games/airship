@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: CharacterOverlayStencil
-  m_Shader: {fileID: 4800000, guid: e1914f76d3e7ac04a8b46b0019566d1f, type: 3}
+  m_Shader: {fileID: 4800000, guid: b6fc8f6a54afc451993bcf3d14ad0257, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []

@@ -124,12 +124,23 @@ public class Deploy {
 		}
 
 		// Rebuild Typescript
-		var shouldResumeTypescriptWatch = TypescriptCompilationService.IsWatchModeRunning;
-		var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Publishing; // FullClean will clear the incremental file & Publishing will omit editor data
-
+		var skipRecompileOnCodeDeploy = skipBuild && TypescriptServicesLocalConfig.instance.skipCompileOnCodeDeploy;
+		var shouldRecompile = !skipBuild || !skipRecompileOnCodeDeploy;
+		var shouldResumeTypescriptWatch = shouldRecompile && TypescriptCompilationService.IsWatchModeRunning;
+		
 		// We want to do a full publish
-		TypescriptCompilationService.StopCompilers();
-		TypescriptCompilationService.BuildTypescript(compileFlags);
+		
+		if (shouldRecompile) {
+			TypescriptCompilationService.StopCompilers();
+			
+			var compileFlags = TypeScriptCompileFlags.Publishing | TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file & Publishing will omit editor data
+
+			if (skipBuild) {
+				compileFlags |= TypeScriptCompileFlags.SkipReimportQueue; // code publish does not require asset reimport
+			}
+			
+			TypescriptCompilationService.BuildTypescript(compileFlags);
+		}
 		
 		if (TypescriptCompilationService.ErrorCount > 0) {
 			Debug.LogError($"Could not publish the project with {TypescriptCompilationService.ErrorCount} compilation error{(TypescriptCompilationService.ErrorCount == 1 ? "" : "s")}");

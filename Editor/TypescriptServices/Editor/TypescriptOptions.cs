@@ -23,6 +23,12 @@ namespace Airship.Editor {
         UseEditorVersion,
         UseLocalDevelopmentBuild,
     }
+
+    [Flags]
+    public enum TypescriptPublishFlags {
+        RecompileOnCodePublish = 2,
+        RecompileOnFullPublish = 1,
+    }
     
     public class TypescriptPopupWindow : PopupWindowContent {
         private static GUIStyle MenuItemIcon = new GUIStyle("LargeButtonMid") {
@@ -82,7 +88,7 @@ namespace Airship.Editor {
                 if (GUILayout.Button(
                         new GUIContent(" Build", BuildIcon, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
-                    var compileFlags = TypeScriptCompileFlags.FullClean;
+                    var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.DisplayProgressBar;
                     if (EditorIntegrationsConfig.instance.typescriptIncremental) {
                         compileFlags |= TypeScriptCompileFlags.Incremental;
                     }
@@ -112,6 +118,11 @@ namespace Airship.Editor {
             EditorGUILayout.EndHorizontal();
         }
     }
+
+    enum TypescriptOptionsTab {
+        ProjectSettings,
+        LocalSettings,
+    }
     
     public static class TypescriptOptions {
         private static string[] args = {
@@ -122,71 +133,93 @@ namespace Airship.Editor {
             "{column} - The column of the file"
         };
         
-        internal static void RenderSettings() {
-            var settings = EditorIntegrationsConfig.instance;
-            EditorGUI.indentLevel += 1;
-
-            EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Service Options", EditorStyles.boldLabel);
+        internal static void RenderProjectSettings() {
+            var projectSettings = EditorIntegrationsConfig.instance;
+            var localSettings = TypescriptServicesLocalConfig.instance;
+            
+            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Service Options"));
             {
-                settings.typescriptAutostartCompiler =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), settings.typescriptAutostartCompiler);
-                settings.typescriptPreventPlayOnError =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), settings.typescriptPreventPlayOnError);
+                projectSettings.typescriptAutostartCompiler =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), projectSettings.typescriptAutostartCompiler);
+                projectSettings.typescriptPreventPlayOnError =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), projectSettings.typescriptPreventPlayOnError);
+                
+                localSettings.skipCompileOnCodeDeploy =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Skip Compile on Code Publish *", "This will skip compilation on code publish"), localSettings.skipCompileOnCodeDeploy);
+
+                if (localSettings.skipCompileOnCodeDeploy) {
+                    EditorGUILayout.HelpBox("Skipping compilation on code deploy may speed up the deploy, but it has a very small chance of publishing broken code if the watch state is incorrect.", MessageType.Warning);
+                }
             }
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
+            AirshipEditorGUI.EndSettingGroup();
+            
+            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Compiler Options"));
             {
-                var currentCompiler = TypescriptCompilationService.CompilerVersion;
-                if (TypescriptCompilationService.UsableVersions.Length > 1) {
-                    var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
-                        new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
-                        currentCompiler,
-                        (version) => {
-                            switch ((TypescriptCompilerVersion)version) {
-                                case TypescriptCompilerVersion.UseEditorVersion:
-                                    return File.Exists(TypescriptCompilationService.EditorCompilerPath);
-                                case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
-                                    return TypescriptCompilationService.HasDevelopmentCompiler;
-                                default:
-                                    return false;
-                            }
-                        },
-                        false
-                    );
-                    
-                    if (currentCompiler != selectedCompiler) {
-                        TypescriptCompilationService.RestartCompilers(() => {
-                            TypescriptCompilationService.CompilerVersion = selectedCompiler;
-                        });
-                    }
-                }
-
-                EditorGUILayout.BeginHorizontal();
-                {
-                    var prevIncremental = settings.typescriptIncremental;
-                    var nextIncremental = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Incremental Compilation",
-                            "Speeds up compilation times by skipping unchanged files (This is skipped when publishing)"),
-                        prevIncremental);
-
-                    settings.typescriptIncremental = nextIncremental;
-                    if (prevIncremental != nextIncremental) {
-                        TypescriptCompilationService.RestartCompilers();
-                    }
                 
+                var prevIncremental = projectSettings.typescriptIncremental;
+                var nextIncremental = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Incremental Compilation",
+                        "Speeds up compilation times by skipping unchanged files (This is skipped when publishing)"),
+                    prevIncremental);
 
-                    settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
+                projectSettings.typescriptIncremental = nextIncremental;
+                if (prevIncremental != nextIncremental) {
+                    TypescriptCompilationService.RestartCompilers();
                 }
-                EditorGUILayout.EndHorizontal();
-                
+            
+
+                projectSettings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  projectSettings.typescriptVerbose );
+
+            
                 
                 #if AIRSHIP_INTERNAL
                 settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
                 #endif    
             }
+            AirshipEditorGUI.EndSettingGroup();
+            
             EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("Editor Options", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("* This property only applies to your instance of the project");
+            
+            if (GUI.changed) {
+                projectSettings.Modify();
+                localSettings.Modify();
+            }
+        }
+
+        internal static void RenderLocalSettings() {
+            var localSettings = TypescriptServicesLocalConfig.instance;
+            
+            var currentCompiler = TypescriptCompilationService.CompilerVersion;
+            if (TypescriptCompilationService.UsableVersions.Length > 1) {
+                AirshipEditorGUI.BeginSettingGroup(new GUIContent("Compiler Options"));
+                
+                var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
+                    new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
+                    currentCompiler,
+                    (version) => {
+                        switch ((TypescriptCompilerVersion)version) {
+                            case TypescriptCompilerVersion.UseEditorVersion:
+                                return File.Exists(TypescriptCompilationService.EditorCompilerPath);
+                            case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
+                                return TypescriptCompilationService.HasDevelopmentCompiler;
+                            default:
+                                return false;
+                        }
+                    },
+                    false
+                );
+                    
+                if (currentCompiler != selectedCompiler) {
+                    TypescriptCompilationService.RestartCompilers(() => {
+                        TypescriptCompilationService.CompilerVersion = selectedCompiler;
+                    });
+                }
+                
+                AirshipEditorGUI.EndSettingGroup();
+            }
+            
+            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Editor Options"));
             {
                 List<CodeEditor.Installation> installations = new();
                 
@@ -226,12 +259,30 @@ namespace Airship.Editor {
                 if (AirshipExternalCodeEditor.CurrentEditorPath != "")
                     EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
             }
-
-            if (GUI.changed) {
-                EditorIntegrationsConfig.instance.Modify();
-            }
+            AirshipEditorGUI.EndSettingGroup();
             
-            EditorGUI.indentLevel -= 1;
+            if (GUI.changed) {
+                localSettings.Modify();
+            }
+        }
+
+        private static TypescriptOptionsTab selectedTab;
+        internal static void RenderSettings() {
+  
+
+            selectedTab = (TypescriptOptionsTab) AirshipEditorGUI.BeginTabs((int) selectedTab, new[] {
+                "Project Settings", 
+                "Local Settings"
+            });
+            {
+                if (selectedTab == TypescriptOptionsTab.ProjectSettings) {
+                    RenderProjectSettings();
+                }
+                else {
+                    RenderLocalSettings();
+                }
+            }
+            AirshipEditorGUI.EndTabs();
         }
     }
 }

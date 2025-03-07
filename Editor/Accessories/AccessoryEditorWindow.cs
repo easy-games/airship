@@ -34,8 +34,8 @@ namespace Editor.Accessories {
         private AccessoryPrefabEditor prefabEditor;
         private GameObject characterGO;
         List<AccessoryComponent> allAccessories = new List<AccessoryComponent>();
-        private AccessoryComponent _editingAccessoryComponent;
-        private AccessoryComponent _referenceAccessoryComponent;
+        private AccessoryComponent editingAccessoryComponent;
+        private AccessoryComponent referenceAccessoryComponent;
         private ListView _listPane;
 
         private Label _selectedItemLabel;
@@ -57,8 +57,8 @@ namespace Editor.Accessories {
             }
 
             _prefabStage = null;
-            _editingAccessoryComponent = null;
-            _referenceAccessoryComponent = null;
+            editingAccessoryComponent = null;
+            referenceAccessoryComponent = null;
             
             if (characterGO) {
                 DestroyImmediate(characterGO);
@@ -130,7 +130,7 @@ namespace Editor.Accessories {
             saveBtn.text = "Save";
             buttonPanel.Add(saveBtn);
             saveBtn.clickable.clicked += () => {
-                if (_editingAccessoryComponent == null || _referenceAccessoryComponent == null) return;
+                if (editingAccessoryComponent == null || referenceAccessoryComponent == null) return;
                 SaveCurrentAccessory();
             };
 
@@ -139,7 +139,7 @@ namespace Editor.Accessories {
             resetBtn.text = "Reset";
             buttonPanel.Add(resetBtn);
             resetBtn.clickable.clicked += () => {
-                if (_editingAccessoryComponent == null || _referenceAccessoryComponent == null) return;
+                if (editingAccessoryComponent == null || referenceAccessoryComponent == null) return;
                 ResetCurrentAccessory();
             };
 
@@ -219,9 +219,9 @@ namespace Editor.Accessories {
 
         private void ClearCurrentAccessory() {
             Log("ClearCurrentAccessory");
-            if (_editingAccessoryComponent) {
-                DestroyImmediate(_editingAccessoryComponent.gameObject);
-                _editingAccessoryComponent = null;
+            if (editingAccessoryComponent) {
+                DestroyImmediate(editingAccessoryComponent.gameObject);
+                editingAccessoryComponent = null;
             }
 
             if (_selectedItemLabel != null) {
@@ -229,9 +229,11 @@ namespace Editor.Accessories {
             }
         }
 
+
+        private bool hasFramedView = false;
         private void BuildScene(AccessoryComponent accessoryComponent, bool forceRedraw = false) {
-            var newItem = accessoryComponent != _referenceAccessoryComponent;
-            Log("Building Scene. New Item: " + newItem + " acc: " + accessoryComponent?.gameObject.name + " oldAcc: " + _referenceAccessoryComponent?.gameObject.name);
+            var newItem = accessoryComponent != referenceAccessoryComponent;
+            Log("Building Scene. New Item: " + newItem + " acc: " + accessoryComponent?.gameObject.name + " oldAcc: " + referenceAccessoryComponent?.gameObject.name);
             if (_prefabStage == null || characterGO == null) {
                 CreateStage();
             }
@@ -252,17 +254,24 @@ namespace Editor.Accessories {
                     return;
                 }
 
-                
                 var go = (GameObject)PrefabUtility.InstantiatePrefab(accessoryComponent.gameObject, parent);
                 if (go != null) {
-                    _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
-                    _referenceAccessoryComponent = accessoryComponent;
+                    this.editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
+                    this.referenceAccessoryComponent = accessoryComponent;
                     //accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
                     Selection.activeObject = go;
                     Selection.activeGameObject = go;
-                    SceneView.FrameLastActiveSceneView();
+                    // SceneView.FrameLastActiveSceneView();
 
                     _selectedItemLabel.text = accessoryComponent.name;
+
+                    if (this.editingAccessoryComponent.skinnedToCharacter) {
+                        var skinnedMeshRenderers = go.GetComponentsInChildren<SkinnedMeshRenderer>();
+                        foreach (var skinnedMeshRenderer in skinnedMeshRenderers) {
+                            skinnedMeshRenderer.rootBone = rig.bodyMesh.rootBone;
+                            skinnedMeshRenderer.bones = rig.bodyMesh.bones;
+                        }
+                    }
                 }
             }
         }
@@ -366,30 +375,30 @@ namespace Editor.Accessories {
         }
 
         private void SaveCurrentAccessory() {
-            if (!_referenceAccessoryComponent) {
+            if (!referenceAccessoryComponent) {
                 Debug.LogError("Trying to save with an empty accessory component");
                 return;
             }
 
-            Log("Saving acc: " + _referenceAccessoryComponent.gameObject.name);
-            Undo.RecordObject(_referenceAccessoryComponent, "Save Accessory");
-            _referenceAccessoryComponent.Copy(_editingAccessoryComponent);
-            PrefabUtility.RecordPrefabInstancePropertyModifications(_referenceAccessoryComponent);
-            EditorUtility.SetDirty(_referenceAccessoryComponent);
-            PrefabUtility.ApplyPrefabInstance(_editingAccessoryComponent.gameObject, InteractionMode.UserAction);
+            Log("Saving acc: " + referenceAccessoryComponent.gameObject.name);
+            Undo.RecordObject(referenceAccessoryComponent, "Save Accessory");
+            referenceAccessoryComponent.Copy(editingAccessoryComponent);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(referenceAccessoryComponent);
+            EditorUtility.SetDirty(referenceAccessoryComponent);
+            PrefabUtility.ApplyPrefabInstance(editingAccessoryComponent.gameObject, InteractionMode.UserAction);
             AssetDatabase.SaveAssets();
         }
 
         private void ResetCurrentAccessory() {
-            if(!_referenceAccessoryComponent){
+            if(!referenceAccessoryComponent){
                 Debug.LogError("Trying to reset an empty accessory component");
                 return;
             }
-            Log("Resetting acc: " + _referenceAccessoryComponent.gameObject.name);
-            Undo.RecordObject(_editingAccessoryComponent.transform, "ResetTransform");
-            _editingAccessoryComponent.transform.SetLocalPositionAndRotation(_referenceAccessoryComponent.localPosition, _referenceAccessoryComponent.localRotation);
-            _editingAccessoryComponent.localScale = _referenceAccessoryComponent.localScale;
-            PrefabUtility.RevertPrefabInstance(_editingAccessoryComponent.gameObject, InteractionMode.UserAction);
+            Log("Resetting acc: " + referenceAccessoryComponent.gameObject.name);
+            Undo.RecordObject(editingAccessoryComponent.transform, "ResetTransform");
+            editingAccessoryComponent.transform.SetLocalPositionAndRotation(referenceAccessoryComponent.localPosition, referenceAccessoryComponent.localRotation);
+            editingAccessoryComponent.localScale = referenceAccessoryComponent.localScale;
+            PrefabUtility.RevertPrefabInstance(editingAccessoryComponent.gameObject, InteractionMode.UserAction);
         }
 
         private void SetPose(PoseType poseType){
