@@ -23,6 +23,12 @@ namespace Airship.Editor {
         UseEditorVersion,
         UseLocalDevelopmentBuild,
     }
+
+    [Flags]
+    public enum TypescriptPublishFlags {
+        RecompileOnCodePublish = 2,
+        RecompileOnFullPublish = 1,
+    }
     
     public class TypescriptPopupWindow : PopupWindowContent {
         private static GUIStyle MenuItemIcon = new GUIStyle("LargeButtonMid") {
@@ -185,6 +191,7 @@ namespace Airship.Editor {
                 settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
                 #endif    
             }
+            
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Editor Options", EditorStyles.boldLabel);
             {
@@ -227,6 +234,38 @@ namespace Airship.Editor {
                     EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
             }
 
+            {
+                EditorGUILayout.Space(10);
+                EditorGUILayout.LabelField("Publishing Options", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Configuration for how to handle Typescript Compilation when publishing your game");
+                EditorGUILayout.Space(5);
+                
+                EditorGUILayout.BeginHorizontal();
+                
+                TypescriptPublishFlags publishFlags = 0;
+                
+                
+                var recompileOnFullPublish = EditorGUILayout.ToggleLeft("Recompile on Publish",
+                    (settings.typescriptPublishFlags & TypescriptPublishFlags.RecompileOnFullPublish) != 0);
+                if (recompileOnFullPublish) {
+                    publishFlags |= TypescriptPublishFlags.RecompileOnFullPublish;
+                }
+                
+                var recompileOnCodePublish = EditorGUILayout.ToggleLeft("Recompile on Code Publish",
+                    (settings.typescriptPublishFlags & TypescriptPublishFlags.RecompileOnCodePublish) != 0);
+                
+                if (recompileOnCodePublish) {
+                    publishFlags |= TypescriptPublishFlags.RecompileOnCodePublish;
+                }
+                
+                settings.typescriptPublishFlags = publishFlags;
+                EditorGUILayout.EndHorizontal();
+                
+                if ((publishFlags & TypescriptPublishFlags.RecompileOnFullPublish) == 0 || (publishFlags & TypescriptPublishFlags.RecompileOnCodePublish) == 0) {
+                    EditorGUILayout.HelpBox("Disabling recompilation will make the publish process faster, but will disable any optimizations or metadata stripping.", MessageType.Warning);
+                }
+            }
+            
             if (GUI.changed) {
                 EditorIntegrationsConfig.instance.Modify();
             }

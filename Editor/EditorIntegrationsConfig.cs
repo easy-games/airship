@@ -55,6 +55,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [FormerlySerializedAs("automaticTypeScriptCompilation")] 
     [SerializeField] public bool typescriptAutostartCompiler = true;
 
+    public TypescriptPublishFlags typescriptPublishFlags =
+        TypescriptPublishFlags.RecompileOnCodePublish | TypescriptPublishFlags.RecompileOnFullPublish;
+
     /// <summary>
     /// The version of the compiler to use
     /// </summary>
