@@ -33,7 +33,7 @@ public class AirshipComponent : MonoBehaviour {
 	[FormerlySerializedAs("m_fileFullPath")] [HideInInspector] public string scriptPath;
 
 	public IntPtr thread;
-	public LuauContext context = LuauContext.Game;
+	[NonSerialized] public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
 	[FormerlySerializedAs("m_metadata")] [HideInInspector] public LuauMetadata metadata = new();
 	
@@ -209,7 +209,7 @@ public class AirshipComponent : MonoBehaviour {
 		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, false);
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
 	}
-
+	
 	private void OnDestroy() {
 		ComponentIdToScriptName.Remove(_airshipComponentId);
 		
@@ -225,8 +225,89 @@ public class AirshipComponent : MonoBehaviour {
 		LuauCore.onResetInstance -= OnLuauReset;
 	}
 
+	#region Collision Events
+	private void OnCollisionEnter(Collision other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionEnter, other);
+	}
+
+	private void OnCollisionStay(Collision other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionStay, other);
+	}
+
+	private void OnCollisionExit(Collision other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionExit, other);
+	}
+
+	private void OnCollisionEnter2D(Collision2D other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionEnter2D, other);
+	}
+
+	private void OnCollisionStay2D(Collision2D other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionStay2D, other);
+	}
+
+	private void OnCollisionExit2D(Collision2D other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionExit2D, other);
+	}
+	#endregion
+
+	#region Trigger Events
+	private void OnTriggerEnter(Collider other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerEnter, other);
+	}
+	
+	private void OnTriggerStay(Collider other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay, other);
+	}
+	
+	private void OnTriggerExit(Collider other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerExit, other);
+	}
+	
+	private void OnTriggerEnter2D(Collider2D other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerEnter2D, other);
+	}
+	
+	private void OnTriggerStay2D(Collider2D other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay2D, other);
+	}
+	
+	private void OnTriggerExit2D(Collider2D other) {
+		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+		
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerExit2D, other);
+	}
+	#endregion
+
 	private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
 		LuauPlugin.LuauUpdateIndividualAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, 0, true);
+	}
+
+	private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object obj) {
+		var argObjId = ThreadDataManager.AddObjectReference(thread, obj);
+		LuauPlugin.LuauUpdateCollisionAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, argObjId);
 	}
 
 	private IReadOnlyList<AirshipComponent> GetDependencies() {
