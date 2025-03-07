@@ -245,6 +245,13 @@ public static class Bridge {
         return SceneManager.GetActiveScene();
     }
 
+    public static bool IsSceneLoading() {
+        if (AirshipNetworkManager.loadingSceneAsync != null) {
+            return !AirshipNetworkManager.loadingSceneAsync.isDone;
+        }
+        return false;
+    }
+
     [LuauAPI(LuauContext.Protected)]
     public static void LoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
         SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau, loadSceneMode));
