@@ -14,6 +14,7 @@ using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
 using Code.Network;
+using Code.Player;
 using Code.RemoteConsole;
 using Code.VoiceChat;
 using ElRaccoone.Tweens;
@@ -214,6 +215,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Vignette),
             typeof(ShaderWarmup),
             typeof(ShaderVariantCollection),
+            typeof(OcclusionCam),
 
             // Mirror
             typeof(NetworkServer),
