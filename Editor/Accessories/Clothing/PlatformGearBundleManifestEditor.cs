@@ -111,7 +111,7 @@ namespace Editor.Accessories.Clothing {
                 // Create a new class id
                 var data = JsonUtility.ToJson(new GearCreateRequest() {
                     name = gear.name,
-                    imageId = "c0e07e88-09d4-4962-b42d-7794a7ad4cb2",
+                    imageId = "64351892-40d4-409b-ab3a-501818213b50",
                     description = "Clothing",
                     airAssets = new string[] { },
                     category = category,
