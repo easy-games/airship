@@ -114,17 +114,15 @@ namespace Editor.Accessories.Clothing {
                         name = gear.name,
                         imageId = "c0e07e88-09d4-4962-b42d-7794a7ad4cb2",
                         description = "Clothing",
-                        gear = new GearCreateRequest() {
-                            airAssets = new string[]{},
-                            category = category,
-                            subcategory = subcategory
-                        }
+                        airAssets = new string[] {},
+                        category = category,
+                        subcategory = subcategory,
                     }));
                 req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
                 req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError("Failed to update air asset: " + req.downloadHandler.text);
+                    Debug.LogError("Failed to create gear class: " + req.downloadHandler.text);
                     return;
                 }
                 Debug.Log("Create classId response: " + req.downloadHandler.text);

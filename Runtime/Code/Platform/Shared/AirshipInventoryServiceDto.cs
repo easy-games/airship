@@ -49,8 +49,6 @@ namespace Code.Platform.Shared {
 
         public bool tradable;
         public bool marketable;
-
-        public GearCreateRequest gear;
     }
 
     [Serializable]
