@@ -109,19 +109,20 @@ namespace Editor.Accessories.Clothing {
                 (string category, string subcategory) = GetGearCategory(gear);
 
                 // Create a new class id
-                var req = UnityWebRequest.PostWwwForm($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}",
-                    JsonUtility.ToJson(new GearCreateRequest() {
-                        name = gear.name,
-                        imageId = "c0e07e88-09d4-4962-b42d-7794a7ad4cb2",
-                        description = "Clothing",
-                        airAssets = new string[] {},
-                        category = category,
-                        subcategory = subcategory,
-                    }));
+                var data = JsonUtility.ToJson(new GearCreateRequest() {
+                    name = gear.name,
+                    imageId = "c0e07e88-09d4-4962-b42d-7794a7ad4cb2",
+                    description = "Clothing",
+                    airAssets = new string[] { },
+                    category = category,
+                    subcategory = subcategory,
+                });
+                var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}", data, "application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
                 req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success) {
+                    Debug.Log("Post request: " + data);
                     Debug.LogError("Failed to create gear class: " + req.downloadHandler.text);
                     return;
                 }
