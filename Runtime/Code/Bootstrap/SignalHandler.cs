@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Threading;
 using Code.Util;
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
 using Mono.Unix;
 using Mono.Unix.Native;
+#endif
 using UnityEngine;
 
 namespace Code.Bootstrap {
