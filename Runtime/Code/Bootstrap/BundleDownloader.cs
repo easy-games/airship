@@ -92,9 +92,15 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 				long totalBytes = 0;
 				foreach (var request in preRequests) {
+					if (request.webRequest.result != UnityWebRequest.Result.Success) continue;
+
 					var contentLength = request.webRequest.GetResponseHeader("content-length");
-					var bytes = long.Parse(contentLength);
-					totalBytes += bytes;
+					try {
+						var bytes = long.Parse(contentLength);
+						totalBytes += bytes;
+					} catch (Exception e) {
+						Debug.LogError("Failed to parse content-length header: " + e);
+					}
 				}
 
 				if (loadingScreen) {

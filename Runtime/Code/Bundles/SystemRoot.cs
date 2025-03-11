@@ -297,6 +297,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			foreach (var ao in this.extraBundleLoadRequests) {
 				if (!ao.isDone) {
+					Debug.Log("Waiting for shipped asset bundles to load...");
 					yield return ao;
 				}
 			}

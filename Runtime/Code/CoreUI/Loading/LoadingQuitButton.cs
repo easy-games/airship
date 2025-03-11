@@ -8,6 +8,9 @@ public class LoadingQuitButton : MonoBehaviour {
     }
 
     private void Update() {
+        #if UNITY_IOS || UNITY_ANDROID
+        return;
+        #endif
         if (Screen.fullScreen) {
             this.visuals.gameObject.SetActive(true);
         } else {

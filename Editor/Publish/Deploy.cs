@@ -35,31 +35,26 @@ public class Deploy {
 	private static GameDto activeDeployTarget;
 	public const ulong MAX_UPLOAD_KB = 500_000;
 
-	public static void DeployToStaging()
+	public static void PublishGame()
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
 		// build the game.
 		// NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
-		List<AirshipPlatform> platforms = new() {
-			// AirshipPlatform.iOS,
-		#if UNITY_EDITOR_OSX // Run Mac build last if on OSX
-			AirshipPlatform.Windows,
-			AirshipPlatform.Mac,
-		#else
-			AirshipPlatform.Mac,
-			AirshipPlatform.Windows,
-		#endif
-		};
-		// List<AirshipPlatform> platforms = new();
-		// var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-		// if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
-		// 	platforms.Add(currentPlatform);
-		// }
-		// foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-  //           if (platform == currentPlatform) continue;
-  //           platforms.Add(platform);
-  //       }
+		List<AirshipPlatform> platforms = new();
+		var gameConfig = GameConfig.Load();
+		if (gameConfig.supportsMobile) {
+			platforms.Add(AirshipPlatform.iOS);
+		}
+
+		// We want to end up on our editor machine's platform
+#if UNITY_EDITOR_OSX
+		platforms.Add(AirshipPlatform.Windows);
+		platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Mac);
+		platforms.Add(AirshipPlatform.Windows);
+#endif
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
@@ -617,7 +612,7 @@ public class Deploy {
 
         switch (option) {
             case 0: // Publish
-                Deploy.DeployToStaging();
+                Deploy.PublishGame();
                 break;
             case 1: // Cancel
                 break;

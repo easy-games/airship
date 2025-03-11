@@ -17,6 +17,8 @@ public class GameConfigEditor : UnityEditor.Editor {
     private Action<UpdateSelectedGame> updateSelectedGame;
     private Action requestRefresh;
 
+    private SerializedProperty supportsMobile;
+
     Rect buttonRect;
     public override void OnInspectorGUI() {
         serializedObject.Update();
@@ -40,6 +42,14 @@ public class GameConfigEditor : UnityEditor.Editor {
             PopupWindow.Show(buttonRect, gameSelectionPopup);
         }
         GUILayout.EndHorizontal();
+
+        GUILayout.Space(20);
+        EditorGUILayout.LabelField("Platforms", EditorStyles.boldLabel);
+        EditorGUI.BeginDisabledGroup(true);
+        EditorGUILayout.Toggle(new GUIContent("Desktop"), true);
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.PropertyField(this.supportsMobile, new GUIContent("Mobile"));
+        GUILayout.Space(20);
 
         foreach (var field in typeof(GameConfig).GetFields()) {
             if (field.Name is "gameId" or "gameLayers" || Attribute.IsDefined(field, typeof(HideInInspector))) continue; // Rendered above
@@ -95,6 +105,8 @@ public class GameConfigEditor : UnityEditor.Editor {
             markPublishTargetPinged = false;
             publishTargetPinged = true;
         }
+
+        this.supportsMobile = serializedObject.FindProperty("supportsMobile");
         
         updateSelectedGame += (update) => {
             var gameId = update.gameId;

@@ -379,21 +379,11 @@ namespace Editor.Packages {
                 yield break;
             }
 
-            // Sort the current platform first to speed up build time
             List<AirshipPlatform> platforms = new() {
-                // AirshipPlatform.iOS,
+                AirshipPlatform.iOS,
                 AirshipPlatform.Mac,
                 AirshipPlatform.Windows,
             };
-            // var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-            // if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
-            //     platforms.Add(currentPlatform);
-            // }
-            // foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-            //     if (platform == currentPlatform) continue;
-            //     platforms.Add(platform);
-            // }
-            // platforms.Remove(AirshipPlatform.Linux);
 
             if (!CreateAssetBundles.PrePublishChecks()) {
                 yield break;
@@ -590,8 +580,8 @@ namespace Editor.Packages {
 
                     // UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
                     // UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
-                    // UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
-                    // UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+                    UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
                 });
             }
 
@@ -659,7 +649,7 @@ namespace Editor.Packages {
                                 // "Linux_shared_resources",
                                 "Mac_shared_resources",
                                 "Windows_shared_resources",
-                                // "iOS_shared_resources",
+                                "iOS_shared_resources",
 
                                 // "Linux_shared_scenes",
                                 // "Mac_shared_scenes",

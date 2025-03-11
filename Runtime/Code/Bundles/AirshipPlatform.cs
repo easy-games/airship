@@ -16,21 +16,10 @@ namespace Code.Bootstrap {
     public class AirshipPlatformUtil {
         public static AirshipPlatform[] livePlatforms = new[]
         {
-            // AirshipPlatform.iOS,
-            AirshipPlatform.Mac,
-            AirshipPlatform.Windows,
-            AirshipPlatform.Linux
-        };
-
-        /// <summary>
-        /// Just another list that includes mobile.
-        /// You probably shouldn't use this -- instead use livePlatforms.
-        /// </summary>
-        public static AirshipPlatform[] betaPlatforms = new[] {
             AirshipPlatform.iOS,
             AirshipPlatform.Mac,
             AirshipPlatform.Windows,
-            AirshipPlatform.Linux,
+            AirshipPlatform.Linux
         };
 
         public static string GetStringName(AirshipPlatform platform) {
