@@ -239,7 +239,7 @@ namespace Luau {
         }
 
         public static void AddToMethodList(MethodInfo info, LuauContext contextMask) {
-            _allowedMethodInfos.Add(info, contextMask);
+            _allowedMethodInfos.TryAdd(info, contextMask);
         }
 
         /// <summary>

@@ -89,7 +89,7 @@ public class AccessoryBuilder : MonoBehaviour {
         //print("AccessoryBuilder OnEnable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete += OnMeshCombineCompleted;
 
-        if (Application.isPlaying && this.rig.faceMesh.material.mainTexture == null) {
+        if (Application.isPlaying && this.rig.faceMesh.material?.mainTexture == null) {
             this.rig.faceMesh.gameObject.SetActive(false);
         }
 
@@ -434,6 +434,7 @@ public class AccessoryBuilder : MonoBehaviour {
         propertyBlock.SetTexture(FaceBaseMapTexture, texture);
         rig.faceMesh.SetPropertyBlock(propertyBlock);
         rig.faceMesh.gameObject.SetActive(true);
+        rig.faceMesh.enabled = true;
     }
 
     public void UpdateCombinedMesh() {
