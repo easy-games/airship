@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Assets.Luau;
+using Code.Network.Simulation;
 using Code.Network.StateSystem;
 using Code.Player.Character.NetworkedMovement;
 using Mirror;
@@ -18,7 +19,7 @@ namespace Code.Player.Character.MovementSystems.Character
     }
 
     [LuauAPI]
-    public class CharacterMovement : NetworkedStateSystem<CharacterSnapshotData, CharacterInputData>
+    public class CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterInputData>
     {
         public Rigidbody rigidbody;
         public Transform rootTransform;
@@ -84,7 +85,7 @@ namespace Code.Player.Character.MovementSystems.Character
         /// <summary>
         /// Called when we need to capture a given snapshot.
         /// </summary>
-        public event Action OnCaptureSnapshot;
+        public event Action<object, object> OnCaptureSnapshot;
 
         /// <summary>
         /// Fired every frame. Provides lastState, nextState, and delta between the two.
@@ -194,7 +195,7 @@ namespace Code.Player.Character.MovementSystems.Character
             // We reset the custom data to make sure earlier calls outside of our
             // specific state capture function don't find their way into our state record.
             this.customSnapshotData = null;
-            OnCaptureSnapshot?.Invoke();
+            OnCaptureSnapshot?.Invoke(commandNumber, time);
             this.currentMoveSnapshot.customData = this.customSnapshotData;
             var snapshot = new CharacterSnapshotData();
             snapshot.CopyFrom(this.currentMoveSnapshot);
@@ -207,7 +208,7 @@ namespace Code.Player.Character.MovementSystems.Character
             return snapshot;
         }
 
-        public override CharacterInputData GetCommand(int commandNumber)
+        public override CharacterInputData GetCommand(int commandNumber, double time)
         {
             // We reset the custom data to make sure earlier calls outside of our
             // specific command generation function don't find their way into our command.
@@ -222,6 +223,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 sprint = sprintInput,
                 lookVector = lookVector,
                 customData = customInputData,
+                time = time,
             };
             // Reset the custom data again
             this.customInputData = null;
@@ -1016,6 +1018,16 @@ namespace Code.Player.Character.MovementSystems.Character
         #endregion
 
         #region TypeScript Interaction
+
+        public void RequestResimulation(double time)
+        {
+            AirshipSimulationManager.instance.ScheduleResimulation((resimulate) =>
+            {
+                this.manager.clientPredictionResimRequestor = true;
+                resimulate(time);
+                this.manager.clientPredictionResimRequestor = false;
+            });
+        }
 
         public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace)
         {

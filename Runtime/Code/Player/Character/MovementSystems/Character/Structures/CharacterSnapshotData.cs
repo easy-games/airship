@@ -38,7 +38,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public Vector3 lookVector;
         public BinaryBlob customData;
 
-        public override bool Compare<TState, TInput>(NetworkedStateSystem<TState, TInput> system, TState snapshot)
+        public override bool Compare<TSystem, TState, TInput>(NetworkedStateSystem<TSystem, TState, TInput> system, TState snapshot)
         {
             // TODO: could probably be optimized?
             if (system.GetType() != typeof(CharacterMovement))

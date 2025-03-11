@@ -14,7 +14,7 @@ namespace Code.Network.StateSystem
 {
     [RequireComponent(typeof(NetworkIdentity))]
     public abstract class AirshipNetworkedStateManager<StateSystem, State, Input> : NetworkBehaviour
-        where State : StateSnapshot where Input : InputCommand where StateSystem : NetworkedStateSystem<State, Input>
+        where State : StateSnapshot where Input : InputCommand where StateSystem : NetworkedStateSystem<StateSystem, State, Input>
     {
         #region Inspector Settings
 
@@ -74,7 +74,7 @@ namespace Code.Network.StateSystem
         // TODO: in the future, we might get better resims in cases where there is more than one predicted
         // component by resimulating both, but it would require us to ensure that we have accurate intermediate
         // data and don't overwrite authoritative snapshots in our prediction history.
-        private bool clientPredictionResimRequestor = false;
+        public bool clientPredictionResimRequestor = false;
 
         // When the client doesn't recieve confirmation of it's commands for an extended time, we pause
         // predictions until we receive more commands from the server.
@@ -188,6 +188,8 @@ namespace Code.Network.StateSystem
             this.OnClientReceiveSnapshot += ClientReceiveSnapshot;
             this.OnServerReceiveSnapshot += ServerReceiveSnapshot;
             this.OnServerReceiveInput += ServerReceiveInputCommand;
+
+            this.stateSystem.manager = this;
         }
 
         public void OnDestroy()
@@ -547,7 +549,7 @@ namespace Code.Network.StateSystem
             if (this.clientPausePrediction)
             {
                 this.stateSystem.GetCommand(this
-                    .clientCommandNumber); // We tick GetCommand to clear any input, but we don't use it
+                    .clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
                 this.stateSystem.Tick(null, false);
                 this.inputHistory.Add(time, null);
                 return;
@@ -555,7 +557,7 @@ namespace Code.Network.StateSystem
 
             // Update our command number and process the next tick.
             clientCommandNumber++;
-            var input = this.stateSystem.GetCommand(this.clientCommandNumber);
+            var input = this.stateSystem.GetCommand(this.clientCommandNumber, time);
             input = this.inputHistory.Add(time, input);
             this.stateSystem.Tick(input, false);
         }
@@ -578,10 +580,8 @@ namespace Code.Network.StateSystem
                     // Capture the state and overwrite our history for this tick since it may be different
                     // due to corrected collisions or positions of other objects.
                     var replayState = this.stateSystem.GetCurrentState(input.commandNumber, time);
-                    var oldState = this.stateHistory.GetExact(time);
                     // Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
                     this.stateHistory.Overwrite(time, replayState);
-                    return;
                 }
                 // If we didn't request this resimulation, reset our state to the one we previously captured for this tick.
                 else
@@ -590,6 +590,7 @@ namespace Code.Network.StateSystem
                     if (oldState == null) return;
                     this.stateSystem.SetCurrentState(oldState);
                 }
+                return;
             }
 
             // Store the current physics state for prediction
@@ -704,7 +705,7 @@ namespace Code.Network.StateSystem
             // Update our command number and process the next tick
             clientCommandNumber++;
             // Read input from system
-            var command = this.stateSystem.GetCommand(clientCommandNumber);
+            var command = this.stateSystem.GetCommand(clientCommandNumber, time);
             this.inputHistory.Add(time, command);
             // Tick system
             this.stateSystem.Tick(command, false);

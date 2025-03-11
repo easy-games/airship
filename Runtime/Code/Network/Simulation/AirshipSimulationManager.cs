@@ -238,6 +238,15 @@ namespace Code.Network.Simulation
         }
 
         /**
+         * Allows typescript to request a resimulation from the provided time.
+         * TODO: rework ScheduleResimulation to work with TS
+         */
+        public void RequestResimulation(double time)
+        {
+            this.ScheduleResimulation((resim => resim(time)));
+        }
+
+        /**
          * Requests a simulation based on the provided time. Requesting a simulation will roll back the physics
          * world to the snapshot just before or at the base time provided. Calling the returned tick function
          * will advance the simulation and re-simulate the calls to OnPerformTick, Physics.Simulate(), and OnCaptureSnapshot

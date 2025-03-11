@@ -10,6 +10,10 @@ namespace Code.Player.Character.Net
     {
         /** The number this command is in the clients stream of commands. */
         public int commandNumber;
+        /**
+        * The time the input was created. This time is local to the client that created it.
+        */
+        public double time;
         
         public virtual object Clone()
         {

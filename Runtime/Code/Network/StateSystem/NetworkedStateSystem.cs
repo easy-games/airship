@@ -1,8 +1,10 @@
 using System;
 using Code.Network.StateSystem.Structures;
+using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.Net;
 using JetBrains.Annotations;
 using Mirror;
+using Mono.WebBrowser;
 using UnityEngine;
 
 namespace Code.Network.StateSystem
@@ -23,10 +25,12 @@ namespace Code.Network.StateSystem
     }
 
     [RequireComponent(typeof(NetworkIdentity))]
-    public abstract class NetworkedStateSystem<State, Input> : NetworkBehaviour
+    public abstract class NetworkedStateSystem<StateSystem, State, Input> : NetworkBehaviour
         where State : StateSnapshot where Input : InputCommand
+        where StateSystem : NetworkedStateSystem<StateSystem, State, Input>
     {
         [NonSerialized] public NetworkedStateSystemMode mode;
+        [NonSerialized] public AirshipNetworkedStateManager<StateSystem, State, Input> manager;
 
         /**
         * This function is called to update the system on how it will be used.
@@ -54,7 +58,7 @@ namespace Code.Network.StateSystem
          * This is called generally at the rate of FixedUpdate, but may not be called in situations where we are waiting
          * for commands from the server.
          */
-        public abstract Input GetCommand(int commandNumber);
+        public abstract Input GetCommand(int commandNumber, double time);
 
         /**
          * Ticks the system and advances the current state based on the move input data provided.

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class TestMovement : NetworkedStateSystem<TestMovementState, TestMovementInput>
+    public class TestMovement : NetworkedStateSystem<TestMovement, TestMovementState, TestMovementInput>
     {
         private Rigidbody rb;
         private Vector3 moveVector;
@@ -84,9 +84,9 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             // Noop
         }
 
-        public override TestMovementInput GetCommand(int commandNumber)
+        public override TestMovementInput GetCommand(int commandNumber, double time)
         {
-            var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, jump = jump};
+            var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, jump = jump, time = time};
             jump = false;
             return command;
         }
