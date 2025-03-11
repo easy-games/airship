@@ -226,7 +226,7 @@ namespace Editor {
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
-            options.locationPathName = "build/client_android";
+            options.locationPathName = $"build/client_android/{ClientExecutableName}.apk";
             options.target = BuildTarget.Android;
             if (development == true) {
                 options.options = BuildOptions.Development;
