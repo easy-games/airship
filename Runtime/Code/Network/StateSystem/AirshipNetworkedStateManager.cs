@@ -87,7 +87,7 @@ namespace Code.Network.StateSystem
         // doesn't process inputs).
         private History<Input> inputHistory;
 
-        private History<State> stateHistory;
+        public History<State> stateHistory;
 
         // Observer history stores authoritative state and uses the server's times. This data can be interpolated
         // with NetworkTime.time. It is converted into state history on the local clients physics timeline

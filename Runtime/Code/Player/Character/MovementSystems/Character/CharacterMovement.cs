@@ -59,7 +59,7 @@ namespace Code.Player.Character.MovementSystems.Character
         /// Called when a new command is being created. This can be used to set custom data for new
         /// command by calling the SetCustomInputData function during this event.
         /// </summary>
-        public event Action OnCreateCommand;
+        public event Action<object> OnCreateCommand;
 	
         /// <summary>
         /// Called on the start of processing for a tick. The state passed in is the last state of the
@@ -213,7 +213,7 @@ namespace Code.Player.Character.MovementSystems.Character
             // We reset the custom data to make sure earlier calls outside of our
             // specific command generation function don't find their way into our command.
             this.customInputData = null;
-            OnCreateCommand?.Invoke();
+            OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData()
             {
                 commandNumber = commandNumber,
@@ -1019,14 +1019,33 @@ namespace Code.Player.Character.MovementSystems.Character
 
         #region TypeScript Interaction
 
-        public void RequestResimulation(double time)
+        public bool RequestResimulation(int commandNumber)
         {
+            CharacterSnapshotData clientPredictedState = null;
+            foreach (var predictedState in this.manager.stateHistory.Values)
+            {
+                if (predictedState.lastProcessedCommand == commandNumber)
+                {
+                    clientPredictedState = predictedState;
+                    break;
+                }
+            }
+
+            if (clientPredictedState == null)
+            {
+                Debug.LogWarning($"Unable to find predicted state for command number {commandNumber}. Resimulation will not be performed.");
+                return false;
+            }
+            
             AirshipSimulationManager.instance.ScheduleResimulation((resimulate) =>
             {
                 this.manager.clientPredictionResimRequestor = true;
-                resimulate(time);
+                Debug.LogWarning("Resimulating for TS");
+                resimulate(clientPredictedState.time);
                 this.manager.clientPredictionResimRequestor = false;
             });
+
+            return true;
         }
 
         public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace)

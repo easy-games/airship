@@ -118,7 +118,6 @@ namespace Code.Network.Simulation
         private bool resimulationSimulationActive = false;
         private bool isActive = false;
         private List<double> tickTimes = new List<double>();
-        private List<double> frameTimes = new List<double>();
         private List<LagCompensationRequest> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
 
@@ -257,6 +256,7 @@ namespace Code.Network.Simulation
         {
             if (resimulationSimulationActive)
             {
+                Debug.LogWarning("Resim already active");
                 throw new ApplicationException(
                     "Re-simulation requested while a re-simulation is already active. Report this.");
             }
