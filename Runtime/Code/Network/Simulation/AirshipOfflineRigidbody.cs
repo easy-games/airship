@@ -19,12 +19,12 @@ namespace Code.Network.Simulation
         public void Start()
         {
             this.rigidbody = this.GetComponent<Rigidbody>();
-            AirshipSimulationManager.OnSetPaused += OnPause;
+            AirshipSimulationManager.Instance.OnSetPaused += OnPause;
         }
 
         private void OnDestroy()
         {
-            AirshipSimulationManager.OnSetPaused -= OnPause;
+            AirshipSimulationManager.Instance.OnSetPaused -= OnPause;
         }
 
         private void OnPause(bool paused)

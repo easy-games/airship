@@ -60,10 +60,8 @@ namespace Code.Network.Simulation
      * Server authoritative networking uses the simulation manager to perform resimulations of its client predictions.
      */
     [LuauAPI]
-    public class AirshipSimulationManager : MonoBehaviour
+    public class AirshipSimulationManager : Singleton<AirshipSimulationManager>
     {
-        public static AirshipSimulationManager instance = null;
-
         /**
          * This function notifies all watching components that a re-simulation
          * is about to occur. The boolean parameter will be true if a re-simulation
@@ -73,7 +71,7 @@ namespace Code.Network.Simulation
          * kinematic if they do not wish to take part in the re-simulation. Physics
          * will be ticked during re-simulation.
          */
-        public static Action<bool> OnSetPaused;
+        public event Action<bool> OnSetPaused;
 
         /**
          * This action notifies all watching components that they need to set their
@@ -81,7 +79,7 @@ namespace Code.Network.Simulation
          * time. Components should expect a PerformTick() call sometime after this
          * function completes.
          */
-        public static Action<double> OnSetSnapshot;
+        public event Action<double> OnSetSnapshot;
 
         /**
          * This action notifies listeners that we are performing a lag compensation check.
@@ -100,20 +98,26 @@ namespace Code.Network.Simulation
          * currentTime - The tick time that triggered this compensation check
          * latency - The estimated time it takes for a client message to reach the server. (client.rtt / 2)
          */
-        public static Action<int, double, double> OnLagCompensationCheck;
+        public event Action<int, double, double> OnLagCompensationCheck;
 
         /**
          * This action tells all watching components that they need to perform a tick.
          * A Physics.Simulate() call will be made after PerformTick completes.
          */
-        public static Action<double, bool> OnPerformTick;
+        public event Action<double, bool> OnPerformTick;
 
         /**
          * Informs all watching components that the simulation tick has been performed
          * and that a new snapshot of the resulting Physics.Simulate() should be captured.
          * This snapshot should be the state for the provided tick number in history.
          */
-        public static Action<double, bool> OnCaptureSnapshot;
+        public event Action<double, bool> OnCaptureSnapshot;
+
+        /**
+         * Fired when a tick leaves local history and will never be referenced again. You can use this
+         * event to clean up any data that is no longer required.
+         */
+        public event Action<object> OnHistoryLifetimeReached;
 
         private bool resimulationSimulationActive = false;
         private bool isActive = false;
@@ -126,11 +130,6 @@ namespace Code.Network.Simulation
             if (isActive) return;
             Physics.simulationMode = SimulationMode.Script;
             this.isActive = true;
-        }
-
-        private void Awake()
-        {
-            instance = this;
         }
         
         public void FixedUpdate()
@@ -147,17 +146,24 @@ namespace Code.Network.Simulation
             // Before running any commands, we perform any resimulation requests that were made during
             // the last tick. This ensures that resimulations don't affect command processing and
             // that all commands run on the most up to date predictions.
+            var resimBackTo = time;
             while (this.resimulationRequests.TryDequeue(out ResimulationRequest request))
             {
                 try
                 {
-                    request.callback(this.PerformResimulation);
+                    request.callback((requestedTime) =>
+                    {
+                        if (resimBackTo > requestedTime) resimBackTo = requestedTime;
+                    });
                 }
                 catch (Exception e)
                 {
                     Debug.LogError(e);
                 }
             }
+
+            // Only resimulate once. Go back to the farthest back time that was requested.
+            if (resimBackTo != time) this.PerformResimulation(resimBackTo);
 
             // Perform the standard tick behavior
             OnPerformTick?.Invoke(time, false);
@@ -202,6 +208,7 @@ namespace Code.Network.Simulation
             // Keep the tick history around only for 1 second. This limits our lag compensation amount.
             while (this.tickTimes.Count > 0 && time - this.tickTimes[0] > 1)
             {
+                OnHistoryLifetimeReached?.Invoke(this.tickTimes[0]);
                 this.tickTimes.RemoveAt(0);
             }
         }
@@ -254,6 +261,8 @@ namespace Code.Network.Simulation
          */
         private void PerformResimulation(double baseTime)
         {
+            Debug.Log($"T:{Time.fixedTime} Resimulating from {baseTime}");
+            
             if (resimulationSimulationActive)
             {
                 Debug.LogWarning("Resim already active");

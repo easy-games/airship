@@ -14,6 +14,7 @@ namespace Code.Network.Simulation
     {
         private int maxSize;
         private SortedList<double, T> history = new SortedList<double, T>();
+        private List<double> authoritativeEntries = new List<double>();
 
         public IList<T> Values => history.Values;
         public IList<double> Keys => history.Keys;
@@ -43,11 +44,36 @@ namespace Code.Network.Simulation
             {
                 while (this.history.Count > this.maxSize)
                 {
+                    this.authoritativeEntries.Remove(this.history.Keys[0]);
                     this.history.RemoveAt(0);
                 }
             }
 
             return entry;
+        }
+
+        public void SetAuthoritativeEntry(double time, bool authority)
+        {
+            var hasEntry = this.authoritativeEntries.Contains(time);
+            if (authority && hasEntry) return;
+            if (!authority && !hasEntry) return;
+
+            if (authority && !hasEntry)
+            {
+                this.authoritativeEntries.Add(time);
+                return;
+            }
+
+            if (!authority && hasEntry)
+            {
+                this.authoritativeEntries.Remove(time);
+                return;
+            }
+        }
+
+        public bool IsAuthoritativeEntry(double time)
+        {
+            return this.authoritativeEntries.Contains(time);
         }
 
         /**
@@ -189,6 +215,9 @@ namespace Code.Network.Simulation
 
         public void RemoveAt(int index)
         {
+            if (index < 0 || index >= this.history.Count) return;
+            var time = this.history.Keys[index];
+            this.authoritativeEntries.Remove(time);
             this.history.RemoveAt(index);
         }
 
@@ -197,6 +226,7 @@ namespace Code.Network.Simulation
          */
         public bool Remove(double time)
         {
+            this.authoritativeEntries.Remove(time);
             return this.history.Remove(time);
         }
 
@@ -205,6 +235,7 @@ namespace Code.Network.Simulation
          */
         public void Clear()
         {
+            this.authoritativeEntries.Clear();
             this.history.Clear();
         }
 
@@ -216,6 +247,7 @@ namespace Code.Network.Simulation
         {
             while (this.history.Count > 0 && this.history.Keys[0] < time)
             {
+                this.authoritativeEntries.Remove(this.history.Keys[0]);
                 this.history.RemoveAt(0);
             }
         }

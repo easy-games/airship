@@ -54,7 +54,7 @@ namespace Code.Player.Character.MovementSystems.Character
             }
 
             string message = "";
-
+            
             if (this.lastProcessedCommand != other.lastProcessedCommand)
                 message += $"lastProcessedCommand: {this.lastProcessedCommand} != {other.lastProcessedCommand}\n";
             if (this.position != other.position) message += $"position: {this.position} != {other.position}\n";

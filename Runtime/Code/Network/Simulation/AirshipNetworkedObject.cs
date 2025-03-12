@@ -26,24 +26,24 @@ namespace Code.Network.Simulation
             if (isServer && authority)
             {
                 history = new History<TransformSnapshot>(NetworkServer.sendRate);
-                AirshipSimulationManager.OnCaptureSnapshot += this.CaptureSnapshot;
-                AirshipSimulationManager.OnSetSnapshot += this.SetSnapshot;
-                AirshipSimulationManager.OnLagCompensationCheck += this.LagCompensationCheck;
+                AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
+                AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
+                AirshipSimulationManager.Instance.OnLagCompensationCheck += this.LagCompensationCheck;
             }
 
             if (isClient && !authority)
             {
                 history = new History<TransformSnapshot>(NetworkClient.sendRate);
-                AirshipSimulationManager.OnCaptureSnapshot += this.CaptureSnapshot;
-                AirshipSimulationManager.OnSetSnapshot += this.SetSnapshot;
+                AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
+                AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
             }
         }
 
         private void OnDestroy()
         {
-            AirshipSimulationManager.OnCaptureSnapshot -= this.CaptureSnapshot;
-            AirshipSimulationManager.OnSetSnapshot -= this.SetSnapshot;
-            AirshipSimulationManager.OnLagCompensationCheck -= this.LagCompensationCheck;
+            AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.CaptureSnapshot;
+            AirshipSimulationManager.Instance.OnSetSnapshot -= this.SetSnapshot;
+            AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.LagCompensationCheck;
         }
 
         private void CaptureSnapshot(double time, bool replay)

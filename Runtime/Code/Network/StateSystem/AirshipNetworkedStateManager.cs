@@ -164,11 +164,11 @@ namespace Code.Network.StateSystem
 
         private void Awake()
         {
-            AirshipSimulationManager.instance.ActivateSimulationManager();
-            AirshipSimulationManager.OnPerformTick += this.OnPerformTick;
-            AirshipSimulationManager.OnSetSnapshot += this.OnSetSnapshot;
-            AirshipSimulationManager.OnCaptureSnapshot += this.OnCaptureSnapshot;
-            AirshipSimulationManager.OnLagCompensationCheck += this.OnLagCompensationCheck;
+            AirshipSimulationManager.Instance.ActivateSimulationManager();
+            AirshipSimulationManager.Instance.OnPerformTick += this.OnPerformTick;
+            AirshipSimulationManager.Instance.OnSetSnapshot += this.OnSetSnapshot;
+            AirshipSimulationManager.Instance.OnCaptureSnapshot += this.OnCaptureSnapshot;
+            AirshipSimulationManager.Instance.OnLagCompensationCheck += this.OnLagCompensationCheck;
 
             // We will keep up to 1 second of commands in the buffer. After that, we will start dropping new commands.
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
@@ -194,10 +194,10 @@ namespace Code.Network.StateSystem
 
         public void OnDestroy()
         {
-            AirshipSimulationManager.OnPerformTick -= this.OnPerformTick;
-            AirshipSimulationManager.OnSetSnapshot -= this.OnSetSnapshot;
-            AirshipSimulationManager.OnCaptureSnapshot -= this.OnCaptureSnapshot;
-            AirshipSimulationManager.OnLagCompensationCheck += this.OnLagCompensationCheck;
+            AirshipSimulationManager.Instance.OnPerformTick -= this.OnPerformTick;
+            AirshipSimulationManager.Instance.OnSetSnapshot -= this.OnSetSnapshot;
+            AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.OnCaptureSnapshot;
+            AirshipSimulationManager.Instance.OnLagCompensationCheck += this.OnLagCompensationCheck;
         }
 
         private void Update()
@@ -424,7 +424,7 @@ namespace Code.Network.StateSystem
                 // ensures that we are rolling back to the time the user actually saw on their
                 // client when they issued the command.
                 var lagCompensatedTickTime =
-                    AirshipSimulationManager.instance.GetLastSimulationTime(currentTime - latency -
+                    AirshipSimulationManager.Instance.GetLastSimulationTime(currentTime - latency -
                                                                             NetworkClient.bufferTime);
                 this.OnSetSnapshot(lagCompensatedTickTime);
             }
@@ -574,8 +574,13 @@ namespace Code.Network.StateSystem
                 // to see it in our state history either.
                 if (input == null) return;
 
-                // If we did request this resimulation, we will process the new state history
-                if (this.clientPredictionResimRequestor)
+                if (this.stateHistory.IsAuthoritativeEntry(time))
+                {
+                    var oldState = this.stateHistory.GetExact(time);
+                    if (oldState == null) return;
+                    this.stateSystem.SetCurrentState(oldState);
+                }
+                else
                 {
                     // Capture the state and overwrite our history for this tick since it may be different
                     // due to corrected collisions or positions of other objects.
@@ -583,13 +588,26 @@ namespace Code.Network.StateSystem
                     // Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
                     this.stateHistory.Overwrite(time, replayState);
                 }
-                // If we didn't request this resimulation, reset our state to the one we previously captured for this tick.
-                else
-                {
-                    var oldState = this.stateHistory.GetExact(time);
-                    if (oldState == null) return;
-                    this.stateSystem.SetCurrentState(oldState);
-                }
+                
+                // // TODO: instead consider flagging state as being authoritative. This would allow us to always
+                // // set that state if we know that it's correct instead of overwriting all resim history even if some
+                // // of the state is actually authoritative
+                // // If we did request this resimulation, we will process the new state history
+                // if (this.clientPredictionResimRequestor)
+                // {
+                //     // Capture the state and overwrite our history for this tick since it may be different
+                //     // due to corrected collisions or positions of other objects.
+                //     var replayState = this.stateSystem.GetCurrentState(input.commandNumber, time);
+                //     // Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
+                //     this.stateHistory.Overwrite(time, replayState);
+                // }
+                // // If we didn't request this resimulation, reset our state to the one we previously captured for this tick.
+                // else
+                // {
+                //     var oldState = this.stateHistory.GetExact(time);
+                //     if (oldState == null) return;
+                //     this.stateSystem.SetCurrentState(oldState);
+                // }
                 return;
             }
 
@@ -888,6 +906,7 @@ namespace Code.Network.StateSystem
             if (clientPredictedState.Compare(this.stateSystem, state))
             {
                 // If it does, we can just return since our predictions have all been correct so far.
+                this.stateHistory.SetAuthoritativeEntry(clientPredictedState.time, true);
                 return;
             }
 
@@ -904,6 +923,7 @@ namespace Code.Network.StateSystem
             // Overwrite the time we should have predicted this on the client so it
             // appears from the client perspective that we predicted the command correctly.
             this.stateHistory.Overwrite(clientPredictedState.time, updatedState);
+            this.stateHistory.SetAuthoritativeEntry(clientPredictedState.time, true);
             // Resimulate all commands performed after the incorrect prediction so that
             // our future predictions are (hopefully) correct.
             this.clientPredictionResimRequestor = true;
@@ -941,7 +961,7 @@ namespace Code.Network.StateSystem
                     // Store the state so we can use it when the callback is fired.
                     this.clientLastConfirmedState = state;
                     // Schedule the resimulation with the simulation manager.
-                    AirshipSimulationManager.instance.ScheduleResimulation((resimulate) =>
+                    AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) =>
                     {
                         // Reconcile when this callback is executed. Use the last confirmed state received,
                         // (since more could come in from the network while we are waiting for the callback)
