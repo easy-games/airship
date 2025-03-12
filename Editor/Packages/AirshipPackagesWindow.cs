@@ -431,7 +431,11 @@ namespace Editor.Packages {
                     buildParams.UseCache = this.publishOptionUseCache;
                     Debug.Log("Building package " + packageDoc.id + " with cache: " + this.publishOptionUseCache);
                     if (isCoreMaterials) {
-                        buildParams.BundleCompression = BuildCompression.Uncompressed;
+                        if (platform is AirshipPlatform.iOS or AirshipPlatform.Android) {
+                            buildParams.BundleCompression = BuildCompression.LZ4;
+                        } else {
+                            buildParams.BundleCompression = BuildCompression.Uncompressed;
+                        }
                     } else {
                         buildParams.BundleCompression = BuildCompression.LZ4;
                     }
