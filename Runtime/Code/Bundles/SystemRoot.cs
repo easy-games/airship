@@ -294,7 +294,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 
 			yield return this.WaitAll(loadLists[0].ToArray());
-
+			
 			foreach (var ao in this.extraBundleLoadRequests) {
 				if (!ao.isDone) {
 					Debug.Log("Waiting for shipped asset bundles to load...");
@@ -305,9 +305,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {
 				preWarmedCoreShaders = true;
-				while (!this.coreMaterialsAssetBundle) {
-					yield return null;
-				}
 				string[] collections = new[] {
 					"MainMenu",
 					// "RacingGame",
