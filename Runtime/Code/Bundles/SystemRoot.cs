@@ -304,6 +304,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {
+#if !UNITY_IOS && !UNITY_ANDROID
 				preWarmedCoreShaders = true;
 				string[] collections = new[] {
 					"MainMenu",
@@ -319,6 +320,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");
 					}
 				}
+#endif
 			}
 		} else {
 			if (NetworkClient.isConnected) {

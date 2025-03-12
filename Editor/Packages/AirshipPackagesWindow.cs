@@ -373,7 +373,7 @@ namespace Editor.Packages {
                 break;
             }
 
-            var didVerify = AirshipPackagesWindow.VerifyBuildModules();
+            var didVerify = AirshipPackagesWindow.VerifyBuildModules(true);
             if (!didVerify) {
                 Debug.LogErrorFormat("Missing build modules. Install missing modules in Unity Hub and restart Unity to publish package ({0}).", packageDoc.id);
                 yield break;
@@ -383,7 +383,13 @@ namespace Editor.Packages {
                 AirshipPlatform.iOS,
                 AirshipPlatform.Mac,
                 AirshipPlatform.Windows,
+                AirshipPlatform.Android,
             };
+            // Uncomment to just build iOS
+            // if (isCoreMaterials) {
+            //     platforms.Clear();
+            //     platforms.Add(AirshipPlatform.iOS);
+            // }
 
             if (!CreateAssetBundles.PrePublishChecks()) {
                 yield break;
@@ -582,6 +588,9 @@ namespace Editor.Packages {
                     // UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
                     UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
                     UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+
+                    UploadSingleGameFile(urls.Android_shared_resources, $"{AirshipPlatform.Android}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    UploadSingleGameFile(urls.Android_shared_scenes, $"{AirshipPlatform.Android}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
                 });
             }
 
@@ -650,6 +659,7 @@ namespace Editor.Packages {
                                 "Mac_shared_resources",
                                 "Windows_shared_resources",
                                 "iOS_shared_resources",
+                                "Android_shared_resources",
 
                                 // "Linux_shared_scenes",
                                 // "Mac_shared_scenes",
@@ -680,7 +690,7 @@ namespace Editor.Packages {
             Repaint();
         }
 
-        public static bool VerifyBuildModules() {
+        public static bool VerifyBuildModules(bool mobileSupport) {
             // var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
             // if (!linux64) {
             //     Debug.LogError("Linux Build Support (<b>Mono</b>) module not found.");
@@ -696,11 +706,20 @@ namespace Editor.Packages {
                 Debug.LogError("Windows Build Support (<b>Mono</b>) module not found.");
             }
 
+            if (!mobileSupport) {
+                return mac && windows;
+            }
+
             var iOS = ModuleUtil.IsModuleInstalled(BuildTarget.iOS);
             if (!iOS) {
                 Debug.LogError("iOS Build Support module not found.");
             }
-            return mac && windows && iOS;
+
+            var android = ModuleUtil.IsModuleInstalled(BuildTarget.Android);
+            if (!iOS) {
+                Debug.LogError("Android Build Support module not found.");
+            }
+            return mac && windows && iOS && android;
         }
 
         private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {

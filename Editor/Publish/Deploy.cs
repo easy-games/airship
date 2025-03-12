@@ -81,19 +81,21 @@ public class Deploy {
 			yield break;
 		}
 
+		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+		if (gameConfig == null) {
+			Debug.LogError("Missing GameConfig.");
+			yield break;
+		}
+
 		if (!skipBuild) {
-			var didVerify = AirshipPackagesWindow.VerifyBuildModules();
+			var didVerify = AirshipPackagesWindow.VerifyBuildModules(gameConfig.supportsMobile);
 			if (!didVerify) {
 				Debug.LogErrorFormat("Missing build modules. Install missing modules in Unity Hub and restart Unity to publish game.");
 				yield break;
 			}
 		}
 
-		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
-		if (gameConfig == null) {
-			Debug.LogError("Missing GameConfig.");
-			yield break;
-		}
+
 
 		var confirmedSaveState = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
 		if (!confirmedSaveState  || SceneManager.GetActiveScene().isDirty) { // User clicked "cancel"
@@ -295,8 +297,11 @@ public class Deploy {
 
 				// UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
 				// UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
-				// UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
-				// UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
+				UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
+				UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
+
+				UploadSingleGameFile(urls.Android_shared_resources, $"{AirshipPlatform.Android}/shared/resources", AirshipPlatform.Android),
+				UploadSingleGameFile(urls.Android_shared_scenes, $"{AirshipPlatform.Android}/shared/scenes", AirshipPlatform.Android),
 			});
 		}
 
@@ -376,6 +381,18 @@ public class Deploy {
 
 		// Complete deployment
 		{
+			List<string> uploadedFileIds = new();
+			uploadedFileIds.Add("Mac_shared_resources");
+			uploadedFileIds.Add("Mac_shared_scenes");
+			uploadedFileIds.Add("Windows_shared_resources");
+			uploadedFileIds.Add("Windows_shared_scenes");
+			if (gameConfig.supportsMobile) {
+				uploadedFileIds.Add("iOS_shared_resources");
+				uploadedFileIds.Add("iOS_shared_scenes");
+				uploadedFileIds.Add("Android_shared_resources");
+				uploadedFileIds.Add("Android_shared_scenes");
+			}
+
 			int attemptNum = 0;
 			while (attemptNum < 5) {
 				// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
@@ -384,17 +401,7 @@ public class Deploy {
 						new CompleteGameDeploymentDto() {
 							gameId = gameConfig.gameId,
 							gameVersionId = deploymentDto.version.gameVersionId,
-							uploadedFileIds = new [] {
-								// "Linux_shared_resources",
-								"Mac_shared_resources",
-								"Windows_shared_resources",
-								// "iOS_shared_resources",
-
-								// "Linux_shared_scenes",
-								"Mac_shared_scenes",
-								"Windows_shared_scenes",
-								// "iOS_shared_scenes",
-							},
+							uploadedFileIds = uploadedFileIds.ToArray(),
 						}), "application/json");
 				req.SetRequestHeader("Authorization", "Bearer " + devKey);
 				yield return req.SendWebRequest();
