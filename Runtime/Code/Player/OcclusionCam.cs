@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player {
     [LuauAPI]
@@ -8,10 +9,11 @@ namespace Code.Player {
         [Header("References")]
         public Camera targetCamera;
 
-        [Header("Variables")]
-        public bool clampYToHeadHeight = false;
+        [FormerlySerializedAs("clampYToHeadHeight")] [Header("Variables")]
+        public bool adjustToHead = false;
 
-        public float clampYToHeadHeightThreshold = 0.45f;
+        [FormerlySerializedAs("clampYToHeadHeightThreshold")]
+        public float adjustToHeadHeightThreshold = 0.45f;
 
 
         private float _fov;
@@ -55,8 +57,8 @@ namespace Code.Player {
             var camPos = t.position;
             var distance = Vector3.Distance(camPos, attachToPos);
             // If cam is too far above attach pos snap up
-            if (this.clampYToHeadHeight && attachToPos.y - camPos.y > this.clampYToHeadHeightThreshold) {
-                distance /= (attachToPos.y - camPos.y) / this.clampYToHeadHeightThreshold;
+            if (this.adjustToHead && attachToPos.y - camPos.y > this.adjustToHeadHeightThreshold) {
+                distance /= (attachToPos.y - camPos.y) / this.adjustToHeadHeightThreshold;
             }
             var adjusted = false;
             var diff = camPos - attachToPos;
