@@ -87,7 +87,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
         this.voiceChatToggle.onValueChanged += VoiceChatToggle_OnValueChanged;
 
         if (Application.isMobilePlatform) {
-            this.disconnectButton.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+            this.disconnectButton.transform.localScale = new Vector3(1.3f, 1.2f, 1.2f);
         }
     }
 
