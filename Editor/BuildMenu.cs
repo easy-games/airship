@@ -237,7 +237,6 @@ namespace Editor {
             switch (summary.result) {
                 case BuildResult.Succeeded:
                     Debug.Log($"Build Android succeeded with size: {FormatBytes(summary)}");
-                    // EditorUtility.RevealInFinder(Application.dataPath + "/" + options.locationPathName);
                     EditorUtility.RevealInFinder(report.summary.outputPath);
                     break;
                 case BuildResult.Failed:
