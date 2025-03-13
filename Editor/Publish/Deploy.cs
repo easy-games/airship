@@ -150,6 +150,13 @@ public class Deploy {
 		DeploymentDto deploymentDto = null;
 		string devKey = null;
 		{
+			List<string> platformStrings = new();
+			platformStrings.Add("Mac");
+			platformStrings.Add("Windows");
+			if (gameConfig.supportsMobile) {
+				platformStrings.Add("iOS");
+				platformStrings.Add("Android");
+			}
 			var packageSlugs = gameConfig.packages.Select((p) => p.id);
 			for (int i = 0; i < possibleKeys.Count; i++) {
 				devKey = possibleKeys[i];
@@ -161,7 +168,8 @@ public class Deploy {
 							defaultScene = gameConfig.startingScene.name,
 							deployCode = true,
 							deployAssets = platforms.Length > 0,
-							packageSlugs = packageSlugs.ToArray()
+							packageSlugs = packageSlugs.ToArray(),
+							platforms = platformStrings.ToArray(),
 						}), "application/json");
 				req.SetRequestHeader("Authorization", "Bearer " + devKey);
 				yield return req.SendWebRequest();
