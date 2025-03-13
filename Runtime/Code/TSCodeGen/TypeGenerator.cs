@@ -172,6 +172,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(ScrollView),
             typeof(AirshipLongPress),
             typeof(DecalProjector),
+            typeof(Time),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),
