@@ -26,6 +26,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public GameObject spinner;
     public RawImage gameImage;
     public Color editorGameImageColor;
+    public RectTransform bottomCard;
 
     [NonSerialized] private float startTime = 0f;
     [NonSerialized] private bool showedVoiceChatCard = false;
@@ -61,6 +62,10 @@ public class CoreLoadingScreen : BundleLoadingScreen
         }
 #endif
 
+#if UNITY_IOS || UNITY_ANDROID
+
+#endif
+
         this.startTime = 0f;
         this.voiceChatCard.gameObject.SetActive(false);
 
@@ -68,9 +73,8 @@ public class CoreLoadingScreen : BundleLoadingScreen
 
         var deviceInfo = DeviceBridge.GetDeviceType();
         if (deviceInfo is AirshipDeviceType.Phone or AirshipDeviceType.Tablet) {
-            var t = this.disconnectButton.transform as RectTransform;
-            t.anchoredPosition = new Vector2(-50, 50);
-            t.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+            this.bottomCard.localScale = Vector3.one * 1.1f;
+            this.bottomCard.anchoredPosition = new Vector2(0, 185);
         }
 
         _canvas.enabled = true;
