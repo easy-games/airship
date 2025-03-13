@@ -444,11 +444,24 @@ public class AirshipComponent : MonoBehaviour {
                 serializedProperty = element;
             } else {
                 if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
+	                // Check if we're changing object type to a type that contains the current type
+	                // (for example swapping from AudioClip to AudioResource)
+	                var canKeepValue = false;
+	                if (serializedProperty.type == property.type && serializedProperty.objectType != property.objectType && serializedProperty.serializedObject != null) {
+		                var scriptObjectType = TypeReflection.GetTypeFromString(property.objectType);
+		                var componentObjectType = serializedProperty.serializedObject.GetType();
+		                if (scriptObjectType.IsAssignableFrom(componentObjectType)) {
+			                canKeepValue = true;
+		                }
+	                }
+	                
                     serializedProperty.type = property.type;
                     serializedProperty.objectType = property.objectType;
-                    serializedProperty.serializedValue = property.serializedValue;
-                    serializedProperty.serializedObject = property.serializedObject;
-                    serializedProperty.modified = false;
+                    if (!canKeepValue) {
+	                    serializedProperty.serializedValue = property.serializedValue;
+	                    serializedProperty.serializedObject = property.serializedObject;
+	                    serializedProperty.modified = false;
+                    }
                 }
                 
                 if (property.items != null) {
