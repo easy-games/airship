@@ -45,6 +45,7 @@ public class Deploy {
 		var gameConfig = GameConfig.Load();
 		if (gameConfig.supportsMobile) {
 			platforms.Add(AirshipPlatform.iOS);
+			platforms.Add(AirshipPlatform.Android);
 		}
 
 		// We want to end up on our editor machine's platform
