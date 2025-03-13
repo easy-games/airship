@@ -1039,10 +1039,8 @@ namespace Code.Player.Character.MovementSystems.Character
             
             AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) =>
             {
-                this.manager.clientPredictionResimRequestor = true;
                 Debug.LogWarning("Resimulating for TS");
                 resimulate(clientPredictedState.time);
-                this.manager.clientPredictionResimRequestor = false;
             });
 
             return true;

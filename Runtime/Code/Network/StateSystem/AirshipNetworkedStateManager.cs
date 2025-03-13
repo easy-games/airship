@@ -69,13 +69,6 @@ namespace Code.Network.StateSystem
         // Client processing for input prediction
         private State clientLastConfirmedState;
 
-        // Flag for if we are the resimulation requestor.
-        // For predicted objects, we don't overwrite the predicted state if we didn't request resimulation
-        // TODO: in the future, we might get better resims in cases where there is more than one predicted
-        // component by resimulating both, but it would require us to ensure that we have accurate intermediate
-        // data and don't overwrite authoritative snapshots in our prediction history.
-        public bool clientPredictionResimRequestor = false;
-
         // When the client doesn't recieve confirmation of it's commands for an extended time, we pause
         // predictions until we receive more commands from the server.
         private bool clientPausePrediction = false;
@@ -926,9 +919,7 @@ namespace Code.Network.StateSystem
             this.stateHistory.SetAuthoritativeEntry(clientPredictedState.time, true);
             // Resimulate all commands performed after the incorrect prediction so that
             // our future predictions are (hopefully) correct.
-            this.clientPredictionResimRequestor = true;
             resimulate(clientPredictedState.time);
-            this.clientPredictionResimRequestor = false;
         }
 
         #endregion
