@@ -388,7 +388,7 @@ namespace Editor.Packages {
             // Uncomment to just build iOS
             if (isCoreMaterials) {
                 platforms.Clear();
-                platforms.Add(AirshipPlatform.iOS);
+                // platforms.Add(AirshipPlatform.iOS);
                 platforms.Add(AirshipPlatform.Android);
             }
 
