@@ -304,23 +304,37 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {
-#if !UNITY_IOS && !UNITY_ANDROID
+// #if !UNITY_IOS && !UNITY_ANDROID
 				preWarmedCoreShaders = true;
 				string[] collections = new[] {
 					"MainMenu",
 					// "RacingGame",
+					"BWShaderVariants 1 (Raven)",
 				};
 				foreach (var collectionName in collections) {
 					var path = $"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants".ToLower();
+					Debug.Log("Loading shader variant: " + collectionName);
 					var shaderVariants = this.coreMaterialsAssetBundle.LoadAssetAsync<ShaderVariantCollection>(path);
 					yield return shaderVariants;
 					if (shaderVariants != null) {
 						var st = Stopwatch.StartNew();
-						(shaderVariants.asset as ShaderVariantCollection).WarmUp();
+						var col = shaderVariants.asset as ShaderVariantCollection;
+						if (col == null) {
+							Debug.LogWarning("Unable to warmup missing shader variant collection: " + collectionName);
+							continue;
+						}
+
+						int variantCounter = 0;
+						int step = 1;
+						while (!col.WarmUpProgressively(step)) {
+							variantCounter += step;
+							Debug.Log($"Prewarm in progress ({collectionName}): {variantCounter}");
+							yield return null;
+						}
 						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");
 					}
 				}
-#endif
+// #endif
 			}
 		} else {
 			if (NetworkClient.isConnected) {

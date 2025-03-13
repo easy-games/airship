@@ -386,10 +386,11 @@ namespace Editor.Packages {
                 AirshipPlatform.Android,
             };
             // Uncomment to just build iOS
-            // if (isCoreMaterials) {
-            //     platforms.Clear();
-            //     platforms.Add(AirshipPlatform.iOS);
-            // }
+            if (isCoreMaterials) {
+                platforms.Clear();
+                platforms.Add(AirshipPlatform.iOS);
+                platforms.Add(AirshipPlatform.Android);
+            }
 
             if (!CreateAssetBundles.PrePublishChecks()) {
                 yield break;
@@ -464,6 +465,10 @@ namespace Editor.Packages {
 
                     Debug.Log($"Finished building {platform} asset bundles in {st.Elapsed.TotalSeconds} seconds.");
                 }
+            }
+
+            if (isCoreMaterials) {
+                yield break;
             }
 
             var importsFolder = Path.Join("Assets", "AirshipPackages");
