@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,6 +29,7 @@ namespace Nobi.UiRoundedCorners {
 
 			if (image != null) {
 				image.material = null;      //This makes so that when the component is removed, the UI material returns to null
+				// EditorUtility.ClearDirty(image);
 			}
 
 			DestroyHelper.Destroy(material);
@@ -64,7 +66,9 @@ namespace Nobi.UiRoundedCorners {
 				var shader = Shader.Find("UI/RoundedCorners/RoundedCorners");
 				if (shader == null) return;
 				
-				material = new Material(shader);
+				material = new Material(shader) {
+					hideFlags = HideFlags.DontSave
+				};
 			}
 
 			if (image == null) {
