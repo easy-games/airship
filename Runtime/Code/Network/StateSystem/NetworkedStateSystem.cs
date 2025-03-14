@@ -1,10 +1,8 @@
 using System;
 using Code.Network.StateSystem.Structures;
-using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.Net;
 using JetBrains.Annotations;
 using Mirror;
-using Mono.WebBrowser;
 using UnityEngine;
 
 namespace Code.Network.StateSystem
