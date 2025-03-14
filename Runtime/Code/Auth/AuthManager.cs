@@ -121,6 +121,8 @@ public class AuthManager {
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
+        // crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new AndroidBrowser("http://*:8080"));
 
         using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 

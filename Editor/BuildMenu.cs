@@ -41,6 +41,8 @@ namespace Editor {
 
         private static void OnBuild() {
             PhysicsSetup.Setup(null);
+
+
         }
 
         public static void BuildLinuxServerStaging() {
@@ -218,6 +220,38 @@ namespace Editor {
 #endif
         }
 
+        public static void BuildAndroidClient(bool development) {
+            OnBuild();
+            CreateAssetBundles.ResetScenes();
+
+            PlayerSettings.SplashScreen.show = false;
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            var options = new BuildPlayerOptions();
+            options.scenes = scenes;
+            options.locationPathName = $"build/client_android/{ClientExecutableName}.apk";
+            options.target = BuildTarget.Android;
+            if (development == true) {
+                options.options = BuildOptions.Development;
+            }
+
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
+            switch (summary.result) {
+                case BuildResult.Succeeded:
+                    Debug.Log($"Build Android succeeded with size: {FormatBytes(summary)}");
+                    EditorUtility.RevealInFinder(report.summary.outputPath);
+                    break;
+                case BuildResult.Failed:
+                    Debug.LogError("Build Android failed");
+                    break;
+                default:
+                    Debug.LogError("Build Android unexpected result:" + summary.result);
+                    break;
+            }
+
+            CreateAssetBundles.AddAllGameBundleScenes();
+        }
+
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/iOS", priority = 80)]
         public static void BuildIOSClientMenuItem() {
@@ -227,6 +261,16 @@ namespace Editor {
         [MenuItem("Airship/Create Binary/Client/iOS (Development)", priority = 80)]
         public static void BuildIOSDevelopmentClientMenuItem() {
             BuildIOSClient(true);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/Android", priority = 80)]
+        public static void BuildAndroidClientMenuItem() {
+            BuildAndroidClient(false);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/Android (Development)", priority = 80)]
+        public static void BuildAndroidDevelopmentClientMenuItem() {
+            BuildAndroidClient(true);
         }
 #endif
 

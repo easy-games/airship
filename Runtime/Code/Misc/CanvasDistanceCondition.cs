@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 
+
+// todo: delete this stupid component
 public class CanvasDistanceCondition : MonoBehaviour {
     public Canvas canvas;
     public float maxDistance = 50f;

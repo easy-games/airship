@@ -474,19 +474,18 @@ namespace Luau {
                 case AirshipComponentPropertyType.AirshipComponent: {
                     if (objectRef is AirshipComponent scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
-                        if (!AirshipBehaviourRootV2.HasId(gameObject)) {
-                            // See if it just needs to be started first:
-                            var foundAny = false;
-                            foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
-                                foundAny = true;
-                                binding.InitEarly();
-                            }
-                        
-                            // Retry getting AirshipBehaviourRoot:
-                            // if (foundAny) {
-                                // airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-                            // }
-                        }
+                        // if (!AirshipBehaviourRootV2.HasId(gameObject)) {
+                        //     // See if it just needs to be started first:
+                        //     var foundAny = false;
+                        //     foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
+                        //         foundAny = true;
+                        //     }
+                        //
+                        //     // Retry getting AirshipBehaviourRoot:
+                        //     // if (foundAny) {
+                        //         // airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                        //     // }
+                        // }
 
                         if (AirshipBehaviourRootV2.HasId(gameObject)) {
                             // We need to just pass the unity instance id + component ids to Luau since it's Luau-side

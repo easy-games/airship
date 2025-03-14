@@ -35,31 +35,27 @@ public class Deploy {
 	private static GameDto activeDeployTarget;
 	public const ulong MAX_UPLOAD_KB = 500_000;
 
-	public static void DeployToStaging()
+	public static void PublishGame()
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
 		// build the game.
 		// NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
-		List<AirshipPlatform> platforms = new() {
-			// AirshipPlatform.iOS,
-		#if UNITY_EDITOR_OSX // Run Mac build last if on OSX
-			AirshipPlatform.Windows,
-			AirshipPlatform.Mac,
-		#else
-			AirshipPlatform.Mac,
-			AirshipPlatform.Windows,
-		#endif
-		};
-		// List<AirshipPlatform> platforms = new();
-		// var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-		// if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
-		// 	platforms.Add(currentPlatform);
-		// }
-		// foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-  //           if (platform == currentPlatform) continue;
-  //           platforms.Add(platform);
-  //       }
+		List<AirshipPlatform> platforms = new();
+		var gameConfig = GameConfig.Load();
+		if (gameConfig.supportsMobile) {
+			platforms.Add(AirshipPlatform.iOS);
+			platforms.Add(AirshipPlatform.Android);
+		}
+
+		// We want to end up on our editor machine's platform
+#if UNITY_EDITOR_OSX
+		platforms.Add(AirshipPlatform.Windows);
+		platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Mac);
+		platforms.Add(AirshipPlatform.Windows);
+#endif
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
@@ -86,19 +82,21 @@ public class Deploy {
 			yield break;
 		}
 
+		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+		if (gameConfig == null) {
+			Debug.LogError("Missing GameConfig.");
+			yield break;
+		}
+
 		if (!skipBuild) {
-			var didVerify = AirshipPackagesWindow.VerifyBuildModules();
+			var didVerify = AirshipPackagesWindow.VerifyBuildModules(gameConfig.supportsMobile);
 			if (!didVerify) {
 				Debug.LogErrorFormat("Missing build modules. Install missing modules in Unity Hub and restart Unity to publish game.");
 				yield break;
 			}
 		}
 
-		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
-		if (gameConfig == null) {
-			Debug.LogError("Missing GameConfig.");
-			yield break;
-		}
+
 
 		var confirmedSaveState = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
 		if (!confirmedSaveState  || SceneManager.GetActiveScene().isDirty) { // User clicked "cancel"
@@ -124,12 +122,23 @@ public class Deploy {
 		}
 
 		// Rebuild Typescript
-		var shouldResumeTypescriptWatch = TypescriptCompilationService.IsWatchModeRunning;
-		var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Publishing; // FullClean will clear the incremental file & Publishing will omit editor data
-
+		var skipRecompileOnCodeDeploy = skipBuild && TypescriptServicesLocalConfig.instance.skipCompileOnCodeDeploy;
+		var shouldRecompile = !skipBuild || !skipRecompileOnCodeDeploy;
+		var shouldResumeTypescriptWatch = shouldRecompile && TypescriptCompilationService.IsWatchModeRunning;
+		
 		// We want to do a full publish
-		TypescriptCompilationService.StopCompilers();
-		TypescriptCompilationService.BuildTypescript(compileFlags);
+		
+		if (shouldRecompile) {
+			TypescriptCompilationService.StopCompilers();
+			
+			var compileFlags = TypeScriptCompileFlags.Publishing | TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file & Publishing will omit editor data
+
+			if (skipBuild) {
+				compileFlags |= TypeScriptCompileFlags.SkipReimportQueue; // code publish does not require asset reimport
+			}
+			
+			TypescriptCompilationService.BuildTypescript(compileFlags);
+		}
 		
 		if (TypescriptCompilationService.ErrorCount > 0) {
 			Debug.LogError($"Could not publish the project with {TypescriptCompilationService.ErrorCount} compilation error{(TypescriptCompilationService.ErrorCount == 1 ? "" : "s")}");
@@ -141,6 +150,13 @@ public class Deploy {
 		DeploymentDto deploymentDto = null;
 		string devKey = null;
 		{
+			List<string> platformStrings = new();
+			platformStrings.Add("Mac");
+			platformStrings.Add("Windows");
+			if (gameConfig.supportsMobile) {
+				platformStrings.Add("iOS");
+				platformStrings.Add("Android");
+			}
 			var packageSlugs = gameConfig.packages.Select((p) => p.id);
 			for (int i = 0; i < possibleKeys.Count; i++) {
 				devKey = possibleKeys[i];
@@ -152,7 +168,8 @@ public class Deploy {
 							defaultScene = gameConfig.startingScene.name,
 							deployCode = true,
 							deployAssets = platforms.Length > 0,
-							packageSlugs = packageSlugs.ToArray()
+							packageSlugs = packageSlugs.ToArray(),
+							platforms = platformStrings.ToArray(),
 						}), "application/json");
 				req.SetRequestHeader("Authorization", "Bearer " + devKey);
 				yield return req.SendWebRequest();
@@ -289,8 +306,11 @@ public class Deploy {
 
 				// UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
 				// UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
-				// UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
-				// UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
+				UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
+				UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
+
+				UploadSingleGameFile(urls.Android_shared_resources, $"{AirshipPlatform.Android}/shared/resources", AirshipPlatform.Android),
+				UploadSingleGameFile(urls.Android_shared_scenes, $"{AirshipPlatform.Android}/shared/scenes", AirshipPlatform.Android),
 			});
 		}
 
@@ -370,6 +390,18 @@ public class Deploy {
 
 		// Complete deployment
 		{
+			List<string> uploadedFileIds = new();
+			uploadedFileIds.Add("Mac_shared_resources");
+			uploadedFileIds.Add("Mac_shared_scenes");
+			uploadedFileIds.Add("Windows_shared_resources");
+			uploadedFileIds.Add("Windows_shared_scenes");
+			if (gameConfig.supportsMobile) {
+				uploadedFileIds.Add("iOS_shared_resources");
+				uploadedFileIds.Add("iOS_shared_scenes");
+				uploadedFileIds.Add("Android_shared_resources");
+				uploadedFileIds.Add("Android_shared_scenes");
+			}
+
 			int attemptNum = 0;
 			while (attemptNum < 5) {
 				// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
@@ -378,17 +410,7 @@ public class Deploy {
 						new CompleteGameDeploymentDto() {
 							gameId = gameConfig.gameId,
 							gameVersionId = deploymentDto.version.gameVersionId,
-							uploadedFileIds = new [] {
-								// "Linux_shared_resources",
-								"Mac_shared_resources",
-								"Windows_shared_resources",
-								// "iOS_shared_resources",
-
-								// "Linux_shared_scenes",
-								"Mac_shared_scenes",
-								"Windows_shared_scenes",
-								// "iOS_shared_scenes",
-							},
+							uploadedFileIds = uploadedFileIds.ToArray(),
 						}), "application/json");
 				req.SetRequestHeader("Authorization", "Bearer " + devKey);
 				yield return req.SendWebRequest();
@@ -606,7 +628,7 @@ public class Deploy {
 
         switch (option) {
             case 0: // Publish
-                Deploy.DeployToStaging();
+                Deploy.PublishGame();
                 break;
             case 1: // Cancel
                 break;

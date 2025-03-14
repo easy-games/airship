@@ -213,18 +213,18 @@ namespace Code.Player.Character.NetworkedMovement
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
 
-            if (idleRectionLength > 0 && currentState == CharacterState.Idle &&
-                Time.time - lastStateTime > nextIdleReactionLength)
-            {
-                //Idle reaction
-                GetRandomReactionLength();
-                animator.SetFloat("ReactIndex", (float)UnityEngine.Random.Range(0, 3));
-                SetTrigger("React");
-
-                lastStateTime =
-                    Time.time +
-                    idleRectionLength; //Add time so it doesn't trigger a reaction while a reaction is still playing
-            }
+            // if (idleRectionLength > 0 && currentState == CharacterState.Idle &&
+            //     Time.time - lastStateTime > nextIdleReactionLength)
+            // {
+            //     //Idle reaction
+            //     GetRandomReactionLength();
+            //     animator.SetFloat("ReactIndex", (float)UnityEngine.Random.Range(0, 3));
+            //     SetTrigger("React");
+            //
+            //     lastStateTime =
+            //         Time.time +
+            //         idleRectionLength; //Add time so it doesn't trigger a reaction while a reaction is still playing
+            // }
         }
 
         private void GetRandomReactionLength()

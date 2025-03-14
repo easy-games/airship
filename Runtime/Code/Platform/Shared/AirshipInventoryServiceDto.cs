@@ -49,8 +49,6 @@ namespace Code.Platform.Shared {
 
         public bool tradable;
         public bool marketable;
-
-        public GearCreateRequest gear;
     }
 
     [Serializable]
@@ -58,6 +56,12 @@ namespace Code.Platform.Shared {
         public string[] airAssets;
         public string category;
         public string subcategory;
+    }
+
+    [Serializable]
+    public class GearCreateResponse {
+        public string classId;
+        public GearClass gear;
     }
 
     [Serializable]
@@ -69,6 +73,7 @@ namespace Code.Platform.Shared {
 
     [Serializable]
     public class GearClass : ItemClass {
+
     }
 
     [Serializable]

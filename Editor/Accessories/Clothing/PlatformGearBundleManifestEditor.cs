@@ -109,21 +109,28 @@ namespace Editor.Accessories.Clothing {
                 (string category, string subcategory) = GetGearCategory(gear);
 
                 // Create a new class id
-                var req = UnityWebRequest.PostWwwForm($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}",
-                    JsonUtility.ToJson(new GearCreateRequest() {
-                        name = gear.name,
-                        imageId = "c0e07e88-09d4-4962-b42d-7794a7ad4cb2",
-                        description = "Clothing",
-                        gear = new GearCreateRequest() {
-                            airAssets = new string[]{},
-                            category = category,
-                            subcategory = subcategory
-                        }
-                    }));
+                var data = JsonUtility.ToJson(new GearCreateRequest() {
+                    name = gear.name,
+                    imageId = "64351892-40d4-409b-ab3a-501818213b50",
+                    description = "Clothing",
+                    airAssets = new string[] { },
+                    category = category,
+                    subcategory = subcategory,
+                });
+                var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}", data, "application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
                 req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                 await req.SendWebRequest();
+                if (req.result != UnityWebRequest.Result.Success) {
+                    Debug.Log("Post request: " + data);
+                    Debug.LogError("Failed to create gear class: " + req.downloadHandler.text);
+                    return;
+                }
                 Debug.Log("Create classId response: " + req.downloadHandler.text);
+                var createResponse = JsonUtility.FromJson<GearCreateResponse>(req.downloadHandler.text);
+                gear.classId = createResponse.classId;
+                EditorUtility.SetDirty(gear);
+                AssetDatabase.SaveAssets();
             }
 
             string airId = manifest.airId;

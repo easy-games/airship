@@ -63,6 +63,8 @@ namespace Airship.Editor {
         /// The total number of files that were compiled in the last compile
         /// </summary>
         internal int CompiledFileCount;
+
+        internal TypeScriptCompileFlags CompileFlags = 0;
     }
     
     public class TypescriptProject {

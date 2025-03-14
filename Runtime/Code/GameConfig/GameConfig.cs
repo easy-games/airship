@@ -36,6 +36,8 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public bool queriesHitBackfaces = false;
     [HideInInspector] public bool queriesHitTriggers = true;
 
+    [HideInInspector] public bool supportsMobile;
+
     private const string TagPrefix = "AirshipTag";
     public const int MaximumTags = 64;
 

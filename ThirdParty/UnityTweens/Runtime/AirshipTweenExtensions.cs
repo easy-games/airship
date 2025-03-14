@@ -52,5 +52,16 @@ namespace ElRaccoone.Tweens {
                 }
             }).SetFrom(0);
         }
+        
+        public static Tween<float> MaterialsVectorProperty(this Component self, string propertyName, Vector4 from,
+            Vector4 to, float duration) {
+            var ren = self.gameObject.GetComponent<Renderer>();
+            return NativeTween.ValueFloat(self.gameObject, 1, duration, delta => {
+                var newColor = Vector4.Lerp(from, to, delta);
+                foreach (var mat in ren.materials) {
+                    mat.SetVector(propertyName, newColor);
+                }
+            }).SetFrom(0);
+        }
     }
 }

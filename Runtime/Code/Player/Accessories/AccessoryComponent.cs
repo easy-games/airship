@@ -60,6 +60,13 @@ namespace Code.Player.Accessories {
                     r.sharedMaterial.shader = Shader.Find("Universal Render Pipeline/Lit");
                 }
             }
+            // foreach (var r in renderers) {
+            //     foreach (var mat in r.sharedMaterials) {
+            //         if (!mat.shader.isSupported) {
+            //             mat.shader = Shader.Find("Universal Render Pipeline/Lit");
+            //         }
+            //     }
+            // }
         }
 
         public struct BodyMaskInspectorData {

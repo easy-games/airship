@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Code.Bootstrap;
+using Code.Util;
 using CsToTs.TypeScript;
 using Editor;
 using Editor.Packages;
@@ -155,8 +156,8 @@ using Object = UnityEngine.Object;
                 
                 lastChecked = EditorApplication.timeSinceStartup;
                     
-                // No point importing files if there's errors
-                if (ErrorCount > 0) {
+                // No point importing files if there's errors, or it's empty
+                if (ErrorCount > 0 || CompiledFileQueue.Count == 0) {
                     EditorApplication.update -= ReimportCompiledFiles;
                     return;
                 }
@@ -274,12 +275,18 @@ using Object = UnityEngine.Object;
             private static readonly GUIContent BuildButtonContent; 
             private static readonly GUIContent CompileInProgressContent;
             
-            internal static void CompileTypeScriptProject(TypescriptProject project, TypescriptCompilerBuildArguments arguments, TypeScriptCompileFlags compileFlags) {
-                var shouldClean = (compileFlags & TypeScriptCompileFlags.FullClean) != 0;
-                var skipInstalled = !shouldClean && (compileFlags & TypeScriptCompileFlags.Setup) != 0;
+            private static void CompileTypeScriptProject(TypescriptProject project, TypescriptCompilerBuildArguments arguments, TypeScriptCompileFlags compileFlags) {
+                var compilationState = project.CompilationState;
+                compilationState.CompileFlags = compileFlags;
+                
+                var fullClean = (compileFlags & TypeScriptCompileFlags.FullClean) != 0;
+                var setup = (compileFlags & TypeScriptCompileFlags.Setup) != 0;
+                var skipInstalled = !fullClean && setup;
+               
 
                 if (!showProgressBar && (compileFlags & TypeScriptCompileFlags.DisplayProgressBar) != 0) {
-                    UpdateCompilerProgressBar(0f, $"Starting compilation for project...");
+                    showProgressBar = true;
+                    UpdateCompilerProgressBar(0f, $"Starting to compile TypeScript code...");
                 }
                 
                 if (!File.Exists(Path.Join(project.Package.Directory, "package.json"))) {
@@ -290,30 +297,41 @@ using Object = UnityEngine.Object;
                 var packageDir = packageInfo.Directory;
 
                 var outPath = Path.Join(packageDir, "out");
-                if (shouldClean && Directory.Exists(outPath))
+                if (fullClean && Directory.Exists(outPath))
                 {
-                    Debug.Log("Deleting out folder..");
                     Directory.Delete(outPath, true);
                 }
 
-                if (skipInstalled && Directory.Exists(Path.Join(packageDir, "node_modules"))) {
+                var installed = Directory.Exists(Path.Join(packageDir, "node_modules"));
+                if (skipInstalled && installed) {
                     return; // ??
                 }
 
                 try
                 {
-                    UpdateCompilerProgressBarText($"Install packages for '{packageInfo.Name}'...");
-                    var success = RunNpmInstall(packageDir);
-                    if (!success)
-                    {
-                        Debug.LogWarning("Failed to install NPM dependencies");
-                        return;
+                    if (fullClean) {
+                        UpdateCompilerProgressBarText($"Install packages for '{packageInfo.Name}'...");
+                        var success = RunNpmInstall(packageDir);
+                        if (!success)
+                        {
+                            Debug.LogWarning("Failed to install NPM dependencies");
+                            return;
+                        }
                     }
 
-                    UpdateCompilerProgressBarText($"Compiling TypeScript project...");
+                    compilationState.FilesToCompileCount = 0;
+                    compilationState.CompiledFileCount = 0;
+       
                     var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
-                    compilerProcess.WaitForExit();
+                    
+                    while (!compilerProcess.HasExited) {
+                        if (compilationState.FilesToCompileCount == 0) continue;
+                        UpdateCompilerProgressBar(
+                            compilationState.CompiledFileCount / (float)compilationState.FilesToCompileCount, $"Compiling {compilationState.CompiledFileCount}/{project.CompilationState.FilesToCompileCount}");
+                    }
+                    
+                    // compilerProcess.WaitForExit();
                     
                     if (compilerProcess.ExitCode == 0)
                     {
@@ -333,9 +351,14 @@ using Object = UnityEngine.Object;
             private static bool showProgressBar = false;
             private static float progress = 0;
             private static void UpdateCompilerProgressBar(float progress, string text) {
-                showProgressBar = true;
                 TypescriptCompilationService.progress = progress;
+                if (!showProgressBar) return;
                 EditorUtility.DisplayProgressBar(TsCompilerService, text, progress);
+            }
+            
+            private static bool UpdateCompilerProgressBarCancellable(float progress, string text) {
+                TypescriptCompilationService.progress = progress;
+                return showProgressBar && EditorUtility.DisplayCancelableProgressBar(TsCompilerService, text, progress);
             }
             
             private static void UpdateCompilerProgressBarText(string text, float? value = null) {
@@ -376,12 +399,12 @@ using Object = UnityEngine.Object;
                         Verbose = (compileFlags & TypeScriptCompileFlags.Verbose) != 0 || EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
                     
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling TypeScript...");
                     CompileTypeScriptProject(project, buildArguments, compileFlags); 
                 }
-                
-                EditorUtility.ClearProgressBar();
+
+                if (!showProgressBar) return;
                 showProgressBar = false;
+                EditorUtility.ClearProgressBar();
             }
 
             private static bool RunNpmInstall(string dir)
@@ -441,34 +464,46 @@ using Object = UnityEngine.Object;
             
             [CanBeNull] 
             private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, TypescriptCompilerBuildArguments buildArguments, string message) {
+                var isUsingProgressBar = showProgressBar;
+                
                 if (string.IsNullOrEmpty(message)) return null;
                 if (project == null) return null;
                 
                 var result = new CompilerEmitResult();
                 var prefix = $"<color=#8e8e8e>TS</color>";
-                
+
                 if (message.StartsWith("{")) {
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                     if (jsonData.Event == CompilerEventType.StartingCompile) {
                         IsCurrentlyCompiling = true;
-                        
+
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
                         project.CompilationState.FilesToCompileCount = arguments.Count;
                         project.CompilationState.CompiledFileCount = 0;
-                        project.ProgressId = Progress.Start($"Compiling TypeScript", $"Compiling {arguments.Count} TypeScript Files");
+                        project.ProgressId = Progress.Start($"Compiling TypeScript",
+                            $"Compiling {arguments.Count} TypeScript Files");
 
                         if (arguments.Count != 0) {
                             if (arguments.Initial) {
                                 Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
                                 project.CompilationState.RequiresInitialCompile = true;
+
+                                if (isUsingProgressBar) {
+                                    // UnityMainThreadDispatcher.Instance.Enqueue(() => {
+                                    //     UpdateCompilerProgressBar(0.0f,
+                                    //         $"Starting compilation of {arguments.Count} files...");
+                                    // });
+                                }
                             }
                             else {
                                 Debug.Log($"{prefix} File change(s) detected, recompiling files...");
-                            }     
+                            }
                         }
-                        
+
+
                         project.ClearAllProblems();
-                    } else if (jsonData.Event == CompilerEventType.FileDiagnostic) {
+                    }
+                    else if (jsonData.Event == CompilerEventType.FileDiagnostic) {
                         var arguments = jsonData.Arguments.ToObject<CompilerEditorFileDiagnosticEvent>();
 
                         var problemItem = TypescriptFileDiagnosticItem.FromDiagnosticEvent(project, arguments);
@@ -489,41 +524,50 @@ using Object = UnityEngine.Object;
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
-                        
-                    } else if (jsonData.Event == CompilerEventType.FinishedCompileWithErrors) {
+
+                    }
+                    else if (jsonData.Event == CompilerEventType.FinishedCompileWithErrors) {
                         Progress.Finish(project.ProgressId, Progress.Status.Failed);
-                        
+
                         var arguments = jsonData.Arguments.ToObject<CompilerFinishCompilationWithErrorsEvent>();
-                        Debug.Log($"{prefix} <color=#ff534a>{arguments.ErrorCount} Compilation Error{(arguments.ErrorCount != 1 ? "s" : "")}</color>");
+                        Debug.Log(
+                            $"{prefix} <color=#ff534a>{arguments.ErrorCount} Compilation Error{(arguments.ErrorCount != 1 ? "s" : "")}</color>");
 
                         IsCurrentlyCompiling = false;
                         LastCompiled = DateTime.Now;
-                    } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
+                    }
+                    else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Progress.Finish(project.ProgressId);
-                        
+
                         if (project.CompilationState.CompiledFileCount > 0) {
                             Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
-                            QueueReimportFiles();
+                            
+                            if ((project.CompilationState.CompileFlags & TypeScriptCompileFlags.SkipReimportQueue) == 0)
+                                QueueReimportFiles();
                         }
 
                         IsCurrentlyCompiling = false;
                         LastCompiled = DateTime.Now;
-                    } else if (jsonData.Event == CompilerEventType.CompiledFile) {
+                    }
+                    else if (jsonData.Event == CompilerEventType.CompiledFile) {
                         var arguments = jsonData.Arguments.ToObject<CompiledFileEvent>();
                         var friendlyName = Path.GetRelativePath("Assets", arguments.fileName);
-                        
+
                         project.CompilationState.CompiledFileCount += 1;
 
                         var length = project.CompilationState.FilesToCompileCount.ToString().Length;
                         var compiledFileCountStr = project.CompilationState.CompiledFileCount.ToString();
 
-                        Progress.Report(project.ProgressId, project.CompilationState.CompiledFileCount, project.CompilationState.FilesToCompileCount);
-                        
+                        Progress.Report(project.ProgressId, project.CompilationState.CompiledFileCount,
+                            project.CompilationState.FilesToCompileCount);
+
                         if (buildArguments.Verbose) {
-                            Debug.Log(@$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.CompilationState.FilesToCompileCount}] Compiled {friendlyName}");
+                            Debug.Log(
+                                @$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.CompilationState.FilesToCompileCount}] Compiled {friendlyName}");
                         }
-                        
-                        QueueCompiledFileForImport(arguments.fileName);
+
+                        if ((project.CompilationState.CompileFlags & TypeScriptCompileFlags.SkipReimportQueue) == 0)
+                            QueueCompiledFileForImport(arguments.fileName);
                     }
                 }
                 else {
@@ -574,12 +618,19 @@ using Object = UnityEngine.Object;
             ) {
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
+                proc.EnableRaisingEvents = true;
                 
                 proc.OutputDataReceived += (_, data) =>
                 {
                     if (data.Data == null) return;
                     if (data.Data == "") return;
-                    HandleTypescriptOutput(project, buildArguments, data.Data);
+
+                    try {
+                        HandleTypescriptOutput(project, buildArguments, data.Data);
+                    }
+                    catch (Exception e) {
+                        Debug.LogException(e);
+                    }
                 };
                 
                 proc.ErrorDataReceived += (_, data) =>
@@ -596,6 +647,9 @@ using Object = UnityEngine.Object;
                 Crashed = false;
 
                 var project = TypescriptProjectsService.Project;
+                project.CompilationState.CompileFlags = 0;
+                project.CompilationState.FilesToCompileCount = 0;
+                project.CompilationState.CompiledFileCount = 0;
                 
                 proc.OutputDataReceived += (_, data) =>
                 {
@@ -654,5 +708,6 @@ using Object = UnityEngine.Object;
             Incremental = 1 << 4,
             Verbose = 1 << 5,
             Publishing = 1 << 6,
+            SkipReimportQueue = 1 << 7,
         }
     }

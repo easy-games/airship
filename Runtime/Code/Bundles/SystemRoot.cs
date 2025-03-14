@@ -14,6 +14,7 @@ using Mirror;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.Serialization;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
@@ -87,14 +88,35 @@ public class SystemRoot : Singleton<SystemRoot> {
 				platform = AirshipPlatform.Windows;
 			}
 			var path = Path.Join(Application.streamingAssetsPath, "ShippedBundles", $"CoreMaterials_{platform}/@easy/corematerials_shared/resources");
+#if UNITY_ANDROID
+			Debug.Log($"Loading CoreMaterials (Android)... ({path})");
+			var st = Stopwatch.StartNew();
+			using var req = UnityWebRequestAssetBundle.GetAssetBundle(path);
+			await req.SendWebRequest();
+			if (req.result != UnityWebRequest.Result.Success) {
+				Debug.LogError($"Failed to load core materials bundle: {req.error}");
+			} else {
+				Debug.Log("Getting asset bundle from request");
+				var bundle = DownloadHandlerAssetBundle.GetContent(req);
+				if (bundle == null) {
+					
+				}
+				this.coreMaterialsAssetBundle = bundle;
+				Debug.Log($"Loaded CoreMaterials bundle in {st.ElapsedMilliseconds} ms.");
+			}
+#else
 			if (File.Exists(path)) {
+				Debug.Log($"Loading CoreMaterials... ({path})");
 				var st = Stopwatch.StartNew();
 				var ao = AssetBundle.LoadFromFileAsync(path);
 				this.extraBundleLoadRequests.Add(ao);
 				await ao;
 				this.coreMaterialsAssetBundle = ao.assetBundle;
 				Debug.Log($"Loaded CoreMaterials bundle in {st.ElapsedMilliseconds} ms.");
+			} else {
+				Debug.LogWarning($"CoreMaterials path not found ({path})");
 			}
+#endif
 		}
 	}
 
@@ -294,33 +316,51 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 
 			yield return this.WaitAll(loadLists[0].ToArray());
-
+			
 			foreach (var ao in this.extraBundleLoadRequests) {
 				if (!ao.isDone) {
+					Debug.Log("Waiting for shipped asset bundles to load...");
 					yield return ao;
 				}
 			}
 
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {
+// #if !UNITY_IOS && !UNITY_ANDROID
 				preWarmedCoreShaders = true;
-				while (!this.coreMaterialsAssetBundle) {
-					yield return null;
-				}
 				string[] collections = new[] {
 					"MainMenu",
 					// "RacingGame",
+					"BWShaderVariants 1 (Raven)",
 				};
 				foreach (var collectionName in collections) {
 					var path = $"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants".ToLower();
+					Debug.Log("Loading shader variant: " + collectionName);
+					if (this.coreMaterialsAssetBundle == null) {
+						Debug.LogWarning("coreMaterialsAssetBundle is null");
+					}
 					var shaderVariants = this.coreMaterialsAssetBundle.LoadAssetAsync<ShaderVariantCollection>(path);
+					Debug.Log($"Loading shader from path: {path}");
 					yield return shaderVariants;
 					if (shaderVariants != null) {
 						var st = Stopwatch.StartNew();
-						(shaderVariants.asset as ShaderVariantCollection).WarmUp();
+						var col = shaderVariants.asset as ShaderVariantCollection;
+						if (col == null) {
+							Debug.LogWarning("Unable to warmup missing shader variant collection: " + collectionName);
+							continue;
+						}
+
+						int variantCounter = 0;
+						int step = 1;
+						while (!col.WarmUpProgressively(step)) {
+							variantCounter += step;
+							Debug.Log($"Prewarm in progress ({collectionName}): {variantCounter}");
+							yield return null;
+						}
 						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");
 					}
 				}
+// #endif
 			}
 		} else {
 			if (NetworkClient.isConnected) {

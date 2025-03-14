@@ -122,14 +122,20 @@ namespace NativeGalleryNamespace
 				else
 #endif
 				{
+					// Edits from https://github.com/yasirkula/UnityNativeGallery/issues/337
+					pbxProject.AddBuildProperty( targetGUID, "OTHER_LDFLAGS", "-weak_framework Photos" );
 					pbxProject.AddBuildProperty( targetGUID, "OTHER_LDFLAGS", "-weak_framework PhotosUI" );
-					pbxProject.AddBuildProperty( targetGUID, "OTHER_LDFLAGS", "-framework Photos" );
+					pbxProject.AddBuildProperty( targetGUID, "OTHER_LDFLAGS", "-framework AssetsLibrary" );
 					pbxProject.AddBuildProperty( targetGUID, "OTHER_LDFLAGS", "-framework MobileCoreServices" );
 					pbxProject.AddBuildProperty( targetGUID, "OTHER_LDFLAGS", "-framework ImageIO" );
 				}
 
 				pbxProject.RemoveFrameworkFromProject( targetGUID, "Photos.framework" );
 				pbxProject.RemoveFrameworkFromProject( targetGUID, "PhotosUI.framework" );
+
+				// Edits from: https://github.com/yasirkula/UnityNativeGallery/issues/337
+				// EDIT: XCode 16 requires this framework reference
+				pbxProject.AddFrameworkToProject(targetGUID, "ImageIO.framework", true);
 
 				File.WriteAllText( pbxProjectPath, pbxProject.WriteToString() );
 

@@ -15,6 +15,7 @@ using CsToTs;
 using Airship.DevConsole;
 using Code.Network;
 using Code.Network.Simulation;
+using Code.Player;
 using Code.RemoteConsole;
 using Code.VoiceChat;
 using ElRaccoone.Tweens;
@@ -174,6 +175,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(ScrollView),
             typeof(AirshipLongPress),
             typeof(DecalProjector),
+            typeof(Time),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),
@@ -216,6 +218,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Vignette),
             typeof(ShaderWarmup),
             typeof(ShaderVariantCollection),
+            typeof(OcclusionCam),
 
             // Mirror
             typeof(NetworkServer),

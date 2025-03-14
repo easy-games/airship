@@ -89,8 +89,8 @@ public class AccessoryBuilder : MonoBehaviour {
         //print("AccessoryBuilder OnEnable: " + this.gameObject.name);
         meshCombiner.OnCombineComplete += OnMeshCombineCompleted;
 
-        if (Application.isPlaying && this.rig.faceMesh.material.mainTexture == null) {
-            this.rig.faceMesh.gameObject.SetActive(false);
+        if (Application.isPlaying && rig.faceMesh.material.mainTexture == null) {
+            rig.faceMesh.gameObject.SetActive(false);
         }
 
         // update list of accessories
@@ -257,12 +257,12 @@ public class AccessoryBuilder : MonoBehaviour {
 
     [HideFromTS]
     public ActiveAccessory[] LoadOutfit(AccessoryOutfit outfit) {
-        this.currentOutfit = outfit;
+        currentOutfit = outfit;
 
-        this.SetSkinColor(outfit.skinColor);
+        SetSkinColor(outfit.skinColor);
 
         if (outfit.faceDecal && outfit.faceDecal.decalTexture) {
-            this.SetFaceTexture(outfit.faceDecal.decalTexture);
+            SetFaceTexture(outfit.faceDecal.decalTexture);
         }
 
         return AddRange(outfit.accessories);
@@ -290,7 +290,7 @@ public class AccessoryBuilder : MonoBehaviour {
                 }
             }
 
-            this.RemoveBySlot(accessoryTemplate.accessorySlot);
+            RemoveBySlot(accessoryTemplate.accessorySlot);
 
             var lods = new List<ActiveAccessory>();
             for (var lodLevel = 0; lodLevel < lodCount; lodLevel++) {
@@ -434,6 +434,7 @@ public class AccessoryBuilder : MonoBehaviour {
         propertyBlock.SetTexture(FaceBaseMapTexture, texture);
         rig.faceMesh.SetPropertyBlock(propertyBlock);
         rig.faceMesh.gameObject.SetActive(true);
+        rig.faceMesh.enabled = true;
     }
 
     public void UpdateCombinedMesh() {
@@ -528,7 +529,7 @@ public class AccessoryBuilder : MonoBehaviour {
             }
 
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
-            meshCombiner.CombineMeshes(this.skinColor);
+            meshCombiner.CombineMeshes(skinColor);
         } else {
             // print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();
@@ -558,12 +559,6 @@ public class AccessoryBuilder : MonoBehaviour {
                 }
             }
         }
-    }
-
-    private bool ShouldCombine(AccessoryComponent acc) {
-        //Dont combine held hand items
-        return acc.canMeshCombine && acc.accessorySlot != AccessorySlot.LeftHand &&
-               acc.accessorySlot != AccessorySlot.RightHand;
     }
 
     public ActiveAccessory GetActiveAccessoryBySlot(AccessorySlot target) {

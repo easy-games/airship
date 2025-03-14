@@ -46,7 +46,7 @@ namespace Editor.Accessories {
 
         private static void Log(string message){
             #if AIRSHIP_INTERNAL
-            Debug.Log("AccEditor: " + message);
+            // Debug.Log("AccEditor: " + message);
             #endif
         }
 

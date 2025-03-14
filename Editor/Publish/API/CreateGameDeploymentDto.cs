@@ -8,6 +8,7 @@ public class CreateGameDeploymentDto {
     public bool deployCode;
     public bool deployAssets;
     public string[] packageSlugs;
+    public string[] platforms;
 }
 
 [Serializable]

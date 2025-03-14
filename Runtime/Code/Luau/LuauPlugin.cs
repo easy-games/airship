@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using UnityEngine;
 using System.Threading;
 using Luau;
@@ -18,9 +19,8 @@ public static class LuauPlugin {
 	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
 	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
-	public delegate int RequirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
+	public delegate void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen);
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
-	public delegate int ToCsArrayCallback(LuauContext context, IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType);
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate void ToggleProfilerCallback(int componentId, IntPtr str, int strLen);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
@@ -466,11 +466,23 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
-	public static IntPtr LuauCreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen) {
+	public static IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
-		IntPtr returnValue = CreateThread(context, script, scriptLength, filename, filenameLength, gameObjectId, nativeCodegen);
+		
+		var scriptBytecodeHandle = GCHandle.Alloc(scriptBytecode, GCHandleType.Pinned);
+		var scriptBytecodePtr = scriptBytecodeHandle.AddrOfPinnedObject();
+		
+		var filenamePtr = Marshal.StringToCoTaskMemUTF8(filename);
+		var filenameLength = Encoding.UTF8.GetByteCount(filename);
+		
+		var returnValue = CreateThread(context, scriptBytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+		
+		Marshal.FreeCoTaskMem(filenamePtr);
+		scriptBytecodeHandle.Free();
+		
         EndExecutionCheck();
+        
         return returnValue;
     }
 

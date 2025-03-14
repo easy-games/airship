@@ -40,6 +40,9 @@ public class DeploymentUrls {
     public string iOS_client_scenes;
     public string iOS_shared_scenes;
 
+    public string Android_shared_resources;
+    public string Android_shared_scenes;
+
     public string gameConfig;
     public string source;
     public string code;
