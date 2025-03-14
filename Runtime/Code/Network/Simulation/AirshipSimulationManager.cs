@@ -261,7 +261,7 @@ namespace Code.Network.Simulation
          */
         private void PerformResimulation(double baseTime)
         {
-            Debug.Log($"T:{Time.fixedTime} Resimulating from {baseTime}");
+            Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTime}");
             
             if (resimulationSimulationActive)
             {
