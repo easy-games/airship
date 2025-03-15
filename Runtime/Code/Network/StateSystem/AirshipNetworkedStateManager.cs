@@ -798,6 +798,7 @@ namespace Code.Network.StateSystem
         public void ObservingClientSetSnapshot(double time)
         {
             var authoritativeState = this.stateHistory.Get(time);
+            if (authoritativeState == null) return;
             this.stateSystem.SetCurrentState(authoritativeState);
         }
 

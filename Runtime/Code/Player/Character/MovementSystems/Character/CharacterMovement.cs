@@ -233,7 +233,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public override void Tick(CharacterInputData command, bool replay)
         {
             if (command == null) return;
-            
+
             OnProcessCommand?.Invoke(command, this.currentMoveSnapshot, replay);
             
             var currentVelocity = this.rigidbody.linearVelocity;
