@@ -10,26 +10,25 @@ public class ManageFullscreenSwitch : MonoBehaviour
 
     private bool _fullscreen = false;
 
-    private void Start()
-    {
+    private void Start() {
+#if !UNITY_IOS && !UNITY_ANDROID
         _fullscreen = Screen.fullScreen;
         SetFullScreenValues();
+#endif
     }
-    private void Update()
-    {
-        if (_fullscreen != Screen.fullScreen)
-        {
-            if (Screen.fullScreen)
-            {
+    private void Update() {
+#if !UNITY_IOS && !UNITY_ANDROID
+        if (_fullscreen != Screen.fullScreen) {
+            if (Screen.fullScreen) {
                 RestoreFullscreenResolution();
             }
 
             _fullscreen = Screen.fullScreen;
         }
+#endif
     }
 
-    private void RestoreFullscreenResolution()
-    {
+    private void RestoreFullscreenResolution() {
         SetFullScreenValues();
         Screen.SetResolution(_fullscreenWidth, _fullscreenHeight, true, _fullscreenAspectRatio);
     }
