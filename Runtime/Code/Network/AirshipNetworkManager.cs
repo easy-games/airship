@@ -117,15 +117,13 @@ public class AirshipNetworkManager : NetworkManager {
 
         var scene = SceneManager.GetSceneByName(sceneName);
         if (!scene.IsValid()) {
-            // Try by path:
             scene = SceneManager.GetSceneByPath(sceneName);
         }
-        Debug.Log($"SetSceneActiveOnceLoaded \"{sceneName}\" (IsDone: {ao.isDone}) (Progress: {ao.progress}) (IsValid: {scene.IsValid()}) (IsLoaded: {scene.isLoaded})");
+        
         if (scene.IsValid() && scene.isLoaded) {
             SceneManager.SetActiveScene(scene);
-            Debug.Log($"SetSceneActiveOnceLoaded \"{sceneName}\" completed");
         } else {
-            Debug.LogWarning($"SetSceneActiveOnceLoaded \"{sceneName}\" skipped");
+            Debug.LogWarning($"SetSceneActiveOnceLoaded \"{sceneName}\" failed to be set as active scene");
         }
     }
 
