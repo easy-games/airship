@@ -122,8 +122,7 @@ public class Deploy {
 		}
 
 		// Rebuild Typescript
-		var skipRecompileOnCodeDeploy = skipBuild && TypescriptServicesLocalConfig.instance.skipCompileOnCodeDeploy;
-		var shouldRecompile = !skipBuild || !skipRecompileOnCodeDeploy;
+		var shouldRecompile = !skipBuild;
 		var shouldResumeTypescriptWatch = shouldRecompile && TypescriptCompilationService.IsWatchModeRunning;
 		
 		// We want to do a full publish

@@ -143,13 +143,6 @@ namespace Airship.Editor {
                     EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), projectSettings.typescriptAutostartCompiler);
                 projectSettings.typescriptPreventPlayOnError =
                     EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), projectSettings.typescriptPreventPlayOnError);
-                
-                localSettings.skipCompileOnCodeDeploy =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Skip Compile on Code Publish *", "This will skip compilation on code publish"), localSettings.skipCompileOnCodeDeploy);
-
-                if (localSettings.skipCompileOnCodeDeploy) {
-                    EditorGUILayout.HelpBox("Skipping compilation on code deploy may speed up the deploy, but it has a very small chance of publishing broken code if the watch state is incorrect.", MessageType.Warning);
-                }
             }
             AirshipEditorGUI.EndSettingGroup();
             
@@ -169,8 +162,6 @@ namespace Airship.Editor {
             
 
                 projectSettings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  projectSettings.typescriptVerbose );
-
-            
                 
                 #if AIRSHIP_INTERNAL
                 projectSettings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), projectSettings.typescriptWriteOnlyChanged);
