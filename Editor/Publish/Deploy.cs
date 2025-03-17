@@ -42,7 +42,7 @@ public class Deploy {
 		// NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new();
-		var gameConfig = CreateAssetBundles.BuildGameConfig();
+		var gameConfig = GameConfig.Load();
 		if (gameConfig.supportsMobile) {
 			platforms.Add(AirshipPlatform.iOS);
 			platforms.Add(AirshipPlatform.Android);
@@ -82,7 +82,7 @@ public class Deploy {
 			yield break;
 		}
 
-		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+		var gameConfig = CreateAssetBundles.BuildGameConfig();
 		if (gameConfig == null) {
 			Debug.LogError("Missing GameConfig.");
 			yield break;
