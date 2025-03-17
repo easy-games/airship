@@ -303,15 +303,17 @@ public class Deploy {
 				// UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Windows),
-
-				// UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
-				// UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
-				UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
-				UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
-
-				UploadSingleGameFile(urls.Android_shared_resources, $"{AirshipPlatform.Android}/shared/resources", AirshipPlatform.Android),
-				UploadSingleGameFile(urls.Android_shared_scenes, $"{AirshipPlatform.Android}/shared/scenes", AirshipPlatform.Android),
 			});
+
+			if (gameConfig.supportsMobile) {
+				uploadList.AddRange(new List<IEnumerator>() {
+					UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
+					UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
+
+					UploadSingleGameFile(urls.Android_shared_resources, $"{AirshipPlatform.Android}/shared/resources", AirshipPlatform.Android),
+					UploadSingleGameFile(urls.Android_shared_scenes, $"{AirshipPlatform.Android}/shared/scenes", AirshipPlatform.Android),
+				});
+			}
 		}
 
 		// wait for all
