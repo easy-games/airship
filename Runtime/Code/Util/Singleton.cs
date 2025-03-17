@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,30 +28,17 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 	public static T Instance {
 		get {
 			if (_instance == null) {
-				_instance = (T)FindObjectOfType (typeof(T));
+				_instance = (T) FindAnyObjectByType(typeof(T));
 				if (_instance == null) {
-
-					string goName = typeof(T).ToString ();
+					var go = new GameObject();
+					go.name = typeof(T).ToString();
 					
-					GameObject go = GameObject.Find(goName);
-					if (go == null) 
-					{
-						// var core = GameObject.Find("AirshipCore");
-						// if (!core) {
-						// 	core = new GameObject("AirshipCore");
-						// }
-						go = new GameObject();
-						go.name = goName;
-						go.hideFlags = HideFlags.HideAndDontSave;
-
-						var coreScene = SceneManager.GetSceneByName("CoreScene");
-						if (coreScene.IsValid()) {
-							SceneManager.MoveGameObjectToScene(go, coreScene);
-						}
+					var coreScene = SceneManager.GetSceneByName("CoreScene");
+					if (coreScene.IsValid()) {
+						SceneManager.MoveGameObjectToScene(go, coreScene);
 					}
 
-					_instance = go.AddComponent<T> ();
-					// print("added component " + _instance.name);
+					_instance = go.AddComponent<T>();
 				}
 			}
 			return _instance;
@@ -86,5 +74,11 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 			}
 			this.transform.parent = parentGO.transform;
 		}
+	}
+	
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+	private static void ResetStaticFields()
+	{
+		_instance = null;
 	}
 }
