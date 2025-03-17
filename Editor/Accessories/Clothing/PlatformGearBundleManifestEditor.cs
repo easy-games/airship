@@ -26,6 +26,30 @@ namespace Editor.Accessories.Clothing {
         private static string easyOrgId = "6b62d6e3-9d74-449c-aeac-b4feed2012b1";
         private bool skipBuild = false;
 
+        [MenuItem("Airship/Internal/Publish All Platform Gear")]
+        public static async void PublishAllPlatformGearBundles() {
+            List<PlatformGearBundleManifest> gearBundles = new();
+
+            // Get all asset GUIDs
+            string[] guids = AssetDatabase.FindAssets("t:PlatformGearBundleManifest");
+            foreach (string guid in guids) {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var obj = AssetDatabase.LoadAssetAtPath<PlatformGearBundleManifest>(path);
+                if (obj != null) {
+                    gearBundles.Add(obj);
+                }
+            }
+
+            int counter = 0;
+            foreach (var gearBundle in gearBundles) {
+                var editor = CreateEditor(gearBundle) as PlatformGearBundleManifestEditor;
+                await editor.BuildAllPlatforms();
+                counter++;
+                Debug.Log($"Gear publish progress: {counter}/{guids.Length}");
+                await Awaitable.WaitForSecondsAsync(0.1f);
+            }
+        }
+
         private void OnEnable() {
             skipBuild = false;
         }
@@ -45,7 +69,7 @@ namespace Editor.Accessories.Clothing {
             this.skipBuild = EditorGUILayout.Toggle("Skip Build", this.skipBuild);
         }
 
-        private async void BuildAllPlatforms() {
+        public async Task BuildAllPlatforms() {
             var st = Stopwatch.StartNew();
             bool success = true;
 

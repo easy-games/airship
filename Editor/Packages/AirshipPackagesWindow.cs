@@ -24,6 +24,7 @@ using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
@@ -422,6 +423,13 @@ namespace Editor.Packages {
                     var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
                     if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
                         buildTargetGroup = BuildTargetGroup.Standalone;
+                    }
+                    if (platform == AirshipPlatform.Android) {
+                        PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
+                        PlayerSettings.SetGraphicsAPIs(buildTarget, new GraphicsDeviceType[]
+                        {
+                            GraphicsDeviceType.OpenGLES3
+                        });
                     }
 
                     var buildParams = new BundleBuildParameters(

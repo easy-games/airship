@@ -8,6 +8,16 @@ using UnityEngine.Networking;
 using UnityEngine.Serialization;
 
 namespace Code.Accessories.Clothing {
+    public class PlatformGearBundleInfo {
+        public AssetBundle assetBundle;
+        public PlatformGearBundleManifest manifest;
+
+        public PlatformGearBundleInfo(AssetBundle assetBundle, PlatformGearBundleManifest manifest) {
+            this.assetBundle = assetBundle;
+            this.manifest = manifest;
+        }
+    }
+
     /**
      * Clothing exists on the backend and consists of one or many accessories.
      * Usually it's just one accessory (ie: a hat)
@@ -21,10 +31,15 @@ namespace Code.Accessories.Clothing {
         public AccessoryFace face;
 
         public static Dictionary<string, Task<bool>> inProgressDownloads = new();
+        /// <summary>
+        /// AirId to asset bundle
+        /// </summary>
+        public static Dictionary<string, PlatformGearBundleInfo> loadedPlatformGearBundles = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void OnReload() {
             inProgressDownloads.Clear();
+            loadedPlatformGearBundles.Clear();
         }
 
         public static async Task<PlatformGear> DownloadYielding(string classId, string airId) {
@@ -38,7 +53,7 @@ namespace Code.Accessories.Clothing {
             }
 
             // Check if we already loaded an asset bundle that contains this clothing piece.
-            if (PlatformGearManager.Instance.loadedPlatformGearBundles.TryGetValue(airId, out var loadedBundleInfo)) {
+            if (loadedPlatformGearBundles.TryGetValue(airId, out var loadedBundleInfo)) {
                 foreach (var clothing in loadedBundleInfo.manifest.gearList) {
                     if (clothing.classId == classId) {
                         return clothing;
@@ -83,7 +98,7 @@ namespace Code.Accessories.Clothing {
 
             await manifestReq;
             var manifest = (PlatformGearBundleManifest) manifestReq.asset;
-            PlatformGearManager.Instance.loadedPlatformGearBundles[airId] = new PlatformGearBundleInfo(bundle, manifest);
+            loadedPlatformGearBundles[airId] = new PlatformGearBundleInfo(bundle, manifest);
             foreach (var clothing in manifest.gearList) {
                 if (clothing.classId == classId) {
                     inProgressTask.SetResult(true);

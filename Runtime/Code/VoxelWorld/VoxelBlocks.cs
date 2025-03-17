@@ -4,6 +4,7 @@ using System.Linq;
 using Assets.Airship.VoxelRenderer;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using System.Xml;
 using JetBrains.Annotations;
 using UnityEngine;
@@ -314,6 +315,7 @@ public class VoxelBlocks : MonoBehaviour {
     [NonSerialized] public List<string> m_bundlePaths = null;
 
     [SerializeField] public List<VoxelBlockDefinionList> blockDefinionLists = new();
+    private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
         
@@ -478,6 +480,11 @@ public class VoxelBlocks : MonoBehaviour {
         }
                 
     }
+    
+    public async Task WaitForLoaded() {
+        if (loadedTask.Task.IsCompleted) return;
+        await loadedTask.Task;
+    }
 
     private void ParseQuarterBlock(BlockDefinition block) {
 
@@ -594,7 +601,6 @@ public class VoxelBlocks : MonoBehaviour {
         }
     }
     public void Load(bool loadTexturesDirectlyFromDisk = false) {
-
         //clear everything
         Clear();
                 
@@ -1099,6 +1105,7 @@ public class VoxelBlocks : MonoBehaviour {
             }*/
         }
         // Profiler.EndSample();
+        loadedTask.TrySetResult(true);
     }
 
     //Fix a voxel value up with its solid mask bit

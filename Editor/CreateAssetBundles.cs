@@ -10,6 +10,7 @@ using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
 using UnityEngine;
+using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -356,8 +357,18 @@ public static class CreateAssetBundles {
 				});
 			}
 		}
+
 		// var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
 		var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
+
+		if (platform == AirshipPlatform.Android) {
+			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
+			PlayerSettings.SetGraphicsAPIs(buildTarget, new GraphicsDeviceType[]
+			{
+				GraphicsDeviceType.OpenGLES3
+			});
+		}
+
 		var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
 		if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
 			buildTargetGroup = BuildTargetGroup.Standalone;
