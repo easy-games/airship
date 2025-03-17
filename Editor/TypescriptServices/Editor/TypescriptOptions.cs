@@ -169,8 +169,8 @@ namespace Airship.Editor {
             }
             AirshipEditorGUI.EndSettingGroup();
             
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("* This property only applies to your instance of the project");
+            // EditorGUILayout.Space(10);
+            // EditorGUILayout.LabelField("* This property only applies to your instance of the project");
             
             if (GUI.changed) {
                 projectSettings.Modify();
@@ -257,13 +257,17 @@ namespace Airship.Editor {
             }
         }
 
+        private static GUIContent projectSettingsIcon;
+        private static GUIContent userSettingsIcon;
+        
         private static TypescriptOptionsTab selectedTab;
         internal static void RenderSettings() {
-  
+            projectSettingsIcon ??= EditorGUIUtility.IconContent("Project");
+            userSettingsIcon ??= EditorGUIUtility.IconContent("BuildSettings.Standalone.Small");
 
             selectedTab = (TypescriptOptionsTab) AirshipEditorGUI.BeginTabs((int) selectedTab, new[] {
-                "Project Settings", 
-                "Local Settings"
+                new GUIContent(" Project Settings", projectSettingsIcon.image), 
+                new GUIContent(" User Settings", userSettingsIcon.image)
             });
             {
                 if (selectedTab == TypescriptOptionsTab.ProjectSettings) {

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Editor.EditorInternal;
 using UnityEditor;
 using UnityEngine;
@@ -66,8 +68,8 @@ public class AirshipEditorGUI {
         int right = Mathf.RoundToInt((tabIndex + 1) * tabWidth);
         return new Rect(rect.x + left, rect.y, right - left,  /* kTabButtonHeight */ TabButtonHeight);
     }
-    
-    internal static int BeginTabs(int selectedIndex, string[] tabs) {
+
+    internal static int BeginTabs(int selectedIndex, GUIContent[] tabs) {
         var rect = EditorGUILayout.BeginVertical(new GUIStyle("FrameBox"));
         GUILayoutUtility.GetRect(10, TabButtonHeight);
         
