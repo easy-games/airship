@@ -1,4 +1,5 @@
 using System;
+using Code.State;
 using Editor.Packages;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -63,7 +64,6 @@ public class AutoSceneRedirect {
                 Debug.Log("An Airship Core update is available. Not updating may result in unexpected behaviour.");
             }
         }
-
         if (state != PlayModeStateChange.ExitingEditMode) return;
         
         var sceneName = SceneManager.GetActiveScene().name;
@@ -71,9 +71,9 @@ public class AutoSceneRedirect {
         if (gameConfig == null) return;
 
         if (Array.Find(gameConfig.gameScenes, obj => ((SceneAsset)obj).name == sceneName) != null) {
-            ServerBootstrap.editorStartingSceneIntent = sceneName;
+            EditorSessionState.SetString("AirshipEditorStartingSceneName", sceneName);
         } else {
-            ServerBootstrap.editorStartingSceneIntent = "";
+            EditorSessionState.SetString("AirshipEditorStartingSceneName", "");
         }
     }
 }
