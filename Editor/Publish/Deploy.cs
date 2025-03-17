@@ -42,7 +42,7 @@ public class Deploy {
 		// NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new();
-		var gameConfig = GameConfig.Load();
+		var gameConfig = CreateAssetBundles.BuildGameConfig();
 		if (gameConfig.supportsMobile) {
 			platforms.Add(AirshipPlatform.iOS);
 			platforms.Add(AirshipPlatform.Android);
