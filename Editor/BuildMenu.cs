@@ -1,7 +1,9 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 #if UNITY_EDITOR_OSX
@@ -224,11 +226,24 @@ namespace Editor {
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
-            var options = new BuildPlayerOptions();
-            options.scenes = scenes;
-            options.locationPathName = $"build/client_android/{ClientExecutableName}.apk";
-            options.target = BuildTarget.Android;
-            if (development == true) {
+            PlayerSettings.Android.splitApplicationBinary = !development;
+
+            BuildProfile buildProfile;
+            if (development) {
+                buildProfile = AssetDatabase.LoadAssetAtPath<BuildProfile>("Assets/Settings/Build Profiles/Android Debug.asset");
+            } else {
+                buildProfile = AssetDatabase.LoadAssetAtPath<BuildProfile>("Assets/Settings/Build Profiles/Android Google Play.asset");
+            }
+            var options = new BuildPlayerWithProfileOptions();
+            var editorBuildScenes = new List<EditorBuildSettingsScene>();
+            foreach (var sceneName in scenes) {
+                editorBuildScenes.Add(new EditorBuildSettingsScene(sceneName, true));
+            }
+            buildProfile.overrideGlobalScenes = true;
+            buildProfile.scenes = editorBuildScenes.ToArray();
+            options.buildProfile = buildProfile;
+            options.locationPathName = $"build/client_android/{ClientExecutableName}.{(development ? "apk" : "aab")}";
+            if (development) {
                 options.options = BuildOptions.Development;
             }
 
