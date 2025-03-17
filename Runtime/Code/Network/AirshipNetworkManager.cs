@@ -116,8 +116,12 @@ public class AirshipNetworkManager : NetworkManager {
         await ao;
 
         var scene = SceneManager.GetSceneByName(sceneName);
+        Debug.Log($"SetSceneActiveOnceLoaded \"{sceneName}\" (IsValid: {scene.IsValid()}) (IsLoaded: {scene.isLoaded})");
         if (scene.IsValid() && scene.isLoaded) {
             SceneManager.SetActiveScene(scene);
+            Debug.Log($"SetSceneActiveOnceLoaded \"{sceneName}\" completed");
+        } else {
+            Debug.LogWarning($"SetSceneActiveOnceLoaded \"{sceneName}\" skipped");
         }
     }
 
