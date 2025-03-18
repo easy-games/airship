@@ -151,7 +151,7 @@ namespace Adrenak.UniVoice {
 
         void Log(string tag, string msg) {
             if (!Application.isEditor) {
-                Debug.Log($"[{tag}] {msg}");
+                // Debug.Log($"[{tag}] {msg}");
             }
         }
 
