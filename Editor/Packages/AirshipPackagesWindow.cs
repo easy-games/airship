@@ -382,10 +382,17 @@ namespace Editor.Packages {
 
             List<AirshipPlatform> platforms = new() {
                 AirshipPlatform.iOS,
-                AirshipPlatform.Mac,
-                AirshipPlatform.Windows,
                 AirshipPlatform.Android,
             };
+            // We want to end up on our editor machine's platform
+#if UNITY_EDITOR_OSX
+            platforms.Add(AirshipPlatform.Windows);
+            platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Mac);
+		platforms.Add(AirshipPlatform.Windows);
+#endif
+
             // Uncomment to just build iOS
             if (isCoreMaterials) {
                 platforms.Clear();
