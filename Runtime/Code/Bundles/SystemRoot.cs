@@ -333,7 +333,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 					// "RacingGame",
 					"BWShaderVariants 1 (Raven)",
 				};
+				int totalCounter = 0;
 				foreach (var collectionName in collections) {
+					onLoadingScreenStep?.Invoke($"Prewarming shaders (1)");
 					var path = $"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants".ToLower();
 					Debug.Log("Loading shader variant: " + collectionName);
 					if (this.coreMaterialsAssetBundle == null) {
@@ -354,6 +356,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 						int step = 1;
 						while (!col.WarmUpProgressively(step)) {
 							variantCounter += step;
+							totalCounter += step;
+							onLoadingScreenStep?.Invoke($"Prewarming shaders ({totalCounter + 1})");
 							Debug.Log($"Prewarm in progress ({collectionName}): {variantCounter}");
 							yield return null;
 						}
