@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Code.Bundles;
 using Code.Platform.Shared;
-using Code.Platform.Server;
-using Code.Platform.Client;
 using UnityEngine;
 
 namespace Code.Analytics {
@@ -32,7 +30,7 @@ namespace Code.Analytics {
             AnalyticsServiceServerBackend.SendServerAnalytics(message).ContinueWith((t) => {
                 isAlreadySending = false;
                 if (!t.Result.success) {
-                    Debug.LogError("airship-analytics-forwarder - Failed to send error analytics: " + t.Result.error);
+                    Debug.LogWarning("airship-analytics-forwarder - Failed to send error analytics: " + t.Result.error);
                 }
             });
 #endif
@@ -53,7 +51,7 @@ namespace Code.Analytics {
             AnalyticsServiceClient.SendClientAnalytics(message).ContinueWith((t) => {
                 isAlreadySending = false;
                 if (!t.Result.success) {
-                    Debug.LogError("airship-analytics-forwarder - Failed to send error analytics: " + t.Result.error);
+                    Debug.LogWarning("airship-analytics-forwarder - Failed to send error analytics: " + t.Result.error);
                 }
             });
 #endif
