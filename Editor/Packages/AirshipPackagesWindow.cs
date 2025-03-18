@@ -740,7 +740,7 @@ namespace Editor.Packages {
             }
 
             var android = ModuleUtil.IsModuleInstalled(BuildTarget.Android);
-            if (!iOS) {
+            if (!android) {
                 Debug.LogError("Android Build Support module not found.");
             }
             return mac && windows && iOS && android;
