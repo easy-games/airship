@@ -19,7 +19,8 @@ namespace Code.Bootstrap {
             AirshipPlatform.iOS,
             AirshipPlatform.Mac,
             AirshipPlatform.Windows,
-            AirshipPlatform.Linux
+            AirshipPlatform.Linux,
+            AirshipPlatform.Android,
         };
 
         public static string GetStringName(AirshipPlatform platform) {

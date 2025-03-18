@@ -15,71 +15,71 @@ using UnityEngine.Networking;
 public class AuthManager {
     public static Action authed;
 
-   private static string GetAccountJSONPath() {
+	private static string GetAccountJSONPath() {
        var stagingExtension = "";
 #if AIRSHIP_STAGING
        stagingExtension = "_staging"; 
 #endif
 #if DEVELOPMENT_BUILD
-    return Path.Combine(Application.persistentDataPath, $"account_devbuild{stagingExtension}.json");
+		return Path.Combine(Application.persistentDataPath, $"account_devbuild{stagingExtension}.json");
 #endif
 #if UNITY_EDITOR
-      return Path.Combine(Application.persistentDataPath, $"account_editor{stagingExtension}.json");
+		return Path.Combine(Application.persistentDataPath, $"account_editor{stagingExtension}.json");
 #endif
-      return Path.Combine(Application.persistentDataPath, $"account{stagingExtension}.json");
-   }
+		return Path.Combine(Application.persistentDataPath, $"account{stagingExtension}.json");
+	}
 
-   [CanBeNull]
-   public static AuthSave GetSavedAccount() {
-      var path = GetAccountJSONPath();
-      if (!File.Exists(path)) {
-         return null;
-      }
+	[CanBeNull]
+	public static AuthSave GetSavedAccount() {
+		var path = GetAccountJSONPath();
+		if (!File.Exists(path)) {
+			return null;
+		}
 
-      try {
-         var authSave = JsonUtility.FromJson<AuthSave>(File.ReadAllText(path));
-         return authSave;
-      } catch (Exception e) {
-         Debug.LogError(e);
-      }
-      return null;
-   }
+		try {
+			var authSave = JsonUtility.FromJson<AuthSave>(File.ReadAllText(path));
+			return authSave;
+		} catch (Exception e) {
+			Debug.LogError(e);
+		}
+		return null;
+	}
    
-   public static void SaveAuthAccount(string refreshToken) {
-      var authSave = new AuthSave {
-         refreshToken = refreshToken,
-         time = DateTimeOffset.Now.ToUnixTimeSeconds()
-      };
-      var path = GetAccountJSONPath();
-      File.WriteAllText(path, JsonUtility.ToJson(authSave));
-   }
+	public static void SaveAuthAccount(string refreshToken) {
+		var authSave = new AuthSave {
+			refreshToken = refreshToken,
+			time = DateTimeOffset.Now.ToUnixTimeSeconds()
+		};
+		var path = GetAccountJSONPath();
+		File.WriteAllText(path, JsonUtility.ToJson(authSave));
+	}
 
-   public static async Task<FirebaseTokenResponse> LoginWithRefreshToken(string refreshToken) {
-      var body = $"grantType=refresh_token&refresh_token={refreshToken}";
-      var req = UnityWebRequest.PostWwwForm("https://securetoken.googleapis.com/v1/token?key=" + AirshipApp.firebaseApiKey + "&" + body, "");
-      req.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-      await req.SendWebRequest();
-      if (req.result == UnityWebRequest.Result.ProtocolError) {
-         Debug.LogError(req.error);
-         return null;
-      }
-      return JsonUtility.FromJson<FirebaseTokenResponse>(req.downloadHandler.text);
-   }
+	public static async Task<FirebaseTokenResponse> LoginWithRefreshToken(string refreshToken) {
+		var body = $"grantType=refresh_token&refresh_token={refreshToken}";
+		var req = UnityWebRequest.PostWwwForm("https://securetoken.googleapis.com/v1/token?key=" + AirshipApp.firebaseApiKey + "&" + body, "");
+		req.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+		await req.SendWebRequest();
+		if (req.result == UnityWebRequest.Result.ProtocolError) {
+			Debug.LogError(req.error);
+			return null;
+		}
+		return JsonUtility.FromJson<FirebaseTokenResponse>(req.downloadHandler.text);
+	}
 
-   public static void ClearSavedAccount() {
+	public static void ClearSavedAccount() {
 #if UNITY_EDITOR
-      InternalHttpManager.editorAuthToken = "";
-      InternalHttpManager.editorUserId = "";
+		InternalHttpManager.editorAuthToken = "";
+		InternalHttpManager.editorUserId = "";
 #else
-      InternalHttpManager.authToken = "";
+		InternalHttpManager.authToken = "";
 #endif
-      var path = GetAccountJSONPath();
-      if (File.Exists(path)) {
-         File.Delete(path);
-      }
-   }
+		var path = GetAccountJSONPath();
+		if (File.Exists(path)) {
+			File.Delete(path);
+		}
+	}
    
-   public static async Task<(bool success, string error)> AuthWithGoogle() {
+	public static async Task<(bool success, string error)> AuthWithGoogle() {
 #if AIRSHIP_STAGING
         string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
         string clientSecret = "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";
@@ -100,6 +100,16 @@ public class AuthManager {
         redirectUri = "gg.easy.airship:/oauth2";
 #endif
 #endif
+	   
+#if UNITY_ANDROID && !UNITY_EDITOR
+#if AIRSHIP_STAGING
+		// TODO
+#else
+		clientId = "457451560440-htottasd1788to2boc7lg08jrkduotg1.apps.googleusercontent.com";
+		clientSecret = null;
+	    redirectUri = "https://airship.gg/oauth2";
+#endif
+#endif
 
         var auth = new GoogleAuth(new AuthorizationCodeFlow.Configuration() {
             clientId = clientId,
@@ -110,6 +120,8 @@ public class AuthManager {
             redirectUri = redirectUri,
             scope = "openid email profile",
         });
+        
+        Debug.Log($"Redirect URI: {redirectUri}");
 
         var crossPlatformBrowser = new CrossPlatformBrowser();
         var standaloneBrowser = new StandaloneBrowser();
@@ -121,8 +133,8 @@ public class AuthManager {
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
-        // crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
-        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new AndroidBrowser("http://*:8080"));
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
+        // crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new AndroidBrowser("http://*:8080"));
 
         using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 

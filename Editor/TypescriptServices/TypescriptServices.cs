@@ -16,7 +16,6 @@ namespace Airship.Editor {
     internal class TypescriptServicesLocalConfig : ScriptableSingleton<TypescriptServicesLocalConfig> {
         [SerializeField]
         internal bool hasInitialized = false;
-        [SerializeField] internal bool skipCompileOnCodeDeploy = false;
         
         public void Modify() {
             Save(true);

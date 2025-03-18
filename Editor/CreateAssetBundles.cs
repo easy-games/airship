@@ -237,7 +237,7 @@ public static class CreateAssetBundles {
 	}
 #endif
 
-	private static GameConfig BuildGameConfig(){
+	public static GameConfig BuildGameConfig() {
 		GameConfig gameConfig = GameConfig.Load();
 
 		// Update tags
@@ -264,7 +264,7 @@ public static class CreateAssetBundles {
 		return gameConfig;
 	}
 
-	private static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
+	public static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
 		ResetScenes();
 
 		if (!PrePublishChecks()) {
@@ -277,7 +277,7 @@ public static class CreateAssetBundles {
 		}
 
 		var sw = Stopwatch.StartNew();
-		var gameConfig = BuildGameConfig();
+		var gameConfig = GameConfig.Load();
 		if(!gameConfig){
 			return false;
 		}

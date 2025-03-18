@@ -11,6 +11,7 @@ using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
 using Code.Platform.Shared;
+using Code.State;
 using JetBrains.Annotations;
 using kcp2k;
 using Mirror;
@@ -61,11 +62,6 @@ public class ServerBootstrap : MonoBehaviour
     public ServerContext serverContext;
 
     private GameServer gameServer;
-
-    /// <summary>
-    /// When set, this will be used as the starting scene.
-    /// </summary>
-    public static string editorStartingSceneIntent;
 
     [NonSerialized] public bool isServerReady = false;
     public event Action OnStartLoadingGame;
@@ -195,6 +191,7 @@ public class ServerBootstrap : MonoBehaviour
 
 #if UNITY_EDITOR
 		var gameConfig = GameConfig.Load();
+		var editorStartingSceneIntent = EditorSessionState.GetString("AirshipEditorStartingSceneName");
 		if (!string.IsNullOrEmpty(editorStartingSceneIntent)) {
 			startupConfig.StartingSceneName = editorStartingSceneIntent;
 		} else {
