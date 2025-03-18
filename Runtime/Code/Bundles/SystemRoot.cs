@@ -331,7 +331,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				string[] collections = new[] {
 					"MainMenu",
 					// "RacingGame",
-					"BWShaderVariants 1 (Raven)",
+					// "BWShaderVariants 1 (Raven)",
 				};
 				int totalCounter = 0;
 				foreach (var collectionName in collections) {
