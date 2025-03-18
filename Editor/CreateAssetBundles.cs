@@ -367,6 +367,8 @@ public static class CreateAssetBundles {
 			{
 				GraphicsDeviceType.OpenGLES3
 			});
+		} else {
+			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, true);
 		}
 
 		var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
