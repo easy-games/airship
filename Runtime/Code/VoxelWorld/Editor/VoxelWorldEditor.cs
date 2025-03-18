@@ -41,14 +41,14 @@ public class VoxelEditAction {
 public class VoxelEditMarker : ScriptableObject {
     public VoxelEditAction lastAction;
 }
-public class VoxelEditManager : Singleton<VoxelEditManager> {
-    public Dictionary<string, VoxelPlacementModifier> placementModifiers = new();
-    public bool buildModsEnabled = false;
-    VoxelEditMarker undoObject;
-    public List<VoxelEditAction> edits = new List<VoxelEditAction>();
-    public List<VoxelEditAction> redos = new List<VoxelEditAction>();
+public class VoxelEditManager {
+    public static Dictionary<string, VoxelPlacementModifier> placementModifiers = new();
+    public static bool buildModsEnabled = false;
+    static VoxelEditMarker undoObject;
+    public static List<VoxelEditAction> edits = new List<VoxelEditAction>();
+    public static List<VoxelEditAction> redos = new List<VoxelEditAction>();
 
-    private HashSet<Vector3Int> WriteVoxel(VoxelWorld world, Vector3Int position, ushort num) {
+    private static HashSet<Vector3Int> WriteVoxel(VoxelWorld world, Vector3Int position, ushort num) {
         var positionSet = new HashSet<Vector3Int>() { position };
         if (buildModsEnabled) {
             foreach (var (id, modifier) in placementModifiers) {
@@ -62,7 +62,7 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         return positionSet;
     }
     
-    public HashSet<Vector3Int> ColorVoxel(VoxelWorld world, Vector3Int position, Color col) {
+    public static HashSet<Vector3Int> ColorVoxel(VoxelWorld world, Vector3Int position, Color col) {
         var positionSet = new HashSet<Vector3Int>() { position };
         if (buildModsEnabled) {
             foreach (var (id, modifier) in placementModifiers) {
@@ -76,7 +76,7 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         return positionSet;
     }
         
-    public void AddEdit(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue, string name) {
+    public static void AddEdit(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue, string name) {
         VoxelEditAction edit = new VoxelEditAction();
         edit.CreateSingleEdit(world, position, oldValue, newValue);
         edits.Add(edit);
@@ -99,7 +99,7 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         world.hasUnsavedChanges = true; 
     }
 
-    public void AddEdits(VoxelWorld world, List<EditInfo> editInfos, string name) {
+    public static void AddEdits(VoxelWorld world, List<EditInfo> editInfos, string name) {
         VoxelEditAction edit = new VoxelEditAction();
         edit.CreateMultiEdit(world, editInfos);
         edits.Add(edit);
@@ -129,11 +129,9 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
     //Constructor
     public VoxelEditManager() {
         Undo.undoRedoEvent += UndoRedoEvent;
-       
     }
     
-    public void UndoRedoEvent(in UndoRedoInfo info) {
-
+    public static void UndoRedoEvent(in UndoRedoInfo info) {
         if (info.isRedo == false) {
             if (edits.Count > 0) {
                 VoxelEditAction edit = edits[edits.Count - 1];
@@ -152,8 +150,7 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
 
                 redos.Add(edit);
             }
-        }
-        else {
+        } else {
             if (redos.Count > 0) {
                 VoxelEditAction edit = redos[redos.Count - 1];
                 redos.RemoveAt(redos.Count - 1);
@@ -167,15 +164,11 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
                     }
                     currentWorld.hasUnsavedChanges = true;
                 }
-
                 edits.Add(edit);
             }
         }
-        
     }
 }
-
-
 
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor {
@@ -416,13 +409,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         EditorGUILayout.LabelField("Build Mods", EditorStyles.boldLabel);
-        VoxelEditManager.Instance.buildModsEnabled =
-            GUILayout.Toggle(VoxelEditManager.Instance.buildModsEnabled, "Enabled");
+        VoxelEditManager.buildModsEnabled =
+            GUILayout.Toggle(VoxelEditManager.buildModsEnabled, "Enabled");
         // placementModsOpen = EditorGUILayout.Foldout(placementModsOpen, "Build Mods");
         // if (placementModsOpen) {
-        GUI.enabled = VoxelEditManager.Instance.buildModsEnabled;
+        GUI.enabled = VoxelEditManager.buildModsEnabled;
         EditorGUI.indentLevel++;
-        var enabledMods = VoxelEditManager.Instance.placementModifiers;
+        var enabledMods = VoxelEditManager.placementModifiers;
         foreach (var placementMod in allPlacementModifiers) {
             var modName = placementMod.GetName();
             var modEnabledOld = enabledMods.ContainsKey(modName);
@@ -437,7 +430,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             EditorGUI.indentLevel++;
             placementMod.OnInspectorGUI();
             EditorGUI.indentLevel--;
-            GUI.enabled = VoxelEditManager.Instance.buildModsEnabled;
+            GUI.enabled = VoxelEditManager.buildModsEnabled;
         }
         EditorGUI.indentLevel--;
         GUI.enabled = true;
@@ -704,10 +697,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         Vector3Int voxelPos = lastPos;
                         ushort oldValue =
                             world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
-                             
-                        VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
-                        voxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
+                        VoxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
 
                         if (leftControlDown == false) {
                             //Refresh the gizmo like we just moved the mouse here
@@ -728,15 +719,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                             world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
                         ushort newValue = (ushort)world.selectedBlockIndex;
 
-                        VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
-
                         var def = world.voxelBlocks.GetBlock(newValue);
 
                         if (def.definition.rotatedPlacement) {
                             newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, (int)placementFlip);
                         } 
 
-                        voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
+                        VoxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
                             "Add Voxel " + def.definition.name);
 
                          
@@ -772,7 +761,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         if (oldColor.r == 0) colIncr = 1; // If just being lightly painted to mark as receiving color
                         newCol = new Color32((byte) (Math.Min(oldColor.r + colIncr, 255)), oldColor.g, oldColor.b, oldColor.a);
                     }
-                    VoxelEditManager.Instance.ColorVoxel(world, voxelPos, newCol);
+                    VoxelEditManager.ColorVoxel(world, voxelPos, newCol);
                 }
             }
         }
@@ -789,7 +778,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     if (oldBlockId > 0) {
                         var edits = new List<EditInfo>();
                         PaintBucket(world, edits, lastPos, oldValue, (ushort) world.selectedBlockIndex, new HashSet<Vector3>());
-                        VoxelEditManager.Instance.AddEdits(world, edits, "Paint Bucket");
+                        VoxelEditManager.AddEdits(world, edits, "Paint Bucket");
                     }
                 }
             }
@@ -816,12 +805,10 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     flipBits %= 8;
                     newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, flipBits);
 
-                    VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
-
                     var def = world.voxelBlocks.GetBlock(newValue);
 
                     //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
-                    voxelEditManager.AddEdit(world, lastPos, oldValue, newValue, "Flip Voxel " + def.definition.name);
+                    VoxelEditManager.AddEdit(world, lastPos, oldValue, newValue, "Flip Voxel " + def.definition.name);
                 }
                 //Refresh the view
                 UpdateHandlePosition(world);

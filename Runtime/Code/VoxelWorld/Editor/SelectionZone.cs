@@ -397,7 +397,6 @@ public class SelectionZoneEditor : UnityEditor.Editor
         {
             return;
         }
-        VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
         //Add Copy Button
         if (GUILayout.Button("Fill"))
@@ -428,7 +427,7 @@ public class SelectionZoneEditor : UnityEditor.Editor
                         }
                     }
                 }
-                voxelEditManager.AddEdits(cube.voxelWorld, edits, "Fill Voxels");
+                VoxelEditManager.AddEdits(cube.voxelWorld, edits, "Fill Voxels");
             }
         }
 
@@ -463,7 +462,7 @@ public class SelectionZoneEditor : UnityEditor.Editor
                         }
                     }
                 }
-                voxelEditManager.AddEdits(cube.voxelWorld, edits, "Replace Voxels");
+                VoxelEditManager.AddEdits(cube.voxelWorld, edits, "Replace Voxels");
             }
         }
 
@@ -504,7 +503,7 @@ public class SelectionZoneEditor : UnityEditor.Editor
                             {
                                 List<VoxelEditAction.EditInfo> edits = new();
                                 edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), data, 0));
-                                voxelEditManager.AddEdits(cube.voxelWorld, edits, "Cut Voxels");
+                                VoxelEditManager.AddEdits(cube.voxelWorld, edits, "Cut Voxels");
                             }
                         }
                     }
@@ -585,7 +584,7 @@ public class SelectionZoneEditor : UnityEditor.Editor
                             }
                         }
                     }
-                    voxelEditManager.AddEdits(cube.voxelWorld, edits, "Paste Voxels");
+                    VoxelEditManager.AddEdits(cube.voxelWorld, edits, "Paste Voxels");
                 }
 
                 //resize the box to whatever we pasted
