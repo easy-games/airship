@@ -1210,6 +1210,11 @@ namespace Code.Player.Character.MovementSystems.Character
 
         #region Typescript Data Access Functions
 
+        public bool IsAuthority()
+        {
+            return this.mode == NetworkedStateSystemMode.Authority;
+        }
+        
         public bool IsFlying()
         {
             return this.currentMoveSnapshot.isFlying;
