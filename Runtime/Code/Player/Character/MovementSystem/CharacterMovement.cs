@@ -203,7 +203,7 @@ public class CharacterMovement : NetworkBehaviour {
         //Only the owner can control
         hasMovementAuth = isOwned || (isServer && (netIdentity.connectionToClient == null || isServerAuth));
 
-        //Have to manualy control the flow of data
+        //Have to manually control the flow of data
         if (networkTransform) {
             if (isServerOnly) {
                 networkTransform.syncDirection
