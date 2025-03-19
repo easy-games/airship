@@ -326,12 +326,12 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {
-// #if !UNITY_IOS && !UNITY_ANDROID
+#if !UNITY_IOS && !UNITY_ANDROID && !UNITY_EDITOR
 				preWarmedCoreShaders = true;
 				string[] collections = new[] {
 					"MainMenu",
 					// "RacingGame",
-					"BWShaderVariants 1 (Raven)",
+					// "BWShaderVariants 1 (Raven)",
 				};
 				int totalCounter = 0;
 				foreach (var collectionName in collections) {
@@ -364,7 +364,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");
 					}
 				}
-// #endif
+#endif
 			}
 		} else {
 			if (NetworkClient.isConnected) {

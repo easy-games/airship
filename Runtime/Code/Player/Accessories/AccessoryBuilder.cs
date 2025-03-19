@@ -173,6 +173,7 @@ public class AccessoryBuilder : MonoBehaviour {
             }
 
             if (Application.isPlaying) {
+                lod.rootTransform.gameObject.SetActive(false);
                 Destroy(lod.rootTransform.gameObject);
             } else {
                 DestroyImmediate(lod.rootTransform.gameObject);
@@ -184,6 +185,7 @@ public class AccessoryBuilder : MonoBehaviour {
         }
 
         if (Application.isPlaying) {
+            activeAccessory.rootTransform.gameObject.SetActive(false);
             Destroy(activeAccessory.rootTransform.gameObject);
         } else {
             DestroyImmediate(activeAccessory.rootTransform.gameObject);
