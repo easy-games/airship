@@ -67,7 +67,7 @@ namespace Nobi.UiRoundedCorners {
 				if (shader == null) return;
 				
 				material = new Material(shader) {
-					hideFlags = HideFlags.DontSave
+					// hideFlags = HideFlags.DontSave
 				};
 			}
 
