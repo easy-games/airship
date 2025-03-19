@@ -115,37 +115,37 @@ namespace Code.Network.StateSystem
             if (isClient && isServer)
             {
                 this.stateSystem.mode = NetworkedStateSystemMode.Authority;
-                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Authority);
+                this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are an authoritative client
             else if (isClient && isOwned && !serverAuth)
             {
                 this.stateSystem.mode = NetworkedStateSystemMode.Authority;
-                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Authority);
+                this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative client
             else if (isClient && isOwned && serverAuth)
             {
                 this.stateSystem.mode = NetworkedStateSystemMode.Input;
-                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Input);
+                this.stateSystem.SetMode(NetworkedStateSystemMode.Input);
             }
             // We are an observing client
             else if (isClient && !isOwned)
             {
                 this.stateSystem.mode = NetworkedStateSystemMode.Observer;
-                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Observer);
+                this.stateSystem.SetMode(NetworkedStateSystemMode.Observer);
             }
             // We are an authoritative server
             else if (isServer && serverAuth)
             {
                 this.stateSystem.mode = NetworkedStateSystemMode.Authority;
-                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Authority);
+                this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative server
             else if (isServer && !serverAuth)
             {
                 this.stateSystem.mode = NetworkedStateSystemMode.Observer;
-                this.stateSystem.OnSetMode(NetworkedStateSystemMode.Observer);
+                this.stateSystem.SetMode(NetworkedStateSystemMode.Observer);
             }
             else
             {

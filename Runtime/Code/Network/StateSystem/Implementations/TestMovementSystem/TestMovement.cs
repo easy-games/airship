@@ -14,7 +14,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             rb = this.GetComponent<Rigidbody>();
         }
 
-        public override void OnSetMode(NetworkedStateSystemMode mode)
+        public override void SetMode(NetworkedStateSystemMode mode)
         {
             if (mode == NetworkedStateSystemMode.Observer)
             {

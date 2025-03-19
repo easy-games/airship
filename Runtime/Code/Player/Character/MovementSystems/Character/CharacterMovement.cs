@@ -55,6 +55,8 @@ namespace Code.Player.Character.MovementSystems.Character
         public delegate void StateChanged(object state);
         public event StateChanged stateChanged;
 
+        public event Action<object> OnSetMode;
+        
         /// <summary>
         /// Called when a new command is being created. This can be used to set custom data for new
         /// command by calling the SetCustomInputData function during this event.
@@ -160,7 +162,7 @@ namespace Code.Player.Character.MovementSystems.Character
             }
         }
 
-        public override void OnSetMode(NetworkedStateSystemMode mode)
+        public override void SetMode(NetworkedStateSystemMode mode)
         {
             Debug.Log("Running movement in " + mode + " mode.");
             if (mode == NetworkedStateSystemMode.Observer)
@@ -176,6 +178,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
                 rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
+            
+            OnSetMode?.Invoke(mode);
         }
 
         public override void SetCurrentState(CharacterSnapshotData snapshot)

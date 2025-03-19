@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace Code.Network.StateSystem
 {
+ 
     public enum NetworkedStateSystemMode
     {
         /** The system will be used as a way to generate commands to send to an authoritative server. */
@@ -35,7 +36,7 @@ namespace Code.Network.StateSystem
         * For example, if the mode is Observer, you may wish to set rigidbodies to kinematic
         * or permanently disable certain effects when this function is called.
         */
-        public abstract void OnSetMode(NetworkedStateSystemMode mode);
+        public abstract void SetMode(NetworkedStateSystemMode mode);
 
         /**
          * Sets the current state to base ticks off of. Updates the associated
