@@ -90,6 +90,7 @@ namespace Mirror
         public static void Pack<T>(T message, NetworkWriter writer)
             where T : struct, NetworkMessage
         {
+            // Debug.Log($"Packing msgId={NetworkMessageId<T>.Id}");
             writer.WriteUShort(NetworkMessageId<T>.Id);
             writer.Write(message);
         }

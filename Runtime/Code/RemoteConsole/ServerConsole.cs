@@ -87,7 +87,7 @@ namespace Code.RemoteConsole {
                         stackTrace = stackTrace,
                         time = time,
                     };
-                    NetworkServer.SendToAll(packet);
+                    NetworkServer.SendToAll(packet, Channels.Reliable, true);
                 }
             }
         }
