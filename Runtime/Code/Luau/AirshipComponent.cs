@@ -23,6 +23,9 @@ public class AirshipComponent : MonoBehaviour {
 	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
 	public static readonly Dictionary<int, string> ComponentIdToScriptName = new();
+	
+	// internal static bool IsTypescriptServicesCompiling = false;
+	
 	private static int _airshipComponentIdGen = 10000000;
 	private static bool _validatedSceneInGameConfig = false;
 
@@ -442,6 +445,7 @@ public class AirshipComponent : MonoBehaviour {
                 var element = property.Clone();
                 metadata.properties.Add(element);
                 serializedProperty = element;
+                Debug.Log($"Adding non-existent property '{property.name}' to {script.m_metadata.name} on {name}");
             } else {
                 if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
 	                // Check if we're changing object type to a type that contains the current type
@@ -502,6 +506,7 @@ public class AirshipComponent : MonoBehaviour {
                     propertiesToRemove = new List<LuauMetadataProperty>();
                 }
                 propertiesToRemove.Add(serializedProperty);
+                Debug.Log($"Removing property '{serializedProperty.name}' to {script.m_metadata.name} on {name}");
             }
             seenProperties.Add(serializedProperty.name);
         }
