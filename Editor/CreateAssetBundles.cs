@@ -451,6 +451,7 @@ public static class CreateAssetBundles {
 		// }
 
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
+
 		return true;
 	}
 

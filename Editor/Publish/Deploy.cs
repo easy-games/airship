@@ -42,20 +42,21 @@ public class Deploy {
 		// NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new();
+
+#if UNITY_EDITOR_OSX
+		platforms.Add(AirshipPlatform.Windows);
+		platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Windows);
+		platforms.Add(AirshipPlatform.Mac);
+#endif
+
 		var gameConfig = GameConfig.Load();
 		if (gameConfig.supportsMobile) {
 			platforms.Add(AirshipPlatform.iOS);
 			platforms.Add(AirshipPlatform.Android);
 		}
 
-		// We want to end up on our editor machine's platform
-#if UNITY_EDITOR_OSX
-		platforms.Add(AirshipPlatform.Windows);
-		platforms.Add(AirshipPlatform.Mac);
-#else
-		platforms.Add(AirshipPlatform.Mac);
-		platforms.Add(AirshipPlatform.Windows);
-#endif
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
@@ -262,6 +263,8 @@ public class Deploy {
 				Debug.Log("Cancelled publish.");
 				yield break;
 			}
+
+			yield return null;
 		}
 
 		if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
@@ -445,6 +448,9 @@ public class Deploy {
 			}
 		}
 
+		// Switch back to starting build target
+		EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
+
 		var slug = activeDeployTarget.slug;
 		if (slug == null) {
 			slug = activeDeployTarget.id;
@@ -463,8 +469,6 @@ public class Deploy {
 		}
 
 		if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
-		// Switch back to starting build target
-		// EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 	}
 	
 	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform, bool absolutePath = false) {
