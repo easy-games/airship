@@ -139,6 +139,14 @@ namespace Editor {
                 airshipScript.compiledFileHash = project.GetOutputFileHash(assetPath);
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
+                
+                var localSettings = TypescriptServicesLocalConfig.instance;
+                if (localSettings.experimentalReimportOnScriptImport) {
+                    var pathsToReimport = TypescriptPrefabDependencyService.GetDependentAssetsForScript(airshipScript);
+                    foreach (var toImport in pathsToReimport) {
+                        AssetDatabase.ImportAsset(toImport, ImportAssetOptions.Default);
+                    }
+                }
             }
         }
     }

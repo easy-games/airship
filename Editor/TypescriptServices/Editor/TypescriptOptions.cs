@@ -169,8 +169,15 @@ namespace Airship.Editor {
             }
             AirshipEditorGUI.EndSettingGroup();
             
-            // EditorGUILayout.Space(10);
-            // EditorGUILayout.LabelField("* This property only applies to your instance of the project");
+            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Experimental Options"));
+            {
+                localSettings.experimentalReimportOnScriptImport =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Reimport Dependencies on Typescript File Changes*"), localSettings.experimentalReimportOnScriptImport);
+            }
+            AirshipEditorGUI.EndSettingGroup();
+            
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField("* This property only applies to your instance of the project");
             
             if (GUI.changed) {
                 projectSettings.Modify();

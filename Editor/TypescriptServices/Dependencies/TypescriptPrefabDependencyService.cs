@@ -9,16 +9,26 @@ using UnityEngine;
 
 namespace Airship.Editor {
     public class TypescriptPrefabDependencyService : AssetPostprocessor {
-        private static Dictionary<AirshipScript, HashSet<string>> scriptToPrefabs = new();
-        
-        private void OnPostprocessPrefab(GameObject g) {
-            var isApplyingChanges = TypescriptCompilationService.IsCurrentlyCompiling;
-            Debug.LogWarning($"PostProcess Prefab {isApplyingChanges}");
+        private static Dictionary<string, HashSet<string>> scriptToPrefabs = new();
+        private static Dictionary<string, HashSet<string>> prefabsToScripts = new();
+
+        [InitializeOnLoadMethod]
+        public static void OnLoad() {
+            scriptToPrefabs.Clear();
+            prefabsToScripts.Clear();
+        }
+
+        [MenuItem("Airship/Debug/Print Script To Prefabs")]
+        public static void PrintScriptToPrefabs() {
+            Debug.Log("scriptsToPrefabs:");
+            foreach (var scriptToPrefab in scriptToPrefabs) {
+                Debug.Log($"\t{scriptToPrefab.Key}: {string.Join(", ", scriptToPrefab.Value)}");
+            }
             
-            // var behaviours = g.GetComponentsInChildren<AirshipComponent>();
-            // foreach (var behaviour in behaviours) {
-            //     behaviour.ReconcileMetadata();
-            // }
+            Debug.Log("prefabsToScripts:");
+            foreach (var prefabToScripts in prefabsToScripts) {
+                Debug.Log($"\t{prefabToScripts.Key}: {string.Join(", ", prefabToScripts.Value)}");
+            }
         }
 
         /// <summary>
@@ -28,29 +38,58 @@ namespace Airship.Editor {
         private static void LinkScriptsToPrefabs(string[] paths) {
             foreach (var path in paths) {
                 if (!path.EndsWith(".prefab", StringComparison.InvariantCulture)) continue;
-                var scripts = new HashSet<AirshipScript>();
+
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                var components = prefab.GetComponentsInChildren<AirshipComponent>();
                 
-                var components = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                foreach (var component in components.GetComponentsInChildren<AirshipComponent>()) {
-                    scripts.Add(component.script);
+                if (!prefabsToScripts.TryGetValue(path, out var prevScripts)) {
+                    prevScripts = new HashSet<string>();
                 }
                 
-                foreach (var script in scripts)
-                {
-                    if (!scriptToPrefabs.TryGetValue(script, out var assetPaths)) {
-                        assetPaths = new HashSet<string>();
-                        scriptToPrefabs.Add(script, assetPaths);
+                var scriptsToAdd = new HashSet<string>();
+
+                foreach (var component in components) {
+                    scriptsToAdd.Add(component.script.assetPath);
+                }
+                
+                // remove old scripts
+                foreach (var prevScript in prevScripts.ToArray()) {
+                    if (scriptsToAdd.Contains(prevScript)) continue;
+                    
+                    if (scriptToPrefabs.TryGetValue(prevScript, out var linkedAssets)) {
+                        linkedAssets.Remove(path);
+                    }
+                    
+                    prevScripts.Remove(prevScript);
+                    //Debug.Log($"Remove {prevScript.assetPath} from {path}");
+                }
+
+                if (!prefabsToScripts.TryGetValue(path, out var linkedScripts)) {
+                    linkedScripts = new HashSet<string>();
+                    prefabsToScripts.Add(path, linkedScripts);
+                }
+                
+                foreach (var script in scriptsToAdd) {
+                    if (linkedScripts.Contains(script)) continue;
+                    linkedScripts.Add(script);
+
+                    if (!scriptToPrefabs.TryGetValue(script, out var prefabPaths)) {
+                        prefabPaths = new HashSet<string>();
+                        scriptToPrefabs.Add(script, prefabPaths);
                     }
 
-                    assetPaths.Add(script.assetPath);
-                    Debug.Log($"Add [ {string.Join(", ", assetPaths)} ] for {path}");
+                    prefabPaths.Add(path);
+                    //Debug.Log($"Add {script.assetPath} to {path}");
                 }
+                
+                //Debug.Log($"{path} is linked with [ {string.Join(", ", linkedScripts.Select(script => script.assetPath))} ]");
             }
         }
 
         private static void UnlinkScriptsFromPrefabs(string[] paths) {
             foreach (var path in paths) {
                 if (!path.EndsWith(".prefab", StringComparison.InvariantCulture)) continue;
+                Debug.Log("Attempting to unlink");
                 foreach (var pathSet in scriptToPrefabs) {
                     if (pathSet.Value.Contains(path)) {
                         Debug.Log($"Remove prefab {path} from linked script {pathSet.Key}");
@@ -61,12 +100,16 @@ namespace Airship.Editor {
 
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths) {
-            LinkScriptsToPrefabs(importedAssets);
-            UnlinkScriptsFromPrefabs(deletedAssets);
+            
+            var localSettings = TypescriptServicesLocalConfig.instance;
+            if (localSettings.experimentalReimportOnScriptImport) {
+                LinkScriptsToPrefabs(importedAssets);
+                UnlinkScriptsFromPrefabs(deletedAssets);
+            }
         }
 
         internal static IEnumerable<string> GetDependentAssetsForScript(AirshipScript script) {
-            if (scriptToPrefabs.TryGetValue(script, out var prefabs)) {
+            if (scriptToPrefabs.TryGetValue(script.assetPath, out var prefabs)) {
                 return prefabs;
             }
             else {
