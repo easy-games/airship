@@ -134,14 +134,13 @@ namespace Editor {
                     icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
                 }
 
-
                 airshipScript.typescriptWasCompiled = hasCompiled;
                 airshipScript.compiledFileHash = project.GetOutputFileHash(assetPath);
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
                 
                 var localSettings = TypescriptServicesLocalConfig.instance;
-                if (localSettings.experimentalReimportOnScriptImport) {
+                if ((localSettings.experiments & TypescriptExperiments.ReimportPrefabsOnTypescriptFileImport) != 0) {
                     var pathsToReimport = TypescriptPrefabDependencyService.GetDependentAssetsForScript(airshipScript);
                     foreach (var toImport in pathsToReimport) {
                         AssetDatabase.ImportAsset(toImport, ImportAssetOptions.Default);

@@ -171,8 +171,8 @@ namespace Airship.Editor {
             
             AirshipEditorGUI.BeginSettingGroup(new GUIContent("Experimental Options"));
             {
-                localSettings.experimentalReimportOnScriptImport =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Reimport Dependencies on Typescript File Changes*"), localSettings.experimentalReimportOnScriptImport);
+                localSettings.experiments = (TypescriptExperiments)
+                    EditorGUILayout.EnumFlagsField(new GUIContent("Experiments*"), localSettings.experiments, false);
             }
             AirshipEditorGUI.EndSettingGroup();
             

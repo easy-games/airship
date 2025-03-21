@@ -16,10 +16,37 @@ public struct PropertyValueState {
 }
 #endif
 
+internal enum ComponentReconcileKind {
+	Validation,
+	Inspector,
+	Compiler,
+}
+
+internal enum ReconcileBehaviour {
+	/// <summary>
+	/// The old add/update/delete behaviour (buggy)
+	/// </summary>
+	AlwaysReconcile,
+	/// <summary>
+	/// Only reconcile on hash change, deferring to the compiler for reconcile
+	/// </summary>
+	HashBasedDeferredReconcile,
+	
+	Default = AlwaysReconcile,
+}
+
+internal delegate void ReconcileEvent(AirshipComponent componentToReconcile);
+
 [AddComponentMenu("Airship/Airship Component")]
 [LuauAPI(LuauContext.Protected)]
 public class AirshipComponent : MonoBehaviour {
 	private const bool ElevateToProtectedWithinCoreScene = true;
+
+	internal static ReconcileBehaviour ReconciliationBehaviour = ReconcileBehaviour.Default;
+	/// <summary>
+	/// Event called when Airship wants to queue a reconcile
+	/// </summary>
+	internal static event ReconcileEvent QueueReconcile;
 	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
 	public static readonly Dictionary<int, string> ComponentIdToScriptName = new();
@@ -44,6 +71,8 @@ public class AirshipComponent : MonoBehaviour {
 	private readonly Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new(); 
 	
 	public string TypescriptFilePath => script.m_path.Replace(".lua", ".ts");
+	
+	private string hash;
 
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void OnReload() {
@@ -401,7 +430,7 @@ public class AirshipComponent : MonoBehaviour {
             }
         }
 
-        ReconcileMetadata();
+        ReconcileMetadata(ComponentReconcileKind.Validation);
 
         if (Application.isPlaying) {
             WriteChangedComponentProperties();
@@ -409,7 +438,8 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     private void OnValidate() {
-        Validate();
+	    if (ReconciliationBehaviour != ReconcileBehaviour.AlwaysReconcile) return;
+	    Validate();
     }
 
     private void Validate() {
@@ -419,14 +449,16 @@ public class AirshipComponent : MonoBehaviour {
 	        scriptPath = script.m_path;
         }
         
+        Debug.Log($"Reconcile {gameObject} on Validate()", gameObject);
         SetupMetadata();
     }
 
     private void Reset() {
+	    Debug.Log($"Reconcile {gameObject} on Reset()", gameObject);
         SetupMetadata();
     }
 
-    public void ReconcileMetadata() {
+    internal void ReconcileMetadata(ComponentReconcileKind reconcileKind) {
 #if AIRSHIP_PLAYER
         return;
 #else
@@ -435,6 +467,23 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         metadata.name = script.m_metadata.name;
+        
+        if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
+	        // We only really want to reconcile outside of a compiler change if our hashes don't match
+	        // A reconcile is meant for a change in metadata anyhow - right?
+	        if (reconcileKind != ComponentReconcileKind.Compiler 
+	            && (metadata.hash != script.m_metadata.hash && !string.IsNullOrEmpty(metadata.hash))) {
+		        Debug.Log($"Hash change: Queueing reconcile for '{gameObject}'#{metadata.name}");
+		        // Defer a reconcile to the compiler
+		        QueueReconcile?.Invoke(this);
+		        return;
+	        }
+
+	        if (metadata.hash == script.m_metadata.hash) {
+		        Debug.Log($"Skip reconciliation for {metadata.hash} ('{gameObject}'#{metadata.name})");
+	            return;
+	        }
+        }
 
         // Add missing properties or reconcile existing ones:
         foreach (var property in script.m_metadata.properties) {
@@ -514,6 +563,13 @@ public class AirshipComponent : MonoBehaviour {
             foreach (var serializedProperty in propertiesToRemove) {
                 metadata.properties.Remove(serializedProperty);
             }
+        }
+        
+        if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
+	        // Update the hash
+	        metadata.hash = script.m_metadata.hash;
+	        hash = metadata.hash;
+	        Debug.Log($"Hash updated  to {metadata.hash} for {gameObject}#{metadata.name}");
         }
 #endif
     }

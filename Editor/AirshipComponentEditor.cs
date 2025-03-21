@@ -62,7 +62,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         if (binding.script != null && binding.script.m_metadata != null) {
             if (ShouldReconcile(binding)) {
-                binding.ReconcileMetadata();
+                binding.ReconcileMetadata(ComponentReconcileKind.Inspector);
                 serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();
             }

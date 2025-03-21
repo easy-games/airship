@@ -49,6 +49,7 @@ namespace Airship.Editor {
                 var scriptsToAdd = new HashSet<string>();
 
                 foreach (var component in components) {
+                    if (!component.script) continue;
                     scriptsToAdd.Add(component.script.assetPath);
                 }
                 
@@ -102,7 +103,7 @@ namespace Airship.Editor {
             string[] movedFromAssetPaths) {
             
             var localSettings = TypescriptServicesLocalConfig.instance;
-            if (localSettings.experimentalReimportOnScriptImport) {
+            if ((localSettings.experiments & TypescriptExperiments.ReimportPrefabsOnTypescriptFileImport) != 0) {
                 LinkScriptsToPrefabs(importedAssets);
                 UnlinkScriptsFromPrefabs(deletedAssets);
             }
@@ -114,6 +115,26 @@ namespace Airship.Editor {
             }
             else {
                 return new string[] { };
+            }
+        }
+
+        internal static void ReconcileDependencies(AirshipScript script) {
+            if (!scriptToPrefabs.TryGetValue(script.assetPath, out var prefabs)) {
+                Debug.LogWarning($"No prefabs at path {script.assetPath}");
+                return;
+            }
+
+            foreach (var prefab in prefabs) {
+                var prefabObject = AssetDatabase.LoadAssetAtPath<GameObject>(prefab);
+                if (!prefabObject) {
+                    Debug.LogWarning("Prefab object undefined");
+                    continue;
+                }
+                foreach (var component in prefabObject.GetComponentsInChildren<AirshipComponent>()) {
+                    if (component.script.assetPath != script.assetPath) continue;
+                    Debug.Log($"Reconcile {component.script.assetPath} for {prefab}");
+                    component.ReconcileMetadata(ComponentReconcileKind.Validation);
+                }
             }
         }
     }

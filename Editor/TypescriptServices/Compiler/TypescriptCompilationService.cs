@@ -151,6 +151,7 @@ using Object = UnityEngine.Object;
             private static bool queueActive = false;
             
             private static List<string> CompiledFileQueue = new();
+            private static HashSet<AirshipComponent> ReconciliationQueue = new();
             private static void ReimportCompiledFiles() {
                 if (!(EditorApplication.timeSinceStartup > lastChecked + checkInterval)) return;
                 
@@ -177,6 +178,17 @@ using Object = UnityEngine.Object;
                 }
 
                 CompiledFileQueue.Clear();
+
+                // Pretty much we want to reconcile after all the metadata have been updated post-compile
+                if (ReconciliationQueue.Count > 0) {
+                    foreach (var component in ReconciliationQueue) {
+                        if (!component.gameObject) continue; // If component is invalidated - skip!
+                        component.ReconcileMetadata(ComponentReconcileKind.Compiler); // compiler forced reconcile
+                    }
+                    
+                    // Clear out the reconciliation queue
+                    ReconciliationQueue.Clear();
+                }
                     
                 EditorApplication.update -= ReimportCompiledFiles;
                 queueActive = false;
@@ -207,9 +219,15 @@ using Object = UnityEngine.Object;
                 
                 BuildTypescript(flags);
             }
+
+            internal static void QueueReconcile(AirshipComponent component) {
+                Debug.Log($"Add '{component.name}'#{component.metadata.name} to reconcile queue");
+                ReconciliationQueue.Add(component);
+            }
             
             [MenuItem("Airship/TypeScript/Start Watch Mode")]
             internal static void StartCompilerServices() {
+                AirshipComponent.QueueReconcile += QueueReconcile;
                 StopCompilers();
                 
                 var project = TypescriptProjectsService.Project;
@@ -256,6 +274,8 @@ using Object = UnityEngine.Object;
             }
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
+                AirshipComponent.QueueReconcile -= QueueReconcile;
+                
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
                 foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
