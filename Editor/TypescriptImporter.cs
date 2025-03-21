@@ -104,7 +104,7 @@ namespace Editor {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
-
+                
                 var project = TypescriptProjectsService.Project;
                 var ext = Path.GetExtension(ctx.assetPath);
                 var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length);

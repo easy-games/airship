@@ -160,16 +160,24 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
     private void CheckDefaults(AirshipComponent binding) {
         var metadata = serializedObject.FindProperty("metadata");
+        if (metadata == null) {
+            Debug.LogError($"Metadata is null on binding {binding.name}");
+            return;
+        }
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
         var originalMetadataProperties = binding.script.m_metadata.properties;
-
+        
         var setDefault = false;
 
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var metadataProperty = metadataProperties.GetArrayElementAtIndex(i);
             var propName = metadataProperty.FindPropertyRelative("name").stringValue;
             var originalProperty = originalMetadataProperties.Find((p) => p.name == propName);
+            if (originalProperty == null) {
+                Debug.LogWarning($"Missing property {propName} on script");
+                continue;
+            }
             
             var modified = metadataProperty.FindPropertyRelative("modified");
             if (modified.boolValue) {

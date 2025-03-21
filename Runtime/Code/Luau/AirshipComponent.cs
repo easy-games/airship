@@ -35,6 +35,10 @@ internal enum ReconcileBehaviour {
 	Default = AlwaysReconcile,
 }
 
+public class ExecuteOnTypescriptCompileAttribute : Attribute {
+	
+}
+
 internal delegate void ReconcileEvent(AirshipComponent componentToReconcile);
 
 [AddComponentMenu("Airship/Airship Component")]
@@ -438,7 +442,6 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     private void OnValidate() {
-	    if (ReconciliationBehaviour != ReconcileBehaviour.AlwaysReconcile) return;
 	    Validate();
     }
 
@@ -458,6 +461,7 @@ public class AirshipComponent : MonoBehaviour {
         SetupMetadata();
     }
 
+    [ExecuteOnTypescriptCompile]
     internal void ReconcileMetadata(ComponentReconcileKind reconcileKind) {
 #if AIRSHIP_PLAYER
         return;
@@ -468,22 +472,22 @@ public class AirshipComponent : MonoBehaviour {
 
         metadata.name = script.m_metadata.name;
         
-        if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
-	        // We only really want to reconcile outside of a compiler change if our hashes don't match
-	        // A reconcile is meant for a change in metadata anyhow - right?
-	        if (reconcileKind != ComponentReconcileKind.Compiler 
-	            && (metadata.hash != script.m_metadata.hash && !string.IsNullOrEmpty(metadata.hash))) {
-		        Debug.Log($"Hash change: Queueing reconcile for '{gameObject}'#{metadata.name}");
-		        // Defer a reconcile to the compiler
-		        QueueReconcile?.Invoke(this);
-		        return;
-	        }
-
-	        if (metadata.hash == script.m_metadata.hash) {
-		        Debug.Log($"Skip reconciliation for {metadata.hash} ('{gameObject}'#{metadata.name})");
-	            return;
-	        }
-        }
+        // if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
+	       //  // We only really want to reconcile outside of a compiler change if our hashes don't match
+	       //  // A reconcile is meant for a change in metadata anyhow - right?
+	       //  if (reconcileKind == ComponentReconcileKind.Validation
+	       //      && (metadata.hash != script.m_metadata.hash && !string.IsNullOrEmpty(metadata.hash))) {
+		      //   Debug.Log($"metadata is {metadata.properties.Count}");
+		      //   // Defer a reconcile to the compiler
+		      //   // QueueReconcile?.Invoke(this);
+		      //   return;
+	       //  }
+        //
+	       //  if (metadata.hash == script.m_metadata.hash) {
+		      //   Debug.Log($"Skip reconciliation for {metadata.hash} ('{gameObject}'#{metadata.name})");
+	       //      return;
+	       //  }
+        // }
 
         // Add missing properties or reconcile existing ones:
         foreach (var property in script.m_metadata.properties) {
@@ -539,10 +543,18 @@ public class AirshipComponent : MonoBehaviour {
             serializedProperty.refPath = property.refPath;
         }
         
-        // // Need to recompile
-        // if (scriptFile.HasFileChanged) {
-        //     return;
-        // }
+        // TODO: Figure this out
+        // Main issue we have right now is that the above will grab from the original script (correct, somewhat)
+        // - unless we're talking about 'removed' properties... then no.
+        // - Ideally we can use the script as the 'source of truth', but it's not the source of truth until compiled
+        // - and a big problem is that we have _new metadata_ before the script has been compiled, which gets
+        //   removed below...
+        //
+        // - The prefab (re)imports, calls OnValidate(), new properties are removed
+        // - The script compiles, new properties are missing until this is called again by the inspector or
+        //   OnValidate() is called again via reimport?
+        // 
+        // 
         
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
@@ -565,12 +577,12 @@ public class AirshipComponent : MonoBehaviour {
             }
         }
         
-        if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
-	        // Update the hash
-	        metadata.hash = script.m_metadata.hash;
-	        hash = metadata.hash;
-	        Debug.Log($"Hash updated  to {metadata.hash} for {gameObject}#{metadata.name}");
-        }
+        // if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
+	       //  // Update the hash
+	       //  metadata.hash = script.m_metadata.hash;
+	       //  hash = metadata.hash;
+	       //  Debug.Log($"Hash updated  to {metadata.hash} for {gameObject}#{metadata.name} {reconcileKind}");
+        // }
 #endif
     }
 

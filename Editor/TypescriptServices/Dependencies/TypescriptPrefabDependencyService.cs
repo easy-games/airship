@@ -20,15 +20,19 @@ namespace Airship.Editor {
 
         [MenuItem("Airship/Debug/Print Script To Prefabs")]
         public static void PrintScriptToPrefabs() {
-            Debug.Log("scriptsToPrefabs:");
-            foreach (var scriptToPrefab in scriptToPrefabs) {
-                Debug.Log($"\t{scriptToPrefab.Key}: {string.Join(", ", scriptToPrefab.Value)}");
-            }
-            
-            Debug.Log("prefabsToScripts:");
-            foreach (var prefabToScripts in prefabsToScripts) {
-                Debug.Log($"\t{prefabToScripts.Key}: {string.Join(", ", prefabToScripts.Value)}");
-            }
+            // Debug.Log("scriptsToPrefabs:");
+            // foreach (var scriptToPrefab in scriptToPrefabs) {
+            //     Debug.Log($"\t{scriptToPrefab.Key}: {string.Join(", ", scriptToPrefab.Value)}");
+            // }
+            //
+            // Debug.Log("prefabsToScripts:");
+            // foreach (var prefabToScripts in prefabsToScripts) {
+            //     Debug.Log($"\t{prefabToScripts.Key}: {string.Join(", ", prefabToScripts.Value)}");
+            // }
+            //
+            // Debug.Log("all");
+            // var components = TypescriptProjectsService.GetAllAirshipComponentsInPrefabs();
+            // Debug.Log($"{components.Count} airship components in project");
         }
 
         /// <summary>

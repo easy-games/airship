@@ -221,8 +221,13 @@ using Object = UnityEngine.Object;
             }
 
             internal static void QueueReconcile(AirshipComponent component) {
-                Debug.Log($"Add '{component.name}'#{component.metadata.name} to reconcile queue");
-                ReconciliationQueue.Add(component);
+                if (IsCurrentlyCompiling) {
+                    Debug.Log($"Add '{component.name}'#{component.metadata.name} to reconcile queue");
+                    ReconciliationQueue.Add(component);
+                }
+                else {
+                    component.ReconcileMetadata(ComponentReconcileKind.Compiler);
+                }
             }
             
             [MenuItem("Airship/TypeScript/Start Watch Mode")]
