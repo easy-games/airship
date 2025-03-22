@@ -437,6 +437,18 @@ namespace Code.Network.StateSystem
                 return;
             }
 
+            // If we don't allow command catchup, drop commands to get to the target buffer size.
+            if (this.maxServerCommandCatchup == 0)
+            {
+                var dropCount = 0;
+                while (this.serverCommandBuffer.Count > this.serverCommandBufferTargetSize && dropCount < 3) // TODO: calculate drop number based on send rate for 1 send worth
+                {
+                    this.serverCommandBuffer.RemoveAt(0);
+                    dropCount++;
+                }
+                print("Dropped " + dropCount + " command(s) from " + this.gameObject.name + " due to exceeding command buffer size.");
+            }
+
             var commandsProcessed = 0;
             do
             {
@@ -494,6 +506,11 @@ namespace Code.Network.StateSystem
                      this.serverCommandBufferTargetSize &&
                      commandsProcessed < 1 + this.maxServerCommandCatchup);
             // ^ we process up to maxServerCommandCatchup commands per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
+
+            if (commandsProcessed > 1)
+            {
+                print("Processed " + commandsProcessed + " additional commands for " + this.gameObject.name);
+            }
         }
 
         public void AuthServerCaptureSnapshot(double time, bool replay)
@@ -761,6 +778,7 @@ namespace Code.Network.StateSystem
             if (replay)
             {
                 var authoritativeState = this.stateHistory.Get(time);
+                if (authoritativeState == null) return;
                 this.stateSystem.SetCurrentState(authoritativeState);
                 return;
             }
@@ -988,7 +1006,7 @@ namespace Code.Network.StateSystem
 
         private void ServerReceiveInputCommand(Input command)
         {
-            // Debug.Log("Server received command " + command.commandNumber);
+            // Debug.Log("Server received command " + command.commandNumber + " for " + this.gameObject.name);
             // This should only occur if the server is authoritative.
             if (!serverAuth) return;
 

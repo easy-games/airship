@@ -245,7 +245,6 @@ namespace Code.Network.Simulation
 
         /**
          * Allows typescript to request a resimulation from the provided time.
-         * TODO: rework ScheduleResimulation to work with TS
          */
         public void RequestResimulation(double time)
         {
