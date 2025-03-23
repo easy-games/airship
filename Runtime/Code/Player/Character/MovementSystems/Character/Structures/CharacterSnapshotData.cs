@@ -15,6 +15,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public Vector3 velocity;
         public Vector3 impulseVelocity = Vector3.zero;
         public float currentSpeed;
+        public float speedModifier = 1; // Not used yet
         public bool inputDisabled;
         public bool isFlying;
         public bool isSprinting;
@@ -60,6 +61,8 @@ namespace Code.Player.Character.MovementSystems.Character
             if (this.position != other.position) message += $"position: {this.position} != {other.position}\n";
             if (this.velocity != other.velocity) message += $"velocity: {this.velocity} != {other.velocity}\n";
             if (this.currentSpeed != other.currentSpeed) message += $"currentSpeed: {this.currentSpeed} != {other.currentSpeed}\n";
+            if (this.speedModifier != other.speedModifier)
+                message += $"speedModifier: {this.speedModifier} != {other.speedModifier}";
             if (this.impulseVelocity != other.impulseVelocity) message += $"impulseVelocity: {this.impulseVelocity} != {other.impulseVelocity}\n";
             if (inputDisabled != other.inputDisabled)
                 message += $"inputDisabled: {inputDisabled} != {other.inputDisabled}\n";
@@ -81,7 +84,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (prevState != other.prevState) message += $"prevState: {prevState} != {other.prevState}\n";
             
             var same =  this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
-                        this.velocity == other.velocity && this.currentSpeed == other.currentSpeed &&
+                        this.velocity == other.velocity && this.currentSpeed == other.currentSpeed && this.speedModifier == other.speedModifier &&
                         inputDisabled == other.inputDisabled
                         && isFlying == other.isFlying && isSprinting == other.isSprinting && jumpCount == other.jumpCount &&
                         airborneFromImpulse == other.airborneFromImpulse &&
@@ -112,6 +115,7 @@ namespace Code.Player.Character.MovementSystems.Character
             this.position = copySnapshot.position;
             this.velocity = copySnapshot.velocity;
             this.currentSpeed = copySnapshot.currentSpeed;
+            this.speedModifier = copySnapshot.speedModifier;
             this.impulseVelocity = copySnapshot.impulseVelocity;
             this.timeSinceJump = copySnapshot.timeSinceJump;
             this.timeSinceWasGrounded = copySnapshot.timeSinceWasGrounded;
@@ -154,6 +158,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 position = position,
                 velocity = velocity,
                 currentSpeed = currentSpeed,
+                speedModifier = speedModifier,
                 impulseVelocity =  impulseVelocity,
                 timeSinceJump = timeSinceJump,
                 timeSinceWasGrounded = timeSinceWasGrounded,

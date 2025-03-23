@@ -253,12 +253,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
             typeof(VisualGraphComponent),
-            //typeof(CharacterSnapshotData),
-            //typeof(CharacterInputData),
             typeof(CharacterMovementSettings),
             typeof(CharacterAnimationSyncData),
             typeof(AccessoryAddMode),
-            typeof(AirshipSimulationManager),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
