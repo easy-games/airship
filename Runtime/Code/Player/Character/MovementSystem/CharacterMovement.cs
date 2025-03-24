@@ -243,6 +243,10 @@ public class CharacterMovement : NetworkBehaviour {
         if (isServerAuth) {
             AirshipPredictionManager.OnPhysicsTick -= OnPhysicsTick;
         }
+
+        if (this.animationHelper) {
+            this.animationHelper.OnCharacterMovementDisabled();
+        }
     }
 
 #endregion
