@@ -234,16 +234,11 @@ namespace Airship.Editor {
                     EditorGUILayout.LabelField("DisplayName", item.m_metadata!.displayName, EditorStyles.boldLabel);
                     EditorGUILayout.LabelField("ClassName", item.m_metadata.name, scriptTextMono);
 
-
-                    
-#if AIRSHIP_INTERNAL
-                    EditorGUILayout.LabelField("OutFileHash", project.GetOutputFileHash(item.assetPath));
-#endif
-
                     GUI.enabled = false;
-                    EditorGUILayout.Toggle("Is Singleton", item.m_metadata.singleton);
 #if AIRSHIP_INTERNAL
-                    EditorGUILayout.Toggle("Requires Reimport", TypescriptImporter.RequiresRecompile(item.assetPath));
+                    EditorGUILayout.LabelField("Luau Hash", project.GetOutputFileHash(item.assetPath));
+                    EditorGUILayout.ToggleLeft("Is Singleton", item.m_metadata.singleton);
+                    EditorGUILayout.ToggleLeft("Has Reconciliation Dependencies", TypescriptPrefabDependencyService.HasReconciliationDependencies(item));
 #endif
                     GUI.enabled = true;
 

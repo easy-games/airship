@@ -112,20 +112,34 @@ namespace Airship.Editor {
             }
         }
 
-        internal static void ReconcileIfPostCompile(AirshipScript script) {
-            if (TypescriptCompilationService.CompilerState != TypescriptCompilerState.PostCompile) return;
-            if (script.m_metadata == null) return;
-            if (!scriptToPrefabs.TryGetValue(script.assetPath, out var prefabs)) return;
+        internal static bool HasReconciliationDependencies(AirshipScript script) {
+            return scriptToPrefabs.TryGetValue(script.assetPath, out _);
+        }
+        
+        internal static bool ReconcileIfPostCompile(AirshipScript script) {
+            if (TypescriptCompilationService.CompilerState != TypescriptCompilerState.PostCompile) return false;
+            if (script.m_metadata == null) return false;
+            if (!scriptToPrefabs.TryGetValue(script.assetPath, out var prefabs)) return false;
 
             foreach (var prefab in prefabs) {
                 var prefabObject = AssetDatabase.LoadAssetAtPath<GameObject>(prefab);
                 if (!prefabObject) continue;
                 
                 foreach (var component in prefabObject.GetComponentsInChildren<AirshipComponent>()) {
-                    if (component.script.assetPath != script.assetPath) continue;
+                    if (!component.script || component.script.assetPath != script.assetPath) continue;
                     Debug.Log($"Reconcile {component.script.assetPath} for {prefab} due to post-compile");
                     component.ReconcileMetadata(ReconcileSource.PostCompile, script.m_metadata);
                 }
+            }
+
+            return true;
+        }
+
+        internal static void RemovePrefabDependencies(AirshipScript script) {
+            scriptToPrefabs.Remove(script.assetPath);
+            foreach (var prefabToScript in prefabsToScripts) {
+                if (!prefabToScript.Value.Contains(script.assetPath)) continue;
+                prefabToScript.Value.Remove(script.assetPath);
             }
         }
     }

@@ -39,7 +39,7 @@ using Object = UnityEngine.Object;
             /// </summary>
             Compiling,
             /// <summary>
-            /// The compiler has just compiled files
+            /// The compiler has just compiled files, and is performing post-compile steps such as importing and reconcilation
             /// </summary>
             PostCompile,
             /// <summary>
@@ -245,16 +245,6 @@ using Object = UnityEngine.Object;
                 }
                 
                 BuildTypescript(flags);
-            }
-
-            internal static void QueueReconcile(AirshipComponent component) {
-                if (IsCompilingFiles) {
-                    Debug.Log($"Add '{component.name}'#{component.metadata.name} to reconcile queue");
-                    ReconciliationQueue.Add(component);
-                }
-                else {
-                    component.ReconcileMetadata(ReconcileSource.PostCompile);
-                }
             }
             
             [MenuItem("Airship/TypeScript/Start Watch Mode")]
