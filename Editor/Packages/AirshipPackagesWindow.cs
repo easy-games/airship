@@ -703,11 +703,11 @@ namespace Editor.Packages {
                 }
             }
 
-            packageDoc.codeVersion = deploymentDto.version.codeVersionNumber.ToString();
-            packageDoc.assetVersion = deploymentDto.version.assetVersionNumber.ToString();
-            EditorUtility.SetDirty(gameConfig);
-            AssetDatabase.Refresh();
-            AssetDatabase.SaveAssets();
+            // packageDoc.codeVersion = deploymentDto.version.codeVersionNumber.ToString();
+            // packageDoc.assetVersion = deploymentDto.version.assetVersionNumber.ToString();
+            // EditorUtility.SetDirty(gameConfig);
+            // AssetDatabase.Refresh();
+            // AssetDatabase.SaveAssets();
 
             Debug.Log($"<color=#77f777>{packageDoc.id} published!</color>");
             packageUploadProgress.Remove(packageDoc.id);
