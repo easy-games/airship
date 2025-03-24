@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Network.Simulation
 {
@@ -119,7 +120,8 @@ namespace Code.Network.Simulation
          */
         public event Action<object> OnHistoryLifetimeReached;
 
-        private bool resimulationSimulationActive = false;
+        [NonSerialized] public bool replaying = false;
+        
         private bool isActive = false;
         private List<double> tickTimes = new List<double>();
         private List<LagCompensationRequest> lagCompensationRequests = new();
@@ -262,7 +264,7 @@ namespace Code.Network.Simulation
         {
             Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTime}");
             
-            if (resimulationSimulationActive)
+            if (replaying)
             {
                 Debug.LogWarning("Resim already active");
                 throw new ApplicationException(
@@ -272,7 +274,7 @@ namespace Code.Network.Simulation
             // If the base time further in the past that our history goes, we reset to the oldest history we have (0) instead.
             int tickIndex = this.CalculateIndexBeforeTime(baseTime);
 
-            this.resimulationSimulationActive = true;
+            this.replaying = true;
             try
             {
                 OnSetPaused?.Invoke(true);
@@ -298,7 +300,7 @@ namespace Code.Network.Simulation
             }
             finally
             {
-                this.resimulationSimulationActive = false;
+                this.replaying = false;
             }
         }
 
