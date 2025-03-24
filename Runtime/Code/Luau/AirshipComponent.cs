@@ -145,6 +145,15 @@ public class AirshipComponent : MonoBehaviour {
 		}
 		
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
+		if (LuauScript.AssetBridge == null) {
+			Debug.LogError("Cannot start script: AssetBridge not yet initialized", gameObject);
+			return;
+		}
+		if (ReferenceEquals(script, null)) {
+			Debug.LogError($"Cannot start script: 'script' property is null (GameObject: {gameObject.name})", gameObject);
+			return;
+		}
+		
 		// Grab the script from code.zip at runtime
 		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(script.m_path.ToLower());
 		if (runtimeScript) {

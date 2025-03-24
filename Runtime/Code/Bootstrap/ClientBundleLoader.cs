@@ -67,6 +67,8 @@ namespace Code.Bootstrap {
         private List<LuauScriptsDto> scriptsDtos = new();
         private string scriptsHash;
 
+        private int setupClientSessionCounter = 0;
+
         /// <summary>
         /// Client downloads and combines all LuauScriptDto objects into this single dto.
         /// This is then serialized to disk as a cache.
@@ -154,6 +156,8 @@ namespace Code.Bootstrap {
         /// 5. Receive SceneMessage
         /// 6. NetworkClient.Ready()
         public async void SetupClient() {
+            this.setupClientSessionCounter++;
+            var session = this.setupClientSessionCounter;
             this.scriptsReady = false;
             this.packagesReady = false;
             this.isFinishedPreparing = false;
@@ -196,7 +200,7 @@ namespace Code.Bootstrap {
                 }
 
                 if (data.final) {
-                    print("scripts hash: " + data.hash);
+                    // print("scripts hash: " + data.hash);
                     try {
                         var writer = new NetworkWriter();
                         writer.WriteLuauScriptsDto(data.scriptsDto);
@@ -218,6 +222,9 @@ namespace Code.Bootstrap {
             while (!NetworkClient.isConnected) {
                 await Awaitable.NextFrameAsync();
             }
+
+            if (this.setupClientSessionCounter != session) return;
+
             NetworkClient.Send(new GreetingMessage());
         }
 

@@ -382,10 +382,17 @@ namespace Editor.Packages {
 
             List<AirshipPlatform> platforms = new() {
                 AirshipPlatform.iOS,
-                AirshipPlatform.Mac,
-                AirshipPlatform.Windows,
                 AirshipPlatform.Android,
             };
+            // We want to end up on our editor machine's platform
+#if UNITY_EDITOR_OSX
+            platforms.Add(AirshipPlatform.Windows);
+            platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Mac);
+		platforms.Add(AirshipPlatform.Windows);
+#endif
+
             // Uncomment to just build iOS
             if (isCoreMaterials) {
                 platforms.Clear();
@@ -696,11 +703,11 @@ namespace Editor.Packages {
                 }
             }
 
-            packageDoc.codeVersion = deploymentDto.version.codeVersionNumber.ToString();
-            packageDoc.assetVersion = deploymentDto.version.assetVersionNumber.ToString();
-            EditorUtility.SetDirty(gameConfig);
-            AssetDatabase.Refresh();
-            AssetDatabase.SaveAssets();
+            // packageDoc.codeVersion = deploymentDto.version.codeVersionNumber.ToString();
+            // packageDoc.assetVersion = deploymentDto.version.assetVersionNumber.ToString();
+            // EditorUtility.SetDirty(gameConfig);
+            // AssetDatabase.Refresh();
+            // AssetDatabase.SaveAssets();
 
             Debug.Log($"<color=#77f777>{packageDoc.id} published!</color>");
             packageUploadProgress.Remove(packageDoc.id);
@@ -733,7 +740,7 @@ namespace Editor.Packages {
             }
 
             var android = ModuleUtil.IsModuleInstalled(BuildTarget.Android);
-            if (!iOS) {
+            if (!android) {
                 Debug.LogError("Android Build Support module not found.");
             }
             return mac && windows && iOS && android;

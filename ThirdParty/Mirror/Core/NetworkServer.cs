@@ -924,6 +924,8 @@ namespace Mirror
             NetworkMessages.Lookup[msgType] = typeof(T);
 
             handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication, exceptionsDisconnect);
+
+            // Debug.Log($"Registered handler id={msgType}");
         }
 
         /// <summary>Register a handler for message type T. Most should require authentication.</summary>
@@ -941,6 +943,7 @@ namespace Mirror
             NetworkMessages.Lookup[msgType] = typeof(T);
 
             handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication, exceptionsDisconnect);
+            // Debug.Log($"Registered handler id={msgType}");
         }
 
         /// <summary>Replace a handler for message type T. Most should require authentication.</summary>

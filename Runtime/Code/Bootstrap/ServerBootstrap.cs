@@ -81,7 +81,7 @@ public class ServerBootstrap : MonoBehaviour
 #endif
     }
 
-	private void Start() {
+	private async void Start() {
 		if (!RunCore.IsServer()) {
 			return;
 		}
@@ -124,6 +124,11 @@ public class ServerBootstrap : MonoBehaviour
 				// print("Listening on port " + transport.port);
 				AirshipNetworkManager.singleton.StartHost();
 			} else {
+
+				// print("waiting 2 seconds...");
+				// await Awaitable.WaitForSecondsAsync(2);
+				// print("starting server.");
+
 				AirshipNetworkManager.singleton.StartServer();
 				Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
 			}

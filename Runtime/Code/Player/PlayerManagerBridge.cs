@@ -73,11 +73,18 @@ namespace Code.Player {
 			this.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
 		}
 
-		private void Start() {
+		private async void Start() {
+			// print("PlayerManagerBridge.start");
+
+			// print("PlayerManagerBridge: server is ready.");
 			if (RunCore.IsServer()) {
+				while (!serverBootstrap.isServerReady) {
+					await Awaitable.NextFrameAsync();
+				}
 				foreach (var connection in NetworkServer.connections.Values) {
 					NetworkServer_OnConnected(connection);
 				}
+
 				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
 
 				if (this.serverBootstrap && this.serverBootstrap.IsAgonesEnvironment())
@@ -189,6 +196,7 @@ namespace Code.Player {
 			}
 
 			while (!conn.isAuthenticated || !conn.isReady) {
+				// print($"Waiting for {conn.connectionId} to be ready.");
 				await Awaitable.NextFrameAsync();
 			}
 
@@ -207,7 +215,7 @@ namespace Code.Player {
 				Debug.Log("Missing UserData for " + conn);
 #endif
 			}
-			NetworkServer.Spawn(go, conn);
+			// NetworkServer.Spawn(go, conn);
 			NetworkServer.AddPlayerForConnection(conn, go);
 
 			var playerInfoDto = playerInfo.BuildDto();
@@ -215,6 +223,10 @@ namespace Code.Player {
 
 			OnPlayerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
+
+			if (RunCore.IsServer() && !RunCore.IsClient()) {
+				Debug.Log(playerInfo.username + " joined the server.");
+			}
 
 			if (this.agones) {
 				await this.agones.AppendListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId}");

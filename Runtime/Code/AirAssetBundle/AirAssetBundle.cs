@@ -79,9 +79,9 @@ namespace Code.AirAssetBundle {
 
             AssetBundle bundle = DownloadHandlerAssetBundle.GetContent(req);
             // Uncomment to list all assets inside the bundle.
-            foreach (var asset in bundle.GetAllAssetNames()) {
-                Debug.Log("  - " + asset);
-            }
+            // foreach (var asset in bundle.GetAllAssetNames()) {
+            //     Debug.Log("  - " + asset);
+            // }
             var loadReq = bundle.LoadAssetAsync<AirAssetBundle>("_AirAssetBundle");
             await loadReq;
             var airAssetBundle = (AirAssetBundle) loadReq.asset;

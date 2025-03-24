@@ -315,10 +315,10 @@ public static class CreateAssetBundles {
 					.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s))
 					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
 					.ToArray();
-				Debug.Log("Including scenes: ");
-				foreach (var p in assetPaths) {
-					Debug.Log("  - " + p);
-				}
+				// Debug.Log("Including scenes: ");
+				// foreach (var p in assetPaths) {
+				// 	Debug.Log("  - " + p);
+				// }
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
 					.ToArray();
 				var build = new AssetBundleBuild() {
@@ -343,10 +343,10 @@ public static class CreateAssetBundles {
 					.Where((path) => !path.ToLower().Contains("editor/"))
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
-				Debug.Log("Resources:");
-				foreach (var path in assetPaths) {
-					Debug.Log("  - " + path);
-				}
+				// Debug.Log("Resources:");
+				// foreach (var path in assetPaths) {
+				// 	Debug.Log("  - " + path);
+				// }
 				var addressableNames = assetPaths
 					.Select((p) => p.ToLower())
 					.ToArray();
@@ -367,6 +367,8 @@ public static class CreateAssetBundles {
 			{
 				GraphicsDeviceType.OpenGLES3
 			});
+		} else {
+			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, true);
 		}
 
 		var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
@@ -384,13 +386,13 @@ public static class CreateAssetBundles {
 		buildParams.BundleCompression = BuildCompression.LZ4;
 		var buildContent = new BundleBuildContent(builds);
 
-		Debug.Log("Additional files:");
-		foreach (var pair in buildContent.AdditionalFiles) {
-			Debug.Log(pair.Key + ":");
-			foreach (var p in pair.Value) {
-				Debug.Log("  - " + p.fileAlias);
-			}
-		}
+		// Debug.Log("Additional files:");
+		// foreach (var pair in buildContent.AdditionalFiles) {
+		// 	Debug.Log(pair.Key + ":");
+		// 	foreach (var p in pair.Value) {
+		// 		Debug.Log("  - " + p.fileAlias);
+		// 	}
+		// }
 
 		ContentPipeline.BuildCallbacks.PostPackingCallback = (parameters, data, arg3) => {
 			return ReturnCode.Success;
@@ -407,9 +409,9 @@ public static class CreateAssetBundles {
 			return false;
 		}
 
-		Debug.Log("----------------------");
-		Debug.Log("Airship Build Report");
-		Debug.Log("----------------------");
+		// Debug.Log("----------------------");
+		// Debug.Log("Airship Build Report");
+		// Debug.Log("----------------------");
 		// {
 		// 	Debug.Log("Serialized Files:");
 		// 	foreach (var pair in result.WriteResults) {
@@ -449,6 +451,7 @@ public static class CreateAssetBundles {
 		// }
 
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
+
 		return true;
 	}
 
