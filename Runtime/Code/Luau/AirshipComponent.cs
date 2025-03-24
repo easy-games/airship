@@ -34,32 +34,14 @@ internal enum ReconcileSource {
 	PostCompile,
 }
 
-internal enum ReconcileBehaviour {
-	/// <summary>
-	/// The old add/update/delete behaviour (buggy)
-	/// </summary>
-	DestructiveOnPostCompile,
-	/// <summary>
-	/// Only reconcile on hash change, deferring to the compiler for reconcile
-	/// </summary>
-	Legacy,
-	
-	Default = Legacy,
-}
-
 [AddComponentMenu("Airship/Airship Component")]
 [LuauAPI(LuauContext.Protected)]
 public class AirshipComponent : MonoBehaviour {
+	internal static bool UsePostCompileReconciliation { get; set; } = true;
 	private const bool ElevateToProtectedWithinCoreScene = true;
-	
-#if UNITY_EDITOR
-	internal static bool ShouldDestructiveReconcile { get; set; }
-#endif
 	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
 	public static readonly Dictionary<int, string> ComponentIdToScriptName = new();
-	
-	// internal static bool IsTypescriptServicesCompiling = false;
 	
 	private static int _airshipComponentIdGen = 10000000;
 	private static bool _validatedSceneInGameConfig = false;
@@ -479,12 +461,10 @@ public class AirshipComponent : MonoBehaviour {
             return;
         }
 
-		Debug.Log($"Running {reconcileSource} reconcile for {metadata.hash} ('{name}'#{metadata.name})");
-
         metadata.name = targetMetadata.name;
 
         // Inspector is an active component, post-compile should give an accurate model
-        var isModifyingReconcile = reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector;
+        var isModifyingReconcile = (reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector) || !UsePostCompileReconciliation;
         
         // Add missing properties or reconcile existing ones:
         foreach (var property in targetMetadata.properties) {

@@ -119,7 +119,7 @@ namespace Airship.Editor {
         }
     }
 
-    enum TypescriptOptionsTab {
+    internal enum TypescriptOptionsTab {
         ProjectSettings,
         LocalSettings,
     }
@@ -169,16 +169,16 @@ namespace Airship.Editor {
             }
             AirshipEditorGUI.EndSettingGroup();
             
-            // AirshipEditorGUI.BeginSettingGroup(new GUIContent("Experimental Options"));
-            // {
-            //     localSettings.experimentOnlyDestroyOnPostCompile = EditorGUILayout.ToggleLeft(new GUIContent(
-            //             "Full reconciliation only on post compile*", "If true, the compiler is the only place that destructive reconciliation can occur."),
-            //         localSettings.experimentOnlyDestroyOnPostCompile);
-            // }
-            // AirshipEditorGUI.EndSettingGroup();
-            //
-            // EditorGUILayout.Space(10);
-            // EditorGUILayout.LabelField("* This property only applies to your instance of the project");
+            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Experimental Options"));
+            {
+                localSettings.usePostCompileReconciliation = EditorGUILayout.ToggleLeft(new GUIContent(
+                        "Experimental reconciliation*", "If true, the compiler is the only place that destructive reconciliation can occur."),
+                    localSettings.usePostCompileReconciliation);
+            }
+            AirshipEditorGUI.EndSettingGroup();
+            
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField("* This property only applies to your instance of the project");
             
             if (GUI.changed) {
                 projectSettings.Modify();

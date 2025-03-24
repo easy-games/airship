@@ -139,9 +139,7 @@ namespace Editor {
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
                 
-                if (TypescriptPrefabDependencyService.ReconcileIfPostCompile(airshipScript)) {
-                    // TypescriptPrefabDependencyService.RemovePrefabDependencies(airshipScript);
-                }
+                if (AirshipComponent.UsePostCompileReconciliation) TypescriptPrefabDependencyService.ReconcileIfPostCompile(airshipScript);
             }
         }
     }
