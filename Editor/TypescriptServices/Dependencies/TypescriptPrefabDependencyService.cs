@@ -20,15 +20,15 @@ namespace Airship.Editor {
 
         [MenuItem("Airship/Debug/Print Script To Prefabs")]
         public static void PrintScriptToPrefabs() {
-            // Debug.Log("scriptsToPrefabs:");
-            // foreach (var scriptToPrefab in scriptToPrefabs) {
-            //     Debug.Log($"\t{scriptToPrefab.Key}: {string.Join(", ", scriptToPrefab.Value)}");
-            // }
-            //
-            // Debug.Log("prefabsToScripts:");
-            // foreach (var prefabToScripts in prefabsToScripts) {
-            //     Debug.Log($"\t{prefabToScripts.Key}: {string.Join(", ", prefabToScripts.Value)}");
-            // }
+            Debug.Log("scriptsToPrefabs:");
+            foreach (var scriptToPrefab in scriptToPrefabs) {
+                Debug.Log($"\t{scriptToPrefab.Key}: {string.Join(", ", scriptToPrefab.Value)}");
+            }
+            
+            Debug.Log("prefabsToScripts:");
+            foreach (var prefabToScripts in prefabsToScripts) {
+                Debug.Log($"\t{prefabToScripts.Key}: {string.Join(", ", prefabToScripts.Value)}");
+            }
             //
             // Debug.Log("all");
             // var components = TypescriptProjectsService.GetAllAirshipComponentsInPrefabs();
@@ -66,7 +66,6 @@ namespace Airship.Editor {
                     }
                     
                     prevScripts.Remove(prevScript);
-                    //Debug.Log($"Remove {prevScript.assetPath} from {path}");
                 }
 
                 if (!prefabsToScripts.TryGetValue(path, out var linkedScripts)) {
@@ -84,20 +83,15 @@ namespace Airship.Editor {
                     }
 
                     prefabPaths.Add(path);
-                    //Debug.Log($"Add {script.assetPath} to {path}");
                 }
-                
-                //Debug.Log($"{path} is linked with [ {string.Join(", ", linkedScripts.Select(script => script.assetPath))} ]");
             }
         }
 
         private static void UnlinkScriptsFromPrefabs(string[] paths) {
             foreach (var path in paths) {
                 if (!path.EndsWith(".prefab", StringComparison.InvariantCulture)) continue;
-                Debug.Log("Attempting to unlink");
                 foreach (var pathSet in scriptToPrefabs) {
                     if (pathSet.Value.Contains(path)) {
-                        Debug.Log($"Remove prefab {path} from linked script {pathSet.Key}");
                     }
                 }
             }
@@ -105,12 +99,8 @@ namespace Airship.Editor {
 
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths) {
-            
-            var localSettings = TypescriptServicesLocalConfig.instance;
-            if ((localSettings.experiments & TypescriptExperiments.ReimportPrefabsOnTypescriptFileImport) != 0) {
-                LinkScriptsToPrefabs(importedAssets);
-                UnlinkScriptsFromPrefabs(deletedAssets);
-            }
+            LinkScriptsToPrefabs(importedAssets);
+            UnlinkScriptsFromPrefabs(deletedAssets);
         }
 
         internal static IEnumerable<string> GetDependentAssetsForScript(AirshipScript script) {
@@ -122,22 +112,19 @@ namespace Airship.Editor {
             }
         }
 
-        internal static void ReconcileDependencies(AirshipScript script) {
-            if (!scriptToPrefabs.TryGetValue(script.assetPath, out var prefabs)) {
-                Debug.LogWarning($"No prefabs at path {script.assetPath}");
-                return;
-            }
+        internal static void ReconcileIfPostCompile(AirshipScript script) {
+            if (TypescriptCompilationService.CompilerState != TypescriptCompilerState.PostCompile) return;
+            if (script.m_metadata == null) return;
+            if (!scriptToPrefabs.TryGetValue(script.assetPath, out var prefabs)) return;
 
             foreach (var prefab in prefabs) {
                 var prefabObject = AssetDatabase.LoadAssetAtPath<GameObject>(prefab);
-                if (!prefabObject) {
-                    Debug.LogWarning("Prefab object undefined");
-                    continue;
-                }
+                if (!prefabObject) continue;
+                
                 foreach (var component in prefabObject.GetComponentsInChildren<AirshipComponent>()) {
                     if (component.script.assetPath != script.assetPath) continue;
-                    Debug.Log($"Reconcile {component.script.assetPath} for {prefab}");
-                    component.ReconcileMetadata(ComponentReconcileKind.Validation);
+                    Debug.Log($"Reconcile {component.script.assetPath} for {prefab} due to post-compile");
+                    component.ReconcileMetadata(ReconcileSource.PostCompile, script.m_metadata);
                 }
             }
         }

@@ -14,9 +14,7 @@ using UnityEngine;
 namespace Airship.Editor {
     [Flags]
     internal enum TypescriptExperiments {
-        ReimportPrefabsOnTypescriptFileImport = 1 << 0,
-        [Tooltip("test")]
-        ExperimentalReconciliation = 1 << 1,
+        ReconcileOnPostCompile = 1 << 0,
     }
     
     [FilePath("Library/TypescriptServices", FilePathAttribute.Location.ProjectFolder)]
@@ -24,28 +22,7 @@ namespace Airship.Editor {
         [SerializeField]
         internal bool hasInitialized = false;
 
-        [SerializeField] internal TypescriptExperiments experiments = 0;
-
-        private void OnEnable() {
-            if ((experiments & TypescriptExperiments.ExperimentalReconciliation) != 0) {
-                AirshipComponent.ReconciliationBehaviour = ReconcileBehaviour.HashBasedDeferredReconcile;
-            }
-        }
-
         public void Modify() {
-            if ((experiments & TypescriptExperiments.ExperimentalReconciliation) != 0) {
-                AirshipComponent.ReconciliationBehaviour = ReconcileBehaviour.HashBasedDeferredReconcile;
-            }
-            else {
-                AirshipComponent.ReconciliationBehaviour = ReconcileBehaviour.Default;
-            }
-
-            if ((experiments & TypescriptExperiments.ReimportPrefabsOnTypescriptFileImport) == 0) {
-                TypescriptPrefabDependencyService.OnLoad();
-            }
-            
-            Debug.Log($"ReconciliationBehaviour is now {AirshipComponent.ReconciliationBehaviour}");
-            
             Save(true);
         }
     }

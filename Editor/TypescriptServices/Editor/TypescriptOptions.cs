@@ -169,15 +169,16 @@ namespace Airship.Editor {
             }
             AirshipEditorGUI.EndSettingGroup();
             
-            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Experimental Options"));
-            {
-                localSettings.experiments = (TypescriptExperiments)
-                    EditorGUILayout.EnumFlagsField(new GUIContent("Experiments*"), localSettings.experiments, false);
-            }
-            AirshipEditorGUI.EndSettingGroup();
-            
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("* This property only applies to your instance of the project");
+            // AirshipEditorGUI.BeginSettingGroup(new GUIContent("Experimental Options"));
+            // {
+            //     localSettings.experimentOnlyDestroyOnPostCompile = EditorGUILayout.ToggleLeft(new GUIContent(
+            //             "Full reconciliation only on post compile*", "If true, the compiler is the only place that destructive reconciliation can occur."),
+            //         localSettings.experimentOnlyDestroyOnPostCompile);
+            // }
+            // AirshipEditorGUI.EndSettingGroup();
+            //
+            // EditorGUILayout.Space(10);
+            // EditorGUILayout.LabelField("* This property only applies to your instance of the project");
             
             if (GUI.changed) {
                 projectSettings.Modify();

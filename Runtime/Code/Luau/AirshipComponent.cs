@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
+using JetBrains.Annotations;
 using Luau;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 #if UNITY_EDITOR
 public struct PropertyValueState {
@@ -16,41 +19,42 @@ public struct PropertyValueState {
 }
 #endif
 
-internal enum ComponentReconcileKind {
-	Validation,
+internal enum ReconcileSource {
+	/// <summary>
+	/// When the component is calling 'OnValidate'
+	/// </summary>
+	ComponentValidate,
+	/// <summary>
+	/// When the component properties are changed in the inspector
+	/// </summary>
 	Inspector,
-	Compiler,
+	/// <summary>
+	/// When the compiler is in the post-compile import state
+	/// </summary>
+	PostCompile,
 }
 
 internal enum ReconcileBehaviour {
 	/// <summary>
 	/// The old add/update/delete behaviour (buggy)
 	/// </summary>
-	AlwaysReconcile,
+	DestructiveOnPostCompile,
 	/// <summary>
 	/// Only reconcile on hash change, deferring to the compiler for reconcile
 	/// </summary>
-	HashBasedDeferredReconcile,
+	Legacy,
 	
-	Default = AlwaysReconcile,
+	Default = Legacy,
 }
-
-public class ExecuteOnTypescriptCompileAttribute : Attribute {
-	
-}
-
-internal delegate void ReconcileEvent(AirshipComponent componentToReconcile);
 
 [AddComponentMenu("Airship/Airship Component")]
 [LuauAPI(LuauContext.Protected)]
 public class AirshipComponent : MonoBehaviour {
 	private const bool ElevateToProtectedWithinCoreScene = true;
-
-	internal static ReconcileBehaviour ReconciliationBehaviour = ReconcileBehaviour.Default;
-	/// <summary>
-	/// Event called when Airship wants to queue a reconcile
-	/// </summary>
-	internal static event ReconcileEvent QueueReconcile;
+	
+#if UNITY_EDITOR
+	internal static bool ShouldDestructiveReconcile { get; set; }
+#endif
 	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
 	public static readonly Dictionary<int, string> ComponentIdToScriptName = new();
@@ -434,7 +438,7 @@ public class AirshipComponent : MonoBehaviour {
             }
         }
 
-        ReconcileMetadata(ComponentReconcileKind.Validation);
+        ReconcileMetadata(ReconcileSource.ComponentValidate);
 
         if (Application.isPlaying) {
             WriteChangedComponentProperties();
@@ -451,46 +455,30 @@ public class AirshipComponent : MonoBehaviour {
         if (script != null && string.IsNullOrEmpty(scriptPath)) {
 	        scriptPath = script.m_path;
         }
-        
-        Debug.Log($"Reconcile {gameObject} on Validate()", gameObject);
+
         SetupMetadata();
     }
-
-    private void Reset() {
-	    Debug.Log($"Reconcile {gameObject} on Reset()", gameObject);
-        SetupMetadata();
-    }
-
-    [ExecuteOnTypescriptCompile]
-    internal void ReconcileMetadata(ComponentReconcileKind reconcileKind) {
+    
+    internal void ReconcileMetadata(ReconcileSource reconcileSource, [CanBeNull] LuauMetadata sourceMetadata = null) {
 #if AIRSHIP_PLAYER
         return;
 #else
-        if (script == null || script.m_metadata == null || script.m_metadata.name == "") {
+	    var targetMetadata = sourceMetadata ?? script.m_metadata;
+	    
+        if (targetMetadata == null) {
+	        Debug.LogWarning("Attempted reconciliation on invalid script or invalid metadata");
             return;
         }
 
-        metadata.name = script.m_metadata.name;
-        
-        // if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
-	       //  // We only really want to reconcile outside of a compiler change if our hashes don't match
-	       //  // A reconcile is meant for a change in metadata anyhow - right?
-	       //  if (reconcileKind == ComponentReconcileKind.Validation
-	       //      && (metadata.hash != script.m_metadata.hash && !string.IsNullOrEmpty(metadata.hash))) {
-		      //   Debug.Log($"metadata is {metadata.properties.Count}");
-		      //   // Defer a reconcile to the compiler
-		      //   // QueueReconcile?.Invoke(this);
-		      //   return;
-	       //  }
-        //
-	       //  if (metadata.hash == script.m_metadata.hash) {
-		      //   Debug.Log($"Skip reconciliation for {metadata.hash} ('{gameObject}'#{metadata.name})");
-	       //      return;
-	       //  }
-        // }
+		Debug.Log($"Running {reconcileSource} reconcile for {metadata.hash} ('{name}'#{metadata.name})");
 
+        metadata.name = targetMetadata.name;
+
+        // Inspector is an active component, post-compile should give an accurate model
+        var isModifyingReconcile = reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector;
+        
         // Add missing properties or reconcile existing ones:
-        foreach (var property in script.m_metadata.properties) {
+        foreach (var property in targetMetadata.properties) {
             var serializedProperty = metadata.FindProperty<object>(property.name);
             
             if (serializedProperty == null)
@@ -498,7 +486,7 @@ public class AirshipComponent : MonoBehaviour {
                 var element = property.Clone();
                 metadata.properties.Add(element);
                 serializedProperty = element;
-                Debug.Log($"Adding non-existent property '{property.name}' to {script.m_metadata.name} on {name}");
+                Debug.Log($"Adding non-existent property '{property.name}' to {targetMetadata.name} on {name}");
             } else {
                 if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
 	                // Check if we're changing object type to a type that contains the current type
@@ -555,34 +543,34 @@ public class AirshipComponent : MonoBehaviour {
         //   OnValidate() is called again via reimport?
         // 
         // 
+
+
         
-        // Remove properties that are no longer used:
-        List<LuauMetadataProperty> propertiesToRemove = null;
-        var seenProperties = new HashSet<string>();
-        foreach (var serializedProperty in metadata.properties) {
-            var property = script.m_metadata.FindProperty<object>(serializedProperty.name);
-            // If it doesn't exist on script or if it is a duplicate property
-            if (property == null || seenProperties.Contains(serializedProperty.name)) {
-                if (propertiesToRemove == null) {
-                    propertiesToRemove = new List<LuauMetadataProperty>();
-                }
-                propertiesToRemove.Add(serializedProperty);
-                Debug.Log($"Removing property '{serializedProperty.name}' to {script.m_metadata.name} on {name}");
-            }
-            seenProperties.Add(serializedProperty.name);
+        // We'll only delete if the compiler wants to delete the file
+        if (isModifyingReconcile) {
+	        // Remove properties that are no longer used:
+	        List<LuauMetadataProperty> propertiesToRemove = null;
+	        var seenProperties = new HashSet<string>();
+	        foreach (var serializedProperty in metadata.properties) {
+		        var property = targetMetadata.FindProperty<object>(serializedProperty.name);
+		        // If it doesn't exist on script or if it is a duplicate property
+		        if (property == null || seenProperties.Contains(serializedProperty.name)) {
+			        if (propertiesToRemove == null) {
+				        propertiesToRemove = new List<LuauMetadataProperty>();
+			        }
+			        propertiesToRemove.Add(serializedProperty);
+			        Debug.Log($"Removing property '{serializedProperty.name}' to {targetMetadata.name} on {name}");
+		        }
+		        seenProperties.Add(serializedProperty.name);
+	        }
+	        if (propertiesToRemove != null) {
+		        foreach (var serializedProperty in propertiesToRemove) {
+			        metadata.properties.Remove(serializedProperty);
+		        }
+	        }
+
+	        metadata.hash = targetMetadata.hash;
         }
-        if (propertiesToRemove != null) {
-            foreach (var serializedProperty in propertiesToRemove) {
-                metadata.properties.Remove(serializedProperty);
-            }
-        }
-        
-        // if (ReconciliationBehaviour == ReconcileBehaviour.HashBasedDeferredReconcile) {
-	       //  // Update the hash
-	       //  metadata.hash = script.m_metadata.hash;
-	       //  hash = metadata.hash;
-	       //  Debug.Log($"Hash updated  to {metadata.hash} for {gameObject}#{metadata.name} {reconcileKind}");
-        // }
 #endif
     }
 

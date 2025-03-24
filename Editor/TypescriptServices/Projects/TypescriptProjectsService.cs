@@ -179,27 +179,6 @@ namespace Airship.Editor {
             TypescriptCompilationService.StartCompilerServices();
         }
         
-        internal static IReadOnlyCollection<AirshipComponent> GetAllAirshipComponentsInPrefabs() {
-            HashSet<AirshipComponent> components = new();
-
-            // var current = Resources.FindObjectsOfTypeAll<AirshipComponent>();
-            // foreach (var component in current) {
-            //     components.Add(component);
-            // }
-            
-            var prefabs = AssetDatabase.FindAssets("t:prefab");
-            foreach (var assetGuid in prefabs) {
-                var assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
-                var asset = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
-                foreach (var component in asset.GetComponentsInChildren<AirshipComponent>()) {
-                    if (!component.script) continue;
-                    components.Add(component);
-                }
-            }
-            
-            return components;
-        }
-        
         internal static void HandleRenameEvent(string oldFileName, string newFileName) {
             var components = Resources.FindObjectsOfTypeAll<AirshipComponent>();
             foreach (var component in components) {

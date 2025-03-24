@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Airship.Editor;
 using Code.Luau;
 using JetBrains.Annotations;
 using Luau;
@@ -62,7 +63,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         if (binding.script != null && binding.script.m_metadata != null) {
             if (ShouldReconcile(binding)) {
-                binding.ReconcileMetadata(ComponentReconcileKind.Inspector);
+                binding.ReconcileMetadata(ReconcileSource.Inspector);
                 serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();
             }
@@ -175,7 +176,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var propName = metadataProperty.FindPropertyRelative("name").stringValue;
             var originalProperty = originalMetadataProperties.Find((p) => p.name == propName);
             if (originalProperty == null) {
-                Debug.LogWarning($"Missing property {propName} on script");
                 continue;
             }
             
@@ -346,23 +346,45 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         var propertyList = new List<SerializedProperty>();
         var indexDictionary = new Dictionary<string, int>();
 
-        if (binding.script.m_metadata != null) {
-            for (var i = 0; i < metadataProperties.arraySize; i++) {
-                var property = metadataProperties.GetArrayElementAtIndex(i);
-                propertyList.Add(property);
-                indexDictionary.Add(binding.script.m_metadata.properties[i].name, i);
+        var bindingMetadata = binding.script.m_metadata;
+        var bindingProperties = bindingMetadata.properties;
+
+        var dataIsInvalid = false;
+        
+        for (var i = 0; i < metadataProperties.arraySize; i++) {
+            var property = metadataProperties.GetArrayElementAtIndex(i);
+            var propertyName = property.FindPropertyRelative("name").stringValue;
+            var bindingPropertyIndex = bindingProperties.FindIndex(p => p.name == propertyName);
+            if (bindingPropertyIndex == -1) {
+//#if AIRSHIP_INTERNAL
+                EditorGUILayout.LabelField(propertyName, "(Missing)", EditorStyles.miniLabel);
+                dataIsInvalid = true;
+//#endif
+                continue;
             }
+            
+            var bindingProperty = bindingProperties[bindingPropertyIndex];
+            propertyList.Add(property);
+            indexDictionary.Add(bindingProperty.name, bindingPropertyIndex);
         }
-
-
+        
         // Sort properties by order in non-serialized object
-        propertyList.Sort((p1, p2) =>
-            indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
-        );
+        // propertyList.Sort((p1, p2) =>
+        //     indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
+        // );
         
         foreach (var prop in propertyList) {
             DrawCustomProperty(binding.GetInstanceID(), binding.script.m_metadata, prop);   
         }
+        
+//#if AIRSHIP_INTERNAL
+        if (dataIsInvalid) {
+            AirshipEditorGUI.HorizontalLine();
+            if (GUILayout.Button("Reconcile")) {
+                binding.ReconcileMetadata(ReconcileSource.PostCompile);
+            }
+        }
+//#endif
     }
 
     // NOTE: This will probably change. Whole "decorators" structure will probably be redesigned.

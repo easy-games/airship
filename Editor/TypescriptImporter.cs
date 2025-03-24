@@ -139,13 +139,7 @@ namespace Editor {
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
                 
-                var localSettings = TypescriptServicesLocalConfig.instance;
-                if ((localSettings.experiments & TypescriptExperiments.ReimportPrefabsOnTypescriptFileImport) != 0) {
-                    var pathsToReimport = TypescriptPrefabDependencyService.GetDependentAssetsForScript(airshipScript);
-                    foreach (var toImport in pathsToReimport) {
-                        AssetDatabase.ImportAsset(toImport, ImportAssetOptions.Default);
-                    }
-                }
+                TypescriptPrefabDependencyService.ReconcileIfPostCompile(airshipScript);
             }
         }
     }
