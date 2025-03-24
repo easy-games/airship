@@ -40,7 +40,8 @@ public class AirshipComponent : MonoBehaviour {
 	private readonly int _airshipComponentId = _airshipComponentIdGen++;
 	private readonly Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new(); 
 	
-	public string TypescriptFilePath => script.m_path.Replace(".lua", ".ts");
+	public string TypescriptFilePath => script.m_path.Replace(".lua", ".ts", StringComparison.OrdinalIgnoreCase);
+	public string LuaFilePath => scriptPath.Replace(".ts", ".lua", StringComparison.OrdinalIgnoreCase);
 
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void OnReload() {
@@ -99,6 +100,7 @@ public class AirshipComponent : MonoBehaviour {
 		
 		if (QueuedAwakeData != null) {
 			script = QueuedAwakeData.Script;
+			scriptPath = script.m_path;
 			context = QueuedAwakeData.Context;
 			forceContext = QueuedAwakeData.ForceContext;
 			QueuedAwakeData = null;
@@ -106,7 +108,7 @@ public class AirshipComponent : MonoBehaviour {
 		
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
 		// Grab the script from code.zip at runtime
-		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(script.m_path.ToLower());
+		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(LuaFilePath.ToLower());
 		if (runtimeScript) {
 			script = runtimeScript;
 		}

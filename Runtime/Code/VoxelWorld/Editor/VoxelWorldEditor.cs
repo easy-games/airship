@@ -41,12 +41,18 @@ public class VoxelEditAction {
 public class VoxelEditMarker : ScriptableObject {
     public VoxelEditAction lastAction;
 }
-public class VoxelEditManager {
+
+[InitializeOnLoad]
+public static class VoxelEditManager {
     public static Dictionary<string, VoxelPlacementModifier> placementModifiers = new();
     public static bool buildModsEnabled = false;
     static VoxelEditMarker undoObject;
     public static List<VoxelEditAction> edits = new List<VoxelEditAction>();
     public static List<VoxelEditAction> redos = new List<VoxelEditAction>();
+
+    static VoxelEditManager() {
+        Undo.undoRedoEvent += UndoRedoEvent;
+    }
 
     private static HashSet<Vector3Int> WriteVoxel(VoxelWorld world, Vector3Int position, ushort num) {
         var positionSet = new HashSet<Vector3Int>() { position };
@@ -125,12 +131,6 @@ public class VoxelEditManager {
         world.hasUnsavedChanges = true;
     }
 
-
-    //Constructor
-    public VoxelEditManager() {
-        Undo.undoRedoEvent += UndoRedoEvent;
-    }
-    
     public static void UndoRedoEvent(in UndoRedoInfo info) {
         if (info.isRedo == false) {
             if (edits.Count > 0) {
@@ -860,18 +860,18 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     }
 
 
-    private void OnDestroy() {
-        //Remove selection handler
-        Selection.selectionChanged -= OnSelectionChanged;
-
-        //Remove the gizmo refresh event handler
-        SceneView.duringSceneGui -= GizmoRefreshEvent;
-
-        EditorApplication.update -= OnEditorUpdate;
-
-        //Save handler
-        EditorSceneManager.sceneSaving -= OnSavingScene;
-    }
+    // private void OnDestroy() {
+    //     //Remove selection handler
+    //     Selection.selectionChanged -= OnSelectionChanged;
+    //
+    //     //Remove the gizmo refresh event handler
+    //     SceneView.duringSceneGui -= GizmoRefreshEvent;
+    //
+    //     EditorApplication.update -= OnEditorUpdate;
+    //
+    //     //Save handler
+    //     EditorSceneManager.sceneSaving -= OnSavingScene;
+    // }
 
     [NonSerialized]
     private GameObject lastSelectedGameObject = null;

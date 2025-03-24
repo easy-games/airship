@@ -51,4 +51,24 @@ public class AirshipEditorUtil {
         if (sizeBytes < Math.Pow(10, 6)) return $"{Math.Round(sizeBytes / Math.Pow(10, 3), 1)}kb";
         return $"{Math.Round(sizeBytes / Math.Pow(10, 6), 1)}mb";
     }
+
+    [MenuItem("Airship/Reimport All Prefabs")]
+    public static void ReimportPrefabs() {
+        string[] prefabGUIDs = AssetDatabase.FindAssets("t:Prefab");
+
+        int total = prefabGUIDs.Length;
+        int counter = 0;
+        for (int i = 0; i < total; i++) {
+            string path = AssetDatabase.GUIDToAssetPath(prefabGUIDs[i]);
+            if (path.Contains("Assets/Polygon Arsenal") || path.Contains("Assets/Hovl") || path.Contains("Packages/") || path.Contains("Assets/Raygeas")) {
+                continue;
+            }
+            EditorUtility.DisplayProgressBar("Reimporting Prefabs", path, (float)i / total);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            counter++;
+        }
+
+        EditorUtility.ClearProgressBar();
+        Debug.Log($"Reimported {counter} prefabs.");
+    }
 }

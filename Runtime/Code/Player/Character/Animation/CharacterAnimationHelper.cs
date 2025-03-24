@@ -25,7 +25,6 @@ namespace Code.Player.Character.NetworkedMovement
         public AnimationEventListener? animationEvents;
         public ParticleSystem? sprintVfx;
         public ParticleSystem? jumpPoofVfx;
-        public ParticleSystem? slideVfx;
 
         [Header("Variables")] public float minAirborneTime = .25f;
         public float particleMaxDistance = 25f;
@@ -64,11 +63,6 @@ namespace Code.Player.Character.NetworkedMovement
             if (this.jumpPoofVfx)
             {
                 jumpPoofVfx.Stop();
-            }
-
-            if (this.slideVfx)
-            {
-                slideVfx.Stop();
             }
 
             //   // Make a new instance of the animator override controller
@@ -140,11 +134,6 @@ namespace Code.Player.Character.NetworkedMovement
             if (jumpPoofVfx)
             {
                 jumpPoofVfx.Stop();
-            }
-
-            if (slideVfx)
-            {
-                slideVfx.Stop();
             }
         }
 
@@ -297,6 +286,17 @@ namespace Code.Player.Character.NetworkedMovement
 
             this.SetVelocity(syncedState.localVelocity);
             //print("Set state: " + currentState);
+        }
+        
+        [HideFromTS]
+        public void OnCharacterMovementDisabled() {
+            if (this.sprintVfx) {
+                sprintVfx.Stop();
+            }
+            
+            if (this.jumpPoofVfx) {
+                jumpPoofVfx.Stop();
+            }
         }
 
         private void SetTrigger(string trigger)

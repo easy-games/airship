@@ -11,7 +11,7 @@ public class MirrorPlacementMod : VoxelPlacementModifier {
     }
     
     public override string GetName() {
-        return "Mirror";
+        return "Flip";
     }
 
     public override void OnPlaceVoxels(VoxelWorld world, HashSet<Vector3Int> positions) {
