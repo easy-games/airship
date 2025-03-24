@@ -24,7 +24,6 @@ public class CharacterAnimationHelper : MonoBehaviour {
     public AnimationEventListener animationEvents;
     public ParticleSystem sprintVfx;
     public ParticleSystem jumpPoofVfx;
-    public ParticleSystem slideVfx;
 
     [Header("Variables")] 
     public float minAirborneTime = .25f;
@@ -58,9 +57,6 @@ public class CharacterAnimationHelper : MonoBehaviour {
         }
         if (this.jumpPoofVfx){
             jumpPoofVfx.Stop();
-        }
-        if (this.slideVfx){
-            slideVfx.Stop();
         }
 
      //   // Make a new instance of the animator override controller
@@ -112,14 +108,11 @@ public class CharacterAnimationHelper : MonoBehaviour {
     }
 
     private void OnDisable() {
-        if(sprintVfx){
+        if (sprintVfx) {
             sprintVfx.Stop();
         }
-        if(jumpPoofVfx){
+        if (jumpPoofVfx) {
             jumpPoofVfx.Stop();
-        }
-        if(slideVfx){
-            slideVfx.Stop();
         }
     }
 
@@ -237,6 +230,16 @@ public class CharacterAnimationHelper : MonoBehaviour {
 
         this.SetVelocity(syncedState.localVelocity);
         //print("Set state: " + currentState);
+    }
+
+    [HideFromTS]
+    public void OnCharacterMovementDisabled() {
+        if (this.sprintVfx) {
+            sprintVfx.Stop();
+        }
+        if (this.jumpPoofVfx) {
+            jumpPoofVfx.Stop();
+        }
     }
 
     private void SetTrigger(string trigger) {
