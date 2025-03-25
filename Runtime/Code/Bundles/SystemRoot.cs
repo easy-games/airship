@@ -358,7 +358,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 							variantCounter += step;
 							totalCounter += step;
 							onLoadingScreenStep?.Invoke($"Prewarming shaders ({totalCounter + 1})");
-							Debug.Log($"Prewarm in progress ({collectionName}): {variantCounter}");
+							// Debug.Log($"Prewarm in progress ({collectionName}): {variantCounter}");
 							yield return null;
 						}
 						Debug.Log("Prewarmed " + collectionName + " in " + st.ElapsedMilliseconds + "ms");

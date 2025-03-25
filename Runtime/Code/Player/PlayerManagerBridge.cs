@@ -77,8 +77,8 @@ namespace Code.Player {
 			// print("PlayerManagerBridge.start");
 
 			// print("PlayerManagerBridge: server is ready.");
-			if (RunCore.IsServer()) {
-				while (!serverBootstrap.isServerReady) {
+			if (RunCore.IsServer() && this.serverBootstrap) {
+				while (!this.serverBootstrap.isServerReady) {
 					await Awaitable.NextFrameAsync();
 				}
 				foreach (var connection in NetworkServer.connections.Values) {
