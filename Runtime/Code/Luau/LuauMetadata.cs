@@ -574,7 +574,6 @@ namespace Luau {
 
     [Serializable]
     public class LuauMetadata {
-        public string hash;
         public string name;
         public bool singleton;
         #if UNITY_EDITOR

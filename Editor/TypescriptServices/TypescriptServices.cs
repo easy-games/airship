@@ -17,7 +17,7 @@ namespace Airship.Editor {
     internal enum TypescriptExperiments {
         ReconcileOnPostCompile = 1 << 0,
     }
-    
+
     [FilePath("Library/TypescriptServices", FilePathAttribute.Location.ProjectFolder)]
     internal class TypescriptServicesLocalConfig : ScriptableSingleton<TypescriptServicesLocalConfig> {
         [SerializeField]

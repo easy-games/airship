@@ -40,6 +40,18 @@ internal enum ReconcileSource {
 	PostCompile,
 }
 
+internal class AirshipReconcileEventData {
+	public AirshipComponent Component { get; }
+	public bool ShouldReconcile { get; set; } = true;
+	public ReconcileSource ReconcileSource { get; }
+
+	public AirshipReconcileEventData(AirshipComponent component, ReconcileSource source) {
+		Component = component;
+		ReconcileSource = source;
+	}
+}
+internal delegate void ReconcileAirshipComponent(AirshipReconcileEventData data);
+
 [AddComponentMenu("Airship/Airship Component")]
 [LuauAPI(LuauContext.Protected)]
 public class AirshipComponent : MonoBehaviour {
@@ -55,6 +67,9 @@ public class AirshipComponent : MonoBehaviour {
 	private bool _init = false;
 
 #if UNITY_EDITOR
+	internal static event ReconcileAirshipComponent Reconcile;
+	[SerializeField] internal string guid;
+	
 	/// <summary>
 	/// Contains the compiler metadata for this component
 	/// </summary>
@@ -490,6 +505,20 @@ public class AirshipComponent : MonoBehaviour {
 	        Debug.LogWarning("Attempted reconciliation on invalid script or invalid metadata");
             return;
         }
+
+        if (string.IsNullOrEmpty(guid)) {
+	        guid = Guid.NewGuid().ToString().Replace("-", "");
+        }
+        
+#if UNITY_EDITOR
+	    var eventData = new AirshipReconcileEventData(this, reconcileSource);
+	    Reconcile?.Invoke(eventData);
+
+	    if (!eventData.ShouldReconcile) {
+		    Debug.Log($"[Reconcile] Reconcile skipped from event for {guid}");
+            return;
+	    }
+#endif
         
 #if AIRSHIP_DEBUG
 	    if (script.compilerMetadata.valid && compilerMetadata.valid) {

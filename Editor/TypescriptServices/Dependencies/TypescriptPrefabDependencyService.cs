@@ -42,48 +42,49 @@ namespace Airship.Editor {
         private static void LinkScriptsToPrefabs(string[] paths) {
             foreach (var path in paths) {
                 if (!path.EndsWith(".prefab", StringComparison.InvariantCulture)) continue;
-
+                
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 var components = prefab.GetComponentsInChildren<AirshipComponent>();
-                
-                if (!prefabsToScripts.TryGetValue(path, out var prevScripts)) {
-                    prevScripts = new HashSet<string>();
-                }
-                
-                var scriptsToAdd = new HashSet<string>();
+                if (components.Length == 0) continue;
 
-                foreach (var component in components) {
-                    if (!component.script) continue;
-                    scriptsToAdd.Add(component.script.assetPath);
-                }
-                
-                // remove old scripts
-                foreach (var prevScript in prevScripts.ToArray()) {
-                    if (scriptsToAdd.Contains(prevScript)) continue;
-                    
-                    if (scriptToPrefabs.TryGetValue(prevScript, out var linkedAssets)) {
-                        linkedAssets.Remove(path);
-                    }
-                    
-                    prevScripts.Remove(prevScript);
-                }
-
-                if (!prefabsToScripts.TryGetValue(path, out var linkedScripts)) {
-                    linkedScripts = new HashSet<string>();
-                    prefabsToScripts.Add(path, linkedScripts);
-                }
-                
-                foreach (var script in scriptsToAdd) {
-                    if (linkedScripts.Contains(script)) continue;
-                    linkedScripts.Add(script);
-
-                    if (!scriptToPrefabs.TryGetValue(script, out var prefabPaths)) {
-                        prefabPaths = new HashSet<string>();
-                        scriptToPrefabs.Add(script, prefabPaths);
-                    }
-
-                    prefabPaths.Add(path);
-                }
+                // if (!prefabsToScripts.TryGetValue(path, out var prevScripts)) {
+                //     prevScripts = new HashSet<string>();
+                // }
+                //
+                // var scriptsToAdd = new HashSet<string>();
+                //
+                // foreach (var component in components) {
+                //     if (!component.script) continue;
+                //     scriptsToAdd.Add(component.script.assetPath);
+                // }
+                //
+                // // remove old scripts
+                // foreach (var prevScript in prevScripts.ToArray()) {
+                //     if (scriptsToAdd.Contains(prevScript)) continue;
+                //     
+                //     if (scriptToPrefabs.TryGetValue(prevScript, out var linkedAssets)) {
+                //         linkedAssets.Remove(path);
+                //     }
+                //     
+                //     prevScripts.Remove(prevScript);
+                // }
+                //
+                // if (!prefabsToScripts.TryGetValue(path, out var linkedScripts)) {
+                //     linkedScripts = new HashSet<string>();
+                //     prefabsToScripts.Add(path, linkedScripts);
+                // }
+                //
+                // foreach (var script in scriptsToAdd) {
+                //     if (linkedScripts.Contains(script)) continue;
+                //     linkedScripts.Add(script);
+                //
+                //     if (!scriptToPrefabs.TryGetValue(script, out var prefabPaths)) {
+                //         prefabPaths = new HashSet<string>();
+                //         scriptToPrefabs.Add(script, prefabPaths);
+                //     }
+                //
+                //     prefabPaths.Add(path);
+                // }
             }
         }
 

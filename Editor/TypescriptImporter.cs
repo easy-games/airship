@@ -144,9 +144,15 @@ namespace Editor {
                         hash = airshipScript.FileHash,
                         timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                     };
-#if AIRSHIP_DEBUG
-                    Debug.Log($"[TypescriptImporter] Updated script {airshipScript.assetPath} to current timestamp");
-#endif
+                }
+
+                var assetData = AirshipLocalArtifactDatabase.instance.GetScriptAssetData(airshipScript);
+                if (assetData.metadata == null || airshipScript.FileHash != assetData.metadata.hash) {
+                    assetData.metadata = new TypescriptCompilerMetadata() {
+                        hash = airshipScript.FileHash,
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    };
+                    AirshipLocalArtifactDatabase.instance.Modify();
                 }
                 
                 if (AirshipComponent.UsePostCompileReconciliation) TypescriptPrefabDependencyService.ReconcileIfPostCompile(airshipScript);
