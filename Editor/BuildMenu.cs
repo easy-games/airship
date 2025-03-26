@@ -152,7 +152,7 @@ namespace Editor {
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Mac (Development)", priority = 80)]
 #endif
-        public static void BuildMacDevelopmentClient() {
+        public static void BuildMacClientDev() {
 #if UNITY_EDITOR_OSX
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -332,7 +332,7 @@ namespace Editor {
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Windows (Development)", priority = 80)]
 #endif
-        public static void BuildWindowsClientProfiler() {
+        public static void BuildWindowsClientDev() {
 #if UNITY_EDITOR
             OnBuild();
             CreateAssetBundles.ResetScenes();
