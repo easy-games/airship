@@ -6,6 +6,7 @@ using Airship;
 using Code.Platform.Server;
 using Code.Platform.Shared;
 using Code.Player.Accessories;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -333,7 +334,7 @@ public class AccessoryBuilder : MonoBehaviour {
                     // Create the prefab on the joint
                     newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
                     meshRenderers = newAccessoryObj.GetComponentsInChildren<MeshRenderer>();
-                    skinnedMeshRenderers = Array.Empty<SkinnedMeshRenderer>();
+                    skinnedMeshRenderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
                     renderers = meshRenderers;
                 }
 
