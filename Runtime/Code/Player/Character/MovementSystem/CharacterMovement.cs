@@ -156,7 +156,12 @@ public class CharacterMovement : NetworkBehaviour {
     [NonSerialized]
     public CharacterAnimationSyncData stateSyncData = new();
 
-    public Vector3 lookVector { get; private set; } = Vector3.one;
+    // todo: this is a redundant sync var to above "stateSyncData" ^^
+    // This is a quick fix for look vector not replicating in dedicated to owner in initial spawn.
+    // This is also a bad fix because it makes server send lookVector to owner every frame (which the owner then overrides).
+    // Although that might not be the case in client auth mode... So maybe it's fine?
+    [SyncVar]
+    public Vector3 lookVector = Vector3.one;
 
 #endregion
 
