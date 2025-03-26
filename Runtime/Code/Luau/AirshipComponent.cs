@@ -19,6 +19,12 @@ public struct PropertyValueState {
 }
 #endif
 
+internal enum MetadataChangeState {
+	ComponentIsMismatched = 1,
+	Ok = 0,
+	ScriptIsMismatched = 1,
+}
+
 internal enum ReconcileSource {
 	/// <summary>
 	/// When the component is calling 'OnValidate'
@@ -47,7 +53,17 @@ public class AirshipComponent : MonoBehaviour {
 	private static bool _validatedSceneInGameConfig = false;
 
 	private bool _init = false;
-	
+
+#if UNITY_EDITOR
+	/// <summary>
+	/// Contains the compiler metadata for this component
+	/// </summary>
+	[SerializeField] internal TypescriptCompilerMetadata compilerMetadata;
+	/// <summary>
+	/// True if this component is outdated
+	/// </summary>
+	internal bool IsOutdated => script.compilerMetadata.timestamp > compilerMetadata.timestamp || !compilerMetadata.valid;
+#endif
 	public AirshipScript script;
 
 	[FormerlySerializedAs("m_fileFullPath")] [HideInInspector] public string scriptPath;
@@ -440,6 +456,29 @@ public class AirshipComponent : MonoBehaviour {
 
         SetupMetadata();
     }
+
+    internal MetadataChangeState ChangeState {
+	    get {
+		    var scriptMetadata = script.m_metadata;
+		    var componentMetadata = metadata;
+
+		    foreach (var property in componentMetadata.properties) {
+			    var matchingProperty = scriptMetadata!.FindProperty(property.name);
+			    if (matchingProperty == null) {
+				    return MetadataChangeState.ComponentIsMismatched;
+			    }
+		    }
+
+		    foreach (var property in scriptMetadata.properties) {
+			    var matchingProperty = componentMetadata!.FindProperty(property.name);
+			    if (matchingProperty == null) {
+				    return MetadataChangeState.ScriptIsMismatched;
+			    }
+		    }
+		    
+		    return MetadataChangeState.Ok;
+	    }
+    }
     
     internal void ReconcileMetadata(ReconcileSource reconcileSource, [CanBeNull] LuauMetadata sourceMetadata = null) {
 #if AIRSHIP_PLAYER
@@ -451,11 +490,36 @@ public class AirshipComponent : MonoBehaviour {
 	        Debug.LogWarning("Attempted reconciliation on invalid script or invalid metadata");
             return;
         }
+        
+#if AIRSHIP_DEBUG
+	    if (script.compilerMetadata.valid && compilerMetadata.valid) {
+		    Debug.Log($"[Reconcile] Script was compiled at {script.compilerMetadata}, component at {compilerMetadata}");
+	    }
+#endif
+
+        // If we're synchronised, no need to reconcile
+        if (!IsOutdated) {
+#if AIRSHIP_DEBUG
+	        Debug.Log("[Reconcile] Skip due to metadata being more recent");
+#endif
+	        return;
+        }
+         
+        
+#if AIRSHIP_DEBUG
+
+	    
+	    var state = ChangeState;
+	    var additions = new HashSet<string>();
+	    var deletions = new HashSet<string>();
+	    var modifications = new HashSet<string>();
+	    // Debug.Log($"[Reconcile] ReconcileMetadata({reconcileSource}) for '{name}'#{targetMetadata.name}");
+#endif
 
         metadata.name = targetMetadata.name;
 
         // Inspector is an active component, post-compile should give an accurate model
-        var isModifyingReconcile = (reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector) || !UsePostCompileReconciliation;
+        var isModifyingReconcile = (reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector);
         
         // Add missing properties or reconcile existing ones:
         foreach (var property in targetMetadata.properties) {
@@ -466,9 +530,17 @@ public class AirshipComponent : MonoBehaviour {
                 var element = property.Clone();
                 metadata.properties.Add(element);
                 serializedProperty = element;
-                Debug.Log($"Adding non-existent property '{property.name}' to {targetMetadata.name} on {name}");
+                
+#if AIRSHIP_DEBUG
+	            additions.Add(element.name);
+#endif
             } else {
+	            
                 if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
+#if AIRSHIP_DEBUG
+	                modifications.Add(serializedProperty.name);
+#endif
+	                
 	                // Check if we're changing object type to a type that contains the current type
 	                // (for example swapping from AudioClip to AudioResource)
 	                var canKeepValue = false;
@@ -492,6 +564,10 @@ public class AirshipComponent : MonoBehaviour {
                 if (property.items != null) {
                     if (serializedProperty.items.type != property.items.type ||
                         serializedProperty.items.objectType != property.items.objectType) {
+#if AIRSHIP_DEBUG
+	                    modifications.Add(serializedProperty.name);
+#endif
+	                    
                         serializedProperty.items.type = property.items.type;
                         serializedProperty.items.objectType = property.items.objectType;
                         serializedProperty.items.serializedItems = new string[property.items.serializedItems.Length];
@@ -505,7 +581,6 @@ public class AirshipComponent : MonoBehaviour {
                     serializedProperty.items.refPath = property.refPath;
                 }
             }
-            
             
             serializedProperty.fileRef = property.fileRef;
             serializedProperty.refPath = property.refPath;
@@ -523,8 +598,6 @@ public class AirshipComponent : MonoBehaviour {
         //   OnValidate() is called again via reimport?
         // 
         // 
-
-
         
         // We'll only delete if the compiler wants to delete the file
         if (isModifyingReconcile) {
@@ -539,18 +612,40 @@ public class AirshipComponent : MonoBehaviour {
 				        propertiesToRemove = new List<LuauMetadataProperty>();
 			        }
 			        propertiesToRemove.Add(serializedProperty);
-			        Debug.Log($"Removing property '{serializedProperty.name}' to {targetMetadata.name} on {name}");
 		        }
 		        seenProperties.Add(serializedProperty.name);
 	        }
 	        if (propertiesToRemove != null) {
 		        foreach (var serializedProperty in propertiesToRemove) {
+#if AIRSHIP_DEBUG
+			        deletions.Add(serializedProperty.name);
+#endif
 			        metadata.properties.Remove(serializedProperty);
 		        }
 	        }
 
-	        metadata.hash = targetMetadata.hash;
+	        
+#if AIRSHIP_DEBUG
+	        if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
+		        Debug.Log($"<color=#b878f7>[Reconcile] ReconcileMetadata({reconcileSource}) {state} for '{name}'#{targetMetadata.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
+
+		        foreach (var addition in additions) {
+			        Debug.Log($"\t<color=#78f798>+ {addition}</color>");
+		        }
+		        
+		        foreach (var modification in modifications) {
+			        Debug.Log($"\t<color=#f7f778>~ {modification}</color>");
+		        }
+		        
+		        foreach (var deletion in deletions) {
+			        Debug.Log($"\t<color=#f77878>- {deletion}</color>");
+		        }
+	        }
+#endif
         }
+        
+        compilerMetadata = script.compilerMetadata.Clone();
+        Debug.Log($"Reconciled to hash {compilerMetadata.hash}");
 #endif
     }
 

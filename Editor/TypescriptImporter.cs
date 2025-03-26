@@ -139,6 +139,16 @@ namespace Editor {
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
                 
+                if (airshipScript.compilerMetadata == null || airshipScript.FileHash != airshipScript.compilerMetadata.hash) {
+                    airshipScript.compilerMetadata = new TypescriptCompilerMetadata() {
+                        hash = airshipScript.FileHash,
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    };
+#if AIRSHIP_DEBUG
+                    Debug.Log($"[TypescriptImporter] Updated script {airshipScript.assetPath} to current timestamp");
+#endif
+                }
+                
                 if (AirshipComponent.UsePostCompileReconciliation) TypescriptPrefabDependencyService.ReconcileIfPostCompile(airshipScript);
             }
         }

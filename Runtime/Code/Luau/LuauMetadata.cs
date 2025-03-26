@@ -641,7 +641,7 @@ namespace Luau {
             return null;
         }
 
-        public LuauMetadataProperty FindProperty<T>(string propertyName) {
+        public LuauMetadataProperty FindProperty(string propertyName) {
             foreach (var property in properties) {
                 if (property.name == propertyName) {
                     return property;
@@ -649,6 +649,11 @@ namespace Luau {
             }
 
             return null;
+        }
+
+        [Obsolete("Use FindProperty - the <T> argument is not used")]
+        public LuauMetadataProperty FindProperty<T>(string propertyName) {
+            return FindProperty(propertyName);
         }
     }
 }
