@@ -337,6 +337,9 @@ public static class CreateAssetBundles {
 				if (AssetDatabase.AssetPathExists("Assets/GameConfig.asset")) {
 					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/GameConfig.asset"));
 				}
+				if (AssetDatabase.AssetPathExists("Assets/NetworkPrefabCollection.asset")) {
+					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/NetworkPrefabCollection.asset"));
+				}
 				var assetPaths = assetGuids
 					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
 					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
