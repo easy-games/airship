@@ -138,24 +138,16 @@ namespace Editor {
                 airshipScript.compiledFileHash = project.GetOutputFileHash(assetPath);
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
-                
-                if (airshipScript.compilerMetadata == null || airshipScript.FileHash != airshipScript.compilerMetadata.hash) {
-                    airshipScript.compilerMetadata = new TypescriptCompilerMetadata() {
-                        hash = airshipScript.FileHash,
-                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                    };
-                }
 
-                var assetData = AirshipLocalArtifactDatabase.instance.GetScriptAssetData(airshipScript);
+                var assetData = AirshipLocalArtifactDatabase.instance.GetOrCreateScriptAssetData(airshipScript);
                 if (assetData.metadata == null || airshipScript.FileHash != assetData.metadata.hash) {
                     assetData.metadata = new TypescriptCompilerMetadata() {
-                        hash = airshipScript.FileHash,
+                        hash = airshipScript.compiledFileHash,
                         timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     };
                     AirshipLocalArtifactDatabase.instance.Modify();
+                    AirshipArtifactService.ReconcileQueuedComponents(airshipScript);
                 }
-                
-                if (AirshipComponent.UsePostCompileReconciliation) TypescriptPrefabDependencyService.ReconcileIfPostCompile(airshipScript);
             }
         }
     }

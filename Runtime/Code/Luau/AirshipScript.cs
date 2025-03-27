@@ -32,6 +32,20 @@ namespace Luau {
                 timestamp = timestamp,
             };
         }
+        
+        /// <summary>
+        /// Is the left metadata older than the right metadata
+        /// </summary>
+        public static bool operator<(TypescriptCompilerMetadata lhs, TypescriptCompilerMetadata rhs) {
+            return lhs.timestamp < rhs.timestamp;
+        }
+        
+        /// <summary>
+        /// Is the left metadata newer than the right metadata
+        /// </summary>
+        public static bool operator>(TypescriptCompilerMetadata lhs, TypescriptCompilerMetadata rhs) {
+            return lhs.timestamp > rhs.timestamp;
+        }
 
         public override string ToString() {
             var formatted = dateTime.ToString("yy-MM-dd h:mm:ss tt zz");
@@ -41,13 +55,6 @@ namespace Luau {
     
     [Serializable]
     public class AirshipScript : ScriptableObject {
-#if UNITY_EDITOR
-        /// <summary>
-        /// Contains the compiler metadata for this script
-        /// </summary>
-        [SerializeField] internal TypescriptCompilerMetadata compilerMetadata;
-#endif
-        
         // [HideInInspector]
         public string m_path;
         

@@ -38,6 +38,7 @@ internal enum ReconcileSource {
 	/// When the compiler is in the post-compile import state
 	/// </summary>
 	PostCompile,
+	ForceReconcile,
 }
 
 internal class AirshipReconcileEventData {
@@ -53,6 +54,7 @@ internal class AirshipReconcileEventData {
 internal delegate void ReconcileAirshipComponent(AirshipReconcileEventData data);
 
 [AddComponentMenu("Airship/Airship Component")]
+[HelpURL("https://docs.airship.gg/typescript/airshipbehaviour")]
 [LuauAPI(LuauContext.Protected)]
 public class AirshipComponent : MonoBehaviour {
 	internal static bool UsePostCompileReconciliation { get; set; } = true;
@@ -69,15 +71,8 @@ public class AirshipComponent : MonoBehaviour {
 #if UNITY_EDITOR
 	internal static event ReconcileAirshipComponent Reconcile;
 	[SerializeField] internal string guid;
-	
-	/// <summary>
-	/// Contains the compiler metadata for this component
-	/// </summary>
-	[SerializeField] internal TypescriptCompilerMetadata compilerMetadata;
-	/// <summary>
-	/// True if this component is outdated
-	/// </summary>
-	internal bool IsOutdated => script.compilerMetadata.timestamp > compilerMetadata.timestamp || !compilerMetadata.valid;
+	[SerializeField] internal string hash;
+	internal string scriptHash => script.FileHash;
 #endif
 	public AirshipScript script;
 
@@ -507,7 +502,7 @@ public class AirshipComponent : MonoBehaviour {
         }
 
         if (string.IsNullOrEmpty(guid)) {
-	        guid = Guid.NewGuid().ToString().Replace("-", "");
+	        guid = Guid.NewGuid().ToString();
         }
         
 #if UNITY_EDITOR
@@ -515,40 +510,24 @@ public class AirshipComponent : MonoBehaviour {
 	    Reconcile?.Invoke(eventData);
 
 	    if (!eventData.ShouldReconcile) {
-		    Debug.Log($"[Reconcile] Reconcile skipped from event for {guid}");
-            return;
+#if AIRSHIP_DEBUG
+			Debug.Log($"[Reconcile] Skipped reconcile for {guid}");
+#endif
+		    return;
 	    }
 #endif
         
 #if AIRSHIP_DEBUG
-	    if (script.compilerMetadata.valid && compilerMetadata.valid) {
-		    Debug.Log($"[Reconcile] Script was compiled at {script.compilerMetadata}, component at {compilerMetadata}");
-	    }
-#endif
-
-        // If we're synchronised, no need to reconcile
-        if (!IsOutdated) {
-#if AIRSHIP_DEBUG
-	        Debug.Log("[Reconcile] Skip due to metadata being more recent");
-#endif
-	        return;
-        }
-         
-        
-#if AIRSHIP_DEBUG
-
-	    
 	    var state = ChangeState;
 	    var additions = new HashSet<string>();
 	    var deletions = new HashSet<string>();
 	    var modifications = new HashSet<string>();
-	    // Debug.Log($"[Reconcile] ReconcileMetadata({reconcileSource}) for '{name}'#{targetMetadata.name}");
 #endif
 
         metadata.name = targetMetadata.name;
 
         // Inspector is an active component, post-compile should give an accurate model
-        var isModifyingReconcile = (reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector);
+        var isModifyingReconcile = (reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector or ReconcileSource.ForceReconcile);
         
         // Add missing properties or reconcile existing ones:
         foreach (var property in targetMetadata.properties) {
@@ -652,7 +631,6 @@ public class AirshipComponent : MonoBehaviour {
 			        metadata.properties.Remove(serializedProperty);
 		        }
 	        }
-
 	        
 #if AIRSHIP_DEBUG
 	        if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
@@ -672,9 +650,6 @@ public class AirshipComponent : MonoBehaviour {
 	        }
 #endif
         }
-        
-        compilerMetadata = script.compilerMetadata.Clone();
-        Debug.Log($"Reconciled to hash {compilerMetadata.hash}");
 #endif
     }
 

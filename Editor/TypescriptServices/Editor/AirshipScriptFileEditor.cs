@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using Editor;
 using Luau;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Airship.Editor {
     public static class AirshipScriptContextMenus {
@@ -41,9 +41,16 @@ namespace Airship.Editor {
         public static void RemoveScript(MenuCommand command) {
             var binding = command.context as AirshipComponent;
             if (binding == null || binding.metadata == null) return;
-
+            
             binding.script = null;
             binding.scriptPath = null;
+        }
+
+        [MenuItem("internal:CONTEXT/" + nameof(AirshipComponent) + "/Remove Component")]
+        public static void RemoveComponent(MenuCommand command) {
+            var component = command.context as AirshipComponent;
+            AirshipArtifactService.OnComponentDestroyed(component);
+            Object.DestroyImmediate(component);
         }
     }
 
