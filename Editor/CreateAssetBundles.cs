@@ -391,7 +391,6 @@ public static class CreateAssetBundles {
 			buildTargetGroup,
 			buildPath
 		) {
-			DisableVisibleSubAssetRepresentations = true,
 			WriteLinkXML = false,
 		};
 		buildParams.UseCache = useCache;
