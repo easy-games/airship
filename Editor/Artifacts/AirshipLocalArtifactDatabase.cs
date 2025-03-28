@@ -11,29 +11,56 @@ using UnityEngine.Serialization;
 namespace Airship.Editor {
     [Serializable]
     internal class ComponentData {
+        private AirshipComponent _component;
+        
         public string scriptPath;
         public string guid;
         public TypescriptCompilerMetadata metadata;
+        
+        /// <summary>
+        /// Will find the component via <tt>Resources.FindObjectsOfTypeAll&lt;T&gt;</tt>, and cache the result
+        /// </summary>
+        [CanBeNull] public AirshipComponent Component {
+            get {
+                if (_component) return _component;
+                var components = Resources.FindObjectsOfTypeAll<AirshipComponent>();
+                foreach (var component in components) {
+                    if (component.guid != guid) continue; 
+                    
+                    _component = component;
+                    break;
+                }
 
-        // public bool IsOlderThan(ScriptAssetData scriptAssetData) {
-        //     if (scriptAssetData == null) return false;
-        //     return scriptAssetData.metadata > metadata;
-        // }
+                return _component;
+            }
+        }
+        
+        /// <summary>
+        /// Will return if the given component is synchronized with this data
+        /// </summary>
+        /// <param name="component">The component</param>
+        /// <returns>True if the component matches this data</returns>
+        public bool IsSyncedWith(AirshipComponent component) {
+            if (guid != component.guid) return false;
+            if (metadata == null) return false;
+            
+            return component.hash == metadata.hash;
+        }
     }
     
     [Serializable]
-    internal class ScriptAssetData {
+    internal class ComponentScriptAssetData {
         public string assetPath;
         public TypescriptCompilerMetadata metadata;
-        public AirshipScript script => AssetDatabase.LoadAssetAtPath<AirshipScript>(assetPath);
-        public bool IsOlderThan(ComponentData componentData) {
-            if (componentData.metadata == null) return true;
-            var componentMetadata = componentData.metadata;
-            
-            // If the component is newer, than yes the script is outdated
-            return componentMetadata > metadata;
-        }
         
+        /// <summary>
+        /// Will find the script via <tt>AssetDatabase.LoadAssetAtPath&lt;T&gt;(assetPath)</tt>
+        /// </summary>
+        public AirshipScript Script => AssetDatabase.LoadAssetAtPath<AirshipScript>(assetPath);
+        
+        /// <summary>
+        /// Will return whether or not the given component data is newer than the script data
+        /// </summary>
         public bool IsNewerThan(ComponentData componentData) {
             if (componentData.metadata == null) return true;
             var componentMetadata = componentData.metadata;
@@ -42,25 +69,36 @@ namespace Airship.Editor {
             return componentMetadata < metadata;
         }
 
-        public bool IsOutOfSyncWith(ComponentData componentData) {
+        /// <summary>
+        /// Returns whether this component script data hash matches the given component script data hash
+        /// </summary>
+        public bool HasSameHashAs(ComponentData componentData) {
             if (componentData.metadata == null) return false;
-            var componentMetadata = componentData.metadata;
-            
-            // If our behaviour is supposedly "older" than the script, BUT
-            // the behaviour is also different... we can assume desync? 
-            return !IsOlderThan(componentData) && componentMetadata.hash != script.compiledFileHash;
+            return componentData.metadata.hash == metadata.hash;
+        }
+
+        
+        public bool IsMismatchedWithComponent(AirshipComponent component) {
+            return false;
         }
     }
 
+    /// <summary>
+    /// The local artifact database for Airship's Editor - stored in <code>Library/AirshipArtifactDB</code>
+    /// This contains the state of the scripts and components for the local project
+    /// </summary>
     [FilePath("Library/AirshipArtifactDB", FilePathAttribute.Location.ProjectFolder)]
     internal class AirshipLocalArtifactDatabase : ScriptableSingleton<AirshipLocalArtifactDatabase> {
-        [SerializeField] internal List<ScriptAssetData> scripts = new();
+        [SerializeField] internal List<ComponentScriptAssetData> scripts = new();
         [SerializeField] internal List<ComponentData> components = new();
         
-        public ScriptAssetData GetOrCreateScriptAssetData(AirshipScript script) {
+        /// <summary>
+        /// Gets or creates the script asset data in the artifact database for the given script
+        /// </summary>
+        internal ComponentScriptAssetData GetOrCreateScriptAssetData(AirshipScript script) {
             var item = scripts.FirstOrDefault(f => f.assetPath == script.assetPath);
             if (item == null) {
-                item = new ScriptAssetData() {
+                item = new ComponentScriptAssetData() {
                     assetPath = script.assetPath,
                     metadata = null,
                 };
@@ -69,7 +107,10 @@ namespace Airship.Editor {
             return item;
         }
 
-        public bool TryGetComponentData(AirshipComponent component, out ComponentData componentData) {
+        /// <summary>
+        /// Will try to get the component data associated with the specified component (if applicable)
+        /// </summary>
+        internal bool TryGetComponentData(AirshipComponent component, out ComponentData componentData) {
             var item = components.FirstOrDefault(f => f.guid == component.guid);
             if (item != null) {
                 componentData = item;
@@ -80,7 +121,10 @@ namespace Airship.Editor {
             return false;   
         }
         
-        public bool TryGetScriptAssetData(AirshipScript script, out ScriptAssetData assetData) {
+        /// <summary>
+        /// Will try to get the script asset data associated with the specified script (if applicable)
+        /// </summary>
+        internal bool TryGetScriptAssetData(AirshipScript script, out ComponentScriptAssetData assetData) {
             var item = scripts.FirstOrDefault(f => f.assetPath == script.assetPath);
             if (item != null) {
                 assetData = item;
@@ -91,7 +135,11 @@ namespace Airship.Editor {
             return false;
         }
 
-        public bool RemoveComponentData(AirshipComponent component) {
+        /// <summary>
+        /// Remove the component data for the given component - usually called when the component is destroyed or
+        /// no longer wants to be referenced in the database
+        /// </summary>
+        internal bool RemoveComponentData(AirshipComponent component) {
             var item = components.FirstOrDefault(f => f.guid == component.guid);
             if (item == null) return false;
             components.Remove(item);

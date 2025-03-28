@@ -185,12 +185,11 @@ using Object = UnityEngine.Object;
             private static bool queueActive = false;
             
             private static List<string> CompiledFileQueue = new();
-            private static HashSet<AirshipComponent> ReconciliationQueue = new();
             private static void ReimportCompiledFiles() {
                 IsImportingFiles = true;
+                AirshipArtifactService.StartScriptUpdates(CompiledFileQueue);
                 
                 if (!(EditorApplication.timeSinceStartup > lastChecked + checkInterval)) return;
-                
                 lastChecked = EditorApplication.timeSinceStartup;
                     
                 // No point importing files if there's errors, or it's empty
@@ -212,13 +211,13 @@ using Object = UnityEngine.Object;
                 } finally {
                     AssetDatabase.StopAssetEditing();
                 }
-
-                CompiledFileQueue.Clear();
-                    
+                
                 EditorApplication.update -= ReimportCompiledFiles;
                 queueActive = false;
                 
                 IsImportingFiles = false;
+                AirshipArtifactService.StopScriptUpdates();
+                CompiledFileQueue.Clear();
             }
 
             public static void QueueCompiledFileForImport(string file) {
