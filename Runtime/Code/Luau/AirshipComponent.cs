@@ -508,13 +508,7 @@ public class AirshipComponent : MonoBehaviour {
 #if UNITY_EDITOR
 	    var eventData = new AirshipReconcileEventData(this, reconcileSource);
 	    Reconcile?.Invoke(eventData);
-
-	    if (!eventData.ShouldReconcile) {
-#if AIRSHIP_DEBUG
-			Debug.Log($"[Reconcile] Skipped reconcile for {guid}");
-#endif
-		    return;
-	    }
+	    if (!eventData.ShouldReconcile) return;
 #endif
         
 #if AIRSHIP_DEBUG
@@ -606,50 +600,48 @@ public class AirshipComponent : MonoBehaviour {
         //   OnValidate() is called again via reimport?
         // 
         // 
-        
-        // We'll only delete if the compiler wants to delete the file
-        if (isModifyingReconcile) {
-	        // Remove properties that are no longer used:
-	        List<LuauMetadataProperty> propertiesToRemove = null;
-	        var seenProperties = new HashSet<string>();
-	        foreach (var serializedProperty in metadata.properties) {
-		        var property = targetMetadata.FindProperty<object>(serializedProperty.name);
-		        // If it doesn't exist on script or if it is a duplicate property
-		        if (property == null || seenProperties.Contains(serializedProperty.name)) {
-			        if (propertiesToRemove == null) {
-				        propertiesToRemove = new List<LuauMetadataProperty>();
-			        }
-			        propertiesToRemove.Add(serializedProperty);
+
+        // Remove properties that are no longer used:
+        List<LuauMetadataProperty> propertiesToRemove = null;
+        var seenProperties = new HashSet<string>();
+        foreach (var serializedProperty in metadata.properties) {
+	        var property = targetMetadata.FindProperty<object>(serializedProperty.name);
+	        // If it doesn't exist on script or if it is a duplicate property
+	        if (property == null || seenProperties.Contains(serializedProperty.name)) {
+		        if (propertiesToRemove == null) {
+			        propertiesToRemove = new List<LuauMetadataProperty>();
 		        }
-		        seenProperties.Add(serializedProperty.name);
+		        propertiesToRemove.Add(serializedProperty);
 	        }
-	        if (propertiesToRemove != null) {
-		        foreach (var serializedProperty in propertiesToRemove) {
+	        seenProperties.Add(serializedProperty.name);
+        }
+        if (propertiesToRemove != null) {
+	        foreach (var serializedProperty in propertiesToRemove) {
 #if AIRSHIP_DEBUG
-			        deletions.Add(serializedProperty.name);
+		        deletions.Add(serializedProperty.name);
 #endif
-			        metadata.properties.Remove(serializedProperty);
-		        }
+		        metadata.properties.Remove(serializedProperty);
 	        }
+        }
 	        
 #if AIRSHIP_DEBUG
-	        if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
-		        Debug.Log($"<color=#b878f7>[Reconcile] ReconcileMetadata({reconcileSource}) {state} for '{name}'#{targetMetadata.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
+        if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
+	        Debug.Log($"<color=#b878f7>[Reconcile] ReconcileMetadata({reconcileSource}) {state} for '{name}'#{targetMetadata.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
 
-		        foreach (var addition in additions) {
-			        Debug.Log($"\t<color=#78f798>+ {addition}</color>");
-		        }
-		        
-		        foreach (var modification in modifications) {
-			        Debug.Log($"\t<color=#f7f778>~ {modification}</color>");
-		        }
-		        
-		        foreach (var deletion in deletions) {
-			        Debug.Log($"\t<color=#f77878>- {deletion}</color>");
-		        }
+	        foreach (var addition in additions) {
+		        Debug.Log($"\t<color=#78f798>+ {addition}</color>");
 	        }
-#endif
+	        
+	        foreach (var modification in modifications) {
+		        Debug.Log($"\t<color=#f7f778>~ {modification}</color>");
+	        }
+	        
+	        foreach (var deletion in deletions) {
+		        Debug.Log($"\t<color=#f77878>- {deletion}</color>");
+	        }
         }
+#endif
+        
 #endif
     }
 

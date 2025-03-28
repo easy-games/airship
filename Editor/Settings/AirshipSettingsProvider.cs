@@ -152,6 +152,9 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorIntegrationsConfig.instance.buildWithoutUpload = EditorGUILayout.Toggle(new GUIContent("Build Without Upload", "When publishing, this will build the asset bundles but won't upload them to Airship. This is useful for testing file sizes with AssetBundle Browser."), EditorIntegrationsConfig.instance.buildWithoutUpload);
             EditorIntegrationsConfig.instance.selfCompileAllShaders = EditorGUILayout.Toggle(new GUIContent("Self Compile All Shaders", "Instead of using pre-compiled shaders from CoreMaterials, you will compile all needed URP shaders when publishing. This makes publishing take significantly longer but reduces shader stripping issues."), EditorIntegrationsConfig.instance.selfCompileAllShaders);
 
+            EditorIntegrationsConfig.instance.reconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
+                new GUIContent("Component Reconciliation", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), EditorIntegrationsConfig.instance.reconcilerVersion);
+            
             // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
             // EditorIntegrationsConfig.instance.typescriptAutostartCompiler = EditorGUILayout.Toggle(

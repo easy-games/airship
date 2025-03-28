@@ -10,6 +10,14 @@ namespace Airship.Editor {
     /// This handles things such as component/script states in Airship's Editor
     /// </summary>
     internal static class AirshipArtifactService {
+        public static ReconcilerVersion DefaultReconcilerVersion => ReconcilerVersion.Version1;
+        public static ReconcilerVersion ReconcilerVersion {
+            get {
+                var version = EditorIntegrationsConfig.instance.reconcilerVersion;
+                return version == ReconcilerVersion.Default ? DefaultReconcilerVersion : version;
+            }
+        }
+        
         private static Dictionary<string, HashSet<AirshipComponent>> reconcileList = new();
         private static IEnumerable<AirshipComponent> _airshipComponentCache;
         
@@ -113,6 +121,8 @@ namespace Airship.Editor {
         /// Callback for when a component is requesting reconciliation
         /// </summary>
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
+            if (ReconcilerVersion != ReconcilerVersion.Version2) return;
+            
             var component = eventData.Component;
             if (!component.script) return;
             var artifactData = AirshipLocalArtifactDatabase.instance;
