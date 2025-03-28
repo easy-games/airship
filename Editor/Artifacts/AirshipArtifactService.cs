@@ -141,8 +141,8 @@ namespace Airship.Editor {
                 artifactData.Modify();
             }
             
-            // If the component is different to the script, we should probably invoke a reconcile anyway
-            if (scriptData.IsMismatchedWithComponent(component)) {
+            // If locally we've got the same hash, and yet the component is different... we can assume the prefab is newer but our database hasn't caught up!
+            if (scriptData.HasSameHashAs(componentData) && scriptData.IsNotSameHashAsComponent(component)) {
 #if AIRSHIP_DEBUG
                 Debug.Log(
                     $"[Reconcile] Discrepancy detected for {eventData.Component.guid}... reconcile queued for next script compilation cycle...");

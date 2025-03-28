@@ -77,9 +77,12 @@ namespace Airship.Editor {
             return componentData.metadata.hash == metadata.hash;
         }
 
-        
-        public bool IsMismatchedWithComponent(AirshipComponent component) {
-            return false;
+
+        /// <summary>
+        /// Will return true if the hash of the component isn't the same as the DB stored script hash
+        /// </summary>
+        public bool IsNotSameHashAsComponent(AirshipComponent component) {
+            return component.hash != metadata.hash;
         }
     }
 
