@@ -1305,6 +1305,8 @@ public class CharacterMovement : NetworkBehaviour {
             if (hasMovementAuth) {
                 if (isClientOnly) {
                     CommandSetStateData(newStateData);
+                } else if (connectionToClient == null) {
+                    RpcSetStateData(newStateData);
                 }
                 // Right now the visual state is controlled by the client only
                 // We may want server auth to update the state but that makes observers have even older version of the character
