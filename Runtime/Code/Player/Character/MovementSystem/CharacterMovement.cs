@@ -156,7 +156,9 @@ public class CharacterMovement : NetworkBehaviour {
     [NonSerialized]
     public CharacterAnimationSyncData stateSyncData = new();
 
-    public Vector3 lookVector { get; private set; } = Vector3.one;
+    public Vector3 lookVector = Vector3.one;
+
+    [SyncVar] public Vector3 startingLookVector = Vector3.one;
 
 #endregion
 
@@ -178,10 +180,12 @@ public class CharacterMovement : NetworkBehaviour {
     }
 
     public override void OnStartClient() {
+        this.lookVector = this.startingLookVector;
         RefreshAuthority();
     }
 
     public override void OnStartServer() {
+        this.lookVector = this.startingLookVector;
         RefreshAuthority();
     }
 
@@ -1301,6 +1305,8 @@ public class CharacterMovement : NetworkBehaviour {
             if (hasMovementAuth) {
                 if (isClientOnly) {
                     CommandSetStateData(newStateData);
+                } else if (connectionToClient == null) {
+                    RpcSetStateData(newStateData);
                 }
                 // Right now the visual state is controlled by the client only
                 // We may want server auth to update the state but that makes observers have even older version of the character

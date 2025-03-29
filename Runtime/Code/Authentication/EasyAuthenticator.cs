@@ -234,7 +234,11 @@ namespace Code.Authentication {
             }
 
             if (!rb.passed) {
-                CrossSceneState.kickMessage = "Kicked from server: Failed to authenticate.";
+                if (!string.IsNullOrEmpty(rb.disconnectMessage)) {
+                    CrossSceneState.kickMessage = rb.disconnectMessage;
+                } else {
+                    CrossSceneState.kickMessage = "Kicked from server: Failed to authenticate.";
+                }
                 ClientReject();
                 SceneManager.LoadScene("Disconnected");
                 return;

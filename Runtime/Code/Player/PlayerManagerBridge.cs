@@ -30,7 +30,7 @@ namespace Code.Player {
 
 		private List<PlayerInfo> players = new();
 
-		private int botPlayerIdCounter = -1;
+		private int botPlayerIdCounter = 1;
 
 		private Scene coreScene;
 
@@ -169,15 +169,16 @@ namespace Code.Player {
 			NetworkServer.OnConnectedEvent -= NetworkServer_OnConnected;
 		}
 
-		public void AddBotPlayer(string username, string tag, string userId) {
-			int clientId = this.botPlayerIdCounter;
-			this.botPlayerIdCounter--;
-			var go = GameObject.Instantiate(this.playerPrefab, Instance.transform.parent);
-			var identity = go.GetComponent<NetworkIdentity>();
-			NetworkServer.Spawn(go);
+		public void AddBotPlayer(string username, string userId, string profilePictureId) {
+			int connectionId = this.botPlayerIdCounter;
+			this.botPlayerIdCounter++;
+			var go = Instantiate(this.playerPrefab, Instance.transform.parent);
 
 			var playerInfo = go.GetComponent<PlayerInfo>();
-			playerInfo.Init(clientId, userId, username, tag);
+			playerInfo.Init(connectionId, userId, username, profilePictureId);
+
+			// var identity = go.GetComponent<NetworkIdentity>();
+			NetworkServer.Spawn(go);
 
 			var playerInfoDto = playerInfo.BuildDto();
 			// this.players.Add(playerInfo);

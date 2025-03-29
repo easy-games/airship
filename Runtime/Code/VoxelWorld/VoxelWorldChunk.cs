@@ -263,7 +263,11 @@ namespace VoxelWorldStuff {
                                 }
                             }
                             else {
-                                Object.Destroy(prefabGameObject);
+                                if (Application.isPlaying) {
+                                    Object.Destroy(prefabGameObject);
+                                } else {
+                                    Object.DestroyImmediate(prefabGameObject);
+                                }
                             }
                         }
 
