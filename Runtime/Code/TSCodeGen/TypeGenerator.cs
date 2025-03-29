@@ -219,6 +219,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(OcclusionCam),
             typeof(QualitySettings),
             typeof(GraphicsSettings),
+            typeof(UniversalRenderPipelineAsset),
 
             // Mirror
             typeof(NetworkServer),
