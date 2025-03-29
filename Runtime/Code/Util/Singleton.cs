@@ -75,10 +75,12 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 			this.transform.parent = parentGO.transform;
 		}
 	}
-	
+
+#if UNITY_EDITOR
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void ResetStaticFields()
 	{
 		_instance = null;
 	}
+#endif
 }
