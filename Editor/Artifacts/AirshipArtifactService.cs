@@ -26,20 +26,11 @@ namespace Airship.Editor {
             AirshipComponent.Reconcile += OnComponentReconcile;
         }
  
-        internal static void StartScriptUpdates(List<string> scriptPaths) {
-            var items = Resources.FindObjectsOfTypeAll<AirshipComponent>();
-            var modifyCache = new List<AirshipComponent>();
-            
-            foreach (var item in items) {
-                if (item.script == null || !scriptPaths.Contains(item.script.assetPath)) continue;
-                modifyCache.Add(item);
-            }
-
-            _airshipComponentCache = modifyCache;
+        internal static void StartScriptUpdates() {
         }
 
         internal static void StopScriptUpdates() {
-            _airshipComponentCache = null;
+            AirshipLocalArtifactDatabase.instance.Modify();
         }
         
         /// <summary>
@@ -171,9 +162,6 @@ namespace Airship.Editor {
             
             // If the script's newer, or the hash is equal we can safely reconcile
             if (scriptData.IsNewerThan(componentData) || scriptData.HasSameHashAs(componentData)) {
-#if AIRSHIP_DEBUG
-                Debug.Log($"[Reconcile] Reconciliation for {componentData.guid} ({scriptData.assetPath})");
-#endif
                 component.hash = component.script.compiledFileHash;
                 componentData.metadata = scriptData.metadata.Clone();
                 artifactData.Modify();

@@ -519,9 +519,6 @@ public class AirshipComponent : MonoBehaviour {
 #endif
 
         metadata.name = targetMetadata.name;
-
-        // Inspector is an active component, post-compile should give an accurate model
-        var isModifyingReconcile = (reconcileSource is ReconcileSource.PostCompile or ReconcileSource.Inspector or ReconcileSource.ForceReconcile);
         
         // Add missing properties or reconcile existing ones:
         foreach (var property in targetMetadata.properties) {

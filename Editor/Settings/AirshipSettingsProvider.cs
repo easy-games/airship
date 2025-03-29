@@ -1,9 +1,11 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using System.IO;
 using Airship.Editor;
 using Code.Bootstrap;
 using UnityEditor.Build;
+using UnityEngine.Windows;
 
 public class AirshipRootSettingsProvider : SettingsProvider
 {
@@ -36,6 +38,7 @@ public class AirshipSettingsProvider : SettingsProvider
     private bool showAutomaticEditorIntegrations = true;
     private bool showLuauOptions = true;
     private bool showNetworkOptions = true;
+    private bool showBetaOptions = false;
 
     bool showGithubAccessToken = false;
     bool showAirshipApiKey = false;
@@ -152,8 +155,25 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorIntegrationsConfig.instance.buildWithoutUpload = EditorGUILayout.Toggle(new GUIContent("Build Without Upload", "When publishing, this will build the asset bundles but won't upload them to Airship. This is useful for testing file sizes with AssetBundle Browser."), EditorIntegrationsConfig.instance.buildWithoutUpload);
             EditorIntegrationsConfig.instance.selfCompileAllShaders = EditorGUILayout.Toggle(new GUIContent("Self Compile All Shaders", "Instead of using pre-compiled shaders from CoreMaterials, you will compile all needed URP shaders when publishing. This makes publishing take significantly longer but reduces shader stripping issues."), EditorIntegrationsConfig.instance.selfCompileAllShaders);
 
+
+            EditorGUILayout.BeginHorizontal();
             EditorIntegrationsConfig.instance.reconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
                 new GUIContent("Component Reconciliation", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), EditorIntegrationsConfig.instance.reconcilerVersion);
+
+            if (EditorIntegrationsConfig.instance.reconcilerVersion == ReconcilerVersion.Version2) {
+#if AIRSHIP_DEBUG
+                if (GUILayout.Button("Refresh", GUILayout.Width(100))) {
+                    AirshipLocalArtifactDatabase.instance.Rebuild();   
+                }
+                if (GUILayout.Button("DEBUG", GUILayout.Width(100))) {
+                    var db = AirshipLocalArtifactDatabase.instance;
+                    var fileInfo = new FileInfo("Library/AirshipArtifactDB");
+                    Debug.Log($"{db.scripts.Count} scripts, {db.components.Count} components ({Mathf.CeilToInt(fileInfo.Length / 1024f)} KB)");
+                }
+#endif
+            }
+            
+            EditorGUILayout.EndHorizontal();
             
             // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 

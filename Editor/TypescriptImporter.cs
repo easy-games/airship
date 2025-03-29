@@ -148,7 +148,6 @@ namespace Editor {
                             timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                         };
                         
-                        AirshipLocalArtifactDatabase.instance.Modify();
                         AirshipArtifactService.ReconcileQueuedComponents(airshipScript);
                     }
                 }

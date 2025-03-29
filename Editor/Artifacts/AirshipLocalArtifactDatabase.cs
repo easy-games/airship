@@ -154,6 +154,12 @@ namespace Airship.Editor {
             Debug.Log($"[LocalArtifactDB] Artifact DB enabled");
 #endif
             
+            // Dictionary<string, AirshipScript> pathToScript = new();
+            // foreach (var script in Resources.FindObjectsOfTypeAll<AirshipScript>()) {
+            //     if (pathToScript.ContainsKey(script.assetPath)) continue; // skip duplicates
+            //     pathToScript.Add(script.assetPath, script);
+            // }
+            
             // When enabled we kind of want to run a validation of the component list
             Dictionary<string, AirshipComponent> guidToComponent = new();
             foreach (var component in Resources.FindObjectsOfTypeAll<AirshipComponent>()) {
@@ -165,11 +171,24 @@ namespace Airship.Editor {
             // we'll yeet it from existence - we don't care, and unity isn't going to try to reconcile it.
             foreach (var componentData in components.ToArray()) {
                 if (guidToComponent.TryGetValue(componentData.guid, out _)) continue;
-                components.Remove(componentData);
+                components.Remove(componentData); // ??
 #if AIRSHIP_DEBUG
                 Debug.Log($"[LocalArtifactDB] Clean out component guid {componentData.guid}");
 #endif
             }
+            
+//             foreach (var scriptAssetData in scripts.ToArray()) { /// ???
+//                 if (pathToScript.TryGetValue(scriptAssetData.assetPath, out _)) continue;
+//                 scripts.Remove(scriptAssetData);
+// #if AIRSHIP_DEBUG
+//                 Debug.Log($"[LocalArtifactDB] Clean out script {scriptAssetData.assetPath}");
+// #endif
+//             }
+        }
+
+        internal void Rebuild() {
+            this.components.Clear();
+            this.scripts.Clear();
         }
 
         private void OnDisable() {

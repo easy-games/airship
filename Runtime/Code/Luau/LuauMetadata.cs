@@ -308,7 +308,7 @@ namespace Luau {
             clone.fileRef = fileRef;
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
-            clone.items = items.Clone();
+            clone.items = items != null ? items.Clone() : new LuauMetadataArrayProperty();
             return clone;
         }
 
