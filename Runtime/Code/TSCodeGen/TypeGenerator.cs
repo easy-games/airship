@@ -217,6 +217,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(ShaderWarmup),
             typeof(ShaderVariantCollection),
             typeof(OcclusionCam),
+            typeof(QualitySettings),
+            typeof(GraphicsSettings),
 
             // Mirror
             typeof(NetworkServer),
