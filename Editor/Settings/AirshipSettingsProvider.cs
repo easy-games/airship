@@ -154,26 +154,6 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorIntegrationsConfig.instance.enableMainMenu = EditorGUILayout.Toggle(new GUIContent("Enable Main Menu", "When true, the main menu will show when pressing [Escape]."), EditorIntegrationsConfig.instance.enableMainMenu);
             EditorIntegrationsConfig.instance.buildWithoutUpload = EditorGUILayout.Toggle(new GUIContent("Build Without Upload", "When publishing, this will build the asset bundles but won't upload them to Airship. This is useful for testing file sizes with AssetBundle Browser."), EditorIntegrationsConfig.instance.buildWithoutUpload);
             EditorIntegrationsConfig.instance.selfCompileAllShaders = EditorGUILayout.Toggle(new GUIContent("Self Compile All Shaders", "Instead of using pre-compiled shaders from CoreMaterials, you will compile all needed URP shaders when publishing. This makes publishing take significantly longer but reduces shader stripping issues."), EditorIntegrationsConfig.instance.selfCompileAllShaders);
-
-
-            EditorGUILayout.BeginHorizontal();
-            EditorIntegrationsConfig.instance.reconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
-                new GUIContent("Component Reconciliation", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), EditorIntegrationsConfig.instance.reconcilerVersion);
-
-            if (EditorIntegrationsConfig.instance.reconcilerVersion == ReconcilerVersion.Version2) {
-#if AIRSHIP_DEBUG
-                if (GUILayout.Button("Refresh", GUILayout.Width(100))) {
-                    AirshipLocalArtifactDatabase.instance.Rebuild();   
-                }
-                if (GUILayout.Button("DEBUG", GUILayout.Width(100))) {
-                    var db = AirshipLocalArtifactDatabase.instance;
-                    var fileInfo = new FileInfo("Library/AirshipArtifactDB");
-                    Debug.Log($"{db.scripts.Count} scripts, {db.components.Count} components ({Mathf.CeilToInt(fileInfo.Length / 1024f)} KB)");
-                }
-#endif
-            }
-            
-            EditorGUILayout.EndHorizontal();
             
             // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
@@ -227,6 +207,31 @@ public class AirshipSettingsProvider : SettingsProvider
             
             if (AirshipEditorNetworkConfig.instance.portOverride != prev) {
                 AirshipEditorNetworkConfig.instance.Modify();
+            }
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+
+        EditorGUILayout.Space();
+        showBetaOptions = EditorGUILayout.BeginFoldoutHeaderGroup(showBetaOptions, "Betas");
+        if (showBetaOptions) {
+            EditorGUILayout.HelpBox("You should not touch these settings unless you know what you're doing. Opting into the betas is accepting you are testing these features.", MessageType.Warning);
+            
+            GUILayout.Label("Reconciler Changes", EditorStyles.boldLabel);
+            GUILayout.Label("Changes how AirshipComponent properties are updated in the Editor. The new setting is 'Artifact Database' \n- which is meant to keep track of what and when needs to reconcile, when appropriate.", EditorStyles.label);
+            
+            EditorGUILayout.BeginHorizontal();
+            AirshipArtifactService.ReconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
+                new GUIContent("Reconciliation Type", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), 
+                EditorIntegrationsConfig.instance.useProjectReconcileOption ? EditorIntegrationsConfig.instance.reconcilerVersion : AirshipLocalArtifactDatabase.instance.reconcilerVersion);
+            EditorGUILayout.EndHorizontal();
+            
+            var result = EditorGUILayout.Popup(new GUIContent("Reconciliation Beta Target", "How to test this feature"), 
+                EditorIntegrationsConfig.instance.useProjectReconcileOption ? 1 : 0, new[] { "Local Instance (Only you)", "Project-wide (All users)" });
+            EditorIntegrationsConfig.instance.useProjectReconcileOption = result == 1;
+            
+            if (GUI.changed) {
+                AirshipLocalArtifactDatabase.instance.Modify();
+                EditorIntegrationsConfig.instance.Modify();
             }
         }
         EditorGUILayout.EndFoldoutHeaderGroup();

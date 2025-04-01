@@ -370,23 +370,38 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
         
         // Sort properties by order in non-serialized object
-        // propertyList.Sort((p1, p2) =>
-        //     indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
-        // );
+        propertyList.Sort((p1, p2) =>
+            indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
+        );
         
         foreach (var prop in propertyList) {
             DrawCustomProperty(binding.GetInstanceID(), binding.script.m_metadata, prop);   
         }
         
-//#if AIRSHIP_INTERNAL
-        if (dataIsInvalid) {
-            AirshipEditorGUI.HorizontalLine();
+#if AIRSHIP_DEBUG
+        AirshipEditorGUI.HorizontalLine();
+        EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+        
+        GUI.enabled = false;
+        EditorGUILayout.LabelField("GUID", binding.guid);
+        EditorGUILayout.Toggle("Prefab Component", PrefabUtility.IsPartOfAnyPrefab(binding));
+        EditorGUILayout.LabelField("File Hash", binding.script.sourceFileHash);
+        EditorGUILayout.LabelField("Component Hash", binding.hash);
+        
+        GUI.enabled = true;
+
+        EditorGUILayout.BeginHorizontal();
+        {
+            GUILayout.FlexibleSpace();
             if (GUILayout.Button("Reconcile")) {
-                binding.ReconcileMetadata(ReconcileSource.PostCompile);
+                AirshipArtifactService.ReconcileComponent(binding);
             }
         }
-//#endif
+        EditorGUILayout.EndHorizontal();
+#endif
     }
+
+    private bool showDebug = true;
 
     // NOTE: This will probably change. Whole "decorators" structure will probably be redesigned.
     private bool HasDecorator(SerializedProperty modifiers, string modifier) {

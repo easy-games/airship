@@ -108,6 +108,7 @@ namespace Airship.Editor {
     /// </summary>
     [FilePath("Library/AirshipArtifactDB", FilePathAttribute.Location.ProjectFolder)]
     internal class AirshipLocalArtifactDatabase : ScriptableSingleton<AirshipLocalArtifactDatabase> {
+        [SerializeField] internal ReconcilerVersion reconcilerVersion = ReconcilerVersion.Default;
         [SerializeField] internal List<ComponentScriptAssetData> scripts = new();
         [SerializeField] internal List<ComponentData> components = new();
         

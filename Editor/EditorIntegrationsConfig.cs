@@ -8,11 +8,11 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 public enum ReconcilerVersion {
-    [InspectorName("Default")]
+    [InspectorName("Default [Opt Out]")]
     Default,
-    [InspectorName("Legacy Behaviour")]
+    [InspectorName("Legacy Behaviour [Opt Out]")]
     Version1,
-    [InspectorName("Artifact Database (Experimental)")]
+    [InspectorName("Artifact Database [Opt In]")]
     Version2,
 }
 
@@ -41,6 +41,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
 
     [SerializeField] public bool selfCompileAllShaders = false;
 
+    [FormerlySerializedAs("reconcilerProject")] [SerializeField] internal bool useProjectReconcileOption = false;
     [SerializeField] internal ReconcilerVersion reconcilerVersion = ReconcilerVersion.Default;
     
     #region LUAU OPTIONS
