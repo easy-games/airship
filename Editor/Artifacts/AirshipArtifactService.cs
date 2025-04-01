@@ -74,9 +74,9 @@ namespace Airship.Editor {
         /// </summary>
         /// <param name="component"></param>
         internal static void ReconcileComponent(AirshipComponent component) {
-            if (string.IsNullOrEmpty(component.guid)) {
-                component.guid = Guid.NewGuid().ToString();
-            }
+            // if (string.IsNullOrEmpty(component.guid)) {
+            //     component.guid = Guid.NewGuid().ToString();
+            // }
             
 #if AIRSHIP_DEBUG
             var additions = new HashSet<string>();
@@ -85,6 +85,8 @@ namespace Airship.Editor {
 #endif
             var scriptMetadata = component.script.m_metadata;
             var componentMetadata = component.metadata;
+            
+            // PrefabUtility.RevertPropertyOverride(new SerializedObject(component).FindProperty("guid"), InteractionMode.AutomatedAction);
             
             if (scriptMetadata == null) return;
             
@@ -165,11 +167,16 @@ namespace Airship.Editor {
         internal static bool ReconcileQueuedComponents(AirshipScript script) {
             // So the idea of this is to reconcile the components AFTER scripts are in the artifact db
             // ... then we can force a reconciliation at that point to ensure the data is up-to-date.
+
+            if (script == null) {
+                Debug.LogError("script is null in ReconcileQueuedComponents ??");
+                return false;
+            }
             
             if (!reconcileList.TryGetValue(script.assetPath, out var componentSet)) return false;
             foreach (var component in componentSet) {
                 if (!component) {
-                    Debug.LogWarning($"Could not reconcile component");
+                    Debug.LogWarning($"Could not reconcile component with path {script.assetPath}, it's now null for whatever reason... ?");
                     continue;
                 }
                 
@@ -200,9 +207,12 @@ namespace Airship.Editor {
         /// </summary>
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
             if (ReconcilerVersion != ReconcilerVersion.Version2) return;
+            if (string.IsNullOrEmpty(eventData.Component.guid)) {
+                eventData.Component.guid = Guid.NewGuid().ToString();
+            }
             
             var originalComponent = PrefabUtility.GetCorrespondingObjectFromSource(eventData.Component);
-            var componentToReconcile = originalComponent != null ? originalComponent : eventData.Component;
+            var componentToReconcile = eventData.Component;
             if (!componentToReconcile.script) return;
             var metadata = componentToReconcile.script.m_metadata;
             if (metadata == null) return;
@@ -241,7 +251,6 @@ namespace Airship.Editor {
                 Debug.Log($"\tConditions: sameHash? {scriptData.HasSameHashAs(componentData)}, isNotSameHash ? {scriptData.IsNotSameHashAsComponent(componentToReconcile)}");
                 Debug.Log($"\tscriptHash: {scriptData.metadata.hash}, componentHash: {componentData.metadata.hash}, instanceHash {componentToReconcile.hash}");
 #endif
-                componentToReconcile.hash = componentData.metadata.hash;
                 OnComponentQueueReconcile(componentToReconcile);
                 eventData.ShouldReconcile = false;
 
@@ -253,16 +262,27 @@ namespace Airship.Editor {
 #endif
                 return;
             }
+
+            if (componentToReconcile.hash == null) {
+                componentToReconcile.hash = componentToReconcile.script.sourceFileHash;
+            }
+
+ 
             
             // If the script's newer, or the hash is equal we can safely reconcile
             if (scriptData.IsNewerThan(componentData) || scriptData.HasSameHashAs(componentData)) {
                 componentToReconcile.metadata.name = metadata.name;
                 
                 // Reconcile the original component + this instance of it
-                if (originalComponent) ReconcileComponent(originalComponent);
-                ReconcileComponent(eventData.Component);
+
+                if (originalComponent) {
+                    originalComponent.hash = componentToReconcile.script.sourceFileHash;
+                    ReconcileComponent(originalComponent);
+                }
                 
                 componentToReconcile.hash = componentToReconcile.script.sourceFileHash;
+                ReconcileComponent(componentToReconcile);
+             
                 componentData.metadata = scriptData.metadata.Clone();
                 
                 if (originalComponent != null) {
@@ -278,7 +298,9 @@ namespace Airship.Editor {
                 Debug.Log($"[Reconcile] skip reconcile for {componentData.guid} ({scriptData.script})");
 #endif
             }
-            
+
+            // Force the hash to be the same as the original component
+            if (originalComponent) componentToReconcile.hash = originalComponent.hash;
             eventData.UseLegacyReconcile = false;
         }
     }

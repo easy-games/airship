@@ -478,10 +478,6 @@ public class AirshipComponent : MonoBehaviour {
 	        Debug.LogWarning("Attempted reconciliation on invalid script or invalid metadata");
             return;
         }
-
-        if (string.IsNullOrEmpty(guid)) {
-	        guid = Guid.NewGuid().ToString();
-        }
         
 #if UNITY_EDITOR
 	    if (Reconcile != null) {
