@@ -513,6 +513,8 @@ using Object = UnityEngine.Object;
                 if (message.StartsWith("{")) {
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                     if (jsonData.Event == CompilerEventType.StartingCompile) {
+                        // AssetDatabase.StartAssetEditing();
+                        
                         IsCompilingFiles = true;
 
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
@@ -525,13 +527,6 @@ using Object = UnityEngine.Object;
                             if (arguments.Initial) {
                                 Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
                                 project.CompilationState.RequiresInitialCompile = true;
-
-                                if (isUsingProgressBar) {
-                                    // UnityMainThreadDispatcher.Instance.Enqueue(() => {
-                                    //     UpdateCompilerProgressBar(0.0f,
-                                    //         $"Starting compilation of {arguments.Count} files...");
-                                    // });
-                                }
                             }
                             else {
                                 Debug.Log($"{prefix} File change(s) detected, recompiling files...");
@@ -565,6 +560,7 @@ using Object = UnityEngine.Object;
 
                     }
                     else if (jsonData.Event == CompilerEventType.FinishedCompileWithErrors) {
+                        // AssetDatabase.StopAssetEditing();
                         Progress.Finish(project.ProgressId, Progress.Status.Failed);
 
                         var arguments = jsonData.Arguments.ToObject<CompilerFinishCompilationWithErrorsEvent>();
@@ -575,6 +571,7 @@ using Object = UnityEngine.Object;
                         LastCompiled = DateTime.Now;
                     }
                     else if (jsonData.Event == CompilerEventType.FinishedCompile) {
+                        // AssetDatabase.StopAssetEditing();
                         Progress.Finish(project.ProgressId);
 
                         if (project.CompilationState.CompiledFileCount > 0) {

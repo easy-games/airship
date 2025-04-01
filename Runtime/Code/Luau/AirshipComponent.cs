@@ -44,6 +44,7 @@ internal enum ReconcileSource {
 internal class AirshipReconcileEventData {
 	public AirshipComponent Component { get; }
 	public bool ShouldReconcile { get; set; } = true;
+	public bool UseLegacyReconcile { get; set; } = true;
 	public ReconcileSource ReconcileSource { get; }
 
 	public AirshipReconcileEventData(AirshipComponent component, ReconcileSource source) {
@@ -72,7 +73,7 @@ public class AirshipComponent : MonoBehaviour {
 	internal static event ReconcileAirshipComponent Reconcile;
 	[SerializeField] internal string guid;
 	[SerializeField] internal string hash;
-	internal string scriptHash => script.FileHash;
+	internal string scriptHash => script.sourceFileHash;
 #endif
 	public AirshipScript script;
 
@@ -466,29 +467,6 @@ public class AirshipComponent : MonoBehaviour {
 
         SetupMetadata();
     }
-
-    internal MetadataChangeState ChangeState {
-	    get {
-		    var scriptMetadata = script.m_metadata;
-		    var componentMetadata = metadata;
-
-		    foreach (var property in componentMetadata.properties) {
-			    var matchingProperty = scriptMetadata!.FindProperty(property.name);
-			    if (matchingProperty == null) {
-				    return MetadataChangeState.ComponentIsMismatched;
-			    }
-		    }
-
-		    foreach (var property in scriptMetadata.properties) {
-			    var matchingProperty = componentMetadata!.FindProperty(property.name);
-			    if (matchingProperty == null) {
-				    return MetadataChangeState.ScriptIsMismatched;
-			    }
-		    }
-		    
-		    return MetadataChangeState.Ok;
-	    }
-    }
     
     internal void ReconcileMetadata(ReconcileSource reconcileSource, [CanBeNull] LuauMetadata sourceMetadata = null) {
 #if AIRSHIP_PLAYER
@@ -506,13 +484,14 @@ public class AirshipComponent : MonoBehaviour {
         }
         
 #if UNITY_EDITOR
-	    var eventData = new AirshipReconcileEventData(this, reconcileSource);
-	    Reconcile?.Invoke(eventData);
-	    if (!eventData.ShouldReconcile) return;
+	    if (Reconcile != null) {
+		    var eventData = new AirshipReconcileEventData(this, reconcileSource);
+		    Reconcile.Invoke(eventData);
+		    if (!eventData.UseLegacyReconcile) return; // we can skip legacy reconcile
+	    }
 #endif
         
 #if AIRSHIP_DEBUG
-	    var state = ChangeState;
 	    var additions = new HashSet<string>();
 	    var deletions = new HashSet<string>();
 	    var modifications = new HashSet<string>();
@@ -534,7 +513,7 @@ public class AirshipComponent : MonoBehaviour {
 	            additions.Add(element.name);
 #endif
             } else {
-	            
+	            // serializedProperty.ReconcileTypes(property);
                 if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
 #if AIRSHIP_DEBUG
 	                modifications.Add(serializedProperty.name);
@@ -623,7 +602,7 @@ public class AirshipComponent : MonoBehaviour {
 	        
 #if AIRSHIP_DEBUG
         if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
-	        Debug.Log($"<color=#b878f7>[Reconcile] ReconcileMetadata({reconcileSource}) {state} for '{name}'#{targetMetadata.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
+	        Debug.Log($"<color=#b878f7>[Reconcile] ReconcileMetadata({reconcileSource}) for '{name}'#{targetMetadata.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
 
 	        foreach (var addition in additions) {
 		        Debug.Log($"\t<color=#78f798>+ {addition}</color>");

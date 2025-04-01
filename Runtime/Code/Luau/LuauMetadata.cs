@@ -298,6 +298,50 @@ namespace Luau {
         public bool HasDecorator(string modifier) {
             return decorators.Exists((element) => element.name == modifier);
         }
+
+        internal bool HasSameTypesAs(LuauMetadataProperty other) {
+            return type == other.type && objectType == other.objectType;
+        }
+
+        internal void ReconcileTypesWith(LuauMetadataProperty property) {
+            // Check if we're changing object type to a type that contains the current type
+            // (for example swapping from AudioClip to AudioResource)
+            var canKeepValue = false;
+            if (type == property.type && objectType != property.objectType && serializedObject != null) {
+                var scriptObjectType = TypeReflection.GetTypeFromString(property.objectType);
+                var componentObjectType = serializedObject.GetType();
+                if (scriptObjectType.IsAssignableFrom(componentObjectType)) {
+                    canKeepValue = true;
+                }
+            }
+            
+            type = property.type;
+            objectType = property.objectType;
+            
+            if (!canKeepValue) {
+                serializedValue = property.serializedValue;
+                serializedObject = property.serializedObject;
+                modified = false;
+            }
+        }
+
+        internal bool ReconcileItemsWith(LuauMetadataProperty property) {
+            if (property.items == null) return false;
+            if (items.type != property.items.type ||
+                items.objectType != property.items.objectType) {
+                items.type = property.items.type;
+                items.objectType = property.items.objectType;
+                items.serializedItems = new string[property.items.serializedItems.Length];
+                items.serializedItems =
+                    property.items.serializedItems.Select(a => a).ToArray();
+                items.objectRefs =
+                    property.items.objectRefs.Select(a => a).ToArray();
+            }
+            
+            items.fileRef = property.fileRef;
+            items.refPath = property.refPath;
+            return true;
+        }
         
         public LuauMetadataProperty Clone() {
             var clone = new LuauMetadataProperty();

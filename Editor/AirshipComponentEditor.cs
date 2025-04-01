@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using Airship.Editor;
 using Code.Luau;
+using Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor.IMGUI.Controls;
@@ -420,7 +421,12 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         var documentation = bindingProp.Documentation;
         var tooltip = GetTooltip(documentation ?? "", decoratorDictionary);
-        
+
+        var wasBold = AirshipEditorInternals.GetBoldDefaultFont();
+        var hasOverride = modified.boolValue && value.prefabOverride;
+        if (hasOverride) {
+            AirshipEditorInternals.SetBoldDefaultFont(true);
+        }
         
         var guiContent = new GUIContent(propNameDisplay, tooltip);
         
@@ -501,7 +507,20 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
                 break;
         }
+        
+        if (hasOverride && Event.current.type == EventType.Repaint) {
+            var lastRect = GUILayoutUtility.GetLastRect();
+
+            var modifiedRect = lastRect;
+            modifiedRect.x = 1;
+            modifiedRect.width = 2;
+            Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
+        }
+        
+        AirshipEditorInternals.SetBoldDefaultFont(wasBold);
     }
+    
+    internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
 
     private void DrawCustomArrayProperty(string scriptName, int componentInstanceId, string propName, GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, AirshipComponentPropertyType arrayElementType, SerializedProperty property, SerializedProperty modified) {
         if (!_openPropertyFoldouts.TryGetValue((scriptName, propName), out bool open))

@@ -89,9 +89,9 @@ namespace Luau {
         /// <summary>
         /// Used to check if the file has changed but not been recompiled yet
         /// </summary>
-        public bool HasFileChanged => compiledFileHash != FileHash;
+        public bool HasFileChanged => compiledFileHash != sourceFileHash;
         
-        public string FileHash {
+        public string sourceFileHash {
             get {
                 using var md5 = MD5.Create();
                 using var stream = File.OpenRead(assetPath);

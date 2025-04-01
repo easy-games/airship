@@ -139,12 +139,12 @@ namespace Editor {
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
                 
-                if (airshipScript.airshipBehaviour) {
+                if (AirshipArtifactService.ReconcilerVersion == ReconcilerVersion.Version2 && airshipScript.airshipBehaviour) {
                     var assetData = AirshipLocalArtifactDatabase.instance.GetOrCreateScriptAssetData(airshipScript);
                     
-                    if (assetData.metadata == null || airshipScript.FileHash != assetData.metadata.hash) {
+                    if (assetData.metadata == null || airshipScript.sourceFileHash != assetData.metadata.hash) {
                         assetData.metadata = new TypescriptCompilerMetadata() {
-                            hash = airshipScript.compiledFileHash,
+                            hash = airshipScript.sourceFileHash,
                             timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                         };
                         

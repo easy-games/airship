@@ -5,18 +5,32 @@ using System.Linq;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
+using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Airship.Editor {
     [Serializable]
     internal class ComponentData {
-        private AirshipComponent _component;
         
-        public string scriptPath;
+        /// <summary>
+        /// The script path of this component
+        /// </summary>
+        public string script;
+        /// <summary>
+        /// The asset path of this component (if it's in a prefab)
+        /// </summary>
+        public string asset;
+        /// <summary>
+        /// The globally-unique identifier of this component
+        /// </summary>
         public string guid;
+        /// <summary>
+        /// Metadata of this component
+        /// </summary>
         public TypescriptCompilerMetadata metadata;
         
+        private AirshipComponent _component;
         /// <summary>
         /// Will find the component via <tt>Resources.FindObjectsOfTypeAll&lt;T&gt;</tt>, and cache the result
         /// </summary>
@@ -34,6 +48,8 @@ namespace Airship.Editor {
                 return _component;
             }
         }
+
+        [CanBeNull] public GameObject Prefab => asset != null ? AssetDatabase.LoadAssetAtPath<GameObject>(asset) : null;
         
         /// <summary>
         /// Will return if the given component is synchronized with this data
@@ -50,13 +66,13 @@ namespace Airship.Editor {
     
     [Serializable]
     internal class ComponentScriptAssetData {
-        public string assetPath;
+        public string script;
         public TypescriptCompilerMetadata metadata;
         
         /// <summary>
         /// Will find the script via <tt>AssetDatabase.LoadAssetAtPath&lt;T&gt;(assetPath)</tt>
         /// </summary>
-        public AirshipScript Script => AssetDatabase.LoadAssetAtPath<AirshipScript>(assetPath);
+        public AirshipScript Script => AssetDatabase.LoadAssetAtPath<AirshipScript>(script);
         
         /// <summary>
         /// Will return whether or not the given component data is newer than the script data
@@ -99,10 +115,10 @@ namespace Airship.Editor {
         /// Gets or creates the script asset data in the artifact database for the given script
         /// </summary>
         internal ComponentScriptAssetData GetOrCreateScriptAssetData(AirshipScript script) {
-            var item = scripts.FirstOrDefault(f => f.assetPath == script.assetPath);
+            var item = scripts.FirstOrDefault(f => f.script == script.assetPath);
             if (item == null) {
                 item = new ComponentScriptAssetData() {
-                    assetPath = script.assetPath,
+                    script = script.assetPath,
                     metadata = null,
                 };
                 scripts.Add(item);
@@ -113,7 +129,7 @@ namespace Airship.Editor {
         /// <summary>
         /// Will try to get the component data associated with the specified component (if applicable)
         /// </summary>
-        internal bool TryGetComponentData(AirshipComponent component, out ComponentData componentData) {
+        internal bool TryGetComponentData(AirshipComponent component, out ComponentData componentData, string assetPath = null) {
             var item = components.FirstOrDefault(f => f.guid == component.guid);
             if (item != null) {
                 componentData = item;
@@ -123,17 +139,35 @@ namespace Airship.Editor {
             componentData = null;
             return false;   
         }
+
+        internal void ProcessPrefabDependencies(GameObject go, AssetImportContext ctx) {
+            var prefabComponents = go.GetComponents<AirshipComponent>();
+            if (prefabComponents.Length == 0) return;
+
+            foreach (var component in prefabComponents) {
+                // if (!TryGetComponentData(component, out var prefabComponentData, ctx.assetPath)) {
+                //     prefabComponentData = new ComponentData() {
+                //         scriptPath = component.script.assetPath,
+                //         assetPath = ctx.assetPath,
+                //     };
+                //     components.Add(prefabComponentData);
+                // }
+                //
+                // if (TryGetComponentData(component, out var componentRefData)) {
+                //     prefabComponentData.metadata = componentRefData.metadata.Clone();
+                // }
+            }
+        }
         
         /// <summary>
         /// Will try to get the script asset data associated with the specified script (if applicable)
         /// </summary>
         internal bool TryGetScriptAssetData(AirshipScript script, out ComponentScriptAssetData assetData) {
-            var item = scripts.FirstOrDefault(f => f.assetPath == script.assetPath);
+            var item = scripts.FirstOrDefault(f => f.script == script.assetPath);
             if (item != null) {
                 assetData = item;
                 return true;
             }
-
             assetData = null;
             return false;
         }
