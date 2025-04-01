@@ -11,8 +11,8 @@ public class CameraScreenshotResponse{
 	public string extension = "";
 }
 
-[LuauAPI]
-public class CameraScreenshotRecorder : MonoBehaviour{
+[LuauAPI(LuauContext.Protected)]
+public class InternalCameraScreenshotRecorder : Singleton<InternalCameraScreenshotRecorder> {
 	public enum SaveFolder {
 		ApplicationData,
 		PicturesFolder,
@@ -58,7 +58,7 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 					folderPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
 					break;
 			};
-			return string.Format("{0}/screenshots/", folderPath);
+			return string.Format("{0}/Airship/", folderPath);
 		}
 	}
 
@@ -68,9 +68,9 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		}
 	}
 
-	public void TakeScreenshot(string fileName = "", int superSampleSize = 1, bool png = true) {
-		InitFolder();
-		StartCoroutine(TakeScreenshotCo(fileName, superSampleSize, png));
+	public static void TakeScreenshot(string fileName = "", int superSampleSize = 1, bool png = true) {
+		Instance.InitFolder();
+		Instance.StartCoroutine(Instance.TakeScreenshotCo(fileName, superSampleSize, png));
 	}
 
 	private IEnumerator TakeScreenshotCo(string fileName = "", int superSampleSize = 1, bool png = true) {
@@ -81,30 +81,29 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 	}
 
 
-	public void TakeCameraScreenshot(Camera camera, string fileName = "", int superSampleSize = 1) {
-		InitFolder();
-		StartCoroutine(TakeCameraScreenshotCo(camera, fileName, superSampleSize));
+	public static void TakeCameraScreenshot(Camera camera, string fileName = "", int superSampleSize = 1) {
+		Instance.InitFolder();
+		Instance.StartCoroutine(Instance.TakeCameraScreenshotCo(camera, fileName, superSampleSize));
 	}
 
 	public IEnumerator TakeCameraScreenshotCo(Camera camera, string fileName = "", int superSampleSize = 1) {
 		bool enabled = camera.enabled;
 		
-		//Have to capture at end of frame for ScreenCapture to work
+		// Have to capture at end of frame for ScreenCapture to work
 		yield return new WaitForEndOfFrame();
 		
-		try{
+		try {
 			screenShot = new Texture2D(resWidth * superSampleSize, resHeight * superSampleSize, TextureFormat.RGB24, false);
 			rt = new RenderTexture(resWidth, resHeight, resDepth);
 			camera.enabled = true;
 			camera.targetTexture = rt;
 			camera.Render();
 			RenderTexture.active = rt;
-		}
-		catch(Exception e){
+		} catch(Exception e) {
 			Debug.LogError("Error saving: " + e.Message);
 		}
 
-		//Save the render textures data to a texture2D
+		// Save the render textures data to a texture2D
 		screenShot.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
 		camera.targetTexture = null;
 		RenderTexture.active = null;
