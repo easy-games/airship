@@ -613,7 +613,7 @@ public class AirshipComponent : MonoBehaviour {
 	        }
         }
 #endif
-        
+	    hash = script.sourceFileHash;
 #endif
     }
 

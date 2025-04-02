@@ -246,7 +246,6 @@ namespace Airship.Editor {
                     EditorGUILayout.LabelField("Luau Hash", project.GetOutputFileHash(item.assetPath));
                     EditorGUILayout.LabelField("Source Hash", item.sourceFileHash);
                     EditorGUILayout.ToggleLeft("Is Singleton", item.m_metadata.singleton);
-                    EditorGUILayout.ToggleLeft("Has Reconciliation Dependencies", TypescriptPrefabDependencyService.HasReconciliationDependencies(item));
 #endif
                     GUI.enabled = true;
 

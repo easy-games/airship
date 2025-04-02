@@ -41,8 +41,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
 
     [SerializeField] public bool selfCompileAllShaders = false;
 
-    [FormerlySerializedAs("reconcilerProject")] [SerializeField] internal bool useProjectReconcileOption = false;
-    [SerializeField] internal ReconcilerVersion reconcilerVersion = ReconcilerVersion.Default;
+    [SerializeField] internal bool useProjectReconcileOption = false;
+    [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;
     
     #region LUAU OPTIONS
     [SerializeField] public bool promptIfLuauPluginChanged = true;

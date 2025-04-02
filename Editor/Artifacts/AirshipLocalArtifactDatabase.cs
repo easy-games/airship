@@ -140,25 +140,6 @@ namespace Airship.Editor {
             componentData = null;
             return false;   
         }
-
-        internal void ProcessPrefabDependencies(GameObject go, AssetImportContext ctx) {
-            var prefabComponents = go.GetComponents<AirshipComponent>();
-            if (prefabComponents.Length == 0) return;
-
-            foreach (var component in prefabComponents) {
-                // if (!TryGetComponentData(component, out var prefabComponentData, ctx.assetPath)) {
-                //     prefabComponentData = new ComponentData() {
-                //         scriptPath = component.script.assetPath,
-                //         assetPath = ctx.assetPath,
-                //     };
-                //     components.Add(prefabComponentData);
-                // }
-                //
-                // if (TryGetComponentData(component, out var componentRefData)) {
-                //     prefabComponentData.metadata = componentRefData.metadata.Clone();
-                // }
-            }
-        }
         
         /// <summary>
         /// Will try to get the script asset data associated with the specified script (if applicable)

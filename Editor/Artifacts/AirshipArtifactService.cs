@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Luau;
+using Mirror.SimpleWeb;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,7 +16,7 @@ namespace Airship.Editor {
         public static ReconcilerVersion ReconcilerVersion {
             get {
                 if (EditorIntegrationsConfig.instance.useProjectReconcileOption) {
-                    var version = EditorIntegrationsConfig.instance.reconcilerVersion;
+                    var version = EditorIntegrationsConfig.instance.projectReconcilerVersion;
                     return version == ReconcilerVersion.Default ? DefaultReconcilerVersion : version;
                 }
                 else {
@@ -25,11 +26,11 @@ namespace Airship.Editor {
             }
             set {
                 if (EditorIntegrationsConfig.instance.useProjectReconcileOption) {
-                    EditorIntegrationsConfig.instance.reconcilerVersion = value;
+                    EditorIntegrationsConfig.instance.projectReconcilerVersion = value;
                 }
                 else {
                     AirshipLocalArtifactDatabase.instance.reconcilerVersion = value;
-                    EditorIntegrationsConfig.instance.reconcilerVersion = ReconcilerVersion.Default;
+                    EditorIntegrationsConfig.instance.projectReconcilerVersion = ReconcilerVersion.Default;
                 }
             }
         }
@@ -88,7 +89,7 @@ namespace Airship.Editor {
         /// Reconcile the component
         /// </summary>
         /// <param name="component"></param>
-        internal static void ReconcileComponent(AirshipComponent component) {
+        internal static bool ReconcileComponent(AirshipComponent component) {
             // if (string.IsNullOrEmpty(component.guid)) {
             //     component.guid = Guid.NewGuid().ToString();
             // }
@@ -98,12 +99,16 @@ namespace Airship.Editor {
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
+            if (component.script == null) return false;
+            
+
+            if (component.script.m_metadata == null) return false;
+            
+            
             var scriptMetadata = component.script.m_metadata;
             var componentMetadata = component.metadata;
-            
-            // PrefabUtility.RevertPropertyOverride(new SerializedObject(component).FindProperty("guid"), InteractionMode.AutomatedAction);
-            
-            if (scriptMetadata == null) return;
+
+            if (scriptMetadata == null) return false;
             
             // Add missing properties
             foreach (var scriptProperty in scriptMetadata.properties) {
@@ -172,6 +177,7 @@ namespace Airship.Editor {
                 }
             }
 #endif
+            return true;
         }
         
         /// <summary>
@@ -207,21 +213,14 @@ namespace Airship.Editor {
             reconcileList.Remove(script.assetPath);
             return true;
         }
-        
-#if AIRSHIP_DEBUG
-        [MenuItem("Airship/Wipe Editor Data")]
-        internal static void Wipe() {
-            var instance = AirshipLocalArtifactDatabase.instance;
-            instance.scripts = new List<ComponentScriptAssetData>();
-            instance.components = new List<ComponentData>();
-            instance.Modify();
-        }
-#endif
+
         /// <summary>
         /// Callback for when a component is requesting reconciliation
         /// </summary>
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
             if (ReconcilerVersion != ReconcilerVersion.Version2) return;
+            eventData.UseLegacyReconcile = false;
+            
             if (string.IsNullOrEmpty(eventData.Component.guid)) {
                 eventData.Component.guid = Guid.NewGuid().ToString();
             }
@@ -280,11 +279,21 @@ namespace Airship.Editor {
                 // Reconcile the original component + this instance of it
                 if (originalComponent) {
                     originalComponent.hash = componentToReconcile.script.sourceFileHash;
-                    ReconcileComponent(originalComponent);
+                    if (!ReconcileComponent(originalComponent)) { // If can't reconcile original, skip out the process 
+#if AIRSHIP_DEBUG
+                        Debug.LogWarning("[Reconcile] Failed reconcile prefab component, will skip instance prefab reconciliation until later.");
+#endif
+                        return;
+                    }
                 }
                 
                 componentToReconcile.hash = componentToReconcile.script.sourceFileHash;
-                ReconcileComponent(componentToReconcile);
+                if (!ReconcileComponent(componentToReconcile)) {
+#if AIRSHIP_DEBUG
+                    Debug.LogWarning("[Reconcile] Failed to reconcile instance component");
+#endif
+                    return;
+                }
              
                 componentData.metadata = scriptData.metadata.Clone();
                 
@@ -298,7 +307,6 @@ namespace Airship.Editor {
 
             // Force the hash to be the same as the original component
             if (originalComponent) componentToReconcile.hash = originalComponent.hash;
-            eventData.UseLegacyReconcile = false;
         }
     }
 }

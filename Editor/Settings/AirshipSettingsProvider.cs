@@ -222,7 +222,7 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorGUILayout.BeginHorizontal();
             AirshipArtifactService.ReconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
                 new GUIContent("Reconciliation Type", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), 
-                EditorIntegrationsConfig.instance.useProjectReconcileOption ? EditorIntegrationsConfig.instance.reconcilerVersion : AirshipLocalArtifactDatabase.instance.reconcilerVersion);
+                EditorIntegrationsConfig.instance.useProjectReconcileOption ? EditorIntegrationsConfig.instance.projectReconcilerVersion : AirshipLocalArtifactDatabase.instance.reconcilerVersion);
             EditorGUILayout.EndHorizontal();
             
             var result = EditorGUILayout.Popup(new GUIContent("Reconciliation Beta Target", "How to test this feature"), 
