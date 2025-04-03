@@ -88,7 +88,10 @@ public class AirshipComponent : MonoBehaviour {
 	public IntPtr thread;
 	[NonSerialized] public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
-	[FormerlySerializedAs("m_metadata")] [HideInInspector] public LuauMetadata metadata = new();
+#if !AIRSHIP_DEBUG
+	[HideInInspector]
+#endif
+	[FormerlySerializedAs("m_metadata")]  public LuauMetadata metadata = new();
 	
 	private readonly int _airshipComponentId = _airshipComponentIdGen++;
 	private readonly Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new(); 
@@ -478,148 +481,16 @@ public class AirshipComponent : MonoBehaviour {
 #if AIRSHIP_PLAYER
         return;
 #else
-	    var targetMetadata = sourceMetadata ?? script.m_metadata;
-	    
-        if (targetMetadata == null) {
-	        Debug.LogWarning("Attempted reconciliation on invalid script or invalid metadata");
-            return;
-        }
-        
-#if UNITY_EDITOR
-	    if (Reconcile != null) {
-		    var eventData = new AirshipReconcileEventData(this, reconcileSource);
-		    Reconcile.Invoke(eventData);
-		    if (!eventData.UseLegacyReconcile) return; // we can skip legacy reconcile
+	    var targetMetadata = script.m_metadata;
+	    if (script == null || targetMetadata == null || targetMetadata.name == "") {
+		    Debug.Log("script null, metadata null or name is empty");
+		    return;
 	    }
-#endif
-        
-#if AIRSHIP_DEBUG
-	    var additions = new HashSet<string>();
-	    var deletions = new HashSet<string>();
-	    var modifications = new HashSet<string>();
-#endif
 
-        metadata.name = targetMetadata.name;
-        
-        // Add missing properties or reconcile existing ones:
-        foreach (var property in targetMetadata.properties) {
-            var serializedProperty = metadata.FindProperty<object>(property.name);
-            
-            if (serializedProperty == null)
-            {
-                var element = property.Clone();
-                metadata.properties.Add(element);
-                serializedProperty = element;
-                
-#if AIRSHIP_DEBUG
-	            additions.Add(element.name);
-#endif
-            } else {
-	            // serializedProperty.ReconcileTypes(property);
-                if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
-#if AIRSHIP_DEBUG
-	                modifications.Add(serializedProperty.name);
-#endif
-	                
-	                // Check if we're changing object type to a type that contains the current type
-	                // (for example swapping from AudioClip to AudioResource)
-	                var canKeepValue = false;
-	                if (serializedProperty.type == property.type && serializedProperty.objectType != property.objectType && serializedProperty.serializedObject != null) {
-		                var scriptObjectType = TypeReflection.GetTypeFromString(property.objectType);
-		                var componentObjectType = serializedProperty.serializedObject.GetType();
-		                if (scriptObjectType.IsAssignableFrom(componentObjectType)) {
-			                canKeepValue = true;
-		                }
-	                }
-	                
-                    serializedProperty.type = property.type;
-                    serializedProperty.objectType = property.objectType;
-                    if (!canKeepValue) {
-	                    serializedProperty.serializedValue = property.serializedValue;
-	                    serializedProperty.serializedObject = property.serializedObject;
-	                    serializedProperty.modified = false;
-                    }
-                }
-                
-                if (property.items != null) {
-                    if (serializedProperty.items.type != property.items.type ||
-                        serializedProperty.items.objectType != property.items.objectType) {
-#if AIRSHIP_DEBUG
-	                    modifications.Add(serializedProperty.name);
-#endif
-	                    
-                        serializedProperty.items.type = property.items.type;
-                        serializedProperty.items.objectType = property.items.objectType;
-                        serializedProperty.items.serializedItems = new string[property.items.serializedItems.Length];
-                        serializedProperty.items.serializedItems =
-                            property.items.serializedItems.Select(a => a).ToArray();
-                        serializedProperty.items.objectRefs =
-                            property.items.objectRefs.Select(a => a).ToArray();
-                    }
-
-                    serializedProperty.items.fileRef = property.fileRef;
-                    serializedProperty.items.refPath = property.refPath;
-                }
-            }
-            
-            serializedProperty.fileRef = property.fileRef;
-            serializedProperty.refPath = property.refPath;
-        }
-        
-        // TODO: Figure this out
-        // Main issue we have right now is that the above will grab from the original script (correct, somewhat)
-        // - unless we're talking about 'removed' properties... then no.
-        // - Ideally we can use the script as the 'source of truth', but it's not the source of truth until compiled
-        // - and a big problem is that we have _new metadata_ before the script has been compiled, which gets
-        //   removed below...
-        //
-        // - The prefab (re)imports, calls OnValidate(), new properties are removed
-        // - The script compiles, new properties are missing until this is called again by the inspector or
-        //   OnValidate() is called again via reimport?
-        // 
-        // 
-
-        // Remove properties that are no longer used:
-        List<LuauMetadataProperty> propertiesToRemove = null;
-        var seenProperties = new HashSet<string>();
-        foreach (var serializedProperty in metadata.properties) {
-	        var property = targetMetadata.FindProperty<object>(serializedProperty.name);
-	        // If it doesn't exist on script or if it is a duplicate property
-	        if (property == null || seenProperties.Contains(serializedProperty.name)) {
-		        if (propertiesToRemove == null) {
-			        propertiesToRemove = new List<LuauMetadataProperty>();
-		        }
-		        propertiesToRemove.Add(serializedProperty);
-	        }
-	        seenProperties.Add(serializedProperty.name);
-        }
-        if (propertiesToRemove != null) {
-	        foreach (var serializedProperty in propertiesToRemove) {
-#if AIRSHIP_DEBUG
-		        deletions.Add(serializedProperty.name);
-#endif
-		        metadata.properties.Remove(serializedProperty);
-	        }
-        }
-	        
-#if AIRSHIP_DEBUG
-        if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
-	        Debug.Log($"<color=#b878f7>[Reconcile] ReconcileMetadata({reconcileSource}) for '{name}'#{targetMetadata.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
-
-	        foreach (var addition in additions) {
-		        Debug.Log($"\t<color=#78f798>+ {addition}</color>");
-	        }
-	        
-	        foreach (var modification in modifications) {
-		        Debug.Log($"\t<color=#f7f778>~ {modification}</color>");
-	        }
-	        
-	        foreach (var deletion in deletions) {
-		        Debug.Log($"\t<color=#f77878>- {deletion}</color>");
-	        }
-        }
-#endif
-	    hash = script.sourceFileHash;
+	    metadata.name = targetMetadata.name;
+	    
+	    var eventData = new AirshipReconcileEventData(this, reconcileSource);
+	    Reconcile?.Invoke(eventData);
 #endif
     }
 

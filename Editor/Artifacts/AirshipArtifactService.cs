@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Editor.EditorInternal;
@@ -108,8 +109,14 @@ namespace Airship.Editor {
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
-            if (component.script == null) return false;
-            if (component.script.m_metadata == null) return false;
+            if (component.script == null) {
+                Debug.LogWarning("no script");
+                return false;
+            }
+            if (component.script.m_metadata == null) {
+                Debug.LogWarning("no metadata");
+                return false;
+            }
             
             
             var scriptMetadata = component.script.m_metadata;
@@ -126,7 +133,7 @@ namespace Airship.Editor {
                     componentMetadata.properties.Add(element);
                     componentProperty = element;
 #if AIRSHIP_DEBUG
-                    additions.Add(element.name);
+                    additions.Add(element.name); // ??
 #endif
                 }
                 else {
@@ -173,15 +180,15 @@ namespace Airship.Editor {
                 Debug.Log($"<color=#b878f7>[Reconcile] ReconcileComponent(com) for '{component.name}'#{component.script.m_metadata?.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
 
                 foreach (var addition in additions) {
-                    Debug.Log($"\t<color=#78f798>+ {addition}</color>");
+                    Debug.Log($"\t<color=#78f798>+ {ObjectNames.NicifyVariableName(addition)}</color>");
                 }
 	        
                 foreach (var modification in modifications) {
-                    Debug.Log($"\t<color=#f7f778>~ {modification}</color>");
+                    Debug.Log($"\t<color=#f7f778>~ {ObjectNames.NicifyVariableName(modification)}</color>");
                 }
 	        
                 foreach (var deletion in deletions) {
-                    Debug.Log($"\t<color=#f77878>- {deletion}</color>");
+                    Debug.Log($"\t<color=#f77878>- {ObjectNames.NicifyVariableName(deletion)}</color>");
                 }
             }
 #endif
@@ -238,6 +245,9 @@ namespace Airship.Editor {
         /// <returns>True if a reconcile is possible</returns>
         internal static bool ReconcileComponentUsingArtifacts(AirshipComponent component, out ReconcileStatus status) {
             if (component.script == null || component.script.m_metadata == null) {
+#if AIRSHIP_DEBUG
+                Debug.LogWarning($"[Reconcile] script or metadata missing for {component}", component);
+#endif
                 status = ReconcileStatus.Unsuccessful;
                 return false;
             }
@@ -247,6 +257,9 @@ namespace Airship.Editor {
             // Ensure we have the script asset data first, if not we'll just have to queue it for the compiler to process...
             var hasData = artifactData.TryGetScriptAssetData(component.script, out var scriptData);
             if (!hasData) {
+#if AIRSHIP_DEBUG
+                Debug.Log($"[Reconcile] Queued reconcile for {component.guid} (from {component.script.assetPath})");
+#endif
                 OnComponentQueueReconcile(component);
                 status = ReconcileStatus.ReconcileWasQueued;
                 return true;
@@ -278,11 +291,17 @@ namespace Airship.Editor {
             // Version mismatch
             if (scriptData.IsNewerThan(componentData) || scriptData.HasSameHashAs(componentData)) {
                 if (reconciled) {
+#if AIRSHIP_DEBUG
+                    Debug.Log($"[Reconcile] Reconciled component because script newer tha component: {component.guid} (from {component.script.assetPath})");
+#endif
                     componentData.metadata = scriptData.metadata.Clone();
                     status = ReconcileStatus.Reconciled;
                     return true;
                 }
                 else {
+#if AIRSHIP_DEBUG
+                    Debug.LogWarning($"[Reconcile] Failed reconcile from: {component.guid} (from {component.script.assetPath})");
+#endif
                     status = ReconcileStatus.Unsuccessful;
                     return false;
                 }
@@ -291,51 +310,65 @@ namespace Airship.Editor {
             status = ReconcileStatus.Reconciled;
             return true;
         }
+
+        private static IEnumerator OnDeferComponentReconcile(AirshipReconcileEventData eventData) {
+            yield return new WaitForEndOfFrame();
+            OnComponentReconcile(eventData);
+        }
         
         /// <summary>
         /// Callback for when a component is requesting reconciliation
         /// </summary>
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
-            if (ReconcilerVersion != ReconcilerVersion.Version2) return;
-            eventData.UseLegacyReconcile = false;
-            // We only continue if we're using the new reconciler...
-
-            var component = eventData.Component;
-            
             // Components must have guids
             if (string.IsNullOrEmpty(eventData.Component.guid)) eventData.Component.guid = Guid.NewGuid().ToString();
             
-            var isPrefab = PrefabUtility.IsPartOfAnyPrefab(component);
-            if (isPrefab) {
-                // If it's a instance component:
-                // - We need to reconcile the source component first:
-                //      - If successful: We can then reconcile the instance
-                //      - Else: well, no point doing a reconcile here... it would just be desync
-                
+            if (ReconcilerVersion == ReconcilerVersion.Version2) {
+                var component = eventData.Component;
+            
+           
+                var isPrefab = PrefabUtility.IsPartOfAnyPrefab(component);
                 var prefabOriginalComponent = PrefabUtility.GetCorrespondingObjectFromOriginalSource(component);
-                if (ReconcileComponentUsingArtifacts(prefabOriginalComponent, out var result)) {
-                    // if successful, we can determine whether or not we'll reconcile the instance component
+                if (isPrefab && prefabOriginalComponent.script != null) {
+                    // If it's a instance component:
+                    // - We need to reconcile the source component first:
+                    //      - If successful: We can then reconcile the instance
+                    //      - Else: well, no point doing a reconcile here... it would just be desync
                     
-                    switch (result) {
-                        // Once we're aware the original is updated, reconcile the instance copy!
-                        case ReconcileStatus.Reconciled: {
-                            ReconcileComponent(component);
-                            break;
+                    if (prefabOriginalComponent.script == null) {
+                        Debug.LogWarning("[Reconcile] Attempted reconcile on instance prefab original without script attached?");
+                        return;
+                    }
+                    
+                    if (ReconcileComponentUsingArtifacts(prefabOriginalComponent, out var result)) {
+                        // if successful, we can determine whether or not we'll reconcile the instance component
+                        
+                        switch (result) {
+                            // Once we're aware the original is updated, reconcile the instance copy!
+                            case ReconcileStatus.Reconciled: {
+                                ReconcileComponent(component);
+                                break;
+                            }
+                            case ReconcileStatus.ReconcileWasQueued:
+                            case ReconcileStatus.Unchanged:
+                                break;
+                            default:
+                                Debug.Log($"Failed to reconcile {component.guid}, got {result}");
+                                break;
                         }
-                        case ReconcileStatus.ReconcileWasQueued:
-                        case ReconcileStatus.Unchanged:
-                            break;
-                        default:
-                            Debug.Log($"Failed to reconcile {component.guid}, got {result}");
-                            break;
+                    }
+                }
+                else {
+                    // It's just an orphaned instance, or we're reconciling the original component, we can just reconcile it outright. No silly business required.
+                    if (ReconcileComponentUsingArtifacts(component, out var result)) {
+                        Debug.Log($"Reconciled unit {component.guid} with result {result}");
                     }
                 }
             }
             else {
-                // It's just an orphaned instance, or we're reconciling the original component, we can just reconcile it outright. No silly business required.
-                if (ReconcileComponentUsingArtifacts(component, out var result)) {
-                    Debug.Log($"Reconciled unit {component.guid} with result {result}");
-                }
+                var component = eventData.Component;
+                ReconcileComponent(component);
+                component.componentHash = component.scriptHash;
             }
         }
     }
