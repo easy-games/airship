@@ -191,6 +191,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 this.rigidbody.linearVelocity = snapshot.velocity;
             }
 
+            airshipTransform.rotation = Quaternion.LookRotation(new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z));
+
             OnSetSnapshot?.Invoke(snapshot);
         }
 
@@ -246,6 +248,12 @@ namespace Code.Player.Character.MovementSystems.Character
             var deltaTime = Time.fixedDeltaTime;
             var isImpulsing = currentMoveSnapshot.impulseVelocity != Vector3.zero;
             var rootPosition = this.rigidbody.position;
+
+            // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
+            if (isServer && !isClient)
+            {
+                airshipTransform.rotation = Quaternion.LookRotation(new Vector3(command.lookVector.x, 0, command.lookVector.z));
+            }
 
             //Ground checks
             var (grounded, groundHit, detectedGround) =
@@ -1001,7 +1009,8 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             // We only update rotation in late update if we are running on a client that is controlling
             // this system
-            if (mode != NetworkedStateSystemMode.Authority && mode != NetworkedStateSystemMode.Input) return;
+            if (isServer) return;
+            if (mode == NetworkedStateSystemMode.Observer) return;
             
             var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
             if(lookTarget == Vector3.zero){
