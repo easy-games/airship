@@ -8,11 +8,11 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 public enum ReconcilerVersion {
-    [InspectorName("Default [Opt Out]")]
+    [InspectorName("Default [Legacy Reconciler]")]
     Default,
-    [InspectorName("Legacy Behaviour [Opt Out]")]
+    [InspectorName("Legacy Reconciler")]
     Version1,
-    [InspectorName("Artifact Database [Opt In]")]
+    [InspectorName("Reconciler V2")]
     Version2,
 }
 

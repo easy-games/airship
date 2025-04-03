@@ -217,7 +217,7 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorGUILayout.HelpBox("You should not touch these settings unless you know what you're doing. Opting into the betas is accepting you are testing these features.", MessageType.Warning);
             
             GUILayout.Label("Reconciler Changes", EditorStyles.boldLabel);
-            GUILayout.Label("Changes how AirshipComponent properties are updated in the Editor. The new setting is 'Artifact Database' \n- which is meant to keep track of what and when needs to reconcile, when appropriate.", EditorStyles.label);
+            GUILayout.Label("Changes how AirshipComponent properties are updated in the Editor.", EditorStyles.label);
             
             EditorGUILayout.BeginHorizontal();
             AirshipArtifactService.ReconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(

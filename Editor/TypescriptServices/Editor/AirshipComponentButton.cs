@@ -68,7 +68,7 @@ namespace Airship.Editor {
 
                                 var component = targetGo.AddComponent<AirshipComponent>();
                                 component.script = airshipScript;
-                                component.scriptPath = airshipScript.assetPath;
+                                component.scriptPath = airshipScript.m_path;
 
                                 EditorUtility.SetDirty(targetGo);
                             });
