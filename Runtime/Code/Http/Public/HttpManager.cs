@@ -37,7 +37,8 @@ namespace Code.Http.Public {
             if (req.result == UnityWebRequest.Result.ProtocolError) {
                 return new HttpResponse() {
                     success = false,
-                    error = req.error,
+                    data = req.downloadHandler.text,
+                    error = req.downloadHandler.text,
                     statusCode = (int)req.responseCode,
                     headers = req.GetResponseHeaders()
                 };
@@ -117,7 +118,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    error = res.statusCode >= 300 ? res.Text : null,
+                    error = res.StatusCode >= 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -162,7 +163,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    error = res.statusCode >= 300 ? res.Text : null,
+                    error = res.StatusCode >= 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -208,7 +209,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    error = res.statusCode >= 300 ? res.Text : null,
+                    error = res.StatusCode >= 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -261,7 +262,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
-                    error = res.statusCode >= 300 ? res.Text : null,
+                    error = res.StatusCode >= 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
