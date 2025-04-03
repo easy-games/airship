@@ -117,6 +117,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
+                    error = res.statusCode > 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -161,6 +162,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
+                    error = res.statusCode > 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -206,6 +208,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
+                    error = res.statusCode > 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -258,6 +261,7 @@ namespace Code.Http.Public {
                 task.SetResult(new HttpResponse() {
                     success = 200 <= res.StatusCode && res.StatusCode < 300,
                     data = res.Text,
+                    error = res.statusCode > 300 ? res.Text : null,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
