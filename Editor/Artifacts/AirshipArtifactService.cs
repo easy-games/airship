@@ -259,7 +259,7 @@ namespace Airship.Editor {
                 componentData = new ComponentData() {
                     guid = component.guid,
                     script = component.script.assetPath,
-                    metadata =  scriptData.metadata.Clone(),
+                    metadata = scriptData.metadata.Clone(),
                 };
                 
                 components.Add(componentData);
@@ -278,11 +278,7 @@ namespace Airship.Editor {
             // Version mismatch
             if (scriptData.IsNewerThan(componentData) || scriptData.HasSameHashAs(componentData)) {
                 if (reconciled) {
-                    scriptData.metadata = new TypescriptCompilerMetadata() {
-                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                        hash = component.componentHash,
-                    };
-                    
+                    componentData.metadata = scriptData.metadata.Clone();
                     status = ReconcileStatus.Reconciled;
                     return true;
                 }
@@ -292,7 +288,7 @@ namespace Airship.Editor {
                 }
             }
             
-            status = ReconcileStatus.Unchanged;
+            status = ReconcileStatus.Reconciled;
             return true;
         }
         
