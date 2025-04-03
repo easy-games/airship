@@ -60,7 +60,7 @@ namespace Airship.Editor {
             if (guid != component.guid) return false;
             if (metadata == null) return false;
             
-            return component.hash == metadata.hash;
+            return component.componentHash == metadata.hash;
         }
     }
     
@@ -98,7 +98,7 @@ namespace Airship.Editor {
         /// Will return true if the hash of the component isn't the same as the DB stored script hash
         /// </summary>
         public bool IsNotSameHashAsComponent(AirshipComponent component) {
-            return component.hash != metadata.hash;
+            return component.componentHash != metadata.hash;
         }
     }
 

@@ -147,9 +147,9 @@ namespace Editor {
                             hash = airshipScript.sourceFileHash,
                             timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                         };
-                        
-                        AirshipArtifactService.ReconcileQueuedComponents(airshipScript);
                     }
+                    
+                    AirshipArtifactService.ReconcileQueuedComponents(airshipScript);
                 }
             }
         }

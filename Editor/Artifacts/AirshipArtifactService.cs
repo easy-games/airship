@@ -2,12 +2,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Editor.EditorInternal;
 using Luau;
 using Mirror.SimpleWeb;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
 namespace Airship.Editor {
+    internal enum ReconcileStatus {
+        Unsuccessful,
+        Unchanged,
+        Reconciled,
+        ReconcileWasQueued,
+    }
+    
     /// <summary>
     /// This handles things such as component/script states in Airship's Editor
     /// </summary>
@@ -100,8 +109,6 @@ namespace Airship.Editor {
             var modifications = new HashSet<string>();
 #endif
             if (component.script == null) return false;
-            
-
             if (component.script.m_metadata == null) return false;
             
             
@@ -109,6 +116,7 @@ namespace Airship.Editor {
             var componentMetadata = component.metadata;
 
             if (scriptMetadata == null) return false;
+            componentMetadata.name = scriptMetadata.name;
             
             // Add missing properties
             foreach (var scriptProperty in scriptMetadata.properties) {
@@ -177,6 +185,7 @@ namespace Airship.Editor {
                 }
             }
 #endif
+            component.componentHash = component.script.sourceFileHash;
             return true;
         }
         
@@ -189,124 +198,149 @@ namespace Airship.Editor {
             // So the idea of this is to reconcile the components AFTER scripts are in the artifact db
             // ... then we can force a reconciliation at that point to ensure the data is up-to-date.
 
-            if (script == null) {
-                Debug.LogError("script is null in ReconcileQueuedComponents ??");
-                return false;
-            }
+            if (script == null) return false;
             
             if (!reconcileList.TryGetValue(script.assetPath, out var componentSet)) return false;
             foreach (var component in componentSet) {
-                if (!component) {
-                    Debug.LogWarning($"Could not reconcile component with path {script.assetPath}, it's now null for whatever reason... ?");
-                    continue;
-                }
-                
-#if AIRSHIP_DEBUG
-                Debug.Log($"[ReconcileDependents] Reconcile {component.guid} ({script.assetPath})");
-#endif
+                if (!component) continue;
                 component.ReconcileMetadata(ReconcileSource.ForceReconcile, script.m_metadata);
             }
             
-#if AIRSHIP_DEBUG
-            Debug.Log($"[ReconcileDependents] Reconciled for all {reconcileList.Count} dependencies of {script.assetPath}");
-#endif
             reconcileList.Remove(script.assetPath);
             return true;
         }
 
+#if AIRSHIP_DEBUG
+        [MenuItem("Airship/Clear Artifact DB")]
+        internal static void Clear() {
+            AirshipLocalArtifactDatabase.instance.components.Clear();
+            AirshipLocalArtifactDatabase.instance.scripts.Clear();
+            AirshipLocalArtifactDatabase.instance.Modify();
+        }
+        
+        [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Reconcile Component", priority = 0)]
+        internal static void Reconcile(MenuCommand item) {
+            var component = item.context as AirshipComponent;
+            ReconcileComponentUsingArtifacts(component, out _);
+        }
+
+        [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Reconcile Component", validate = true)]
+        internal static bool ValidateReconcile(MenuCommand command) {
+            return ReconcilerVersion == ReconcilerVersion.Version2;
+        }
+#endif
+        
+        /// <summary>
+        /// Reconciles the given component using the Artifact Database reconciliation system...
+        /// </summary>
+        /// <param name="component">The component to reconcile</param>
+        /// <param name="status">The status of the reconcile</param>
+        /// <returns>True if a reconcile is possible</returns>
+        internal static bool ReconcileComponentUsingArtifacts(AirshipComponent component, out ReconcileStatus status) {
+            if (component.script == null || component.script.m_metadata == null) {
+                status = ReconcileStatus.Unsuccessful;
+                return false;
+            }
+            
+            var artifactData = AirshipLocalArtifactDatabase.instance;
+            
+            // Ensure we have the script asset data first, if not we'll just have to queue it for the compiler to process...
+            var hasData = artifactData.TryGetScriptAssetData(component.script, out var scriptData);
+            if (!hasData) {
+                OnComponentQueueReconcile(component);
+                status = ReconcileStatus.ReconcileWasQueued;
+                return true;
+            }
+            
+            // If the component artifact doesn't exist yet, create it.
+            var components = artifactData.components;
+            var componentData = components.FirstOrDefault(f => component.guid == f.guid);
+            if (componentData == null) {
+                componentData = new ComponentData() {
+                    guid = component.guid,
+                    script = component.script.assetPath,
+                    metadata =  scriptData.metadata.Clone(),
+                };
+                
+                components.Add(componentData);
+                artifactData.Modify();
+            }
+            
+            // // Hash mismatch
+            // if (!string.IsNullOrEmpty(component.componentHash) && scriptData.HasSameHashAs(componentData) && scriptData.IsNotSameHashAsComponent(component)) {
+            //     Debug.Log($"[Reconcile] Queued reconcile fpr {component.componentHash}");
+            //     OnComponentQueueReconcile(component);
+            //     status = ReconcileStatus.ReconcileWasQueued;
+            //     return true;
+            // }
+
+            var reconciled = ReconcileComponent(component);
+            // Version mismatch
+            if (scriptData.IsNewerThan(componentData) || scriptData.HasSameHashAs(componentData)) {
+                if (reconciled) {
+                    scriptData.metadata = new TypescriptCompilerMetadata() {
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                        hash = component.componentHash,
+                    };
+                    
+                    status = ReconcileStatus.Reconciled;
+                    return true;
+                }
+                else {
+                    status = ReconcileStatus.Unsuccessful;
+                    return false;
+                }
+            }
+            
+            status = ReconcileStatus.Unchanged;
+            return true;
+        }
+        
         /// <summary>
         /// Callback for when a component is requesting reconciliation
         /// </summary>
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
             if (ReconcilerVersion != ReconcilerVersion.Version2) return;
             eventData.UseLegacyReconcile = false;
-            
-            if (string.IsNullOrEmpty(eventData.Component.guid)) {
-                eventData.Component.guid = Guid.NewGuid().ToString();
-            }
+            // We only continue if we're using the new reconciler...
 
-            var originalComponent = PrefabUtility.GetCorrespondingObjectFromSource(eventData.Component);
-            var componentToReconcile = eventData.Component;
-            if (!componentToReconcile.script) return;
-            var metadata = componentToReconcile.script.m_metadata;
-            if (metadata == null) return;
+            var component = eventData.Component;
             
-            var artifactData = AirshipLocalArtifactDatabase.instance;
+            // Components must have guids
+            if (string.IsNullOrEmpty(eventData.Component.guid)) eventData.Component.guid = Guid.NewGuid().ToString();
             
-            // If we have no script data, or it's not got metadata
-            // we should probably skip reconciliation at this stage
-            var hasData = artifactData.TryGetScriptAssetData(componentToReconcile.script, out var scriptData);
-            if (!hasData) {
-#if AIRSHIP_DEBUG
-                Debug.Log(
-                    $"[Reconcile] Script not yet existing, deferring reconciliation for {eventData.Component.guid}...");
-#endif
-                OnComponentQueueReconcile(componentToReconcile);
-                eventData.ShouldReconcile = false;
-                return;
-            }
-
-            var components = artifactData.components;
-            var componentData = components.FirstOrDefault(f => componentToReconcile.guid == f.guid);
-            if (componentData == null) {
-                componentData = new ComponentData() {
-                    guid = componentToReconcile.guid,
-                    script = componentToReconcile.script.assetPath,
-                };
-                components.Add(componentData);
-                artifactData.Modify();
-            }
-            
-            // If locally we've got the same hash, and yet the component is different... we can assume the prefab is newer but our database hasn't caught up!
-            if (scriptData.HasSameHashAs(componentData) && scriptData.IsNotSameHashAsComponent(componentToReconcile)) {
-#if AIRSHIP_DEBUG
-                Debug.Log(
-                    $"[Reconcile] Discrepancy detected for {eventData.Component.guid}... reconcile queued for next script compilation cycle...");
-#endif
-                OnComponentQueueReconcile(componentToReconcile);
-                eventData.ShouldReconcile = false;
-                return;
-            }
-
-            if (componentToReconcile.hash == null) {
-                componentToReconcile.hash = componentToReconcile.script.sourceFileHash;
-            }
-            
-            // If the script's newer, or the hash is equal we can safely reconcile
-            if (scriptData.IsNewerThan(componentData) || scriptData.HasSameHashAs(componentData)) {
-                componentToReconcile.metadata.name = metadata.name;
+            var isPrefab = PrefabUtility.IsPartOfAnyPrefab(component);
+            if (isPrefab) {
+                // If it's a instance component:
+                // - We need to reconcile the source component first:
+                //      - If successful: We can then reconcile the instance
+                //      - Else: well, no point doing a reconcile here... it would just be desync
                 
-                // Reconcile the original component + this instance of it
-                if (originalComponent) {
-                    originalComponent.hash = componentToReconcile.script.sourceFileHash;
-                    if (!ReconcileComponent(originalComponent)) { // If can't reconcile original, skip out the process 
-#if AIRSHIP_DEBUG
-                        Debug.LogWarning("[Reconcile] Failed reconcile prefab component, will skip instance prefab reconciliation until later.");
-#endif
-                        return;
+                var prefabOriginalComponent = PrefabUtility.GetCorrespondingObjectFromOriginalSource(component);
+                if (ReconcileComponentUsingArtifacts(prefabOriginalComponent, out var result)) {
+                    // if successful, we can determine whether or not we'll reconcile the instance component
+                    
+                    switch (result) {
+                        // Once we're aware the original is updated, reconcile the instance copy!
+                        case ReconcileStatus.Reconciled: {
+                            ReconcileComponent(component);
+                            break;
+                        }
+                        case ReconcileStatus.ReconcileWasQueued:
+                        case ReconcileStatus.Unchanged:
+                            break;
+                        default:
+                            Debug.Log($"Failed to reconcile {component.guid}, got {result}");
+                            break;
                     }
                 }
-                
-                componentToReconcile.hash = componentToReconcile.script.sourceFileHash;
-                if (!ReconcileComponent(componentToReconcile)) {
-#if AIRSHIP_DEBUG
-                    Debug.LogWarning("[Reconcile] Failed to reconcile instance component");
-#endif
-                    return;
-                }
-             
-                componentData.metadata = scriptData.metadata.Clone();
-                
-                if (originalComponent != null) {
-                    var path = AssetDatabase.GetAssetPath(originalComponent);
-                    componentData.asset = path;
-                }
-                
-                artifactData.Modify();
             }
-
-            // Force the hash to be the same as the original component
-            if (originalComponent) componentToReconcile.hash = originalComponent.hash;
+            else {
+                // It's just an orphaned instance, or we're reconciling the original component, we can just reconcile it outright. No silly business required.
+                if (ReconcileComponentUsingArtifacts(component, out var result)) {
+                    Debug.Log($"Reconciled unit {component.guid} with result {result}");
+                }
+            }
         }
     }
 }

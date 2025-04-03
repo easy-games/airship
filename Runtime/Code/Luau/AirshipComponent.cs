@@ -72,7 +72,13 @@ public class AirshipComponent : MonoBehaviour {
 #if UNITY_EDITOR
 	internal static event ReconcileAirshipComponent Reconcile;
 	[SerializeField] internal string guid;
-	[SerializeField] internal string hash;
+	[SerializeField] private string hash;
+
+	internal string componentHash {
+		get => hash;
+		set => hash = value;
+	}
+
 	internal string scriptHash => script.sourceFileHash;
 #endif
 	public AirshipScript script;

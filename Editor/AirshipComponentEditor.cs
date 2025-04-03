@@ -384,9 +384,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         GUI.enabled = false;
         EditorGUILayout.LabelField("GUID", binding.guid);
-        EditorGUILayout.Toggle("Prefab Component", PrefabUtility.IsPartOfAnyPrefab(binding));
+        EditorGUILayout.Toggle("Instance", PrefabUtility.IsPartOfAnyPrefab(binding));
         EditorGUILayout.LabelField("File Hash", binding.script.sourceFileHash);
-        EditorGUILayout.LabelField("Component Hash", binding.hash);
+        EditorGUILayout.LabelField("Component Hash", binding.componentHash);
         
         GUI.enabled = true;
 
