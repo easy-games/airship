@@ -37,7 +37,6 @@ namespace Code.Http.Public {
             if (req.result == UnityWebRequest.Result.ProtocolError) {
                 return new HttpResponse() {
                     success = false,
-                    data = req.downloadHandler.text,
                     error = req.downloadHandler.text,
                     statusCode = (int)req.responseCode,
                     headers = req.GetResponseHeaders()
@@ -115,10 +114,11 @@ namespace Code.Http.Public {
             }
 
             RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+                var success = 200 <= res.StatusCode && res.StatusCode < 300;
                 task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    error = res.StatusCode >= 300 ? res.Text : null,
+                    success = success,
+                    data = success ? res.Text : null,
+                    error = success ? null : res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -160,10 +160,11 @@ namespace Code.Http.Public {
             }
 
             RestClient.Delete(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+                var success = 200 <= res.StatusCode && res.StatusCode < 300;
                 task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    error = res.StatusCode >= 300 ? res.Text : null,
+                    success = success,
+                    data = success ? res.Text : null,
+                    error = success ? null : res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -206,10 +207,11 @@ namespace Code.Http.Public {
             }
 
             RestClient.Patch(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+                var success = 200 <= res.StatusCode && res.StatusCode < 300;
                 task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    error = res.StatusCode >= 300 ? res.Text : null,
+                    success = success,
+                    data = success ? res.Text : null,
+                    error = success ? null : res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
@@ -259,10 +261,11 @@ namespace Code.Http.Public {
             }
 
             RestClient.Put(UnityWebRequestProxyHelper.ApplyProxySettings(options)).Then((res) => {
+                var success = 200 <= res.StatusCode && res.StatusCode < 300;
                 task.SetResult(new HttpResponse() {
-                    success = 200 <= res.StatusCode && res.StatusCode < 300,
-                    data = res.Text,
-                    error = res.StatusCode >= 300 ? res.Text : null,
+                    success = success,
+                    data = success ? res.Text : null,
+                    error = success ? null : res.Text,
                     statusCode = (int)res.StatusCode,
                     headers = res.Headers
                 });
