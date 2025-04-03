@@ -330,7 +330,7 @@ public static class CreateAssetBundles {
 			} else {
 				if (assetBundleName != "shared/resources") continue;
 
-				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToList();
+				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToHashSet();
 				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
 					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
 				}
@@ -344,6 +344,7 @@ public static class CreateAssetBundles {
 				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("resources");
 				Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for resources bundle.");
 				foreach (var path in explicitlyAddedPaths) {
+					// Debug.Log("  - " + path);
 					assetGuids.Add(AssetDatabase.AssetPathToGUID(path));
 				}
 
