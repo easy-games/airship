@@ -49,7 +49,7 @@ namespace Airship.Editor {
         [MenuItem("internal:CONTEXT/" + nameof(AirshipComponent) + "/Remove Component")]
         public static void RemoveComponent(MenuCommand command) {
             var component = command.context as AirshipComponent;
-            AirshipArtifactService.OnComponentDestroyed(component);
+            AirshipReconciliationService.OnComponentDestroyed(component);
             Object.DestroyImmediate(component);
         }
     }

@@ -187,7 +187,7 @@ using Object = UnityEngine.Object;
             private static List<string> CompiledFileQueue = new();
             private static void ReimportCompiledFiles() {
                 IsImportingFiles = true;
-                AirshipArtifactService.StartScriptUpdates();
+                AirshipReconciliationService.StartScriptUpdates();
                 
                 if (!(EditorApplication.timeSinceStartup > lastChecked + checkInterval)) return;
                 lastChecked = EditorApplication.timeSinceStartup;
@@ -216,7 +216,7 @@ using Object = UnityEngine.Object;
                 queueActive = false;
                 
                 IsImportingFiles = false;
-                AirshipArtifactService.StopScriptUpdates();
+                AirshipReconciliationService.StopScriptUpdates();
                 CompiledFileQueue.Clear();
             }
 

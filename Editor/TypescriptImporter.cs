@@ -139,7 +139,7 @@ namespace Editor {
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
                 
-                if (AirshipArtifactService.ReconcilerVersion == ReconcilerVersion.Version2 && airshipScript.airshipBehaviour) {
+                if (AirshipReconciliationService.ReconcilerVersion == ReconcilerVersion.Version2 && airshipScript.airshipBehaviour) {
                     var assetData = AirshipLocalArtifactDatabase.instance.GetOrCreateScriptAssetData(airshipScript);
                     
                     if (assetData.metadata == null || airshipScript.sourceFileHash != assetData.metadata.hash) {
@@ -149,7 +149,7 @@ namespace Editor {
                         };
                     }
                     
-                    AirshipArtifactService.ReconcileQueuedComponents(airshipScript);
+                    AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
                 }
             }
         }

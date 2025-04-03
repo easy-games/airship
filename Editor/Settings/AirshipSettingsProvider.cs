@@ -220,7 +220,7 @@ public class AirshipSettingsProvider : SettingsProvider
             GUILayout.Label("Changes how AirshipComponent properties are updated in the Editor.", EditorStyles.label);
             
             EditorGUILayout.BeginHorizontal();
-            AirshipArtifactService.ReconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
+            AirshipReconciliationService.ReconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
                 new GUIContent("Reconciliation Type", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), 
                 EditorIntegrationsConfig.instance.useProjectReconcileOption ? EditorIntegrationsConfig.instance.projectReconcilerVersion : AirshipLocalArtifactDatabase.instance.reconcilerVersion);
             EditorGUILayout.EndHorizontal();

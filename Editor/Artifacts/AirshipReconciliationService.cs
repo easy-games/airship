@@ -19,9 +19,9 @@ namespace Airship.Editor {
     }
     
     /// <summary>
-    /// This handles things such as component/script states in Airship's Editor
+    /// Handles the reconciliation of AirshipComponents
     /// </summary>
-    internal static class AirshipArtifactService {
+    internal static class AirshipReconciliationService {
         public static ReconcilerVersion DefaultReconcilerVersion => ReconcilerVersion.Version1;
         public static ReconcilerVersion ReconcilerVersion {
             get {

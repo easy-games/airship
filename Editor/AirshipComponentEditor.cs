@@ -394,7 +394,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         {
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Reconcile")) {
-                AirshipArtifactService.ReconcileComponent(binding);
+                AirshipReconciliationService.ReconcileComponent(binding);
             }
         }
         EditorGUILayout.EndHorizontal();
