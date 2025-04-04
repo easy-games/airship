@@ -40,23 +40,16 @@ namespace Airship.Editor {
             
             lastRect.width = 200;
 
-            if (TypescriptCompilationService.IsCurrentlyCompiling) {
-                // Do nothing rn
-            } else if (TypescriptCompilationService.IsWatchModeRunning) {
-                if (TypescriptCompilationService.ErrorCount > 0) {
+            switch (TypescriptCompilationService.CompilerState) {
+                case TypescriptCompilerState.Idle:
                     GUI.Button(
-                        lastRect, 
-                        $"Failed to compile {GetTimeString((DateTime.Now - TypescriptCompilationService.LastCompiled))}", 
+                        lastRect,
+                        TypescriptCompilationService.ErrorCount > 0
+                            ? $"Failed to compile {GetTimeString((DateTime.Now - TypescriptCompilationService.LastCompiled))}"
+                            : $"Last compiled {GetTimeString((DateTime.Now - TypescriptCompilationService.LastCompiled))}",
                         "StatusBarIcon"
                     );
-                }
-                else {
-                    GUI.Button(
-                        lastRect, 
-                        $"Last compiled {GetTimeString((DateTime.Now - TypescriptCompilationService.LastCompiled))}", 
-                        "StatusBarIcon"
-                        );
-                }
+                    break;
             }
         }
     }

@@ -7,12 +7,19 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
 
+public enum ReconcilerVersion {
+    [InspectorName("Default [Legacy Reconciler]")]
+    Default,
+    [InspectorName("Legacy Reconciler")]
+    Version1,
+    [InspectorName("Reconciler V2")]
+    Version2,
+}
 
 
 [FilePath("Assets/Editor/EditorIntegrationsConfigData.confg", FilePathAttribute.Location.ProjectFolder)]
 public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsConfig>
 {
-
     [SerializeField]
     public bool autoAddMaterialColor = true;
 
@@ -34,6 +41,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
 
     [SerializeField] public bool selfCompileAllShaders = false;
 
+    [SerializeField] internal bool useProjectReconcileOption = false;
+    [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;
+    
     #region LUAU OPTIONS
     [SerializeField] public bool promptIfLuauPluginChanged = true;
     

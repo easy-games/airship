@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 namespace Editor.EditorInternal {
     public static class GUIViewExtensions {
         public static float v = 10;
-        public static IMGUIContainer GetIMGUIContainerForStatusbar() {
+        internal static IMGUIContainer GetIMGUIContainerForStatusbar() {
 #if !UNITY_EDITOR
             return null;
 #else

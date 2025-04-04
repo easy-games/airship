@@ -13,6 +13,47 @@ namespace Luau {
     }
     
     [Serializable]
+    internal class TypescriptCompilerMetadata {
+        /// <summary>
+        /// The file hash at the compile time
+        /// </summary>
+        public string hash;
+        /// <summary>
+        /// The timestamp when this was compiled
+        /// </summary>
+        public long timestamp;
+        public bool valid => hash != default && timestamp != default;
+        public DateTimeOffset dateTimeOffset => DateTimeOffset.FromUnixTimeSeconds(timestamp);
+        public DateTime dateTime => dateTimeOffset.UtcDateTime;
+
+        public TypescriptCompilerMetadata Clone() {
+            return new TypescriptCompilerMetadata() {
+                hash = hash,
+                timestamp = timestamp,
+            };
+        }
+        
+        /// <summary>
+        /// Is the left metadata older than the right metadata
+        /// </summary>
+        public static bool operator<(TypescriptCompilerMetadata lhs, TypescriptCompilerMetadata rhs) {
+            return lhs.timestamp < rhs.timestamp;
+        }
+        
+        /// <summary>
+        /// Is the left metadata newer than the right metadata
+        /// </summary>
+        public static bool operator>(TypescriptCompilerMetadata lhs, TypescriptCompilerMetadata rhs) {
+            return lhs.timestamp > rhs.timestamp;
+        }
+
+        public override string ToString() {
+            var formatted = dateTime.ToString("yy-MM-dd h:mm:ss tt zz");
+            return $"{hash} ({formatted})";
+        }
+    }
+    
+    [Serializable]
     public class AirshipScript : ScriptableObject {
         // [HideInInspector]
         public string m_path;
@@ -48,9 +89,9 @@ namespace Luau {
         /// <summary>
         /// Used to check if the file has changed but not been recompiled yet
         /// </summary>
-        public bool HasFileChanged => compiledFileHash != FileHash;
+        public bool HasFileChanged => compiledFileHash != sourceFileHash;
         
-        public string FileHash {
+        public string sourceFileHash {
             get {
                 using var md5 = MD5.Create();
                 using var stream = File.OpenRead(assetPath);

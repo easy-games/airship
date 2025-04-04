@@ -10,14 +10,26 @@ using Unity.EditorCoroutines.Editor;
 using Unity.Multiplayer.Playmode;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Airship.Editor {
+    [Flags]
+    internal enum TypescriptExperiments {
+        ReconcileOnPostCompile = 1 << 0,
+    }
+
     [FilePath("Library/TypescriptServices", FilePathAttribute.Location.ProjectFolder)]
     internal class TypescriptServicesLocalConfig : ScriptableSingleton<TypescriptServicesLocalConfig> {
         [SerializeField]
         internal bool hasInitialized = false;
-        
+        [SerializeField] internal bool usePostCompileReconciliation = true;
+
+        private void OnEnable() {
+            AirshipComponent.UsePostCompileReconciliation = usePostCompileReconciliation;
+        }
+
         public void Modify() {
+            AirshipComponent.UsePostCompileReconciliation = usePostCompileReconciliation;
             Save(true);
         }
     }
