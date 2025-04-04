@@ -101,15 +101,15 @@ public class AuthManager {
 #endif
 #endif
 	   
-#if UNITY_ANDROID && !UNITY_EDITOR
-#if AIRSHIP_STAGING
-		// TODO
-#else
-		clientId = "457451560440-htottasd1788to2boc7lg08jrkduotg1.apps.googleusercontent.com";
-		clientSecret = null;
-	    redirectUri = "https://airship.gg/oauth2";
-#endif
-#endif
+// #if UNITY_ANDROID && !UNITY_EDITOR
+// #if AIRSHIP_STAGING
+// 		// TODO
+// #else
+// 		clientId = "457451560440-htottasd1788to2boc7lg08jrkduotg1.apps.googleusercontent.com";
+// 		clientSecret = null;
+// 	    redirectUri = "https://airship.gg/oauth2";
+// #endif
+// #endif
 
         var auth = new GoogleAuth(new AuthorizationCodeFlow.Configuration() {
             clientId = clientId,
@@ -133,8 +133,8 @@ public class AuthManager {
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
-        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
-        // crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new AndroidBrowser("http://*:8080"));
+        // crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new AndroidBrowser("http://*:8080"));
 
         using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 

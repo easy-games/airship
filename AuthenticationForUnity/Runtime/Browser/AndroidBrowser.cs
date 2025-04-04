@@ -3,6 +3,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using GooglePlayGames;
+using GooglePlayGames.BasicApi;
 
 namespace Cdm.Authentication.Browser {
     /// <summary>
@@ -31,24 +33,35 @@ namespace Cdm.Authentication.Browser {
                 _taskCompletionSource?.TrySetCanceled();
             });
 
-            using var httpListener = new HttpListener();
-            
-            try {
-                var prefix = _prefix;
-                prefix = AddForwardSlashIfNecessary(prefix);
-                httpListener.Prefixes.Add(prefix);
-                if (httpListener.IsListening) {
-                    httpListener.Stop();
+            PlayGamesPlatform.Instance.Authenticate((status) => {
+                if (status == SignInStatus.Success) {
+                    Debug.Log("Play Games authentication successful");
+                    _taskCompletionSource.SetResult(new BrowserResult(BrowserStatus.Success, ""));
+                } else {
+                    Debug.LogError($"Play Games authentication failed: {status}");
+                    _taskCompletionSource.SetResult(new BrowserResult(BrowserStatus.UnknownError, ""));
                 }
-                httpListener.Start();
-                httpListener.BeginGetContext(IncomingHttpRequest, httpListener);
-                
-                Application.OpenURL(loginUrl);
-                
-                return await _taskCompletionSource.Task;
-            } finally {
-                httpListener.Stop();
-            }
+            });
+            return await _taskCompletionSource.Task;
+
+            // using var httpListener = new HttpListener();
+            //
+            // try {
+            //     var prefix = _prefix;
+            //     prefix = AddForwardSlashIfNecessary(prefix);
+            //     httpListener.Prefixes.Add(prefix);
+            //     if (httpListener.IsListening) {
+            //         httpListener.Stop();
+            //     }
+            //     httpListener.Start();
+            //     httpListener.BeginGetContext(IncomingHttpRequest, httpListener);
+            //     
+            //     Application.OpenURL(loginUrl);
+            //     
+            //     return await _taskCompletionSource.Task;
+            // } finally {
+            //     httpListener.Stop();
+            // }
         }
 
         private void IncomingHttpRequest(IAsyncResult result) {
