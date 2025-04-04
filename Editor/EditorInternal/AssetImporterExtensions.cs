@@ -1,5 +1,4 @@
-﻿#if UNITY_EDITOR
-using UnityEditor;
+﻿using UnityEditor;
 
 namespace Editor.EditorInternal {
     public static class AssetImporterExtensions {
@@ -14,4 +13,3 @@ namespace Editor.EditorInternal {
         }
     }
 }
-#endif
