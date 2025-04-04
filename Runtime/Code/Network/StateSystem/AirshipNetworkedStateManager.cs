@@ -173,6 +173,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
                     ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 3);
+            print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
 
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
@@ -1025,7 +1026,7 @@ namespace Code.Network.StateSystem
             if (this.serverCommandBuffer.Count > this.serverCommandBufferMaxSize)
             {
                 Debug.LogWarning("Dropping command " + command.commandNumber +
-                                 " due to exceeding command buffer size.");
+                                 " due to exceeding command buffer size. First command in buffer is " + this.serverCommandBuffer.Values[0]);
                 return;
             }
 
