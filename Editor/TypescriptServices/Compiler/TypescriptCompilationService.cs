@@ -25,6 +25,28 @@ using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
     namespace Airship.Editor {
+        public enum TypescriptCompilerState {
+            /// <summary>
+            /// The compiler is not running
+            /// </summary>
+            Inactive,
+            /// <summary>
+            /// The compiler is active, but idle
+            /// </summary>
+            Idle,
+            /// <summary>
+            /// The compiler is compiling files
+            /// </summary>
+            Compiling,
+            /// <summary>
+            /// The compiler has just compiled files, and is performing post-compile steps such as importing and reconcilation
+            /// </summary>
+            PostCompile,
+            /// <summary>
+            /// The compiler has crashed
+            /// </summary>
+            Crashed,
+        }
         
         /// <summary>
         /// Services relating to the TypeScript compiler in the editor
@@ -47,8 +69,20 @@ using Object = UnityEngine.Object;
             /// <summary>
             /// A boolean representing if the compiler is currently compiling files
             /// </summary>
-            public static bool IsCurrentlyCompiling { get; private set; } = false;
+            internal static bool IsCompilingFiles { get; private set; }
+            internal static bool IsImportingFiles { get; private set; }
             
+            public static TypescriptCompilerState CompilerState {
+                get {
+                    if (Crashed) return TypescriptCompilerState.Crashed;
+                    if (IsCompilingFiles) return TypescriptCompilerState.Compiling;
+                    if (IsImportingFiles) return TypescriptCompilerState.PostCompile;
+                    if (IsWatchModeRunning) return TypescriptCompilerState.Idle;
+
+                    return TypescriptCompilerState.Inactive;
+                }
+            }
+
             /// <summary>
             /// The path to where utsc-dev should be installed (if applicable)
             /// </summary>
@@ -83,7 +117,7 @@ using Object = UnityEngine.Object;
             /// <summary>
             /// The version of the compiler the user is using
             /// </summary>
-            public static TypescriptCompilerVersion CompilerVersion {
+            internal static TypescriptCompilerVersion CompilerVersion {
                 get {
                     if (!EditorPrefs.HasKey(AirshipCompilerVersionKey)) {
                         EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) DefaultVersion);
@@ -94,12 +128,12 @@ using Object = UnityEngine.Object;
                             (int)DefaultVersion);
                     }
                 }
-                internal set {
+                set {
                     EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) value);
                 }
             }
 
-            public static TypescriptCompilerVersion[] UsableVersions {
+            internal static TypescriptCompilerVersion[] UsableVersions {
                 get {
                     var versions = new List<TypescriptCompilerVersion> { TypescriptCompilerVersion.UseEditorVersion };
 
@@ -152,8 +186,10 @@ using Object = UnityEngine.Object;
             
             private static List<string> CompiledFileQueue = new();
             private static void ReimportCompiledFiles() {
-                if (!(EditorApplication.timeSinceStartup > lastChecked + checkInterval)) return;
+                IsImportingFiles = true;
+                AirshipReconciliationService.StartScriptUpdates();
                 
+                if (!(EditorApplication.timeSinceStartup > lastChecked + checkInterval)) return;
                 lastChecked = EditorApplication.timeSinceStartup;
                     
                 // No point importing files if there's errors, or it's empty
@@ -175,11 +211,13 @@ using Object = UnityEngine.Object;
                 } finally {
                     AssetDatabase.StopAssetEditing();
                 }
-
-                CompiledFileQueue.Clear();
-                    
+                
                 EditorApplication.update -= ReimportCompiledFiles;
                 queueActive = false;
+                
+                IsImportingFiles = false;
+                AirshipReconciliationService.StopScriptUpdates();
+                CompiledFileQueue.Clear();
             }
 
             public static void QueueCompiledFileForImport(string file) {
@@ -475,7 +513,9 @@ using Object = UnityEngine.Object;
                 if (message.StartsWith("{")) {
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                     if (jsonData.Event == CompilerEventType.StartingCompile) {
-                        IsCurrentlyCompiling = true;
+                        // AssetDatabase.StartAssetEditing();
+                        
+                        IsCompilingFiles = true;
 
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
                         project.CompilationState.FilesToCompileCount = arguments.Count;
@@ -487,13 +527,6 @@ using Object = UnityEngine.Object;
                             if (arguments.Initial) {
                                 Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
                                 project.CompilationState.RequiresInitialCompile = true;
-
-                                if (isUsingProgressBar) {
-                                    // UnityMainThreadDispatcher.Instance.Enqueue(() => {
-                                    //     UpdateCompilerProgressBar(0.0f,
-                                    //         $"Starting compilation of {arguments.Count} files...");
-                                    // });
-                                }
                             }
                             else {
                                 Debug.Log($"{prefix} File change(s) detected, recompiling files...");
@@ -527,16 +560,18 @@ using Object = UnityEngine.Object;
 
                     }
                     else if (jsonData.Event == CompilerEventType.FinishedCompileWithErrors) {
+                        // AssetDatabase.StopAssetEditing();
                         Progress.Finish(project.ProgressId, Progress.Status.Failed);
 
                         var arguments = jsonData.Arguments.ToObject<CompilerFinishCompilationWithErrorsEvent>();
                         Debug.Log(
                             $"{prefix} <color=#ff534a>{arguments.ErrorCount} Compilation Error{(arguments.ErrorCount != 1 ? "s" : "")}</color>");
 
-                        IsCurrentlyCompiling = false;
+                        IsCompilingFiles = false;
                         LastCompiled = DateTime.Now;
                     }
                     else if (jsonData.Event == CompilerEventType.FinishedCompile) {
+                        // AssetDatabase.StopAssetEditing();
                         Progress.Finish(project.ProgressId);
 
                         if (project.CompilationState.CompiledFileCount > 0) {
@@ -546,7 +581,7 @@ using Object = UnityEngine.Object;
                                 QueueReimportFiles();
                         }
 
-                        IsCurrentlyCompiling = false;
+                        IsCompilingFiles = false;
                         LastCompiled = DateTime.Now;
                     }
                     else if (jsonData.Event == CompilerEventType.CompiledFile) {

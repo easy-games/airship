@@ -141,7 +141,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(LayoutRebuilder),
             typeof(RectTransformUtility),
             typeof(ScrollRect),
-            typeof(CameraScreenshotRecorder),
+            typeof(InternalCameraScreenshotRecorder),
             typeof(Ray),
             typeof(MaterialPropertyBlock),
             typeof(DevConsole),
@@ -219,6 +219,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(ShaderWarmup),
             typeof(ShaderVariantCollection),
             typeof(OcclusionCam),
+            typeof(QualitySettings),
+            typeof(GraphicsSettings),
+            typeof(UniversalRenderPipelineAsset),
 
             // Mirror
             typeof(NetworkServer),

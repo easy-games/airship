@@ -158,7 +158,7 @@ namespace UnityEditor.Build.Pipeline
                     // Add the guid to the bundle map
                     guids.Add(asset);
                     // Add the guid & address
-                    Addresses.Add(asset, address);
+                    Addresses.TryAdd(asset, address);
 
                     // Add the asset to the correct collection
                     if (status == ValidationMethods.Status.Asset)

@@ -9,7 +9,7 @@ public class EasyDestroy : MonoBehaviour {
     public DestroyMode destroyMode = DestroyMode.DESTROY; 
 
     // Use this for initialization
-    void Start () {
+    void OnEnable() {
         if (timeUntilDeathInSeconds <= 0) {
             Destroy();
             return;
@@ -20,6 +20,7 @@ public class EasyDestroy : MonoBehaviour {
         }
         Invoke (nameof(Destroy), timeUntilDeathInSeconds);
     }
+    
     private void Destroy(){
         if (destroyMode == DestroyMode.DESTROY) {
             Destroy (gameObject);

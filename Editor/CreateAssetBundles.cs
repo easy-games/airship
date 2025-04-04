@@ -55,13 +55,13 @@ public static class CreateAssetBundles {
 		// }
 		// AssetDatabase.SaveAssets();
 
-		foreach (var assetBundleName in AssetDatabase.GetAllAssetBundleNames()) {
-			var paths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-			foreach (var path in paths) {
-				var importer = AssetImporter.GetAtPath(path);
-				importer.assetBundleName = null;
-			}
-		}
+		// foreach (var assetBundleName in AssetDatabase.GetAllAssetBundleNames()) {
+		// 	var paths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
+		// 	foreach (var path in paths) {
+		// 		var importer = AssetImporter.GetAtPath(path);
+		// 		importer.assetBundleName = null;
+		// 	}
+		// }
 
 		return true;
 
@@ -330,13 +330,24 @@ public static class CreateAssetBundles {
 			} else {
 				if (assetBundleName != "shared/resources") continue;
 
-				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToList();
+				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToHashSet();
 				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
 					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
 				}
 				if (AssetDatabase.AssetPathExists("Assets/GameConfig.asset")) {
 					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/GameConfig.asset"));
 				}
+				if (AssetDatabase.AssetPathExists("Assets/NetworkPrefabCollection.asset")) {
+					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/NetworkPrefabCollection.asset"));
+				}
+
+				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("resources");
+				Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for resources bundle.");
+				foreach (var path in explicitlyAddedPaths) {
+					// Debug.Log("  - " + path);
+					assetGuids.Add(AssetDatabase.AssetPathToGUID(path));
+				}
+
 				var assetPaths = assetGuids
 					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
 					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
@@ -380,7 +391,9 @@ public static class CreateAssetBundles {
 			buildTarget,
 			buildTargetGroup,
 			buildPath
-		);
+		) {
+			WriteLinkXML = false,
+		};
 		buildParams.UseCache = useCache;
 		EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
 		buildParams.BundleCompression = BuildCompression.LZ4;

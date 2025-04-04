@@ -1,9 +1,11 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using System.IO;
 using Airship.Editor;
 using Code.Bootstrap;
 using UnityEditor.Build;
+using UnityEngine.Windows;
 
 public class AirshipRootSettingsProvider : SettingsProvider
 {
@@ -36,6 +38,7 @@ public class AirshipSettingsProvider : SettingsProvider
     private bool showAutomaticEditorIntegrations = true;
     private bool showLuauOptions = true;
     private bool showNetworkOptions = true;
+    private bool showBetaOptions = false;
 
     bool showGithubAccessToken = false;
     bool showAirshipApiKey = false;
@@ -151,7 +154,7 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorIntegrationsConfig.instance.enableMainMenu = EditorGUILayout.Toggle(new GUIContent("Enable Main Menu", "When true, the main menu will show when pressing [Escape]."), EditorIntegrationsConfig.instance.enableMainMenu);
             EditorIntegrationsConfig.instance.buildWithoutUpload = EditorGUILayout.Toggle(new GUIContent("Build Without Upload", "When publishing, this will build the asset bundles but won't upload them to Airship. This is useful for testing file sizes with AssetBundle Browser."), EditorIntegrationsConfig.instance.buildWithoutUpload);
             EditorIntegrationsConfig.instance.selfCompileAllShaders = EditorGUILayout.Toggle(new GUIContent("Self Compile All Shaders", "Instead of using pre-compiled shaders from CoreMaterials, you will compile all needed URP shaders when publishing. This makes publishing take significantly longer but reduces shader stripping issues."), EditorIntegrationsConfig.instance.selfCompileAllShaders);
-
+            
             // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
             // EditorIntegrationsConfig.instance.typescriptAutostartCompiler = EditorGUILayout.Toggle(
@@ -204,6 +207,31 @@ public class AirshipSettingsProvider : SettingsProvider
             
             if (AirshipEditorNetworkConfig.instance.portOverride != prev) {
                 AirshipEditorNetworkConfig.instance.Modify();
+            }
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+
+        EditorGUILayout.Space();
+        showBetaOptions = EditorGUILayout.BeginFoldoutHeaderGroup(showBetaOptions, "Betas");
+        if (showBetaOptions) {
+            EditorGUILayout.HelpBox("You should not touch these settings unless you know what you're doing. Opting into the betas is accepting you are testing these features.", MessageType.Warning);
+            
+            GUILayout.Label("Reconciler Changes", EditorStyles.boldLabel);
+            GUILayout.Label("Changes how AirshipComponent properties are updated in the Editor.", EditorStyles.label);
+            
+            EditorGUILayout.BeginHorizontal();
+            AirshipReconciliationService.ReconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
+                new GUIContent("Reconciliation Type", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), 
+                EditorIntegrationsConfig.instance.useProjectReconcileOption ? EditorIntegrationsConfig.instance.projectReconcilerVersion : AirshipLocalArtifactDatabase.instance.reconcilerVersion);
+            EditorGUILayout.EndHorizontal();
+            
+            var result = EditorGUILayout.Popup(new GUIContent("Reconciliation Beta Target", "How to test this feature"), 
+                EditorIntegrationsConfig.instance.useProjectReconcileOption ? 1 : 0, new[] { "Local Instance (Only you)", "Project-wide (All users)" });
+            EditorIntegrationsConfig.instance.useProjectReconcileOption = result == 1;
+            
+            if (GUI.changed) {
+                AirshipLocalArtifactDatabase.instance.Modify();
+                EditorIntegrationsConfig.instance.Modify();
             }
         }
         EditorGUILayout.EndFoldoutHeaderGroup();

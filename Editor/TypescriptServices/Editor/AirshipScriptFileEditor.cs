@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using Editor;
 using Luau;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Airship.Editor {
     public static class AirshipScriptContextMenus {
@@ -41,9 +41,16 @@ namespace Airship.Editor {
         public static void RemoveScript(MenuCommand command) {
             var binding = command.context as AirshipComponent;
             if (binding == null || binding.metadata == null) return;
-
+            
             binding.script = null;
             binding.scriptPath = null;
+        }
+
+        [MenuItem("internal:CONTEXT/" + nameof(AirshipComponent) + "/Remove Component")]
+        public static void RemoveComponent(MenuCommand command) {
+            var component = command.context as AirshipComponent;
+            AirshipReconciliationService.OnComponentDestroyed(component);
+            Object.DestroyImmediate(component);
         }
     }
 
@@ -234,16 +241,11 @@ namespace Airship.Editor {
                     EditorGUILayout.LabelField("DisplayName", item.m_metadata!.displayName, EditorStyles.boldLabel);
                     EditorGUILayout.LabelField("ClassName", item.m_metadata.name, scriptTextMono);
 
-
-                    
-#if AIRSHIP_INTERNAL
-                    EditorGUILayout.LabelField("OutFileHash", project.GetOutputFileHash(item.assetPath));
-#endif
-
                     GUI.enabled = false;
-                    EditorGUILayout.Toggle("Is Singleton", item.m_metadata.singleton);
 #if AIRSHIP_INTERNAL
-                    EditorGUILayout.Toggle("Requires Reimport", TypescriptImporter.RequiresRecompile(item.assetPath));
+                    EditorGUILayout.LabelField("Luau Hash", project.GetOutputFileHash(item.assetPath));
+                    EditorGUILayout.LabelField("Source Hash", item.sourceFileHash);
+                    EditorGUILayout.ToggleLeft("Is Singleton", item.m_metadata.singleton);
 #endif
                     GUI.enabled = true;
 

@@ -119,7 +119,7 @@ namespace Airship.Editor {
         }
     }
 
-    enum TypescriptOptionsTab {
+    internal enum TypescriptOptionsTab {
         ProjectSettings,
         LocalSettings,
     }

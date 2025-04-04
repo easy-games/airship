@@ -104,7 +104,7 @@ namespace Editor {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
-
+                
                 var project = TypescriptProjectsService.Project;
                 var ext = Path.GetExtension(ctx.assetPath);
                 var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length);
@@ -134,11 +134,23 @@ namespace Editor {
                     icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
                 }
 
-
                 airshipScript.typescriptWasCompiled = hasCompiled;
                 airshipScript.compiledFileHash = project.GetOutputFileHash(assetPath);
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
+                
+                if (AirshipReconciliationService.ReconcilerVersion == ReconcilerVersion.Version2 && airshipScript.airshipBehaviour) {
+                    var assetData = AirshipLocalArtifactDatabase.instance.GetOrCreateScriptAssetData(airshipScript);
+                    
+                    if (assetData.metadata == null || airshipScript.sourceFileHash != assetData.metadata.hash) {
+                        assetData.metadata = new TypescriptCompilerMetadata() {
+                            hash = airshipScript.sourceFileHash,
+                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                        };
+                    }
+                    
+                    AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
+                }
             }
         }
     }

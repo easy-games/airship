@@ -7,7 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Airship.Editor;
 using Code.Luau;
+using Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor.IMGUI.Controls;
@@ -62,7 +64,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         if (binding.script != null && binding.script.m_metadata != null) {
             if (ShouldReconcile(binding)) {
-                binding.ReconcileMetadata();
+                binding.ReconcileMetadata(ReconcileSource.Inspector);
                 serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();
             }
@@ -160,16 +162,23 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
     private void CheckDefaults(AirshipComponent binding) {
         var metadata = serializedObject.FindProperty("metadata");
+        if (metadata == null) {
+            Debug.LogError($"Metadata is null on binding {binding.name}");
+            return;
+        }
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
         var originalMetadataProperties = binding.script.m_metadata.properties;
-
+        
         var setDefault = false;
 
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var metadataProperty = metadataProperties.GetArrayElementAtIndex(i);
             var propName = metadataProperty.FindPropertyRelative("name").stringValue;
             var originalProperty = originalMetadataProperties.Find((p) => p.name == propName);
+            if (originalProperty == null) {
+                continue;
+            }
             
             var modified = metadataProperty.FindPropertyRelative("modified");
             if (modified.boolValue) {
@@ -338,15 +347,28 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         var propertyList = new List<SerializedProperty>();
         var indexDictionary = new Dictionary<string, int>();
 
-        if (binding.script.m_metadata != null) {
-            for (var i = 0; i < metadataProperties.arraySize; i++) {
-                var property = metadataProperties.GetArrayElementAtIndex(i);
-                propertyList.Add(property);
-                indexDictionary.Add(binding.script.m_metadata.properties[i].name, i);
+        var bindingMetadata = binding.script.m_metadata;
+        var bindingProperties = bindingMetadata.properties;
+
+        var dataIsInvalid = false;
+        
+        for (var i = 0; i < metadataProperties.arraySize; i++) {
+            var property = metadataProperties.GetArrayElementAtIndex(i);
+            var propertyName = property.FindPropertyRelative("name").stringValue;
+            var bindingPropertyIndex = bindingProperties.FindIndex(p => p.name == propertyName);
+            if (bindingPropertyIndex == -1) {
+//#if AIRSHIP_INTERNAL
+                EditorGUILayout.LabelField(propertyName, "(Missing)", EditorStyles.miniLabel);
+                dataIsInvalid = true;
+//#endif
+                continue;
             }
+            
+            var bindingProperty = bindingProperties[bindingPropertyIndex];
+            propertyList.Add(property);
+            indexDictionary.Add(bindingProperty.name, bindingPropertyIndex);
         }
-
-
+        
         // Sort properties by order in non-serialized object
         propertyList.Sort((p1, p2) =>
             indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
@@ -355,7 +377,31 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         foreach (var prop in propertyList) {
             DrawCustomProperty(binding.GetInstanceID(), binding.script.m_metadata, prop);   
         }
+        
+#if AIRSHIP_DEBUG
+        AirshipEditorGUI.HorizontalLine();
+        EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+        
+        GUI.enabled = false;
+        EditorGUILayout.LabelField("GUID", binding.guid);
+        EditorGUILayout.Toggle("Instance", PrefabUtility.IsPartOfAnyPrefab(binding));
+        EditorGUILayout.LabelField("File Hash", binding.script.sourceFileHash);
+        EditorGUILayout.LabelField("Component Hash", binding.componentHash);
+        
+        GUI.enabled = true;
+
+        EditorGUILayout.BeginHorizontal();
+        {
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Reconcile")) {
+                AirshipReconciliationService.ReconcileComponent(binding);
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+#endif
     }
+
+    private bool showDebug = true;
 
     // NOTE: This will probably change. Whole "decorators" structure will probably be redesigned.
     private bool HasDecorator(SerializedProperty modifiers, string modifier) {
@@ -390,7 +436,12 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         var documentation = bindingProp.Documentation;
         var tooltip = GetTooltip(documentation ?? "", decoratorDictionary);
-        
+
+        var wasBold = AirshipEditorInternals.GetBoldDefaultFont();
+        var hasOverride = modified.boolValue && value.prefabOverride;
+        if (hasOverride) {
+            AirshipEditorInternals.SetBoldDefaultFont(true);
+        }
         
         var guiContent = new GUIContent(propNameDisplay, tooltip);
         
@@ -471,7 +522,20 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
                 break;
         }
+        
+        if (hasOverride && Event.current.type == EventType.Repaint) {
+            var lastRect = GUILayoutUtility.GetLastRect();
+
+            var modifiedRect = lastRect;
+            modifiedRect.x = 1;
+            modifiedRect.width = 2;
+            Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
+        }
+        
+        AirshipEditorInternals.SetBoldDefaultFont(wasBold);
     }
+    
+    internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
 
     private void DrawCustomArrayProperty(string scriptName, int componentInstanceId, string propName, GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, AirshipComponentPropertyType arrayElementType, SerializedProperty property, SerializedProperty modified) {
         if (!_openPropertyFoldouts.TryGetValue((scriptName, propName), out bool open))
