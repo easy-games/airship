@@ -1040,6 +1040,27 @@ namespace Code.Player.Character.MovementSystems.Character
 
         #region TypeScript Interaction
 
+        public double GetLocalSimulationTimeFromCommandNumber(int commandNumber)
+        {
+            CharacterSnapshotData clientPredictedState = null;
+            foreach (var predictedState in this.manager.stateHistory.Values)
+            {
+                if (predictedState.lastProcessedCommand == commandNumber)
+                {
+                    clientPredictedState = predictedState;
+                    break;
+                }
+            }
+
+            if (clientPredictedState == null)
+            {
+                Debug.LogWarning($"Unable to find predicted state for command number {commandNumber}. Returning 0 as simulation time.");
+                return 0;
+            }
+
+            return clientPredictedState.time;
+        }
+
         public bool RequestResimulation(int commandNumber)
         {
             CharacterSnapshotData clientPredictedState = null;
