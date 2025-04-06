@@ -1257,6 +1257,11 @@ namespace Code.Player.Character.MovementSystems.Character
             return this.currentMoveSnapshot.prevMoveDir;
         }
 
+        public Vector3 GetPosition()
+        {
+            return this.rigidbody.position;
+        }
+
         // This is used by typescript to allow custom data to be compared in TS and the result used
         // in C#. See the CharacterSnapshotData file for how compareResult is used.
         public bool compareResult = false;

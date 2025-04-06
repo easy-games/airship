@@ -12,6 +12,7 @@ using UnityEngine.Serialization;
 
 namespace Code.Network.StateSystem
 {
+    [LuauAPI]
     [RequireComponent(typeof(NetworkIdentity))]
     public abstract class AirshipNetworkedStateManager<StateSystem, State, Input> : NetworkBehaviour
         where State : StateSnapshot where Input : InputCommand where StateSystem : NetworkedStateSystem<StateSystem, State, Input>
