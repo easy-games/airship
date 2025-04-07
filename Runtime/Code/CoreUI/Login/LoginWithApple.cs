@@ -26,12 +26,14 @@ public class LoginWithApple : MonoBehaviour {
         InternalAirshipUtil.HandleWindowSize();
         
         // If the current platform is supported
+#if UNITY_IOS
         if (AppleAuthManager.IsCurrentPlatformSupported) {
             // Creates a default JSON deserializer, to transform JSON Native responses to C# instances
             var deserializer = new PayloadDeserializer();
             // Creates an Apple Authentication manager with the deserializer
             this._appleAuthManager = new AppleAuthManager(deserializer);
         }
+#endif
 
         this.InitializeLoginMenu();
     }

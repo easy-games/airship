@@ -142,6 +142,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     }
     
     private void OnGetTicketForWebApiResponse(GetTicketForWebApiResponse_t data) {
+        print("OnGetTicketForWebApiResponse");
         if (data.m_eResult != EResult.k_EResultOK) {
             Debug.LogError("[Steam] Failed to get auth ticket. Error: " + data.m_eResult);
             return;
