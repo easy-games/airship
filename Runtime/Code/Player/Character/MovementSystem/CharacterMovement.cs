@@ -2,7 +2,14 @@
 using Assets.Luau;
 using Mirror;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
+
+enum MoveDirectionMode {
+    World,
+    Character,
+    Camera,
+}
 
 [LuauAPI]
 public class CharacterMovement : NetworkBehaviour {
@@ -146,6 +153,9 @@ public class CharacterMovement : NetworkBehaviour {
     //Prediction
     private bool queueReplay = false;
 
+    private Transform _cameraTransform;
+    private bool _smoothLookVector = false;
+
 #endregion
 
 #region SYNC DATA
@@ -177,6 +187,8 @@ public class CharacterMovement : NetworkBehaviour {
         if (animationHelper && autoCalibrateSkiddingSpeed) {
             animationHelper.skiddingSpeed = moveData.sprintSpeed + .5f;
         }
+
+        _cameraTransform = Camera.main.transform;
     }
 
     public override void OnStartClient() {
@@ -302,7 +314,7 @@ public class CharacterMovement : NetworkBehaviour {
     //Every frame update the calculated look vector and the visual state of the movement
     private void LateUpdate() {
         //Handle the look rotation
-        if (isClient && isOwned) {
+        if (isClient && isOwned && !_smoothLookVector) {
             var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
             if (lookTarget == Vector3.zero) {
                 lookTarget = new Vector3(0, 0, .01f);
@@ -1116,16 +1128,32 @@ public class CharacterMovement : NetworkBehaviour {
         return lookVector;
     }
 
-    public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace) {
-        if (moveDirWorldSpace) {
-            moveDirInput = moveDir;
-        } else {
-            moveDirInput = graphicTransform.TransformDirection(moveDir);
+    public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
+        var moveDirMode = (MoveDirectionMode)moveDirModeInt;
+
+        switch (moveDirMode) {
+            case MoveDirectionMode.World:
+                moveDirInput = moveDir;
+                break;
+            case MoveDirectionMode.Character:
+                moveDirInput = graphicTransform.TransformDirection(moveDir);
+                break;
+            case MoveDirectionMode.Camera:
+                var forwardZeroY = _cameraTransform.forward;
+                forwardZeroY = new Vector3(forwardZeroY.x, 0, forwardZeroY.z).normalized;
+                var angle = Mathf.Atan2(forwardZeroY.x, forwardZeroY.z) * Mathf.Rad2Deg;
+                moveDirInput = Quaternion.AngleAxis(angle, Vector3.up) * moveDir;
+                break;
+            default:
+                Debug.LogWarning($"Unknown move direction input: {moveDirModeInt}");
+                break;
         }
 
         crouchInput = crouch;
         sprintInput = sprinting;
         jumpInput = jump;
+
+        _smoothLookVector = moveDirMode == MoveDirectionMode.Camera;
     }
 
     public void SetMoveInputData(MoveInputData data) {
@@ -1215,6 +1243,11 @@ public class CharacterMovement : NetworkBehaviour {
     /// <param name="lookVector"></param>
     public void SetLookVectorRecurring(Vector3 lookVector) {
         this.lookVector = lookVector;
+    }
+    
+    public void SetLookVectorRecurringToMoveDir() {
+        if (moveDirInput == Vector3.zero) return;
+        this.lookVector = moveDirInput;
     }
 
     public void SetCustomData(BinaryBlob customData) {
