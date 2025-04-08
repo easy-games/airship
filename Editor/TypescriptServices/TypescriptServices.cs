@@ -65,7 +65,7 @@ namespace Airship.Editor {
         }
 
         private static void PlayModeStateChanged(PlayModeStateChange obj) {
-            if (obj == PlayModeStateChange.EnteredPlayMode && EditorIntegrationsConfig.instance.typescriptPreventPlayOnError) {
+            if (obj == PlayModeStateChange.EnteredPlayMode && TypescriptCompilationService.PreventPlayModeWithErrors) {
                 if (TypescriptCompilationService.ErrorCount > 0) {
                     foreach( SceneView scene in SceneView.sceneViews ) {
                         scene.ShowNotification(new GUIContent("There are TypeScript compilation errors in your project"));
@@ -124,13 +124,15 @@ namespace Airship.Editor {
         private  static IEnumerator StartTypescriptRuntime() {
             TypescriptProjectsService.ReloadProject();
             
-            if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
+            // if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
                 TypescriptCompilationService.StopCompilerServices(true);
             } else {
                 TypescriptCompilationService.StartCompilerServices();
             }
+
+            yield break;
         }
 
         private static void CheckForConsoleClear() {

@@ -110,6 +110,8 @@ using Object = UnityEngine.Object;
             public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
             
             private const string AirshipCompilerVersionKey = "airshipCompilerVersion0";
+            private const string AirshipPreventCompileOnPlayKey = "airshipPreventCompileOnPlay";
+            
             private const TypescriptCompilerVersion DefaultVersion = TypescriptCompilerVersion.UseEditorVersion;
             
 #pragma warning disable CS0612 // Type or member is obsolete
@@ -128,9 +130,19 @@ using Object = UnityEngine.Object;
                             (int)DefaultVersion);
                     }
                 }
-                set {
-                    EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) value);
+                set => EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) value);
+            }
+
+            internal static bool PreventPlayModeWithErrors {
+                get {
+                    if (!EditorPrefs.HasKey(AirshipPreventCompileOnPlayKey)) {
+                        return true;
+                    }
+                    else {
+                        return EditorPrefs.GetBool(AirshipPreventCompileOnPlayKey);
+                    }
                 }
+                set => EditorPrefs.SetBool(AirshipPreventCompileOnPlayKey, value);
             }
 
             internal static TypescriptCompilerVersion[] UsableVersions {

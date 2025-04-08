@@ -133,18 +133,9 @@ namespace Airship.Editor {
             "{column} - The column of the file"
         };
         
-        internal static void RenderProjectSettings() {
+        private static void RenderProjectSettings() {
             var projectSettings = EditorIntegrationsConfig.instance;
             var localSettings = TypescriptServicesLocalConfig.instance;
-            
-            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Service Options"));
-            {
-                projectSettings.typescriptAutostartCompiler =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), projectSettings.typescriptAutostartCompiler);
-                projectSettings.typescriptPreventPlayOnError =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), projectSettings.typescriptPreventPlayOnError);
-            }
-            AirshipEditorGUI.EndSettingGroup();
             
             AirshipEditorGUI.BeginSettingGroup(new GUIContent("Compiler Options"));
             {
@@ -178,7 +169,7 @@ namespace Airship.Editor {
             }
         }
 
-        internal static void RenderLocalSettings() {
+        private static void RenderLocalSettings() {
             var localSettings = TypescriptServicesLocalConfig.instance;
             
             var currentCompiler = TypescriptCompilationService.CompilerVersion;
@@ -212,6 +203,19 @@ namespace Airship.Editor {
             
             AirshipEditorGUI.BeginSettingGroup(new GUIContent("Editor Options"));
             {
+                GUILayout.Space(5);
+                GUILayout.Label("Play Mode", EditorStyles.boldLabel);
+                
+                TypescriptCompilationService.PreventPlayModeWithErrors =
+                    EditorGUILayout.ToggleLeft(
+                        new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), 
+                        TypescriptCompilationService.PreventPlayModeWithErrors
+                        );
+                
+                
+                GUILayout.Space(5);
+                GUILayout.Label("File Association", EditorStyles.boldLabel);
+                
                 List<CodeEditor.Installation> installations = new();
                 
                 installations.Add(new CodeEditor.Installation() {
@@ -261,7 +265,7 @@ namespace Airship.Editor {
         private static GUIContent userSettingsIcon;
         
         private static TypescriptOptionsTab selectedTab;
-        internal static void RenderSettings() {
+        internal static void RenderSettings(string searchContext) {
             projectSettingsIcon ??= EditorGUIUtility.IconContent("Project");
             userSettingsIcon ??= EditorGUIUtility.IconContent("BuildSettings.Standalone.Small");
 
