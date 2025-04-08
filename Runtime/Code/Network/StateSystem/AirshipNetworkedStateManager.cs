@@ -38,6 +38,9 @@ namespace Code.Network.StateSystem
         // Determines if the server has authority over the character
         public bool serverAuth = false;
 
+        [Tooltip("Determines if the server will process inputs from a client, or if it will create it's own input commands.")]
+        public bool serverGeneratesCommands = false;
+
         #endregion
 
         #region Internal State
@@ -436,6 +439,15 @@ namespace Code.Network.StateSystem
                 // An authoritative server will never have a reason to replay a tick since it is the authority on what
                 // happened during that tick.
                 Debug.LogWarning("A replay was triggered on an authoritative server. This shouldn't happen.");
+                return;
+            }
+
+            if (this.serverGeneratesCommands)
+            {
+                // Server generated commands will never be replayed or stored
+                var command = this.stateSystem.GetCommand(this.serverLastProcessedCommandNumber, time);
+                this.serverLastProcessedCommandNumber++;
+                this.stateSystem.Tick(command, false);
                 return;
             }
 
