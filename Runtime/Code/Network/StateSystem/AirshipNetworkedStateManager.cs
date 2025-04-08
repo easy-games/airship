@@ -447,7 +447,7 @@ namespace Code.Network.StateSystem
                 // Server generated commands will never be replayed or stored
                 var command = this.stateSystem.GetCommand(this.serverLastProcessedCommandNumber, time);
                 this.serverLastProcessedCommandNumber++;
-                this.stateSystem.Tick(command, false);
+                this.stateSystem.Tick(command, time,false);
                 return;
             }
 
@@ -494,6 +494,7 @@ namespace Code.Network.StateSystem
                                          (this.serverPredictedCommandCount + 1) + " command(s) so far.");
                         this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
                         command = this.lastProcessedCommand;
+                        command.commandNumber = expectedNextCommandNumber;
                         this.serverPredictedCommandCount++;
                     }
                     // We have a valid command that is in sequence, or we reached our max fill. Remove the next
@@ -508,13 +509,14 @@ namespace Code.Network.StateSystem
                     }
 
                     // tick command
-                    this.stateSystem.Tick(command, false);
+                    command.time = time; // Correct time to local timeline for ticking on the server.
+                    this.stateSystem.Tick(command, time, false);
                 }
                 else
                 {
                     // Ensure that we always tick the system even if there's no command to process.
                     // Debug.LogWarning("No commands left. Last command processed: " + this.lastProcessedCommand);
-                    this.stateSystem.Tick(null, false);
+                    this.stateSystem.Tick(null, time, false);
                 }
             } while (this.serverCommandBuffer.Count >
                      this.serverCommandBufferTargetSize &&
@@ -562,7 +564,7 @@ namespace Code.Network.StateSystem
                 var command = this.inputHistory.GetExact(time);
                 // Process the command again like before, but pass replay into the network system so that
                 // it doesn't replay effects or animations, etc.
-                this.stateSystem.Tick(command, true);
+                this.stateSystem.Tick(command, time, true);
                 return;
             }
 
@@ -574,7 +576,7 @@ namespace Code.Network.StateSystem
             {
                 this.stateSystem.GetCommand(this
                     .clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
-                this.stateSystem.Tick(null, false);
+                this.stateSystem.Tick(null, time, false);
                 this.inputHistory.Add(time, null);
                 return;
             }
@@ -583,7 +585,7 @@ namespace Code.Network.StateSystem
             clientCommandNumber++;
             var input = this.stateSystem.GetCommand(this.clientCommandNumber, time);
             input = this.inputHistory.Add(time, input);
-            this.stateSystem.Tick(input, false);
+            this.stateSystem.Tick(input, time, false);
         }
 
         public void NonAuthClientCaptureSnapshot(double time, bool replay)
@@ -612,26 +614,6 @@ namespace Code.Network.StateSystem
                     // Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
                     this.stateHistory.Overwrite(time, replayState);
                 }
-                
-                // // TODO: instead consider flagging state as being authoritative. This would allow us to always
-                // // set that state if we know that it's correct instead of overwriting all resim history even if some
-                // // of the state is actually authoritative
-                // // If we did request this resimulation, we will process the new state history
-                // if (this.clientPredictionResimRequestor)
-                // {
-                //     // Capture the state and overwrite our history for this tick since it may be different
-                //     // due to corrected collisions or positions of other objects.
-                //     var replayState = this.stateSystem.GetCurrentState(input.commandNumber, time);
-                //     // Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
-                //     this.stateHistory.Overwrite(time, replayState);
-                // }
-                // // If we didn't request this resimulation, reset our state to the one we previously captured for this tick.
-                // else
-                // {
-                //     var oldState = this.stateHistory.GetExact(time);
-                //     if (oldState == null) return;
-                //     this.stateSystem.SetCurrentState(oldState);
-                // }
                 return;
             }
 
@@ -740,7 +722,7 @@ namespace Code.Network.StateSystem
                 // it was on it's last snapshot (we will also set the authoritative position on snapshot capture
                 // later)
                 if (input == null) return;
-                this.stateSystem.Tick(input, true);
+                this.stateSystem.Tick(input, time, true);
                 return;
             }
 
@@ -750,7 +732,7 @@ namespace Code.Network.StateSystem
             var command = this.stateSystem.GetCommand(clientCommandNumber, time);
             this.inputHistory.Add(time, command);
             // Tick system
-            this.stateSystem.Tick(command, false);
+            this.stateSystem.Tick(command, time, false);
         }
 
         public void AuthClientCaptureSnapshot(double time, bool replay)

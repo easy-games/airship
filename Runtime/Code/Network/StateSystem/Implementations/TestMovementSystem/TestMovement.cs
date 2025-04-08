@@ -54,7 +54,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             };
         }
 
-        public override void Tick(TestMovementInput command, bool replay)
+        public override void Tick(TestMovementInput command, double time, bool replay)
         {
             if (command == null) return;
             //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
