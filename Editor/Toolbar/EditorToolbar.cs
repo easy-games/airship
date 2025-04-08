@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using System.Threading.Tasks;
 using Code.Authentication;
 using Code.Http.Internal;
@@ -163,6 +164,7 @@ namespace Airship.Editor
         private static bool fetchingPublishInfo;
         
         private const string IconOn = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
+        private const string IconOnLight = "Packages/gg.easy.airship/Editor/TypescriptOkLight.png";
         private const string IconDev = "Packages/gg.easy.airship/Editor/TypescriptDev.png";
         private const string IconErr = "Packages/gg.easy.airship/Editor/TypescriptErr.png";
         private const string IconOff = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
@@ -374,7 +376,7 @@ namespace Airship.Editor
             GUILayout.FlexibleSpace();
             
             if (typescriptIcon == null)
-                typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOn);
+                typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(EditorGUIUtility.isProSkin ? IconOn : IconOnLight);
 
             if (typescriptIconErr == null)
                 typescriptIconErr = AssetDatabase.LoadAssetAtPath<Texture2D>(IconErr);
@@ -403,13 +405,13 @@ namespace Airship.Editor
                     }
                 } 
                 else {
-                    compilerText = " Typescript";
+                    compilerText = TypescriptCompilationService.ShowDeveloperOptions && !TypescriptCompilationService.Crashed ? $" TypeScript" : "";
                 }
 
                 var isDev = false;
                 if (TypescriptCompilationService.CompilerVersion ==
                     TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
-                    compilerText += " Dev";
+                    compilerText += " Development Build";
                     isDev = true;
                 }
 
@@ -425,14 +427,20 @@ namespace Airship.Editor
                 };
 
                 var style = new GUIStyle(ToolbarStyles.CompilerServicesButtonStyle);
-                if (project.HasCrashed) {
+                if (project.HasCrashed && !TypescriptCompilationService.IsWatchModeRunning) {
                     compilerText = " Typescript <CRASHED>";
                     style.normal.textColor = new Color(1, 0.8f, 0.4f);
                     style.fontStyle = FontStyle.Bold;
-                    
-                    EditorGUILayout.LabelField(new GUIContent("", project.CrashProblemItem.Message), new GUIStyle("CN EntryWarnIconSmall"), GUILayout.Width(20));
                 }
 
+                if (!TypescriptCompilationService.IsWatchModeRunning) {
+                    style.normal.textColor = new Color(1, 0.5f, 0.5f);
+                    style.fontStyle = FontStyle.Bold;
+                    
+                    EditorGUILayout.LabelField(new GUIContent("", "TypeScript is not running!"), new GUIStyle("CN EntryWarnIconSmall"), GUILayout.Width(20));
+                }
+
+                //if (TypescriptCompilationService.ShowTypescriptDropdown) {
                 var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
                     new GUIContent(
                         Screen.width < 1366 ? "" : compilerText, 
@@ -446,6 +454,7 @@ namespace Airship.Editor
                     PopupWindow.Show(buttonRect, wind);
                 }
                 if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
+                //}
             }
             
             GUILayout.Space(5);

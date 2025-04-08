@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using Code.Authentication;
 using Code.Bootstrap;
 using Code.Util;
 using CsToTs.TypeScript;
@@ -54,7 +56,7 @@ using Object = UnityEngine.Object;
         // [InitializeOnLoad]
         public static class TypescriptCompilationService {
             private const string TsCompilerService = "Typescript Compilation Service";
-
+            
             /// <summary>
             /// True if the compiler is running in watch mode
             /// </summary>
@@ -133,6 +135,17 @@ using Object = UnityEngine.Object;
                 set => EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) value);
             }
 
+            internal static bool ShowDeveloperOptions {
+                set => EditorPrefs.SetBool("airshipTypescriptDeveloperOptions", value);
+                get {
+                    if (EditorPrefs.HasKey("airshipTypescriptDeveloperOptions")) {
+                        return EditorPrefs.GetBool("airshipTypescriptDeveloperOptions");
+                    }
+
+                    return false;
+                }
+            }
+            
             internal static bool PreventPlayModeWithErrors {
                 get {
                     if (!EditorPrefs.HasKey(AirshipPreventCompileOnPlayKey)) {
@@ -734,7 +747,7 @@ using Object = UnityEngine.Object;
                     
                     project.CrashProblemItem =
                         new TypescriptCrashProblemItem(project,  errorData, $"The Typescript compiler unexpectedly crashed!\n(Exit Code {proc.ExitCode})", proc.ExitCode);
-
+                    
                     if (Progress.Exists(progressId)) {
                         Progress.SetDescription(progressId, "Failed due to process exit - check console");
                         Progress.Finish(progressId, Progress.Status.Failed);

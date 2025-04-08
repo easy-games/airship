@@ -52,15 +52,20 @@ namespace Airship.Editor {
             alignment = TextAnchor.MiddleLeft,
         };
 
-        private static Texture BuildIcon = EditorGUIUtility.Load("d_CustomTool") as Texture;
-        private static Texture PlayIcon = EditorGUIUtility.Load("d_PlayButton") as Texture;
-        private static Texture PlayIconOn = EditorGUIUtility.Load("PlayButton On") as Texture;
-        private static Texture StopIcon = EditorGUIUtility.Load("d_StopButton") as Texture;
-        private static Texture RevealIcon = EditorGUIUtility.Load("d_CustomTool") as Texture;
-        private static Texture SettingsIcon = EditorGUIUtility.Load("d_SettingsIcon") as Texture;
+        private static readonly Texture BuildIcon = EditorGUIUtility.Load("d_CustomTool") as Texture;
+        private static readonly Texture WindowIcon = EditorGUIUtility.Load("d_UnityEditor.ConsoleWindow") as Texture;
+        private static readonly Texture PlayIconOn = EditorGUIUtility.Load("d_PlayButton") as Texture;
+        private static readonly Texture RestartIcon = EditorGUIUtility.Load("Refresh") as Texture;
+        private static readonly Texture StopIcon = EditorGUIUtility.Load("d_PauseButton On") as Texture;
+        private static readonly Texture SettingsIcon = EditorGUIUtility.Load("d_SettingsIcon") as Texture;
 
         public override Vector2 GetWindowSize() {
-            return new Vector2(400, 80 + 11);
+            if (TypescriptCompilationService.ShowDeveloperOptions) {
+                return new Vector2(420, 105 + 11);
+            }
+            else {
+                return new Vector2(400, 80 + 11);
+            }
         }
         
         public override void OnGUI(Rect rect) {
@@ -70,11 +75,13 @@ namespace Airship.Editor {
 
             EditorGUILayout.BeginVertical();
             {
+                EditorGUILayout.BeginHorizontal();
+                
                 if (TypescriptCompilationService.IsWatchModeRunning) {
                     if (GUILayout.Button(
-                            new GUIContent(" Stop TypeScript", StopIcon, "Stops TypeScript from automatically compiling the projects it is watching"),
+                            new GUIContent(" Restart TypeScript", RestartIcon, "Restarts the TypeScript compilation service"),
                             MenuItem)) {
-                        TypescriptCompilationService.StopCompilers();
+                        TypescriptCompilationService.RestartCompilers();
                     }
                 }
                 else {
@@ -85,25 +92,46 @@ namespace Airship.Editor {
                     }
                 }
                 
-                if (GUILayout.Button(
-                        new GUIContent(" Build", BuildIcon, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
-                        MenuItem)) {
-                    var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.DisplayProgressBar;
-                    if (EditorIntegrationsConfig.instance.typescriptIncremental) {
-                        compileFlags |= TypeScriptCompileFlags.Incremental;
+                if (TypescriptCompilationService.ShowDeveloperOptions) {
+                    GUI.enabled = TypescriptCompilationService.IsWatchModeRunning;
+                    if (GUILayout.Button(
+                            new GUIContent(" Stop TypeScript", StopIcon, "Restarts the TypeScript compilation service"),
+                            MenuItem)) {
+                        TypescriptCompilationService.StopCompilers();
                     }
 
-                    if (EditorIntegrationsConfig.instance.typescriptVerbose) {
-                        compileFlags |= TypeScriptCompileFlags.Verbose;
-                    }
+                    GUI.enabled = true;
+                } 
+                
+                EditorGUILayout.EndHorizontal();
+
+                if (GUILayout.Button(
+                        new GUIContent(" Typescript Console", WindowIcon, ""),
+                        MenuItem)) {
+                    TypescriptServicesStatusWindow.Open();
+                }
+
+                if (TypescriptCompilationService.ShowDeveloperOptions) {
+                    if (GUILayout.Button(
+                            new GUIContent(" Build", BuildIcon, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
+                            MenuItem)) {
+                        var compileFlags = TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.DisplayProgressBar;
+                        if (EditorIntegrationsConfig.instance.typescriptIncremental) {
+                            compileFlags |= TypeScriptCompileFlags.Incremental;
+                        }
                     
-                    if (TypescriptCompilationService.IsWatchModeRunning) {
-                        TypescriptCompilationService.StopCompilerServices();
-                        TypescriptCompilationService.BuildTypescript(compileFlags);
-                        TypescriptCompilationService.StartCompilerServices();
-                    }
-                    else {
-                        TypescriptCompilationService.BuildTypescript(compileFlags);
+                        if (EditorIntegrationsConfig.instance.typescriptVerbose) {
+                            compileFlags |= TypeScriptCompileFlags.Verbose;
+                        }
+                        
+                        if (TypescriptCompilationService.IsWatchModeRunning) {
+                            TypescriptCompilationService.StopCompilerServices();
+                            TypescriptCompilationService.BuildTypescript(compileFlags);
+                            TypescriptCompilationService.StartCompilerServices();
+                        }
+                        else {
+                            TypescriptCompilationService.BuildTypescript(compileFlags);
+                        }
                     }
                 }
             }
@@ -173,7 +201,7 @@ namespace Airship.Editor {
             var localSettings = TypescriptServicesLocalConfig.instance;
             
             var currentCompiler = TypescriptCompilationService.CompilerVersion;
-            if (TypescriptCompilationService.UsableVersions.Length > 1) {
+            if (TypescriptCompilationService.UsableVersions.Length > 1 && TypescriptCompilationService.ShowDeveloperOptions) {
                 AirshipEditorGUI.BeginSettingGroup(new GUIContent("Compiler Options"));
                 
                 var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
@@ -253,6 +281,14 @@ namespace Airship.Editor {
                 
                 if (AirshipExternalCodeEditor.CurrentEditorPath != "")
                     EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
+                
+                GUILayout.Space(5);
+                GUILayout.Label("Debugging", EditorStyles.boldLabel);
+                
+                TypescriptCompilationService.ShowDeveloperOptions = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Advanced Options", "Enable the advanced options - only enable this if you know what you're doing!"), 
+                    TypescriptCompilationService.ShowDeveloperOptions
+                );
             }
             AirshipEditorGUI.EndSettingGroup();
             

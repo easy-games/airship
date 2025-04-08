@@ -193,11 +193,20 @@ namespace Airship.Editor {
         }
 
         private static void OnCrash(TypescriptCrashProblemItem problem) {
-            if (EditorUtility.DisplayDialog("Typescript Compiler Crashed",
-                    $"{string.Join("\n", problem.StandardError.ToArray()[4..7])}",
-                    "Restart...", "Ok")) {
-                EditorCoroutines.Execute(StartTypescriptRuntime());
+            var errorLog = problem.StandardError;
+            if (errorLog.Count() >= 8) {
+               EditorUtility.DisplayDialog("Typescript Compiler Crashed",
+                        $"{string.Join("\n", problem.StandardError.ToArray()[4..7])}",
+                        "Ok");
+            }else {
+                if (EditorUtility.DisplayDialog("Typescript Compiler quit unexpectedly...",
+                        $"{problem.Message} - check the Typescript Console for more details.",
+                        "Restart...", "Ok")) {
+                    EditorCoroutines.Execute(StartTypescriptRuntime());
+                }
             }
+            
+
         }
 
         private static IEnumerator RestoreErrorsOnNextFrame() {
