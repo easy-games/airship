@@ -657,6 +657,25 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 		}));
 
+		DevConsole.AddCommand(Command.Create<string>("luauregistry", "", "Prints info about the Luau plugin", Parameter.Create("context", "Options: game, protected"), (val) => {
+			val = val.ToLower();
+			
+			string registryDump;
+			switch (val) {
+				case "game":
+					registryDump = LuauPlugin.LuauDebugCountAllRegistryItems(LuauContext.Game);
+					break;
+				case "protected":
+					registryDump = LuauPlugin.LuauDebugCountAllRegistryItems(LuauContext.Protected);
+					break;
+				default:
+					Debug.Log($"Invalid context: \"{val}\"");
+					return;
+			}
+			
+			Debug.Log(registryDump);
+		}));
+
 		DevConsole.AddCommand(Command.Create("version", "", "Prints version git hash", () => {
 			var localVersion = AirshipVersion.GetVersionHash();
 			Debug.Log("Client: #" + localVersion);
