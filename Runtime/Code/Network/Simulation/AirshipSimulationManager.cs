@@ -87,7 +87,7 @@ namespace Code.Network.Simulation
          * This action is only ever invoked on the server. Components listening to this
          * action should set their state to be what the client would have seen at the provided
          * tick time. Keep in mind, this means that any components the client would have been
-         * observing should be rolled back an additional amount to account for the client
+         * observing (ie. other player characters) should be rolled back an additional amount to account for the client
          * interpolation. You can convert a time to an exact tick time using
          * GetLastSimulationTime() to find the correct tick time for any given time in the
          * last 1 second.

@@ -122,6 +122,16 @@ namespace Code.Player.Character.MovementSystems.Character
         /// Params: Vector3 currentLookVector
         /// </summary>
         public event Action<object> OnNewLookVector;
+
+        /**
+         * Fired when lag compensated checks should occur. ID of check is passed as the event parameter.
+         */
+        public event Action<object> OnLagCompensationCheck;
+        /**
+         * Fired when lag compensated check is over and physics can be modified. ID of check is passed as the event parameter.
+         */
+        public event Action<object> OnLagCompensationComplete;
+        
         #endregion
         
         // step up + forward constant
@@ -1097,6 +1107,19 @@ namespace Code.Player.Character.MovementSystems.Character
             });
 
             return true;
+        }
+
+        public string RequestLagCompensationCheck()
+        {
+            string uniqueId = Guid.NewGuid().ToString();
+            AirshipSimulationManager.Instance.ScheduleLagCompensation(netIdentity.connectionToClient, () =>
+            {
+                this.OnLagCompensationCheck(uniqueId);
+            }, () =>
+            {
+                this.OnLagCompensationComplete(uniqueId);
+            });
+            return uniqueId;
         }
 
         public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace)
