@@ -1053,23 +1053,23 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public double GetLocalSimulationTimeFromCommandNumber(int commandNumber)
         {
-            CharacterSnapshotData clientPredictedState = null;
-            foreach (var predictedState in this.manager.stateHistory.Values)
+            CharacterSnapshotData localState = null;
+            foreach (var state in this.manager.stateHistory.Values)
             {
-                if (predictedState.lastProcessedCommand == commandNumber)
+                if (state.lastProcessedCommand >= commandNumber)
                 {
-                    clientPredictedState = predictedState;
+                    localState = state;
                     break;
                 }
             }
 
-            if (clientPredictedState == null)
+            if (localState == null)
             {
                 Debug.LogWarning($"Unable to find predicted state for command number {commandNumber}. Returning 0 as simulation time.");
                 return 0;
             }
 
-            return clientPredictedState.time;
+            return localState.time;
         }
 
         public bool RequestResimulation(int commandNumber)
