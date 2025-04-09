@@ -107,6 +107,8 @@ namespace Code.Network.Simulation
          */
         public event Action<double, bool> OnPerformTick;
 
+        public event Action<object, object> OnTick;
+
         /**
          * Informs all watching components that the simulation tick has been performed
          * and that a new snapshot of the resulting Physics.Simulate() should be captured.
@@ -169,6 +171,7 @@ namespace Code.Network.Simulation
 
             // Perform the standard tick behavior
             OnPerformTick?.Invoke(time, false);
+            OnTick?.Invoke(time, false);
             // Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
             Physics.Simulate(Time.fixedDeltaTime);
             OnCaptureSnapshot?.Invoke(time, false);

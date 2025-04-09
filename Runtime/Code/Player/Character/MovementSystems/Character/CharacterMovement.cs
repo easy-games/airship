@@ -1114,10 +1114,10 @@ namespace Code.Player.Character.MovementSystems.Character
             string uniqueId = Guid.NewGuid().ToString();
             AirshipSimulationManager.Instance.ScheduleLagCompensation(netIdentity.connectionToClient, () =>
             {
-                this.OnLagCompensationCheck(uniqueId);
+                this.OnLagCompensationCheck?.Invoke(uniqueId);
             }, () =>
             {
-                this.OnLagCompensationComplete(uniqueId);
+                this.OnLagCompensationComplete?.Invoke(uniqueId);
             });
             return uniqueId;
         }

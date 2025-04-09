@@ -410,7 +410,7 @@ namespace Code.Network.StateSystem
                 // we don't want to include any rollback on their player since they predicted
                 // all of the commands up to the one that triggered the check. They
                 // saw themselves where the server sees them at the current time.
-                if (clientId == this.netIdentity.connectionToClient.connectionId)
+                if (this.netIdentity.connectionToClient != null && clientId == this.netIdentity.connectionToClient.connectionId)
                 {
                     this.OnSetSnapshot(currentTime);
                     return;
