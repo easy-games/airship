@@ -9,6 +9,7 @@ using ParrelSync;
 using Unity.EditorCoroutines.Editor;
 using Unity.Multiplayer.Playmode;
 using UnityEditor;
+using UnityEditor.Callbacks;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -42,26 +43,33 @@ namespace Airship.Editor {
     public static class TypescriptServices {
         internal static event CompilerCrashEvent CompilerCrash;
         
+        
         /// <summary>
         /// Returns true if this is a valid editor window to run TSS in
         /// </summary>
         public static bool IsValidEditor =>
             !ClonesManager.IsClone() &&
             !Environment.GetCommandLineArgs().Contains("--virtual-project-clone");
-
+        
+#if !AIRSHIP_PLAYER
+        [DidReloadScripts]
+        public static void OnScriptReload() {
+            EditorCoroutines.Execute(ResumeOrStartTypescriptRuntime());
+        }
+        
         [InitializeOnLoadMethod]
         public static void OnLoad() {
-#if AIRSHIP_PLAYER
-            Debug.LogWarning("[TypescriptServices] Skipped, in Airship Player mode");
-            return;
-#endif
             // If a server or clone - ignore
             if (!IsValidEditor) return;
-            EditorApplication.delayCall += OnLoadDeferred;
-
-            EditorApplication.playModeStateChanged += PlayModeStateChanged;
-            EditorApplication.quitting += OnEditorQuitting;
+            
+            if (!SessionState.GetBool("TSSLoadedUnityEditor", false)) {
+                SessionState.SetBool("TSSLoadedUnityEditor", true);
+                EditorApplication.delayCall += OnLoadDeferred;
+                EditorApplication.playModeStateChanged += PlayModeStateChanged;
+                EditorApplication.quitting += OnEditorQuitting;
+            }
         }
+#endif
 
         private static void OnEditorQuitting() {
             // Stop any running compilers pls
@@ -137,6 +145,18 @@ namespace Airship.Editor {
             }
 
             yield break;
+        }
+
+        private static IEnumerator ResumeOrStartTypescriptRuntime() {
+            if (!TypescriptCompilationService.IsWatchModeRunning) {
+                yield return StartTypescriptRuntime();
+            }
+            else {
+                var compilerState = TypescriptCompilationService.WatchStates[0];
+                Debug.Log($"[TypescriptServices] Reattaching process {compilerState.processId}...");
+            }
+            
+            
         }
 
         private static void CheckForConsoleClear() {

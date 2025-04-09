@@ -61,6 +61,8 @@ using Object = UnityEngine.Object;
             /// True if the compiler is running in watch mode
             /// </summary>
             public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
+            internal static IReadOnlyList<TypescriptCompilerWatchState> WatchStates => TypescriptCompilationServicesState.instance.watchStates;
+            
             public static bool Crashed { get; private set; }
 
             /// <summary>
