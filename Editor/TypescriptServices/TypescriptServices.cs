@@ -34,10 +34,14 @@ namespace Airship.Editor {
         }
     }
     
+    internal delegate void CompilerCrashEvent(TypescriptCrashProblemItem problemItem);
+    
     /// <summary>
     /// Main static class for handling the TypeScript services
     /// </summary>
     public static class TypescriptServices {
+        internal static event CompilerCrashEvent CompilerCrash;
+        
         /// <summary>
         /// Returns true if this is a valid editor window to run TSS in
         /// </summary>
@@ -65,7 +69,7 @@ namespace Airship.Editor {
         }
 
         private static void PlayModeStateChanged(PlayModeStateChange obj) {
-            if (obj == PlayModeStateChange.EnteredPlayMode && EditorIntegrationsConfig.instance.typescriptPreventPlayOnError) {
+            if (obj == PlayModeStateChange.EnteredPlayMode && TypescriptCompilationService.PreventPlayModeWithErrors) {
                 if (TypescriptCompilationService.ErrorCount > 0) {
                     foreach( SceneView scene in SceneView.sceneViews ) {
                         scene.ShowNotification(new GUIContent("There are TypeScript compilation errors in your project"));
@@ -124,13 +128,15 @@ namespace Airship.Editor {
         private  static IEnumerator StartTypescriptRuntime() {
             TypescriptProjectsService.ReloadProject();
             
-            if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
+            // if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
                 TypescriptCompilationService.StopCompilerServices(true);
             } else {
                 TypescriptCompilationService.StartCompilerServices();
             }
+
+            yield break;
         }
 
         private static void CheckForConsoleClear() {
@@ -151,7 +157,9 @@ namespace Airship.Editor {
             project.EnforceDefaultConfigurationSettings();
             EditorApplication.delayCall -= OnLoadDeferred;
             EditorApplication.update += OnUpdate;
-            
+
+            CompilerCrash += OnCrash;
+
             // If offline, only start TSServices if initialized
             var offline = Application.internetReachability == NetworkReachability.NotReachable;
             if (offline) {
@@ -184,6 +192,23 @@ namespace Airship.Editor {
             }
         }
 
+        private static void OnCrash(TypescriptCrashProblemItem problem) {
+            var errorLog = problem.StandardError;
+            if (errorLog.Count() >= 8) {
+               EditorUtility.DisplayDialog("Typescript Compiler Crashed",
+                        $"{string.Join("\n", problem.StandardError.ToArray()[4..7])}",
+                        "Ok");
+            }else {
+                if (EditorUtility.DisplayDialog("Typescript Compiler quit unexpectedly...",
+                        $"{problem.Message} - check the Typescript Console for more details.",
+                        "Restart...", "Ok")) {
+                    EditorCoroutines.Execute(StartTypescriptRuntime());
+                }
+            }
+            
+
+        }
+
         private static IEnumerator RestoreErrorsOnNextFrame() {
             yield return new WaitForEndOfFrame();
             
@@ -202,6 +227,8 @@ namespace Airship.Editor {
         
         private static int prevLogCount = 0;
         private static bool isRestoringErrors = false;
+        private static bool invokedCrashEvent = false;
+        
         private static void OnUpdate() {
             if (isRestoringErrors) return;
             int logCount = LogExtensions.GetLogCount();
@@ -211,6 +238,14 @@ namespace Airship.Editor {
                 // Assume it was cleared
                 isRestoringErrors = true;
                 EditorCoroutines.Execute(RestoreErrorsOnNextFrame());
+            }
+
+            if (TypescriptCompilationService.Crashed && !invokedCrashEvent) {
+                invokedCrashEvent = true;
+                CompilerCrash?.Invoke(TypescriptProjectsService.Project.CrashProblemItem);
+            }
+            else if (!TypescriptCompilationService.Crashed) {
+                invokedCrashEvent = false;
             }
         }
     }

@@ -57,12 +57,15 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool typescriptWriteOnlyChanged = false;
     public bool typescriptRestoreConsoleErrors = true;
     
+    [Obsolete]
     public bool typescriptPreventPlayOnError = true;
 
     public string typescriptProjectConfig => "Assets/tsconfig.json";
     public string typescriptPackagesLocation => "Assets";
     
     [FormerlySerializedAs("automaticTypeScriptCompilation")] 
+    
+    [Obsolete]
     [SerializeField] public bool typescriptAutostartCompiler = true;
     
     /// <summary>

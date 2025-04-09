@@ -360,9 +360,7 @@ namespace Airship.Editor {
                 }
                 else {
                     // It's just an orphaned instance, or we're reconciling the original component, we can just reconcile it outright. No silly business required.
-                    if (ReconcileComponentUsingArtifacts(component, out var result)) {
-                        Debug.Log($"Reconciled unit {component.guid} with result {result}");
-                    }
+                    ReconcileComponentUsingArtifacts(component, out _);
                 }
             }
             else {

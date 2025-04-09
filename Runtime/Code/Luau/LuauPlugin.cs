@@ -885,4 +885,18 @@ public static class LuauPlugin {
 			memCatDumpItemsPtr += Marshal.SizeOf<LuauMemoryCategoryDumpItemInternal>();
 		}
 	}
+	
+	/// <summary>
+	/// Fetch a string that contains the count of all registry item tables.
+	/// </summary>
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int DebugCountAllRegistryItems(LuauContext context, out IntPtr str);
+	public static string LuauDebugCountAllRegistryItems(LuauContext context) {
+		var strLen = DebugCountAllRegistryItems(context, out var strPtr);
+		return Marshal.PtrToStringUTF8(strPtr, strLen);
+	}
 }
