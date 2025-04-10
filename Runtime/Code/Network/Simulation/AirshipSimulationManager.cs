@@ -97,7 +97,7 @@ namespace Code.Network.Simulation
          *
          * clientId - The connectionId of the client we are simulating the view of
          * currentTime - The tick time that triggered this compensation check
-         * latency - The estimated time it takes for a client message to reach the server. (client.rtt / 2)
+         * rtt - The estimated time it takes for a message to reach the client and then be returned to the server (aka. ping) (rtt / 2 = latency)
          */
         public event Action<int, double, double> OnLagCompensationCheck;
 
@@ -185,8 +185,9 @@ namespace Code.Network.Simulation
                 processedLagCompensation = true;
                 try
                 {
-                    OnLagCompensationCheck?.Invoke(request.client.connectionId, this.tickTimes[^1],
-                        request.client.rtt / 2);
+                    Debug.LogWarning("Server lag compensation rolling back for client " + request.client.connectionId);
+                    OnLagCompensationCheck?.Invoke(request.client.connectionId, time,
+                        request.client.rtt);
                     request.check();
                 }
                 catch (Exception e)
@@ -198,6 +199,7 @@ namespace Code.Network.Simulation
             // If we processed lag compensation, we have some additional work to do
             if (processedLagCompensation)
             {
+                Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
                 // Reset back to the server view of the world at the current time.
                 OnSetSnapshot?.Invoke(time);
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
@@ -234,7 +236,7 @@ namespace Code.Network.Simulation
             {
                 check = checkCallback,
                 complete = completeCallback,
-                client = client
+                client = client,
             });
         }
 

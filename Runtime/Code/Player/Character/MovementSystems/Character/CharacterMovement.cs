@@ -1002,8 +1002,8 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotData snapshotNew)
         {
             this.rigidbody.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
-            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : snapshotOld.lookVector;
-            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : snapshotNew.lookVector;
+            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.01f) : snapshotOld.lookVector;
+            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.01f) : snapshotNew.lookVector;
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation( new Vector3(oldLook.x, 0, oldLook.z)),
                 Quaternion.LookRotation( new Vector3(newLook.x, 0, newLook.z)),

@@ -195,7 +195,7 @@ namespace Code.Network.StateSystem
             AirshipSimulationManager.Instance.OnPerformTick -= this.OnPerformTick;
             AirshipSimulationManager.Instance.OnSetSnapshot -= this.OnSetSnapshot;
             AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.OnCaptureSnapshot;
-            AirshipSimulationManager.Instance.OnLagCompensationCheck += this.OnLagCompensationCheck;
+            AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.OnLagCompensationCheck;
         }
 
         private void Update()
@@ -401,7 +401,7 @@ namespace Code.Network.StateSystem
             }
         }
 
-        private void OnLagCompensationCheck(int clientId, double currentTime, double latency)
+        private void OnLagCompensationCheck(int clientId, double currentTime, double ping)
         {
             // We are the server, and we are the authority.
             if (isServer && serverAuth)
@@ -421,9 +421,16 @@ namespace Code.Network.StateSystem
                 // out their estimated latency and the interpolation buffer time. This
                 // ensures that we are rolling back to the time the user actually saw on their
                 // client when they issued the command.
+                // TODO: We treat estimatedCommandDelay as a constant, but we should determine this by calculating how long the command that triggered the lag comp was buffered
+                // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
+                // That may prove difficult, so we use a constant for now.
+                var estimatedCommandDelay = this.serverCommandBufferTargetSize * Time.fixedDeltaTime; 
+                var clientBufferTime  = NetworkServer.connections[clientId].bufferTime;
+                Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " command delay: " + estimatedCommandDelay + " for a result of: " + (- ping -
+                    clientBufferTime - estimatedCommandDelay));
                 var lagCompensatedTickTime =
-                    AirshipSimulationManager.Instance.GetLastSimulationTime(currentTime - latency -
-                                                                            NetworkClient.bufferTime);
+                    AirshipSimulationManager.Instance.GetLastSimulationTime(currentTime - ping -
+                                                                            clientBufferTime - estimatedCommandDelay);
                 this.OnSetSnapshot(lagCompensatedTickTime);
             }
         }
@@ -546,9 +553,17 @@ namespace Code.Network.StateSystem
 
         public void AuthServerSetSnapshot(double time)
         {
-            // This function shouldn't run since an authoritative server should never run
-            // resimulations.
-            // Log in AuthServerTick will notify if this case occurs.
+            var state = this.stateHistory.GetExact(time);
+            print("got state" + state);
+            Debug.Log("Server rolling back " + this.gameObject.name + " to " + time + " has state history? " + (state != null));
+            if (state == null)
+            {
+                // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
+                // that freshly spawned players will exist in rollback when they shouldn't but we won't handle that edge case for now.
+                return;
+            }
+            
+            this.stateSystem.SetCurrentState(state);
         }
 
         #endregion
