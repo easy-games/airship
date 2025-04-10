@@ -3,6 +3,7 @@ using Mirror;
 
 namespace Code.Player.Character.MovementSystems.Character
 {
+    [LuauAPI]
     public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterSnapshotData, CharacterInputData>
     {
         public override void SendClientInputToServer(CharacterInputData input)
