@@ -257,7 +257,7 @@ public class CharacterAnimationHelper : MonoBehaviour {
     }
 
     public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer, float fixedTransitionDuration) {
-        if (!enabled || !this.gameObject.activeInHierarchy) {
+        if (!this.isActiveAndEnabled || !enabled || !this.gameObject.activeInHierarchy) {
             return;
         }
 
