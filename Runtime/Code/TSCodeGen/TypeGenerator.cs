@@ -330,6 +330,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.Clothing$",
             "\\.ClothingManager$",
             "\\.MonoBehaviour$",
+            "\\.InternalCameraScreenshotRecorder$",
         };
 
         var options = new TypeScriptOptions
