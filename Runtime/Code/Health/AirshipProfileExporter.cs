@@ -1,14 +1,17 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Airship.DevConsole;
 using Code.Http.Internal;
 using Code.Platform.Shared;
+using Code.UI;
 using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
+using Debug = UnityEngine.Debug;
 
 struct SignedUrlRequest {
     public string type;
@@ -182,19 +185,22 @@ namespace Code.Health
             await Task.Delay((int)(durationSecs * 1000));
             Profiler.enabled = false;
             var info = new FileInfo(logPath);
-            
+
             Debug.Log($"Profiling completed. Retrieving upload URL...");
-            if (RunCore.IsClient())
-            {
-                NetworkClient.Send(new ClientProfileUploadRequest
-                {
+            if (RunCore.IsClient()) {
+                var profilesFolder = Path.Combine(Application.persistentDataPath, "ClientProfiles");
+                try {
+                    CrossPlatformFileAPI.OpenPath(profilesFolder);
+                } catch (Exception e) {
+                    Debug.LogError(e);
+                }
+
+                NetworkClient.Send(new ClientProfileUploadRequest {
                     contentSize = info.Length,
                     logLocation = logPath,
                     fileName = fileName
                 });
-            }
-            else
-            {
+            } else {
                 var urlData = await this.GetSignedUrl(fileName, durationSecs, info.Length);
                 Upload(urlData, logPath, profileInitiator);
             }

@@ -26,6 +26,7 @@ using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
+using System.IO;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 #if INPUT_SYSTEM_INSTALLED
@@ -684,13 +685,15 @@ namespace Airship.DevConsole
         public void OpenLogsFolder() {
             var path = Application.consoleLogPath;
             print("Opening console log path: " + path);
-            if (Application.platform is RuntimePlatform.WindowsPlayer or RuntimePlatform.WindowsEditor) {
-                Process.Start("explorer.exe", path);
-            } else if (Application.platform is RuntimePlatform.OSXPlayer or RuntimePlatform.OSXEditor) {
-                Process.Start("open", path);
-            } else {
-                Debug.LogError("Unable to open logs folder: unsupported platform.");
+            CrossPlatformFileAPI.OpenPath(path);
+        }
+
+        public void OpenProfilesFolder() {
+            var path = Path.Combine(Application.persistentDataPath, "ClientProfiles");
+            if (!Directory.Exists(path)) {
+                Directory.CreateDirectory(path);
             }
+            CrossPlatformFileAPI.OpenPath(path);
         }
 
         /// <summary>
