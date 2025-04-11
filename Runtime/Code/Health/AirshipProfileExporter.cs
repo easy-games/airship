@@ -164,7 +164,10 @@ namespace Code.Health
 
             var date = DateTime.Now.ToString("MM-dd-yyyy h.mm.ss");
             var fileName = RunCore.IsClient() ?  $"Client-Profile-{date}.raw" :  $"Server-Profile-{date}.raw";
-            var logPath = Path.Combine(Application.persistentDataPath, fileName);
+            if (!Directory.Exists(Path.Combine(Application.persistentDataPath, "ClientProfiles"))) {
+                Directory.CreateDirectory(Path.Combine(Application.persistentDataPath, "ClientProfiles"));
+            }
+            var logPath = Path.Combine(Application.persistentDataPath, "ClientProfiles", fileName);
             if (File.Exists(logPath)) File.WriteAllText(logPath, "");
 
             Profiler.logFile = logPath;
@@ -219,7 +222,7 @@ namespace Code.Health
             Debug.Log("Uploading profile to backend...");
             var uploadFilePath = logPath;
             var fileData = await File.ReadAllBytesAsync(uploadFilePath);
-            File.Delete(uploadFilePath);
+            // File.Delete(uploadFilePath);
             
             using var www = UnityWebRequest.Put(urlData.url, fileData);
             MonitorUploadProgress(www);
