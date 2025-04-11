@@ -78,11 +78,13 @@ namespace Code.Network.StateSystem
         private bool clientPausePrediction = false;
 
         // Fields for managing re-simulations
-        // We store a max of 1 second of history
-        // Note: The server does not store input history. We don't perform simulation rollbacks on the
-        // server because the server is either the authority (it never rolls back) or an observer (it
-        // doesn't process inputs).
-        private History<Input> inputHistory;
+        /**
+         * We store a max of 1 second of history
+         * Note: The server does not store input history. We don't perform simulation rollbacks on the
+         * server because the server is either the authority (it never rolls back) or an observer (it
+         * doesn't process inputs).
+         */
+        public History<Input> inputHistory;
 
         public History<State> stateHistory;
 
@@ -403,36 +405,36 @@ namespace Code.Network.StateSystem
 
         private void OnLagCompensationCheck(int clientId, double currentTime, double ping)
         {
-            // We are the server, and we are the authority.
-            if (isServer && serverAuth)
+            // Only the server can perform lag compensation checks.
+            if (!isServer) return;
+            
+            // If we are viewing the world as the client who is predicting this system,
+            // we don't want to include any rollback on their player since they predicted
+            // all of the commands up to the one that triggered the check. They
+            // saw themselves where the server sees them at the current time.
+            if (this.netIdentity.connectionToClient != null && clientId == this.netIdentity.connectionToClient.connectionId)
             {
-                // If we are viewing the world as the client who is predicting this system,
-                // we don't want to include any rollback on their player since they predicted
-                // all of the commands up to the one that triggered the check. They
-                // saw themselves where the server sees them at the current time.
-                if (this.netIdentity.connectionToClient != null && clientId == this.netIdentity.connectionToClient.connectionId)
-                {
-                    this.OnSetSnapshot(currentTime);
-                    return;
-                }
-
-                // If we are viewing the world as a client who is an observer of this object,
-                // calculate the position that was being rendered at the time by subtracting.
-                // out their estimated latency and the interpolation buffer time. This
-                // ensures that we are rolling back to the time the user actually saw on their
-                // client when they issued the command.
-                // TODO: We treat estimatedCommandDelay as a constant, but we should determine this by calculating how long the command that triggered the lag comp was buffered
-                // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
-                // That may prove difficult, so we use a constant for now.
-                var estimatedCommandDelay = this.serverCommandBufferTargetSize * Time.fixedDeltaTime; 
-                var clientBufferTime  = NetworkServer.connections[clientId].bufferTime;
-                Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " command delay: " + estimatedCommandDelay + " for a result of: " + (- ping -
-                    clientBufferTime - estimatedCommandDelay));
-                var lagCompensatedTickTime =
-                    AirshipSimulationManager.Instance.GetLastSimulationTime(currentTime - ping -
-                                                                            clientBufferTime - estimatedCommandDelay);
-                this.OnSetSnapshot(lagCompensatedTickTime);
+                this.OnSetSnapshot(currentTime);
+                return;
             }
+
+            // If we are viewing the world as a client who is an observer of this object,
+            // calculate the position that was being rendered at the time by subtracting.
+            // out their estimated latency and the interpolation buffer time. This
+            // ensures that we are rolling back to the time the user actually saw on their
+            // client when they issued the command.
+            
+            // TODO: We treat estimatedCommandDelay as a constant, but we should determine this by calculating how long the command that triggered the lag comp was buffered
+            // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
+            // That may prove difficult, so we use a constant for now.
+            var estimatedCommandDelay = this.serverCommandBufferTargetSize * Time.fixedDeltaTime; 
+            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime;
+            // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " command delay: " + estimatedCommandDelay + " for a result of: " + (- ping -
+            //     clientBufferTime - estimatedCommandDelay));
+            var lagCompensatedTickTime =
+                AirshipSimulationManager.Instance.GetLastSimulationTime(currentTime - ping -
+                                                                        clientBufferTime - estimatedCommandDelay);
+            this.OnSetSnapshot(lagCompensatedTickTime);
         }
 
         #endregion
@@ -554,15 +556,12 @@ namespace Code.Network.StateSystem
         public void AuthServerSetSnapshot(double time)
         {
             var state = this.stateHistory.GetExact(time);
-            print("got state" + state);
-            Debug.Log("Server rolling back " + this.gameObject.name + " to " + time + " has state history? " + (state != null));
             if (state == null)
             {
                 // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
                 // that freshly spawned players will exist in rollback when they shouldn't but we won't handle that edge case for now.
                 return;
             }
-            
             this.stateSystem.SetCurrentState(state);
         }
 
@@ -717,7 +716,14 @@ namespace Code.Network.StateSystem
 
         public void NonAuthServerSetSnapshot(double time)
         {
-            // Non auth set snapshots should not occur since no re-simulations should take ploce on the server.
+            var state = this.stateHistory.GetExact(time);
+            if (state == null)
+            {
+                // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
+                // that freshly spawned players will exist in rollback when they shouldn't but we won't handle that edge case for now.
+                return;
+            }
+            this.stateSystem.SetCurrentState(state);
         }
 
         #endregion

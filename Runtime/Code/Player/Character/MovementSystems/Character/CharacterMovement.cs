@@ -1075,7 +1075,8 @@ namespace Code.Player.Character.MovementSystems.Character
 
             if (localState == null)
             {
-                Debug.LogWarning($"Unable to find predicted state for command number {commandNumber}. Returning 0 as simulation time.");
+                Debug.LogWarning(
+                    $"Unable to find predicted state for command number {commandNumber}. Returning 0 as simulation time.");
                 return 0;
             }
 

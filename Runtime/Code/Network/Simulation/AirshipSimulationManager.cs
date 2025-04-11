@@ -185,7 +185,7 @@ namespace Code.Network.Simulation
                 processedLagCompensation = true;
                 try
                 {
-                    Debug.LogWarning("Server lag compensation rolling back for client " + request.client.connectionId);
+                   // Debug.LogWarning("Server lag compensation rolling back for client " + request.client.connectionId);
                     OnLagCompensationCheck?.Invoke(request.client.connectionId, time,
                         request.client.rtt);
                     request.check();
@@ -199,7 +199,7 @@ namespace Code.Network.Simulation
             // If we processed lag compensation, we have some additional work to do
             if (processedLagCompensation)
             {
-                Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
+                // Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
                 // Reset back to the server view of the world at the current time.
                 OnSetSnapshot?.Invoke(time);
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
