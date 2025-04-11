@@ -101,6 +101,11 @@ namespace Code.Health
                     }
 
                     if (context.Equals("client", StringComparison.OrdinalIgnoreCase)) {
+                        if (!Debug.isDebugBuild) {
+                            Debug.Log(
+                                "Unable to capture profile log because debug mode is not enabled. Use the development build branch on Steam to enable debug mode.");
+                            return;
+                        }
                         StartProfiling(d, null);
                     } else if (context.Equals("server", StringComparison.OrdinalIgnoreCase)) {
                         Debug.Log("Starting a server profile, view server console to monitor progress.");
