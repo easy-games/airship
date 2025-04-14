@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 
 namespace Code.Http {
+    [LuauAPI]
     public struct HttpResponse {
         public bool success;
 // workable data
