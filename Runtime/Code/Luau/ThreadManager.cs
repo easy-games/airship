@@ -150,7 +150,7 @@ namespace Luau {
                    
                 }
 
-                if (!preventTrace) {
+                if (!preventTrace && thread != IntPtr.Zero) {
                     LuauPlugin.LuauGetDebugTrace(thread);
                 }
 
