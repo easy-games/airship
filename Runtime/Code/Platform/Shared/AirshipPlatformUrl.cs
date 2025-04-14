@@ -9,6 +9,7 @@ namespace Code.Platform.Shared {
         public static string dataStoreService = "https://data-store-service-fxy2zritya-uc.a.run.app";
         public static string deploymentService = "https://deployment-service-fxy2zritya-uc.a.run.app";
         public static string analyticsService = "https://analytics-service-fxy2zritya-uc.a.run.app";
+        public static string moderationService = "https://moderation-service-fxy2zritya-uc.a.run.app";
         public static string gameCdn = "https://gcdn-staging.easy.gg";
         public static string cdn = "https://cdn-staging.easy.gg";
         public static string mainWeb = "https://staging.airship.gg";
@@ -20,6 +21,7 @@ namespace Code.Platform.Shared {
         public static string dataStoreService = "https://api-staging.airship.gg/data-store";
         public static string deploymentService = "https://api-staging.airship.gg/deployment";
         public static string analyticsService = "https://api-staging.airship.gg/analytics";
+        public static string moderationService = "https://api-staging.airship.gg/moderation";
         public static string gameCdn = "https://gcdn-staging.easy.gg";
         public static string cdn = "https://cdn-staging.easy.gg";
         public static string mainWeb = "https://staging.airship.gg";
@@ -33,6 +35,7 @@ namespace Code.Platform.Shared {
         public static string dataStoreService = "https://data-store-service-hwcvz2epka-uc.a.run.app";
         public static string deploymentService = "https://deployment-service-hwcvz2epka-uc.a.run.app";
         public static string analyticsService = "https://analytics-service-hwcvz2epka-uc.a.run.app";
+        public static string moderationService = "https://moderation-service-fxy2zritya-uc.a.run.app"; // TODO: Update this url to production url
         public static string cdn = "https://cdn.airship.gg";
         public static string gameCdn = "https://gcdn.airship.gg";
         public static string mainWeb = "https://airship.gg";
@@ -44,6 +47,7 @@ namespace Code.Platform.Shared {
         public static string dataStoreService = "https://api.airship.gg/data-store";
         public static string deploymentService = "https://api.airship.gg/deployment";
         public static string analyticsService = "https://api.airship.gg/analytics";
+        public static string moderationService = "https://api.airship.gg/moderation";
         public static string cdn = "https://cdn.airship.gg";
         public static string gameCdn = "https://gcdn.airship.gg";
         public static string mainWeb = "https://airship.gg";
