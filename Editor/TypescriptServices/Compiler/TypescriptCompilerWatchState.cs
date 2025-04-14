@@ -21,10 +21,16 @@ namespace Airship.Editor {
         public int processId;
         [SerializeField]
         public string directory;
+        [SerializeField]
+        public TypescriptCompilerBuildArguments compilerArguments;
+        [SerializeField] public TypescriptCompilerStartInfo compilerStartInfo;
+        
         internal CompilationState compilationState = CompilationState.Inactive;
 
+        private Process process;
         public Process CompilerProcess {
             get {
+                if (process is { HasExited: false }) return process;
                 if (processId == 0) return null;
                 try {
                     return Process.GetProcessById(processId);
@@ -34,6 +40,8 @@ namespace Airship.Editor {
                 }
             }
         }
+        
+        public ProcessStartInfo CompilerStartInfo { get; private set; }
 
         public bool IsActive => CompilerProcess is { HasExited: false };
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
@@ -46,6 +54,11 @@ namespace Airship.Editor {
         public TypescriptCompilerWatchState(TypescriptProject project) {
             this.directory = project.Directory;
         }
+
+        public IEnumerator Resume() {
+            if (CompilerProcess == null) yield break;
+            TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, compilerArguments, CompilerProcess);
+        }
         
         public IEnumerator Watch(TypescriptCompilerBuildArguments arguments) {
             compilationState = CompilationState.IsCompiling;
@@ -56,7 +69,11 @@ namespace Airship.Editor {
             
             var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"{TypescriptCompilationService.TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
             TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
+            process = compilerProcess;
             processId = compilerProcess.Id;
+            compilerArguments = arguments;
+            CompilerStartInfo = compilerProcess.StartInfo;
+            compilerStartInfo = new TypescriptCompilerStartInfo(compilerProcess.StartInfo);
             
             TypescriptCompilationServicesState.instance.RegisterWatchCompiler(this);
             yield return null;

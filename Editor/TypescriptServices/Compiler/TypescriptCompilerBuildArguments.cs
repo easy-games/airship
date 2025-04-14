@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 namespace Airship.Editor {
@@ -6,42 +8,76 @@ namespace Airship.Editor {
         BuildOnly,
         BuildWatch,
     }
+
+    [Serializable]
+    internal class TypescriptCompilerStartInfo {
+        public bool RedirectStandardOutput;
+        public bool RedirectStandardError;
+        public bool UseShellExecute;
+        public string WorkingDirectory;
+        public bool CreateNoWindow;
+        public bool LoadUserProfile;
+        public string Arguments;
+        
+        public TypescriptCompilerStartInfo(ProcessStartInfo startInfo) {
+            RedirectStandardOutput = startInfo.RedirectStandardOutput;
+            RedirectStandardError = startInfo.RedirectStandardError;
+            UseShellExecute = startInfo.UseShellExecute;
+            WorkingDirectory = startInfo.WorkingDirectory;
+            CreateNoWindow = startInfo.CreateNoWindow;
+            LoadUserProfile = startInfo.LoadUserProfile;
+            Arguments = startInfo.Arguments;
+        }
+
+        public static implicit operator ProcessStartInfo(TypescriptCompilerStartInfo info) {
+            return new ProcessStartInfo() {
+                RedirectStandardOutput = info.RedirectStandardOutput,
+                RedirectStandardError = info.RedirectStandardError,
+                UseShellExecute = info.UseShellExecute,
+                WorkingDirectory = info.WorkingDirectory,
+                CreateNoWindow = info.CreateNoWindow,
+                LoadUserProfile = info.LoadUserProfile,
+                Arguments = info.Arguments,
+            };
+        }
+    }
     
-    internal struct TypescriptCompilerBuildArguments {
+    [Serializable]
+    internal class TypescriptCompilerBuildArguments {
         /// <summary>
         /// The location of package.json (aka --package)
         /// </summary>
-        public string Package { get; set; }
+        public string Package;
 
         /// <summary>
         /// If true, tell the compiler we're compiling for a publish
         /// </summary>
-        public bool Publishing { get; set; }
+        public bool Publishing;
 
         /// <summary>
         /// The location of tsconfig.json (aka -p or --project)
         /// </summary>
-        public string Project { get; set; }
+        public string Project;
 
         /// <summary>
         /// Use JSON event messaging
         /// </summary>
-        public bool Json { get; set; }
+        public bool Json;
 
         /// <summary>
         /// Flag to enable incremental mode
         /// </summary>
-        public bool Incremental { get; set; }
+        public bool Incremental;
 
         /// <summary>
         /// Use verbose messages
         /// </summary>
-        public bool Verbose { get; set; }
+        public bool Verbose;
 
         /// <summary>
         /// Only write changed files
         /// </summary>
-        public bool WriteOnlyChanged { get; set; }
+        public bool WriteOnlyChanged;
 
         /// <summary>
         /// Will output the arguments as a string

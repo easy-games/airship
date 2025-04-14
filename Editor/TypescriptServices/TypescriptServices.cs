@@ -2,9 +2,11 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Net.WebSockets;
 using Editor;
 using Editor.EditorInternal;
 using Editor.Packages;
+using HandlebarsDotNet;
 using ParrelSync;
 using Unity.EditorCoroutines.Editor;
 using Unity.Multiplayer.Playmode;
@@ -61,7 +63,13 @@ namespace Airship.Editor {
         public static void OnLoad() {
             // If a server or clone - ignore
             if (!IsValidEditor) return;
-            
+
+            var client = new WebsocketClient(new Uri("ws://localhost:7472"));
+            client.WebsocketDataReceived += data => {
+                Debug.Log($"Received: {data}");
+            };
+            _ = client.ConnectAsync();
+            //
             if (!SessionState.GetBool("TSSLoadedUnityEditor", false)) {
                 SessionState.SetBool("TSSLoadedUnityEditor", true);
                 EditorApplication.delayCall += OnLoadDeferred;
@@ -124,7 +132,7 @@ namespace Airship.Editor {
         }
 
         private static IEnumerator InitializeTypeScript() {
-            TypescriptProjectsService.CheckTypescriptProject(); // ??
+            TypescriptProjectsService.CheckTypescriptProject(); // ????
             yield return null;
         }
 
@@ -136,8 +144,6 @@ namespace Airship.Editor {
         private  static IEnumerator StartTypescriptRuntime() {
             TypescriptProjectsService.ReloadProject();
             
-            // if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
-
             if (TypescriptCompilationService.IsWatchModeRunning) {
                 TypescriptCompilationService.StopCompilerServices(true);
             } else {
@@ -153,10 +159,21 @@ namespace Airship.Editor {
             }
             else {
                 var compilerState = TypescriptCompilationService.WatchStates[0];
-                Debug.Log($"[TypescriptServices] Reattaching process {compilerState.processId}...");
+                if (compilerState != null) {
+                    var process = compilerState.CompilerProcess;
+                    var processArguments = compilerState.compilerArguments;
+
+                    if (process != null && process.HasExited == false) {
+                        Debug.Log("[TypescriptServices] Detected Unity domain reload, reattaching compiler...");
+                        // Reattach the output of the console
+                        TypescriptCompilationService.AttachWatchOutputToUnityConsole(compilerState, processArguments, process, isDomainReload: true);
+                    }
+                    else {
+                        Debug.LogWarning("[TypescriptServices] Could not reattach process, restarting compiler...");
+                        TypescriptCompilationService.StopCompilerServices(shouldRestart: true); // ???????????????
+                    }
+                }
             }
-            
-            
         }
 
         private static void CheckForConsoleClear() {
@@ -167,6 +184,8 @@ namespace Airship.Editor {
         }
 
         private static void OnLoadDeferred() {
+            
+            
             var project = TypescriptProjectsService.ReloadProject();
             if (project == null) {
                 Debug.LogWarning($"Missing Typescript Project");

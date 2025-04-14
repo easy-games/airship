@@ -678,6 +678,7 @@ using Object = UnityEngine.Object;
                 Process proc, 
                 string directory
             ) {
+            
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
                 proc.EnableRaisingEvents = true;
@@ -702,16 +703,26 @@ using Object = UnityEngine.Object;
                 };
             }
 
-            internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, TypescriptCompilerBuildArguments buildArguments, Process proc) {
+            internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, TypescriptCompilerBuildArguments buildArguments, Process proc, bool isDomainReload = false) {
+                var project = TypescriptProjectsService.Project;
+
+                proc.StartInfo.UseShellExecute = false;
+                proc.StartInfo.RedirectStandardOutput = true;
+                proc.StartInfo.RedirectStandardError = true;
+                proc.EnableRaisingEvents = true;
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
-                proc.EnableRaisingEvents = true;
-                Crashed = false;
+                
+                if (!isDomainReload) {
+                    Crashed = false;
+                    project.CompilationState.CompileFlags = 0;
+                    project.CompilationState.FilesToCompileCount = 0;
+                    project.CompilationState.CompiledFileCount = 0;
+                }
 
-                var project = TypescriptProjectsService.Project;
-                project.CompilationState.CompileFlags = 0;
-                project.CompilationState.FilesToCompileCount = 0;
-                project.CompilationState.CompiledFileCount = 0;
+                if (proc.StartInfo.RedirectStandardError == false) {
+                    throw new InvalidOperationException("Not redirecting :(");
+                }
                 
                 proc.OutputDataReceived += (_, data) =>
                 {
@@ -742,21 +753,26 @@ using Object = UnityEngine.Object;
 
                 proc.Exited += (_, _) => {
                     if (proc.ExitCode <= 0) return;
+
+                    try {
+                        Debug.Log("[TypescriptCompilationService] Compiler process exited with code " + proc.ExitCode);
+                        var progressId = TypescriptProjectsService.Project!.ProgressId;
+                        Crashed = true;
                     
-                    Debug.Log("Compiler process exited with code " + proc.ExitCode);
-                    var progressId = TypescriptProjectsService.Project!.ProgressId;
-                    Crashed = true;
+                        project.CrashProblemItem =
+                            new TypescriptCrashProblemItem(project,  errorData, $"The Typescript compiler unexpectedly crashed!\n(Exit Code {proc.ExitCode})", proc.ExitCode);
                     
-                    project.CrashProblemItem =
-                        new TypescriptCrashProblemItem(project,  errorData, $"The Typescript compiler unexpectedly crashed!\n(Exit Code {proc.ExitCode})", proc.ExitCode);
+                        if (Progress.Exists(progressId)) {
+                            Progress.SetDescription(progressId, "Failed due to process exit - check console");
+                            Progress.Finish(progressId, Progress.Status.Failed);
+                        }
                     
-                    if (Progress.Exists(progressId)) {
-                        Progress.SetDescription(progressId, "Failed due to process exit - check console");
-                        Progress.Finish(progressId, Progress.Status.Failed);
+                        state.processId = 0; // we've exited, no more process
+                        TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(state);
                     }
-                    
-                    state.processId = 0; // we've exited, no more process
-                    TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(state);
+                    catch (Exception e) {
+                        Debug.LogException(e);
+                    }
                 };
             }
         }
