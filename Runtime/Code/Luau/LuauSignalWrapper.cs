@@ -28,6 +28,7 @@ namespace Luau {
             }
             
             private void Awake() {
+                hideFlags = HideFlags.HideInInspector;
                 LuauCore.onResetInstance += OnContextReset;
             }
             
