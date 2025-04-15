@@ -9,10 +9,5 @@ namespace Code.Http {
 // meta data
         public int statusCode;
         public Dictionary<string, string> headers;
-
-        [LuauAPI]
-        public string GetHeader(string headerName) {
-            return headers[headerName];
-        }
     }
 }
