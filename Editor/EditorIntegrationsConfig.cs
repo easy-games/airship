@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 public enum ReconcilerVersion {
-    [InspectorName("Default [Legacy Reconciler]")]
+    [InspectorName("Default [Reconciler V2]")]
     Default,
     [InspectorName("Legacy Reconciler")]
     Version1,
