@@ -10,6 +10,7 @@ namespace Code.Http {
         public int statusCode;
         public Dictionary<string, string> headers;
 
+        [LuauAPI]
         public string GetHeader(string headerName) {
             return headers[headerName];
         }
