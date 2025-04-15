@@ -405,7 +405,7 @@ public class ServerBootstrap : MonoBehaviour
 		foreach (var doc in this.startupConfig.packages) {
 			Debug.Log($"	 - id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, publish={doc.publishVersionNumber}, game={doc.game},");
 		}
-		Debug.Log("  - " + gameCodeZipUrl);
+		// Debug.Log("  - " + gameCodeZipUrl);
 		AnalyticsRecorder.InitGame(this.startupConfig);
 
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray(), gameCodeZipUrl);
