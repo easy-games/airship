@@ -38,7 +38,7 @@ namespace Code.RemoteConsole {
         }
 
         private async Task ProcessQueue() {
-            while (true) {
+            while (!shuttingDown) {
                 while (logQueue.TryDequeue(out string msg)) {
                     try {
                         await writer.WriteLineAsync(msg);
