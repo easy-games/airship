@@ -682,9 +682,14 @@ namespace Airship.DevConsole
             DevConsole.InvokeOnConsoleClosed();
         }
 
-        public void OpenLogsFolder() {
+        public void OpenLogFile() {
             var path = Application.consoleLogPath;
             print("Opening console log path: " + path);
+            CrossPlatformFileAPI.OpenPath(path);
+        }
+
+        public void OpenLogsFolder() {
+            var path = Path.GetDirectoryName(Application.consoleLogPath);
             CrossPlatformFileAPI.OpenPath(path);
         }
 
