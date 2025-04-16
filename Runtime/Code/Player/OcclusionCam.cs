@@ -21,6 +21,8 @@ namespace Code.Player {
         private float _projectionX;
         private float _projectionY;
 
+        private RaycastHit[] raycast2Hits;
+
         public void Init(Camera camera)
         {
             targetCamera = camera;
@@ -52,25 +54,64 @@ namespace Code.Player {
 
         // Called from TS/Lua side
         // Returns the ending distance from the target
-        public void BumpForOcclusion(Vector3 attachToPos, int mask) {
+        public void BumpForOcclusion(Vector3 targetPosition, Vector3 characterPosition, int mask) {
+            GizmoUtils.DrawSphere(targetPosition, 0.05f, Color.white);
             var t = transform;
             var camPos = t.position;
-            var distance = Vector3.Distance(camPos, attachToPos);
+            var distance = Vector3.Distance(camPos, targetPosition);
             // If cam is too far above attach pos snap up
-            if (this.adjustToHead && attachToPos.y - camPos.y > this.adjustToHeadHeightThreshold) {
-                distance /= (attachToPos.y - camPos.y) / this.adjustToHeadHeightThreshold;
+            if (this.adjustToHead && targetPosition.y - camPos.y > this.adjustToHeadHeightThreshold) {
+                distance /= (targetPosition.y - camPos.y) / this.adjustToHeadHeightThreshold;
             }
-            var adjusted = false;
-            var diff = camPos - attachToPos;
-            var boxHalfExtents = new Vector3(_projectionX * 0.05f, _projectionY * 0.05f, 0f);
-            if (!Physics.BoxCast(attachToPos,
-                    boxHalfExtents, diff, out var hitInfo, t.rotation, distance,
-                    mask, QueryTriggerInteraction.Ignore)) {
-                t.position = attachToPos + diff.normalized * distance;
+            var diff = camPos - targetPosition;
+            var boxHalfExtents = new Vector3(_projectionX * 0.02f, _projectionY * 0.02f, 0f);
+            RaycastHit[] hits;
+            hits = Physics.RaycastAll(targetPosition - diff.normalized * 0.05f, diff, distance + 0.1f, mask, QueryTriggerInteraction.Ignore);
+            Debug.DrawLine(targetPosition - diff.normalized * 0.05f, targetPosition + diff.normalized * distance, Color.blue);
+            if (hits.Length == 0) {
+                print($"path1 distance: {distance}");
+                t.position = targetPosition + diff.normalized * distance;
                 return;
             }
 
-            t.position = attachToPos + diff.normalized * hitInfo.distance;
+            RaycastHit hitClosestToCharacter = hits[0];
+            float closestDist = -1f;
+            foreach (var hit in hits) {
+                var dist = Vector3.Distance(hit.point, characterPosition);
+                if (closestDist < 0 || dist < closestDist) {
+                    hitClosestToCharacter = hit;
+                    closestDist = dist;
+                }
+            }
+            GizmoUtils.DrawSphere(hitClosestToCharacter.point, 0.05f, Color.blue);
+
+            Vector3 newCamPosition = hitClosestToCharacter.point - diff.normalized * 0.05f;
+            // Debug.DrawLine(camPos, newCamPosition, Color.blue);
+
+            // Adjust back towards character to prevent going into blocks
+            {
+                var origin = characterPosition;
+                var dir = newCamPosition - origin;
+                // Debug.DrawLine(origin, origin + dir, Color.red, 0.01f);
+                var hit = Physics.Raycast(origin, dir.normalized, out var raycastHit, dir.magnitude, mask, QueryTriggerInteraction.Ignore);
+                Debug.DrawLine(origin, origin + dir, Color.white);
+                Debug.Log($"hit: {hit}, dir: {dir}, firstCollider: {hitClosestToCharacter.collider.GetInstanceID()} ({hitClosestToCharacter.collider.gameObject.name})", hitClosestToCharacter.collider.gameObject);
+                if (hit) {
+                    GizmoUtils.DrawSphere(raycastHit.point, 0.05f, Color.yellow);
+                    var n = raycastHit.point - dir.normalized * 0.05f;
+                    Debug.DrawLine(origin, n, Color.yellow);
+                    newCamPosition = n;
+                    // return;
+                } else {
+                    var n = newCamPosition - dir.normalized * 0.05f;
+                    Debug.DrawLine(origin, n, Color.magenta);
+                    newCamPosition = n;
+                }
+            }
+
+
+            // print($"path2 dir: {diff.normalized}, distance: {hitInfo.distance}");
+            t.position = newCamPosition;
         }
     }
 }
