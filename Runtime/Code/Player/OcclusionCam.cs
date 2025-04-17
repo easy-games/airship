@@ -29,20 +29,16 @@ namespace Code.Player {
             OnScreenSizeChanged();
         }
 
-        private void Update()
-        {
-            if (!targetCamera)
-            {
+        private void Update() {
+            if (!targetCamera) {
                 return;
             }
-            if (Screen.width != _res.x || Screen.height != _res.y || Math.Abs(_fov - targetCamera.fieldOfView) > 0.001f)
-            {
+            if (Screen.width != _res.x || Screen.height != _res.y || Math.Abs(_fov - targetCamera.fieldOfView) > 0.001f) {
                 OnScreenSizeChanged();
             }
         }
 
-        private void OnScreenSizeChanged()
-        {
+        private void OnScreenSizeChanged() {
             _res.x = Screen.width;
             _res.y = Screen.height;
             _fov = targetCamera.fieldOfView;
@@ -58,60 +54,38 @@ namespace Code.Player {
             GizmoUtils.DrawSphere(targetPosition, 0.05f, Color.white);
             var t = transform;
             var camPos = t.position;
-            var distance = Vector3.Distance(camPos, targetPosition);
+            var mainDir = camPos - targetPosition;
+            // var boxHalfExtents = new Vector3(_projectionX * 0.02f, _projectionY * 0.02f, 0f);
             // If cam is too far above attach pos snap up
-            if (this.adjustToHead && targetPosition.y - camPos.y > this.adjustToHeadHeightThreshold) {
-                distance /= (targetPosition.y - camPos.y) / this.adjustToHeadHeightThreshold;
-            }
-            var diff = camPos - targetPosition;
-            var boxHalfExtents = new Vector3(_projectionX * 0.02f, _projectionY * 0.02f, 0f);
-            RaycastHit[] hits;
-            hits = Physics.RaycastAll(targetPosition - diff.normalized * 0.05f, diff, distance + 0.1f, mask, QueryTriggerInteraction.Ignore);
-            Debug.DrawLine(targetPosition - diff.normalized * 0.05f, targetPosition + diff.normalized * distance, Color.blue);
-            if (hits.Length == 0) {
-                print($"path1 distance: {distance}");
-                t.position = targetPosition + diff.normalized * distance;
-                return;
-            }
+            // if (this.adjustToHead && targetPosition.y - camPos.y > this.adjustToHeadHeightThreshold) {
+            //     distance /= (targetPosition.y - camPos.y) / this.adjustToHeadHeightThreshold;
+            // }
 
-            RaycastHit hitClosestToCharacter = hits[0];
-            float closestDist = -1f;
-            foreach (var hit in hits) {
-                var dist = Vector3.Distance(hit.point, characterPosition);
-                if (closestDist < 0 || dist < closestDist) {
-                    hitClosestToCharacter = hit;
-                    closestDist = dist;
-                }
-            }
-            GizmoUtils.DrawSphere(hitClosestToCharacter.point, 0.05f, Color.blue);
-
-            Vector3 newCamPosition = hitClosestToCharacter.point - diff.normalized * 0.05f;
-            // Debug.DrawLine(camPos, newCamPosition, Color.blue);
-
-            // Adjust back towards character to prevent going into blocks
-            {
-                var origin = characterPosition;
-                var dir = newCamPosition - origin;
-                // Debug.DrawLine(origin, origin + dir, Color.red, 0.01f);
-                var hit = Physics.Raycast(origin, dir.normalized, out var raycastHit, dir.magnitude, mask, QueryTriggerInteraction.Ignore);
-                Debug.DrawLine(origin, origin + dir, Color.white);
-                Debug.Log($"hit: {hit}, dir: {dir}, firstCollider: {hitClosestToCharacter.collider.GetInstanceID()} ({hitClosestToCharacter.collider.gameObject.name})", hitClosestToCharacter.collider.gameObject);
-                if (hit) {
-                    GizmoUtils.DrawSphere(raycastHit.point, 0.05f, Color.yellow);
-                    var n = raycastHit.point - dir.normalized * 0.05f;
-                    Debug.DrawLine(origin, n, Color.yellow);
-                    newCamPosition = n;
-                    // return;
-                } else {
-                    var n = newCamPosition - dir.normalized * 0.05f;
-                    Debug.DrawLine(origin, n, Color.magenta);
-                    newCamPosition = n;
-                }
+            // Pre: Raycast from character to target position to prevent target being in a wall
+            var preDir = targetPosition - characterPosition;
+            Debug.DrawLine(characterPosition, characterPosition + preDir, Color.yellow);
+            bool preHit = Physics.Raycast(characterPosition, preDir.normalized, out RaycastHit preHitInfo, preDir.magnitude, mask,
+                QueryTriggerInteraction.Ignore);
+            if (preHit) {
+                GizmoUtils.DrawSphere(preHitInfo.point, 0.03f, Color.yellow);
+                targetPosition = preHitInfo.point - preDir.normalized * 0.06f;
             }
 
+            Vector3 newCamPos;
+
+            // Main: Raycast from target position backwards (away from character).
+            Debug.DrawLine(targetPosition, targetPosition + mainDir, Color.blue);
+            bool mainHit = Physics.Raycast(targetPosition, mainDir.normalized, out RaycastHit mainHitInfo, mainDir.magnitude, mask, QueryTriggerInteraction.Ignore);
+            if (mainHit) {
+                GizmoUtils.DrawSphere(mainHitInfo.point, 0.03f, Color.blue);
+                newCamPos = mainHitInfo.point - mainDir.normalized * 0.06f;
+            } else {
+                newCamPos = targetPosition + mainDir;
+                GizmoUtils.DrawSphere(targetPosition + mainDir, 0.03f, Color.blue);
+            }
 
             // print($"path2 dir: {diff.normalized}, distance: {hitInfo.distance}");
-            t.position = newCamPosition;
+            t.position = newCamPos;
         }
     }
 }
