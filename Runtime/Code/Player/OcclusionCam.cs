@@ -48,6 +48,13 @@ namespace Code.Player {
             _projectionX = _projectionY * aspectRatio;
         }
 
+        Vector3 GetCameraBoxExtents(Camera cam) {
+            float near = cam.nearClipPlane;
+            float halfHeight = Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * near;
+            float halfWidth = halfHeight * cam.aspect;
+            return new Vector3(halfWidth, halfHeight, 0.05f); // Slight depth to make it 3D
+        }
+
         // Called from TS/Lua side
         // Returns the ending distance from the target
         public void BumpForOcclusion(Vector3 targetPosition, Vector3 characterPosition, int mask) {
@@ -55,7 +62,11 @@ namespace Code.Player {
             var t = transform;
             var camPos = t.position;
             var mainDir = camPos - targetPosition;
-            // var boxHalfExtents = new Vector3(_projectionX * 0.02f, _projectionY * 0.02f, 0f);
+
+            Vector3 boxHalfExtents = this.GetCameraBoxExtents(this.targetCamera);
+            // var boxHalfExtents = new Vector3(_projectionX * 0.02f, _projectionY * 0.02f, 0.01f);
+            // var boxHalfExtents = new Vector3(0.25f, 0.15f, 0f);
+
             // If cam is too far above attach pos snap up
             // if (this.adjustToHead && targetPosition.y - camPos.y > this.adjustToHeadHeightThreshold) {
             //     distance /= (targetPosition.y - camPos.y) / this.adjustToHeadHeightThreshold;
@@ -64,27 +75,30 @@ namespace Code.Player {
             // Pre: Raycast from character to target position to prevent target being in a wall
             var preDir = targetPosition - characterPosition;
             Debug.DrawLine(characterPosition, characterPosition + preDir, Color.yellow);
+            // bool preHit = Physics.BoxCast(characterPosition, boxHalfExtents, preDir.normalized, out RaycastHit preHitInfo, t.rotation, preDir.magnitude, mask,
+            //     QueryTriggerInteraction.Ignore);
             bool preHit = Physics.Raycast(characterPosition, preDir.normalized, out RaycastHit preHitInfo, preDir.magnitude, mask,
                 QueryTriggerInteraction.Ignore);
             if (preHit) {
                 GizmoUtils.DrawSphere(preHitInfo.point, 0.03f, Color.yellow);
-                targetPosition = preHitInfo.point - preDir.normalized * 0.06f;
+                targetPosition = preHitInfo.point - preDir.normalized * 0.1f;
             }
 
             Vector3 newCamPos;
 
             // Main: Raycast from target position backwards (away from character).
             Debug.DrawLine(targetPosition, targetPosition + mainDir, Color.blue);
-            bool mainHit = Physics.Raycast(targetPosition, mainDir.normalized, out RaycastHit mainHitInfo, mainDir.magnitude, mask, QueryTriggerInteraction.Ignore);
+            // bool mainHit = Physics.BoxCast(targetPosition - mainDir.normalized * 0.1f, boxHalfExtents, mainDir.normalized, out RaycastHit mainHitInfo,
+            //     t.rotation, mainDir.magnitude + 0.05f, mask, QueryTriggerInteraction.Ignore);
+            bool mainHit = Physics.Raycast(targetPosition - mainDir.normalized * 0.1f, mainDir.normalized, out RaycastHit mainHitInfo, mainDir.magnitude + 0.05f, mask, QueryTriggerInteraction.Ignore);
             if (mainHit) {
                 GizmoUtils.DrawSphere(mainHitInfo.point, 0.03f, Color.blue);
-                newCamPos = mainHitInfo.point - mainDir.normalized * 0.06f;
+                newCamPos = mainHitInfo.point - mainDir.normalized * 0.1f;
             } else {
                 newCamPos = targetPosition + mainDir;
                 GizmoUtils.DrawSphere(targetPosition + mainDir, 0.03f, Color.blue);
             }
 
-            // print($"path2 dir: {diff.normalized}, distance: {hitInfo.distance}");
             t.position = newCamPos;
         }
     }
