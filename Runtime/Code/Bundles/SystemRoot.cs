@@ -6,16 +6,13 @@ using System.IO.Compression;
 using Code.Bootstrap;
 using Luau;
 using System;
-using System.Text;
 using Airship.DevConsole;
 using Code.Bundles;
-using JetBrains.Annotations;
 using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.Serialization;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
@@ -677,65 +674,32 @@ public class SystemRoot : Singleton<SystemRoot> {
 			Debug.Log(registryDump);
 		}));
 
-		DevConsole.AddCommand(Command.Create<string>("luauobjects", "", "Prints info about the Luau plugin", Parameter.Create("context", "Options: game, protected"), (val) => {
+		DevConsole.AddCommand(Command.Create<string>("luauobjects", "", "Prints count of Unity objects tracked by Luau plugin", Parameter.Create("context", "Options: game, protected, game_server, protected_server"), (val) => {
 			val = val.ToLower();
+
+			var context = LuauContext.Game;
+			var onServer = val.EndsWith("_server", StringComparison.OrdinalIgnoreCase);
 			
 			int[] instanceIds;
 			switch (val) {
-				case "game":
-					instanceIds = LuauPlugin.LuauDebugGetAllTrackedInstanceIds(LuauContext.Game);
+				case "game" or "game_server":
+					context = LuauContext.Game;
 					break;
-				case "protected":
-					instanceIds = LuauPlugin.LuauDebugGetAllTrackedInstanceIds(LuauContext.Protected);
+				case "protected" or "protected_server":
+					context = LuauContext.Protected;
 					break;
 				default:
 					Debug.Log($"Invalid context: \"{val}\"");
 					return;
 			}
 
-			var sb = new StringBuilder("OBJECTS:\n");
-			
-			// Count objects by unique name/type:
-			var countByName = new Dictionary<string, int>();
-			foreach (var instanceId in instanceIds) {
-				var obj = ThreadDataManager.GetObjectReference(IntPtr.Zero, instanceId, true, true);
-				if (obj is UnityEngine.Object unityObj) {
-					var t = unityObj.GetType();
-					var n = "(Destroyed)";
-					if (unityObj != null) {
-						n = unityObj.name;
-					} else {
-						var cachedName = ThreadDataManager.GetObjectReferenceName_TEMP_DEBUG(instanceId);
-						if (cachedName != null) {
-							n = cachedName + " (Destroyed)";
-						}
-					}
-					var objName = $"[{t.Name}] {n}";
-					if (!countByName.TryAdd(objName, 1)) {
-						countByName[objName]++;
-					}
-				}
+			if (onServer) {
+				var server = FindAnyObjectByType<AirshipLuauDebugger>();
+				server.FetchServerLuauInstanceIds(context);
+			} else {
+				var str = AirshipLuauDebugger.FetchLuauUnityInstanceIds(context);
+				Debug.Log(str);
 			}
-			
-			// Include top 20:
-			for (var i = 0; i < 20; i++) {
-				if (countByName.Count == 0) break;
-				
-				// Find top item:
-				var topKey = "";
-				var topCount = 0;
-				foreach (var (key, count) in countByName) {
-					if (count > topCount) {
-						topKey = key;
-						topCount = count;
-					}
-				}
-				
-				sb.AppendLine($"{topKey}: {topCount}");
-				countByName.Remove(topKey);
-			}
-			
-			Debug.Log(sb.ToString());
 		}));
 
 		DevConsole.AddCommand(Command.Create("version", "", "Prints version git hash", () => {
