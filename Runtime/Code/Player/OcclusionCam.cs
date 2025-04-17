@@ -63,7 +63,7 @@ namespace Code.Player {
             var camPos = t.position;
             var mainDir = camPos - targetPosition;
 
-            Vector3 boxHalfExtents = this.GetCameraBoxExtents(this.targetCamera);
+            // Vector3 boxHalfExtents = this.GetCameraBoxExtents(this.targetCamera);
             // var boxHalfExtents = new Vector3(_projectionX * 0.02f, _projectionY * 0.02f, 0.01f);
             // var boxHalfExtents = new Vector3(0.25f, 0.15f, 0f);
 
