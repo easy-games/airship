@@ -109,14 +109,6 @@ public class LuauScript : MonoBehaviour {
 		thread = LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, out var status);
 	}
 
-	private void OnDestroy() {
-		if (thread != IntPtr.Zero && LuauState.IsContextActive(context)) {
-			LuauPlugin.LuauUnpinThread(thread);
-			LuauPlugin.LuauDestroyThread(thread);
-		}
-		thread = IntPtr.Zero;
-	}
-
 	/// <summary>
 	/// Creates a new Luau thread from the given script. The thread is not yet executed. Returns a nullptr if the Luau
 	/// fails to create the new thread.
