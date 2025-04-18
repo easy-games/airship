@@ -290,6 +290,7 @@ public class AirshipComponent : MonoBehaviour {
 		AirshipBehaviourRootV2.CleanIdOnDestroy(gameObject, this);
 		if (LuauState.IsContextActive(context)) {
 			LuauPlugin.LuauUnpinThread(thread);
+			LuauPlugin.LuauDestroyThread(thread);
 		}
 		thread = IntPtr.Zero;
 		LuauCore.onResetInstance -= OnLuauReset;
