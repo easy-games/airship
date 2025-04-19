@@ -2,6 +2,8 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Net.WebSockets;
 using Editor;
 using Editor.EditorInternal;
@@ -93,6 +95,20 @@ namespace Airship.Editor {
 
                     EditorApplication.isPlaying = false;
                 }
+            }
+
+            // Require files compiled to go into play mode
+            if (obj == PlayModeStateChange.ExitingEditMode && EditorApplication.isPlayingOrWillChangePlaymode && TypescriptCompilationService.IsCompilingFiles) {
+                // We'll yield the editor to wait for those files to finish compiling before entering play mode...
+                while (TypescriptCompilationService.IsCompilingFiles || TypescriptCompilationService.IsImportingFiles) {
+                    var compilationState = TypescriptProjectsService.Project.CompilationState;
+                    EditorUtility.DisplayProgressBar("Typescript Services", 
+                        $"Finishing compilation of Typescript files ({compilationState.CompiledFileCount}/{compilationState.FilesToCompileCount})", 
+                        (float) compilationState.CompiledFileCount / compilationState.FilesToCompileCount);
+                    Thread.Sleep(10);
+                }
+                
+                EditorUtility.ClearProgressBar();
             }
         }
 

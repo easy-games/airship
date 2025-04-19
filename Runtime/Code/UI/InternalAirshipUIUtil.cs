@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Code.UI {
     public class InternalAirshipUtil : MonoBehaviour {

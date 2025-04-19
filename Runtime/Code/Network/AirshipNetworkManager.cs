@@ -46,6 +46,7 @@ public class AirshipNetworkManager : NetworkManager {
         base.OnStopClient();
         // Debug.Log("OnStopClient");
         this.clientBundleLoader.CleanupClient();
+        this.serverConsole.OnStopClient();
 
         var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
         if (clientNetworkConnector != null) {

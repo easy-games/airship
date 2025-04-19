@@ -22,7 +22,7 @@ namespace Airship.Editor {
     /// Handles the reconciliation of AirshipComponents
     /// </summary>
     internal static class AirshipReconciliationService {
-        public static ReconcilerVersion DefaultReconcilerVersion => ReconcilerVersion.Version1;
+        public static ReconcilerVersion DefaultReconcilerVersion => ReconcilerVersion.Version2;
         public static ReconcilerVersion ReconcilerVersion {
             get {
                 if (EditorIntegrationsConfig.instance.useProjectReconcileOption) {

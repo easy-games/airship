@@ -59,8 +59,12 @@ public static class Bridge {
     public static void RemoveMaterial(Renderer ren, int materialI) {
         var materials = new List<Material>();
         ren.GetMaterials(materials);
-        materials.RemoveAt(materialI);
-        ren.SetMaterials(materials);
+        if (materialI >= 0 && materialI < materials.Count) {
+            materials.RemoveAt(materialI);
+            ren.SetMaterials(materials);
+        } else {
+            //Debug.LogError("Trying to remove material that is out of bounds. Materials: " + materials.Count + " index: " + materialI);
+        }
     }
 
     public static void ClearAllMaterials(Renderer ren) {

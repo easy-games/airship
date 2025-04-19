@@ -168,6 +168,7 @@ namespace Luau {
         // From JSON:
         public string target;
         public string member;
+        public string method;
         public string type;
         public List<object> arguments;
     }
