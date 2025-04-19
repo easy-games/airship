@@ -60,18 +60,31 @@ namespace Airship.Editor {
         public static void OnScriptReload() {
             EditorCoroutines.Execute(ResumeOrStartTypescriptRuntime());
         }
+
+        private static WebsocketClient client;
+        [MenuItem("Airship/TypeScript/Connect...")]
+        public static void Connect() {
+            client = new WebsocketClient(new Uri("ws://localhost:7472"));
+            client.WebsocketReady += () => {
+                client.CompileAllFiles();
+            };
+            client.WebsocketDataReceived += data => {
+                Debug.Log($"Received: {data}");
+            };
+            _ = client.ConnectAsync();
+        }
+
+        [MenuItem("Airship/TypeScript/Disconnect")]
+        public static void Disconnect() {
+            _ = client.CloseAsync();
+        }
+        
         
         [InitializeOnLoadMethod]
         public static void OnLoad() {
             // If a server or clone - ignore
             if (!IsValidEditor) return;
 
-            var client = new WebsocketClient(new Uri("ws://localhost:7472"));
-            client.WebsocketDataReceived += data => {
-                Debug.Log($"Received: {data}");
-            };
-            _ = client.ConnectAsync();
-            //
             if (!SessionState.GetBool("TSSLoadedUnityEditor", false)) {
                 SessionState.SetBool("TSSLoadedUnityEditor", true);
                 EditorApplication.delayCall += OnLoadDeferred;
