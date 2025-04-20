@@ -631,12 +631,12 @@ namespace Airship.DevConsole
             }
 
             // Create a new event system if none exists
-            if (EventSystem.current == null)
-            {
-                GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
-                EventSystem.current = obj.GetComponent<EventSystem>();
-                obj.name = "EventSystem";
-            }
+            // if (EventSystem.current == null)
+            // {
+            //     GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
+            //     EventSystem.current = obj.GetComponent<EventSystem>();
+            //     obj.name = "EventSystem";
+            // }
 
             // _canvasGroup.alpha = 1f;
             // _canvasGroup.interactable = true;
