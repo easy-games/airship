@@ -484,7 +484,6 @@ public class AirshipComponent : MonoBehaviour {
 #else
 	    var targetMetadata = script.m_metadata;
 	    if (script == null || targetMetadata == null || targetMetadata.name == "") {
-		    Debug.Log("script null, metadata null or name is empty");
 		    return;
 	    }
 
