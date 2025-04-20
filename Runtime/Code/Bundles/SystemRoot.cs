@@ -13,6 +13,7 @@ using Mirror;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.Serialization;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
