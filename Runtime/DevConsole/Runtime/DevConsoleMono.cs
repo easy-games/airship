@@ -585,6 +585,7 @@ namespace Airship.DevConsole
 
             ClearConsole();
             InputText = string.Empty;
+            InputCaretPosition = 0;
             _screenSize = new Vector2Int(Screen.width, Screen.height);
             ConsoleIsEnabled = true;
             enabled = true;
