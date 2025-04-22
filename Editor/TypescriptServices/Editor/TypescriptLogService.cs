@@ -99,35 +99,35 @@ namespace Airship.Editor {
         }
 
         internal static void StartLogging() {
-            if (started) return;
-            
-            string logDir = Path.GetDirectoryName(Application.consoleLogPath);
-            logPath = Path.Combine(logDir, $"TypeScript.log");
-            prevLogPath = Path.Combine(logDir, $"TypeScript-prev.log"); // lol
-            
-            try {
-                if (File.Exists(prevLogPath)) File.Delete(prevLogPath);
-                if (File.Exists(logPath)) File.Move(logPath, prevLogPath);
-            } catch (Exception e) {
-                Debug.LogError("Failed rotating typescript logs: " + e);
-            }
-            
-            if (writer != null) {
-                writer.Close();
-            }
-
-            var isDomainReload = SessionState.GetBool("StartedLogger", false);
-            if (isDomainReload) {
-                Log(TypescriptLogLevel.Information, "Detected domain reload..."); // lol
-            }
-            
-            writer = new StreamWriter(logPath, append: isDomainReload); // overwrite existing
-            writer.AutoFlush = true;
-            
-            writeTask = Task.Run(ProcessQueue);
-            started = true;
-            
-            SessionState.SetBool("StartedLogger", true);
+            // if (started) return;
+            //
+            // string logDir = Path.GetDirectoryName(Application.consoleLogPath);
+            // logPath = Path.Combine(logDir, $"TypeScript.log");
+            // prevLogPath = Path.Combine(logDir, $"TypeScript-prev.log"); // lol
+            //
+            // try {
+            //     if (File.Exists(prevLogPath)) File.Delete(prevLogPath);
+            //     if (File.Exists(logPath)) File.Move(logPath, prevLogPath);
+            // } catch (Exception e) {
+            //     Debug.LogError("Failed rotating typescript logs: " + e);
+            // }
+            //
+            // if (writer != null) {
+            //     writer.Close();
+            // }
+            //
+            // var isDomainReload = SessionState.GetBool("StartedLogger", false);
+            // if (isDomainReload) {
+            //     Log(TypescriptLogLevel.Information, "Detected domain reload..."); // lol
+            // }
+            //
+            // writer = new StreamWriter(logPath, append: isDomainReload); // overwrite existing
+            // writer.AutoFlush = true;
+            //
+            // writeTask = Task.Run(ProcessQueue);
+            // started = true;
+            //
+            // SessionState.SetBool("StartedLogger", true);
         }
         
         [InitializeOnLoadMethod]
