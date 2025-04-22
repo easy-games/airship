@@ -129,6 +129,12 @@ namespace Airship.Editor {
             if (!TypescriptCompilationService.IsWatchModeRunning || IsAwaitingRestart) {
                 yield break;
             }
+
+            if (AirshipUpdateService.IsUpdatingAirship) {
+                TypescriptLogService.Log(TypescriptLogLevel.Warning, "Restarting compiler because Airship is updating...");
+            } else if (AirshipPackagesWindow.IsModifyingPackages) {
+                TypescriptLogService.Log(TypescriptLogLevel.Warning, "Restarting compiler for package modification...");
+            }
             
             IsAwaitingRestart = true;
             TypescriptCompilationService.StopCompilerServices();

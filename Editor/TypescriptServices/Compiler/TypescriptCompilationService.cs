@@ -298,6 +298,7 @@ using Object = UnityEngine.Object;
                 }
                 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs, nodeJsArgs));
+                TypescriptLogService.Log(TypescriptLogLevel.Information, "Started compiler services.");
             }
 
             [MenuItem("Airship/TypeScript/Stop Watch Mode")]
@@ -329,6 +330,7 @@ using Object = UnityEngine.Object;
             }
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
+                if (!IsWatchModeRunning) return;
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
                 foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
@@ -339,6 +341,8 @@ using Object = UnityEngine.Object;
                 if (project != null && Progress.Exists(project.ProgressId)) {
                     Progress.Finish(project.ProgressId, Progress.Status.Canceled);
                 }
+                
+                TypescriptLogService.Log(TypescriptLogLevel.Warning, "Stopped compiler services.");
                 
                 if (shouldRestart) {
                     StartCompilerServices();
@@ -558,7 +562,7 @@ using Object = UnityEngine.Object;
 
                         TypescriptLogService.StartCompileStopWatch();
                         TypescriptLogService.Log(TypescriptLogLevel.Information, 
-                            $"Starting logging of Typescript project '{TypescriptProjectsService.Project.Directory}' with {arguments.Count} files...");
+                            $"Starting compilation of {arguments.Count} files in project...");
                         
                         if (arguments.Count != 0) {
                             if (arguments.Initial) {

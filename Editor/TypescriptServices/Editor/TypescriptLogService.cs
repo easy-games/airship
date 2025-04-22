@@ -73,9 +73,9 @@ namespace Airship.Editor {
         }
 
         internal static void LogEvent(CompiledFileEvent compiledFileEvent) {
-            var project = TypescriptProjectsService.Project;
-            var relative = PosixPath.Join("Assets", Path.GetRelativePath(project.Directory, compiledFileEvent.fileName));
-            
+            // var project = TypescriptProjectsService.Project;
+            // var relative = PosixPath.Join("Assets", Path.GetRelativePath(project.Directory, compiledFileEvent.fileName));
+            //
             // Log(TypescriptLogLevel.Information, 
             //     $"Compiled file at {relative}, output to {project.GetOutputPath(relative)}");
         }

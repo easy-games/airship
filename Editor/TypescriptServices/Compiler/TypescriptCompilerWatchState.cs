@@ -62,8 +62,11 @@ namespace Airship.Editor {
             
             argList.Add(TypescriptCompilationService.TypescriptLocationCommandLine);
             argList.Add(arguments.GetCommandString(CompilerCommand.BuildWatch));
+            var fullCommandString = string.Join(" ", argList);
             
-            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, string.Join(" ", argList));
+            TypescriptLogService.Log(TypescriptLogLevel.Information, $"Start process 'node {fullCommandString}'");
+            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, fullCommandString);
+            
             TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
             processId = compilerProcess.Id;
             
