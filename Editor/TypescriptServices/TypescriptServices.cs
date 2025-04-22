@@ -26,8 +26,15 @@ namespace Airship.Editor {
         internal bool hasInitialized = false;
         [SerializeField] internal bool usePostCompileReconciliation = true;
 
+        [SerializeField] internal bool overrideMemory = false;
+        [SerializeField] internal int overrideMemoryMb = 0;
+        [SerializeField] internal bool useNodeInspect = false;
+
         private void OnEnable() {
             AirshipComponent.UsePostCompileReconciliation = usePostCompileReconciliation;
+            if (overrideMemoryMb == 0) {
+                overrideMemoryMb = Math.Clamp(SystemInfo.systemMemorySize - 512, 0, 4096);
+            }
         }
 
         public void Modify() {
@@ -210,6 +217,9 @@ namespace Airship.Editor {
 
         private static void OnCrash(TypescriptCrashProblemItem problem) {
             var errorLog = problem.StandardError;
+            
+            TypescriptLogService.LogCrash(problem);
+            
             if (errorLog.Count() >= 8) {
                EditorUtility.DisplayDialog("Typescript Compiler Crashed",
                         $"{string.Join("\n", problem.StandardError.ToArray()[4..7])}",
