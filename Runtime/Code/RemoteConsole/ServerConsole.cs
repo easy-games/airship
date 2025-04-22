@@ -146,7 +146,8 @@ namespace Code.RemoteConsole {
                         stackTrace = stackTrace,
                         time = time,
                     };
-                    NetworkServer.SendToAll(packet, Channels.Reliable, true);
+                    bool sendToReadyOnly = Application.isEditor;
+                    NetworkServer.SendToAll(packet, Channels.Reliable, sendToReadyOnly);
                 }
             }
         }

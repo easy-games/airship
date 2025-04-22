@@ -585,6 +585,7 @@ namespace Airship.DevConsole
 
             ClearConsole();
             InputText = string.Empty;
+            InputCaretPosition = 0;
             _screenSize = new Vector2Int(Screen.width, Screen.height);
             ConsoleIsEnabled = true;
             enabled = true;
@@ -631,12 +632,12 @@ namespace Airship.DevConsole
             }
 
             // Create a new event system if none exists
-            if (EventSystem.current == null)
-            {
-                GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
-                EventSystem.current = obj.GetComponent<EventSystem>();
-                obj.name = "EventSystem";
-            }
+            // if (EventSystem.current == null)
+            // {
+            //     GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
+            //     EventSystem.current = obj.GetComponent<EventSystem>();
+            //     obj.name = "EventSystem";
+            // }
 
             // _canvasGroup.alpha = 1f;
             // _canvasGroup.interactable = true;

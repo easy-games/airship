@@ -29,7 +29,7 @@ namespace Adrenak.UniVoice.UniMicInput {
                 // Mic.Instance.SetDeviceIndex(deviceIndex);
                 // Mic.Instance.StartRecording(frequency, sampleLen);
             } else {
-                Debug.Log("No mic devices found. Unable to start recording.");
+                // Debug.Log("No mic devices found. Unable to start recording.");
             }
 
             // Debug.unityLogger.Log(TAG, "Start recording.");

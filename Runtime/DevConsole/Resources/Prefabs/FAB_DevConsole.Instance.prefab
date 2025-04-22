@@ -1146,7 +1146,7 @@ MonoBehaviour:
   tabServer: {fileID: 264935783764998699}
   tabMemory: {fileID: 8047865324661410208}
   bottom: {fileID: 3240027391199046436}
-  loggingEnabled: 0
+  loggingEnabled: 1
   activeContext: 0
 --- !u!1 &2882227552420178953
 GameObject:
@@ -5241,8 +5241,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 97973453866908033, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_Text
-      value: Type <b>enable</b> to turn on console logging. This may cause lag when
-        many logs get printed.
+      value: Airship Dev Console v1
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_Pivot.x
@@ -5330,8 +5329,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6945350098497969374, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_text
-      value: "Type <b>enable</b> to turn on console logging. This may cause lag when
-        many logs get printed.\u200B"
+      value: "Airship Dev Console v1\u200B"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
