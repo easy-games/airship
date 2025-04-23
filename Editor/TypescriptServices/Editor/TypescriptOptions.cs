@@ -317,8 +317,25 @@ namespace Airship.Editor {
                 GUILayout.Space(5);
                 GUILayout.Label("Debugging", EditorStyles.boldLabel);
                 
+                EditorGUILayout.BeginHorizontal();
+                {
+                    TypescriptLogService.Enabled = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Enable Logging", "Enables logging for the Typescript services"), 
+                        TypescriptLogService.Enabled
+                    );
+                    if (TypescriptLogService.Enabled && GUILayout.Button("Open Log File...", GUILayout.Width(150))) {
+                        TypescriptLogService.OpenLogFile();
+                    }
+                    
+                    if (TypescriptLogService.Enabled && TypescriptLogService.HasPrevLog && GUILayout.Button("Open Prev Log File...", GUILayout.Width(150))) {
+                        TypescriptLogService.OpenPrevLogFile();
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+
+                
                 TypescriptCompilationService.ShowDeveloperOptions = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Advanced Options", "Enable the advanced options - only enable this if you know what you're doing!"), 
+                    new GUIContent("Developer Options (Advanced)", "Enable the advanced options - only enable this if you know what you're doing!"), 
                     TypescriptCompilationService.ShowDeveloperOptions
                 );
             }
