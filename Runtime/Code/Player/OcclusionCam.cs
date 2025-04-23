@@ -58,7 +58,7 @@ namespace Code.Player {
         // Called from TS/Lua side
         // Returns the ending distance from the target
         public void BumpForOcclusion(Vector3 targetPosition, Vector3 characterPosition, int mask) {
-            GizmoUtils.DrawSphere(targetPosition, 0.05f, Color.white);
+            GizmoUtils.DrawSphere(targetPosition, 0.03f, Color.white);
             var t = transform;
             var camPos = t.position;
             var mainDir = camPos - targetPosition;
@@ -84,12 +84,20 @@ namespace Code.Player {
                     mainDistanceMod = alpha;
                 }
             }
-            // if (this.adjustToHead && yDiff > this.adjustToHeadHeightThreshold) {
-            //     float alpha = 1 / yDiff / this.adjustToHeadHeightThreshold;
-            //     print($"alpha: {alpha}");
-            //     // targetPosition = Vector3.Lerp(characterPosition, targetPosition, alpha);
-            //     // mainDistanceMod = alpha;
-            // }
+            
+            Vector3 newCamPos;
+
+            // Step 1: raycast from character to the ideal non-occluded position
+            // If nothing hits, then we skip all other checks and immediately update camera position.
+            {
+                bool step1Hit = Physics.Raycast(characterPosition, mainDir.normalized, out RaycastHit step1HitInfo,
+                    mainDir.magnitude, mask, QueryTriggerInteraction.Ignore);
+                if (!step1Hit) {
+                    newCamPos = targetPosition + mainDir;
+                    t.position = newCamPos;
+                    return;
+                }
+            }
 
             // Pre: Raycast from character to target position to prevent target being in a wall
             Debug.DrawLine(characterPosition, characterPosition + preDir * preDirDistance, Color.yellow);
@@ -101,8 +109,6 @@ namespace Code.Player {
                 GizmoUtils.DrawSphere(preHitInfo.point, 0.03f, Color.yellow);
                 targetPosition = preHitInfo.point - preDir.normalized * 0.1f;
             }
-
-            Vector3 newCamPos;
 
             // Main: Raycast from target position backwards (away from character).
             Debug.DrawLine(targetPosition, targetPosition + mainDir, Color.blue);
