@@ -137,7 +137,6 @@ namespace Airship.Editor {
         }
 
         internal static void StartLogging() {
-            Debug.Log($"Log files should be in {LogFolder}");
             if (!Directory.Exists(LogFolder)) {
                 Directory.CreateDirectory(LogFolder);
             }
