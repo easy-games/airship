@@ -87,25 +87,23 @@ namespace Code.Player {
             
             Vector3 newCamPos;
 
-            // Step 1: raycast from character to the ideal non-occluded position
+            // Step 1: Raycast from character to the ideal non-occluded position
             // If nothing hits, then we skip all other checks and immediately update camera position.
-            {
-                bool step1Hit = Physics.Raycast(characterPosition, mainDir.normalized, out RaycastHit step1HitInfo,
-                    mainDir.magnitude, mask, QueryTriggerInteraction.Ignore);
-                if (!step1Hit) {
-                    newCamPos = targetPosition + mainDir;
-                    t.position = newCamPos;
-                    return;
-                }
+            bool step1Hit = Physics.Raycast(characterPosition, mainDir.normalized, out RaycastHit step1HitInfo,
+                mainDir.magnitude, mask, QueryTriggerInteraction.Ignore);
+            if (!step1Hit) {
+                newCamPos = targetPosition + mainDir;
+                t.position = newCamPos;
+                return;
             }
 
-            // Pre: Raycast from character to target position to prevent target being in a wall
+            // Step 2: Raycast from character to target position to prevent target being in a wall
             Debug.DrawLine(characterPosition, characterPosition + preDir * preDirDistance, Color.yellow);
             // bool preHit = Physics.BoxCast(characterPosition, boxHalfExtents, preDir.normalized, out RaycastHit preHitInfo, t.rotation, preDir.magnitude, mask,
             //     QueryTriggerInteraction.Ignore);
-            bool preHit = Physics.Raycast(characterPosition, preDir.normalized, out RaycastHit preHitInfo, preDirDistance, mask,
+            bool step2Hit = Physics.Raycast(characterPosition, preDir.normalized, out RaycastHit preHitInfo, preDirDistance, mask,
                 QueryTriggerInteraction.Ignore);
-            if (preHit) {
+            if (step2Hit) {
                 GizmoUtils.DrawSphere(preHitInfo.point, 0.03f, Color.yellow);
                 targetPosition = preHitInfo.point - preDir.normalized * 0.1f;
             }
