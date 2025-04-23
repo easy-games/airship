@@ -106,6 +106,10 @@ public class CharacterRig : MonoBehaviour {
                     return spineChest;
 
                 //ARMS
+                case AccessorySlot.RightWrist:
+                    return handR;
+                case AccessorySlot.LeftWrist:
+                    return handL;
                 case AccessorySlot.Hands:
                 case AccessorySlot.RightHand:
                     return heldItemR;
