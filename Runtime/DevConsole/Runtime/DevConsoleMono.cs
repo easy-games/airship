@@ -999,10 +999,6 @@ namespace Airship.DevConsole
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false) {
-            string s = message.ToString();
-            if (s.Contains("The character with Unicode value")) {
-                return;
-            }
             Log(message, context, prepend, WarningColour);
         }
 
