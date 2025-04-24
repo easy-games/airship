@@ -27,28 +27,28 @@ namespace Code.Components {
         }
 
         private void Update(){
-            if(Input.GetMouseButtonDown(0)) { // capture screen shot on left mouse button down
-                if(transparentBackground){
-                    TakeScreenshotRenderTransparent();
-                } else{
-                    TakeScreenshotRender();
-                }
-            }
+            // if(Input.GetMouseButtonDown(0)) { // capture screen shot on left mouse button down
+            //     if(transparentBackground){
+            //         TakeScreenshotRenderTransparent();
+            //     } else{
+            //         TakeScreenshotRender();
+            //     }
+            // }
         }
 
-        public void TakeScreenshotRender(){
+        public void TakeScreenshotRender() {
             var folderPath = CreateFolder();
             var screenshotName = GetFileName();
             ScreenCapture.CaptureScreenshot(Path.Combine(folderPath, screenshotName), superScaleSize); // takes the sceenshot, the "2" is for the scaled resolution, you can put this to 600 but it will take really long to scale the image up
             Debug.Log("Saved screenshot to: " + folderPath + screenshotName); // You get instant feedback in the console
         }
 
-        public void TakeScreenshotRenderTransparent(){
+        public void TakeScreenshotRenderTransparent() {
             var folderPath = CreateFolder();
             var screenshotName = GetFileName();
 
             var camera = Camera.main;
-            var width = Screen.width;
+            var width = Screen.height;
             var height = Screen.height;
             Texture2D scrTexture = new Texture2D(width, height, TextureFormat.ARGB32, false); 
             RenderTexture scrRenderTexture = new RenderTexture(scrTexture.width, scrTexture.height, 24);
