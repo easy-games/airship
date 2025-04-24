@@ -48,7 +48,7 @@ namespace Code.Components {
             var screenshotName = GetFileName();
 
             var camera = Camera.main;
-            var width = Screen.height;
+            var width = Screen.width;
             var height = Screen.height;
             Texture2D scrTexture = new Texture2D(width, height, TextureFormat.ARGB32, false); 
             RenderTexture scrRenderTexture = new RenderTexture(scrTexture.width, scrTexture.height, 24);
