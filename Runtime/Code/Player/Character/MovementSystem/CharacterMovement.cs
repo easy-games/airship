@@ -447,7 +447,12 @@ public class CharacterMovement : NetworkBehaviour {
             currentMoveState.jumpCount = 0;
             currentMoveState.timeSinceBecameGrounded = 0f;
             OnImpactWithGround?.Invoke(currentVelocity, groundHit);
-            CommandImpactWithGround(currentVelocity, groundHit);
+            if (isClientOnly) {
+                CommandImpactWithGround(currentVelocity, groundHit);
+            }
+            else {
+                RpcImpactWithGround(currentVelocity, groundHit);
+            }
         } else {
             currentMoveState.timeSinceBecameGrounded
                 = Math.Min(currentMoveState.timeSinceBecameGrounded + deltaTime, 100f);
