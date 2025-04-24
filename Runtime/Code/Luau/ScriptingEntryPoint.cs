@@ -54,7 +54,7 @@ namespace Assets.Code.Luau {
 				LuauScript.Create(go, CoreEntryScript, LuauContext.Game, true);
 			}
 			stopwatch.Stop();
-			Debug.Log($"ScriptingEntryPoint elapsed time: {stopwatch.ElapsedMilliseconds}ms");
+			// Debug.Log($"ScriptingEntryPoint elapsed time: {stopwatch.ElapsedMilliseconds}ms");
 		}
 	}
 }
