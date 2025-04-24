@@ -858,8 +858,8 @@ public class CharacterMovement : NetworkBehaviour {
                 //Push the character out of any colliders
                 flatVelocity
                     = Vector3.ClampMagnitude(newVelocity, forwardHit.distance - characterRadius - forwardMargin);
-                newVelocity.x = flatVelocity.x;
-                newVelocity.z = flatVelocity.z;
+                newVelocity.x += flatVelocity.x;
+                newVelocity.z += flatVelocity.z;
             }
 
             if (!grounded && detectedGround) {
