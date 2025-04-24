@@ -950,6 +950,11 @@ namespace Airship.DevConsole
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false) {
+            string s = message.ToString();
+            if (s.Contains("The character with Unicode value")) {
+                return;
+            }
+            
             Profiler.BeginSample("DevConsole.Log");
             var list = StoredLogText[context];
             if (list.Count >= 100) {
@@ -995,7 +1000,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false) {
             string s = message.ToString();
-            if (s.Contains("The character with Unicode value ")) {
+            if (s.Contains("The character with Unicode value")) {
                 return;
             }
             Log(message, context, prepend, WarningColour);
