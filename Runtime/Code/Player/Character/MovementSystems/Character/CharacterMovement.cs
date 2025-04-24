@@ -652,7 +652,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 newVelocity += currentMoveSnapshot.impulseVelocity;
                 currentMoveSnapshot.airborneFromImpulse = !grounded || currentMoveSnapshot.impulseVelocity.y > .01f;
                 currentMoveSnapshot.impulseVelocity = Vector3.zero;
-                if (useExtraLogging)
+                if (isImpulsing)
                 {
                     print(" isImpulsing: " + isImpulsing + " impulse force: " + currentMoveSnapshot.impulseVelocity + "New Vel: " +
                           newVelocity);
@@ -802,8 +802,8 @@ namespace Code.Player.Character.MovementSystems.Character
                     //Push the character out of any colliders
                     flatVelocity = Vector3.ClampMagnitude(newVelocity,
                         forwardHit.distance - characterRadius - forwardMargin);
-                    newVelocity.x = flatVelocity.x;
-                    newVelocity.z = flatVelocity.z;
+                    newVelocity.x += flatVelocity.x;
+                    newVelocity.z += flatVelocity.z;
                 }
 
                 if (!grounded && detectedGround)
@@ -936,6 +936,7 @@ namespace Code.Player.Character.MovementSystems.Character
             //print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>currentMoveState.prevState</b>: {currentMoveState.prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 
             //Execute the forces onto the rigidbody
+            if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
             this.rigidbody.linearVelocity = newVelocity;
 
             #endregion
@@ -1228,9 +1229,7 @@ namespace Code.Player.Character.MovementSystems.Character
         }
         
         public void AddImpulse(Vector3 impulse){
-            if(useExtraLogging){
-                print("Adding impulse: " + impulse);
-            }
+            print("Adding impulse: " + impulse);
             if (mode == NetworkedStateSystemMode.Observer && isServer) {
                 RpcAddImpulse(impulse);
                 return;
