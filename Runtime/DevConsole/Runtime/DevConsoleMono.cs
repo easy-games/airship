@@ -2956,6 +2956,11 @@ namespace Airship.DevConsole
                 ));
 
             #endregion
+
+            AddCommand(Command.Create("lighting", "", "View lighting data", () => {
+                Debug.Log("Lightmaps: " + LightmapSettings.lightmaps.Length);
+                Debug.Log("Probes: " + LightmapSettings.lightProbes?.count);
+            }));
         }
 
         /// <summary>
