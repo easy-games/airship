@@ -80,7 +80,7 @@ namespace Code.Network.Simulation
          * time. Components should expect a PerformTick() call sometime after this
          * function completes.
          */
-        public event Action<double> OnSetSnapshot;
+        public event Action<object> OnSetSnapshot;
 
         /**
          * This action notifies listeners that we are performing a lag compensation check.

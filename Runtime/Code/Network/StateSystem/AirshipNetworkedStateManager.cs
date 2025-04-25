@@ -363,43 +363,39 @@ namespace Code.Network.StateSystem
             }
         }
 
-        private void OnSetSnapshot(double time)
+        private void OnSetSnapshot(object objTime)
         {
-            // we are in shared mode
-            if (isClient && isServer)
-            {
-                this.AuthClientSetSnapshot(time);
-                return;
-            }
+            if (objTime is double time) {
+                // we are in shared mode
+                if (isClient && isServer) {
+                    this.AuthClientSetSnapshot(time);
+                    return;
+                }
 
-            // We are the client and we are authoritative.
-            if (isClient && isOwned && !serverAuth)
-            {
-                this.AuthClientSetSnapshot(time);
-            }
+                // We are the client and we are authoritative.
+                if (isClient && isOwned && !serverAuth) {
+                    this.AuthClientSetSnapshot(time);
+                }
 
-            // We are the server, and we are the authority.
-            if (isServer && serverAuth)
-            {
-                this.AuthServerSetSnapshot(time);
-            }
+                // We are the server, and we are the authority.
+                if (isServer && serverAuth) {
+                    this.AuthServerSetSnapshot(time);
+                }
 
-            // We are the server, but the client is authoritative.
-            if (isServer && !serverAuth)
-            {
-                this.NonAuthServerSetSnapshot(time);
-            }
+                // We are the server, but the client is authoritative.
+                if (isServer && !serverAuth) {
+                    this.NonAuthServerSetSnapshot(time);
+                }
 
-            // We are the client and the server is authoritative.
-            if (isClient && isOwned && serverAuth)
-            {
-                this.NonAuthClientSetSnapshot(time);
-            }
+                // We are the client and the server is authoritative.
+                if (isClient && isOwned && serverAuth) {
+                    this.NonAuthClientSetSnapshot(time);
+                }
 
-            // We are an observing client
-            if (isClient && !isOwned)
-            {
-                this.ObservingClientSetSnapshot(time);
+                // We are an observing client
+                if (isClient && !isOwned) {
+                    this.ObservingClientSetSnapshot(time);
+                }
             }
         }
 

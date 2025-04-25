@@ -1003,8 +1003,8 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotData snapshotNew)
         {
             this.rigidbody.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
-            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.01f) : snapshotOld.lookVector;
-            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.01f) : snapshotNew.lookVector;
+            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : snapshotOld.lookVector;
+            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : snapshotNew.lookVector;
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation( new Vector3(oldLook.x, 0, oldLook.z)),
                 Quaternion.LookRotation( new Vector3(newLook.x, 0, newLook.z)),
@@ -1065,8 +1065,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public double GetLocalSimulationTimeFromCommandNumber(int commandNumber)
         {
             CharacterSnapshotData localState = null;
-            foreach (var state in this.manager.stateHistory.Values)
-            {
+            foreach (var state in this.manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber)
                 {
                     localState = state;
@@ -1076,8 +1075,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             if (localState == null)
             {
-                Debug.LogWarning(
-                    $"Unable to find predicted state for command number {commandNumber}. Returning 0 as simulation time.");
+                Debug.LogWarning($"Unable to find predicted state for command number {commandNumber}. Returning 0 as simulation time.");
                 return 0;
             }
 
