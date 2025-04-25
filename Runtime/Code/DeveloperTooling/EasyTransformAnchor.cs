@@ -1,18 +1,20 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class EasyTransformAnchor : MonoBehaviour
-{
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+public class EasyTransformAnchor : MonoBehaviour {
+    public Transform anchor;
+    public bool matchPosition = true;
+    public bool matchRotation = true;
+    public bool matchScale = false;
 
-    // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
-        
+        if(matchPosition)
+            this.transform.position = anchor.position;
+
+        if(matchRotation)
+            this.transform.rotation = anchor.rotation;
+
+        if(matchScale)  
+            this.transform.localScale = anchor.localScale;
     }
 }
