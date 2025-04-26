@@ -63,11 +63,13 @@ namespace Code.Network.Simulation
             });
         }
 
-        private void SetSnapshot(double time)
+        private void SetSnapshot(object objTime)
         {
-            var snapshot = this.history.Get(time);
-            this.transform.position = snapshot.position;
-            this.transform.rotation = snapshot.rotation;
+            if (objTime is double time) {
+                var snapshot = this.history.Get(time);
+                this.transform.position = snapshot.position;
+                this.transform.rotation = snapshot.rotation;
+            }
         }
 
         private void LagCompensationCheck(int clientId, double time, double latency)
