@@ -1098,7 +1098,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             if (clientPredictedState == null)
             {
-                Debug.LogWarning($"Unable to find predicted state for command number {commandNumber}. Resimulation will not be performed.");
+                Debug.LogWarning($"Unable to find predicted state for command number {commandNumber} on " + this.name + ". Resimulation will not be performed.");
                 return false;
             }
             
@@ -1268,6 +1268,12 @@ namespace Code.Player.Character.MovementSystems.Character
         public void SetVelocity(Vector3 velocity) {
             if (mode == NetworkedStateSystemMode.Observer && isServer) {
                 RpcVelocity(velocity);
+                return;
+            }
+
+            if (mode == NetworkedStateSystemMode.Observer)
+            {
+                Debug.LogWarning("Attempted to set velocity on an observed player. This will not work.");
                 return;
             }
             this.rigidbody.linearVelocity = velocity;

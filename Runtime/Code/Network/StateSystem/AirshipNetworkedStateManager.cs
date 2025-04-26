@@ -939,7 +939,7 @@ namespace Code.Network.StateSystem
                 return;
             }
 
-            Debug.LogWarning("Re-simulating command " + state.lastProcessedCommand);
+            Debug.LogWarning("Authoritative result for " + this.name + " on cmd# " + state.lastProcessedCommand + " was mispredicted. Requesting resimulation.");
 
             // Correct our networked system state to match the authoritative answer from the server
             this.stateSystem.SetCurrentState(state);
