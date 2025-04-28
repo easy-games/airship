@@ -241,12 +241,10 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern bool Reset(LuauContext context);
-	public static bool LuauReset(LuauContext context) {
+	private static extern void Reset(LuauContext context);
+	public static void LuauReset(LuauContext context) {
         ThreadSafetyCheck();
-
-        bool returnValue = Reset(context);
-        return returnValue;
+        Reset(context);
 	}
 
 #if UNITY_IPHONE

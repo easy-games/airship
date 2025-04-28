@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Code.Bundles;
+using Luau;
 using Mirror;
 using UnityEngine;
 
@@ -8,6 +10,7 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 	[NonSerialized] [SyncVar] public string luauPluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
 	[NonSerialized] [SyncVar] public LuauPlugin.LuauBytecodeVersion bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
 	[NonSerialized] [SyncVar] public string serverPlayerVersion = "";
+	[NonSerialized] [SyncVar(hook = nameof(OnLuauObjectsDebugStringChanged))] public string luauObjectsDebugString = "";
 
 	[NonSerialized]
 	public readonly SyncDictionary<LuauContext, List<LuauPlugin.LuauMemoryCategoryDumpItem>> ServerMemDump = new();
@@ -44,5 +47,63 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 		ServerMemDump[context] = dump; // Force update
 		
 		ServerUnityObjects = LuauPlugin.LuauGetUnityObjectCount();
+	}
+
+	[Command(requiresAuthority = false)]
+	public void FetchServerLuauInstanceIds(LuauContext context) {
+		luauObjectsDebugString = "SERVER " + FetchLuauUnityInstanceIds(context);
+	}
+	
+	public static string FetchLuauUnityInstanceIds(LuauContext context) {
+		var instanceIds = LuauPlugin.LuauDebugGetAllTrackedInstanceIds(context);
+		
+		var sb = new StringBuilder("OBJECTS:\n");
+			
+		// Count objects by unique name/type:
+		var countByName = new Dictionary<string, int>();
+		foreach (var instanceId in instanceIds) {
+			var obj = ThreadDataManager.GetObjectReference(IntPtr.Zero, instanceId, true, true);
+			if (obj is UnityEngine.Object unityObj) {
+				var t = unityObj.GetType();
+				var n = "(Destroyed)";
+				if (unityObj != null) {
+					n = unityObj.name;
+				} else {
+					var cachedName = ThreadDataManager.GetObjectReferenceName_TEMP_DEBUG(instanceId);
+					if (cachedName != null) {
+						n = cachedName + " (Destroyed)";
+					}
+				}
+				var objName = $"[{t.Name}] {n}";
+				if (!countByName.TryAdd(objName, 1)) {
+					countByName[objName]++;
+				}
+			}
+		}
+			
+		// Include top 20:
+		for (var i = 0; i < 20; i++) {
+			if (countByName.Count == 0) break;
+				
+			// Find top item:
+			var topKey = "";
+			var topCount = 0;
+			foreach (var (key, count) in countByName) {
+				if (count > topCount) {
+					topKey = key;
+					topCount = count;
+				}
+			}
+				
+			sb.AppendLine($"{topKey}: {topCount}");
+			countByName.Remove(topKey);
+		}
+
+		return sb.ToString();
+	}
+
+	private void OnLuauObjectsDebugStringChanged(string oldStr, string newStr) {
+		// Log on the client when the value changes:
+		Debug.Log(newStr);
 	}
 }

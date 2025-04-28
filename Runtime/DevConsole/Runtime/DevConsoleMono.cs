@@ -585,6 +585,7 @@ namespace Airship.DevConsole
 
             ClearConsole();
             InputText = string.Empty;
+            InputCaretPosition = 0;
             _screenSize = new Vector2Int(Screen.width, Screen.height);
             ConsoleIsEnabled = true;
             enabled = true;
@@ -631,12 +632,12 @@ namespace Airship.DevConsole
             }
 
             // Create a new event system if none exists
-            if (EventSystem.current == null)
-            {
-                GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
-                EventSystem.current = obj.GetComponent<EventSystem>();
-                obj.name = "EventSystem";
-            }
+            // if (EventSystem.current == null)
+            // {
+            //     GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
+            //     EventSystem.current = obj.GetComponent<EventSystem>();
+            //     obj.name = "EventSystem";
+            // }
 
             // _canvasGroup.alpha = 1f;
             // _canvasGroup.interactable = true;
@@ -949,6 +950,11 @@ namespace Airship.DevConsole
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false) {
+            string s = message.ToString();
+            if (s.Contains("The character with Unicode value")) {
+                return;
+            }
+            
             Profiler.BeginSample("DevConsole.Log");
             var list = StoredLogText[context];
             if (list.Count >= 100) {
@@ -993,10 +999,6 @@ namespace Airship.DevConsole
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false) {
-            string s = message.ToString();
-            if (s.Contains("The character with Unicode value ")) {
-                return;
-            }
             Log(message, context, prepend, WarningColour);
         }
 
@@ -2954,6 +2956,11 @@ namespace Airship.DevConsole
                 ));
 
             #endregion
+
+            AddCommand(Command.Create("lighting", "", "View lighting data", () => {
+                Debug.Log("Lightmaps: " + LightmapSettings.lightmaps.Length);
+                Debug.Log("Probes: " + LightmapSettings.lightProbes?.count);
+            }));
         }
 
         /// <summary>

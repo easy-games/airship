@@ -38,7 +38,7 @@ namespace Code.RemoteConsole {
         }
 
         private async Task ProcessQueue() {
-            while (true) {
+            while (!shuttingDown) {
                 while (logQueue.TryDequeue(out string msg)) {
                     try {
                         await writer.WriteLineAsync(msg);
@@ -146,7 +146,8 @@ namespace Code.RemoteConsole {
                         stackTrace = stackTrace,
                         time = time,
                     };
-                    NetworkServer.SendToAll(packet, Channels.Reliable, true);
+                    bool sendToReadyOnly = Application.isEditor;
+                    NetworkServer.SendToAll(packet, Channels.Reliable, sendToReadyOnly);
                 }
             }
         }

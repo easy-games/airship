@@ -2,6 +2,8 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Editor;
 using Editor.EditorInternal;
 using Editor.Packages;
@@ -24,8 +26,15 @@ namespace Airship.Editor {
         internal bool hasInitialized = false;
         [SerializeField] internal bool usePostCompileReconciliation = true;
 
+        [SerializeField] internal bool overrideMemory = false;
+        [SerializeField] internal int overrideMemoryMb = 0;
+        [SerializeField] internal bool useNodeInspect = false;
+
         private void OnEnable() {
             AirshipComponent.UsePostCompileReconciliation = usePostCompileReconciliation;
+            if (overrideMemoryMb == 0) {
+                overrideMemoryMb = Math.Clamp(SystemInfo.systemMemorySize - 512, 0, 4096);
+            }
         }
 
         public void Modify() {
@@ -78,6 +87,20 @@ namespace Airship.Editor {
                     EditorApplication.isPlaying = false;
                 }
             }
+
+            // Require files compiled to go into play mode
+            if (obj == PlayModeStateChange.ExitingEditMode && EditorApplication.isPlayingOrWillChangePlaymode && TypescriptCompilationService.IsCompilingFiles) {
+                // We'll yield the editor to wait for those files to finish compiling before entering play mode...
+                while (TypescriptCompilationService.IsCompilingFiles || TypescriptCompilationService.IsImportingFiles) {
+                    var compilationState = TypescriptProjectsService.Project.CompilationState;
+                    EditorUtility.DisplayProgressBar("Typescript Services", 
+                        $"Finishing compilation of Typescript files ({compilationState.CompiledFileCount}/{compilationState.FilesToCompileCount})", 
+                        (float) compilationState.CompiledFileCount / compilationState.FilesToCompileCount);
+                    Thread.Sleep(10);
+                }
+                
+                EditorUtility.ClearProgressBar();
+            }
         }
 
         private static bool HasAllPackagesDownloaded() {
@@ -105,6 +128,12 @@ namespace Airship.Editor {
         internal static IEnumerator RestartAndAwaitUpdates() {
             if (!TypescriptCompilationService.IsWatchModeRunning || IsAwaitingRestart) {
                 yield break;
+            }
+
+            if (AirshipUpdateService.IsUpdatingAirship) {
+                TypescriptLogService.Log(TypescriptLogLevel.Warning, "Restarting compiler because Airship is updating...");
+            } else if (AirshipPackagesWindow.IsModifyingPackages) {
+                TypescriptLogService.Log(TypescriptLogLevel.Warning, "Restarting compiler for package modification...");
             }
             
             IsAwaitingRestart = true;
@@ -194,6 +223,9 @@ namespace Airship.Editor {
 
         private static void OnCrash(TypescriptCrashProblemItem problem) {
             var errorLog = problem.StandardError;
+            
+            TypescriptLogService.LogCrash(problem);
+            
             if (errorLog.Count() >= 8) {
                EditorUtility.DisplayDialog("Typescript Compiler Crashed",
                         $"{string.Join("\n", problem.StandardError.ToArray()[4..7])}",

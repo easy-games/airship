@@ -32,6 +32,10 @@ namespace Code.Player.Accessories {
         LeftArmUpper,
         LeftArmLower,
         RightArmUpper,
-        RightArmLower
+        RightArmLower,
+        RightShoulder,
+        LeftShoulder,
+        FrontChest,
+        BackChest
     }
 }    

@@ -6,7 +6,7 @@ namespace Airship.Editor {
         BuildOnly,
         BuildWatch,
     }
-    
+
     internal struct TypescriptCompilerBuildArguments {
         /// <summary>
         /// The location of package.json (aka --package)

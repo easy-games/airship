@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -29,7 +30,7 @@ namespace Airship.Editor {
         RecompileOnCodePublish = 2,
         RecompileOnFullPublish = 1,
     }
-    
+
     public class TypescriptPopupWindow : PopupWindowContent {
         private static GUIStyle MenuItemIcon = new GUIStyle("LargeButtonMid") {
             fontSize = 13,
@@ -197,13 +198,16 @@ namespace Airship.Editor {
             }
         }
 
+        private static int STEP = 8;
+        
         private static void RenderLocalSettings() {
+            
             var localSettings = TypescriptServicesLocalConfig.instance;
             
             var currentCompiler = TypescriptCompilationService.CompilerVersion;
+            
+            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Compiler Options"));
             if (TypescriptCompilationService.UsableVersions.Length > 1 && TypescriptCompilationService.ShowDeveloperOptions) {
-                AirshipEditorGUI.BeginSettingGroup(new GUIContent("Compiler Options"));
-                
                 var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
                     new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
                     currentCompiler,
@@ -225,9 +229,37 @@ namespace Airship.Editor {
                         TypescriptCompilationService.CompilerVersion = selectedCompiler;
                     });
                 }
-                
-                AirshipEditorGUI.EndSettingGroup();
             }
+
+            var wasOverriding = localSettings.overrideMemory;
+            var prev = localSettings.overrideMemoryMb;
+            
+            
+            localSettings.overrideMemory = EditorGUILayout.ToggleLeft("Override Memory Limits", wasOverriding);
+            if (localSettings.overrideMemory) {
+                EditorGUILayout.BeginHorizontal();
+
+                localSettings.overrideMemoryMb = STEP * (EditorGUILayout.IntSlider(new GUIContent("Old Space Size (MB)"),
+                    prev, 2048, SystemInfo.systemMemorySize - 512) / STEP);
+                if (GUILayout.Button("Use Recommended", GUILayout.Width(150))) {
+                    localSettings.overrideMemoryMb = Math.Clamp(SystemInfo.systemMemorySize - 512, 0, 8192);
+                }
+                
+                EditorGUILayout.EndHorizontal();
+            }
+
+            var useNodeInspect = localSettings.useNodeInspect;
+            if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
+                localSettings.useNodeInspect = EditorGUILayout.ToggleLeft("Run Inspector", useNodeInspect);
+            }
+            
+            if (localSettings.overrideMemoryMb != prev || wasOverriding != localSettings.overrideMemory || useNodeInspect != localSettings.useNodeInspect) {
+                // Force restart
+                TypescriptCompilationService.RestartCompilers();
+            }
+            
+            
+            AirshipEditorGUI.EndSettingGroup();
             
             AirshipEditorGUI.BeginSettingGroup(new GUIContent("Editor Options"));
             {
@@ -285,8 +317,25 @@ namespace Airship.Editor {
                 GUILayout.Space(5);
                 GUILayout.Label("Debugging", EditorStyles.boldLabel);
                 
+                EditorGUILayout.BeginHorizontal();
+                {
+                    TypescriptLogService.Enabled = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Enable Logging", "Enables logging for the Typescript services"), 
+                        TypescriptLogService.Enabled
+                    );
+                    if (TypescriptLogService.Enabled && GUILayout.Button("Open Log File...", GUILayout.Width(150))) {
+                        TypescriptLogService.OpenLogFile();
+                    }
+                    
+                    if (TypescriptLogService.Enabled && TypescriptLogService.HasPrevLog && GUILayout.Button("Open Prev Log File...", GUILayout.Width(150))) {
+                        TypescriptLogService.OpenPrevLogFile();
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+
+                
                 TypescriptCompilationService.ShowDeveloperOptions = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Advanced Options", "Enable the advanced options - only enable this if you know what you're doing!"), 
+                    new GUIContent("Developer Options (Advanced)", "Enable the advanced options - only enable this if you know what you're doing!"), 
                     TypescriptCompilationService.ShowDeveloperOptions
                 );
             }

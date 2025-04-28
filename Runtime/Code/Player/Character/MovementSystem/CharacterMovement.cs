@@ -447,6 +447,12 @@ public class CharacterMovement : NetworkBehaviour {
             currentMoveState.jumpCount = 0;
             currentMoveState.timeSinceBecameGrounded = 0f;
             OnImpactWithGround?.Invoke(currentVelocity, groundHit);
+            if (isClientOnly) {
+                CommandImpactWithGround(currentVelocity, groundHit);
+            }
+            else {
+                RpcImpactWithGround(currentVelocity, groundHit);
+            }
         } else {
             currentMoveState.timeSinceBecameGrounded
                 = Math.Min(currentMoveState.timeSinceBecameGrounded + deltaTime, 100f);
@@ -541,6 +547,7 @@ public class CharacterMovement : NetworkBehaviour {
                 newVelocity.y = moveData.jumpSpeed;
                 currentMoveState.airborneFromImpulse = false;
                 OnJumped?.Invoke(newVelocity);
+                CommandNotifyJump(newVelocity);
             }
         }
 
@@ -851,8 +858,8 @@ public class CharacterMovement : NetworkBehaviour {
                 //Push the character out of any colliders
                 flatVelocity
                     = Vector3.ClampMagnitude(newVelocity, forwardHit.distance - characterRadius - forwardMargin);
-                newVelocity.x = flatVelocity.x;
-                newVelocity.z = flatVelocity.z;
+                newVelocity.x += flatVelocity.x;
+                newVelocity.z += flatVelocity.z;
             }
 
             if (!grounded && detectedGround) {
@@ -1404,5 +1411,27 @@ public class CharacterMovement : NetworkBehaviour {
 		*/
     public bool IsIntersectingWithBlock() {
         return false;
+    }
+
+    [Command]
+    void CommandImpactWithGround(Vector3 velocity, RaycastHit hit) {
+        RpcImpactWithGround(velocity, hit);
+    }
+
+    [ClientRpc(includeOwner = false)]
+    void RpcImpactWithGround(Vector3 velocity, RaycastHit hit) {
+        OnImpactWithGround?.Invoke(velocity, hit);
+    }
+
+    [Command]
+    void CommandNotifyJump(Vector3 jumpVelocity)
+    {
+        RpcPlayerJumped(jumpVelocity);
+    }
+
+    [ClientRpc(includeOwner = false)]
+    void RpcPlayerJumped(Vector3 jumpVelocity)
+    {
+        OnJumped?.Invoke(jumpVelocity);
     }
 }

@@ -36,6 +36,11 @@ public class CharacterAnimationHelper : MonoBehaviour {
 
     public bool isSkidding {get; private set;} = false;
 
+    [Header("Animation Calibration")]
+    public float animWalkSpeed = 4.4444445f;
+    public float animRunSpeed = 6.6666667f;
+    public float animCrouchSpeed = 2.1233335f;
+
     private float nextIdleReactionLength = 0;
     private AnimatorOverrideController animatorOverride;
     private CharacterState currentState = CharacterState.Idle;
@@ -183,11 +188,11 @@ public class CharacterAnimationHelper : MonoBehaviour {
 
     public void SetVelocity(Vector3 localVel) {
         //The target speed is the movement speed the animations were built for
-        var targetSpeed = 4.4444445f;
+        var targetSpeed = animWalkSpeed;
         if (currentState == CharacterState.Sprinting) {
-            targetSpeed = 6.6666667f;
+            targetSpeed = animRunSpeed;
         } else if (currentState == CharacterState.Crouching) {
-            targetSpeed = 2.1233335f;
+            targetSpeed = animCrouchSpeed;
         }
         currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
         this.targetPlaybackSpeed = currentSpeed  / targetSpeed;
