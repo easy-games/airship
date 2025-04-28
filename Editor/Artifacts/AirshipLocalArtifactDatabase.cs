@@ -179,7 +179,7 @@ namespace Airship.Editor {
             // When enabled we kind of want to run a validation of the component list
             Dictionary<string, AirshipComponent> guidToComponent = new();
             foreach (var component in Resources.FindObjectsOfTypeAll<AirshipComponent>()) {
-                if (guidToComponent.ContainsKey(component.guid)) continue; // skip duplicates
+                if (component != null && guidToComponent.ContainsKey(component.guid)) continue; // skip duplicates
                 guidToComponent.Add(component.guid, component);
             }
 

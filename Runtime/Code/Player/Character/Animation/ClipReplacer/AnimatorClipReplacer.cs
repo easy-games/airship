@@ -216,9 +216,8 @@ namespace Code.Player.Character
                 return;
             }
 
-            if (originalOverrides == null || originalOverrides.Count == 0)
-            {
-                Debug.LogWarning("No original overrides found to restore.");
+            if (originalOverrides == null || originalOverrides.Count == 0) {
+                // Debug.LogWarning("No original overrides found to restore.");
                 return;
             }
 

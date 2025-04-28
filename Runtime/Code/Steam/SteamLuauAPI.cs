@@ -35,15 +35,19 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 
 #if STEAMWORKS_NET
     private void Awake() {
-        this.gameObject.hideFlags = HideFlags.None;
-        GameObject.DontDestroyOnLoad(this);
+        // Don't initialized multiple times
+        if (initialized) {
+            Destroy(this.gameObject);
+            return;
+        }
+        initialized = true;
+
         if (!SteamManager.Initialized) {
             return;
         }
-        
-        // Don't initialized multiple times
-        if (SteamLuauAPI.initialized) return;
-        SteamLuauAPI.initialized = true;
+
+        this.gameObject.hideFlags = HideFlags.None;
+        DontDestroyOnLoad(this);
 
         // Check for launch by "Join game"
         // This might cause weird data to be processed. Seems like commandLineStr is of the format:
@@ -61,6 +65,11 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         Callback<GetTicketForWebApiResponse_t>.Create(OnGetTicketForWebApiResponse);
         SteamUser.GetAuthTicketForWebApi("airship");
         Debug.Log("Invoked steam auth request.");
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnReload() {
+        initialized = false;
     }
 #endif
 
@@ -142,6 +151,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     }
     
     private void OnGetTicketForWebApiResponse(GetTicketForWebApiResponse_t data) {
+        print("OnGetTicketForWebApiResponse");
         if (data.m_eResult != EResult.k_EResultOK) {
             Debug.LogError("[Steam] Failed to get auth ticket. Error: " + data.m_eResult);
             return;

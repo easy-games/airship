@@ -17,6 +17,12 @@ namespace Code.Player.Character.MovementSystems.Character
         Sprinting = 3,
         Crouching = 4,
     }
+    
+    enum MoveDirectionMode {
+        World,
+        Character,
+        Camera,
+    }
 
     [LuauAPI]
     public class CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterInputData>
@@ -48,6 +54,8 @@ namespace Code.Player.Character.MovementSystems.Character
         #region PRIVATE REFS
 
         private CharacterPhysics physics;
+        private Transform _cameraTransform;
+        private bool _smoothLookVector = false;
 
         #endregion
 
@@ -170,6 +178,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if(this.physics == null){
                 this.physics = new CharacterPhysics(this);
             }
+            _cameraTransform = Camera.main.transform;
         }
 
         public override void SetMode(NetworkedStateSystemMode mode)
@@ -1041,13 +1050,28 @@ namespace Code.Player.Character.MovementSystems.Character
             // this system
             if (isServer) return;
             if (mode == NetworkedStateSystemMode.Observer) return;
-            
-            var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
-            if(lookTarget == Vector3.zero){
-                lookTarget = new Vector3(0,0,.01f);
+
+            if (!_smoothLookVector)
+            {
+                var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
+                if(lookTarget == Vector3.zero){
+                    lookTarget = new Vector3(0,0,.01f);
+                }
+                //Instantly rotate for owner
+                airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
             }
-            //Instantly rotate for owner
-            airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
+            else
+            {
+                //Tween to rotation
+                var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
+                if (lookTarget == Vector3.zero) {
+                    lookTarget = new Vector3(0, 0, .01f);
+                }
+                airshipTransform.rotation = Quaternion.Lerp(
+                    airshipTransform.rotation,
+                    Quaternion.LookRotation(lookTarget),
+                    observerRotationLerpMod * Time.deltaTime);
+            }
         }
 
         #region Helpers
@@ -1121,21 +1145,32 @@ namespace Code.Player.Character.MovementSystems.Character
             });
             return uniqueId;
         }
-
-        public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace)
-        {
-            if (moveDirWorldSpace)
-            {
-                moveDirInput = moveDir;
+        
+        public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
+            var moveDirMode = (MoveDirectionMode)moveDirModeInt;
+            switch (moveDirMode) {
+                case MoveDirectionMode.World:
+                    moveDirInput = moveDir;
+                    break;
+                case MoveDirectionMode.Character:
+                    moveDirInput = graphicTransform.TransformDirection(moveDir);
+                    break;
+                case MoveDirectionMode.Camera:
+                    var forwardZeroY = _cameraTransform.forward;
+                    forwardZeroY = new Vector3(forwardZeroY.x, 0, forwardZeroY.z).normalized;
+                    var angle = Mathf.Atan2(forwardZeroY.x, forwardZeroY.z) * Mathf.Rad2Deg;
+                    moveDirInput = Quaternion.AngleAxis(angle, Vector3.up) * moveDir;
+                    break;
+                default:
+                    Debug.LogWarning($"Unknown move direction input: {moveDirModeInt}");
+                    break;
             }
-            else
-            {
-                moveDirInput = this.graphicTransform.TransformDirection(moveDir);
-            }
-
+            
             crouchInput = crouch;
             sprintInput = sprinting;
             jumpInput = jump;
+            
+            _smoothLookVector = moveDirMode == MoveDirectionMode.Camera;
         }
 
         public void SetLookVector(Vector3 lookVector)
@@ -1170,6 +1205,32 @@ namespace Code.Player.Character.MovementSystems.Character
             if (mode == NetworkedStateSystemMode.Authority)
             {
                 this.currentMoveSnapshot.lookVector = this.lookVector;
+            }
+        }
+
+        public void SetLookVectorRecurringToMoveDir()
+        {
+            // Don't set look vectors on observed characters
+            if (mode == NetworkedStateSystemMode.Observer) return;
+
+            if (moveDirInput == Vector3.zero) return;
+            
+            // If we are the client creating input, we want to set the actual local look vector.
+            // It will be moved into the state and sent to the server in the next snapshot.
+            if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient))
+            {
+                this.lookVector = moveDirInput;
+                return;
+            }
+
+            // If we are an authoritative server, we set the current move state to use this new look vector.
+            // This will get sent to the client as the authoritative truth and reconciled on the next snapshot.
+            // Keep in mind that the client overwrites this on each tick, so the timing of this set is important.
+            // It's generally better to just force a look vector on the client because reconciled camera
+            // rotation makes people nauseous.
+            if (mode == NetworkedStateSystemMode.Authority)
+            {
+                this.currentMoveSnapshot.lookVector = this.currentMoveSnapshot.prevMoveDir;
             }
         }
 

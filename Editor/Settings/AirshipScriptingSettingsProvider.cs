@@ -10,15 +10,17 @@ namespace Editor.Settings {
         
         public override void OnGUI(string searchContext) {
             EditorGUILayout.Space(10);
-            TypescriptOptions.RenderSettings();
+            TypescriptOptions.RenderSettings(searchContext);
         }
         
         // Register the SettingsProvider
         [SettingsProvider]
         public static SettingsProvider CreateTypescriptSettingsProvider()
         {
-            var provider = new AirshipScriptingSettingsProvider(Path, SettingsScope.Project);
-            provider.keywords = new[] { "Github", "Airship", "Typescript", "Compiler", "Scripting", "Scripts", "Compiling" };
+            var provider = new AirshipScriptingSettingsProvider(Path) {
+                keywords = new[] { "Github", "Airship", "Typescript", "Compiler", "Scripting", "Scripts", "Compiling" },
+                label = "TypeScript Services",
+            };
             return provider;
         }
     }

@@ -57,8 +57,13 @@ public class CharacterRig : MonoBehaviour {
 	public Transform headTop;
 	public Transform neck;
 	public Transform spineChest;
-	public Transform heldItemL;
+    public Transform chestBack;
+    public Transform chestFront;
+    public Transform heldItemL;
 	public Transform heldItemR;
+    public Transform shoulderItemL;
+    public Transform shoulderItemR;
+
 
     [Header("Color")] public MaterialColorURP headColor;
     public MaterialColorURP bodyColor;
@@ -99,6 +104,10 @@ public class CharacterRig : MonoBehaviour {
 
                 //TORSO
                 case AccessorySlot.Torso:
+                case AccessorySlot.FrontChest:
+                    return chestFront;
+                case AccessorySlot.BackChest:
+                    return chestBack;
                 case AccessorySlot.TorsoInner:
                 case AccessorySlot.TorsoOuter:
                     return spine;
@@ -106,6 +115,10 @@ public class CharacterRig : MonoBehaviour {
                     return spineChest;
 
                 //ARMS
+                case AccessorySlot.RightWrist:
+                    return handR;
+                case AccessorySlot.LeftWrist:
+                    return handL;
                 case AccessorySlot.Hands:
                 case AccessorySlot.RightHand:
                     return heldItemR;
@@ -115,6 +128,10 @@ public class CharacterRig : MonoBehaviour {
                     return upperArmL;
                 case AccessorySlot.LeftArmLower:
                     return forearmL;
+                case AccessorySlot.LeftShoulder:
+                    return shoulderItemL;
+                case AccessorySlot.RightShoulder:
+                    return shoulderItemR;
                 case AccessorySlot.RightArmUpper:
                     return upperArmR;
                 case AccessorySlot.RightArmLower:

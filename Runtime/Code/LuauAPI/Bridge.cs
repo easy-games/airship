@@ -13,13 +13,13 @@ using UnityEngine.Scripting;
 using UnityEngine.UI;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
-[LuauAPI][Preserve]
+[LuauAPI] [Preserve]
 public static class Bridge {
-
 #region CREATION
+
     //RENDER TEXTURES
-    public static RenderTexture MakeDefaultRenderTexture(int width, int height){
-        RenderTextureDescriptor descriptor = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 8, 0) {
+    public static RenderTexture MakeDefaultRenderTexture(int width, int height) {
+        var descriptor = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 8, 0) {
             sRGB = false,
             autoGenerateMips = false,
             useMipMap = false
@@ -28,16 +28,16 @@ public static class Bridge {
     }
 
     //TEXTURES
-    public static Texture2D MakeDefaultTexture2D(int width, int height){
+    public static Texture2D MakeDefaultTexture2D(int width, int height) {
         return new Texture2D(width, height);
     }
 
-    public static Texture2D MakeTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear){
+    public static Texture2D MakeTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear) {
         return new Texture2D(width, height, format, mipChain, linear);
     }
 
     //SPRITES
-    public static Sprite MakeDefaultSprite(Texture2D texture){
+    public static Sprite MakeDefaultSprite(Texture2D texture) {
         return Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height),
             new Vector2(0.5f, 0.5f), 100.0f);
     }
@@ -47,17 +47,28 @@ public static class Bridge {
             new Vector2(0.5f, 0.5f), 100.0f);
     }
 
-    public static Sprite MakeSprite(Texture2D texture, Rect rect, Vector2 pivot, float pixelsPerUnit){
+    public static Sprite MakeSprite(Texture2D texture, Rect rect, Vector2 pivot, float pixelsPerUnit) {
         return Sprite.Create(texture, rect, pivot, pixelsPerUnit);
     }
 
     //RENDERERS
-    public static void ClearMaterial(Renderer ren, int materialI){
+    public static void ClearMaterial(Renderer ren, int materialI) {
         ren.materials[materialI] = null;
     }
-    
-    public static void ClearAllMaterials(Renderer ren){
-        for(int i=0; i<ren.materials.Length; i++){
+
+    public static void RemoveMaterial(Renderer ren, int materialI) {
+        var materials = new List<Material>();
+        ren.GetMaterials(materials);
+        if (materialI >= 0 && materialI < materials.Count) {
+            materials.RemoveAt(materialI);
+            ren.SetMaterials(materials);
+        } else {
+            //Debug.LogError("Trying to remove material that is out of bounds. Materials: " + materials.Count + " index: " + materialI);
+        }
+    }
+
+    public static void ClearAllMaterials(Renderer ren) {
+        for (var i = 0; i < ren.materials.Length; i++) {
             ren.materials[i] = null;
         }
     }
@@ -71,15 +82,14 @@ public static class Bridge {
     public static Mesh MakeMesh() {
         return new Mesh();
     }
+
 #endregion
-    
-    public static float GetAverageFPS()
-    {
+
+    public static float GetAverageFPS() {
         return GraphyManager.Instance.AverageFPS;
     }
 
-    public static float GetCurrentFPS()
-    {
+    public static float GetCurrentFPS() {
         return GraphyManager.Instance.CurrentFPS;
     }
 
@@ -95,28 +105,23 @@ public static class Bridge {
         return GraphyManager.Instance.AllocatedRam;
     }
 
-    public static void SetVolume(float volume)
-    {
+    public static void SetVolume(float volume) {
         AudioListener.volume = volume;
     }
 
-    public static float GetVolume()
-    {
+    public static float GetVolume() {
         return AudioListener.volume;
     }
 
-    public static void SetFullScreen(bool value)
-    {
+    public static void SetFullScreen(bool value) {
         Screen.fullScreen = value;
     }
 
-    public static bool IsFullScreen()
-    {
+    public static bool IsFullScreen() {
         return Screen.fullScreen;
     }
 
-    public static void SetParentToSceneRoot(Transform transform)
-    {
+    public static void SetParentToSceneRoot(Transform transform) {
         transform.SetParent(null);
     }
 
@@ -140,7 +145,7 @@ public static class Bridge {
 
         // Update children first
         if (recursive) {
-            for (int x = 0; x < xform.childCount; ++x) {
+            for (var x = 0; x < xform.childCount; ++x) {
                 UpdateLayout_Internal(xform.GetChild(x), true);
             }
         }
@@ -150,10 +155,12 @@ public static class Bridge {
             layout.CalculateLayoutInputVertical();
             layout.CalculateLayoutInputHorizontal();
         }
+
         foreach (var fitter in xform.GetComponents<ContentSizeFitter>()) {
             fitter.SetLayoutVertical();
             fitter.SetLayoutHorizontal();
         }
+
         foreach (var layout in xform.GetComponents<LayoutGroup>()) {
             LayoutRebuilder.ForceRebuildLayoutImmediate(layout.GetComponent<RectTransform>());
         }
@@ -209,34 +216,37 @@ public static class Bridge {
         return input;
     }
 
-    private static string RemoveRichTextDynamicTag (string input, string tag) {
-        int index = -1;
-        while (true)
-        {
+    private static string RemoveRichTextDynamicTag(string input, string tag) {
+        var index = -1;
+        while (true) {
             index = input.IndexOf($"<{tag}=");
             //Debug.Log($"{{{index}}} - <noparse>{input}");
-            if (index != -1)
-            {
-                int endIndex = input.Substring(index, input.Length - index).IndexOf('>');
-                if (endIndex > 0)
+            if (index != -1) {
+                var endIndex = input.Substring(index, input.Length - index).IndexOf('>');
+                if (endIndex > 0) {
                     input = input.Remove(index, endIndex + 1);
+                }
+
                 continue;
             }
+
             input = RemoveRichTextTag(input, tag, false);
             return input;
         }
     }
-    private static string RemoveRichTextTag (string input, string tag, bool isStart = true) {
-        while (true)
-        {
-            int index = input.IndexOf(isStart ? $"<{tag}>" : $"</{tag}>");
-            if (index != -1)
-            {
+
+    private static string RemoveRichTextTag(string input, string tag, bool isStart = true) {
+        while (true) {
+            var index = input.IndexOf(isStart ? $"<{tag}>" : $"</{tag}>");
+            if (index != -1) {
                 input = input.Remove(index, 2 + tag.Length + (!isStart).GetHashCode());
                 continue;
             }
-            if (isStart)
+
+            if (isStart) {
                 input = RemoveRichTextTag(input, tag, false);
+            }
+
             return input;
         }
     }
@@ -246,9 +256,10 @@ public static class Bridge {
     }
 
     public static bool IsSceneLoading() {
-        if (AirshipNetworkManager.loadingSceneAsync != null) {
-            return !AirshipNetworkManager.loadingSceneAsync.isDone;
+        if (NetworkManager.loadingSceneAsync != null) {
+            return !NetworkManager.loadingSceneAsync.isDone;
         }
+
         return false;
     }
 
@@ -275,7 +286,7 @@ public static class Bridge {
     public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName) {
         conn.Send(new SceneMessage() {
             sceneName = sceneName,
-            sceneOperation = SceneOperation.UnloadAdditive,
+            sceneOperation = SceneOperation.UnloadAdditive
         });
         // throw new NotImplementedException();
         // var unloadData = new SceneUnloadData(sceneName);
@@ -300,6 +311,7 @@ public static class Bridge {
                 }
             }
         }
+
         // fallback for when in editor
         await SceneManager.LoadSceneAsync(sceneName, loadSceneMode);
     }
@@ -355,7 +367,7 @@ public static class Bridge {
 
     [LuauAPI(LuauContext.Protected)]
     public static AirshipUniVoiceNetwork GetAirshipVoiceChatNetwork() {
-        return GameObject.FindFirstObjectByType<AirshipUniVoiceNetwork>(FindObjectsInactive.Include);
+        return Object.FindFirstObjectByType<AirshipUniVoiceNetwork>(FindObjectsInactive.Include);
     }
 
     [LuauAPI(LuauContext.Protected)]
@@ -394,11 +406,12 @@ public static class Bridge {
 
     public static Scene[] GetScenes() {
         List<Scene> scenes = new();
-        for (int i = 0; i < SceneManager.sceneCount; i++) {
-            Scene scene = SceneManager.GetSceneAt(i);
+        for (var i = 0; i < SceneManager.sceneCount; i++) {
+            var scene = SceneManager.GetSceneAt(i);
             if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene)) {
                 continue;
             }
+
             scenes.Add(scene);
         }
 
@@ -419,7 +432,7 @@ public static class Bridge {
     public static Vector3[] MakeVector3Array(int size) {
         return new Vector3[size];
     }
-    
+
     public static int[] MakeIntArray(int size) {
         return new int[size];
     }
@@ -432,6 +445,7 @@ public static class Bridge {
             if (www.responseCode == 404) {
                 return null;
             }
+
             Debug.LogError("Download texture failed. " + www.error + " " + www.downloadHandler.error);
             return null;
         }

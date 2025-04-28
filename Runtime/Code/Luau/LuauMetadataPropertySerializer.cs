@@ -66,6 +66,18 @@ namespace Luau {
                                 }
                             }
                             obj = Activator.CreateInstance(objType, args);
+                        } else if (objDefaultVal.target == "method") {
+                            var args = objDefaultVal.arguments.ToArray();
+                            for (var i = 0; i < args.Length; i++)
+                            {
+                                if (args[i] is double)
+                                {
+                                    args[i] = Convert.ToSingle(args[i]);
+                                }
+                            }
+
+                            var expectedMethod = objType.GetMethod(objDefaultVal.method);
+                            obj = expectedMethod?.Invoke(null, args);
                         }
 
                         // Can't use JSONUtility on AnimationCurve

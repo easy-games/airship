@@ -1,14 +1,17 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Airship.DevConsole;
 using Code.Http.Internal;
 using Code.Platform.Shared;
+using Code.UI;
 using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
+using Debug = UnityEngine.Debug;
 
 struct SignedUrlRequest {
     public string type;
@@ -98,6 +101,11 @@ namespace Code.Health
                     }
 
                     if (context.Equals("client", StringComparison.OrdinalIgnoreCase)) {
+                        if (!Debug.isDebugBuild) {
+                            Debug.Log(
+                                "Unable to capture profile log because debug mode is not enabled. Use the development build branch on Steam to enable debug mode.");
+                            return;
+                        }
                         StartProfiling(d, null);
                     } else if (context.Equals("server", StringComparison.OrdinalIgnoreCase)) {
                         Debug.Log("Starting a server profile, view server console to monitor progress.");
@@ -164,7 +172,10 @@ namespace Code.Health
 
             var date = DateTime.Now.ToString("MM-dd-yyyy h.mm.ss");
             var fileName = RunCore.IsClient() ?  $"Client-Profile-{date}.raw" :  $"Server-Profile-{date}.raw";
-            var logPath = Path.Combine(Application.persistentDataPath, fileName);
+            if (!Directory.Exists(Path.Combine(Application.persistentDataPath, "ClientProfiles"))) {
+                Directory.CreateDirectory(Path.Combine(Application.persistentDataPath, "ClientProfiles"));
+            }
+            var logPath = Path.Combine(Application.persistentDataPath, "ClientProfiles", fileName);
             if (File.Exists(logPath)) File.WriteAllText(logPath, "");
 
             Profiler.logFile = logPath;
@@ -179,19 +190,22 @@ namespace Code.Health
             await Task.Delay((int)(durationSecs * 1000));
             Profiler.enabled = false;
             var info = new FileInfo(logPath);
-            
+
             Debug.Log($"Profiling completed. Retrieving upload URL...");
-            if (RunCore.IsClient())
-            {
-                NetworkClient.Send(new ClientProfileUploadRequest
-                {
+            if (RunCore.IsClient()) {
+                var profilesFolder = Path.Combine(Application.persistentDataPath, "ClientProfiles");
+                try {
+                    CrossPlatformFileAPI.OpenPath(profilesFolder);
+                } catch (Exception e) {
+                    Debug.LogError(e);
+                }
+
+                NetworkClient.Send(new ClientProfileUploadRequest {
                     contentSize = info.Length,
                     logLocation = logPath,
                     fileName = fileName
                 });
-            }
-            else
-            {
+            } else {
                 var urlData = await this.GetSignedUrl(fileName, durationSecs, info.Length);
                 Upload(urlData, logPath, profileInitiator);
             }
@@ -219,7 +233,7 @@ namespace Code.Health
             Debug.Log("Uploading profile to backend...");
             var uploadFilePath = logPath;
             var fileData = await File.ReadAllBytesAsync(uploadFilePath);
-            File.Delete(uploadFilePath);
+            // File.Delete(uploadFilePath);
             
             using var www = UnityWebRequest.Put(urlData.url, fileData);
             MonitorUploadProgress(www);

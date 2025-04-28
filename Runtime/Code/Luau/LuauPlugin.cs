@@ -241,12 +241,10 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern bool Reset(LuauContext context);
-	public static bool LuauReset(LuauContext context) {
+	private static extern void Reset(LuauContext context);
+	public static void LuauReset(LuauContext context) {
         ThreadSafetyCheck();
-
-        bool returnValue = Reset(context);
-        return returnValue;
+        Reset(context);
 	}
 
 #if UNITY_IPHONE
@@ -884,5 +882,38 @@ public static class LuauPlugin {
 			
 			memCatDumpItemsPtr += Marshal.SizeOf<LuauMemoryCategoryDumpItemInternal>();
 		}
+	}
+	
+	/// <summary>
+	/// Fetch a string that contains the count of all registry item tables.
+	/// </summary>
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int DebugCountAllRegistryItems(LuauContext context, out IntPtr str);
+	public static string LuauDebugCountAllRegistryItems(LuauContext context) {
+		var strLen = DebugCountAllRegistryItems(context, out var strPtr);
+		return Marshal.PtrToStringUTF8(strPtr, strLen);
+	}
+	
+	/// <summary>
+	/// Fetch a list of all UnityObject Instance IDs tracked by the plugin.
+	/// </summary>
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int DebugGetAllTrackedInstanceIds(LuauContext context, out IntPtr ids);
+	public static int[] LuauDebugGetAllTrackedInstanceIds(LuauContext context) {
+		var listLen = DebugGetAllTrackedInstanceIds(context, out var arrPtr);
+		var list = new int[listLen];
+		var elementSize = Marshal.SizeOf<int>();
+		for (var i = 0; i < listLen; i++) {
+			list[i] = Marshal.ReadInt32(arrPtr, i * elementSize);
+		}
+		return list;
 	}
 }
