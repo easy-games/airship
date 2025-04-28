@@ -35,7 +35,7 @@ namespace Code.Platform.Shared {
         public static string dataStoreService = "https://data-store-service-hwcvz2epka-uc.a.run.app";
         public static string deploymentService = "https://deployment-service-hwcvz2epka-uc.a.run.app";
         public static string analyticsService = "https://analytics-service-hwcvz2epka-uc.a.run.app";
-        public static string moderationService = "https://moderation-service-fxy2zritya-uc.a.run.app"; // TODO: Update this url to production url
+        public static string moderationService = "https://moderation-service-hwcvz2epka-uc.a.run.app";
         public static string cdn = "https://cdn.airship.gg";
         public static string gameCdn = "https://gcdn.airship.gg";
         public static string mainWeb = "https://airship.gg";
