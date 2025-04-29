@@ -322,11 +322,19 @@ namespace Airship.Editor {
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
             // Components must have guids
             if (string.IsNullOrEmpty(eventData.Component.guid)) eventData.Component.guid = Guid.NewGuid().ToString();
+
+            // If an initial setup (e.g. first pull, or new template project)
+            if (AirshipLocalArtifactDatabase.isEmpty) {
+                // We can run a default reconcile, it wont matter tbh.
+                var component = eventData.Component;
+                ReconcileComponent(component);
+                component.componentHash = component.scriptHash;
+                return;
+            }
             
             if (ReconcilerVersion == ReconcilerVersion.Version2) {
                 var component = eventData.Component;
-            
-           
+
                 var isPrefab = PrefabUtility.IsPartOfAnyPrefab(component);
                 var prefabOriginalComponent = PrefabUtility.GetCorrespondingObjectFromOriginalSource(component);
                 if (isPrefab && prefabOriginalComponent.script != null) {
