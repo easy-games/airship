@@ -389,6 +389,33 @@ public static class Bridge {
     public static void UnloadGlobalSceneByName(string sceneName) {
         // InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
     }
+    
+    [LuauAPI(LuauContext.Protected)]
+    public static bool IsLowEndDevice() {
+        // CPU check
+        string cpu = SystemInfo.processorType.ToLower();
+        if (cpu.Contains("celeron") || cpu.Contains("pentium") || cpu.Contains("atom")) {
+            return true;
+        }
+    
+        // GPU check
+        string gpu = SystemInfo.graphicsDeviceName.ToLower();
+        if (gpu.Contains("intel") || gpu.Contains("uhd") || gpu.Contains("hd graphics")) {
+            return true;
+        }
+
+        // RAM check
+        if (SystemInfo.systemMemorySize < 8000) { // Less than 8GB RAM
+            return true;
+        }
+
+        // GPU memory check
+        if (SystemInfo.graphicsMemorySize < 2000) { // Less than 2GB VRAM
+            return true;
+        }
+
+        return false;
+    }
 
     public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
         if (LuauCore.IsProtectedScene(scene) && LuauCore.CurrentContext == LuauContext.Game) {
