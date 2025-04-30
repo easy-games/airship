@@ -1012,8 +1012,8 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotData snapshotNew)
         {
             this.rigidbody.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
-            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : snapshotOld.lookVector;
-            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.0001f) : snapshotNew.lookVector;
+            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotOld.lookVector;
+            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotNew.lookVector;
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation( new Vector3(oldLook.x, 0, oldLook.z)),
                 Quaternion.LookRotation( new Vector3(newLook.x, 0, newLook.z)),
@@ -1199,12 +1199,13 @@ namespace Code.Player.Character.MovementSystems.Character
 
             // If we are an authoritative server, we set the current move state to use this new look vector.
             // This will get sent to the client as the authoritative truth and reconciled on the next snapshot.
-            // Keep in mind that the client overwrites this on each tick, so the timing of this set is important.
+            // Keep in mind that the client overwrites this on each tick, so the timing of this set is important (needs to be after move tick).
             // It's generally better to just force a look vector on the client because reconciled camera
             // rotation makes people nauseous.
             if (mode == NetworkedStateSystemMode.Authority)
             {
-                this.currentMoveSnapshot.lookVector = this.lookVector;
+                this.lookVector = lookVector; // we set the input look vector for server generated commands
+                this.currentMoveSnapshot.lookVector = lookVector; // we set the snapshot vector for predicted client reconcile
             }
         }
 
@@ -1230,6 +1231,7 @@ namespace Code.Player.Character.MovementSystems.Character
             // rotation makes people nauseous.
             if (mode == NetworkedStateSystemMode.Authority)
             {
+                this.lookVector = moveDirInput; // for server generated commands. Ignored in any other case
                 this.currentMoveSnapshot.lookVector = this.currentMoveSnapshot.prevMoveDir;
             }
         }
@@ -1259,7 +1261,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 RpcTeleportAndLook(position, lookVector);
                 return;
             }
-            // TODO: why? Coppied from old movement
+            // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
             this.rigidbody.MovePosition(position);
             this.SetLookVector(lookVector);
