@@ -61,15 +61,15 @@ namespace Code.VoiceChat {
         }
 
         private void Start() {
+            PeerIDs.Clear();
+            peerIdToConnectionIdMap.Clear();
+            
             this.agent = new ChatroomAgent(
                 this,
                 new UniVoiceUniMicInput(0, 16000, 100),
                 new UniVoiceAudioSourceOutput.Factory()
             );
-
-            PeerIDs.Clear();
-            peerIdToConnectionIdMap.Clear();
-
+            
             if (RunCore.IsClient()) {
                 this.ClientSendReadyWhenAble();
             }
@@ -240,7 +240,7 @@ namespace Code.VoiceChat {
 
         void Log(string msg) {
             if (!Application.isEditor || RunCore.IsInternal()) {
-                // Debug.Log("[VoiceChat] " + msg);
+                Debug.Log("[VoiceChat] " + msg);
             }
         }
 
@@ -310,11 +310,10 @@ namespace Code.VoiceChat {
             }
             
             OnAudioReceived?.Invoke(senderPeerId, segment);
-            
-            NetworkConnection connection = this.GetNetworkConnectionFromPeerId(senderPeerId);
-            if (connection != null) {
+
+            if (this.peerIdToConnectionIdMap.TryGetValue(senderPeerId, out var senderConnectionId)) {
                 var speakingLevel = this.ComputeSpeakingLevel(segment.samples);
-                onPlayerSpeakingLevel?.Invoke(connection.connectionId, speakingLevel);
+                onPlayerSpeakingLevel?.Invoke(senderConnectionId, speakingLevel);
             }
         }
          
@@ -365,6 +364,7 @@ namespace Code.VoiceChat {
             return -1;
         }
 
+        // Only works on server
         NetworkConnectionToClient GetNetworkConnectionFromPeerId(short peerId) {
             if (!peerIdToConnectionIdMap.ContainsKey(peerId)) {
                 return null;
@@ -373,6 +373,7 @@ namespace Code.VoiceChat {
             if (NetworkServer.connections.TryGetValue(peerIdToConnectionIdMap[peerId], out var connection)) {
                 return connection;
             }
+           
             return null;
         }
 
