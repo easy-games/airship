@@ -147,6 +147,7 @@ namespace Luau {
             [typeof(Scrollbar)] = LuauContextAll,
             [typeof(ScrollRect)] = LuauContextAll,
             [typeof(Text)] = LuauContextAll,
+            [typeof(RectMask2D)] = LuauContextAll,
 
             // Particles
             [typeof(ParticleSystem)] = LuauContextAll,

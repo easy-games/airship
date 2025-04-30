@@ -113,6 +113,11 @@ namespace Airship.Editor {
         [SerializeField] internal List<ComponentData> components = new();
         
         /// <summary>
+        /// Returns if the Database is empty - if it is, it's likely the project is new or freshly pulled
+        /// </summary>
+        internal static bool isEmpty => instance.scripts.Count == 0 && instance.components.Count == 0;
+        
+        /// <summary>
         /// Gets or creates the script asset data in the artifact database for the given script
         /// </summary>
         internal ComponentScriptAssetData GetOrCreateScriptAssetData(AirshipScript script) {

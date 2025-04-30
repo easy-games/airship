@@ -87,6 +87,7 @@ namespace CsToTs.TypeScript {
                 // }
                 type.GetGenericArguments().ToList().ForEach(t => {
                     if (t.Name == type.Name) return;
+                    if (t.Name == "InternalCameraScreenshotRecorder") return;
                     PopulateTypeDefinition(t, context);
                 });
                 type = type.GetGenericTypeDefinition();

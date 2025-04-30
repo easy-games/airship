@@ -209,12 +209,13 @@ namespace Adrenak.UniVoice {
                 // var recipients = Network.PeerIDs
                 //     .Where(id => AllowOutgoingAudioToPeer(id));
 
-                Network.BroadcastAudioSegment(new ChatroomAudioSegment {
+                var segment = new ChatroomAudioSegment {
                     segmentIndex = index,
                     frequency = AudioInput.Frequency,
                     channelCount = AudioInput.ChannelCount,
                     samples = samples
-                });
+                };
+                Network.BroadcastAudioSegment(segment);
             };
             this.Log(TAG, "Event setup completed.");
         }

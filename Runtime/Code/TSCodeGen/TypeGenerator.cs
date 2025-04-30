@@ -141,7 +141,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(LayoutRebuilder),
             typeof(RectTransformUtility),
             typeof(ScrollRect),
-            typeof(InternalCameraScreenshotRecorder),
             typeof(Ray),
             typeof(MaterialPropertyBlock),
             typeof(DevConsole),
@@ -259,6 +258,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementSettings),
             typeof(CharacterAnimationSyncData),
             typeof(AccessoryAddMode),
+            typeof(RectMask2D),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
@@ -332,6 +332,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.MonoBehaviour$",
             "\\.InternalCameraScreenshotRecorder$",
             "\\.OcclusionCam$",
+            "\\.AirshipUniVoiceNetwork$"
         };
 
         var options = new TypeScriptOptions
