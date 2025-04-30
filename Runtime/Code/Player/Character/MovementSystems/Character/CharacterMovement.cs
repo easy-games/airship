@@ -1048,7 +1048,7 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             // We only update rotation in late update if we are running on a client that is controlling
             // this system
-            if (isServer) return;
+            if (isServer && !isClient) return;
             if (mode == NetworkedStateSystemMode.Observer) return;
 
             if (!_smoothLookVector)
