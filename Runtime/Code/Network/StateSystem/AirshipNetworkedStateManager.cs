@@ -935,7 +935,7 @@ namespace Code.Network.StateSystem
                 return;
             }
 
-            Debug.LogWarning("Authoritative result for " + this.name + " on cmd# " + state.lastProcessedCommand + " was mispredicted. Requesting resimulation.");
+            Debug.LogWarning("Misprediction for " + this.name + " on cmd# " + state.lastProcessedCommand + ". Requesting resimulation.");
 
             // Correct our networked system state to match the authoritative answer from the server
             this.stateSystem.SetCurrentState(state);
