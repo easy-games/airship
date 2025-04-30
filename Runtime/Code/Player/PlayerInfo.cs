@@ -23,6 +23,7 @@ public class PlayerInfo : NetworkBehaviour {
 
 	private void Start() {
 		this.transform.parent = InputBridge.Instance.transform.parent;
+		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
 	public void Init(int connectionId, string userId, string username, string profileImageId) {
@@ -66,8 +67,7 @@ public class PlayerInfo : NetworkBehaviour {
 			PlayerManagerBridge.Instance.HandlePlayerLeave(this);
 		}
 	}
-
-
+	
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
 			connectionId = this.connectionId,
