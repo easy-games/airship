@@ -1,4 +1,5 @@
 using Code.Player.Character;
+using Code.Player.Character.NetworkedMovement;
 using UnityEngine;
 
 public class EntityDebugAnimator : MonoBehaviour {

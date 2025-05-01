@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Code.Luau;
-using Codice.Utils;
 using HandlebarsDotNet;
-using PlasticPipe.PlasticProtocol.Messages;
-using SkbKontur.TypeScript.ContractGenerator.CodeDom;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
@@ -24,6 +19,7 @@ namespace CsToTs.TypeScript {
         private static readonly Lazy<string> _lazyTemplate = new Lazy<string>(GetDefaultTemplate);
         private static string Template => _lazyTemplate.Value;
         private static XmlDocument commentDoc;
+        private static HashSet<Type> populateInProgress = new HashSet<Type>();
 
         private static bool SkipCheck(string s, TypeScriptOptions o) =>
             s != null && o.SkipTypePatterns.Any(p => Regex.Match(s, p).Success);
@@ -44,6 +40,8 @@ namespace CsToTs.TypeScript {
         }
 
         private static void GetTypeScriptDefinitions(IEnumerable<Type> types, TypeScriptContext context) {
+            populateInProgress.Clear();
+            
             foreach (var type in types) {
                 if (!type.IsEnum) {
                     PopulateTypeDefinition(type, context);
@@ -76,7 +74,7 @@ namespace CsToTs.TypeScript {
 
         private static TypeDefinition PopulateTypeDefinition(Type type, TypeScriptContext context) {
             if (type == null) return null;
-
+            
             if (type.IsGenericParameter) return null;
             var typeCode = Type.GetTypeCode(type);
             if (typeCode != TypeCode.Object) return null;
@@ -97,14 +95,20 @@ namespace CsToTs.TypeScript {
 
             var existing = context.Types.FirstOrDefault(t => t.ClrType == type);
             if (existing != null) return existing;
+            
+            if (populateInProgress.Contains(type)) return null;
+            populateInProgress.Add(type);
 
             var interfaceRefs = GetInterfaces(type, context);
 
             var useInterface = context.Options.UseInterfaceForClasses; 
             var isInterface = type.IsStruct() || type.IsInterface || (useInterface != null && useInterface(type));
             var baseTypeRef = string.Empty;
+            // Delayed population to prevent infinite looping!
+            var requiresPopulation = new List<Type>();
             if (type.IsClass) {
-                if (type.BaseType != typeof(object) && PopulateTypeDefinition(type.BaseType, context) != null) {
+                if (type.BaseType != typeof(object) && type.BaseType != null) {
+                    requiresPopulation.Add(type.BaseType);
                     baseTypeRef = GetTypeRef(type.BaseType, context);
                 }
                 else if (context.Options.DefaultBaseType != null) {
@@ -187,6 +191,11 @@ namespace CsToTs.TypeScript {
                     constructorDef.StaticEvents.AddRange(staticEvents);
                     constructorDef.Ctors.AddRange(ctors);
                 }   
+            }
+
+            // This should happen after we've pushed this typeDef to context to make sure we don't inf loop!
+            foreach (var toPopulate in requiresPopulation) {
+                PopulateTypeDefinition(toPopulate, context);
             }
 
             return typeDef;
@@ -576,12 +585,12 @@ namespace CsToTs.TypeScript {
 
             if (enumerable != null)
                 return $"Readonly<{GetTypeRef(enumerable.GetGenericArguments().First(), context)}[]>";
-                
-            var typeDef = PopulateTypeDefinition(type, context);
-            if (typeDef == null) 
-                return "unknown";
 
-            var typeName = typeDef.Name;
+            // This is very specifically to resolve Debug.Log taking in an Object
+            if (type == typeof(object)) return "unknown";
+            
+            var typeDef = PopulateTypeDefinition(type, context); // Populate
+            var typeName = ApplyRename(StripGenericFromName(type.Name), context);
             if (type.IsGenericType) {
                 var genericPrms = type.GetGenericArguments().Select(t => GetTypeRef(t, context));
                 return $"{typeName}<{string.Join(", ", genericPrms)}>";

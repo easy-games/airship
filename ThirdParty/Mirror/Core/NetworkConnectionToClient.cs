@@ -34,7 +34,7 @@ namespace Mirror
         public double remoteTimeline;
         public double remoteTimescale;
         double bufferTimeMultiplier = 2;
-        double bufferTime => NetworkServer.sendInterval * bufferTimeMultiplier;
+        public double bufferTime => NetworkServer.sendInterval * bufferTimeMultiplier;
 
         // <clienttime, snaps>
         readonly SortedList<double, TimeSnapshot> snapshots = new SortedList<double, TimeSnapshot>();

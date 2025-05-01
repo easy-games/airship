@@ -67,8 +67,7 @@ public class PlayerInfo : NetworkBehaviour {
 			PlayerManagerBridge.Instance.HandlePlayerLeave(this);
 		}
 	}
-
-
+	
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
 			connectionId = this.connectionId,

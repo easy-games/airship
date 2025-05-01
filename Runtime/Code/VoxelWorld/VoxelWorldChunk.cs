@@ -426,6 +426,17 @@ namespace VoxelWorldStuff {
         }
 
         /// <summary>
+        /// Writes a simple change to the chunk's collision. This change will be
+        /// overriden when the chunk next rebuilds collision. It is primarily useful
+        /// for the case of resimulating a server authoritative voxel world where you
+        /// need quick collision changes that don't intend to persist.
+        /// </summary>
+        public void WriteTemporaryCollision(Vector3 position, bool hasCollision) {
+            if (hasCollision) VoxelWorldCollision.MakeCollider(this, position, Vector3Int.one);
+            else VoxelWorldCollision.RemoveSingleVoxelCollision(this, position);
+        }
+
+        /// <summary>
         /// Returns a set of all chunk position keys that have non-air voxels.
         /// This may require looping over all positions in chunk if it is being run
         /// for the first time.

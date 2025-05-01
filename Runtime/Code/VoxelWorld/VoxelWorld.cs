@@ -278,6 +278,26 @@ public partial class VoxelWorld : MonoBehaviour {
             }
         }
     }
+    
+    /// <summary>
+    /// Method to quickly update the voxel collision at a certain position. Useful for
+    /// resimulating changes to the Voxel World in a server auth game. These collisions
+    /// will be overriden when the chunk next rebuilds itself (hence why they are called temporary).
+    /// </summary>
+    /// <param name="pos">Position to write collision to</param>
+    /// <param name="num">The block type to write (if the block definition doesn't have collisions this won't do anything).
+    /// Use 0 to delete the existing collisions at this position.</param>
+    public void WriteTemporaryVoxelCollisionAt(Vector3 pos, ushort num) {
+        Vector3Int chunkKey = WorldPosToChunkKey(pos);
+        if (!chunks.TryGetValue(chunkKey, out Chunk chunk)) return;
+
+        var addCollision = num > 0;
+        
+        // Don't write temporary collision if voxel doesn't have collisions
+        if (addCollision && GetCollisionType(num) != VoxelBlocks.CollisionType.Solid) return;
+        
+        chunk.WriteTemporaryCollision(pos, addCollision);
+    }
 
     public void ColorVoxelAt(Vector3 pos, Color color, bool priority) {
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
