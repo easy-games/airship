@@ -35,6 +35,7 @@ namespace Luau {
             s_workingListDirty = true;
             m_threadData.Clear();
             s_objectKeys.Clear();
+            s_objectNames_TEMP_DEBUG.Clear();
             s_reverseObjectKeys.Clear();
             s_cleanUpKeys.Clear();
             s_debuggingKeys.Clear();
@@ -64,6 +65,7 @@ namespace Luau {
         
         //Keep strong references to all objects created
         private static Dictionary<int, object> s_objectKeys = new();
+        private static Dictionary<int, string> s_objectNames_TEMP_DEBUG = new();
         public static Dictionary<object, int> s_reverseObjectKeys = new();
         private static HashSet<int> s_cleanUpKeys = new HashSet<int>();
 
@@ -84,6 +86,9 @@ namespace Luau {
             //Only place objects get added to the dictionary
             s_objectKeys.Add(s_keyGen, obj);
             s_reverseObjectKeys.Add(obj, s_keyGen);
+            if (obj is GameObject go) {
+                s_objectNames_TEMP_DEBUG.Add(s_keyGen, go.name);
+            }
 
             if (s_debugging) {
                 Debug.Log("GC add reference to " + obj + " id: " + s_keyGen);
@@ -150,13 +155,18 @@ namespace Luau {
                    
                 }
 
-                if (!preventTrace) {
+                if (!preventTrace && thread != IntPtr.Zero) {
                     LuauPlugin.LuauGetDebugTrace(thread);
                 }
 
                 return null;
             }
             return value;
+        }
+
+        public static string GetObjectReferenceName_TEMP_DEBUG(int instanceId) {
+            var res = s_objectNames_TEMP_DEBUG.TryGetValue(instanceId, out var objName);
+            return res ? objName : null;
         }
 
         public static void DeleteObjectReference(int instanceId) {
@@ -342,6 +352,7 @@ namespace Luau {
                     s_reverseObjectKeys.Remove(obj);
                 }
                 s_objectKeys.Remove(key);
+                s_objectNames_TEMP_DEBUG.Remove(key);
             }
             s_cleanUpKeys.Clear();
             Profiler.EndSample();

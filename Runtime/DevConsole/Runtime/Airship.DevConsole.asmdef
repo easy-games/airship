@@ -11,7 +11,8 @@
         "SocketIO",
         "FishNet.Runtime",
         "GameKit.Dependencies",
-        "GameKit.Utilities"
+        "GameKit.Utilities",
+        "Airship.Util"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

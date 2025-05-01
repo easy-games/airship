@@ -311,14 +311,24 @@ public static class CreateAssetBundles {
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLower();
 			if (assetBundleName == "shared/scenes") {
-				string[] assetPaths = gameConfig.gameScenes
-					.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s))
+				var assetGuids = gameConfig.gameScenes
+					.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s)).ToHashSet();
+
+				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("scenes");
+				Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for scenes bundle.");
+				foreach (var path in explicitlyAddedPaths) {
+					// Debug.Log("  - " + path);
+					assetGuids.Add(AssetDatabase.AssetPathToGUID(path));
+				}
+
+				string[] assetPaths = assetGuids
 					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
 					.ToArray();
-				// Debug.Log("Including scenes: ");
-				// foreach (var p in assetPaths) {
-				// 	Debug.Log("  - " + p);
-				// }
+				Debug.Log("Including assets in scenes bundle:");
+				foreach (var p in assetPaths) {
+					Debug.Log("  - " + p);
+				}
+
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
 					.ToArray();
 				var build = new AssetBundleBuild() {

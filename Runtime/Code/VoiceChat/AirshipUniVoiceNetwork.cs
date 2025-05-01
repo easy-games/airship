@@ -35,8 +35,14 @@ namespace Code.VoiceChat {
         public event Action<short, ChatroomAudioSegment> OnAudioReceived;
         public event Action<ChatroomAudioSegment> OnAudioBroadcasted;
 
+        // connectionId (int), speakingLevel (float)
+        public event Action<object, object> onPlayerSpeakingLevel; 
+        
+        // speakingLevel (float)
+        public event Action<object> onLocalSpeakingLevel; 
+
         // Peer ID management
-        public short OwnID { get; private set; } = -1;
+        public short LocalPeerId { get; private set; } = -1;
         public List<short> PeerIDs { get; private set; } = new List<short>();
 
         // UniVoice peer ID <-> FishNet connection ID mapping
@@ -47,6 +53,7 @@ namespace Code.VoiceChat {
 
         private uint audioNonce = 0;
         
+        
         private void OnDisable() {
             if (this.agent != null) {
                 this.agent.Dispose();
@@ -54,15 +61,15 @@ namespace Code.VoiceChat {
         }
 
         private void Start() {
+            PeerIDs.Clear();
+            peerIdToConnectionIdMap.Clear();
+            
             this.agent = new ChatroomAgent(
                 this,
                 new UniVoiceUniMicInput(0, 16000, 100),
                 new UniVoiceAudioSourceOutput.Factory()
             );
-
-            PeerIDs.Clear();
-            peerIdToConnectionIdMap.Clear();
-
+            
             if (RunCore.IsClient()) {
                 this.ClientSendReadyWhenAble();
             }
@@ -101,15 +108,15 @@ namespace Code.VoiceChat {
         void OnDestroy() {
             // If the client disconnects while own ID is -1, that means
             // it haven't connected earlier and the connection attempt has failed.
-            if (OwnID == -1) {
+            if (LocalPeerId == -1) {
                 OnChatroomJoinFailed?.Invoke(new Exception("Could not join chatroom"));
                 return;
             }
 
             // This method is *also* called on the server when the server is shutdown.
             // So we check peer ID to ensure that we're running this only on a peer.
-            if (OwnID >= 0) {
-                OwnID = -1;
+            if (LocalPeerId >= 0) {
+                LocalPeerId = -1;
                 PeerIDs.Clear();
                 peerIdToConnectionIdMap.Clear();
                 OnLeftChatroom?.Invoke();
@@ -124,8 +131,8 @@ namespace Code.VoiceChat {
             this.Log($"Initialized self with PeerId {assignedPeerId} and peers: {string.Join(", ", existingPeers)}");
 
             // Get self ID and fire that joined chatroom event
-            OwnID = assignedPeerId;
-            OnJoinedChatroom?.Invoke(OwnID);
+            LocalPeerId = assignedPeerId;
+            OnJoinedChatroom?.Invoke(LocalPeerId);
 
             for (int i = 0; i < existingPeers.Length; i++) {
                 this.peerIdToConnectionIdMap[existingPeers[i]] = existingPeerConnectionIds[i];
@@ -233,7 +240,7 @@ namespace Code.VoiceChat {
 
         void Log(string msg) {
             if (!Application.isEditor || RunCore.IsInternal()) {
-                // Debug.Log("[VoiceChat] " + msg);
+                Debug.Log("[VoiceChat] " + msg);
             }
         }
 
@@ -281,22 +288,58 @@ namespace Code.VoiceChat {
             // print("[server] received audio from peer " + senderPeerId);
             RpcSendAudioToClient(senderPeerId, bytes, this.audioNonce);
 
-            // var segment = FromByteArray<ChatroomAudioSegment>(bytes);
-            // OnAudioReceived?.Invoke(senderPeerId, segment);
+            if (Application.isEditor) {
+                this.EmitAudioInScene(senderPeerId, bytes);
+            }
         }
 
         [ClientRpc(channel = Channels.Reliable)]
         void RpcSendAudioToClient(short senderPeerId, byte[] bytes, uint nonce) {
             // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
-            var segment = FromByteArray<ChatroomAudioSegment>(bytes);
-            OnAudioReceived?.Invoke(senderPeerId, segment);
+            this.EmitAudioInScene(senderPeerId, bytes);
         }
+
+        private void EmitAudioInScene(short senderPeerId, byte[] bytes) {
+            var segment = FromByteArray<ChatroomAudioSegment>(bytes);
+            
+            if (senderPeerId == LocalPeerId && RunCore.IsClient() && NetworkClient.isConnected) {
+                // Local speaking
+                var speakingLevel = this.ComputeSpeakingLevel(segment.samples);
+                onLocalSpeakingLevel?.Invoke(speakingLevel);
+                return;
+            }
+            
+            OnAudioReceived?.Invoke(senderPeerId, segment);
+
+            if (this.peerIdToConnectionIdMap.TryGetValue(senderPeerId, out var senderConnectionId)) {
+                var speakingLevel = this.ComputeSpeakingLevel(segment.samples);
+                onPlayerSpeakingLevel?.Invoke(senderConnectionId, speakingLevel);
+            }
+        }
+         
+         private float ComputeSpeakingLevel(float[] samples) {
+             float sum = 0f;
+             for (int i = 0; i < samples.Length; i++) {
+                 sum += samples[i] * samples[i];
+             }
+             float rms = Mathf.Sqrt(sum / samples.Length);
+             return Mathf.Clamp01(rms * 10f); // scale up and clamp
+         }
+
+         // public float GetSpeakingLevel(int connectionId) {
+         //     if (this.playerConnectionIdToSpeakingLevelMap.TryGetValue(connectionId, out var speakingLevel)) {
+         //         return speakingLevel;
+         //     }
+         //     return 0;
+         // }
 
         public void BroadcastAudioSegment(ChatroomAudioSegment data) {
             if (!NetworkClient.isConnected) return;
 
             if (isClient) {
-                RpcSendAudioToServer(ToByteArray(data));
+                var bytes = ToByteArray(data);
+                this.EmitAudioInScene(LocalPeerId, bytes);
+                RpcSendAudioToServer(bytes);
             }
 
             OnAudioBroadcasted?.Invoke(data);
@@ -321,6 +364,7 @@ namespace Code.VoiceChat {
             return -1;
         }
 
+        // Only works on server
         NetworkConnectionToClient GetNetworkConnectionFromPeerId(short peerId) {
             if (!peerIdToConnectionIdMap.ContainsKey(peerId)) {
                 return null;
@@ -329,7 +373,7 @@ namespace Code.VoiceChat {
             if (NetworkServer.connections.TryGetValue(peerIdToConnectionIdMap[peerId], out var connection)) {
                 return connection;
             }
-
+           
             return null;
         }
 

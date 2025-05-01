@@ -26,6 +26,7 @@ using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
+using System.IO;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 #if INPUT_SYSTEM_INSTALLED
@@ -584,6 +585,7 @@ namespace Airship.DevConsole
 
             ClearConsole();
             InputText = string.Empty;
+            InputCaretPosition = 0;
             _screenSize = new Vector2Int(Screen.width, Screen.height);
             ConsoleIsEnabled = true;
             enabled = true;
@@ -630,12 +632,12 @@ namespace Airship.DevConsole
             }
 
             // Create a new event system if none exists
-            if (EventSystem.current == null)
-            {
-                GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
-                EventSystem.current = obj.GetComponent<EventSystem>();
-                obj.name = "EventSystem";
-            }
+            // if (EventSystem.current == null)
+            // {
+            //     GameObject obj = Instantiate(Resources.Load<GameObject>(InputSystemPrefabPath));
+            //     EventSystem.current = obj.GetComponent<EventSystem>();
+            //     obj.name = "EventSystem";
+            // }
 
             // _canvasGroup.alpha = 1f;
             // _canvasGroup.interactable = true;
@@ -681,16 +683,23 @@ namespace Airship.DevConsole
             DevConsole.InvokeOnConsoleClosed();
         }
 
-        public void OpenLogsFolder() {
+        public void OpenLogFile() {
             var path = Application.consoleLogPath;
             print("Opening console log path: " + path);
-            if (Application.platform is RuntimePlatform.WindowsPlayer or RuntimePlatform.WindowsEditor) {
-                Process.Start("explorer.exe", path);
-            } else if (Application.platform is RuntimePlatform.OSXPlayer or RuntimePlatform.OSXEditor) {
-                Process.Start("open", path);
-            } else {
-                Debug.LogError("Unable to open logs folder: unsupported platform.");
+            CrossPlatformFileAPI.OpenPath(path);
+        }
+
+        public void OpenLogsFolder() {
+            var path = Path.GetDirectoryName(Application.consoleLogPath);
+            CrossPlatformFileAPI.OpenPath(path);
+        }
+
+        public void OpenProfilesFolder() {
+            var path = Path.Combine(Application.persistentDataPath, "ClientProfiles");
+            if (!Directory.Exists(path)) {
+                Directory.CreateDirectory(path);
             }
+            CrossPlatformFileAPI.OpenPath(path);
         }
 
         /// <summary>
@@ -941,6 +950,11 @@ namespace Airship.DevConsole
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false) {
+            string s = message.ToString();
+            if (s.Contains("The character with Unicode value")) {
+                return;
+            }
+            
             Profiler.BeginSample("DevConsole.Log");
             var list = StoredLogText[context];
             if (list.Count >= 100) {
@@ -984,8 +998,7 @@ namespace Airship.DevConsole
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false)
-        {
+        internal void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false) {
             Log(message, context, prepend, WarningColour);
         }
 
@@ -2943,6 +2956,11 @@ namespace Airship.DevConsole
                 ));
 
             #endregion
+
+            AddCommand(Command.Create("lighting", "", "View lighting data", () => {
+                Debug.Log("Lightmaps: " + LightmapSettings.lightmaps.Length);
+                Debug.Log("Probes: " + LightmapSettings.lightProbes?.count);
+            }));
         }
 
         /// <summary>

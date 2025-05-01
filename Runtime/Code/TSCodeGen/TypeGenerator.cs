@@ -14,6 +14,7 @@ using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
 using Code.Network;
+using Code.Network.Simulation;
 using Code.Player;
 using Code.RemoteConsole;
 using Code.VoiceChat;
@@ -44,6 +45,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 using Code.Player.Accessories;
+using Code.Player.Character.MovementSystems.Character;
+using Code.Player.Character.NetworkedMovement;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -138,7 +141,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(LayoutRebuilder),
             typeof(RectTransformUtility),
             typeof(ScrollRect),
-            typeof(InternalCameraScreenshotRecorder),
             typeof(Ray),
             typeof(MaterialPropertyBlock),
             typeof(DevConsole),
@@ -204,7 +206,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(UIOutline),
             typeof(EventTrigger),
             typeof(EasyShake),
-            typeof(CharacterMovementData),
             typeof(TreeInstance),
             typeof(Terrain),
             typeof(GameServer),
@@ -243,22 +244,21 @@ public class TypeGenerator : MonoBehaviour
             typeof(ConstantForce),
             typeof(ConstantForce2D),
             typeof(FixedJoint),
-            typeof(MoveInputData),
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
 
             // Airship
-            typeof(CharacterMovementData),
             typeof(AnimationEventData),
             typeof(VoxelWorld),
             // typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
-            typeof(CharacterMovementState),
-            typeof(AirshipPredictionManager),
             typeof(VisualGraphComponent),
+            typeof(CharacterMovementSettings),
+            typeof(CharacterAnimationSyncData),
             typeof(AccessoryAddMode),
+            typeof(RectMask2D),
             
             // Steam
             typeof(AirshipSteamFriendInfo),
@@ -330,6 +330,9 @@ public class TypeGenerator : MonoBehaviour
             "\\.Clothing$",
             "\\.ClothingManager$",
             "\\.MonoBehaviour$",
+            "\\.InternalCameraScreenshotRecorder$",
+            "\\.OcclusionCam$",
+            "\\.AirshipUniVoiceNetwork$"
         };
 
         var options = new TypeScriptOptions

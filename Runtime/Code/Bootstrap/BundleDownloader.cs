@@ -76,6 +76,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				bundleFilesToDownload.Add(remoteBundleFile);
 			}
 
+			var downloadSt = Stopwatch.StartNew();
+
 			// Calculate total download size
 			var device = DeviceBridge.GetDeviceType();
 			if (device is AirshipDeviceType.Phone or AirshipDeviceType.Tablet && loadingScreen && loadingScreen.showContinueButton && bundleFilesToDownload.Count > 0) {
@@ -111,7 +113,6 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				}
 			}
 
-			var downloadSt = Stopwatch.StartNew();
 			// Download files
 			var bundleIndex = 0;
 			this.totalDownload.Clear();

@@ -221,7 +221,7 @@ namespace Code.Player {
 
 			var playerInfoDto = playerInfo.BuildDto();
 			// this.players.Add(playerInfo);
-
+			
 			OnPlayerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 

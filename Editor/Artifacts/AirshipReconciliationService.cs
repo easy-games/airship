@@ -22,7 +22,7 @@ namespace Airship.Editor {
     /// Handles the reconciliation of AirshipComponents
     /// </summary>
     internal static class AirshipReconciliationService {
-        public static ReconcilerVersion DefaultReconcilerVersion => ReconcilerVersion.Version1;
+        public static ReconcilerVersion DefaultReconcilerVersion => ReconcilerVersion.Version2;
         public static ReconcilerVersion ReconcilerVersion {
             get {
                 if (EditorIntegrationsConfig.instance.useProjectReconcileOption) {
@@ -322,11 +322,19 @@ namespace Airship.Editor {
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
             // Components must have guids
             if (string.IsNullOrEmpty(eventData.Component.guid)) eventData.Component.guid = Guid.NewGuid().ToString();
+
+            // If an initial setup (e.g. first pull, or new template project)
+            if (AirshipLocalArtifactDatabase.isEmpty) {
+                // We can run a default reconcile, it wont matter tbh.
+                var component = eventData.Component;
+                ReconcileComponent(component);
+                component.componentHash = component.scriptHash;
+                return;
+            }
             
             if (ReconcilerVersion == ReconcilerVersion.Version2) {
                 var component = eventData.Component;
-            
-           
+
                 var isPrefab = PrefabUtility.IsPartOfAnyPrefab(component);
                 var prefabOriginalComponent = PrefabUtility.GetCorrespondingObjectFromOriginalSource(component);
                 if (isPrefab && prefabOriginalComponent.script != null) {
@@ -360,9 +368,7 @@ namespace Airship.Editor {
                 }
                 else {
                     // It's just an orphaned instance, or we're reconciling the original component, we can just reconcile it outright. No silly business required.
-                    if (ReconcileComponentUsingArtifacts(component, out var result)) {
-                        Debug.Log($"Reconciled unit {component.guid} with result {result}");
-                    }
+                    ReconcileComponentUsingArtifacts(component, out _);
                 }
             }
             else {

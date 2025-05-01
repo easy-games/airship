@@ -106,6 +106,16 @@ public class SocketManager : Singleton<SocketManager> {
                 await Awaitable.MainThreadAsync();
                 Instance.OnDisconnected?.Invoke(s);
             };
+
+            Instance.socket.OnError += async (sender, s) => {
+                if (s.StartsWith("User does not have \"GC Edge\" access")) {
+                    Debug.Log("User does not have \"GC Edge\" access");
+                    await Awaitable.MainThreadAsync();
+                    CrossSceneState.kickForceLogout = true;
+                    TransferManager.Instance.Disconnect(true, "User does not have permission to access Airship");
+                }
+            };
+
         }
 
         if (!Instance.socket.Connected) {

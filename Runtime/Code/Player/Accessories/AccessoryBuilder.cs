@@ -593,33 +593,48 @@ public class AccessoryBuilder : MonoBehaviour {
             meshCombiner.outputSkinnedMeshRenderers[0]);
     }
 
-    public Renderer[] GetAllAccessoryRenderers() {
-        var renderers = new List<Renderer>();
+    private T[] GetAllAccessoryRenderersInternal<T>()where T: Renderer {
+        var renderers = new List<T>();
 
         //Main renderers
         foreach (var keyValuePair in activeAccessories) {
             //Main Renderers
             foreach (var ren in keyValuePair.Value.renderers) {
-                renderers.Add(ren);
+                if (ren.GetType() == typeof(T) || ren.GetType().IsSubclassOf(typeof(T))) {
+                    renderers.Add(ren as T);
+                }
             }
 
             //LOD Renderers
             foreach (var lodAcc in keyValuePair.Value.lods) {
                 foreach (var ren in keyValuePair.Value.renderers) {
-                    renderers.Add(ren);
+                    if (ren.GetType() == typeof(T) || ren.GetType().IsSubclassOf(typeof(T))) {
+                        renderers.Add(ren as T);
+                    }
                 }
             }
         }
 
-
         //Combined renderers
-        if (meshCombiner.enabled) {
+        if (meshCombiner.enabled && typeof(T) != typeof(MeshRenderer)) {
             for (var i = 0; i < meshCombiner.outputSkinnedMeshRenderers.Count; i++) {
-                renderers.Add(meshCombiner.outputSkinnedMeshRenderers[i]);
+                renderers.Add(meshCombiner.outputSkinnedMeshRenderers[i]  as T);
             }
-        } else { }
+        } 
 
         return renderers.ToArray();
+    }
+
+    public Renderer[] GetAllAccessoryRenderers() {
+        return GetAllAccessoryRenderersInternal<Renderer>();
+    }
+
+    public MeshRenderer[] GetAllMeshRenderers() {
+        return GetAllAccessoryRenderersInternal<MeshRenderer>();
+    }
+
+    public SkinnedMeshRenderer[] GetAllSkinnedMeshRenderers() {
+        return GetAllAccessoryRenderersInternal<SkinnedMeshRenderer>();
     }
 
     public Renderer[] GetAccessoryRenderers(AccessorySlot slot) {

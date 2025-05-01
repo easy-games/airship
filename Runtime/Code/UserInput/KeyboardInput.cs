@@ -6,11 +6,13 @@ public class KeyboardInput : IDisposable {
     public event Action<Key> KeyDown;
     public event Action<Key> KeyUp;
     
-    private readonly InputActionMap _inputMap = new InputActionMap("keyboard");
+    private InputActionMap _inputMap = new InputActionMap("keyboard");
     
     public KeyboardInput() {
         // Capture all keys and bind them to the input action map:
         foreach (var keyControl in Keyboard.current.allKeys) {
+            if (keyControl == null) continue;
+            
             var action = _inputMap.AddAction(keyControl.name);
             action.AddBinding($"<Keyboard>/{keyControl.name}");
         }

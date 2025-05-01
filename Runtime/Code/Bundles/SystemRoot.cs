@@ -8,7 +8,6 @@ using Luau;
 using System;
 using Airship.DevConsole;
 using Code.Bundles;
-using JetBrains.Annotations;
 using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -654,6 +653,53 @@ public class SystemRoot : Singleton<SystemRoot> {
 				if (pluginVersion != server.luauPluginVersion) {
 					Debug.LogWarning("Luau plugin version mismatch between server and client");
 				}
+			}
+		}));
+
+		DevConsole.AddCommand(Command.Create<string>("luauregistry", "", "Prints info about the Luau plugin", Parameter.Create("context", "Options: game, protected"), (val) => {
+			val = val.ToLower();
+			
+			string registryDump;
+			switch (val) {
+				case "game":
+					registryDump = LuauPlugin.LuauDebugCountAllRegistryItems(LuauContext.Game);
+					break;
+				case "protected":
+					registryDump = LuauPlugin.LuauDebugCountAllRegistryItems(LuauContext.Protected);
+					break;
+				default:
+					Debug.Log($"Invalid context: \"{val}\"");
+					return;
+			}
+			
+			Debug.Log(registryDump);
+		}));
+
+		DevConsole.AddCommand(Command.Create<string>("luauobjects", "", "Prints count of Unity objects tracked by Luau plugin", Parameter.Create("context", "Options: game, protected, game_server, protected_server"), (val) => {
+			val = val.ToLower();
+
+			var context = LuauContext.Game;
+			var onServer = val.EndsWith("_server", StringComparison.OrdinalIgnoreCase);
+			
+			int[] instanceIds;
+			switch (val) {
+				case "game" or "game_server":
+					context = LuauContext.Game;
+					break;
+				case "protected" or "protected_server":
+					context = LuauContext.Protected;
+					break;
+				default:
+					Debug.Log($"Invalid context: \"{val}\"");
+					return;
+			}
+
+			if (onServer) {
+				var server = FindAnyObjectByType<AirshipLuauDebugger>();
+				server.FetchServerLuauInstanceIds(context);
+			} else {
+				var str = AirshipLuauDebugger.FetchLuauUnityInstanceIds(context);
+				Debug.Log(str);
 			}
 		}));
 

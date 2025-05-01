@@ -47,14 +47,26 @@ namespace Airship.Editor {
             this.directory = project.Directory;
         }
         
-        public IEnumerator Watch(TypescriptCompilerBuildArguments arguments) {
+        public IEnumerator Watch(TypescriptCompilerBuildArguments arguments, NodeJsArguments nodeJsArguments = default) {
             compilationState = CompilationState.IsCompiling;
 
             if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
                 Debug.LogWarning("You are using the development version of the typescript compiler");
             }
+
+            var argList = new List<string>();
+            var nodeJsArgs = nodeJsArguments.GetCommandString();
+            if (!string.IsNullOrEmpty(nodeJsArgs)) {
+                argList.Add(nodeJsArgs);
+            }
             
-            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"{TypescriptCompilationService.TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
+            argList.Add(TypescriptCompilationService.TypescriptLocationCommandLine);
+            argList.Add(arguments.GetCommandString(CompilerCommand.BuildWatch));
+            var fullCommandString = string.Join(" ", argList);
+            
+            TypescriptLogService.Log(TypescriptLogLevel.Information, $"Start process 'node {fullCommandString}'");
+            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, fullCommandString);
+            
             TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
             processId = compilerProcess.Id;
             

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Airship.DevConsole;
 using Mirror;
 using UnityEngine;
@@ -22,6 +24,37 @@ namespace Code.RemoteConsole {
     public class ServerConsole : MonoBehaviour {
         private List<ServerConsoleBroadcast> startupMessages = new(100);
         private const int maxStartupMessages = 100;
+        private static readonly ConcurrentQueue<string> logQueue = new();
+
+        private string logPath;
+        private string prevLogPath;
+        private StreamWriter writer;
+
+        private bool shuttingDown = false;
+        private Task writeTask;
+
+        private void Awake() {
+            writeTask = Task.Run(ProcessQueue);
+        }
+
+        private async Task ProcessQueue() {
+            while (!shuttingDown) {
+                while (logQueue.TryDequeue(out string msg)) {
+                    try {
+                        await writer.WriteLineAsync(msg);
+                    } catch (Exception e) {
+                        Debug.LogError("ServerLogger write failed: " + e);
+                    }
+                }
+
+                await Task.Delay(1); // tune as needed
+            }
+        }
+
+        private void OnDestroy() {
+            shuttingDown = true;
+            // writeTask?.Wait();
+        }
 
         /// <summary>
         /// Called on client when client receives a remote log from server.
@@ -30,6 +63,9 @@ namespace Code.RemoteConsole {
         private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
             if (!DevConsole.console.loggingEnabled) return;
             DevConsole.console.OnLogMessageReceived(args.message, args.stackTrace, args.logType, LogContext.Server, args.time);
+
+            string timeStamped = $"[{DateTime.Now:HH:mm:ss}] {args.message}";
+            logQueue.Enqueue(timeStamped);
         }
 
         public void OnStartServer() {
@@ -48,11 +84,34 @@ namespace Code.RemoteConsole {
                 NetworkClient.RegisterHandler<ServerConsoleBroadcast>(OnServerConsoleBroadcast, false);
                 NetworkClient.Send(new RequestServerConsoleStartupLogs());
             }
+
+            // Setup logs
+            if (RunCore.IsClient()) {
+                string logDir = Path.GetDirectoryName(Application.consoleLogPath);
+                logPath = Path.Combine(logDir, "Server.log");
+                prevLogPath = Path.Combine(logDir, "Server-prev.log");
+
+                // Rotate logs
+                try {
+                    if (File.Exists(prevLogPath)) File.Delete(prevLogPath);
+                    if (File.Exists(logPath)) File.Move(logPath, prevLogPath);
+                } catch (Exception e) {
+                    Debug.LogError("Failed rotating server logs: " + e);
+                }
+
+                if (writer != null) {
+                    writer.Close();
+                }
+                writer = new StreamWriter(logPath, false); // overwrite existing
+                writer.AutoFlush = true;
+            }
         }
 
-        public void Cleanup() {
-            if (RunCore.IsClient()) {
-                NetworkClient.UnregisterHandler<ServerConsoleBroadcast>();
+        public void OnStopClient() {
+            NetworkClient.UnregisterHandler<ServerConsoleBroadcast>();
+            if (writer != null) {
+                writer.Close();
+                writer = null;
             }
         }
 
@@ -87,7 +146,8 @@ namespace Code.RemoteConsole {
                         stackTrace = stackTrace,
                         time = time,
                     };
-                    NetworkServer.SendToAll(packet, Channels.Reliable, true);
+                    bool sendToReadyOnly = Application.isEditor;
+                    NetworkServer.SendToAll(packet, Channels.Reliable, sendToReadyOnly);
                 }
             }
         }

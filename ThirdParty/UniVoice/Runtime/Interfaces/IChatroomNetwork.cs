@@ -81,10 +81,10 @@ namespace Adrenak.UniVoice {
         /// <summary>
         /// The ID of the local user in the current chatroom 
         /// </summary>
-        short OwnID { get; }
+        short LocalPeerId { get; }
 
         /// <summary>
-        /// IDs of all the peers in the current chatroom (excluding <see cref="OwnID"/>)
+        /// IDs of all the peers in the current chatroom (excluding <see cref="LocalPeerId"/>)
         /// </summary>
         List<short> PeerIDs { get; }
         #endregion
