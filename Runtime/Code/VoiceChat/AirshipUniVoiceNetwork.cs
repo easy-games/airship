@@ -300,9 +300,30 @@ namespace Code.VoiceChat {
             // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             this.EmitAudioInScene(senderPeerId, bytes);
         }
+        
+        private void PreProcessAudio(ChatroomAudioSegment segment) {
+            const float maxAmplitude = 0.25f;
+            
+            // find peak
+            float peak = 0f;
+            for (int i = 0; i < segment.samples.Length; i++) {
+                float absSample = Math.Abs(segment.samples[i]);
+                if (absSample > peak) peak = absSample;
+            }
+            
+            // if too loud, scale down
+            if (peak > maxAmplitude) {
+                float scale = maxAmplitude / peak;
+                for (int i = 0; i < segment.samples.Length; i++) {
+                    segment.samples[i] *= scale;
+                }
+            }
+        }
 
         private void EmitAudioInScene(short senderPeerId, byte[] bytes) {
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
+            
+            this.PreProcessAudio(segment);
             
             if (senderPeerId == LocalPeerId && RunCore.IsClient() && NetworkClient.isConnected) {
                 // Local speaking
