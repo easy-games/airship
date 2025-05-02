@@ -183,7 +183,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public override void SetMode(NetworkedStateSystemMode mode)
         {
-            Debug.Log("Running movement in " + mode + " mode.");
+            Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer)
             {
                 rigidbody.isKinematic = true;
