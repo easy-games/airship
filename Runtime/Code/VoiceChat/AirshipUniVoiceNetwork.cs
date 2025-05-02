@@ -49,6 +49,8 @@ namespace Code.VoiceChat {
         short peerCount = 0;
         private readonly Dictionary<short, int> peerIdToConnectionIdMap = new Dictionary<short, int>();
 
+        private readonly HashSet<int> mutedConnectionIds = new();
+
         public ChatroomAgent agent;
 
         private uint audioNonce = 0;
@@ -308,13 +310,15 @@ namespace Code.VoiceChat {
                 onLocalSpeakingLevel?.Invoke(speakingLevel);
                 return;
             }
-            
-            OnAudioReceived?.Invoke(senderPeerId, segment);
 
             if (this.peerIdToConnectionIdMap.TryGetValue(senderPeerId, out var senderConnectionId)) {
+                if (this.mutedConnectionIds.Contains(senderConnectionId)) {
+                    return;
+                }
                 var speakingLevel = this.ComputeSpeakingLevel(segment.samples);
                 onPlayerSpeakingLevel?.Invoke(senderConnectionId, speakingLevel);
             }
+            OnAudioReceived?.Invoke(senderPeerId, segment);
         }
          
          private float ComputeSpeakingLevel(float[] samples) {
@@ -343,6 +347,14 @@ namespace Code.VoiceChat {
             }
 
             OnAudioBroadcasted?.Invoke(data);
+        }
+
+        public void SetConnectionMuted(int connectionId, bool muted) {
+            if (muted) {
+                this.mutedConnectionIds.Add(connectionId);
+            } else {
+                this.mutedConnectionIds.Remove(connectionId);
+            }
         }
 
         /// <summary>

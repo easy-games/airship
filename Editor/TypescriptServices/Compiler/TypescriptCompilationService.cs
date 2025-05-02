@@ -21,6 +21,7 @@ using Newtonsoft.Json.Linq;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Android;
 using UnityEngine.PlayerLoop;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
@@ -55,6 +56,7 @@ using Object = UnityEngine.Object;
         /// </summary>
         // [InitializeOnLoad]
         public static class TypescriptCompilationService {
+            private const int ExitCodeKill = 137;
             private const string TsCompilerService = "Typescript Compilation Service";
             
             /// <summary>
@@ -768,6 +770,7 @@ using Object = UnityEngine.Object;
 
                 proc.Exited += (_, _) => {
                     if (proc.ExitCode <= 0) return;
+                    if (proc.ExitCode == ExitCodeKill) return;
                     
                     Debug.Log("Compiler process exited with code " + proc.ExitCode);
                     var progressId = TypescriptProjectsService.Project!.ProgressId;
