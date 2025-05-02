@@ -6,6 +6,7 @@ using Code.Network.StateSystem;
 using Code.Player.Character.NetworkedMovement;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character.MovementSystems.Character
 {
@@ -47,7 +48,10 @@ namespace Code.Player.Character.MovementSystems.Character
 
         [Header("Visual Variables")]
         public bool autoCalibrateSkiddingSpeed = true;
-        public float observerRotationLerpMod = 1;
+
+        [Tooltip("Controls the speed in which local character rotates to face look direction.")]
+        public float ownerRotationLerpMod = 6;
+
         [Tooltip("If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
         public bool playAnimationOnServer = true;
 
@@ -1070,7 +1074,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 airshipTransform.rotation = Quaternion.Lerp(
                     airshipTransform.rotation,
                     Quaternion.LookRotation(lookTarget),
-                    observerRotationLerpMod * Time.deltaTime);
+                    ownerRotationLerpMod * Time.deltaTime);
             }
         }
 
