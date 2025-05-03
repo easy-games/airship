@@ -6,6 +6,7 @@ using Code.Network.StateSystem;
 using Code.Player.Character.NetworkedMovement;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character.MovementSystems.Character
 {
@@ -47,7 +48,10 @@ namespace Code.Player.Character.MovementSystems.Character
 
         [Header("Visual Variables")]
         public bool autoCalibrateSkiddingSpeed = true;
-        public float observerRotationLerpMod = 1;
+
+        [Tooltip("Controls the speed in which local character rotates to face look direction.")]
+        public float ownerRotationLerpMod = 6;
+
         [Tooltip("If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
         public bool playAnimationOnServer = true;
 
@@ -112,25 +116,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public event Action<object> OnInterpolateReachedState;
 
         public event Action<object, object> OnCompareSnapshots;
-
-        /// <summary>
-        /// Params: Vector3 velocity, RaycastHit hitInfo
-        /// </summary>
-        public event Action<object, object> OnImpactWithGround;
-        public event Action<object> OnMoveDirectionChanged;
-
-        /// <summary>
-        /// Called when movement processes a new jump
-        /// Params: Vector3 velocity
-        /// </summary>
-        public event Action<object> OnJumped;
-
-        /// <summary>
-        /// Called when the look vector is externally set
-        /// Params: Vector3 currentLookVector
-        /// </summary>
-        public event Action<object> OnNewLookVector;
-
+        
         /**
          * Fired when lag compensated checks should occur. ID of check is passed as the event parameter.
          */
@@ -139,6 +125,25 @@ namespace Code.Player.Character.MovementSystems.Character
          * Fired when lag compensated check is over and physics can be modified. ID of check is passed as the event parameter.
          */
         public event Action<object> OnLagCompensationComplete;
+        
+        public event Action<object> OnMoveDirectionChanged;
+
+        /// <summary>
+        /// Called when the look vector is externally set
+        /// Params: Vector3 currentLookVector
+        /// </summary>
+        public event Action<object> OnNewLookVector;
+        
+        /// <summary>
+        /// Called when movement processes a new jump
+        /// Params: Vector3 velocity
+        /// </summary>
+        public event Action<object> OnJumped;
+        
+        /// <summary>
+        /// Params: Vector3 velocity, RaycastHit hitInfo
+        /// </summary>
+        public event Action<object, object> OnImpactWithGround;
         
         #endregion
         
@@ -300,8 +305,7 @@ namespace Code.Player.Character.MovementSystems.Character
             {
                 grounded = true;
             }
-
-            currentMoveSnapshot.isGrounded = grounded;
+            
             this.groundedRaycastHit = groundHit;
 
             if (grounded)
@@ -335,6 +339,13 @@ namespace Code.Player.Character.MovementSystems.Character
                 currentMoveSnapshot.jumpCount = 0;
                 currentMoveSnapshot.timeSinceBecameGrounded = 0f;
                 this.OnImpactWithGround?.Invoke(currentVelocity, groundHit);
+                if (this.mode == NetworkedStateSystemMode.Authority && isServer)
+                {
+                    SAuthImpactEvent(currentVelocity, groundHit);
+                } else if (this.mode == NetworkedStateSystemMode.Authority && isClient)
+                {
+                    CAuthImpactEvent(currentVelocity, groundHit);
+                }
             }
             else
             {
@@ -442,6 +453,14 @@ namespace Code.Player.Character.MovementSystems.Character
                     newVelocity.y = movementSettings.jumpSpeed;
                     currentMoveSnapshot.airborneFromImpulse = false;
                     OnJumped?.Invoke(newVelocity);
+                    if (mode == NetworkedStateSystemMode.Authority && isServer)
+                    {
+                        SAuthJumpedEvent(newVelocity);
+                    }
+                    else if (mode == NetworkedStateSystemMode.Authority && isClient)
+                    {
+                        CAuthJumpedEvent(newVelocity);
+                    }
                 }
             }
 
@@ -1070,7 +1089,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 airshipTransform.rotation = Quaternion.Lerp(
                     airshipTransform.rotation,
                     Quaternion.LookRotation(lookTarget),
-                    observerRotationLerpMod * Time.deltaTime);
+                    ownerRotationLerpMod * Time.deltaTime);
             }
         }
 
@@ -1400,6 +1419,36 @@ namespace Code.Player.Character.MovementSystems.Character
         #endregion
         
         #region RPCs
+
+        [Command]
+        public void CAuthJumpedEvent(Vector3 velocity)
+        {
+            // Only used in the client authoritative networking mode.
+            if (mode != NetworkedStateSystemMode.Observer) return;
+            OnJumped?.Invoke(velocity);
+            SAuthJumpedEvent(velocity);
+        }
+
+        [Command]
+        public void CAuthImpactEvent(Vector3 velocity, RaycastHit hitInfo)
+        {
+            // Only used in the client authoritative networking mode.
+            if (mode != NetworkedStateSystemMode.Observer) return;
+            OnImpactWithGround(velocity, hitInfo);
+            SAuthImpactEvent(velocity, hitInfo);
+        }
+
+        [ClientRpc(includeOwner = false)]
+        public void SAuthJumpedEvent(Vector3 velocity)
+        {
+            OnJumped?.Invoke(velocity);
+        }
+
+        [ClientRpc(includeOwner = false)]
+        public void SAuthImpactEvent(Vector3 velocity, RaycastHit hitInfo)
+        {
+            OnImpactWithGround?.Invoke(velocity, hitInfo);
+        }
         
         /**
          * RPCs are used in client authoritative networking to allow server side code to move clients. These
