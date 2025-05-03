@@ -192,7 +192,7 @@ namespace Airship.Editor {
                 }
             }
 #endif
-            component.componentHash = component.script.sourceFileHash;
+            // component.componentHash = component.script.sourceFileHash;
             return true;
         }
         
@@ -328,7 +328,7 @@ namespace Airship.Editor {
                 // We can run a default reconcile, it wont matter tbh.
                 var component = eventData.Component;
                 ReconcileComponent(component);
-                component.componentHash = component.scriptHash;
+                //component.componentHash = component.scriptHash;
                 return;
             }
             
@@ -374,7 +374,7 @@ namespace Airship.Editor {
             else {
                 var component = eventData.Component;
                 ReconcileComponent(component);
-                component.componentHash = component.scriptHash;
+                //component.componentHash = component.scriptHash;
             }
         }
     }

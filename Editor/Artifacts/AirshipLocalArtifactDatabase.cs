@@ -51,17 +51,17 @@ namespace Airship.Editor {
 
         [CanBeNull] public GameObject Prefab => asset != null ? AssetDatabase.LoadAssetAtPath<GameObject>(asset) : null;
         
-        /// <summary>
-        /// Will return if the given component is synchronized with this data
-        /// </summary>
-        /// <param name="component">The component</param>
-        /// <returns>True if the component matches this data</returns>
-        public bool IsSyncedWith(AirshipComponent component) {
-            if (guid != component.guid) return false;
-            if (metadata == null) return false;
-            
-            return component.componentHash == metadata.hash;
-        }
+        // /// <summary>
+        // /// Will return if the given component is synchronized with this data
+        // /// </summary>
+        // /// <param name="component">The component</param>
+        // /// <returns>True if the component matches this data</returns>
+        // public bool IsSyncedWith(AirshipComponent component) {
+        //     if (guid != component.guid) return false;
+        //     if (metadata == null) return false;
+        //     
+        //     return component.componentHash == metadata.hash;
+        // }
     }
     
     [Serializable]
@@ -94,12 +94,12 @@ namespace Airship.Editor {
         }
 
 
-        /// <summary>
-        /// Will return true if the hash of the component isn't the same as the DB stored script hash
-        /// </summary>
-        public bool IsNotSameHashAsComponent(AirshipComponent component) {
-            return component.componentHash != metadata.hash;
-        }
+        // /// <summary>
+        // /// Will return true if the hash of the component isn't the same as the DB stored script hash
+        // /// </summary>
+        // public bool IsNotSameHashAsComponent(AirshipComponent component) {
+        //     return component.componentHash != metadata.hash;
+        // }
     }
 
     /// <summary>
