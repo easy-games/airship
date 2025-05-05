@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using UnityEngine;
 using GooglePlayGames;
 using GooglePlayGames.BasicApi;
@@ -29,20 +30,45 @@ namespace Cdm.Authentication.Browser {
         public async Task<BrowserResult> StartAsync(string loginUrl, string redirectUrl, CancellationToken cancellationToken = default) {
             _taskCompletionSource = new TaskCompletionSource<BrowserResult>();
 
+            Debug.Log("Android Browser login starting");
+
             cancellationToken.Register(() => {
                 _taskCompletionSource?.TrySetCanceled();
             });
-
-            PlayGamesPlatform.Instance.Authenticate((status) => {
+#if UNITY_ANDROID
+            PlayGamesPlatform.DebugLogEnabled = true;
+            PlayGamesPlatform.Activate();
+            Debug.Log("PlayGamesPlatform activated [6]");
+            Debug.Log("Authenticating now...");
+            // PlayGamesPlatform.Instance.Authenticate((status) => {
+            //     if (status == SignInStatus.Success) {
+            //         Debug.Log("Play Games authentication successful");
+            //         _taskCompletionSource.SetResult(new BrowserResult(BrowserStatus.Success, ""));
+            //     } else {
+            //         Debug.LogError($"Play Games authentication failed: {status}");
+            //         _taskCompletionSource.SetResult(new BrowserResult(BrowserStatus.UnknownError, ""));
+            //     }
+            // });
+            PlayGamesPlatform.Instance.ManuallyAuthenticate((status) => {
                 if (status == SignInStatus.Success) {
-                    Debug.Log("Play Games authentication successful");
-                    _taskCompletionSource.SetResult(new BrowserResult(BrowserStatus.Success, ""));
+                    Debug.Log("Play Games authentication successful. Requesting server side access...");
+                    PlayGamesPlatform.Instance.RequestServerSideAccess(false, (code) => {
+                        var uri = new Uri(loginUrl);
+                        var query = HttpUtility.ParseQueryString(uri.Query);
+                        var state = query.Get("state");
+                        var redirectUriMock = $"https://airship.gg/android?code={code}&state={state}";
+                        Debug.Log($"Got auth code: {redirectUriMock}");
+                        _taskCompletionSource.SetResult(new BrowserResult(BrowserStatus.Success, redirectUriMock));
+                    });
                 } else {
                     Debug.LogError($"Play Games authentication failed: {status}");
                     _taskCompletionSource.SetResult(new BrowserResult(BrowserStatus.UnknownError, ""));
                 }
             });
             return await _taskCompletionSource.Task;
+#else
+            return new BrowserResult(BrowserStatus.UnknownError, "");
+#endif
 
             // using var httpListener = new HttpListener();
             //

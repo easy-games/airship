@@ -120,8 +120,6 @@ public class AuthManager {
             redirectUri = redirectUri,
             scope = "openid email profile",
         });
-        
-        Debug.Log($"Redirect URI: {redirectUri}");
 
         var crossPlatformBrowser = new CrossPlatformBrowser();
         var standaloneBrowser = new StandaloneBrowser();
@@ -151,8 +149,10 @@ public class AuthManager {
                 $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key={AirshipApp.firebaseApiKey}",
                 JsonUtility.ToJson(reqBody),
                 "application/json");
+            Debug.Log($"Request Body: {JsonUtility.ToJson(reqBody)}");
             await req.SendWebRequest();
             if (req.result == UnityWebRequest.Result.ProtocolError) {
+	            Debug.LogError($"error: [{req.responseCode}] {req.error} - {req.downloadHandler.text}");
                 return (false, "Authentication request failed");
             }
 
