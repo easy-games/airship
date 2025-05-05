@@ -6,6 +6,7 @@ using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror;
 using RSG.Promises;
+using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -423,8 +424,8 @@ namespace Code.Network.StateSystem
             // TODO: We treat estimatedCommandDelay as a constant, but we should determine this by calculating how long the command that triggered the lag comp was buffered
             // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
             // That may prove difficult, so we use a constant for now.
-            var estimatedCommandDelay = this.serverCommandBufferTargetSize * Time.fixedDeltaTime; 
-            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime;
+            var estimatedCommandDelay = this.serverCommandBufferTargetSize * Time.fixedDeltaTime;
+            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime / Math.Min(Time.timeScale, 1); // client buffers more when timescale is set lower than 1
             // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " command delay: " + estimatedCommandDelay + " for a result of: " + (- ping -
             //     clientBufferTime - estimatedCommandDelay));
             var lagCompensatedTickTime =
@@ -845,14 +846,16 @@ namespace Code.Network.StateSystem
             if (this.observerHistory.Values.Count == 0) return;
 
             // Get the time we should render on the client.
-            var clientTime = (float)NetworkTime.time - NetworkClient.bufferTime;
+            var clientTime = (float)NetworkTime.time - (NetworkClient.bufferTime / Math.Min(Time.timeScale, 1)); // Don't reduce buffer on TS higher than one since send rate is unaffected
 
             // Get the state history around the time that's currently being rendered.
             if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
             {
-                Debug.LogWarning("Not enough state history for rendering. " + this.observerHistory.Keys.Count +
+                if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported.
+                Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
                                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                                 this.observerHistory.Keys[^1] + " Target " + clientTime);
+                                 this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
+                                 (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
                 return;
             }
 
