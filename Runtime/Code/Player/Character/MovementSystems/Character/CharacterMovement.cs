@@ -158,6 +158,8 @@ namespace Code.Player.Character.MovementSystems.Character
         private Vector3 lookVector;
         private BinaryBlob customInputData;
 
+        [SyncVar] public Vector3 startingLookVector;
+
         // State information
         public CharacterSnapshotData currentMoveSnapshot = new CharacterSnapshotData() {};
         public CharacterAnimationSyncData currentAnimState = new CharacterAnimationSyncData() {};
@@ -184,6 +186,16 @@ namespace Code.Player.Character.MovementSystems.Character
                 this.physics = new CharacterPhysics(this);
             }
             _cameraTransform = Camera.main.transform;
+        }
+
+        public override void OnStartClient() {
+            base.OnStartClient();
+            this.lookVector = this.startingLookVector;
+        }
+
+        public override void OnStartServer() {
+            base.OnStartServer();
+            this.lookVector = this.startingLookVector;
         }
 
         public override void SetMode(NetworkedStateSystemMode mode)
