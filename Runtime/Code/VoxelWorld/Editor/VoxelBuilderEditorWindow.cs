@@ -150,7 +150,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             //Show a foldable help box
             EditorGUILayout.HelpBox(
-                "Left click to add\nShift+click to delete\nCtrl+click for repeat placement\nA to rotate highlighted block",
+                "Left click to add\nShift+click to delete\nCtrl+click for repeat placement\nG to rotate highlighted block",
                 MessageType.Info);
 
             //active = EditorGUILayout.Toggle("Active", active);

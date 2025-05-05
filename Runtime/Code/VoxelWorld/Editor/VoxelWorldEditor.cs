@@ -830,7 +830,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 leftShiftDown = false;
             }
 
-            if (currentEvent.keyCode == KeyCode.A) {
+            if (currentEvent.keyCode == KeyCode.G) {
                 //Cycle the bits on the selected block
                 if (world.selectedBlockIndex > 0) {
                     var oldVoxel = world.GetVoxelAt(lastPos); // Assuming you have a method to get the voxel value
@@ -847,6 +847,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
                     VoxelEditManager.AddEdit(world, lastPos, oldVoxel, newVoxel, "Flip Voxel " + def.definition.name);
 
+                    //Need to use a Key that Unity doesn't use so we don't consume it
                     currentEvent.Use();
                 }
 
