@@ -1197,6 +1197,7 @@ namespace Code.Player.Character.MovementSystems.Character
         }
         
         public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
+            moveDir = moveDir.normalized;
             var moveDirMode = (MoveDirectionMode)moveDirModeInt;
             switch (moveDirMode) {
                 case MoveDirectionMode.World:
