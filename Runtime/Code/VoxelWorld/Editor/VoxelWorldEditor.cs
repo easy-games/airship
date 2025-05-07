@@ -233,9 +233,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         //Add selection handler
         Selection.selectionChanged += OnSelectionChanged;
 
-        //Add a handler for the gizmo refresh event
-        SceneView.duringSceneGui += GizmoRefreshEvent;
-
         EditorApplication.update += OnEditorUpdate;
 
         //Save handler
@@ -509,8 +506,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             world.FullWorldUpdate();
         }
     }
+    
+    private void OnEnable() {
+        SceneView.duringSceneGui += GizmoRefreshEvent;
+    }
 
     private void OnDisable() {
+        SceneView.duringSceneGui -= GizmoRefreshEvent;
+        
         CleanupHandles();
     }
 
@@ -830,7 +833,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 leftShiftDown = false;
             }
 
-            if (currentEvent.keyCode == KeyCode.A) {
+            if (currentEvent.keyCode == KeyCode.G) {
                 //Cycle the bits on the selected block
                 if (world.selectedBlockIndex > 0) {
                     var oldVoxel = world.GetVoxelAt(lastPos); // Assuming you have a method to get the voxel value
@@ -847,6 +850,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     //newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, 0x04  );
                     VoxelEditManager.AddEdit(world, lastPos, oldVoxel, newVoxel, "Flip Voxel " + def.definition.name);
 
+                    //Need to use a Key that Unity doesn't use so we don't consume it
                     currentEvent.Use();
                 }
 
@@ -983,6 +987,10 @@ public class VoxelWorldEditorToolBase : EditorTool {
         buttonActive = true;
     }
 
+    private void OnDisable() {
+        buttonActive = false;
+    }
+
     public override void OnWillBeDeactivated() {
         buttonActive = false;
     }
@@ -1009,6 +1017,10 @@ public class VoxelWorldSelectionToolBase : EditorTool {
 
     public override void OnActivated() {
         buttonActive = true;
+    }
+
+    private void OnDisable() {
+        buttonActive = false;
     }
 
     public override void OnWillBeDeactivated() {
@@ -1038,6 +1050,10 @@ public class VoxelWorldPaintBucketToolBase : EditorTool {
         buttonActive = true;
     }
 
+    private void OnDisable() {
+        buttonActive = false;
+    }
+
     public override void OnWillBeDeactivated() {
         buttonActive = false;
     }
@@ -1063,6 +1079,10 @@ public class VoxelWorldBrushToolBase : EditorTool {
 
     public override void OnActivated() {
         buttonActive = true;
+    }
+
+    private void OnDisable() {
+        buttonActive = false;
     }
 
     public override void OnWillBeDeactivated() {

@@ -857,7 +857,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             //Instantly move at the desired speed
             var moveMagnitude = characterMoveVelocity.magnitude;
-            var velMagnitude = flatVelocity.magnitude;
+            var flatVelMagnitude = flatVelocity.magnitude;
 
             //Don't move character in direction its already moveing
             //Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
@@ -875,13 +875,13 @@ namespace Code.Player.Character.MovementSystems.Character
                 newVelocity.z = command.moveDir.z * currentMoveSnapshot.currentSpeed;
             }
             else if (!isImpulsing && !currentMoveSnapshot.airborneFromImpulse && //Not impulsing AND under our max speed
-                     (velMagnitude < (movementSettings.useAccelerationMovement
+                     (flatVelMagnitude < (movementSettings.useAccelerationMovement
                          ? currentMoveSnapshot.currentSpeed
                          : Mathf.Max(movementSettings.sprintSpeed, currentMoveSnapshot.currentSpeed) + 1)))
             {
                 if (movementSettings.useAccelerationMovement)
                 {
-                    newVelocity += Vector3.ClampMagnitude(characterMoveVelocity, currentMoveSnapshot.currentSpeed - velMagnitude);
+                    newVelocity += Vector3.ClampMagnitude(characterMoveVelocity, currentMoveSnapshot.currentSpeed - flatVelMagnitude);
                 }
                 else
                 {
@@ -891,7 +891,7 @@ namespace Code.Player.Character.MovementSystems.Character
                     // if(Mathf.Abs(characterMoveVelocity.z) > Mathf.Abs(newVelocity.z)){
                     // 	newVelocity.z = characterMoveVelocity.z;
                     // }
-                    if (moveMagnitude + .5f >= velMagnitude)
+                    if (moveMagnitude + .5f >= flatVelMagnitude)
                     {
                         newVelocity.x = characterMoveVelocity.x;
                         newVelocity.z = characterMoveVelocity.z;
@@ -900,11 +900,30 @@ namespace Code.Player.Character.MovementSystems.Character
             }
             else
             {
-                //Moving faster than max speed or using acceleration mode
-                newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) *
-                               (groundedState == CharacterState.Sprinting
-                                   ? this.movementSettings.sprintAccelerationForce
-                                   : movementSettings.accelerationForce);
+                if(this.movementSettings.useAccelerationMovement){
+                    //Using acceleration movement
+                    newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) *
+                                   (groundedState == CharacterState.Sprinting
+                                       ? this.movementSettings.sprintAccelerationForce
+                                       : movementSettings.accelerationForce);
+                }else{
+                    //Impulsing
+                    var forwardMod = Mathf.Max(0, dirDot);
+                    var addedForce = groundedState == CharacterState.Sprinting
+                                    ? this.movementSettings.sprintAccelerationForce
+                                    : movementSettings.accelerationForce;
+                    if(flatVelMagnitude+addedForce < currentMoveSnapshot.currentSpeed){
+                        forwardMod = 1;
+                    }
+
+                    //Apply the force
+                    newVelocity += normalizedMoveDir * forwardMod * addedForce;
+
+                    //Never get faster than you've been impulsed
+                    var flatVel = Vector3.ClampMagnitude(new Vector3(newVelocity.x, 0, newVelocity.z), Mathf.Max(addedForce, flatVelMagnitude));
+                    newVelocity.x = flatVel.x;
+                    newVelocity.z = flatVel.z;
+                }
             }
 
             //print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
@@ -1178,6 +1197,7 @@ namespace Code.Player.Character.MovementSystems.Character
         }
         
         public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
+            moveDir = moveDir.normalized;
             var moveDirMode = (MoveDirectionMode)moveDirModeInt;
             switch (moveDirMode) {
                 case MoveDirectionMode.World:
