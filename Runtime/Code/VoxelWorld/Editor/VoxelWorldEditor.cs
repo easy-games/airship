@@ -233,9 +233,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         //Add selection handler
         Selection.selectionChanged += OnSelectionChanged;
 
-        //Add a handler for the gizmo refresh event
-        SceneView.duringSceneGui += GizmoRefreshEvent;
-
         EditorApplication.update += OnEditorUpdate;
 
         //Save handler
@@ -509,8 +506,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             world.FullWorldUpdate();
         }
     }
+    
+    private void OnEnable() {
+        SceneView.duringSceneGui += GizmoRefreshEvent;
+    }
 
     private void OnDisable() {
+        SceneView.duringSceneGui -= GizmoRefreshEvent;
+        
         CleanupHandles();
     }
 
@@ -984,6 +987,10 @@ public class VoxelWorldEditorToolBase : EditorTool {
         buttonActive = true;
     }
 
+    private void OnDisable() {
+        buttonActive = false;
+    }
+
     public override void OnWillBeDeactivated() {
         buttonActive = false;
     }
@@ -1010,6 +1017,10 @@ public class VoxelWorldSelectionToolBase : EditorTool {
 
     public override void OnActivated() {
         buttonActive = true;
+    }
+
+    private void OnDisable() {
+        buttonActive = false;
     }
 
     public override void OnWillBeDeactivated() {
@@ -1039,6 +1050,10 @@ public class VoxelWorldPaintBucketToolBase : EditorTool {
         buttonActive = true;
     }
 
+    private void OnDisable() {
+        buttonActive = false;
+    }
+
     public override void OnWillBeDeactivated() {
         buttonActive = false;
     }
@@ -1064,6 +1079,10 @@ public class VoxelWorldBrushToolBase : EditorTool {
 
     public override void OnActivated() {
         buttonActive = true;
+    }
+
+    private void OnDisable() {
+        buttonActive = false;
     }
 
     public override void OnWillBeDeactivated() {

@@ -131,15 +131,17 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 //Select this
                 selection.gameObject.SetActive(true);
                 Selection.activeGameObject = selection.gameObject;
+                Debug.Log("select.1");
             }
 
-            if (VoxelWorldEditorToolBase.buttonActive == true) {
+            if (VoxelWorldEditorToolBase.buttonActive) {
                 //If we're not in selection mode, disable the selection zone
                 selection = world.GetComponentInChildren<SelectionZone>();
 
                 if (selection) {
                     //Select the world
                     Selection.activeGameObject = world.gameObject;
+                    Debug.Log("select.2");
                     //disable it
                     selection.gameObject.SetActive(false);
 
