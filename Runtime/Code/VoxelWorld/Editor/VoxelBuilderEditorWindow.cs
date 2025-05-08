@@ -131,15 +131,17 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 //Select this
                 selection.gameObject.SetActive(true);
                 Selection.activeGameObject = selection.gameObject;
+                Debug.Log("select.1");
             }
 
-            if (VoxelWorldEditorToolBase.buttonActive == true) {
+            if (VoxelWorldEditorToolBase.buttonActive) {
                 //If we're not in selection mode, disable the selection zone
                 selection = world.GetComponentInChildren<SelectionZone>();
 
                 if (selection) {
                     //Select the world
                     Selection.activeGameObject = world.gameObject;
+                    Debug.Log("select.2");
                     //disable it
                     selection.gameObject.SetActive(false);
 
@@ -150,7 +152,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             //Show a foldable help box
             EditorGUILayout.HelpBox(
-                "Left click to add\nShift+click to delete\nCtrl+click for repeat placement\nA to rotate highlighted block",
+                "Left click to add\nShift+click to delete\nCtrl+click for repeat placement\nG to rotate highlighted block",
                 MessageType.Info);
 
             //active = EditorGUILayout.Toggle("Active", active);
