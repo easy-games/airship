@@ -1115,6 +1115,7 @@ namespace VoxelWorldStuff {
                         }
 
                         var lodOffset = 0; // How much do we offset lod index for default placement. 
+                        var placeBlockWithPerFaceMaterial = true; // We set this to false when using a quarter block definition for generating a normal block
                         switch (block.definition.contextStyle) {
                             case VoxelBlocks.ContextStyle.Prefab:
                                 continue;
@@ -1124,6 +1125,11 @@ namespace VoxelWorldStuff {
                                 }
                             break;
                             case VoxelBlocks.ContextStyle.QuarterBlocks:
+                                // If we're using simplified voxels skip the quarter block building
+                                if (world.useSimplifiedVoxels) break;
+                                
+                                placeBlockWithPerFaceMaterial = false;
+                                
                                 InitDetailMeshes();
                                 lodOffset = 1;
                                 if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, detailMeshData[0], world, origin, damageUv, voxelColor, scale, flip) == true) {
@@ -1185,7 +1191,7 @@ namespace VoxelWorldStuff {
                         }
                         
                         //where we put this mesh is variable!
-                        if (block.mesh != null) {
+                        if (block.mesh != null ) {
                             int rotation = 0;
                             if (block.definition.randomRotation) {
                                 rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
@@ -1245,7 +1251,7 @@ namespace VoxelWorldStuff {
                             if (solid == false && otherBlockIndex != blockIndex) {
                                 Rect uvRect = block.GetUvsForFace(faceIndex);
 
-                                int faceMatId = lodOffset == 0 ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
+                                int faceMatId = placeBlockWithPerFaceMaterial ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
                                 faceMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
                                 if (subMesh == null) {
                                     subMesh = new SubMesh(faceMatId);

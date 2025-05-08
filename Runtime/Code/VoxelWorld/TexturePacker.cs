@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Profiling;
 
@@ -21,20 +22,16 @@ public class TexturePacker
 
     public void Dispose()
     {
-        // Debug.Log("Dispose.1");
-        // if (diffuse != null)
-        // {
-        //     Debug.Log("Dispose.1.a");
-        //     diffuse.Release();
-        //     diffuse = null;
-        // }
-        // if (normals != null)
-        // {
-        //     Debug.Log("Dispose.1.b");
-        //     normals.Release();
-        //     normals = null;
-        // }
-        // Debug.Log("Dispose.2");
+        if (diffuse != null)
+        {
+            diffuse.Release();
+            diffuse = null;
+        }
+        if (normals != null)
+        {
+            normals.Release();
+            normals = null;
+        }
     }
 
     public class TextureSet
@@ -265,15 +262,14 @@ public class TexturePacker
         }
         //print the total time elapsed
         // Debug.Log("Atlas generation took " + (Time.realtimeSinceStartup - startTime) + " seconds");
-
+        
         RenderTexture.active = activeRt;
         
-        diffuse.Release();
-        normals.Release();
+        // diffuse.Release();
+        // normals.Release();
         
         Profiler.EndSample();
     }
-
  
     public static void CustomBlit(RenderTexture renderTarget, Texture sourceTexture, Material material, int destX, int destY, int destWidth, int destHeight, int srcX = 0, int srcY = 0, int srcWidth = -1, int srcHeight = -1)
     {

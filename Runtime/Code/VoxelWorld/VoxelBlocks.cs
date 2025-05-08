@@ -669,7 +669,7 @@ public class VoxelBlocks : MonoBehaviour {
             }
         }
         
-        atlasMaterial = Resources.Load<Material>("VoxelWorldURP");
+        atlasMaterial = Resources.Load<Material>("VoxelWorldMatURP");
         
         /*foreach (var stringContent in contentsOfBlockDefines) {
             XmlDocument xmlDoc = new XmlDocument();
