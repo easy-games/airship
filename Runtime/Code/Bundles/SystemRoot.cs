@@ -36,6 +36,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	public static bool startedLoadingExtraBundle = false;
 	public static bool preWarmedCoreShaders = false;
 	public AssetBundle coreMaterialsAssetBundle;
+	private bool loadInProgress = false;
 
 	private void Awake() {
 		DontDestroyOnLoad(this);
@@ -142,12 +143,21 @@ public class SystemRoot : Singleton<SystemRoot> {
 	/// <param name="forceUnloadAll">If false, we attempt to keep packages that are already loaded in place (instead of unloading and re-loading them)</param>
 	/// <returns></returns>
 	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true, bool compileLuaOnClient = false, Action<string> onLoadingScreenStep = null) {
+		if (this.loadInProgress) {
+			Debug.LogWarning("Tried to load packages when load was already in progress. Waiting...");
+			while (this.loadInProgress) {
+				yield return null;
+			}
+		}
+		this.loadInProgress = true;
+		
 #if AIRSHIP_PLAYER
 		print("Packages to load:");
 		for (int i = 0; i < packages.Count; i++) {
 			print($"  {i}. {packages[i].id} (Assets v{packages[i].assetVersion}) (Code v{packages[i].codeVersion})");
 		}
 #endif
+		
 		//
 		// print("Already loaded asset bundles:");
 		// {
@@ -201,6 +211,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 					}
 					if (zip == null) {
 						Debug.LogError("Zip was null. This is bad.");
+						this.loadInProgress = false;
 						yield break;
 					}
 
@@ -396,6 +407,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 		}
 
+		this.loadInProgress = false;
 #if AIRSHIP_PLAYER
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + " ms.");
 #endif

@@ -244,7 +244,11 @@ public class MainMenuSceneManager : MonoBehaviour {
             // Delete core packages
             var path = Path.Combine(Application.persistentDataPath, "Packages", "@Easy");
             if (Directory.Exists(path)) {
-                Directory.Delete(path, true);
+                try {
+                    Directory.Delete(path, true);
+                } catch (Exception e) {
+                    Debug.LogError(e);
+                }
             }
 
             // yield return SceneManager.UnloadSceneAsync("MainMenu");
