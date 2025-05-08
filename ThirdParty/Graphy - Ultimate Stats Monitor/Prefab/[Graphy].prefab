@@ -630,7 +630,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.49019608}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.7019608}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -657,7 +657,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 785040300544555607, guid: 6387d68cbe02d2d4fb8912f794606585, type: 3}
       propertyPath: m_Color.a
-      value: 0.49019608
+      value: 0.7019608
       objectReference: {fileID: 0}
     - target: {fileID: 824167088385395553, guid: 6387d68cbe02d2d4fb8912f794606585, type: 3}
       propertyPath: m_Pivot.x
@@ -969,7 +969,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6467840249286285167, guid: fed2d45066a6d2a4191aa0c744a03147, type: 3}
       propertyPath: m_Color.a
-      value: 0.49019608
+      value: 0.7019608
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

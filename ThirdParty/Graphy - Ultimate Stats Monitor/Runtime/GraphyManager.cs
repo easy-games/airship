@@ -100,7 +100,7 @@ namespace Tayx.Graphy {
         [SerializeField] private bool m_keepAlive = true;
 
         [SerializeField] private bool m_background = true;
-        [SerializeField] private Color m_backgroundColor = new Color(0, 0, 0, 0.3f);
+        [SerializeField] private Color m_backgroundColor = new Color(0, 0, 0, 0.6f);
 
         [SerializeField] private bool m_enableHotkeys = true;
 

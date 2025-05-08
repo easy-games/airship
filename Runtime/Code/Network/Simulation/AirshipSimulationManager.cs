@@ -269,7 +269,7 @@ namespace Code.Network.Simulation
         private void PerformResimulation(double baseTime)
         {
             Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTime}");
-            G_ResimMonitor.FrameResimValue = 1;
+            G_ResimMonitor.FrameResimValue = 100;
             
             if (replaying)
             {

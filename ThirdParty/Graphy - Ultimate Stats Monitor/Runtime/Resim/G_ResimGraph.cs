@@ -111,9 +111,10 @@ namespace Tayx.Graphy.Resim {
                 }
             }
 
-            m_highestFps = m_highestFps < 1 || m_highestFps <= currentMaxFps ? currentMaxFps : m_highestFps - 1;
-
-            m_highestFps = m_highestFps > 0 ? m_highestFps : 1;
+            // m_highestFps = m_highestFps < 1 || m_highestFps <= currentMaxFps ? currentMaxFps : m_highestFps - 1;
+            //
+            // m_highestFps = m_highestFps > 0 ? m_highestFps : 1;
+            m_highestFps = 100;
 
             if (m_shaderGraph.ShaderArrayValues == null) {
                 m_fpsArray = new int[m_resolution];
@@ -131,8 +132,8 @@ namespace Tayx.Graphy.Resim {
             m_shaderGraph.Average = m_resimMonitor.AverageFPS / m_highestFps;
             m_shaderGraph.UpdateAverage();
 
-            m_shaderGraph.GoodThreshold = (float)m_graphyManager.GoodFPSThreshold / m_highestFps;
-            m_shaderGraph.CautionThreshold = (float)m_graphyManager.CautionFPSThreshold / m_highestFps;
+            m_shaderGraph.GoodThreshold = 0;
+            m_shaderGraph.CautionThreshold = 0;
             m_shaderGraph.UpdateThresholds();
         }
 

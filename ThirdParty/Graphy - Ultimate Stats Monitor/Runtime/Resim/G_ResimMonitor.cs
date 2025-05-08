@@ -51,7 +51,7 @@ namespace Tayx.Graphy.Resim {
             // Update fps and ms
 
             CurrentResim = FrameResimValue;
-            FrameResimValue = 100;
+            FrameResimValue = 1;
 
             // Update avg fps
 
