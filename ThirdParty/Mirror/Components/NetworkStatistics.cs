@@ -141,54 +141,54 @@ namespace Mirror
             serverIntervalSentBytes = 0;
         }
 
-        void OnGUI()
-        {
-            // only show if either server or client active
-            if (NetworkClient.active || NetworkServer.active)
-            {
-                // create main GUI area
-                // 120 is below NetworkManager HUD in all cases.
-                GUILayout.BeginArea(new Rect(10, 120, 215, 300));
-
-                // show client / server stats if active
-                if (NetworkClient.active) OnClientGUI();
-                if (NetworkServer.active) OnServerGUI();
-
-                // end of GUI area
-                GUILayout.EndArea();
-            }
-        }
-
-        void OnClientGUI()
-        {
-            // background
-            GUILayout.BeginVertical("Box");
-            GUILayout.Label("<b>Client Statistics</b>");
-
-            // sending ("msgs" instead of "packets" to fit larger numbers)
-            GUILayout.Label($"Send: {clientSentPacketsPerSecond} msgs @ {Utils.PrettyBytes(clientSentBytesPerSecond)}/s");
-
-            // receiving ("msgs" instead of "packets" to fit larger numbers)
-            GUILayout.Label($"Recv: {clientReceivedPacketsPerSecond} msgs @ {Utils.PrettyBytes(clientReceivedBytesPerSecond)}/s");
-
-            // end background
-            GUILayout.EndVertical();
-        }
-
-        void OnServerGUI()
-        {
-            // background
-            GUILayout.BeginVertical("Box");
-            GUILayout.Label("<b>Server Statistics</b>");
-
-            // sending ("msgs" instead of "packets" to fit larger numbers)
-            GUILayout.Label($"Send: {serverSentPacketsPerSecond} msgs @ {Utils.PrettyBytes(serverSentBytesPerSecond)}/s");
-
-            // receiving ("msgs" instead of "packets" to fit larger numbers)
-            GUILayout.Label($"Recv: {serverReceivedPacketsPerSecond} msgs @ {Utils.PrettyBytes(serverReceivedBytesPerSecond)}/s");
-
-            // end background
-            GUILayout.EndVertical();
-        }
+        // void OnGUI()
+        // {
+        //     // only show if either server or client active
+        //     if (NetworkClient.active || NetworkServer.active)
+        //     {
+        //         // create main GUI area
+        //         // 120 is below NetworkManager HUD in all cases.
+        //         GUILayout.BeginArea(new Rect(10, 120, 215, 300));
+        //
+        //         // show client / server stats if active
+        //         if (NetworkClient.active) OnClientGUI();
+        //         if (NetworkServer.active) OnServerGUI();
+        //
+        //         // end of GUI area
+        //         GUILayout.EndArea();
+        //     }
+        // }
+        //
+        // void OnClientGUI()
+        // {
+        //     // background
+        //     GUILayout.BeginVertical("Box");
+        //     GUILayout.Label("<b>Client Statistics</b>");
+        //
+        //     // sending ("msgs" instead of "packets" to fit larger numbers)
+        //     GUILayout.Label($"Send: {clientSentPacketsPerSecond} msgs @ {Utils.PrettyBytes(clientSentBytesPerSecond)}/s");
+        //
+        //     // receiving ("msgs" instead of "packets" to fit larger numbers)
+        //     GUILayout.Label($"Recv: {clientReceivedPacketsPerSecond} msgs @ {Utils.PrettyBytes(clientReceivedBytesPerSecond)}/s");
+        //
+        //     // end background
+        //     GUILayout.EndVertical();
+        // }
+        //
+        // void OnServerGUI()
+        // {
+        //     // background
+        //     GUILayout.BeginVertical("Box");
+        //     GUILayout.Label("<b>Server Statistics</b>");
+        //
+        //     // sending ("msgs" instead of "packets" to fit larger numbers)
+        //     GUILayout.Label($"Send: {serverSentPacketsPerSecond} msgs @ {Utils.PrettyBytes(serverSentBytesPerSecond)}/s");
+        //
+        //     // receiving ("msgs" instead of "packets" to fit larger numbers)
+        //     GUILayout.Label($"Recv: {serverReceivedPacketsPerSecond} msgs @ {Utils.PrettyBytes(serverReceivedBytesPerSecond)}/s");
+        //
+        //     // end background
+        //     GUILayout.EndVertical();
+        // }
     }
 }

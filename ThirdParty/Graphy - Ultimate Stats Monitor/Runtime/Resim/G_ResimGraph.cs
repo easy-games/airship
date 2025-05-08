@@ -11,6 +11,7 @@
  * Attribution is not required, but it is always welcomed!
  * -------------------------------------*/
 
+using Mirror;
 using Tayx.Graphy.Graph;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,6 +29,10 @@ namespace Tayx.Graphy.Resim {
         [SerializeField] private bool m_isInitialized = false;
 
         #endregion
+
+        public NetworkStatistics networkStatistics;
+        public Text clientSendRate;
+        public Text clientRecvRate;
 
         #region Variables -> Private
 
@@ -49,6 +54,9 @@ namespace Tayx.Graphy.Resim {
 
         private void Update() {
             UpdateGraph();
+
+            this.clientSendRate.text = $"{Mirror.Utils.PrettyBytes(this.networkStatistics.clientSentBytesPerSecond)}/s";
+            this.clientRecvRate.text = $"{Mirror.Utils.PrettyBytes(this.networkStatistics.clientReceivedBytesPerSecond)}/s";
         }
 
         #endregion
