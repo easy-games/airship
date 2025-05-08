@@ -145,6 +145,10 @@ namespace Code.Network.Simulation
             // and capturing snapshots of the interpolated state on its own timeline.
             var time = NetworkServer.active ? NetworkTime.time : Time.unscaledTimeAsDouble;
             
+            // Update debug overlay
+            var buffer = NetworkClient.bufferTime / Math.Min(Time.timeScale, 1);
+            G_ResimMonitor.FrameObserverBuffer = buffer;
+            
             if (!isActive) return;
             if (Physics.simulationMode != SimulationMode.Script) return;
             

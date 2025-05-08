@@ -14,6 +14,7 @@
 using System;
 using System.Xml.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 namespace Tayx.Graphy.Resim {
@@ -29,6 +30,7 @@ namespace Tayx.Graphy.Resim {
         private short m_indexSample = 0;
 
         public static short FrameResimValue = 0;
+        public static double FrameObserverBuffer = 0;
 
         #endregion
 
@@ -38,6 +40,8 @@ namespace Tayx.Graphy.Resim {
         public short AverageFPS { get; private set; } = 0;
         public short OnePercentFPS { get; private set; } = 0;
         public short Zero1PercentFps { get; private set; } = 0;
+
+        [SerializeField] public Text observerBufferText;
 
         #endregion
 
@@ -52,6 +56,7 @@ namespace Tayx.Graphy.Resim {
 
             CurrentResim = FrameResimValue;
             FrameResimValue = 1;
+            this.observerBufferText.text = $"{Math.Round(FrameObserverBuffer * 1000)} ms";
 
             // Update avg fps
 
