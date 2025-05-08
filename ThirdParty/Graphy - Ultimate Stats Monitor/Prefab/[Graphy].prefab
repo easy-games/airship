@@ -440,7 +440,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: client send rate
+  m_Text: client send
 --- !u!114 &9078297077908515683
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1240,7 +1240,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: client recv rate
+  m_Text: client recv
 --- !u!114 &6698575406369578841
 MonoBehaviour:
   m_ObjectHideFlags: 0
