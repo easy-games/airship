@@ -18,6 +18,7 @@ using Tayx.Graphy.Fps;
 using Tayx.Graphy.Ram;
 using Tayx.Graphy.Utils;
 using Tayx.Graphy.Advanced;
+using Tayx.Graphy.Resim;
 using Tayx.Graphy.Utils.NumString;
 
 #if GRAPHY_NEW_INPUT
@@ -136,6 +137,9 @@ namespace Tayx.Graphy {
         [Range(10, 300)] [SerializeField] private int m_fpsGraphResolution = 150;
 
         [Range(1, 200)] [SerializeField] private int m_fpsTextUpdateRate = 3; // 3 updates per sec.
+        
+        // Resim ---------------------------------------------------------------------------
+        [SerializeField] private ModuleState m_resimModuleState = ModuleState.FULL;
 
         // Ram ---------------------------------------------------------------------------
 
@@ -187,10 +191,12 @@ namespace Tayx.Graphy {
         private G_RamManager m_ramManager = null;
         private G_AudioManager m_audioManager = null;
         private G_AdvancedData m_advancedData = null;
+        private G_ResimManager m_resimManager = null;
 
         private G_FpsMonitor m_fpsMonitor = null;
         private G_RamMonitor m_ramMonitor = null;
         private G_AudioMonitor m_audioMonitor = null;
+        private G_ResimMonitor m_resimMonitor = null;
 
         private ModulePreset m_modulePresetState = ModulePreset.FPS_BASIC_ADVANCED_FULL;
 
@@ -239,6 +245,7 @@ namespace Tayx.Graphy {
                 m_fpsManager.SetPosition(m_graphModulePosition);
                 m_ramManager.SetPosition(m_graphModulePosition);
                 m_audioManager.SetPosition(m_graphModulePosition);
+                m_resimManager.SetPosition(m_graphModulePosition);
             }
         }
 
@@ -251,6 +258,14 @@ namespace Tayx.Graphy {
             set {
                 m_fpsModuleState = value;
                 m_fpsManager.SetState(m_fpsModuleState);
+            }
+        }
+
+        public ModuleState ResimModuleState {
+            get { return m_resimModuleState; }
+            set {
+                m_resimModuleState = value;
+                m_resimManager.SetState(m_resimModuleState);
             }
         }
 
@@ -688,6 +703,7 @@ namespace Tayx.Graphy {
                     m_ramManager.RestorePreviousState();
                     m_audioManager.RestorePreviousState();
                     m_advancedData.RestorePreviousState();
+                    m_resimManager.RestorePreviousState();
 
                     m_active = true;
                 }
@@ -703,6 +719,7 @@ namespace Tayx.Graphy {
                 m_ramManager.SetState(ModuleState.OFF);
                 m_audioManager.SetState(ModuleState.OFF);
                 m_advancedData.SetState(ModuleState.OFF);
+                m_resimManager.SetState(ModuleState.OFF);
 
                 m_active = false;
             }
@@ -720,11 +737,13 @@ namespace Tayx.Graphy {
             m_fpsMonitor = GetComponentInChildren(typeof(G_FpsMonitor), true) as G_FpsMonitor;
             m_ramMonitor = GetComponentInChildren(typeof(G_RamMonitor), true) as G_RamMonitor;
             m_audioMonitor = GetComponentInChildren(typeof(G_AudioMonitor), true) as G_AudioMonitor;
+            m_resimMonitor = GetComponentInChildren(typeof(G_ResimMonitor), true) as G_ResimMonitor;
 
             m_fpsManager = GetComponentInChildren(typeof(G_FpsManager), true) as G_FpsManager;
             m_ramManager = GetComponentInChildren(typeof(G_RamManager), true) as G_RamManager;
             m_audioManager = GetComponentInChildren(typeof(G_AudioManager), true) as G_AudioManager;
             m_advancedData = GetComponentInChildren(typeof(G_AdvancedData), true) as G_AdvancedData;
+            m_resimManager = GetComponentInChildren(typeof(G_ResimManager), true) as G_ResimManager;
 
             m_fpsManager.SetPosition(m_graphModulePosition);
             m_ramManager.SetPosition(m_graphModulePosition);

@@ -309,10 +309,10 @@ namespace Tayx.Graphy
             );
 
             // This is a neat trick to hide Graphy in the Scene if it's going to be deactivated in play mode so that it doesn't use screen space.
-            if (!Application.isPlaying)
-            {
-                m_target.GetComponent<Canvas>().enabled = m_enableOnStartup.boolValue;
-            }
+            // if (!Application.isPlaying)
+            // {
+            //     m_target.GetComponent<Canvas>().enabled = m_enableOnStartup.boolValue;
+            // }
 
             m_keepAlive.boolValue = EditorGUILayout.Toggle
             (

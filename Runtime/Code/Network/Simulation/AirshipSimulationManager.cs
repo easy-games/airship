@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Mirror;
+using Tayx.Graphy.Resim;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -268,6 +269,7 @@ namespace Code.Network.Simulation
         private void PerformResimulation(double baseTime)
         {
             Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTime}");
+            G_ResimMonitor.FrameResimValue = 1;
             
             if (replaying)
             {
