@@ -138,18 +138,27 @@ public class AuthManager {
 
         // Opens a browser to log user in
         AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
+        Debug.Log($"AccessTokenResponse: accessToken: {accessTokenResponse.accessToken} | refreshToken: {accessTokenResponse.refreshToken} | scope: {accessTokenResponse.scope} | tokenType: {accessTokenResponse.tokenType} | expiresAt: {accessTokenResponse.expiresAt?.ToString() ?? ""} | issuedAt: {accessTokenResponse.issuedAt?.ToString() ?? ""}");
         if (accessTokenResponse.accessToken != "") {
+#if UNITY_ANDROID
+	        var reqBody = new SignInWithIdpRequest() {
+		        postBody = "access_token=" + accessTokenResponse.accessToken + "&providerId=google.com",
+		        requestUri = "http://localhost",
+		        returnSecureToken = true
+	        };
+#else
             var reqBody = new SignInWithIdpRequest() {
                 postBody = "access_token=" + accessTokenResponse.accessToken + "&providerId=google.com",
                 requestUri = "http://localhost",
                 returnSecureToken = true
             };
+#endif
             
             using UnityWebRequest req = UnityWebRequest.Post(
                 $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key={AirshipApp.firebaseApiKey}",
                 JsonUtility.ToJson(reqBody),
                 "application/json");
-            Debug.Log($"Request Body: {JsonUtility.ToJson(reqBody)}");
+            Debug.Log($"Request Body: {JsonUtility.ToJson(reqBody)}"); // TODO: Remove this line (access token is getting logged)
             await req.SendWebRequest();
             if (req.result == UnityWebRequest.Result.ProtocolError) {
 	            Debug.LogError($"error: [{req.responseCode}] {req.error} - {req.downloadHandler.text}");

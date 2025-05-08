@@ -52,7 +52,7 @@ namespace Cdm.Authentication.Browser {
             PlayGamesPlatform.Instance.ManuallyAuthenticate((status) => {
                 if (status == SignInStatus.Success) {
                     Debug.Log("Play Games authentication successful. Requesting server side access...");
-                    PlayGamesPlatform.Instance.RequestServerSideAccess(false, (code) => {
+                    PlayGamesPlatform.Instance.RequestServerSideAccess(true, (code) => {
                         var uri = new Uri(loginUrl);
                         var query = HttpUtility.ParseQueryString(uri.Query);
                         var state = query.Get("state");
