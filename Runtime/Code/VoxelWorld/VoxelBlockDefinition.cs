@@ -207,8 +207,8 @@ public class VoxelBlockDefinitionEditor : Editor {
             block.halfBlock = EditorGUILayout.Toggle("Half block", block.halfBlock);
         }
         
+        ShowDrawerForTextureSetProperty("Top Texture", "topTexture", block);
         if (block.contextStyle == VoxelBlocks.ContextStyle.Block) {
-            ShowDrawerForTextureSetProperty("Top Texture", "topTexture", block);
             ShowDrawerForTextureSetProperty("Side Texture", "sideTexture", block);
             ShowDrawerForTextureSetProperty("Bottom Texture", "bottomTexture", block);
 

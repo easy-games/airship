@@ -428,6 +428,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         AirshipEditorGUI.HorizontalLine();
+        
+        EditorGUILayout.LabelField("Quality", EditorStyles.boldLabel);
+        world.useSimplifiedVoxels = GUILayout.Toggle(world.useSimplifiedVoxels, new GUIContent("Simplified Voxels", "If enabled quarter blocks will be rendered as default cube voxels."));
 
         EditorGUILayout.LabelField("Editing", EditorStyles.boldLabel);
 

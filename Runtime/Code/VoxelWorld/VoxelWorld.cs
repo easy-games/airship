@@ -12,6 +12,7 @@ using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Assets.Luau;
+using UnityEngine.Serialization;
 
 #if UNITY_EDITOR
 using ParrelSync;
@@ -20,7 +21,10 @@ using UnityEditor;
 
 [ExecuteInEditMode]
 public partial class VoxelWorld : MonoBehaviour {
-
+    /// <summary>
+    /// If enabled all quarter blocks will be replaced with default cube voxels
+    /// </summary>
+    public bool useSimplifiedVoxels = false;
     public const bool runThreaded = true;       //Turn off if you suspect threading problems
     [NonSerialized]
     public bool doVisuals = true;         //Turn on for headless servers

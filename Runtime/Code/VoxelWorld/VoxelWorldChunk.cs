@@ -720,10 +720,16 @@ namespace VoxelWorldStuff {
                         obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
 
-                        if (mesh == null) {
-                            mesh = new Mesh();
-                            mesh.name = "VoxelWorldChunk";
+                        if (mesh != null) {
+                            if (Application.isPlaying) {
+                                Object.Destroy(mesh);
+                            } else {
+                                Object.DestroyImmediate(mesh);
+                            }
                         }
+
+                        mesh = new Mesh();
+                        mesh.name = "VoxelWorldChunk";
                         // mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                         filter = obj.AddComponent<MeshFilter>();
