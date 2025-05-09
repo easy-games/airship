@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Code.Player;
 using Mirror;
 using Tayx.Graphy.Resim;
 using UnityEngine;
@@ -49,7 +50,6 @@ namespace Code.Network.Simulation
     {
         public CheckWorld check;
         public RollbackComplete complete;
-        public NetworkConnectionToClient client;
     }
 
     struct ResimulationRequest
@@ -122,12 +122,21 @@ namespace Code.Network.Simulation
          * event to clean up any data that is no longer required.
          */
         public event Action<object> OnHistoryLifetimeReached;
+        
+        /**
+        * Fired when lag compensated checks should occur. ID of check is passed as the event parameter.
+        */
+        public event Action<object> LagCompensationRequestCheck;
+        /**
+         * Fired when lag compensated check is over and physics can be modified. ID of check is passed as the event parameter.
+         */
+        public event Action<object> LagCompensationRequestComplete;
 
         [NonSerialized] public bool replaying = false;
         
         private bool isActive = false;
         private List<double> tickTimes = new List<double>();
-        private List<LagCompensationRequest> lagCompensationRequests = new();
+        private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
 
         public void ActivateSimulationManager()
@@ -185,34 +194,48 @@ namespace Code.Network.Simulation
             // Note: This process is placed after snapshot processing so that changes made to physics (like an impulse)
             // are processed on the _next_ tick. This is safe because the server never resimulates.
             var processedLagCompensation = false;
-            foreach (var request in this.lagCompensationRequests)
+            foreach (var entry in this.lagCompensationRequests)
             {
                 processedLagCompensation = true;
-                try
+                foreach (var request in entry.Value)
                 {
-                   // Debug.LogWarning("Server lag compensation rolling back for client " + request.client.connectionId);
-                    OnLagCompensationCheck?.Invoke(request.client.connectionId, time,
-                        request.client.rtt);
-                    request.check();
+                    try
+                    {
+                        Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
+                        OnLagCompensationCheck?.Invoke(entry.Key.connectionId, time,
+                            entry.Key.rtt);
+                        request.check();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError(e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Debug.LogError(e);
-                }
+               
             }
 
             // If we processed lag compensation, we have some additional work to do
             if (processedLagCompensation)
             {
-                // Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
+                Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
                 // Reset back to the server view of the world at the current time.
                 OnSetSnapshot?.Invoke(time);
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
-                while (this.lagCompensationRequests.Count > 0)
+                foreach (var entry in this.lagCompensationRequests)
                 {
-                    this.lagCompensationRequests[0].complete();
-                    this.lagCompensationRequests.RemoveAt(0);
+                    foreach (var request in entry.Value)
+                    {
+                        try
+                        {
+                            request.complete();
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogError(e);
+                        }
+                    }
                 }
+                this.lagCompensationRequests.Clear();
             }
 
             // Add our completed tick time into our history
@@ -237,12 +260,38 @@ namespace Code.Network.Simulation
         public void ScheduleLagCompensation(NetworkConnectionToClient client, CheckWorld checkCallback,
             RollbackComplete completeCallback)
         {
-            this.lagCompensationRequests.Add(new LagCompensationRequest()
+            List<LagCompensationRequest> list;
+            if (!this.lagCompensationRequests.TryGetValue(client, out list))
+            {
+                list = new();
+                this.lagCompensationRequests.Add(client, list);
+            }
+
+            list.Add(new LagCompensationRequest()
             {
                 check = checkCallback,
                 complete = completeCallback,
-                client = client,
             });
+        }
+
+        /**
+         * Schedules lag compensation for the provided ID. Used by TS to call ScheduleLagCompensation for a player in the Player.ts file.
+         */
+        public string RequestLagCompensationCheck(int connectionId)
+        {
+            if (NetworkServer.connections.TryGetValue(connectionId, out var connection))
+            {
+                string uniqueId = Guid.NewGuid().ToString();
+                this.ScheduleLagCompensation(connection, () => {
+                    this.LagCompensationRequestCheck?.Invoke(uniqueId);
+                }, () =>
+                {
+                    this.LagCompensationRequestComplete?.Invoke(uniqueId);
+                });
+                return uniqueId;
+            }
+
+            return "";
         }
 
         /**

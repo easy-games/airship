@@ -117,15 +117,6 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public event Action<object, object> OnCompareSnapshots;
         
-        /**
-         * Fired when lag compensated checks should occur. ID of check is passed as the event parameter.
-         */
-        public event Action<object> OnLagCompensationCheck;
-        /**
-         * Fired when lag compensated check is over and physics can be modified. ID of check is passed as the event parameter.
-         */
-        public event Action<object> OnLagCompensationComplete;
-        
         public event Action<object> OnMoveDirectionChanged;
 
         /// <summary>
@@ -1181,19 +1172,6 @@ namespace Code.Player.Character.MovementSystems.Character
             });
 
             return true;
-        }
-
-        public string RequestLagCompensationCheck()
-        {
-            string uniqueId = Guid.NewGuid().ToString();
-            AirshipSimulationManager.Instance.ScheduleLagCompensation(netIdentity.connectionToClient, () =>
-            {
-                this.OnLagCompensationCheck?.Invoke(uniqueId);
-            }, () =>
-            {
-                this.OnLagCompensationComplete?.Invoke(uniqueId);
-            });
-            return uniqueId;
         }
         
         public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
