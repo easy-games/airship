@@ -222,6 +222,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(GraphicsSettings),
             typeof(UniversalRenderPipelineAsset),
             typeof(WheelFrictionCurve),
+            typeof(WheelHit),
 
             // Mirror
             typeof(NetworkServer),
@@ -333,7 +334,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.MonoBehaviour$",
             "\\.InternalCameraScreenshotRecorder$",
             "\\.OcclusionCam$",
-            "\\.AirshipUniVoiceNetwork$"
+            "\\.AirshipUniVoiceNetwork$",
+            "\\.WheelFrictionCurve$",
         };
 
         var options = new TypeScriptOptions
