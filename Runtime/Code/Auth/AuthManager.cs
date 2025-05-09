@@ -101,16 +101,6 @@ public class AuthManager {
         redirectUri = "gg.easy.airship:/oauth2";
 #endif
 #endif
-	   
-#if UNITY_ANDROID && !UNITY_EDITOR
-#if AIRSHIP_STAGING
-		// TODO
-#else
-		clientId = "457451560440-htottasd1788to2boc7lg08jrkduotg1.apps.googleusercontent.com";
-		clientSecret = null;
-	    redirectUri = "https://airship.gg/oauth2";
-#endif
-#endif
 
         var auth = new GoogleAuth(new AuthorizationCodeFlow.Configuration() {
             clientId = clientId,
@@ -128,8 +118,14 @@ public class AuthManager {
 			RequestIdToken = true,
 			RequestAuthCode = true,
 			WebClientId = clientId,
+#if UNITY_EDITOR || UNITY_STANDALONE
 			ClientSecret = clientSecret,
+#endif
         };
+        
+#if AIRSHIP_ANDROID_DEBUG
+        GoogleSignIn.DefaultInstance.EnableDebugLogging(true);
+#endif
 
         var accessToken = "";
         
@@ -139,7 +135,8 @@ public class AuthManager {
 			return (false, err);
 		}
 
-		accessToken = user.AuthCode;
+		var accessTokenRes = await auth.ExchangeCodeForAccessTokenAsync($"http://localhost?code={user.AuthCode}");
+		accessToken = accessTokenRes.accessToken;
 #else
 
         Debug.Log($"Redirect URI: {redirectUri}");
