@@ -221,6 +221,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(QualitySettings),
             typeof(GraphicsSettings),
             typeof(UniversalRenderPipelineAsset),
+            typeof(WheelFrictionCurve),
 
             // Mirror
             typeof(NetworkServer),

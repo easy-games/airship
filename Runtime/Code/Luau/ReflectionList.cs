@@ -148,6 +148,7 @@ namespace Luau {
             [typeof(ScrollRect)] = LuauContextAll,
             [typeof(Text)] = LuauContextAll,
             [typeof(RectMask2D)] = LuauContextAll,
+            [typeof(WheelFrictionCurve)] = LuauContextAll,
 
             // Particles
             [typeof(ParticleSystem)] = LuauContextAll,

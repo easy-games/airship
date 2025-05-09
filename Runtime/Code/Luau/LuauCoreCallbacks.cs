@@ -780,6 +780,8 @@ public partial class LuauCore : MonoBehaviour {
             return LuauError(thread, "ERROR - " + propName + " get property not found on class " + staticClassName);
         }
         else {
+            // Not a static class object:
+            
             // Profiler.BeginSample("GetRef");
             System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
             // Profiler.EndSample();
