@@ -5,6 +5,7 @@ using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
 using Code.Http.Internal;
+using Google;
 using JetBrains.Annotations;
 using Proyecto26;
 using RSG;
@@ -120,7 +121,27 @@ public class AuthManager {
             redirectUri = redirectUri,
             scope = "openid email profile",
         });
+
+        GoogleSignIn.Configuration = new GoogleSignInConfiguration() {
+			RequestEmail = true,
+			RequestProfile = true,
+			RequestIdToken = true,
+			RequestAuthCode = true,
+			WebClientId = clientId,
+			ClientSecret = clientSecret,
+        };
+
+        var accessToken = "";
         
+#if UNITY_ANDROID
+		var (user, err) = await AuthWithGoogleAndroid();
+		if (err != null) {
+			return (false, err);
+		}
+
+		accessToken = user.AuthCode;
+#else
+
         Debug.Log($"Redirect URI: {redirectUri}");
 
         var crossPlatformBrowser = new CrossPlatformBrowser();
@@ -140,9 +161,11 @@ public class AuthManager {
 
         // Opens a browser to log user in
         AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
-        if (accessTokenResponse.accessToken != "") {
+		accessToken = accessTokenResponse.AccessToken;
+#endif
+        if (accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
-                postBody = "access_token=" + accessTokenResponse.accessToken + "&providerId=google.com",
+                postBody = "access_token=" + accessToken + "&providerId=google.com",
                 requestUri = "http://localhost",
                 returnSecureToken = true
             };
@@ -177,5 +200,30 @@ public class AuthManager {
             Debug.Log("Login cancelled.");
             return (false, ""); // Don't return a display error
         }
-    }
+	}
+
+#if UNITY_ANDROID
+	private static Task<(GoogleSignInUser user, string error)> AuthWithGoogleAndroid() {
+		GoogleSignIn.Configuration.UseGameSignIn = false;
+
+		return GoogleSignIn.DefaultInstance.SignIn().ContinueWith(OnAuthFinished, TaskScheduler.FromCurrentSynchronizationContext());
+	}
+
+	private static (GoogleSignInUser user, string error) OnAuthFinished(Task<GoogleSignInUser> task) {
+		if (task.IsFaulted) {
+			using var enumerator = task.Exception!.InnerExceptions.GetEnumerator();
+			if (enumerator.MoveNext()) {
+				var err = (GoogleSignIn.SignInException)enumerator.Current;
+				return (null, $"{err!.Status}: {err!.Message}");
+			}
+			return (null, "Unknown sign in exception");
+		}
+		
+		if (task.IsCanceled) {
+			return (null, "Sign in cancelled");
+		}
+
+		return (task.Result, null);
+	}
+#endif
 }
