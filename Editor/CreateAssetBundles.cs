@@ -386,7 +386,7 @@ public static class CreateAssetBundles {
 			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
 			PlayerSettings.SetGraphicsAPIs(buildTarget, new GraphicsDeviceType[]
 			{
-				GraphicsDeviceType.OpenGLES3
+				GraphicsDeviceType.Vulkan
 			});
 		} else {
 			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, true);
@@ -531,6 +531,11 @@ public static class CreateAssetBundles {
 	[MenuItem("Airship/Internal/Build iOS Game Bundles")]
 	public static void BuildiOSAssetBundles() {
 		BuildGameAssetBundles(AirshipPlatform.iOS);
+	}
+	
+	[MenuItem("Airship/Internal/Build Android Game Bundles")]
+	public static void BuildAndroidAssetBundles() {
+		BuildGameAssetBundles(AirshipPlatform.Android);
 	}
 #endif
 

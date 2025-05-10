@@ -437,7 +437,7 @@ namespace Editor.Packages {
                         PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
                         PlayerSettings.SetGraphicsAPIs(buildTarget, new GraphicsDeviceType[]
                         {
-                            GraphicsDeviceType.OpenGLES3
+                            GraphicsDeviceType.Vulkan
                         });
                     }
 
