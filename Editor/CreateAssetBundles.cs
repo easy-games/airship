@@ -386,7 +386,7 @@ public static class CreateAssetBundles {
 			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
 			PlayerSettings.SetGraphicsAPIs(buildTarget, new GraphicsDeviceType[]
 			{
-				GraphicsDeviceType.OpenGLES3
+				GraphicsDeviceType.Vulkan
 			});
 		} else {
 			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, true);
