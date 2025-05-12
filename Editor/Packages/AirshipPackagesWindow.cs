@@ -396,10 +396,10 @@ namespace Editor.Packages {
             // Uncomment to just build iOS
             if (isCoreMaterials) {
                 platforms.Clear();
-            //     platforms.Add(AirshipPlatform.iOS);
-            //     platforms.Add(AirshipPlatform.Android);
-                platforms.Add(AirshipPlatform.Windows);
-                platforms.Add(AirshipPlatform.Mac);
+                // platforms.Add(AirshipPlatform.iOS);
+                platforms.Add(AirshipPlatform.Android);
+                // platforms.Add(AirshipPlatform.Windows);
+                // platforms.Add(AirshipPlatform.Mac);
             }
 
             if (!CreateAssetBundles.PrePublishChecks()) {
@@ -437,7 +437,7 @@ namespace Editor.Packages {
                         PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
                         PlayerSettings.SetGraphicsAPIs(buildTarget, new GraphicsDeviceType[]
                         {
-                            GraphicsDeviceType.OpenGLES3
+                            GraphicsDeviceType.Vulkan
                         });
                     }
 

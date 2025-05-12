@@ -334,10 +334,9 @@ public class TypeGenerator : MonoBehaviour
             "\\.MonoBehaviour$",
             "\\.InternalCameraScreenshotRecorder$",
             "\\.OcclusionCam$",
-            "\\.AirshipUniVoiceNetwork$",
-            "\\.WheelFrictionCurve$",
+            "\\.AirshipUniVoiceNetwork$"
         };
-
+        
         var options = new TypeScriptOptions
         {
             ShouldGenerateMethod = (info, definition) => true,
