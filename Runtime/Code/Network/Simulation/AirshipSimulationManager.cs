@@ -126,11 +126,11 @@ namespace Code.Network.Simulation
         /**
         * Fired when lag compensated checks should occur. ID of check is passed as the event parameter.
         */
-        public event Action<object> LagCompensationRequestCheck;
+        public event Action<object> OnLagCompensationRequestCheck;
         /**
          * Fired when lag compensated check is over and physics can be modified. ID of check is passed as the event parameter.
          */
-        public event Action<object> LagCompensationRequestComplete;
+        public event Action<object> OnLagCompensationRequestComplete;
 
         [NonSerialized] public bool replaying = false;
         
@@ -196,28 +196,26 @@ namespace Code.Network.Simulation
             var processedLagCompensation = false;
             foreach (var entry in this.lagCompensationRequests)
             {
-                processedLagCompensation = true;
-                foreach (var request in entry.Value)
+                try
                 {
-                    try
+                    processedLagCompensation = true;
+                    // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
+                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, time, entry.Key.rtt);
+                    foreach (var request in entry.Value)
                     {
-                        Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
-                        OnLagCompensationCheck?.Invoke(entry.Key.connectionId, time,
-                            entry.Key.rtt);
                         request.check();
                     }
-                    catch (Exception e)
-                    {
-                        Debug.LogError(e);
-                    }
                 }
-               
+                catch (Exception e)
+                {
+                    Debug.LogError(e);
+                }
             }
 
             // If we processed lag compensation, we have some additional work to do
             if (processedLagCompensation)
             {
-                Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
+                // Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
                 // Reset back to the server view of the world at the current time.
                 OnSetSnapshot?.Invoke(time);
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
@@ -283,10 +281,10 @@ namespace Code.Network.Simulation
             {
                 string uniqueId = Guid.NewGuid().ToString();
                 this.ScheduleLagCompensation(connection, () => {
-                    this.LagCompensationRequestCheck?.Invoke(uniqueId);
+                    this.OnLagCompensationRequestCheck?.Invoke(uniqueId);
                 }, () =>
                 {
-                    this.LagCompensationRequestComplete?.Invoke(uniqueId);
+                    this.OnLagCompensationRequestComplete?.Invoke(uniqueId);
                 });
                 return uniqueId;
             }
