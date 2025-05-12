@@ -222,6 +222,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(GraphicsSettings),
             typeof(UniversalRenderPipelineAsset),
             typeof(WheelFrictionCurve),
+            typeof(WheelHit),
 
             // Mirror
             typeof(NetworkServer),
@@ -335,7 +336,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.OcclusionCam$",
             "\\.AirshipUniVoiceNetwork$"
         };
-
+        
         var options = new TypeScriptOptions
         {
             ShouldGenerateMethod = (info, definition) => true,

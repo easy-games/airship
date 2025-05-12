@@ -1,9 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Profiling;
 
-public class TexturePacker
+public class TexturePacker : IDisposable
 {
 
     static int anisoLevel = 1;
@@ -13,12 +14,6 @@ public class TexturePacker
 
     public RenderTexture diffuse;
     public RenderTexture normals;
-
-    //destructor
-    ~TexturePacker()
-    {
-        Dispose();
-    }
 
     public void Dispose()
     {

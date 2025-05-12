@@ -398,11 +398,6 @@ public class VoxelBlocks : MonoBehaviour {
         }
     }
 
-    //Destructor
-    ~VoxelBlocks() {
-        atlas?.Dispose();
-    }
-
     private void Clear() {
         blockIdCounter = 0;
         atlasMaterial = null;
@@ -600,6 +595,11 @@ public class VoxelBlocks : MonoBehaviour {
             meshList[i] = meshToAdd;
         }
     }
+
+    private void OnDestroy() {
+        atlas?.Dispose();
+    }
+
     public void Load(bool loadTexturesDirectlyFromDisk = false) {
         //clear everything
         Clear();
