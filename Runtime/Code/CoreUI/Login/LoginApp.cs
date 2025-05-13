@@ -28,6 +28,7 @@ public class LoginApp : MonoBehaviour {
     [SerializeField] public TMP_Text errorMessageText;
     [SerializeField] public LoginButton steamLoginButton;
     [SerializeField] public GameObject quitButton;
+    [SerializeField] public GameObject backButton;
 
     [Header("Mobile")]
     [SerializeField] public Canvas mobileCanvas;
@@ -99,6 +100,10 @@ public class LoginApp : MonoBehaviour {
         this.quitButton.SetActive(Screen.fullScreen);
     }
 
+    public void BackToFirstPage() {
+        this.RouteToPage(this.loginPage, false, false);
+    }
+
     private void CalcLayout() {
         this.screenWidth = Screen.width;
         this.screenHeight = Screen.height;
@@ -146,6 +151,12 @@ public class LoginApp : MonoBehaviour {
         loginPage.SetActive(false);
         pickUsernamePage.SetActive(false);
         pageGameObject.SetActive(true);
+
+        if (this.mobileMode) {
+            this.backButton.SetActive(false);
+        } else {
+            this.backButton.SetActive(pageGameObject != this.loginPage);
+        }
     }   
 
     public async void PressContinueWithGoogle() {

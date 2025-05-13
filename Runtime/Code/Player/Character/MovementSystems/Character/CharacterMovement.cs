@@ -45,6 +45,15 @@ namespace Code.Player.Character.MovementSystems.Character
         public bool drawDebugGizmos_STEPUP = false;
         public bool drawDebugGizmos_STATES= false;
         public bool useExtraLogging = false;
+        
+        [Header("Prediction Correction Interpolation (server auth only)")]
+        [Tooltip("Controls the speed of correction when non-authoritative clients mis-predict their location. Unit is seconds.")]
+        [Range(0, 1)]
+        public float correctionInterpTime = 0.1f;
+
+        [Tooltip(
+            "Controls the maximum magnitude of the correction interp. Mis-predictions larger that this magnitude will instantly teleport the character to the correct location.")]
+        public float correctionMaxMagnitude = 10;
 
         [Header("Visual Variables")]
         public bool autoCalibrateSkiddingSpeed = true;
@@ -60,6 +69,21 @@ namespace Code.Player.Character.MovementSystems.Character
         private CharacterPhysics physics;
         private Transform _cameraTransform;
         private bool _smoothLookVector = false;
+
+        /**
+         * Used for calculating interp for non-authoritative clients. Set to the previous airshipTransform location
+         * OnPause (before resim). Used to calculate difference in simulated and actual position which is then
+         * applied to the airshipTransform.
+         */
+        private Vector3 correctionLastSimulatedPosition = Vector3.zero;
+        /**
+         * The offset applied to the airshipTransform due to correction.
+         */
+        private Vector3 correctionOffset = Vector3.zero;
+        /**
+         * How long since the last correction
+         */
+        private float correctionTime = 0;
 
         #endregion
 
@@ -204,9 +228,39 @@ namespace Code.Player.Character.MovementSystems.Character
                 rigidbody.isKinematic = false;
                 rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
                 rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+                // non-authoritative client functions for interpolating mispredicts
+                if (isClient && mode == NetworkedStateSystemMode.Input)
+                {
+                    AirshipSimulationManager.Instance.OnSetPaused += OnPaused;
+                }
             }
             
             OnSetMode?.Invoke(mode);
+        }
+        
+        public void OnDestroy()
+        {
+            // non-authoritative client
+            if (isClient && mode == NetworkedStateSystemMode.Input)
+            {
+                AirshipSimulationManager.Instance.OnSetPaused -= OnPaused;
+            }
+        }
+        
+        private void OnPaused(bool paused)
+        {
+            if (paused)
+            {
+                this.correctionLastSimulatedPosition = this.airshipTransform.position; // save the last transform position so that we calculate the difference from where the player sees themselves
+            }
+            else
+            {
+                this.correctionTime = 0;
+                var goalPosition = this.rigidbody.position;
+                var difference = this.correctionLastSimulatedPosition - goalPosition; // inverted so that when we apply the difference, we move the airshipTransform back to the original pos
+                this.correctionOffset = (difference.magnitude > correctionMaxMagnitude) ?  Vector3.zero : difference;
+            }
         }
 
         public override void SetCurrentState(CharacterSnapshotData snapshot)
@@ -1115,6 +1169,16 @@ namespace Code.Player.Character.MovementSystems.Character
             }
         }
 
+        public void Update()
+        {
+            if (this.correctionTime < 1)
+            {
+                this.correctionTime += correctionInterpTime == 0 ? 1 : Time.deltaTime / this.correctionInterpTime;
+                this.airshipTransform.localPosition = Vector3.Lerp(this.correctionOffset, Vector3.zero,
+                    this.correctionTime);
+            }
+        }
+
         #region Helpers
 
         private void SnapToY(float newY){
@@ -1444,7 +1508,7 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             // Only used in the client authoritative networking mode.
             if (mode != NetworkedStateSystemMode.Observer) return;
-            OnImpactWithGround(velocity, hitInfo);
+            OnImpactWithGround?.Invoke(velocity, hitInfo);
             SAuthImpactEvent(velocity, hitInfo);
         }
 
