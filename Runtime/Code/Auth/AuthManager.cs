@@ -158,7 +158,7 @@ public class AuthManager {
 
         // Opens a browser to log user in
         AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
-		accessToken = accessTokenResponse.AccessToken;
+		accessToken = accessTokenResponse.accessToken;
 #endif
         if (accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
