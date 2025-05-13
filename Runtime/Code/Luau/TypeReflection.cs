@@ -11,6 +11,8 @@ public class TypeReflection {
         { "RectTransform", typeof(RectTransform) },
         { "Button", typeof(Button) },
         { "Color", typeof(Color) },
+        { "Toggle", typeof(Toggle) },
+        // { "ToggleGroup", typeof(ToggleGroup) }
     };
     private static readonly Dictionary<string, HashSet<string>> _assemblyNamespaceCache = new();
 
