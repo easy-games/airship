@@ -23,7 +23,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
 		public override string ToString()
 		{
-			return "command: " + this.commandNumber + " time: ";//+ this.time;
+			return "command: " + this.commandNumber;
 		}
 
 		public override object Clone()
@@ -31,6 +31,7 @@ namespace Code.Player.Character.MovementSystems.Character
 			return new CharacterInputData()
 			{
 				commandNumber = commandNumber,
+				time = time,
 				moveDir = moveDir,
 				jump = jump,
 				crouch = crouch,

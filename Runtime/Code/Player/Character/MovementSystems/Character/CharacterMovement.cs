@@ -335,7 +335,21 @@ namespace Code.Player.Character.MovementSystems.Character
                     lookVector = this.currentMoveSnapshot.lookVector
                 };
             }
-
+            
+            // If input is disabled, we use default inputs, but we keep customData since we don't know how TS will want to handle that data.
+            // TODO: in the future we might not want to actually overwrite the data passed in by the client. It might be nice for TS to be able
+            // to still read what direction the character wants to move, even if processing that input is disabled.
+            if (this.disableInput)
+            {
+                var replacementCmd = command.Clone() as CharacterInputData;
+                replacementCmd.moveDir = new Vector3();
+                replacementCmd.lookVector = this.currentMoveSnapshot.lookVector;
+                replacementCmd.jump = false;
+                replacementCmd.crouch = false;
+                replacementCmd.sprint = false;
+                command = replacementCmd;
+            }
+            
             OnProcessCommand?.Invoke(command, this.currentMoveSnapshot, replay);
             
             var currentVelocity = this.rigidbody.linearVelocity;
@@ -1360,9 +1374,8 @@ namespace Code.Player.Character.MovementSystems.Character
             this.SetLookVector(lookVector);
         }
         
-        public void SetMovementEnabled(bool isEnabled){
+        public void SetMovementEnabled(bool isEnabled) {
             this.disableInput = !isEnabled;
-            this.netIdentity.enabled = isEnabled;
         }
 
         public void SetDebugFlying(bool flying){
