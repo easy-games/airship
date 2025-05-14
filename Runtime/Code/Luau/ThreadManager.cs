@@ -345,7 +345,7 @@ namespace Luau {
             }
             
             if (s_removalList.Count > 0) {
-                Debug.Log($"Removing threads: {s_removalList.Count}");
+                // Debug.Log($"Removing threads: {s_removalList.Count}");
                 foreach (var threadKey in s_removalList) {
                     RemoveThreadData(threadKey);
                 }
