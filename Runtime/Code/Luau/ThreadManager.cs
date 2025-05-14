@@ -185,6 +185,15 @@ namespace Luau {
 
             return callback;
         }
+        
+        /// <summary>
+        /// Unregisters a callback. This is necessary to allow the associated thread to clean up.
+        /// </summary>
+        /// <returns>True if the callback was successfully removed.</returns>
+        public static bool UnregisterCallback(CallbackWrapper callback) {
+            if (!m_threadData.TryGetValue(callback.thread, out var threadData)) return false;
+            return threadData.m_callbacks.Remove(callback);
+        }
 
         public static LuauSignalWrapper RegisterSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong signalNameHash) {
             var threadData = GetOrCreateThreadData(context, thread, "RegisterSignalWrapper");
@@ -336,7 +345,7 @@ namespace Luau {
             }
             
             if (s_removalList.Count > 0) {
-                Debug.Log($"Removing threads: {s_removalList.Count}");
+                // Debug.Log($"Removing threads: {s_removalList.Count}");
                 foreach (var threadKey in s_removalList) {
                     RemoveThreadData(threadKey);
                 }
