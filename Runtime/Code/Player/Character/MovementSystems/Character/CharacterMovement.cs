@@ -1121,11 +1121,13 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotData snapshotNew)
         {
             this.rigidbody.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
-            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotOld.lookVector;
-            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotNew.lookVector;
+            var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
+            var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
+            if (snapshotOld.lookVector.magnitude == 0) oldLook.z = 0.01f;
+            if (snapshotNew.lookVector.magnitude == 0) newLook.z = 0.01f;
             airshipTransform.rotation = Quaternion.Lerp(
-                Quaternion.LookRotation( new Vector3(oldLook.x, 0.001f, oldLook.z)),
-                Quaternion.LookRotation( new Vector3(newLook.x, 0.001f, newLook.z)),
+                Quaternion.LookRotation(oldLook),
+                Quaternion.LookRotation(newLook),
                 delta);
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
