@@ -1124,8 +1124,8 @@ namespace Code.Player.Character.MovementSystems.Character
             var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotOld.lookVector;
             var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotNew.lookVector;
             airshipTransform.rotation = Quaternion.Lerp(
-                Quaternion.LookRotation( new Vector3(oldLook.x, 0, oldLook.z)),
-                Quaternion.LookRotation( new Vector3(newLook.x, 0, newLook.z)),
+                Quaternion.LookRotation( new Vector3(oldLook.x, 0.001f, oldLook.z)),
+                Quaternion.LookRotation( new Vector3(newLook.x, 0.001f, newLook.z)),
                 delta);
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
