@@ -1114,8 +1114,7 @@ public partial class LuauCore : MonoBehaviour {
 
     public static void DisconnectEvent(int eventId) {
         if (eventConnections.TryGetValue(eventId, out var eventConnection)) {
-            ThreadDataManager.GetThreadDataByPointer(eventConnection.callbackWrapper.thread).m_callbacks
-                .Remove(eventConnection.callbackWrapper);
+            ThreadDataManager.UnregisterCallback(eventConnection.callbackWrapper);
             eventConnection.eventInfo.RemoveEventHandler(eventConnection.target, eventConnection.handler);
             eventConnections.Remove(eventId);
         }
