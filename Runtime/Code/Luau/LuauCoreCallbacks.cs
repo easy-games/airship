@@ -92,6 +92,7 @@ public partial class LuauCore : MonoBehaviour {
         public object target;
         public System.Delegate handler;
         public EventInfo eventInfo;
+        public CallbackWrapper callbackWrapper;
     }
 
     private static Dictionary<PropertyCacheKey, PropertyGetReflectionCache> propertyGetCache = new();
@@ -1113,6 +1114,8 @@ public partial class LuauCore : MonoBehaviour {
 
     public static void DisconnectEvent(int eventId) {
         if (eventConnections.TryGetValue(eventId, out var eventConnection)) {
+            ThreadDataManager.GetThreadDataByPointer(eventConnection.callbackWrapper.thread).m_callbacks
+                .Remove(eventConnection.callbackWrapper);
             eventConnection.eventInfo.RemoveEventHandler(eventConnection.target, eventConnection.handler);
             eventConnections.Remove(eventId);
         }
@@ -1307,6 +1310,7 @@ public partial class LuauCore : MonoBehaviour {
                     target = reflectionObject,
                     handler = d,
                     eventInfo = eventInfo,
+                    callbackWrapper = callbackWrapper
                 };
                 eventConnections.Add(eventConnectionId, eventConnection);
                 // print("added eventConnection (" + eventConnections.Count + "): " + methodName);
