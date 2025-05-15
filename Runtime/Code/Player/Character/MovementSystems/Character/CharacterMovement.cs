@@ -165,7 +165,7 @@ namespace Code.Player.Character.MovementSystems.Character
         // step up + forward constant
         private float forwardMargin = .05f;
         
-        //Input Controls
+        //Input Controls (also updated to match input command on server)
         private bool jumpInput;
         private Vector3 moveDirInput;
         private bool sprintInput;
@@ -179,6 +179,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public CharacterSnapshotData currentMoveSnapshot = new CharacterSnapshotData() {};
         public CharacterAnimationSyncData currentAnimState = new CharacterAnimationSyncData() {};
         private BinaryBlob customSnapshotData;
+        private Vector3 pendingImpulse = new Vector3(); // Impulse that will be applied on the next tick.
 
         #region PUBLIC GET
         public float currentCharacterHeight { get; private set; }
@@ -356,7 +357,7 @@ namespace Code.Player.Character.MovementSystems.Character
             var newVelocity = currentVelocity;
             var isIntersecting = false; // TODO: this was "IsIntersectingWithBlock" which just returned false
             var deltaTime = Time.fixedDeltaTime;
-            var isImpulsing = currentMoveSnapshot.impulseVelocity != Vector3.zero;
+            var isImpulsing = this.pendingImpulse != Vector3.zero;
             var rootPosition = this.rigidbody.position;
 
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
@@ -748,12 +749,12 @@ namespace Code.Player.Character.MovementSystems.Character
                 //impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
 
                 //Apply the impulse to the velocity
-                newVelocity += currentMoveSnapshot.impulseVelocity;
-                currentMoveSnapshot.airborneFromImpulse = !grounded || currentMoveSnapshot.impulseVelocity.y > .01f;
-                currentMoveSnapshot.impulseVelocity = Vector3.zero;
+                newVelocity += this.pendingImpulse;
+                currentMoveSnapshot.airborneFromImpulse = !grounded || this.pendingImpulse.y > .01f;
+                this.pendingImpulse = Vector3.zero;
                 if (isImpulsing)
                 {
-                    print(" isImpulsing: " + isImpulsing + " impulse force: " + currentMoveSnapshot.impulseVelocity + "New Vel: " +
+                    print(" isImpulsing: " + isImpulsing + " impulse force: " + this.pendingImpulse + "New Vel: " +
                           newVelocity);
                 }
             }
@@ -1091,17 +1092,16 @@ namespace Code.Player.Character.MovementSystems.Character
             }
 
             // Handle OnMoveDirectionChanged event
-            if (currentMoveSnapshot.prevMoveDir != command.moveDir)
+            if (this.moveDirInput != command.moveDir)
             {
                 OnMoveDirectionChanged?.Invoke(command.moveDir);
             }
+            this.moveDirInput = command.moveDir;
 
             currentMoveSnapshot.lookVector = command.lookVector;
             currentMoveSnapshot.prevState = currentMoveSnapshot.state;
             currentMoveSnapshot.isCrouching = command.crouch;
-            currentMoveSnapshot.prevMoveDir = command.moveDir;
             currentMoveSnapshot.isGrounded = grounded;
-            currentMoveSnapshot.animGrounded = !inAir || didStepUp;
             currentMoveSnapshot.prevStepUp = didStepUp;
             // currentMoveState.position = rootPosition;
             // currentMoveState.velocity = newVelocity;
@@ -1341,7 +1341,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (mode == NetworkedStateSystemMode.Authority)
             {
                 this.lookVector = moveDirInput; // for server generated commands. Ignored in any other case
-                this.currentMoveSnapshot.lookVector = this.currentMoveSnapshot.prevMoveDir;
+                this.currentMoveSnapshot.lookVector = moveDirInput;
             }
         }
 
@@ -1403,7 +1403,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 RpcAddImpulse(impulse);
                 return;
             }
-            SetImpulse(this.currentMoveSnapshot.impulseVelocity + impulse);
+            SetImpulse(this.pendingImpulse + impulse);
         }
 
         public void SetImpulse(Vector3 impulse){
@@ -1411,7 +1411,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 RpcSetImpulse(impulse);
                 return;
             }
-            currentMoveSnapshot.impulseVelocity = impulse;
+            this.pendingImpulse = impulse;
         }
         
         public void IgnoreGroundCollider(Collider collider, bool ignore){
@@ -1484,7 +1484,7 @@ namespace Code.Player.Character.MovementSystems.Character
             // this.moveDirInput will only get populated when we are the one creating the inputs
             if (mode == NetworkedStateSystemMode.Input) return this.moveDirInput;
             if (mode == NetworkedStateSystemMode.Authority && isClient) return this.moveDirInput;
-            return this.currentMoveSnapshot.prevMoveDir;
+            return this.moveDirInput;
         }
 
         public Vector3 GetPosition()
