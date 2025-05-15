@@ -45,6 +45,15 @@ namespace Code.Player.Character.MovementSystems.Character
         public bool drawDebugGizmos_STEPUP = false;
         public bool drawDebugGizmos_STATES= false;
         public bool useExtraLogging = false;
+        
+        [Header("Prediction Correction Interpolation (server auth only)")]
+        [Tooltip("Controls the speed of correction when non-authoritative clients mis-predict their location. Unit is seconds.")]
+        [Range(0, 1)]
+        public float correctionInterpTime = 0.1f;
+
+        [Tooltip(
+            "Controls the maximum magnitude of the correction interp. Mis-predictions larger that this magnitude will instantly teleport the character to the correct location.")]
+        public float correctionMaxMagnitude = 10;
 
         [Header("Visual Variables")]
         public bool autoCalibrateSkiddingSpeed = true;
@@ -60,6 +69,21 @@ namespace Code.Player.Character.MovementSystems.Character
         private CharacterPhysics physics;
         private Transform _cameraTransform;
         private bool _smoothLookVector = false;
+
+        /**
+         * Used for calculating interp for non-authoritative clients. Set to the previous airshipTransform location
+         * OnPause (before resim). Used to calculate difference in simulated and actual position which is then
+         * applied to the airshipTransform.
+         */
+        private Vector3 correctionLastSimulatedPosition = Vector3.zero;
+        /**
+         * The offset applied to the airshipTransform due to correction.
+         */
+        private Vector3 correctionOffset = Vector3.zero;
+        /**
+         * How long since the last correction
+         */
+        private float correctionTime = 0;
 
         #endregion
 
@@ -204,9 +228,39 @@ namespace Code.Player.Character.MovementSystems.Character
                 rigidbody.isKinematic = false;
                 rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
                 rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+                // non-authoritative client functions for interpolating mispredicts
+                if (isClient && mode == NetworkedStateSystemMode.Input)
+                {
+                    AirshipSimulationManager.Instance.OnSetPaused += OnPaused;
+                }
             }
             
             OnSetMode?.Invoke(mode);
+        }
+        
+        public void OnDestroy()
+        {
+            // non-authoritative client
+            if (isClient && mode == NetworkedStateSystemMode.Input)
+            {
+                AirshipSimulationManager.Instance.OnSetPaused -= OnPaused;
+            }
+        }
+        
+        private void OnPaused(bool paused)
+        {
+            if (paused)
+            {
+                this.correctionLastSimulatedPosition = this.airshipTransform.position; // save the last transform position so that we calculate the difference from where the player sees themselves
+            }
+            else
+            {
+                this.correctionTime = 0;
+                var goalPosition = this.rigidbody.position;
+                var difference = this.correctionLastSimulatedPosition - goalPosition; // inverted so that when we apply the difference, we move the airshipTransform back to the original pos
+                this.correctionOffset = (difference.magnitude > correctionMaxMagnitude) ?  Vector3.zero : difference;
+            }
         }
 
         public override void SetCurrentState(CharacterSnapshotData snapshot)
@@ -281,7 +335,21 @@ namespace Code.Player.Character.MovementSystems.Character
                     lookVector = this.currentMoveSnapshot.lookVector
                 };
             }
-
+            
+            // If input is disabled, we use default inputs, but we keep customData since we don't know how TS will want to handle that data.
+            // TODO: in the future we might not want to actually overwrite the data passed in by the client. It might be nice for TS to be able
+            // to still read what direction the character wants to move, even if processing that input is disabled.
+            if (this.disableInput)
+            {
+                var replacementCmd = command.Clone() as CharacterInputData;
+                replacementCmd.moveDir = new Vector3();
+                replacementCmd.lookVector = this.currentMoveSnapshot.lookVector;
+                replacementCmd.jump = false;
+                replacementCmd.crouch = false;
+                replacementCmd.sprint = false;
+                command = replacementCmd;
+            }
+            
             OnProcessCommand?.Invoke(command, this.currentMoveSnapshot, replay);
             
             var currentVelocity = this.rigidbody.linearVelocity;
@@ -1053,11 +1121,13 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotData snapshotNew)
         {
             this.rigidbody.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
-            var oldLook = snapshotOld.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotOld.lookVector;
-            var newLook = snapshotNew.lookVector.magnitude == 0 ? new Vector3(0, 0, 0.001f) : snapshotNew.lookVector;
+            var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
+            var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
+            if (oldLook == Vector3.zero) oldLook.z = 0.01f;
+            if (newLook == Vector3.zero) newLook.z = 0.01f;
             airshipTransform.rotation = Quaternion.Lerp(
-                Quaternion.LookRotation( new Vector3(oldLook.x, 0, oldLook.z)),
-                Quaternion.LookRotation( new Vector3(newLook.x, 0, newLook.z)),
+                Quaternion.LookRotation(oldLook),
+                Quaternion.LookRotation(newLook),
                 delta);
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
@@ -1112,6 +1182,16 @@ namespace Code.Player.Character.MovementSystems.Character
                     airshipTransform.rotation,
                     Quaternion.LookRotation(lookTarget),
                     ownerRotationLerpMod * Time.deltaTime);
+            }
+        }
+
+        public void Update()
+        {
+            if (this.correctionTime < 1)
+            {
+                this.correctionTime += correctionInterpTime == 0 ? 1 : Time.deltaTime / this.correctionInterpTime;
+                this.airshipTransform.localPosition = Vector3.Lerp(this.correctionOffset, Vector3.zero,
+                    this.correctionTime);
             }
         }
 
@@ -1296,9 +1376,8 @@ namespace Code.Player.Character.MovementSystems.Character
             this.SetLookVector(lookVector);
         }
         
-        public void SetMovementEnabled(bool isEnabled){
+        public void SetMovementEnabled(bool isEnabled) {
             this.disableInput = !isEnabled;
-            this.netIdentity.enabled = isEnabled;
         }
 
         public void SetDebugFlying(bool flying){
@@ -1444,7 +1523,7 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             // Only used in the client authoritative networking mode.
             if (mode != NetworkedStateSystemMode.Observer) return;
-            OnImpactWithGround(velocity, hitInfo);
+            OnImpactWithGround?.Invoke(velocity, hitInfo);
             SAuthImpactEvent(velocity, hitInfo);
         }
 

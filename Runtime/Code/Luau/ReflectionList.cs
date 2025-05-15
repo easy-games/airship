@@ -19,7 +19,6 @@ using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
 using UnityEngine.Tilemaps;
 using UnityEngine.VFX;
-using Toggle = UnityEngine.UI.Toggle;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -132,6 +131,7 @@ namespace Luau {
             [typeof(GridLayoutGroup)] = LuauContextAll,
             [typeof(LayoutRebuilder)] = LuauContextAll,
             [typeof(UnityEngine.UI.Button)] = LuauContextAll,
+            [typeof(ToggleGroup)] = LuauContextAll,
             [typeof(Dropdown)] = LuauContextAll,
             [typeof(TMP_Dropdown)] = LuauContextAll,
             [typeof(TMP_InputField)] = LuauContextAll,
@@ -139,7 +139,7 @@ namespace Luau {
             [typeof(TextMeshProUGUI)] = LuauContextAll,
             [typeof(UnityEngine.UI.Slider)] = LuauContextAll,
             [typeof(CanvasScaler)] = LuauContextAll,
-            [typeof(Toggle)] = LuauContextAll,
+            [typeof(UnityEngine.UI.Toggle)] = LuauContextAll,
             [typeof(Mask)] = LuauContextAll,
             [typeof(ContentSizeFitter)] = LuauContextAll,
             [typeof(AspectRatioFitter)] = LuauContextAll,
@@ -221,6 +221,7 @@ namespace Luau {
             ["TubeRendererCS"] = LuauContextAll,
             ["AudioMixerSnapshotController"] = LuauContextAll,
             ["AudioMixerController"] = LuauContextAll,
+            ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
         };
 
         public static Dictionary<Type, LuauContext> allowedTypesInternal;

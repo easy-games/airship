@@ -851,11 +851,11 @@ namespace Code.Network.StateSystem
             // Get the state history around the time that's currently being rendered.
             if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
             {
-                if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported.
-                Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
-                                 " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                                 this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
-                                 (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
+                // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
+                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
+                //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
+                //                  this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
+                //                  (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
                 return;
             }
 
@@ -938,7 +938,7 @@ namespace Code.Network.StateSystem
                 return;
             }
 
-            Debug.LogWarning("Misprediction for " + this.name + " on cmd# " + state.lastProcessedCommand + ". Requesting resimulation.");
+            Debug.LogWarning("Misprediction for " + this.name + " on cmd#" + state.lastProcessedCommand + ". Requesting resimulation.");
 
             // Correct our networked system state to match the authoritative answer from the server
             this.stateSystem.SetCurrentState(state);
