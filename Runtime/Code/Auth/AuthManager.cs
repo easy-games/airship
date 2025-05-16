@@ -17,9 +17,9 @@ public class AuthManager {
     public static Action authed;
 
 	private static string GetAccountJSONPath() {
-       var stagingExtension = "";
+		var stagingExtension = "";
 #if AIRSHIP_STAGING
-       stagingExtension = "_staging"; 
+		stagingExtension = "_staging"; 
 #endif
 #if DEVELOPMENT_BUILD
 		return Path.Combine(Application.persistentDataPath, $"account_devbuild{stagingExtension}.json");
@@ -85,8 +85,8 @@ public class AuthManager {
         string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
         string clientSecret = "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";
 #else
-       string clientId = "457451560440-fvhufuvt3skas9m046jqin0l10h8uaph.apps.googleusercontent.com";
-       string clientSecret = "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";
+		string clientId = "457451560440-fvhufuvt3skas9m046jqin0l10h8uaph.apps.googleusercontent.com";
+		string clientSecret = "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";
 #endif
         string redirectUri = "http://localhost:8080";
 
@@ -115,7 +115,6 @@ public class AuthManager {
         GoogleSignIn.Configuration = new GoogleSignInConfiguration() {
 			RequestEmail = true,
 			RequestProfile = true,
-			RequestIdToken = true,
 			RequestAuthCode = true,
 			WebClientId = clientId,
 #if UNITY_EDITOR || UNITY_STANDALONE
@@ -138,9 +137,6 @@ public class AuthManager {
 		var accessTokenRes = await auth.ExchangeCodeForAccessTokenAsync($"http://localhost?code={user.AuthCode}");
 		accessToken = accessTokenRes.accessToken;
 #else
-
-        Debug.Log($"Redirect URI: {redirectUri}");
-
         var crossPlatformBrowser = new CrossPlatformBrowser();
         var standaloneBrowser = new StandaloneBrowser();
         standaloneBrowser.closePageResponse =
@@ -151,8 +147,6 @@ public class AuthManager {
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
-        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
-        // crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new AndroidBrowser("http://*:8080"));
 
         using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 
@@ -203,15 +197,18 @@ public class AuthManager {
 	private static Task<(GoogleSignInUser user, string error)> AuthWithGoogleAndroid() {
 		GoogleSignIn.Configuration.UseGameSignIn = false;
 
-		return GoogleSignIn.DefaultInstance.SignIn().ContinueWith(OnAuthFinished, TaskScheduler.FromCurrentSynchronizationContext());
+		return GoogleSignIn.DefaultInstance.SignIn().ContinueWith(OnAuthGoogleAndroidFinished, TaskScheduler.FromCurrentSynchronizationContext());
 	}
 
-	private static (GoogleSignInUser user, string error) OnAuthFinished(Task<GoogleSignInUser> task) {
+	private static (GoogleSignInUser user, string error) OnAuthGoogleAndroidFinished(Task<GoogleSignInUser> task) {
 		if (task.IsFaulted) {
-			using var enumerator = task.Exception!.InnerExceptions.GetEnumerator();
-			if (enumerator.MoveNext()) {
-				var err = (GoogleSignIn.SignInException)enumerator.Current;
-				return (null, $"{err!.Status}: {err!.Message}");
+			// Attempt to get the SignInException and return the message:
+			if (task.Exception != null) {
+				using var enumerator = task.Exception.InnerExceptions.GetEnumerator();
+				if (enumerator.MoveNext()) {
+					var err = (GoogleSignIn.SignInException)enumerator.Current;
+					return (null, $"{err!.Status}: {err!.Message}");
+				}
 			}
 			return (null, "Unknown sign in exception");
 		}
