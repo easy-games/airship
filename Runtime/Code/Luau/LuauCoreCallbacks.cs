@@ -947,8 +947,8 @@ public partial class LuauCore : MonoBehaviour {
                     return 1;
                 }
                 else {
-                    Debug.Log("[Luau]: Dictionary was found but key was not found. propName=" + propName +
-                              ", sourceType=" + sourceType.Name);
+                    // Debug.Log("[Luau]: Dictionary was found but key was not found. propName=" + propName +
+                    //           ", sourceType=" + sourceType.Name);
                     WritePropertyToThread(thread, null, null);
                     Profiler.EndSample();
                     return 1;
