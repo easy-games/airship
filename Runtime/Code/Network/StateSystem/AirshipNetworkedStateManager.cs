@@ -522,6 +522,7 @@ namespace Code.Network.StateSystem
                 {
                     // Ensure that we always tick the system even if there's no command to process.
                     // Debug.LogWarning("No commands left. Last command processed: " + this.lastProcessedCommand);
+                    // todo: maybe we should be increasing command number here as well?
                     this.stateSystem.Tick(null, time, false);
                 }
             } while (this.serverCommandBuffer.Count >

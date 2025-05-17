@@ -13,6 +13,8 @@ namespace Code.Player.Character.MovementSystems.Character
     {
         public Vector3 position;
         public Vector3 velocity;
+        public Vector3 lookVector;
+        
         public float currentSpeed;
         public float speedModifier = 1; // Not used yet
         public bool inputDisabled;
@@ -21,10 +23,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public int jumpCount;
         public bool airborneFromImpulse;
         public bool alreadyJumped; //Only lets the character jump once until the jump key is released
-
-        public Vector3
-            lastGroundedMoveDir; //What direction were we moving on the ground, so we can float that dir in the air
-
+        
         public bool isCrouching;
         public bool prevStepUp;
         public bool isGrounded;
@@ -33,7 +32,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public float timeSinceBecameGrounded;
         public float timeSinceWasGrounded;
         public float timeSinceJump;
-        public Vector3 lookVector;
+    
         public BinaryBlob customData;
 
         public override bool Compare<TSystem, TState, TInput>(NetworkedStateSystem<TSystem, TState, TInput> system, TState snapshot)
@@ -69,8 +68,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 message += $"airborneFromImpulse: {airborneFromImpulse} != {other.airborneFromImpulse}\n";
             if (alreadyJumped != other.alreadyJumped)
                 message += $"alreadyJumped: {alreadyJumped} != {other.alreadyJumped}\n";
-            if (lastGroundedMoveDir != other.lastGroundedMoveDir)
-                message += $"lastGroundedMoveDir: {lastGroundedMoveDir} != {other.lastGroundedMoveDir}\n";
             if (isCrouching != other.isCrouching) message += $"prevCrouch: {isCrouching} != {other.isCrouching}\n";
             if (prevStepUp != other.prevStepUp) message += $"prevStepUp: {prevStepUp} != {other.prevStepUp}\n";
             if (isGrounded != other.isGrounded)
@@ -83,8 +80,7 @@ namespace Code.Player.Character.MovementSystems.Character
                         inputDisabled == other.inputDisabled
                         && isFlying == other.isFlying && isSprinting == other.isSprinting && jumpCount == other.jumpCount &&
                         airborneFromImpulse == other.airborneFromImpulse &&
-                        alreadyJumped == other.alreadyJumped &&
-                        lastGroundedMoveDir == other.lastGroundedMoveDir
+                        alreadyJumped == other.alreadyJumped
                         && isCrouching == other.isCrouching && prevStepUp == other.prevStepUp &&
                         isGrounded == other.isGrounded && state == other.state
                         && prevState == other.prevState;
@@ -120,7 +116,6 @@ namespace Code.Player.Character.MovementSystems.Character
             this.prevStepUp = copySnapshot.prevStepUp;
             this.isCrouching = copySnapshot.isCrouching;
             this.isSprinting = copySnapshot.isSprinting;
-            this.lastGroundedMoveDir = copySnapshot.lastGroundedMoveDir;
             this.alreadyJumped = copySnapshot.alreadyJumped;
             this.airborneFromImpulse = copySnapshot.airborneFromImpulse;
             this.jumpCount = copySnapshot.jumpCount;
@@ -160,7 +155,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 prevStepUp = prevStepUp,
                 isCrouching = isCrouching,
                 isSprinting = isSprinting,
-                lastGroundedMoveDir = lastGroundedMoveDir,
                 alreadyJumped = alreadyJumped,
                 airborneFromImpulse = airborneFromImpulse,
                 jumpCount = jumpCount,

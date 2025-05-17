@@ -329,10 +329,14 @@ namespace Code.Player.Character.MovementSystems.Character
                 // If there is no command, we use a "no input" command. This command uses the same command number as our lastProcessedCommand state data
                 // so that we treat this input essentially as a ghost input that doesn't effect our stored command information, but allows us to
                 // properly tick physics. TS custom command data is not copied. TS has to keep active commands running and tick them with null input
+                // We replace the base inputs with the last known state input so that players do not feel that their inputs were lost from dropped packets.
                 command = new CharacterInputData()
                 {
                     commandNumber = this.currentMoveSnapshot.lastProcessedCommand,
                     time = time,
+                    jump = this.currentMoveSnapshot.alreadyJumped,
+                    crouch = this.currentMoveSnapshot.isCrouching,
+                    sprint = this.currentMoveSnapshot.isSprinting,
                     lookVector = this.currentMoveSnapshot.lookVector
                 };
             }
@@ -383,7 +387,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (grounded)
             {
                 //Store this move dir
-                currentMoveSnapshot.lastGroundedMoveDir = command.moveDir;
+                // currentMoveSnapshot.lastGroundedMoveDir = command.moveDir;
 
                 //Snap to the ground if you are falling into the ground
                 if (newVelocity.y < 1 &&
@@ -402,7 +406,8 @@ namespace Code.Player.Character.MovementSystems.Character
             else
             {
                 //While in the air how much control do we have over our direction?
-                command.moveDir = Vector3.Lerp(currentMoveSnapshot.lastGroundedMoveDir, command.moveDir,
+                // TODO: was lastGroundedMoveDir
+                command.moveDir = Vector3.Lerp(Vector3.zero, command.moveDir,
                     movementSettings.inAirDirectionalControl);
             }
 
