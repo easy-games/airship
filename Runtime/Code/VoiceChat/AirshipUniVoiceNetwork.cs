@@ -302,7 +302,13 @@ namespace Code.VoiceChat {
         }
         
         private void PreProcessAudio(ChatroomAudioSegment segment) {
-            const float maxAmplitude = 0.25f;
+            const float gain = 1.4f;  // boost overall volume (1.0 = no boost)
+            const float maxAmplitude = 0.25f; // max allowed peak to prevent distortion
+            
+            // apply gain
+            for (int i = 0; i < segment.samples.Length; i++) {
+                segment.samples[i] *= gain;
+            }
             
             // find peak
             float peak = 0f;
