@@ -516,13 +516,12 @@ namespace Code.Network.StateSystem
 
                     // tick command
                     command.time = time; // Correct time to local timeline for ticking on the server.
-                    this.stateSystem.Tick(command, time, false);
+                    if (commandsProcessed == 1) this.stateSystem.Tick(command, time, false);
                 }
                 else
                 {
                     // Ensure that we always tick the system even if there's no command to process.
                     // Debug.LogWarning("No commands left. Last command processed: " + this.lastProcessedCommand);
-                    // todo: maybe we should be increasing command number here as well?
                     this.stateSystem.Tick(null, time, false);
                 }
             } while (this.serverCommandBuffer.Count >

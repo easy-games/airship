@@ -527,6 +527,7 @@ namespace Code.Player.Character.MovementSystems.Character
                     didJump = true;
                     currentMoveSnapshot.alreadyJumped = true;
                     currentMoveSnapshot.jumpCount++;
+                    print("Applying character movement jump force");
                     newVelocity.y = movementSettings.jumpSpeed;
                     currentMoveSnapshot.airborneFromImpulse = false;
                     OnJumped?.Invoke(newVelocity);
