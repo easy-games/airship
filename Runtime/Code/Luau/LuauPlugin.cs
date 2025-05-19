@@ -34,6 +34,15 @@ public static class LuauPlugin {
 		CreateThread
 	}
 
+	public enum LuauOptimizationLevel {
+		/// No optimizations.
+		None = 0,
+		/// Baseline optimizations.
+		Baseline = 1,
+		/// Max optimizations. Inlining, constant folding, loop unrolling, etc.
+		Max = 2,
+	}
+
 	// Must match BytecodeVersion struct in Plugin.cpp
 	[StructLayout(LayoutKind.Sequential)]
 	public struct LuauBytecodeVersion {
@@ -550,8 +559,8 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel);
-	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel) {
-        var returnValue = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
+	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, LuauOptimizationLevel optimizationLevel) {
+        var returnValue = CompileCode(script, scriptLength, filename, filenameLength, (int)optimizationLevel);
 		return returnValue;
 	}
 
