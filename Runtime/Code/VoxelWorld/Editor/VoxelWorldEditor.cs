@@ -261,12 +261,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (voxelBlocks == null) {
             voxelBlocks = new GameObject("VoxelBlocks").AddComponent<VoxelBlocks>();
             voxelBlocks.name = "VoxelBlocks";
-            voxelBlocks.blockDefinionLists = new List<VoxelBlockDefinionList>();
+            voxelBlocks.blockDefinitionLists = new List<VoxelBlockDefinitionList>();
 
             //Find this asset if it exists
             var resource =
-                Resources.Load<VoxelBlockDefinionList>("VoxelWorldDefaultBlocks/DefaultVoxelBlockDefinionList");
-            voxelBlocks.blockDefinionLists.Add(resource);
+                Resources.Load<VoxelBlockDefinitionList>("VoxelWorldDefaultBlocks/DefaultVoxelBlockDefinitionList");
+            voxelBlocks.blockDefinitionLists.Add(resource);
         }
 
         var voxelWorldGo = new GameObject("VoxelWorld");

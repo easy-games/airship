@@ -9,6 +9,7 @@ using System.Xml;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -314,7 +315,8 @@ public class VoxelBlocks : MonoBehaviour {
     [NonSerialized] public string rootAssetPath;
     [NonSerialized] public List<string> m_bundlePaths = null;
 
-    [SerializeField] public List<VoxelBlockDefinionList> blockDefinionLists = new();
+    [FormerlySerializedAs("blockDefinionLists")]
+    [SerializeField] public List<VoxelBlockDefinitionList> blockDefinitionLists = new();
     private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
@@ -621,8 +623,9 @@ public class VoxelBlocks : MonoBehaviour {
         loadedBlocks.Add(airBlock.blockId, airBlock);
         blockIdLookup.Add("air", airBlock.blockId);
 
-        foreach (VoxelBlockDefinionList voxelDefinitionList in blockDefinionLists) {
+        foreach (VoxelBlockDefinitionList voxelDefinitionList in blockDefinitionLists) {
             foreach (VoxelBlockDefinition voxelBlockDefinition in voxelDefinitionList.blockDefinitions) {
+                if (voxelBlockDefinition == null) continue;
                 var scopedId = $"{voxelDefinitionList.scope}:{voxelBlockDefinition.name}"; // e.g. @Easy/Core:OAK_LOG
 
                 BlockDefinition block = new BlockDefinition();

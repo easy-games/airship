@@ -1,17 +1,19 @@
-//write a scriptable object that acts as a container and editor for VoxelBlockDefines called VoxelBlockDefinion
+//write a scriptable object that acts as a container and editor for VoxelBlockDefines called VoxelBlockDefinition
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
 #endif
 
-[CreateAssetMenu(fileName = "VoxelBlockDefinionList", menuName = "Airship/VoxelWorld/VoxelBlockDefinionList", order = 2)]
-public class VoxelBlockDefinionList : ScriptableObject {
+[CreateAssetMenu(fileName = "VoxelBlockDefinitionList", menuName = "Airship/VoxelWorld/VoxelBlockDefinitionList", order = 2)]
+public class VoxelBlockDefinitionList : ScriptableObject {
 
     public string scope = "@Easy/Default";
+    [FormerlySerializedAs("blockDefinions")]
     public List<VoxelBlockDefinition> blockDefinitions = new List<VoxelBlockDefinition>();
 
 }
@@ -20,12 +22,12 @@ public class VoxelBlockDefinionList : ScriptableObject {
 #if UNITY_EDITOR
 //Create an editor for it
 
-[CustomEditor(typeof(VoxelBlockDefinionList))]
-public class VoxelBlockDefinionListEditor : Editor {
+[CustomEditor(typeof(VoxelBlockDefinitionList))]
+public class VoxelBlockDefinitionListEditor : Editor {
     // public override void OnInspectorGUI() {
     //     base.OnInspectorGUI();
     //
-    //     VoxelBlockDefinionList list = (VoxelBlockDefinionList)target;
+    //     VoxelBlockDefinitionList list = (VoxelBlockDefinitionList)target;
     //
     //     EditorGUILayout.Space();
     //
