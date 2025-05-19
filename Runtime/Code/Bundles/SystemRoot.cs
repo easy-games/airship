@@ -185,7 +185,16 @@ public class SystemRoot : Singleton<SystemRoot> {
 		var enums = new List<IEnumerator>();
 		foreach (var bundleId in unloadList) {
 			var loadedBundle = this.loadedAssetBundles[bundleId];
-			enums.Add(this.UnloadBundleAsync(loadedBundle));
+			
+			// We keep code.zip when we will re-loading this same package (code.zip update)
+			// Code.zip is always downloaded on join before this code runs, so we know it'll be up-to-date.
+			bool keepCodeZip = false;
+			var samePackageIdBeingLoaded = packages.Find(p => p.id.ToLower() == loadedBundle.airshipPackage.id.ToLower());
+			if (samePackageIdBeingLoaded != null) {
+				keepCodeZip = true;
+			}
+			
+			enums.Add(this.UnloadBundleAsync(loadedBundle, keepCodeZip));
 		}
 		yield return this.WaitAll(enums.ToArray());
 
@@ -413,19 +422,25 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 	}
 
-	public IEnumerator UnloadBundleAsync(LoadedAssetBundle loadedBundle) {
-		Debug.Log($"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}");
-		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
-
-		if (this.luauFiles.TryGetValue(loadedBundle.bundleId, out var files)) {
-			int count = files.Count;
-			foreach (var s in files.Values) {
-				Object.Destroy(s);
-			}
-			this.luauFiles.Remove(loadedBundle.bundleId);
-			Debug.Log($"Unloaded {count} script files.");
+	public IEnumerator UnloadBundleAsync(LoadedAssetBundle loadedBundle, bool keepCodeZip) {
+		var msg = $"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}";
+		if (keepCodeZip) {
+			msg += ". Keeping code.zip";
 		}
-
+		Debug.Log(msg);
+		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
+		
+		if (!keepCodeZip) {
+			if (this.luauFiles.TryGetValue(loadedBundle.bundleId, out var files)) {
+				int count = files.Count;
+				foreach (var s in files.Values) {
+					Object.Destroy(s);
+				}
+				this.luauFiles.Remove(loadedBundle.bundleId);
+				Debug.Log($"Unloaded {count} script files.");
+			}
+		}
+		
 		var ao = loadedBundle.assetBundle.UnloadAsync(true);
 		while (!ao.isDone) {
 			yield return null;

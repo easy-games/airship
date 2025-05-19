@@ -101,6 +101,25 @@ public class PhysicsAPI : BaseLuaAPIClass
                     return WriteRaycastResultToThread(thread, hit, hitInfo);
                     break;
                 }
+                case 6: {
+                    // origin, radius, direction, maxDistance, layerMask, QueryTriggerInteraction
+                    var origin = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, parameterDataSizes);
+                    var radius = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, parameterDataSizes);
+                    var direction = LuauCore.GetParameterAsVector3(2, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, parameterDataSizes);
+                    var maxDistance = LuauCore.GetParameterAsFloat(3, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, parameterDataSizes);
+                    var layerMask = LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, parameterDataSizes);
+                    var triggerInteraction = LuauCore.GetParameterAsInt(5, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, parameterDataSizes);
+
+                    var hit = Physics.SphereCast(origin, radius, direction, out var hitInfo, maxDistance, layerMask, (QueryTriggerInteraction)triggerInteraction);
+                    return WriteRaycastResultToThread(thread, hit, hitInfo);
+                    break;
+                }
             }
         }
         

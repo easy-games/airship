@@ -760,8 +760,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 this.pendingImpulse = Vector3.zero;
                 if (isImpulsing)
                 {
-                    print(" isImpulsing: " + isImpulsing + " impulse force: " + this.pendingImpulse + "New Vel: " +
-                          newVelocity);
+                    // print(" isImpulsing: " + isImpulsing + " impulse force: " + this.pendingImpulse + "New Vel: " +
+                    //       newVelocity);
                 }
             }
 
@@ -1061,7 +1061,7 @@ namespace Code.Player.Character.MovementSystems.Character
             //print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>currentMoveState.prevState</b>: {currentMoveState.prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 
             //Execute the forces onto the rigidbody
-            if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
+            // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
             this.rigidbody.linearVelocity = newVelocity;
 
             #endregion
@@ -1404,7 +1404,7 @@ namespace Code.Player.Character.MovementSystems.Character
         }
         
         public void AddImpulse(Vector3 impulse){
-            print("Adding impulse: " + impulse);
+            // print("Adding impulse: " + impulse);
             if (mode == NetworkedStateSystemMode.Observer && isServer) {
                 RpcAddImpulse(impulse);
                 return;

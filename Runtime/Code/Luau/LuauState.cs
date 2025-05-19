@@ -206,6 +206,7 @@ namespace Luau {
         private void OnFixedUpdate() {
             LuauPlugin.LuauResetTimeCache(Context, true);
             LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipFixedUpdate, Time.fixedDeltaTime);
+            LuauPlugin.LuauResetTimeCache(Context, false);
         }
     }
 }

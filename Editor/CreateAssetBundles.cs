@@ -532,6 +532,11 @@ public static class CreateAssetBundles {
 	public static void BuildiOSAssetBundles() {
 		BuildGameAssetBundles(AirshipPlatform.iOS);
 	}
+	
+	[MenuItem("Airship/Internal/Build Android Game Bundles")]
+	public static void BuildAndroidAssetBundles() {
+		BuildGameAssetBundles(AirshipPlatform.Android);
+	}
 #endif
 
 #if AIRSHIP_INTERNAL

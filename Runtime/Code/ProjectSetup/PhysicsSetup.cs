@@ -155,15 +155,15 @@ public static class PhysicsSetup {
         //Reset Unity to Airship defaults and GameConfig customizations
         var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
         if (gameConfig && gameConfig.physicsMatrix != null && gameConfig.gravity != null) {
-            Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
-                      gameConfig.physicsMatrix.Length);
+            // Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
+            //           gameConfig.physicsMatrix.Length);
             //Setup the Core Layers
             Setup(gameConfig);
             //Load in game specific Layers and Settings
             gameConfig.DeserializeSettings();
         } else {
             //Use default Airship values if we aren't setting up game specific values
-            Debug.Log("No custom GameConfig settings found. Reseting to defaults");
+            Debug.Log("No custom GameConfig settings found. Resetting to defaults");
             //TODO: This gravity value is old to support games that havne't been built with the new gravity values. 
             //Can swap to default gravity once those games have been published again
             ResetDefaults(gameConfig, new Vector3(0, -24, 0));

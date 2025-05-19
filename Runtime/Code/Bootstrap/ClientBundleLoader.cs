@@ -177,7 +177,7 @@ namespace Code.Bootstrap {
                 NetworkClient.Send(new ClientFinishedPreparingMessage());
             }, false);
 
-            NetworkClient.RegisterHandler<LuauBytesMessage>(async data => {
+            NetworkClient.RegisterHandler<LuauBytesMessage>(data => {
                 int totalCounter = 0;
                 foreach (var files in data.scriptsDto.files) {
                     totalCounter += files.Value.Count;

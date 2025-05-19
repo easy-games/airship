@@ -1,19 +1,13 @@
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Luau;
-using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 public class LuauCompiler {
-    public const string IconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
-    public const string IconFail = "Packages/gg.easy.airship/Editor/LuauErrorIcon.png";
-    
     // Any globals in Luau that have values that change need to be added to this list (e.g. "Time" because "Time.time" changes):
-    public static readonly string[] MutableGlobals = {"Time", "NetworkTime", "Physics", "Screen", "Input", "math"};
+    public static readonly string[] MutableGlobals = {"Time", "NetworkTime", "Physics", "Screen", "Input"};
 
     public struct CompilationResult {
         public IntPtr Data;
@@ -34,38 +28,37 @@ public class LuauCompiler {
             }
         }
 
-        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(path); //Ok
-        IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
+        var filenameStr = Marshal.StringToCoTaskMemUTF8(path);
+        var dataStr = Marshal.StringToCoTaskMemUTF8(data);
 
         // Compile
         var len = Encoding.UTF8.GetByteCount(data);
-        IntPtr res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, path.Length, 1);
+        var res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, path.Length, LuauPlugin.LuauOptimizationLevel.Max);
 
         Marshal.FreeCoTaskMem(dataStr);
         Marshal.FreeCoTaskMem(filenameStr);
 
         // Figure out what happened
-        var resStruct = Marshal.PtrToStructure<CompilationResult>(res);
-        // Debug.Log("Compilation of " + ctx.assetPath + ": " + resStruct.Compiled.ToString());
+        var compilationResult = Marshal.PtrToStructure<CompilationResult>(res);
 
-        bool compileSuccess = true;
-        string compileErrMessage = "none";
+        var compileSuccess = true;
+        var compileErrMessage = "none";
 
         airshipScript.airshipBehaviour = airshipBehaviour;
         airshipScript.m_path = path;
 
-        if (!resStruct.Compiled) {
-            var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
+        if (!compilationResult.Compiled) {
+            var resString = Marshal.PtrToStringUTF8(compilationResult.Data, (int)compilationResult.DataSize);
             compileSuccess = false;
             compileErrMessage = resString;
-            UnityEngine.Debug.LogError($"Failed to compile {path}: {resString}");
+            Debug.LogError($"Failed to compile {path}: {resString}");
         }
 
         airshipScript.m_compiled = compileSuccess;
         airshipScript.m_compilationError = compileErrMessage;
 
-        var bytes = new byte[resStruct.DataSize];
-        Marshal.Copy(resStruct.Data, bytes, 0, (int)resStruct.DataSize);
+        var bytes = new byte[compilationResult.DataSize];
+        Marshal.Copy(compilationResult.Data, bytes, 0, (int)compilationResult.DataSize);
 
         airshipScript.m_bytes = bytes;
 
@@ -73,8 +66,6 @@ public class LuauCompiler {
         if (split.Length > 0) {
             airshipScript.name = split[split.Length - 1];
         }
-        // var iconPath = binaryFile.m_compiled ? IconOk : IconFail;
-        // var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
