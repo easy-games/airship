@@ -558,8 +558,8 @@ public partial class LuauCore : MonoBehaviour
         if (t == binaryBlobType) {
             Assets.Luau.BinaryBlob blob = (Assets.Luau.BinaryBlob)value;
 
-            var gch = GCHandle.Alloc(blob.m_data, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, gch.AddrOfPinnedObject(), (int)blob.m_dataSize); // 0, because we know how big an intPtr is
+            var gch = GCHandle.Alloc(blob.data, GCHandleType.Pinned); //Ok
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, gch.AddrOfPinnedObject(), (int)blob.dataSize); // 0, because we know how big an intPtr is
             gch.Free();
 
             return true;

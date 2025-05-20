@@ -39,8 +39,8 @@ namespace Code.Player.Character.MovementSystems.Character
 				lookVector = lookVector,
 				customData = customData != null ?  new BinaryBlob()
 				{
-					m_dataSize = customData.m_dataSize,
-					m_data = (byte[])customData.m_data.Clone(),
+					dataSize = customData.dataSize,
+					data = (byte[])customData.data.Clone(),
 				} : default,
 			};
 		}

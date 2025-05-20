@@ -1348,11 +1348,13 @@ namespace Code.Player.Character.MovementSystems.Character
         public void SetCustomInputData(BinaryBlob data)
         {
             this.customInputData = data;
+            // print("Custom input bytes: " + data.dataSize);
         }
 
         public void SetCustomSnapshotData(BinaryBlob data)
         {
             this.customSnapshotData = data;
+            // print("Custom snapshot bytes: " + data.dataSize);
         }
 
         public void Teleport(Vector3 position)
