@@ -579,18 +579,22 @@ namespace Code.Network.StateSystem
                 return;
             }
 
-            // If the prediction is paused, we still tick the system, but we include no command
-            // for the tick. We want to wait for our current set of commands to be confirmed before
-            // we start predicting again, so it's important that we do not continue processing new commands
-            // and incrementing our commandNumber.
-            if (this.clientPausePrediction)
-            {
-                this.stateSystem.GetCommand(this
-                    .clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
-                this.stateSystem.Tick(null, time, false);
-                this.inputHistory.Add(time, null);
-                return;
-            }
+            // I think for now, I'm just going to remove this because I'm having trouble justifying the actual purpose
+            // of this. If there's a network issue, then mirror will disconnect us, and any other case we would want to
+            // continue as if we will recover and trust that resimulations will correct any mistakes. If the server is
+            // lagging out, ticking the characters will still occur even if we don't send cmds, so we might as well try
+            // // If the prediction is paused, we still tick the system, but we include no command
+            // // for the tick. We want to wait for our current set of commands to be confirmed before
+            // // we start predicting again, so it's important that we do not continue processing new commands
+            // // and incrementing our commandNumber.
+            // if (this.clientPausePrediction)
+            // {
+            //     // this.stateSystem.GetCommand(this
+            //     //     .clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
+            //     // this.stateSystem.Tick(null, time, false);
+            //     this.inputHistory.Add(time, null);
+            //     return;
+            // }
 
             // Update our command number and process the next tick.
             clientCommandNumber++;
@@ -884,6 +888,7 @@ namespace Code.Network.StateSystem
                 return;
             }
 
+            // Check if it's even worth iterating over the state history
             if (this.stateHistory.Values[0].lastProcessedCommand > state.lastProcessedCommand)
             {
                 // In this situation, our oldest saved command is actually higher than the last confirmed
@@ -894,9 +899,9 @@ namespace Code.Network.StateSystem
                 // one of our previous predictions. Once one is confirmed, we can start predicting again.
                 // On extremely high ping, this will mean that the local player will freeze in place while we wait for
                 // confirmation from the server.
-                this.clientPausePrediction = true;
+                // this.clientPausePrediction = true; // disabled for now
                 Debug.LogWarning(
-                    "Prediction paused due to a large number of unconfirmed commands to the server. Is there something wrong with the network?");
+                    "We have a large number of unconfirmed commands to the server. Is there something wrong with the network or is the server lagging?");
                 return;
             }
 
