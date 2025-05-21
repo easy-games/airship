@@ -29,11 +29,11 @@ namespace Assets.Luau {
                 return m_cachedDictionary;
             }
 
-            int readPos = 1; //skip the first byte, its a magic key to let us know its a blob
-            m_cachedDictionary = Decode(this.data, ref readPos);
+            var readPos = 1; // skip the first byte, it's a magic key to let us know it's a blob
+            m_cachedDictionary = Decode(data, ref readPos);
+            
             return m_cachedDictionary;
         }
-
         
         enum keyTypes : byte {
             KEY_TERMINATOR = 0,
@@ -51,7 +51,15 @@ namespace Assets.Luau {
             KEY_PODTYPE = 12,
         };
 
-        private static Dictionary<object, object> Decode(byte[] buffer, ref int readPos) {
+        private static Dictionary<object, object> Decode(byte[] bufferRaw, ref int readPos) {
+            var isCompressed = bufferRaw.Length > 0 && bufferRaw[0] == 1;
+            
+            // Skip the first byte, which is the compressed/decompressed flag:
+            var bufferMaybeCompressed = new ArraySegment<byte>(bufferRaw).Slice(1, bufferRaw.Length - 1);
+            
+            // Decompress the buffer if needed:
+            var buffer = isCompressed ? ZSTD.Decompress(bufferMaybeCompressed.Array) : bufferMaybeCompressed.Array;
+            
             Dictionary<object, object> dictionary = new();
 
             while (true) {
