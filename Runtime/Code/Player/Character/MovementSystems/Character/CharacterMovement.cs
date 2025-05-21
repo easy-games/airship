@@ -28,7 +28,7 @@ namespace Code.Player.Character.MovementSystems.Character
     [LuauAPI]
     public class CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterInputData>
     {
-        public Rigidbody rigidbody;
+        [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
         public Transform graphicTransform; //A transform that games can animate
@@ -219,16 +219,16 @@ namespace Code.Player.Character.MovementSystems.Character
             Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer)
             {
-                rigidbody.isKinematic = true;
-                rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-                rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                rb.isKinematic = true;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 
             if (mode == NetworkedStateSystemMode.Authority || mode == NetworkedStateSystemMode.Input)
             {
-                rigidbody.isKinematic = false;
-                rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-                rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                rb.isKinematic = false;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
                 // non-authoritative client functions for interpolating mispredicts
                 if (isClient && mode == NetworkedStateSystemMode.Input)
@@ -258,7 +258,7 @@ namespace Code.Player.Character.MovementSystems.Character
             else
             {
                 this.correctionTime = 0;
-                var goalPosition = this.rigidbody.position;
+                var goalPosition = this.rb.position;
                 var difference = this.correctionLastSimulatedPosition - goalPosition; // inverted so that when we apply the difference, we move the airshipTransform back to the original pos
                 this.correctionOffset = (difference.magnitude > correctionMaxMagnitude) ?  Vector3.zero : difference;
             }
@@ -267,10 +267,10 @@ namespace Code.Player.Character.MovementSystems.Character
         public override void SetCurrentState(CharacterSnapshotData snapshot)
         {
             this.currentMoveSnapshot.CopyFrom(snapshot);
-            this.rigidbody.position = snapshot.position;
-            if (!this.rigidbody.isKinematic)
+            this.rb.position = snapshot.position;
+            if (!this.rb.isKinematic)
             {
-                this.rigidbody.linearVelocity = snapshot.velocity;
+                this.rb.linearVelocity = snapshot.velocity;
             }
 
             var lookTarget = new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z);
@@ -289,12 +289,12 @@ namespace Code.Player.Character.MovementSystems.Character
             this.customSnapshotData = null;
             OnCaptureSnapshot?.Invoke(commandNumber, time);
             this.currentMoveSnapshot.customData = this.customSnapshotData;
+            currentMoveSnapshot.time = time;
+            currentMoveSnapshot.lastProcessedCommand = commandNumber;
+            currentMoveSnapshot.position = this.rb.position;
+            currentMoveSnapshot.velocity = this.rb.linearVelocity;
             var snapshot = new CharacterSnapshotData();
             snapshot.CopyFrom(this.currentMoveSnapshot);
-            snapshot.time = time;
-            snapshot.lastProcessedCommand = commandNumber;
-            snapshot.position = this.rigidbody.position;
-            snapshot.velocity = this.rigidbody.linearVelocity;
             // Reset the custom data again
             this.customSnapshotData = null;
             return snapshot;
@@ -357,12 +357,12 @@ namespace Code.Player.Character.MovementSystems.Character
             
             OnProcessCommand?.Invoke(command, this.currentMoveSnapshot, replay);
             
-            var currentVelocity = this.rigidbody.linearVelocity;
+            var currentVelocity = this.rb.linearVelocity;
             var newVelocity = currentVelocity;
             var isIntersecting = false; // TODO: this was "IsIntersectingWithBlock" which just returned false
             var deltaTime = Time.fixedDeltaTime;
             var isImpulsing = this.pendingImpulse != Vector3.zero;
-            var rootPosition = this.rigidbody.position;
+            var rootPosition = this.rb.position;
 
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
             if (isServer && !isClient)
@@ -482,8 +482,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 {
                     //In the air
                     // coyote jump
-                    if (normalizedMoveDir.y <= 0.02f &&
-                        currentMoveSnapshot.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime && currentVelocity.y <= 0 &&
+                    if (currentVelocity.y < 0f &&
+                        currentMoveSnapshot.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime && 
                         currentMoveSnapshot.timeSinceJump > movementSettings.jumpCoyoteTime)
                     {
                         canJump = true;
@@ -527,7 +527,6 @@ namespace Code.Player.Character.MovementSystems.Character
                     didJump = true;
                     currentMoveSnapshot.alreadyJumped = true;
                     currentMoveSnapshot.jumpCount++;
-                    print("Applying character movement jump force");
                     newVelocity.y = movementSettings.jumpSpeed;
                     currentMoveSnapshot.airborneFromImpulse = false;
                     OnJumped?.Invoke(newVelocity);
@@ -1062,7 +1061,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
-            this.rigidbody.linearVelocity = newVelocity;
+            this.rb.linearVelocity = newVelocity;
 
             #endregion
 
@@ -1104,13 +1103,13 @@ namespace Code.Player.Character.MovementSystems.Character
             }
             this.moveDirInput = command.moveDir;
 
+            // Record variables that will not change due to physics tick. Variables affected by physics tick will need to be
+            // recorded as part of OnCaptureSnapshot so that they record the value post physics tick.
             currentMoveSnapshot.lookVector = command.lookVector;
             currentMoveSnapshot.prevState = currentMoveSnapshot.state;
             currentMoveSnapshot.isCrouching = command.crouch;
             currentMoveSnapshot.isGrounded = grounded;
             currentMoveSnapshot.prevStepUp = didStepUp;
-            // currentMoveState.position = rootPosition;
-            // currentMoveState.velocity = newVelocity;
 
             #endregion
 
@@ -1126,7 +1125,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public override void Interpolate(float delta, CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew)
         {
-            this.rigidbody.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
+            this.rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) oldLook.z = 0.01f;
@@ -1204,9 +1203,9 @@ namespace Code.Player.Character.MovementSystems.Character
         #region Helpers
 
         private void SnapToY(float newY){
-            var newPos = this.rigidbody.position;
+            var newPos = this.rb.position;
             newPos.y = newY;
-            this.rigidbody.position = newPos;
+            this.rb.position = newPos;
         }
 
         #endregion
@@ -1378,7 +1377,7 @@ namespace Code.Player.Character.MovementSystems.Character
             }
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
-            this.rigidbody.MovePosition(position);
+            this.rb.MovePosition(position);
             this.SetLookVector(lookVector);
         }
         
@@ -1451,12 +1450,12 @@ namespace Code.Player.Character.MovementSystems.Character
                 Debug.LogWarning("Attempted to set velocity on an observed player. This will not work.");
                 return;
             }
-            this.rigidbody.linearVelocity = velocity;
+            this.rb.linearVelocity = velocity;
         }
         
         // TODO: check if we should have this or make people use movement.currentMoveState.velocity
         public Vector3 GetVelocity() {
-            return this.rigidbody.linearVelocity;
+            return this.rb.linearVelocity;
         }
         
         public int GetState() {
@@ -1495,7 +1494,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public Vector3 GetPosition()
         {
-            return this.rigidbody.position;
+            return this.rb.position;
         }
 
         // This is used by typescript to allow custom data to be compared in TS and the result used
