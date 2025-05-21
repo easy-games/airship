@@ -490,7 +490,7 @@ namespace Code.Network.StateSystem
                     // this.maxServerCommandPrediction * (1f / this.clientInputRate / Time.fixedDeltaTime)) is the number of
                     // commands contained in a single input message
                     if (this.lastProcessedCommand != null && command.commandNumber != expectedNextCommandNumber &&
-                        this.serverPredictedCommandCount < Math.Ceiling(0 *
+                        this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction *
                                                                         (NetworkServer.sendInterval /
                                                                          Time.fixedDeltaTime)))
                     {
@@ -524,10 +524,9 @@ namespace Code.Network.StateSystem
                     // Debug.LogWarning("No commands left. Last command processed: " + this.lastProcessedCommand);
                     this.stateSystem.Tick(null, time, false);
                 }
-            } while (false);
-            // while (this.serverCommandBuffer.Count >
-            //          this.serverCommandBufferTargetSize &&
-            //          commandsProcessed < 1 + this.maxServerCommandCatchup);
+            } while (this.serverCommandBuffer.Count >
+                     this.serverCommandBufferTargetSize &&
+                     commandsProcessed < 1 + this.maxServerCommandCatchup);
             // ^ we process up to maxServerCommandCatchup commands per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
 
             if (commandsProcessed > 1)
