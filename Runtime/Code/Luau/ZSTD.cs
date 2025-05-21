@@ -6,56 +6,9 @@ using System.Runtime.InteropServices;
 /// </summary>
 /// <see href="https://facebook.github.io/zstd/"/>
 public static class ZSTD {
+	// Compression & decompression will try to utilize the stack if certain buffers can fit
+	// within the given byte size here:
 	private const ulong MaxStackSize = 1024;
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern ulong ZSTDCompressBound(ulong uncompressedBufferSize);
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern ulong ZSTDCompress(IntPtr dst, ulong dstSize, IntPtr src, ulong srcSize, int compressionLevel);
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern ulong ZSTDGetFrameContentSize(IntPtr src, ulong srcSize);
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern ulong ZSTDDecompress(IntPtr dst, ulong dstSize, IntPtr src, ulong compressedSize);
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int ZSTDMinCompressionLevel();
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int ZSTDMaxCompressionLevel();
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int ZSTDDefaultCompressionLevel();
 
 	/// Minimum compression level.
 	public static readonly int MinCompressionLevel = ZSTDMinCompressionLevel();
@@ -135,4 +88,55 @@ public static class ZSTD {
 		var dstSegment = new ArraySegment<byte>(dst);
 		return dstSegment.Slice(0, (int)compressedSize).Array;
 	}
+	
+	#region Extern
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern ulong ZSTDCompressBound(ulong uncompressedBufferSize);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern ulong ZSTDCompress(IntPtr dst, ulong dstSize, IntPtr src, ulong srcSize, int compressionLevel);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern ulong ZSTDGetFrameContentSize(IntPtr src, ulong srcSize);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern ulong ZSTDDecompress(IntPtr dst, ulong dstSize, IntPtr src, ulong compressedSize);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int ZSTDMinCompressionLevel();
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int ZSTDMaxCompressionLevel();
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int ZSTDDefaultCompressionLevel();
+	#endregion
 }
