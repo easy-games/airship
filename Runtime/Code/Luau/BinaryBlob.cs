@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Serialization;
 using static LuauCore;
 
 namespace Assets.Luau
@@ -11,16 +12,16 @@ namespace Assets.Luau
     public class BinaryBlob : IEquatable<BinaryBlob>
     {
         public BinaryBlob() {
-            m_data = new byte[] { };
-            m_dataSize = 0;
+            data = new byte[] { };
+            dataSize = 0;
         }
         public BinaryBlob(byte[] bytes)
         {
-            m_dataSize = bytes.Length;
-            m_data = bytes;
+            dataSize = bytes.Length;
+            data = bytes;
         }
-        public long m_dataSize;
-        public byte[] m_data;
+        public long dataSize;
+        public byte[] data;
 
         private Dictionary<object, object> m_cachedDictionary = null;
 
@@ -32,7 +33,7 @@ namespace Assets.Luau
             }
 
             int readPos = 1; //skip the first byte, its a magic key to let us know its a blob
-            m_cachedDictionary = Decode(m_data, ref readPos);
+            m_cachedDictionary = Decode(this.data, ref readPos);
             return m_cachedDictionary;
         }
 
@@ -328,7 +329,7 @@ namespace Assets.Luau
         }
 
         public bool Equals(BinaryBlob other) {
-            return this.m_dataSize == other?.m_dataSize;
+            return this.dataSize == other?.dataSize;
         }
     }
 }

@@ -126,7 +126,7 @@ namespace Code.RemoteConsole {
         }
 
         private void SendServerLogMessage(string message, LogType logType = LogType.Log, string stackTrace = "") {
-            if (RunCore.IsServer()) {
+            if (RunCore.IsServer() && !RunCore.IsEditor()) {
                 var time = DateTime.Now.ToString("HH:mm:ss");
                 if (this.startupMessages.Count < maxStartupMessages) {
                     this.startupMessages.Add(new ServerConsoleBroadcast() {
