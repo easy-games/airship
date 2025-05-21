@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 
+/// <summary>
+/// Zstandard (ZSTD) is a compression algorithm.
+/// </summary>
+/// <see href="https://facebook.github.io/zstd/"/>
 public static class ZSTD {
 	private const ulong MaxStackSize = 1024;
 	
@@ -54,10 +57,19 @@ public static class ZSTD {
 #endif
 	private static extern int ZSTDDefaultCompressionLevel();
 
+	/// Minimum compression level.
 	public static readonly int MinCompressionLevel = ZSTDMinCompressionLevel();
+	
+	/// Maximum compression level.
 	public static readonly int MaxCompressionLevel = ZSTDMaxCompressionLevel();
+	
+	/// Default compression level.
 	public static readonly int DefaultCompressionLevel = ZSTDDefaultCompressionLevel();
 	
+	/// <summary>
+	/// Compress the bytes. The compression level can be between <c>ZSTD.MinCompressionLevel</c>
+	/// and <c>ZSTD.MaxCompressionLevel</c>. Most use-cases should use <c>ZSTD.DefaultCompressionLevel</c>.
+	/// </summary>
 	public static byte[] Compress(byte[] data, int compressionLevel) {
 		var bound = ZSTDCompressBound((ulong)data.Length);
 		if (bound <= MaxStackSize) {
@@ -66,6 +78,9 @@ public static class ZSTD {
 		return CompressWithHeap(data, bound, compressionLevel);
 	}
 
+	/// <summary>
+	/// Decompress the bytes.
+	/// </summary>
 	public static byte[] Decompress(byte[] data) {
 		var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
 		var rSize = ZSTDGetFrameContentSize(dataHandle.AddrOfPinnedObject(), (ulong)data.Length);
