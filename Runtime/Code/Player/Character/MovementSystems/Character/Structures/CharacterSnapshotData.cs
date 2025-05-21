@@ -125,8 +125,8 @@ namespace Code.Player.Character.MovementSystems.Character
             this.customData = copySnapshot.customData != null
                 ? new BinaryBlob()
                 {
-                    m_dataSize = copySnapshot.customData.m_dataSize,
-                    m_data = (byte[])copySnapshot.customData.m_data.Clone(),
+                    dataSize = copySnapshot.customData.dataSize,
+                    data = (byte[])copySnapshot.customData.data.Clone(),
                 }
                 : default;
         }
@@ -163,8 +163,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 lookVector = lookVector,
                 customData = customData != null ? new BinaryBlob()
                 {
-                    m_dataSize = customData.m_dataSize,
-                    m_data = (byte[]) customData.m_data.Clone(),
+                    dataSize = customData.dataSize,
+                    data = (byte[]) customData.data.Clone(),
                 } : default,
             };
         }
