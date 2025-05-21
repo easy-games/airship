@@ -588,31 +588,54 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (movementSettings.preventFallingWhileCrouching && !currentMoveSnapshot.prevStepUp &&
                 currentMoveSnapshot.isCrouching && isMoving &&
                 grounded) {
-                var posInMoveDirection = rootPosition + normalizedMoveDir * 0.2f;
+                var distanceCheck = movementSettings.characterRadius * 2 + forwardMargin + newVelocity.magnitude;
+                var projectedPosition
+                    = rootPosition + normalizedMoveDir * distanceCheck;
                 var (groundedInMoveDirection, _, _) =
-                    physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
+                    physics.CheckIfGrounded(projectedPosition, newVelocity, normalizedMoveDir);
                 var foundGroundedDir = false;
                 if (!groundedInMoveDirection) {
-                    // Determine which direction we're mainly moving toward
-                    var xFirst = Math.Abs(command.moveDir.x) > Math.Abs(command.moveDir.z);
-                    Vector3[] vecArr = { new(command.moveDir.x, 0, 0), new(0, 0, command.moveDir.z) };
-                    for (var i = 0; i < 2; i++) {
-                        // We will try x dir first if x magnitude is greater
-                        var index = (xFirst ? i : i + 1) % 2;
-                        var safeDirection = vecArr[index];
-                        var stepPosition = rootPosition + safeDirection.normalized * 0.2f;
-                        (foundGroundedDir, _, _) =
-                            physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
-                        if (foundGroundedDir) {
-                            characterMoveVelocity = safeDirection;
-                            break;
+                    GizmoUtils.DrawSphere(projectedPosition + new Vector3(0, -.5f, 0), .1f, Color.red, 4, .1f);
+                    Debug.DrawLine(projectedPosition + new Vector3(0, -.5f, 0),
+                        projectedPosition + new Vector3(0, -.5f, 0) + -distanceCheck * normalizedMoveDir, Color.red,
+                        .1f);
+                    if (Physics.Raycast(projectedPosition + new Vector3(0, -.5f, 0), -normalizedMoveDir,
+                            out var cliffHit, distanceCheck,
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                        //Stop movement into this surface
+                        var colliderDot = 1 - Mathf.Max(0,
+                            -Vector3.Dot(-cliffHit.normal, normalizedMoveDir));
+                        //var colliderDot = 1 - -Vector3.Dot(forwardHit.normal, forwardVector);
+                        if (Mathf.Abs(colliderDot) < .01) {
+                            //|| forwardHit.distance < bumpSize) {
+                            colliderDot = 0;
                         }
+
+                        //limit movement dir based on how straight you are walking into the wall
+                        characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, -cliffHit.normal);
+                        characterMoveVelocity.y = 0;
+                        characterMoveVelocity *= colliderDot;
                     }
+                    // Determine which direction we're mainly moving toward
+                    // var xFirst = Math.Abs(command.moveDir.x) > Math.Abs(command.moveDir.z);
+                    // Vector3[] vecArr = { new(command.moveDir.x, 0, 0), new(0, 0, command.moveDir.z) };
+                    // for (var i = 0; i < 2; i++) {
+                    //     // We will try x dir first if x magnitude is greater
+                    //     var index = (xFirst ? i : i + 1) % 2;
+                    //     var safeDirection = vecArr[index];
+                    //     var stepPosition = rootPosition + safeDirection.normalized * 0.2f;
+                    //     (foundGroundedDir, _, _) =
+                    //         physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
+                    //     if (foundGroundedDir) {
+                    //         characterMoveVelocity = safeDirection;
+                    //         break;
+                    //     }
+                    // }
 
                     // Only if we didn't find a safe direction set move to 0
-                    if (!foundGroundedDir) {
-                        characterMoveVelocity = Vector3.zero;
-                    }
+                    // if (!foundGroundedDir) {
+                    //     characterMoveVelocity = Vector3.zero;
+                    // }
                 }
             }
 
