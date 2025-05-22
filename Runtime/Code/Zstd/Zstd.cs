@@ -26,6 +26,9 @@ namespace Code.Zstd {
 		/// </summary>
 		public static byte[] Compress(byte[] data, int compressionLevel) {
 			var bound = ZSTDCompressBound((ulong)data.Length);
+			if (IsError(bound)) {
+				throw new ZstdException(bound);
+			}
 			if (bound <= MaxStackSize) {
 				return CompressWithStack(data, bound, compressionLevel);
 			}
@@ -75,8 +78,8 @@ namespace Code.Zstd {
 				dataHandle.Free();
 				throw new ZstdException(decompressedSize);
 			}
-			var dstSegment = new ArraySegment<byte>(decompressedData);
-			return dstSegment.Slice(0, (int)decompressedSize).Array;
+			Array.Resize(ref decompressedData, (int)decompressedSize);
+			return decompressedData;
 		}
 
 		private static unsafe byte[] CompressWithStack(byte[] data, ulong bound, int compressionLevel) {
@@ -104,8 +107,8 @@ namespace Code.Zstd {
 			if (IsError(compressedSize)) {
 				throw new ZstdException(compressedSize);
 			}
-			var dstSegment = new ArraySegment<byte>(dst);
-			return dstSegment.Slice(0, (int)compressedSize).Array;
+			Array.Resize(ref dst, (int)compressedSize);
+			return dst;
 		}
 
 		private static bool IsError(ulong code) {
@@ -144,7 +147,7 @@ namespace Code.Zstd {
 #else
 		[DllImport("LuauPlugin")]
 #endif
-		private static extern ulong ZSTDDecompress(IntPtr dst, ulong dstSize, IntPtr src, ulong compressedSize);
+		private static extern ulong ZSTDDecompress(IntPtr dst, ulong dstSize, IntPtr src, ulong srcSize);
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]

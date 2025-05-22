@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using Code.Zstd;
 using UnityEngine;
 using UnityEngine.Serialization;
 using static LuauCore;
@@ -58,7 +59,7 @@ namespace Assets.Luau {
             var bufferMaybeCompressed = new ArraySegment<byte>(bufferRaw).Slice(1, bufferRaw.Length - 1);
             
             // Decompress the buffer if needed:
-            var buffer = isCompressed ? ZSTD.Decompress(bufferMaybeCompressed.Array) : bufferMaybeCompressed.Array;
+            var buffer = isCompressed ? Zstd.Decompress(bufferMaybeCompressed.Array) : bufferMaybeCompressed.Array;
             
             Dictionary<object, object> dictionary = new();
 
