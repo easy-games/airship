@@ -334,7 +334,9 @@ public class AccessoryBuilder : MonoBehaviour {
                     // Create the prefab on the joint
                     newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
                     meshRenderers = newAccessoryObj.GetComponentsInChildren<MeshRenderer>();
-                    skinnedMeshRenderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
+                    //Dont grab skinned meshes from static accessory because if its static than any skinned meshes will have their own rigs
+                    //skinnedMeshRenderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
+                    skinnedMeshRenderers = Array.Empty<SkinnedMeshRenderer>();
                     renderers = meshRenderers;
                 }
 
@@ -593,7 +595,7 @@ public class AccessoryBuilder : MonoBehaviour {
             meshCombiner.outputSkinnedMeshRenderers[0]);
     }
 
-    private T[] GetAllAccessoryRenderersInternal<T>()where T: Renderer {
+    private T[] GetAllAccessoryRenderersInternal<T>() where T : Renderer {
         var renderers = new List<T>();
 
         //Main renderers
@@ -618,9 +620,9 @@ public class AccessoryBuilder : MonoBehaviour {
         //Combined renderers
         if (meshCombiner.enabled && typeof(T) != typeof(MeshRenderer)) {
             for (var i = 0; i < meshCombiner.outputSkinnedMeshRenderers.Count; i++) {
-                renderers.Add(meshCombiner.outputSkinnedMeshRenderers[i]  as T);
+                renderers.Add(meshCombiner.outputSkinnedMeshRenderers[i] as T);
             }
-        } 
+        }
 
         return renderers.ToArray();
     }
