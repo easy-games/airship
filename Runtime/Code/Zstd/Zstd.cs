@@ -25,17 +25,9 @@ namespace Code.Zstd {
 		public Zstd(ulong scratchBufferSize) {
 			_ctx = new ZstdContext(scratchBufferSize);
 		}
-
-		public void PrewarmForCompression() {
-			_ = _ctx.Cctx;
-		}
-
-		public void PrewarmForDecompression() {
-			_ = _ctx.Dctx;
-		}
 		
 		/// <summary>
-		/// Compress the bytes. The compression level can be between <c>Zstd.MinCompressionLevel</c>
+		/// Compress the data. The compression level can be between <c>Zstd.MinCompressionLevel</c>
 		/// and <c>Zstd.MaxCompressionLevel</c>. Most use-cases should use <c>Zstd.DefaultCompressionLevel</c>.
 		/// </summary>
 		public byte[] Compress(byte[] data, int compressionLevel) {
@@ -43,7 +35,14 @@ namespace Code.Zstd {
 		}
 		
 		/// <summary>
-		/// Decompress the bytes.
+		/// Compress the data using the default compression level.
+		/// </summary>
+		public byte[] Compress(byte[] data) {
+			return CompressData(data, DefaultCompressionLevel, _ctx);
+		}
+		
+		/// <summary>
+		/// Decompress the data.
 		/// </summary>
 		public byte[] Decompress(byte[] data) {
 			return DecompressData(data, _ctx);
@@ -287,44 +286,22 @@ namespace Code.Zstd {
 	public class ZstdContext : IDisposable {
 		internal byte[] ScratchBuffer;
 		
-		private IntPtr _cctx = IntPtr.Zero;
-		private IntPtr _dctx = IntPtr.Zero;
-
-		internal IntPtr Cctx {
-			get {
-				if (_cctx == IntPtr.Zero) {
-					_cctx = Zstd.ZSTDCreateCCTX();
-				}
-				return _cctx;
-			}
-		}
-
-		internal IntPtr Dctx {
-			get {
-				if (_dctx == IntPtr.Zero) {
-					_dctx = Zstd.ZSTDCreateDCTX();
-				}
-				return _dctx;
-			}
-		}
+		internal IntPtr Cctx;
+		internal IntPtr Dctx;
 		
 		public ZstdContext(ulong scratchBufferSize) {
 			ScratchBuffer = new byte[scratchBufferSize];
+			Cctx = Zstd.ZSTDCreateCCTX();
+			Dctx = Zstd.ZSTDCreateDCTX();
 		}
 
 		public void Dispose() {
-			if (Cctx != IntPtr.Zero) {
-				Zstd.ZSTDFreeCCTX(Cctx);
-			}
-			if (Dctx != IntPtr.Zero) {
-				Zstd.ZSTDFreeDCTX(Dctx);
-			}
+			Zstd.ZSTDFreeCCTX(Cctx);
+			Zstd.ZSTDFreeDCTX(Dctx);
 		}
 	}
 
 	public class ZstdException : Exception {
-		public ZstdException(string message) : base(message) { }
-
 		public ZstdException(ulong code) : base(Zstd.GetErrorName(code)) { }
 	}
 }
