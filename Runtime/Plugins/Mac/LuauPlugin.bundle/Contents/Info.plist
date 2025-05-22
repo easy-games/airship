@@ -9,7 +9,7 @@
 	<key>CFBundleExecutable</key>
 	<string>LuauPlugin</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.unity3d.LuauPlugin</string>
+	<string>gg.easy.airship.luauplugin</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
