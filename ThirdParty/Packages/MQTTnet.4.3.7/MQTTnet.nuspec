@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>MQTTnet</id>
+    <version>4.3.7.1207</version>
+    <authors>The contributors of MQTTnet</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>nuget.png</icon>
+    <projectUrl>https://github.com/dotnet/MQTTnet</projectUrl>
+    <description>MQTTnet is a high performance .NET library for MQTT based communication. It provides a MQTT client and a MQTT server (broker) and supports v3.1.0, v3.1.1 and v5.0.0 of the MQTT protocol.</description>
+    <releaseNotes>* Core: Fixed issue when parsing AUTH packet with 0 length body (#2039).
+* nuget: Changed code signing and nuget certificate (**BREAKING CHANGE**).
+* TopicTemplates: Updated samples, parameter validation (#2022).
+* ManagedClient: Switch SubscribeAsync/UnsubscribeAsync to IEnumerable&lt;string&gt; (#2026).
+* Server: Fix _LoadingRetainedMessageAsync_ not executed (#2025).</releaseNotes>
+    <copyright>Copyright (c) .NET Foundation and Contributors</copyright>
+    <tags>MQTT Message Queue Telemetry Transport MQTTClient MQTTServer Server MQTTBroker Broker NETStandard IoT InternetOfThings Messaging Hardware Arduino Sensor Actuator M2M ESP Smart Home Cities Automation Xamarin Blazor</tags>
+    <repository type="git" url="https://github.com/dotnet/MQTTnet.git" commit="740d605fd2c25922fad6ea60e78e8370356e95dd" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.5.2" />
+      <group targetFramework=".NETFramework4.6.1" />
+      <group targetFramework=".NETFramework4.8" />
+      <group targetFramework=".NETStandard1.3">
+        <dependency id="NETStandard.Library" version="1.6.1" exclude="Build,Analyzers" />
+        <dependency id="System.Net.Security" version="4.3.2" exclude="Build,Analyzers" />
+        <dependency id="System.Net.WebSockets" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Net.WebSockets.Client" version="4.3.2" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="UAP10.0.10240">
+        <dependency id="Microsoft.NETCore.UniversalWindowsPlatform" version="6.2.10" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETCoreApp3.1" />
+      <group targetFramework="net5.0" />
+      <group targetFramework="net6.0" />
+      <group targetFramework="net7.0" />
+      <group targetFramework=".NETStandard2.0" />
+      <group targetFramework=".NETStandard2.1" />
+    </dependencies>
+  </metadata>
+</package>
