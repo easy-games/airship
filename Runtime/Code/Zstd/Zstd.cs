@@ -34,12 +34,19 @@ namespace Code.Zstd {
 			_ = _ctx.Dctx;
 		}
 		
-		public byte[] CompressData(byte[] data, int compressionLevel) {
-			return Compress(data, compressionLevel, _ctx);
+		/// <summary>
+		/// Compress the bytes. The compression level can be between <c>Zstd.MinCompressionLevel</c>
+		/// and <c>Zstd.MaxCompressionLevel</c>. Most use-cases should use <c>Zstd.DefaultCompressionLevel</c>.
+		/// </summary>
+		public byte[] Compress(byte[] data, int compressionLevel) {
+			return CompressData(data, compressionLevel, _ctx);
 		}
 		
-		public byte[] DecompressData(byte[] data) {
-			return Decompress(data, _ctx);
+		/// <summary>
+		/// Decompress the bytes.
+		/// </summary>
+		public byte[] Decompress(byte[] data) {
+			return DecompressData(data, _ctx);
 		}
 
 		public void Dispose() {
@@ -50,7 +57,7 @@ namespace Code.Zstd {
 		/// Compress the bytes. The compression level can be between <c>Zstd.MinCompressionLevel</c>
 		/// and <c>Zstd.MaxCompressionLevel</c>. Most use-cases should use <c>Zstd.DefaultCompressionLevel</c>.
 		/// </summary>
-		public static byte[] Compress(byte[] data, int compressionLevel, ZstdContext ctx = null) {
+		public static byte[] CompressData(byte[] data, int compressionLevel, ZstdContext ctx = null) {
 			var bound = ZSTDCompressBound((ulong)data.Length);
 			if (IsError(bound)) {
 				throw new ZstdException(bound);
@@ -64,7 +71,7 @@ namespace Code.Zstd {
 		/// <summary>
 		/// Decompress the bytes.
 		/// </summary>
-		public static byte[] Decompress(byte[] data, ZstdContext ctx = null) {
+		public static byte[] DecompressData(byte[] data, ZstdContext ctx = null) {
 			var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
 			var rSize = ZSTDGetFrameContentSize(dataHandle.AddrOfPinnedObject(), (ulong)data.Length);
 			if (IsError(rSize)) {

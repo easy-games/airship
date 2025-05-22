@@ -59,7 +59,7 @@ namespace Assets.Luau {
             var bufferMaybeCompressed = new ArraySegment<byte>(bufferRaw).Slice(1, bufferRaw.Length - 1);
             
             // Decompress the buffer if needed:
-            var buffer = isCompressed ? Zstd.Decompress(bufferMaybeCompressed.Array) : bufferMaybeCompressed.Array;
+            var buffer = isCompressed ? Zstd.DecompressData(bufferMaybeCompressed.Array) : bufferMaybeCompressed.Array;
             
             Dictionary<object, object> dictionary = new();
 
