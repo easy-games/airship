@@ -1537,12 +1537,16 @@ namespace Code.Player.Character.MovementSystems.Character
                 isClient && mode != NetworkedStateSystemMode.Observer ? lookVector : currentMoveSnapshot.lookVector);
         }
 
-        public void TeleportAndLook(Vector3 position, Vector3 lookVector)
-        {
-            if (mode == NetworkedStateSystemMode.Observer && isServer)
-            {
+        public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
+            if (mode == NetworkedStateSystemMode.Observer && isServer) {
                 RpcTeleportAndLook(position, lookVector);
                 return;
+            }
+            
+            // TS listens to this to update the local camera.
+            // Position will update from reconcile, but we handle look direction manually.
+            if (mode == NetworkedStateSystemMode.Authority && isServer) {
+                RpcSetLookVector(lookVector);
             }
 
             // TODO: why? Copied from old movement
@@ -1778,6 +1782,11 @@ namespace Code.Player.Character.MovementSystems.Character
         public void RpcTeleport(Vector3 position)
         {
             Teleport(position);
+        }
+
+        [TargetRpc]
+        public void RpcSetLookVector(Vector3 lookVector) {
+            SetLookVector(this.lookVector);
         }
 
         [TargetRpc]
