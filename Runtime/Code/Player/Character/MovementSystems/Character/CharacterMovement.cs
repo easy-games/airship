@@ -1786,7 +1786,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         [TargetRpc]
         public void RpcSetLookVector(Vector3 lookVector) {
-            SetLookVector(this.lookVector);
+            SetLookVector(lookVector);
         }
 
         [TargetRpc]
