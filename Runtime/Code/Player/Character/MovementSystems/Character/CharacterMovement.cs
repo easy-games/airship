@@ -971,7 +971,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 var forwardDistance = Mathf.Max(flatVelocity.magnitude * deltaTime, minDistance);
                 var forwardVector = flatVelocity.normalized * Mathf.Max(forwardDistance, bumpSize);
                 //print("Forward vec: " + forwardVector);
-                drawDebugGizmos_WALLCLIPPING = true;
 
                 //Do raycasting after we have claculated our move direction
                 var forwardHits =
