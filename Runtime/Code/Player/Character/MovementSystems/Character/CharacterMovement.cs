@@ -964,10 +964,12 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region APPLY FORCES
             //Stop character from moveing into colliders (Helps prevent axis aligned box colliders from colliding when they shouldn't like jumping in a voxel world)
-            if (false && movementSettings.preventWallClipping && !currentMoveSnapshot.prevStepUp) {
+            if (movementSettings.preventWallClipping && !currentMoveSnapshot.prevStepUp) {
+                var velY = newVelocity.y;
+                flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
                 var minDistance = (characterRadius + forwardMargin);
-                var forwardDistance = Mathf.Max(newVelocity.magnitude * deltaTime, minDistance);
-                var forwardVector = newVelocity.normalized * Mathf.Max(forwardDistance, bumpSize);
+                var forwardDistance = Mathf.Max(flatVelocity.magnitude * deltaTime, minDistance);
+                var forwardVector = flatVelocity.normalized * Mathf.Max(forwardDistance, bumpSize);
                 //print("Forward vec: " + forwardVector);
                 drawDebugGizmos_WALLCLIPPING = true;
 
@@ -978,6 +980,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                 float i = 0;
                 string label = "ForwardHitCounts: " + forwardHits.Length + "\n";
+                int forcedCount = 0;
                 foreach (var forwardHitResult in forwardHits) {
                     label += "Hit " + i + " Point: " + forwardHitResult.point + " Normal: " + forwardHitResult.normal;
                     //Check if this is a valid wall and not something behind a surface
@@ -1042,9 +1045,31 @@ namespace Code.Player.Character.MovementSystems.Character {
                         // newVelocity.x -= flatVelocity.x;
                         // newVelocity.z -= flatVelocity.z;
                         
-                        newVelocity = Vector3.ProjectOnPlane(newVelocity, forwardHit.normal);
-                        newVelocity.y = 0;
-                        newVelocity *= colliderDot;
+                        var flatPoint = new Vector3(forwardHit.point.x, transform.position.y, forwardHit.point.z);
+                        if (Vector3.Distance(flatPoint, transform.position) < minDistance) {
+                            //Snap back to the bump distance so you never inch your way to the edge 
+                            var newPos = forwardHit.point + forwardHit.normal * (bumpSize+forwardMargin);
+                            if (forcedCount == 0) {
+                                transform.position = new Vector3(newPos.x, transform.position.y, newPos.z);
+                            } else {
+                                transform.position = new Vector3(
+                                    (transform.position.x + newPos.x) /2f, 
+                                    transform.position.y, 
+                                    (transform.position.z + newPos.z) /2f);
+                            }
+
+                            forcedCount++;
+                            //newVelocity = new Vector3(0, velY, 0);
+
+                            // var normalVel = forwardHit.normal * (Math.Abs(newVelocity.x) + Math.Abs(newVelocity.z)); 
+                            // newVelocity = new Vector3(normalVel.x, velY , normalVel.z);
+                        } else {
+                        }
+                        
+                        newVelocity = Vector3.ProjectOnPlane( flatVelocity, forwardHit.normal);
+                        //newVelocity.y = 0;
+                        newVelocity *= colliderDot * .9f;
+                        newVelocity.y = velY;
 
                         //limit movement dir based on how straight you are walking into the wall
                         // characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, forwardHit.normal);
@@ -1068,8 +1093,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                     // }
                     label += "\n";
                 }
-                
-                Debug.Log(label);
+
+                if (forwardHits.Length > 0) {
+                    //Debug.Log(label);
+                }
 
                 // if (forwardHits.Length == 0) {
                 //     //Not hitting anything forwad, but make sure we aren't already overlapping something
@@ -1080,7 +1107,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                 if (!grounded && detectedGround) {
                     //Hit ground but its not valid ground, push away from it
-                    print("PUSHING AWAY FROM: " + groundHit.normal);
+                    //print("PUSHING AWAY FROM: " + groundHit.normal);
                     newVelocity += groundHit.normal * physics.GetFlatDistance(rootPosition, groundHit.point) * .25f /
                                    deltaTime;
                 }
