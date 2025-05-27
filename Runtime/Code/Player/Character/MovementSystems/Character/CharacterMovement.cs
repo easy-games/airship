@@ -225,7 +225,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void SetMode(NetworkedStateSystemMode mode) {
-            Debug.Log("Running movement in " + mode + " mode for " + name + ".");
+            // Debug.Log("Running movement in " + mode + " mode for " + name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
@@ -1450,6 +1450,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                 RpcTeleportAndLook(position, lookVector);
                 return;
             }
+            
+            // TS listens to this to update the local camera.
+            // Position will update from reconcile, but we handle look direction manually.
+            if (mode == NetworkedStateSystemMode.Authority && isServer) {
+                RpcSetLookVector(lookVector);
+            }
 
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
@@ -1653,6 +1659,11 @@ namespace Code.Player.Character.MovementSystems.Character {
         [TargetRpc]
         public void RpcTeleport(Vector3 position) {
             Teleport(position);
+        }
+
+        [TargetRpc]
+        public void RpcSetLookVector(Vector3 lookVector) {
+            SetLookVector(lookVector);
         }
 
         [TargetRpc]

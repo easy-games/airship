@@ -180,7 +180,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
                     ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 2);
-            print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
+            // print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
 
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
@@ -944,19 +944,16 @@ namespace Code.Network.StateSystem
             }
 
             Debug.LogWarning("Misprediction for " + this.name + " on cmd#" + state.lastProcessedCommand + ". Requesting resimulation.");
-
-            // Correct our networked system state to match the authoritative answer from the server
-            this.stateSystem.SetCurrentState(state);
-            Physics.SyncTransforms();
-            // Build an updated state entry for the command that was processed by the server.
-            // We use the client prediction time so we can act like we got this right in our history
-            var updatedState = this.stateSystem.GetCurrentState(state.lastProcessedCommand,
-                clientPredictedState.time);
-            // Debug.Log("Generated updated state for prediction history: " + updatedState + " based on authed state: " + state);
+            
+            // We use the client prediction time so we can act like we got this right in our history. Server gives us
+            // a time value in its local timeline so the provided time is not useful to us.
+            state.time = clientPredictedState.time;
+            
             // Overwrite the time we should have predicted this on the client so it
             // appears from the client perspective that we predicted the command correctly.
-            this.stateHistory.Overwrite(clientPredictedState.time, updatedState);
+            this.stateHistory.Overwrite(clientPredictedState.time, state);
             this.stateHistory.SetAuthoritativeEntry(clientPredictedState.time, true);
+            
             // Resimulate all commands performed after the incorrect prediction so that
             // our future predictions are (hopefully) correct.
             resimulate(clientPredictedState.time);
