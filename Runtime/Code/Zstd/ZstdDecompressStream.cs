@@ -57,6 +57,7 @@ namespace Code.Zstd {
 
 		private int ReadCore(Span<byte> buffer) {
 			var read = 0;
+			var lastRet = 0ul;
 			var streamEmpty = false;
 
 			if (buffer.IsEmpty) {
@@ -87,7 +88,7 @@ namespace Code.Zstd {
 					}
 
 					if (!streamEmpty) {
-						Decompress();
+						lastRet = Decompress();
 					}
 				}
 
@@ -96,10 +97,14 @@ namespace Code.Zstd {
 				}
 			}
 
+			if (streamEmpty && _currentBufOut == 0 && lastRet != 0) {
+				throw new ZstdStreamException($"EOF before end of stream: {lastRet}");
+			}
+
 			return read;
 		}
 
-		private void Decompress() {
+		private ulong Decompress() {
 			var lastRet = 0ul;
 			var decompressedBytes = 0;
 			
@@ -127,9 +132,7 @@ namespace Code.Zstd {
 			_currentBufOut += decompressedBytes;
 			_currentBufIn = 0;
 
-			if (lastRet != 0) {
-				throw new ZstdStreamException($"EOF before end of stream: {lastRet}");
-			}
+			return lastRet;
 		}
 
 		private int ReadInCompressedChunkFromStream() {
