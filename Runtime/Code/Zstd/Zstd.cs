@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Runtime.InteropServices;
 
 using static Code.Zstd.ZstdNative;
@@ -175,7 +176,7 @@ namespace Code.Zstd {
 		internal readonly IntPtr Dctx;
 		
 		public ZstdContext(ulong scratchBufferSize) {
-			ScratchBuffer = new byte[scratchBufferSize];
+			ScratchBuffer = ArrayPool<byte>.Shared.Rent((int)scratchBufferSize);
 			Cctx = ZSTD_createCCtx();
 			Dctx = ZSTD_createDCtx();
 		}
@@ -183,10 +184,16 @@ namespace Code.Zstd {
 		public void Dispose() {
 			ZSTD_freeCCtx(Cctx);
 			ZSTD_freeDCtx(Dctx);
+			ArrayPool<byte>.Shared.Return(ScratchBuffer);
 		}
 	}
 
 	public class ZstdException : Exception {
 		public ZstdException(ulong code) : base(ZSTD_getErrorName(code)) { }
+	}
+
+	public class ZstdStreamException : Exception {
+		public ZstdStreamException(string message) : base(message) { }
+		public ZstdStreamException(ulong code) : this(ZSTD_getErrorName(code)) { }
 	}
 }
