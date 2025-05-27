@@ -180,7 +180,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
                     ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 2);
-            print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
+            // print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
 
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
