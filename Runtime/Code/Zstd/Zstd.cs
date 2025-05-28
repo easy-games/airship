@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Buffers;
 using System.Runtime.InteropServices;
-
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
@@ -51,7 +51,16 @@ namespace Code.Zstd {
 		}
 
 		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing) {
 			_ctx.Dispose();
+		}
+
+		~Zstd() {
+			Dispose(false);
 		}
 
 		/// <summary>
@@ -168,19 +177,37 @@ namespace Code.Zstd {
 		}
 	}
 
-	public class ZstdContext : IDisposable {
+	public sealed class ZstdContext : IDisposable {
 		internal readonly byte[] ScratchBuffer;
 		
 		internal readonly IntPtr Cctx;
 		internal readonly IntPtr Dctx;
+
+		private bool _disposed;
 		
 		public ZstdContext(ulong scratchBufferSize) {
-			ScratchBuffer = new byte[scratchBufferSize];
+			ScratchBuffer = ArrayPool<byte>.Shared.Rent((int)scratchBufferSize);
 			Cctx = ZSTD_createCCtx();
 			Dctx = ZSTD_createDCtx();
 		}
 
+		~ZstdContext() {
+			Dispose(false);
+		}
+
 		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		private void Dispose(bool disposing) {
+			if (_disposed) return;
+			_disposed = true;
+			
+			if (disposing) {
+				ArrayPool<byte>.Shared.Return(ScratchBuffer);
+			}
+			
 			ZSTD_freeCCtx(Cctx);
 			ZSTD_freeDCtx(Dctx);
 		}
@@ -188,5 +215,10 @@ namespace Code.Zstd {
 
 	public class ZstdException : Exception {
 		public ZstdException(ulong code) : base(ZSTD_getErrorName(code)) { }
+	}
+
+	public class ZstdStreamException : Exception {
+		public ZstdStreamException(string message) : base(message) { }
+		public ZstdStreamException(ulong code) : this(ZSTD_getErrorName(code)) { }
 	}
 }

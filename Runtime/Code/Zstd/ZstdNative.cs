@@ -327,7 +327,7 @@ namespace Code.Zstd {
 #else
 		[DllImport("LuauPlugin")]
 #endif
-		internal static extern ulong ZSTD_compressStream2(IntPtr cctx, ZSTD_outBuffer output, ZSTD_inBuffer input, ZSTD_EndDirective endOp);
+		internal static extern ulong ZSTD_compressStream2(IntPtr cctx, ref ZSTD_outBuffer output, ref ZSTD_inBuffer input, ZSTD_EndDirective endOp);
 		
 #if UNITY_IPHONE
 		[DllImport("__Internal")]
@@ -355,21 +355,21 @@ namespace Code.Zstd {
 #else
 		[DllImport("LuauPlugin")]
 #endif
-		internal static extern ulong ZSTD_compressStream(IntPtr zcs, ZSTD_outBuffer output, ZSTD_inBuffer input);
+		internal static extern ulong ZSTD_compressStream(IntPtr zcs, ref ZSTD_outBuffer output, ref ZSTD_inBuffer input);
 		
 #if UNITY_IPHONE
 		[DllImport("__Internal")]
 #else
 		[DllImport("LuauPlugin")]
 #endif
-		internal static extern ulong ZSTD_flushStream(IntPtr zcs, ZSTD_outBuffer output);
+		internal static extern ulong ZSTD_flushStream(IntPtr zcs, ref ZSTD_outBuffer output);
 		
 #if UNITY_IPHONE
 		[DllImport("__Internal")]
 #else
 		[DllImport("LuauPlugin")]
 #endif
-		internal static extern ulong ZSTD_endStream(IntPtr zcs, ZSTD_outBuffer output);
+		internal static extern ulong ZSTD_endStream(IntPtr zcs, ref ZSTD_outBuffer output);
 		
 #if UNITY_IPHONE
 		[DllImport("__Internal")]
@@ -397,7 +397,7 @@ namespace Code.Zstd {
 #else
 		[DllImport("LuauPlugin")]
 #endif
-		internal static extern ulong ZSTD_decompressStream(IntPtr zds, ZSTD_outBuffer output, ZSTD_inBuffer input);
+		internal static extern ulong ZSTD_decompressStream(IntPtr zds, ref ZSTD_outBuffer output, ref ZSTD_inBuffer input);
 		
 #if UNITY_IPHONE
 		[DllImport("__Internal")]
