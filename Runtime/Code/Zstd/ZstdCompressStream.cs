@@ -20,6 +20,8 @@ namespace Code.Zstd {
 		private readonly byte[] _bufOut;
 		private readonly ulong _bufOutSize;
 
+		private bool _disposed;
+
 		public ZstdCompressStream(Stream compressedStream, bool leaveOpen = false) : this(compressedStream, Zstd.DefaultCompressionLevel, leaveOpen) { }
 
 		public ZstdCompressStream(Stream compressedStream, int compressionLevel, bool leaveOpen = false) {
@@ -96,11 +98,9 @@ namespace Code.Zstd {
 			}
 		}
 
-		private bool _disposed = false;
 		protected override void Dispose(bool disposing) {
 			base.Dispose(disposing);
 			if (disposing && !_disposed) {
-				_disposed = true;
 				var finished = false;
 				do {
 					var output = new ZSTD_outBuffer {
@@ -126,6 +126,8 @@ namespace Code.Zstd {
 
 			ZSTD_freeCCtx(_cctx);
 			_cctx = IntPtr.Zero;
+			
+			_disposed = true;
 		}
 	}
 }

@@ -27,6 +27,8 @@ namespace Code.Zstd {
 
 		private int _currentBufOutOffset;
 		private int _currentBufIn;
+		
+		private bool _disposed;
 
 		public ZstdDecompressStream(Stream compressedStream, bool leaveOpen = false) {
 			_compressedStream = compressedStream;
@@ -164,11 +166,9 @@ namespace Code.Zstd {
 			throw new NotSupportedException();
 		}
 
-		private bool _disposed = false;
 		protected override void Dispose(bool disposing) {
 			base.Dispose(disposing);
 			if (disposing && !_disposed) {
-				_disposed = true;
 				_outHandle.Free();
 				_inHandle.Free();
 				ArrayPool<byte>.Shared.Return(_bufOut);
@@ -181,6 +181,8 @@ namespace Code.Zstd {
 
 			ZSTD_freeDCtx(_dctx);
 			_dctx = IntPtr.Zero;
+			
+			_disposed = true;
 		}
 	}
 }

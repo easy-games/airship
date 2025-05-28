@@ -52,7 +52,16 @@ namespace Code.Zstd {
 		}
 
 		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing) {
 			_ctx.Dispose();
+		}
+
+		~Zstd() {
+			Dispose(false);
 		}
 
 		/// <summary>
@@ -169,11 +178,13 @@ namespace Code.Zstd {
 		}
 	}
 
-	public class ZstdContext : IDisposable {
+	public sealed class ZstdContext : IDisposable {
 		internal readonly byte[] ScratchBuffer;
 		
 		internal readonly IntPtr Cctx;
 		internal readonly IntPtr Dctx;
+
+		private bool _disposed;
 		
 		public ZstdContext(ulong scratchBufferSize) {
 			ScratchBuffer = ArrayPool<byte>.Shared.Rent((int)scratchBufferSize);
@@ -181,10 +192,25 @@ namespace Code.Zstd {
 			Dctx = ZSTD_createDCtx();
 		}
 
+		~ZstdContext() {
+			Dispose(false);
+		}
+
 		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		private void Dispose(bool disposing) {
+			if (_disposed) return;
+			_disposed = true;
+			
+			if (disposing) {
+				ArrayPool<byte>.Shared.Return(ScratchBuffer);
+			}
+			
 			ZSTD_freeCCtx(Cctx);
 			ZSTD_freeDCtx(Dctx);
-			ArrayPool<byte>.Shared.Return(ScratchBuffer);
 		}
 	}
 
