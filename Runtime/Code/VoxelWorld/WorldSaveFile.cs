@@ -15,6 +15,7 @@ public class WorldSaveFile : ScriptableObject {
     public List<BlockIdToScopedName> blockIdToScopeName = new();
 
     public byte[] chunksCompressed;
+    [HideInInspector] public bool chunksCompressedV2;
 
     [Serializable]
     public struct BlockIdToScopedName {
@@ -216,7 +217,8 @@ public class WorldSaveFile : ScriptableObject {
         }
         
         // Compress:
-        chunksCompressed = VoxelCompressUtil.CompressToByteArray(memStream);
+        chunksCompressed = VoxelCompressUtil.CompressToByteArrayV2(memStream);
+        chunksCompressedV2 = true;
         
         Profiler.EndSample();
 
@@ -299,7 +301,9 @@ public class WorldSaveFile : ScriptableObject {
             
             // Decompress and deserialize chunks:
             Profiler.BeginSample("DecompressChunks");
-            using var decompressedStream = VoxelCompressUtil.DecompressToMemoryStream(chunksCompressed);
+            using var decompressedStream = chunksCompressedV2
+                ? VoxelCompressUtil.DecompressToMemoryStreamV2(chunksCompressed)
+                : VoxelCompressUtil.DecompressToMemoryStreamV1(chunksCompressed);
             Profiler.EndSample();
 
             var reader = new BinaryReader(decompressedStream);
