@@ -57,7 +57,7 @@ using Object = UnityEngine.Object;
         // [InitializeOnLoad]
         public static class TypescriptCompilationService {
             private const int ExitCodeKill = 137;
-            private const string TsCompilerService = "Typescript Compilation Service";
+            private const string TsCompilerService = "Compiling Scripts";
             
             /// <summary>
             /// True if the compiler is running in watch mode
@@ -389,7 +389,7 @@ using Object = UnityEngine.Object;
                 try
                 {
                     if (fullClean) {
-                        UpdateCompilerProgressBarText($"Install packages for '{packageInfo.Name}'...");
+                        UpdateCompilerProgressBarText($"Preparing TypeScript project");
                         var success = RunNpmInstall(packageDir);
                         if (!success)
                         {
@@ -407,7 +407,7 @@ using Object = UnityEngine.Object;
                     while (!compilerProcess.HasExited) {
                         if (compilationState.FilesToCompileCount == 0) continue;
                         UpdateCompilerProgressBar(
-                            compilationState.CompiledFileCount / (float)compilationState.FilesToCompileCount, $"Compiling {compilationState.CompiledFileCount}/{project.CompilationState.FilesToCompileCount}");
+                            compilationState.CompiledFileCount / (float)compilationState.FilesToCompileCount, $"Compiling TypeScript files {compilationState.CompiledFileCount}/{project.CompilationState.FilesToCompileCount}...");
                     }
                     
                     // compilerProcess.WaitForExit();
