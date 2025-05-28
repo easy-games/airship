@@ -6,9 +6,9 @@ using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
 	public sealed class ZstdCompressStream : Stream {
-		public override bool CanRead => _compressedStream.CanRead;
-		public override bool CanSeek => _compressedStream.CanSeek;
-		public override bool CanWrite => _compressedStream.CanWrite;
+		public override bool CanRead => false;
+		public override bool CanSeek => false;
+		public override bool CanWrite => true;
 		public override long Length => _compressedStream.Length;
 		public override long Position { get; set; }
 
@@ -20,7 +20,9 @@ namespace Code.Zstd {
 		private readonly byte[] _bufOut;
 		private readonly ulong _bufOutSize;
 
-		public ZstdCompressStream(Stream compressedStream, bool leaveOpen = false) {
+		public ZstdCompressStream(Stream compressedStream, bool leaveOpen = false) : this(compressedStream, Zstd.DefaultCompressionLevel, leaveOpen) { }
+
+		public ZstdCompressStream(Stream compressedStream, int compressionLevel, bool leaveOpen = false) {
 			_compressedStream = compressedStream;
 			_leaveOpen = leaveOpen;
 
@@ -30,6 +32,8 @@ namespace Code.Zstd {
 			_bufOut = ArrayPool<byte>.Shared.Rent((int)_bufOutSize);
 			
 			_outHandle = GCHandle.Alloc(_bufOut, GCHandleType.Pinned);
+			
+			ZSTD_CCtx_setParameter(_cctx, ZSTD_cParameter.ZSTD_c_compressionLevel, compressionLevel);
 		}
 		
 		public override void Flush() {
@@ -83,9 +87,9 @@ namespace Code.Zstd {
 						size = _bufOutSize,
 						pos = 0,
 					};
-					var remaining = ZSTD_compressStream(_cctx, ref output, ref input);
-					if (ZSTD_isError(remaining)) {
-						throw new ZstdStreamException(remaining);
+					var ret = ZSTD_compressStream(_cctx, ref output, ref input);
+					if (ZSTD_isError(ret)) {
+						throw new ZstdStreamException(ret);
 					}
 					_compressedStream.Write(_bufOut, 0, (int)output.pos);
 				} while (input.pos != input.size);

@@ -2,14 +2,13 @@
 using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
-using UnityEngine;
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
 	public sealed class ZstdDecompressStream : Stream {
-		public override bool CanRead => _compressedStream.CanRead;
-		public override bool CanSeek => _compressedStream.CanSeek;
-		public override bool CanWrite => _compressedStream.CanWrite;
+		public override bool CanRead => true;
+		public override bool CanSeek => false;
+		public override bool CanWrite => false;
 		public override long Length => _compressedStream.Length;
 		public override long Position { get; set; }
 
@@ -24,9 +23,10 @@ namespace Code.Zstd {
 		private readonly ulong _bufOutSize;
 		private readonly ulong _bufInSize;
 
-		private int _currentBufOut;
-		private int _currentBufOutOffset = 0;
-		private int _currentBufIn = 0;
+		private readonly MemoryStream _bufOutStream;
+
+		private int _currentBufOutOffset;
+		private int _currentBufIn;
 
 		public ZstdDecompressStream(Stream compressedStream, bool leaveOpen = false) {
 			_compressedStream = compressedStream;
@@ -42,10 +42,12 @@ namespace Code.Zstd {
 			
 			_outHandle = GCHandle.Alloc(_bufOut, GCHandleType.Pinned);
 			_inHandle = GCHandle.Alloc(_bufIn, GCHandleType.Pinned);
+
+			_bufOutStream = new MemoryStream((int)ZSTD_DStreamOutSize());
 		}
 		
 		public override void Flush() {
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public override int Read(byte[] buffer, int offset, int count) {
@@ -67,16 +69,21 @@ namespace Code.Zstd {
 			}
 
 			while (true) {
-				if (_currentBufOut > 0) {
-					var len = Math.Min(buffer.Length, _currentBufOut - _currentBufOutOffset);
-					new Span<byte>(_bufOut, _currentBufOutOffset, len).CopyTo(buffer.Slice(bufferOffset, len));
+				if (_bufOutStream.Length > 0) {
+					var len = Math.Min(buffer.Length, (int)(_bufOutStream.Length - _currentBufOutOffset));
+					_bufOutStream.Seek(_currentBufOutOffset, SeekOrigin.Begin);
+					var bufOutRead = _bufOutStream.Read(buffer.Slice(bufferOffset, len));
+					if (bufOutRead != len) {
+						throw new ZstdStreamException("Failed to read full amount into buffer");
+					}
 					_currentBufOutOffset += len;
 					bufferOffset += len;
 					read += len;
 					
-					if (_currentBufOutOffset == _currentBufOut) {
-						_currentBufOut = 0;
+					if (_currentBufOutOffset == _bufOutStream.Length) {
 						_currentBufOutOffset = 0;
+						_bufOutStream.Seek(0, SeekOrigin.Begin);
+						_bufOutStream.SetLength(0);
 					}
 
 					if (len == buffer.Length) {
@@ -84,7 +91,7 @@ namespace Code.Zstd {
 					}
 				}
 
-				if (_currentBufOut == 0) {
+				if (_bufOutStream.Length == 0) {
 					if (_currentBufIn == 0) {
 						var bytesFromStream = ReadInCompressedChunkFromStream();
 						streamEmpty = bytesFromStream == 0;
@@ -95,17 +102,13 @@ namespace Code.Zstd {
 					}
 				}
 
-				if (streamEmpty && _currentBufOut == 0) {
+				if (streamEmpty && _bufOutStream.Length == 0) {
 					break;
 				}
 			}
 
-			if (streamEmpty && _currentBufOut == 0 && lastRet != 0) {
+			if (streamEmpty && _bufOutStream.Length == 0 && lastRet != 0) {
 				throw new ZstdStreamException($"EOF before end of stream: {lastRet}");
-			}
-
-			if (lastRet == 0) {
-				var x = 0;
 			}
 
 			return read;
@@ -113,7 +116,6 @@ namespace Code.Zstd {
 
 		private ulong Decompress() {
 			var lastRet = 0ul;
-			var decompressedBytes = 0;
 			
 			var input = new ZSTD_inBuffer {
 				src = _inHandle.AddrOfPinnedObject(),
@@ -123,7 +125,7 @@ namespace Code.Zstd {
 			
 			while (input.pos < input.size) {
 				var output = new ZSTD_outBuffer {
-					dst = IntPtr.Add(_outHandle.AddrOfPinnedObject(), _currentBufOut),
+					dst = _outHandle.AddrOfPinnedObject(),
 					size = _bufOutSize,
 					pos = 0,
 				};
@@ -133,10 +135,9 @@ namespace Code.Zstd {
 					throw new ZstdStreamException(lastRet);
 				}
 
-				decompressedBytes += (int)output.pos;
+				_bufOutStream.Write(_bufOut, 0, (int)output.pos);
 			}
 			
-			_currentBufOut += decompressedBytes;
 			_currentBufIn = 0;
 
 			return lastRet;
@@ -175,6 +176,7 @@ namespace Code.Zstd {
 				if (!_leaveOpen) {
 					_compressedStream.Close();
 				}
+				_bufOutStream.Dispose();
 			}
 
 			ZSTD_freeDCtx(_dctx);
