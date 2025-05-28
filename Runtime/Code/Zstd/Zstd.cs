@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
-
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
