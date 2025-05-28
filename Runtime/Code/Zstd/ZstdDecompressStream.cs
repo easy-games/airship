@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
+using UnityEngine;
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
@@ -59,6 +60,7 @@ namespace Code.Zstd {
 			var read = 0;
 			var lastRet = 0ul;
 			var streamEmpty = false;
+			var bufferOffset = 0;
 
 			if (buffer.IsEmpty) {
 				throw new ZstdStreamException("Empty buffer");
@@ -67,8 +69,9 @@ namespace Code.Zstd {
 			while (true) {
 				if (_currentBufOut > 0) {
 					var len = Math.Min(buffer.Length, _currentBufOut - _currentBufOutOffset);
-					new Span<byte>(_bufOut, _currentBufOutOffset, len).CopyTo(buffer[..len]);
+					new Span<byte>(_bufOut, _currentBufOutOffset, len).CopyTo(buffer.Slice(bufferOffset, len));
 					_currentBufOutOffset += len;
+					bufferOffset += len;
 					read += len;
 					
 					if (_currentBufOutOffset == _currentBufOut) {
@@ -101,6 +104,10 @@ namespace Code.Zstd {
 				throw new ZstdStreamException($"EOF before end of stream: {lastRet}");
 			}
 
+			if (lastRet == 0) {
+				var x = 0;
+			}
+
 			return read;
 		}
 
@@ -113,20 +120,20 @@ namespace Code.Zstd {
 				size = (ulong)_currentBufIn,
 				pos = 0,
 			};
-				
+			
 			while (input.pos < input.size) {
 				var output = new ZSTD_outBuffer {
 					dst = IntPtr.Add(_outHandle.AddrOfPinnedObject(), _currentBufOut),
 					size = _bufOutSize,
 					pos = 0,
 				};
-					
+				
 				lastRet = ZSTD_decompressStream(_dctx, ref output, ref input);
 				if (ZSTD_isError(lastRet)) {
 					throw new ZstdStreamException(lastRet);
 				}
 
-				decompressedBytes = (int)output.pos;
+				decompressedBytes += (int)output.pos;
 			}
 			
 			_currentBufOut += decompressedBytes;
