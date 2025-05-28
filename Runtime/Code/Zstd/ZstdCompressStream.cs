@@ -5,6 +5,9 @@ using System.Runtime.InteropServices;
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
+	/// <summary>
+	/// Provides methods for compressing streams using the zstd algorithm.
+	/// </summary>
 	public sealed class ZstdCompressStream : Stream {
 		public override bool CanRead => false;
 		public override bool CanSeek => false;
@@ -22,8 +25,19 @@ namespace Code.Zstd {
 
 		private bool _disposed;
 
+		/// <summary>
+		/// Constructs a new ZstdCompressionStream.
+		/// </summary>
+		/// <param name="compressedStream">The stream to which compressed data is written.</param>
+		/// <param name="leaveOpen">Optionally leave the <c>compressedStream</c> open after closing (defaults to <c>false</c>).</param>
 		public ZstdCompressStream(Stream compressedStream, bool leaveOpen = false) : this(compressedStream, Zstd.DefaultCompressionLevel, leaveOpen) { }
 
+		/// <summary>
+		/// Constructs a new ZstdCompressionStream.
+		/// </summary>
+		/// <param name="compressedStream">The stream to which compressed data is written.</param>
+		/// <param name="compressionLevel">The zstd compression level. This should be in the range of <c>Zstd.MinCompressionLevel</c> and <c>Zstd.MaxCompressionLevel</c>. Most use-cases should use <c>Zstd.DefaultCompressionLevel</c>.</param>
+		/// <param name="leaveOpen">Optionally leave the <c>compressedStream</c> open after closing (defaults to <c>false</c>).</param>
 		public ZstdCompressStream(Stream compressedStream, int compressionLevel, bool leaveOpen = false) {
 			_compressedStream = compressedStream;
 			_leaveOpen = leaveOpen;

@@ -5,6 +5,9 @@ using System.Runtime.InteropServices;
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
+	/// <summary>
+	/// Provides methods for decompressing streams using the zstd algorithm.
+	/// </summary>
 	public sealed class ZstdDecompressStream : Stream {
 		public override bool CanRead => true;
 		public override bool CanSeek => false;
@@ -30,6 +33,11 @@ namespace Code.Zstd {
 		
 		private bool _disposed;
 
+		/// <summary>
+		/// Constructs a new ZstdDecompressionStream.
+		/// </summary>
+		/// <param name="compressedStream">The source stream from which compressed data is decompressed.</param>
+		/// <param name="leaveOpen">Optionally leave the <c>compressedStream</c> open after closing (defaults to <c>false</c>).</param>
 		public ZstdDecompressStream(Stream compressedStream, bool leaveOpen = false) {
 			_compressedStream = compressedStream;
 			_leaveOpen = leaveOpen;
