@@ -597,8 +597,9 @@ namespace Code.Player.Character.MovementSystems.Character {
                 : standingCharacterHeight;
             characterHalfExtents = new Vector3(movementSettings.characterRadius,
                 currentCharacterHeight / 2f - offsetExtent, movementSettings.characterRadius);
-            mainCollider.transform.localScale = characterHalfExtents * 2;
-            mainCollider.transform.localPosition = new Vector3(0, currentCharacterHeight / 2f + offsetExtent, 0);
+            var mainColliderTransform = mainCollider.transform;
+            mainColliderTransform.localScale = characterHalfExtents * 2;
+            mainColliderTransform.localPosition = new Vector3(0, currentCharacterHeight / 2f + offsetExtent, 0);
 
 #endregion
 
