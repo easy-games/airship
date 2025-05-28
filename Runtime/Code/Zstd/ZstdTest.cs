@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -26,7 +25,7 @@ namespace Code.Zstd {
 			{
 				print("Compressing...");
 				using var compressedStream = new MemoryStream();
-				using var compressor = new ZstdCompressStream(compressedStream);
+				using var compressor = new ZstdCompressStream(compressedStream, Zstd.DefaultCompressionLevel);
 				compressor.Write(data, 0, data.Length);
 				compressor.Close();
 
@@ -47,20 +46,25 @@ namespace Code.Zstd {
 				print($"Decompressed size: {decompressed.Length} (expecting {data.Length})");
 			}
 			
-			// Check equal:
-			if (decompressed.Length != data.Length) {
-				Debug.LogError("Decompressed length does not match original length");
+			if (!AreBytesEqual(decompressed, data)) {
+				Debug.LogError("Decompressed != original");
 				return;
-			}
-
-			for (var i = 0; i < data.Length; i++) {
-				if (decompressed[i] != data[i]) {
-					Debug.LogError("Decompressed != original");
-					return;
-				}
 			}
 			
 			print("Decompressed matches original!");
+		}
+
+		private static bool AreBytesEqual(byte[] b1, byte[] b2) {
+			if (b1.Length != b2.Length) return false;
+			
+			for (var i = 0; i < b1.Length; i++) {
+				if (b1[i] != b2[i]) {
+					Debug.LogWarning($"Byte comparison failed on index {i} (len: {b1.Length})");
+					return false;
+				}
+			}
+
+			return true;
 		}
 	}
 }
