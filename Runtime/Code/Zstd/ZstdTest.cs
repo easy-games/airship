@@ -44,7 +44,7 @@ namespace Code.Zstd {
 				decompressedStream.Seek(0, SeekOrigin.Begin);
 				
 				decompressed = decompressedStream.ToArray();
-				print($"Decompressed size: {decompressed.Length}");
+				print($"Decompressed size: {decompressed.Length} (expecting {data.Length})");
 			}
 			
 			// Check equal:
