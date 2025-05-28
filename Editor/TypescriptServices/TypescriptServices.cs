@@ -64,6 +64,12 @@ namespace Airship.Editor {
             Debug.LogWarning("[TypescriptServices] Skipped, in Airship Player mode");
             return;
 #endif
+            // On project load we'll force a full compile to try and get all the refs up to date
+            if (!SessionState.GetBool("TypescriptInitialBoot", false)) {
+                SessionState.SetBool("TypescriptInitialBoot", true);
+                TypescriptCompilationService.BuildTypescript(TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
+            }
+            
             // If a server or clone - ignore
             if (!IsValidEditor) return;
             EditorApplication.delayCall += OnLoadDeferred;
