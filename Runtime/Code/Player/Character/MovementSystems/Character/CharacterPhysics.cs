@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Code.Player.Character.MovementSystems.Character {
     public class CharacterPhysics {
         private const float offsetMargin = .02f;
-        private const float gizmoDuration = 4f;
+        private const float gizmoDuration = .2f;
 
         private CharacterMovement _movement;
         private Vector3 uniformHalfExtents;
