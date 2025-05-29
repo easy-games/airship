@@ -65,7 +65,7 @@ namespace Airship.Editor {
             return;
 #endif
             // On project load we'll force a full compile to try and get all the refs up to date
-            if (!SessionState.GetBool("TypescriptInitialBoot", false)) {
+            if (!SessionState.GetBool("TypescriptInitialBoot", false) && IsValidEditor) {
                 SessionState.SetBool("TypescriptInitialBoot", true);
                 TypescriptCompilationService.BuildTypescript(TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
             }
