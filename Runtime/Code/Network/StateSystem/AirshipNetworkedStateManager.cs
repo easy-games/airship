@@ -165,7 +165,7 @@ namespace Code.Network.StateSystem
         private void Awake()
         {
             AirshipSimulationManager.Instance.ActivateSimulationManager();
-            AirshipSimulationManager.Instance.OnPerformTick += this.OnPerformTick;
+            AirshipSimulationManager.Instance.OnTick += this.OnTick;
             AirshipSimulationManager.Instance.OnSetSnapshot += this.OnSetSnapshot;
             AirshipSimulationManager.Instance.OnCaptureSnapshot += this.OnCaptureSnapshot;
             AirshipSimulationManager.Instance.OnLagCompensationCheck += this.OnLagCompensationCheck;
@@ -195,7 +195,7 @@ namespace Code.Network.StateSystem
 
         public void OnDestroy()
         {
-            AirshipSimulationManager.Instance.OnPerformTick -= this.OnPerformTick;
+            AirshipSimulationManager.Instance.OnTick -= this.OnTick;
             AirshipSimulationManager.Instance.OnSetSnapshot -= this.OnSetSnapshot;
             AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.OnCaptureSnapshot;
             AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.OnLagCompensationCheck;
@@ -282,8 +282,9 @@ namespace Code.Network.StateSystem
 
         #region Top Level Event Functions
 
-        private void OnPerformTick(double time, bool replay)
-        {
+        private void OnTick(object timeObj, object replayObj) {
+            if (timeObj is not double time || replayObj is not bool replay) return;
+            
             // We are in shared mode
             if (isServer && isClient)
             {
