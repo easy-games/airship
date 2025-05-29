@@ -225,18 +225,42 @@ using Object = UnityEngine.Object;
                     return;
                 }
 
+                var artifacts = AirshipLocalArtifactDatabase.instance;
+                var modifiedDatabase = false;
+                
                 try {
                     AssetDatabase.StartAssetEditing();
                     var compileFileList = CompiledFileQueue.ToArray();
+                    
                     foreach (var file in compileFileList) {
-                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
-                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                        var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
+                        
+                        if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
+                            if (outFileHash != data.metadata.compiledHash) {
+                                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                                data.metadata.compiledHash = outFileHash;
+                                modifiedDatabase = true;
+                            }
+                        }
+                        else {
+                            var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
+                            scriptData.metadata = new TypescriptCompilerMetadata() {
+                                compiledHash = outFileHash
+                            };
+                            
+                            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                            modifiedDatabase = true;
+                        }
                     }
+                    
                     AssetDatabase.Refresh();
                 } catch (Exception ex) {
-                    Debug.LogError("[Airship] Failed to reimport compiled files: " + ex);
+                    Debug.LogException(ex);
                 } finally {
                     AssetDatabase.StopAssetEditing();
+                    if (modifiedDatabase) {
+                        artifacts.Modify();
+                    }
                 }
                 
                 EditorApplication.update -= ReimportCompiledFiles;
