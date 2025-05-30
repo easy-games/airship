@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using Code.Zstd;
-using Debug = UnityEngine.Debug;
 
 public static class VoxelCompressUtil {
 	private const ulong ZstdScratchBufferSize = 1024 * 128;

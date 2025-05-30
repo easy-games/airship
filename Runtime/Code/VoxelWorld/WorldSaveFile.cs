@@ -6,7 +6,6 @@ using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
-
 [Serializable]
 [LuauAPI]
 [CreateAssetMenu(fileName = "VoxelWorldSaveFile", menuName = "Airship/VoxelWorld/VoxelWorldSaveFile", order = 0)]
@@ -131,9 +130,6 @@ public class WorldSaveFile : ScriptableObject {
             }
         }
     }
-
-
-
 
     public BlockId GetFileBlockIdFromStringId(string blockTypeId) {
         foreach (var pair in this.blockIdToScopeName) {
