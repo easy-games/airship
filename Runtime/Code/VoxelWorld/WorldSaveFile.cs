@@ -217,7 +217,9 @@ public class WorldSaveFile : ScriptableObject {
         }
         
         // Compress:
-        chunksCompressed = VoxelCompressUtil.CompressToByteArrayV2(memStream);
+        var buffer = memStream.GetBuffer();
+        var bufferSpan = new ReadOnlySpan<byte>(buffer, 0, (int)memStream.Length);
+        chunksCompressed = VoxelCompressUtil.CompressToByteArrayV2(bufferSpan);
         chunksCompressedV2 = true;
         
         Profiler.EndSample();
