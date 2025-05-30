@@ -6,7 +6,6 @@ using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
-
 [Serializable]
 [LuauAPI]
 [CreateAssetMenu(fileName = "VoxelWorldSaveFile", menuName = "Airship/VoxelWorld/VoxelWorldSaveFile", order = 0)]
@@ -15,6 +14,7 @@ public class WorldSaveFile : ScriptableObject {
     public List<BlockIdToScopedName> blockIdToScopeName = new();
 
     public byte[] chunksCompressed;
+    [HideInInspector] public bool chunksCompressedV2;
 
     [Serializable]
     public struct BlockIdToScopedName {
@@ -131,9 +131,6 @@ public class WorldSaveFile : ScriptableObject {
         }
     }
 
-
-
-
     public BlockId GetFileBlockIdFromStringId(string blockTypeId) {
         foreach (var pair in this.blockIdToScopeName) {
             if (pair.name == blockTypeId) {
@@ -216,7 +213,10 @@ public class WorldSaveFile : ScriptableObject {
         }
         
         // Compress:
-        chunksCompressed = VoxelCompressUtil.CompressToByteArray(memStream);
+        var buffer = memStream.GetBuffer();
+        var bufferSpan = new ReadOnlySpan<byte>(buffer, 0, (int)memStream.Length);
+        chunksCompressed = VoxelCompressUtil.CompressToByteArrayV2(bufferSpan);
+        chunksCompressedV2 = true;
         
         Profiler.EndSample();
 
@@ -299,7 +299,9 @@ public class WorldSaveFile : ScriptableObject {
             
             // Decompress and deserialize chunks:
             Profiler.BeginSample("DecompressChunks");
-            using var decompressedStream = VoxelCompressUtil.DecompressToMemoryStream(chunksCompressed);
+            using var decompressedStream = chunksCompressedV2
+                ? VoxelCompressUtil.DecompressToMemoryStreamV2(chunksCompressed)
+                : VoxelCompressUtil.DecompressToMemoryStreamV1(chunksCompressed);
             Profiler.EndSample();
 
             var reader = new BinaryReader(decompressedStream);
