@@ -1,11 +1,15 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.Compression;
+using Code.Zstd;
 
 public static class VoxelCompressUtil {
+	private const ulong ZstdScratchBufferSize = 1024 * 128;
+	
 	/// <summary>
 	/// Compress the given stream to a byte array.
 	/// </summary>
-	public static byte[] CompressToByteArray(Stream stream) {
+	public static byte[] CompressToByteArrayV1(Stream stream) {
 		using var compressedStream = new MemoryStream();
 		using var compressor = new DeflateStream(compressedStream, CompressionMode.Compress);
 		
@@ -22,7 +26,7 @@ public static class VoxelCompressUtil {
 	/// Decompress the compressed byte array into a new MemoryStream. The returned
 	/// stream must be disposed once done.
 	/// </summary>
-	public static MemoryStream DecompressToMemoryStream(byte[] data) {
+	public static MemoryStream DecompressToMemoryStreamV1(byte[] data) {
 		var decompressedStream = new MemoryStream();
 		
 		using var compressedStream = new MemoryStream(data);
@@ -33,5 +37,24 @@ public static class VoxelCompressUtil {
 		decompressedStream.Seek(0, SeekOrigin.Begin);
 
 		return decompressedStream;
+	}
+	
+	/// <summary>
+	/// Compress the given data to a byte array.
+	/// </summary>
+	public static byte[] CompressToByteArrayV2(ReadOnlySpan<byte> data) {
+		using var zstd = new Zstd(ZstdScratchBufferSize);
+		var compressed = zstd.Compress(data, Zstd.MaxCompressionLevel);
+		return compressed;
+	}
+
+	/// <summary>
+	/// Decompress the compressed byte array into a new MemoryStream. The returned
+	/// stream must be disposed once done.
+	/// </summary>
+	public static MemoryStream DecompressToMemoryStreamV2(ReadOnlySpan<byte> data) {
+		using var zstd = new Zstd(ZstdScratchBufferSize);
+		var decompressed = zstd.Decompress(data);
+		return new MemoryStream(decompressed, false);
 	}
 }
