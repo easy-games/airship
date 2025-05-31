@@ -150,7 +150,11 @@ namespace Airship.Editor {
         /// Will try to get the script asset data associated with the specified script (if applicable)
         /// </summary>
         internal bool TryGetScriptAssetData(AirshipScript script, out ComponentScriptAssetData assetData) {
-            var item = scripts.FirstOrDefault(f => f.script == script.assetPath);
+            return TryGetScriptAssetDataFromPath(script.assetPath, out assetData);
+        }
+
+        internal bool TryGetScriptAssetDataFromPath(string path, out ComponentScriptAssetData assetData) {
+            var item = scripts.FirstOrDefault(f => f.script == path);
             if (item != null) {
                 assetData = item;
                 return true;

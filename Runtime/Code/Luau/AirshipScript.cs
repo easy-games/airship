@@ -18,6 +18,8 @@ namespace Luau {
         /// The file hash at the compile time
         /// </summary>
         public string hash;
+
+        public string compiledHash;
         /// <summary>
         /// The timestamp when this was compiled
         /// </summary>

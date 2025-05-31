@@ -102,12 +102,10 @@ namespace Code.Network.Simulation
          */
         public event Action<int, double, double> OnLagCompensationCheck;
 
-        /**
-         * This action tells all watching components that they need to perform a tick.
-         * A Physics.Simulate() call will be made after PerformTick completes.
-         */
-        public event Action<double, bool> OnPerformTick;
-
+        /// <summary>
+        /// This action tells all watching components that they need to perform a tick.
+        /// A Physics.Simulate() call will be made after PerformTick completes.
+        /// </summary>
         public event Action<object, object> OnTick;
 
         /**
@@ -184,7 +182,6 @@ namespace Code.Network.Simulation
             if (resimBackTo != time) this.PerformResimulation(resimBackTo);
 
             // Perform the standard tick behavior
-            OnPerformTick?.Invoke(time, false);
             OnTick?.Invoke(time, false);
             // Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
             Physics.Simulate(Time.fixedDeltaTime);
@@ -310,13 +307,14 @@ namespace Code.Network.Simulation
             this.ScheduleResimulation((resim => resim(time)));
         }
 
-        /**
-         * Requests a simulation based on the provided time. Requesting a simulation will roll back the physics
-         * world to the snapshot just before or at the base time provided. Calling the returned tick function
-         * will advance the simulation and re-simulate the calls to OnPerformTick, Physics.Simulate(), and OnCaptureSnapshot
-         *
-         * This function is used internally to implement the scheduled resimulations.
-         */
+        /// <summary>
+        /// Requests a simulation based on the provided time. Requesting a simulation will roll back the physics
+        /// world to the snapshot just before or at the base time provided. Calling the returned tick function
+        /// will advance the simulation and re-simulate the calls to <see cref="OnTick"/>, Physics.Simulate,
+        /// and <see cref="OnCaptureSnapshot"/>
+        /// 
+        /// This function is used internally to implement the scheduled resimulations.
+        /// </summary>
         private void PerformResimulation(double baseTime)
         {
             Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTime}");
@@ -343,7 +341,7 @@ namespace Code.Network.Simulation
 
                 while (tickIndex < this.tickTimes.Count)
                 {
-                    OnPerformTick?.Invoke(this.tickTimes[tickIndex], true);
+                    OnTick?.Invoke(this.tickTimes[tickIndex], true);
                     // Debug.Log("Simulate call. Replay Tick: " + this.tickTimes[tickIndex]);
                     Physics.Simulate(Time.fixedDeltaTime);
                     OnCaptureSnapshot?.Invoke(this.tickTimes[tickIndex], true);

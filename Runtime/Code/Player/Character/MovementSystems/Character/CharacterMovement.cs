@@ -40,6 +40,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         [Header("Debug")] public bool drawDebugGizmos_FORWARD = false;
 
         public bool drawDebugGizmos_WALLCLIPPING = false;
+        public bool drawDebugGizmos_CROUCH = false;
 
         public bool drawDebugGizmos_GROUND = false;
         public bool drawDebugGizmos_STEPUP = false;
@@ -65,7 +66,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             "If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
         public bool playAnimationOnServer = true;
 
-        #region PRIVATE REFS
+#region PRIVATE REFS
 
         private CharacterPhysics physics;
         private Transform _cameraTransform;
@@ -88,9 +89,9 @@ namespace Code.Player.Character.MovementSystems.Character {
          */
         private float correctionTime = 0;
 
-        #endregion
+#endregion
 
-        #region EVENTS
+#region EVENTS
 
         public delegate void StateChanged(object state);
 
@@ -166,7 +167,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         /// </summary>
         public event Action<object, object> OnImpactWithGround;
 
-        #endregion
+#endregion
 
         // step up + forward constant
         private float forwardMargin = .05f;
@@ -185,9 +186,9 @@ namespace Code.Player.Character.MovementSystems.Character {
         public CharacterSnapshotData currentMoveSnapshot = new() { };
         public CharacterAnimationSyncData currentAnimState = new() { };
         private BinaryBlob customSnapshotData;
-        private Vector3 pendingImpulse = new Vector3(); // Impulse that will be applied on the next tick.
+        private Vector3 pendingImpulse = new(); // Impulse that will be applied on the next tick.
 
-        #region PUBLIC GET
+#region PUBLIC GET
 
         public float currentCharacterHeight { get; private set; }
         public float standingCharacterHeight => movementSettings.characterHeight;
@@ -200,7 +201,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             set => currentMoveSnapshot.inputDisabled = value;
         }
 
-        #endregion
+#endregion
 
         private void Awake() {
             if (physics == null) {
@@ -251,25 +252,24 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         private void OnPaused(bool paused) {
             if (paused) {
-                this.correctionLastSimulatedPosition =
-                    this.airshipTransform
+                correctionLastSimulatedPosition
+                    = airshipTransform
                         .position; // save the last transform position so that we calculate the difference from where the player sees themselves
-            }
-            else {
-                this.correctionTime = 0;
-                var goalPosition = this.rb.position;
-                var difference =
-                    this.correctionLastSimulatedPosition -
-                    goalPosition; // inverted so that when we apply the difference, we move the airshipTransform back to the original pos
-                this.correctionOffset = (difference.magnitude > correctionMaxMagnitude) ? Vector3.zero : difference;
+            } else {
+                correctionTime = 0;
+                var goalPosition = rb.position;
+                var difference
+                    = correctionLastSimulatedPosition -
+                      goalPosition; // inverted so that when we apply the difference, we move the airshipTransform back to the original pos
+                correctionOffset = difference.magnitude > correctionMaxMagnitude ? Vector3.zero : difference;
             }
         }
 
         public override void SetCurrentState(CharacterSnapshotData snapshot) {
-            this.currentMoveSnapshot.CopyFrom(snapshot);
-            this.rb.position = snapshot.position;
-            if (!this.rb.isKinematic) {
-                this.rb.linearVelocity = snapshot.velocity;
+            currentMoveSnapshot.CopyFrom(snapshot);
+            rb.position = snapshot.position;
+            if (!rb.isKinematic) {
+                rb.linearVelocity = snapshot.velocity;
             }
 
             var lookTarget = new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z);
@@ -287,13 +287,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             // specific state capture function don't find their way into our state record.
             customSnapshotData = null;
             OnCaptureSnapshot?.Invoke(commandNumber, time);
-            this.currentMoveSnapshot.customData = this.customSnapshotData;
+            currentMoveSnapshot.customData = customSnapshotData;
             currentMoveSnapshot.time = time;
             currentMoveSnapshot.lastProcessedCommand = commandNumber;
-            currentMoveSnapshot.position = this.rb.position;
-            currentMoveSnapshot.velocity = this.rb.linearVelocity;
+            currentMoveSnapshot.position = rb.position;
+            currentMoveSnapshot.velocity = rb.linearVelocity;
             var snapshot = new CharacterSnapshotData();
-            snapshot.CopyFrom(this.currentMoveSnapshot);
+            snapshot.CopyFrom(currentMoveSnapshot);
             // Reset the custom data again
             customSnapshotData = null;
             return snapshot;
@@ -326,12 +326,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // properly tick physics. TS custom command data is not copied. TS has to keep active commands running and tick them with null input
                 // We replace the base inputs with the last known state input so that players do not feel that their inputs were lost from dropped packets.
                 command = new CharacterInputData() {
-                    commandNumber = this.currentMoveSnapshot.lastProcessedCommand,
+                    commandNumber = currentMoveSnapshot.lastProcessedCommand,
                     time = time,
-                    jump = this.currentMoveSnapshot.alreadyJumped,
-                    crouch = this.currentMoveSnapshot.isCrouching,
-                    sprint = this.currentMoveSnapshot.isSprinting,
-                    lookVector = this.currentMoveSnapshot.lookVector
+                    jump = currentMoveSnapshot.alreadyJumped,
+                    crouch = currentMoveSnapshot.isCrouching,
+                    sprint = currentMoveSnapshot.isSprinting,
+                    lookVector = currentMoveSnapshot.lookVector
                 };
             }
 
@@ -348,14 +348,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                 command = replacementCmd;
             }
 
-            OnProcessCommand?.Invoke(command, this.currentMoveSnapshot, replay);
+            OnProcessCommand?.Invoke(command, currentMoveSnapshot, replay);
 
-            var currentVelocity = this.rb.linearVelocity;
+            var currentVelocity = rb.linearVelocity;
             var newVelocity = currentVelocity;
             var isIntersecting = false; // TODO: this was "IsIntersectingWithBlock" which just returned false
             var deltaTime = Time.fixedDeltaTime;
-            var isImpulsing = this.pendingImpulse != Vector3.zero;
-            var rootPosition = this.rb.position;
+            var isImpulsing = pendingImpulse != Vector3.zero;
+            var rootPosition = rb.position;
 
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
             if (isServer && !isClient) {
@@ -392,8 +392,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                 //Reset airborne impulse
                 currentMoveSnapshot.airborneFromImpulse = false;
-            }
-            else {
+            } else {
                 //While in the air how much control do we have over our direction?
                 // TODO: was lastGroundedMoveDir
                 command.moveDir = Vector3.Lerp(Vector3.zero, command.moveDir,
@@ -406,12 +405,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 OnImpactWithGround?.Invoke(currentVelocity, groundHit);
                 if (mode == NetworkedStateSystemMode.Authority && isServer) {
                     SAuthImpactEvent(currentVelocity, groundHit);
-                }
-                else if (mode == NetworkedStateSystemMode.Authority && isClient) {
+                } else if (mode == NetworkedStateSystemMode.Authority && isClient) {
                     CAuthImpactEvent(currentVelocity, groundHit);
                 }
-            }
-            else {
+            } else {
                 currentMoveSnapshot.timeSinceBecameGrounded =
                     Math.Min(currentMoveSnapshot.timeSinceBecameGrounded + deltaTime, 100f);
             }
@@ -425,8 +422,10 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             var normalizedMoveDir = Vector3.ClampMagnitude(command.moveDir, 1);
             var characterMoveVelocity = normalizedMoveDir;
+            //Save the crouching var
+            currentMoveSnapshot.isCrouching = command.crouch;
 
-            #region GRAVITY
+#region GRAVITY
 
             if (movementSettings.useGravity) {
                 if (!currentMoveSnapshot.isFlying && !currentMoveSnapshot.prevStepUp &&
@@ -444,9 +443,9 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             //print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
 
-            #endregion
+#endregion
 
-            #region JUMPING
+#region JUMPING
 
             var requestJump = command.jump;
             //Don't try to jump again until they stop requesting this jump
@@ -461,8 +460,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //On the ground
                 if (grounded || currentMoveSnapshot.prevStepUp) {
                     canJump = true;
-                }
-                else {
+                } else {
                     //In the air
                     // coyote jump
                     if (currentVelocity.y < 0f &&
@@ -510,8 +508,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     OnJumped?.Invoke(newVelocity);
                     if (mode == NetworkedStateSystemMode.Authority && isServer) {
                         SAuthJumpedEvent(newVelocity);
-                    }
-                    else if (mode == NetworkedStateSystemMode.Authority && isClient) {
+                    } else if (mode == NetworkedStateSystemMode.Authority && isClient) {
                         CAuthJumpedEvent(newVelocity);
                     }
                 }
@@ -519,9 +516,10 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // print($"Tick={md.GetTick()} requestJump={md.jump} canJump={canJump} grounded={grounded} reconciling={replaying}");
 
-            #endregion
+#endregion
 
-            #region STATE
+
+#region STATE
 
             /*
              * Determine entity state state.
@@ -540,31 +538,26 @@ namespace Code.Player.Character.MovementSystems.Character {
                     CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
             //Check to see if we can stand up from a crouch
-            if ((movementSettings.autoCrouch || currentMoveSnapshot.state == CharacterState.Crouching) &&
+            if ((movementSettings.autoCrouch || currentMoveSnapshot.prevState == CharacterState.Crouching) &&
                 !canStand) {
                 groundedState = CharacterState.Crouching;
-            }
-            else if (command.crouch && grounded) {
+            } else if (command.crouch && grounded) {
                 groundedState = CharacterState.Crouching;
-            }
-            else if (isMoving) {
+            } else if (isMoving) {
                 if (tryingToSprint) {
                     groundedState = CharacterState.Sprinting;
                     currentMoveSnapshot.isSprinting = true;
-                }
-                else {
+                } else {
                     groundedState = CharacterState.Running;
                 }
-            }
-            else {
+            } else {
                 groundedState = CharacterState.Idle;
             }
 
             //If you are in the air override the state
             if (inAir) {
                 currentMoveSnapshot.state = CharacterState.Airborne;
-            }
-            else {
+            } else {
                 //Otherwise use our found state
                 currentMoveSnapshot.state = groundedState;
             }
@@ -579,15 +572,13 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (didJump) {
                 currentMoveSnapshot.timeSinceJump = 0f;
-            }
-            else {
+            } else {
                 currentMoveSnapshot.timeSinceJump = Math.Min(currentMoveSnapshot.timeSinceJump + deltaTime, 100f);
             }
 
             if (grounded) {
                 currentMoveSnapshot.timeSinceWasGrounded = 0f;
-            }
-            else {
+            } else {
                 currentMoveSnapshot.timeSinceWasGrounded =
                     Math.Min(currentMoveSnapshot.timeSinceWasGrounded + deltaTime, 100f);
             }
@@ -636,12 +627,13 @@ namespace Code.Player.Character.MovementSystems.Character {
                 : standingCharacterHeight;
             characterHalfExtents = new Vector3(movementSettings.characterRadius,
                 currentCharacterHeight / 2f - offsetExtent, movementSettings.characterRadius);
-            mainCollider.transform.localScale = characterHalfExtents * 2;
-            mainCollider.transform.localPosition = new Vector3(0, currentCharacterHeight / 2f + offsetExtent, 0);
+            var mainColliderTransform = mainCollider.transform;
+            mainColliderTransform.localScale = characterHalfExtents * 2;
+            mainColliderTransform.localPosition = new Vector3(0, currentCharacterHeight / 2f + offsetExtent, 0);
 
-            #endregion
+#endregion
 
-            #region FLYING
+#region FLYING
 
             //Flying movement
             if (currentMoveSnapshot.isFlying) {
@@ -656,9 +648,9 @@ namespace Code.Player.Character.MovementSystems.Character {
                 newVelocity.y *= Mathf.Clamp(.98f - deltaTime, 0, 1);
             }
 
-            #endregion
+#endregion
 
-            #region FRICTION_DRAG
+#region FRICTION_DRAG
 
             var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
             // Calculate drag:
@@ -683,14 +675,14 @@ namespace Code.Player.Character.MovementSystems.Character {
             //Slow down velocity based on drag
             newVelocity += Vector3.ClampMagnitude(dragForce, flatMagnitude);
 
-            #endregion
+#endregion
 
             // if (OwnerId != -1) {
             //  print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, pos={rootPosition}, name={gameObject.name}, ownerId={OwnerId}");
             // }
 
 
-            #region IMPULSE
+#region IMPULSE
 
             //Apply any new impulses
             //Apply the impulse over multiple frames to push against drag in a more expected way
@@ -709,18 +701,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
 
                 //Apply the impulse to the velocity
-                newVelocity += this.pendingImpulse;
-                currentMoveSnapshot.airborneFromImpulse = !grounded || this.pendingImpulse.y > .01f;
-                this.pendingImpulse = Vector3.zero;
+                newVelocity += pendingImpulse;
+                currentMoveSnapshot.airborneFromImpulse = !grounded || pendingImpulse.y > .01f;
+                pendingImpulse = Vector3.zero;
                 if (isImpulsing) {
                     // print(" isImpulsing: " + isImpulsing + " impulse force: " + this.pendingImpulse + "New Vel: " +
                     //       newVelocity);
                 }
             }
 
-            #endregion
+#endregion
 
-            #region MOVEMENT
+#region MOVEMENT
 
             // Find speed
             //Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
@@ -728,8 +720,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (tryingToSprint) {
                 currentMoveSnapshot.currentSpeed = movementSettings.sprintSpeed;
                 currentAcc = movementSettings.sprintAccelerationForce;
-            }
-            else {
+            } else {
                 currentMoveSnapshot.currentSpeed = movementSettings.speed;
                 currentAcc = movementSettings.accelerationForce;
             }
@@ -741,20 +732,18 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (currentMoveSnapshot.isFlying) {
                 currentMoveSnapshot.currentSpeed *= movementSettings.flySpeedMultiplier;
-            }
-            else if (inAir) {
+            } else if (inAir) {
                 currentMoveSnapshot.currentSpeed *= movementSettings.airSpeedMultiplier;
             }
 
             //Apply speed
             if (movementSettings.useAccelerationMovement) {
                 characterMoveVelocity *= currentAcc;
-            }
-            else {
+            } else {
                 characterMoveVelocity *= currentMoveSnapshot.currentSpeed;
             }
 
-            #region SLOPE
+#region SLOPE
 
             if (movementSettings.detectSlopes && detectedGround) {
                 //On Ground and detecting slopes
@@ -790,10 +779,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                                        (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
             }
 
-            #endregion
+#endregion
 
 
-            #region MOVE_FORCE
+#region MOVE_FORCE
 
             //Clamp directional movement to not add forces if you are already moving in that direction
             var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
@@ -937,17 +926,15 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (currentMoveSnapshot.isFlying) {
                 newVelocity.x = command.moveDir.x * currentMoveSnapshot.currentSpeed;
                 newVelocity.z = command.moveDir.z * currentMoveSnapshot.currentSpeed;
-            }
-            else if (!isImpulsing &&
-                     !currentMoveSnapshot.airborneFromImpulse && //Not impulsing AND under our max speed
-                     flatVelMagnitude < (movementSettings.useAccelerationMovement
-                         ? currentMoveSnapshot.currentSpeed
-                         : Mathf.Max(movementSettings.sprintSpeed, currentMoveSnapshot.currentSpeed) + 1)) {
+            } else if (!isImpulsing &&
+                       !currentMoveSnapshot.airborneFromImpulse && //Not impulsing AND under our max speed
+                       flatVelMagnitude < (movementSettings.useAccelerationMovement
+                           ? currentMoveSnapshot.currentSpeed
+                           : Mathf.Max(movementSettings.sprintSpeed, currentMoveSnapshot.currentSpeed) + 1)) {
                 if (movementSettings.useAccelerationMovement) {
                     newVelocity += Vector3.ClampMagnitude(characterMoveVelocity,
                         currentMoveSnapshot.currentSpeed - flatVelMagnitude);
-                }
-                else {
+                } else {
                     // if(Mathf.Abs(characterMoveVelocity.x) > Mathf.Abs(newVelocity.x)){
                     // 	newVelocity.x = characterMoveVelocity.x;
                     // }
@@ -959,16 +946,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                         newVelocity.z = characterMoveVelocity.z;
                     }
                 }
-            }
-            else {
+            } else {
                 if (movementSettings.useAccelerationMovement) {
                     //Using acceleration movement
                     newVelocity += normalizedMoveDir * (dirDot * dirDot / 2) *
                                    (groundedState == CharacterState.Sprinting
                                        ? movementSettings.sprintAccelerationForce
                                        : movementSettings.accelerationForce);
-                }
-                else {
+                } else {
                     //Impulsing
                     var forwardMod = Mathf.Max(0, dirDot);
                     var addedForce = groundedState == CharacterState.Sprinting
@@ -991,11 +976,11 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             //print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 
-            #endregion
+#endregion
 
-            #endregion
+#endregion
 
-            #region STEP_UP
+#region STEP_UP
 
             //Step up as the last step so we have the most up to date velocity to work from
             var didStepUp = false;
@@ -1031,9 +1016,241 @@ namespace Code.Player.Character.MovementSystems.Character {
                 }
             }
 
-            #endregion
+#endregion
 
-            #region APPLY FORCES
+#region CROUCH
+
+            // Prevent falling off blocks while crouching
+            if (movementSettings.preventFallingWhileCrouching && !currentMoveSnapshot.prevStepUp &&
+                currentMoveSnapshot.isCrouching && !didJump && grounded) {
+                var distanceCheck = movementSettings.characterRadius * 4 + newVelocity.magnitude * deltaTime;
+                var normalizedVel = newVelocity.normalized;
+                var projectedPosition = rootPosition + normalizedVel * distanceCheck;
+                if (drawDebugGizmos_CROUCH) {
+                    GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
+                }
+                var (groundedInMoveDirection, _, _) =
+                    physics.CheckIfGrounded(projectedPosition, newVelocity, normalizedVel);
+                var foundGroundedDir = false;
+                if (!groundedInMoveDirection) {
+                    var wallStartPos = projectedPosition + new Vector3(0, -.5f, 0);
+                    if (drawDebugGizmos_CROUCH) {
+                        GizmoUtils.DrawSphere(wallStartPos, .1f, Color.white, 4, .1f);
+                        Debug.DrawLine(wallStartPos, wallStartPos + -distanceCheck * normalizedVel, Color.white,
+                            .1f);
+                    }
+
+                    if (Physics.Raycast(projectedPosition + new Vector3(0, -.5f, 0), -normalizedVel,
+                            out var cliffHit, distanceCheck,
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+
+                        if (drawDebugGizmos_CROUCH) {
+                            GizmoUtils.DrawSphere(cliffHit.point, .1f, Color.red, 4, .1f);
+                        }
+
+                        //Stop movement into this surface
+                        var colliderDot = 1 - Mathf.Max(0,
+                            -Vector3.Dot(-cliffHit.normal, normalizedVel));
+                        colliderDot *= .8f;
+                        //var colliderDot = 1 - -Vector3.Dot(forwardHit.normal, forwardVector);
+                        if (Mathf.Abs(colliderDot) < .01f || normalizedVel.sqrMagnitude < 1f) {
+                            colliderDot = 0;
+                        }
+
+                        colliderDot = 0;
+                        var flatPoint = new Vector3(cliffHit.point.x, transform.position.y, cliffHit.point.z);
+                        if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin) {
+                            //Snap back to the bump distance so you never inch your way to the edge 
+                            //newVelocity = new Vector3(0, newVelocity.y, 0);
+                            //var newPos = cliffHit.point - normalizedVel * (bumpSize-forwardMargin);
+                            //transform.position = new Vector3(newPos.x, transform.position.y, newPos.z);
+
+                            newVelocity = -normalizedVel;
+                        } else {
+                            //limit movement dir based on how straight you are walking into the wall
+                            characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, -cliffHit.normal);
+                            characterMoveVelocity.y = 0;
+                            characterMoveVelocity *= colliderDot;
+                            normalizedMoveDir = characterMoveVelocity.normalized;
+
+                            newVelocity = Vector3.ProjectOnPlane(newVelocity, -cliffHit.normal);
+                            newVelocity *= colliderDot;
+                        }
+                    }
+                    // Determine which direction we're mainly moving toward
+                    // var xFirst = Math.Abs(command.moveDir.x) > Math.Abs(command.moveDir.z);
+                    // Vector3[] vecArr = { new(command.moveDir.x, 0, 0), new(0, 0, command.moveDir.z) };
+                    // for (var i = 0; i < 2; i++) {
+                    //     // We will try x dir first if x magnitude is greater
+                    //     var index = (xFirst ? i : i + 1) % 2;
+                    //     var safeDirection = vecArr[index];
+                    //     var stepPosition = rootPosition + safeDirection.normalized * 0.2f;
+                    //     (foundGroundedDir, _, _) =
+                    //         physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
+                    //     if (foundGroundedDir) {
+                    //         characterMoveVelocity = safeDirection;
+                    //         break;
+                    //     }
+                    // }
+
+                    // Only if we didn't find a safe direction set move to 0
+                    // if (!foundGroundedDir) {
+                    //     characterMoveVelocity = Vector3.zero;
+                    // }
+                }
+            }
+
+#endregion
+
+#region APPLY FORCES
+            //Stop character from moveing into colliders (Helps prevent axis aligned box colliders from colliding when they shouldn't like jumping in a voxel world)
+            if (movementSettings.preventWallClipping && !currentMoveSnapshot.prevStepUp) {
+                var velY = newVelocity.y;
+                flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
+                var minDistance = (characterRadius + forwardMargin);
+                var forwardDistance = Mathf.Max(flatVelocity.magnitude * deltaTime, minDistance);
+                var forwardVector = flatVelocity.normalized * Mathf.Max(forwardDistance, bumpSize);
+                //print("Forward vec: " + forwardVector);
+
+                //Do raycasting after we have claculated our move direction
+                var forwardHits =
+                    physics.CheckAllForwardHits(rootPosition - flatVelocity.normalized * -forwardMargin, forwardVector, true,
+                        true);
+
+                float i = 0;
+                string label = "ForwardHitCounts: " + forwardHits.Length + "\n";
+                int forcedCount = 0;
+                foreach (var forwardHitResult in forwardHits) {
+                    label += "Hit " + i + " Point: " + forwardHitResult.point + " Normal: " + forwardHitResult.normal;
+                    //Check if this is a valid wall and not something behind a surface
+                    var forwardHit = forwardHitResult;
+                    var checkPoint = transform.position + new Vector3(0, characterHalfExtents.y, 0);
+
+                    if (drawDebugGizmos_WALLCLIPPING) {
+                        var color = Color.Lerp(Color.green, Color.cyan, i / (forwardHits.Length - 1f));
+                        GizmoUtils.DrawSphere(forwardHit.point, .05f, color, 4, .2f);
+                        Debug.DrawLine(forwardHit.point, forwardHit.point + forwardHit.normal, color, .2f);
+                    }
+
+                    //Valid result from BoxCastAll but not a hit we want to use (happens on corners of voxels sometimes)
+                    if (forwardHitResult.distance == 0) {
+                        forwardHit.point = checkPoint + forwardVector;
+                        label += " ZEROED HIT POINT";
+                    }
+
+                    var checkDir = (forwardHit.point - checkPoint).normalized;
+                    var checkDistance = forwardMargin + Mathf.Max(forwardHit.distance, movementSettings.characterRadius * 2);
+                    if (Physics.Raycast(checkPoint, checkDir,
+                            out var rayTestHit, checkDistance,
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                        //This is more accurate and may be a complete different wall than the box cast found
+                        forwardHit = rayTestHit;
+                        if (drawDebugGizmos_WALLCLIPPING) {
+                            Debug.DrawLine(checkPoint, checkPoint + checkDir * checkDistance, Color.magenta, .2f);
+                            GizmoUtils.DrawSphere(rayTestHit.point, .04f, Color.magenta, 4, .2f);
+                            Debug.DrawLine(rayTestHit.point, rayTestHit.point + rayTestHit.normal, Color.magenta, .2f);
+                        }
+                    } else if (drawDebugGizmos_WALLCLIPPING) {
+                        GizmoUtils.DrawSphere(checkPoint, .03f, Color.white, 4, .2f);
+                        Debug.DrawLine(checkPoint, checkPoint + checkDir * checkDistance, Color.white, .2f);
+                    }
+
+                    i++;
+                    if (forwardHit.distance == 0) {
+                        //still invalid so skip
+                        continue;
+                    }
+
+                    var isVerticalWall = 1 - Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >=
+                                         movementSettings.maxSlopeDelta;
+                    var isKinematic = forwardHit.collider?.attachedRigidbody == null ||
+                                      forwardHit.collider.attachedRigidbody.isKinematic;
+
+                    //print("Avoiding wall: " + forwardHit.collider.gameObject.name + " distance: " + forwardHit.distance + " isVerticalWall: " + isVerticalWall + " isKinematic: " + isKinematic);
+                    //Stop character from walking into walls but Let character push into rigidbodies	
+                    if (isVerticalWall && isKinematic) {
+                        //Stop movement into this surface
+                        var colliderDot = 1 - Mathf.Max(0,
+                            -Vector3.Dot(forwardHit.normal, forwardVector));
+                        //var colliderDot = 1 - -Vector3.Dot(forwardHit.normal, forwardVector);
+                        if (Mathf.Abs(colliderDot) < .01) {
+                            //|| forwardHit.distance < bumpSize) {
+                            colliderDot = 0;
+                        }
+                        
+                        // flatVelocity = Vector3.ClampMagnitude(newVelocity,
+                        //     forwardHit.distance - characterRadius - forwardMargin);
+                        // //print("FLAT VEL: " + flatVelocity);
+                        // newVelocity.x -= flatVelocity.x;
+                        // newVelocity.z -= flatVelocity.z;
+                        
+                        var flatPoint = new Vector3(forwardHit.point.x, transform.position.y, forwardHit.point.z);
+                        if (Vector3.Distance(flatPoint, transform.position) < minDistance) {
+                            //Snap back to the bump distance so you never inch your way to the edge 
+                            var newPos = forwardHit.point + forwardHit.normal * (bumpSize+forwardMargin);
+                            if (forcedCount == 0) {
+                                transform.position = new Vector3(newPos.x, transform.position.y, newPos.z);
+                            } else {
+                                transform.position = new Vector3(
+                                    (transform.position.x + newPos.x) /2f, 
+                                    transform.position.y, 
+                                    (transform.position.z + newPos.z) /2f);
+                            }
+
+                            forcedCount++;
+                            //newVelocity = new Vector3(0, velY, 0);
+
+                            // var normalVel = forwardHit.normal * (Math.Abs(newVelocity.x) + Math.Abs(newVelocity.z)); 
+                            // newVelocity = new Vector3(normalVel.x, velY , normalVel.z);
+                        } else {
+                        }
+                        
+                        newVelocity = Vector3.ProjectOnPlane( flatVelocity, forwardHit.normal);
+                        //newVelocity.y = 0;
+                        newVelocity *= colliderDot * .9f;
+                        newVelocity.y = velY;
+
+                        //limit movement dir based on how straight you are walking into the wall
+                        // characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, forwardHit.normal);
+                        // characterMoveVelocity.y = 0;
+                        // characterMoveVelocity *= colliderDot;
+
+                        // if (forwardHit.distance < characterRadius + .15f)
+                        // {
+                        // newVelocity.x = 0;
+                        // newVelocity.z = 0;
+                        //newVelocity -= flatVelocity * (1 - colliderDot);
+                        //transform.position = forwardHit.point - forwardHit.normal * bumpSize;
+                        // }
+                        //print("Collider Dot: " + colliderDot.ToString("R") + " moveVector: " + characterMoveVelocity.magnitude.ToString("R"));
+                    }
+
+                    //Push the character out of any colliders
+                    // if (forwardHit.distance < characterRadius + .15f) {
+                    //     newVelocity.x = 0;
+                    //     newVelocity.z = 0;
+                    // }
+                    label += "\n";
+                }
+
+                if (forwardHits.Length > 0) {
+                    //Debug.Log(label);
+                }
+
+                // if (forwardHits.Length == 0) {
+                //     //Not hitting anything forwad, but make sure we aren't already overlapping something
+                //     var boundHits = Physics.OverlapBox(transform.position + new Vector3(0, characterHalfExtents.y, 0),
+                //         characterHalfExtents + new Vector3(forwardMargin, forwardMargin, forwardMargin),
+                //         Quaternion.identity);
+                // }
+
+                if (!grounded && detectedGround) {
+                    //Hit ground but its not valid ground, push away from it
+                    //print("PUSHING AWAY FROM: " + groundHit.normal);
+                    newVelocity += groundHit.normal * physics.GetFlatDistance(rootPosition, groundHit.point) * .25f /
+                                   deltaTime;
+                }
+            }
 
             //Clamp the velocity
             newVelocity = Vector3.ClampMagnitude(newVelocity, movementSettings.terminalVelocity);
@@ -1055,11 +1272,11 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
-            this.rb.linearVelocity = newVelocity;
+            rb.linearVelocity = newVelocity;
 
-            #endregion
+#endregion
 
-            #region SAVE STATE
+#region SAVE STATE
 
             // if(currentMoveState.timeSinceBecameGrounded < .1){
             // 	print("LANDED! prevVel: " + currentVelocity + " newVel: " + newVelocity);
@@ -1081,8 +1298,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     if (animationHelper) {
                         animationHelper.SetState(newState);
                     }
-                }
-                else {
+                } else {
                     if (animationHelper) {
                         animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
                     }
@@ -1092,11 +1308,11 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             // Handle OnMoveDirectionChanged event
-            if (this.moveDirInput != command.moveDir) {
+            if (moveDirInput != command.moveDir) {
                 OnMoveDirectionChanged?.Invoke(command.moveDir);
             }
 
-            this.moveDirInput = command.moveDir;
+            moveDirInput = command.moveDir;
 
             // Record variables that will not change due to physics tick. Variables affected by physics tick will need to be
             // recorded as part of OnCaptureSnapshot so that they record the value post physics tick.
@@ -1105,7 +1321,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             currentMoveSnapshot.isGrounded = grounded;
             currentMoveSnapshot.prevStepUp = didStepUp;
 
-            #endregion
+#endregion
 
             //Track speed based on position
             if (useExtraLogging) {
@@ -1115,9 +1331,11 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnProcessedCommand?.Invoke(command, currentMoveSnapshot, replay);
         }
 
-        public override void Interpolate(float delta, CharacterSnapshotData snapshotOld,
+        public override void Interpolate(
+            float delta,
+            CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
-            this.rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
+            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
@@ -1180,8 +1398,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                 //Instantly rotate for owner
                 airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
-            }
-            else {
+            } else {
                 //Tween to rotation
                 var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
                 if (lookTarget == Vector3.zero) {
@@ -1203,34 +1420,20 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
         }
 
-        #region Helpers
+#region Helpers
 
         private void SnapToY(float newY) {
-            var newPos = this.rb.position;
+            var newPos = rb.position;
             newPos.y = newY;
-            this.rb.position = newPos;
+            rb.position = newPos;
         }
 
-        #endregion
+#endregion
 
-        #region TypeScript Interaction
+#region TypeScript Interaction
 
         public double GetLocalSimulationTimeFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
-
-            // if (this.mode == NetworkedStateSystemMode.Observer) {
-            //     var state = manager.stateHistory.Values[^1];
-            //     if (state == null) {
-            //         return 0;
-            //     }
-            //
-            //     // Observers may sometimes operate on snapshot information received ahead of the
-            //     // processing of observed history into state history.
-            //     if (state.lastProcessedCommand < commandNumber) {
-            //         return state.time;
-            //     }
-            // }
-            
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
                     localState = state;
@@ -1356,8 +1559,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             // It's generally better to just force a look vector on the client because reconciled camera
             // rotation makes people nauseous.
             if (mode == NetworkedStateSystemMode.Authority) {
-                this.lookVector = moveDirInput; // for server generated commands. Ignored in any other case
-                this.currentMoveSnapshot.lookVector = moveDirInput;
+                lookVector = moveDirInput; // for server generated commands. Ignored in any other case
+                currentMoveSnapshot.lookVector = moveDirInput;
             }
         }
 
@@ -1395,12 +1598,12 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
-            this.rb.MovePosition(position);
-            this.SetLookVector(lookVector);
+            rb.MovePosition(position);
+            SetLookVector(lookVector);
         }
 
         public void SetMovementEnabled(bool isEnabled) {
-            this.disableInput = !isEnabled;
+            disableInput = !isEnabled;
         }
 
         public void SetDebugFlying(bool flying) {
@@ -1428,7 +1631,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
-            SetImpulse(this.pendingImpulse + impulse);
+            SetImpulse(pendingImpulse + impulse);
         }
 
         public void SetImpulse(Vector3 impulse) {
@@ -1437,14 +1640,13 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
-            this.pendingImpulse = impulse;
+            pendingImpulse = impulse;
         }
 
         public void IgnoreGroundCollider(Collider collider, bool ignore) {
             if (ignore) {
                 physics.ignoredColliders.TryAdd(collider.GetInstanceID(), collider);
-            }
-            else {
+            } else {
                 physics.ignoredColliders.Remove(collider.GetInstanceID());
             }
         }
@@ -1472,21 +1674,21 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
-            this.rb.linearVelocity = velocity;
+            rb.linearVelocity = velocity;
         }
 
         // TODO: check if we should have this or make people use movement.currentMoveState.velocity
         public Vector3 GetVelocity() {
-            return this.rb.linearVelocity;
+            return rb.linearVelocity;
         }
 
         public int GetState() {
             return (int)currentMoveSnapshot.state;
         }
 
-        #endregion
+#endregion
 
-        #region Typescript Data Access Functions
+#region Typescript Data Access Functions
 
         public bool IsAuthority() {
             return mode == NetworkedStateSystemMode.Authority;
@@ -1511,13 +1713,19 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public Vector3 GetMoveDir() {
             // this.moveDirInput will only get populated when we are the one creating the inputs
-            if (mode == NetworkedStateSystemMode.Input) return this.moveDirInput;
-            if (mode == NetworkedStateSystemMode.Authority && isClient) return this.moveDirInput;
-            return this.moveDirInput;
+            if (mode == NetworkedStateSystemMode.Input) {
+                return moveDirInput;
+            }
+
+            if (mode == NetworkedStateSystemMode.Authority && isClient) {
+                return moveDirInput;
+            }
+
+            return moveDirInput;
         }
 
         public Vector3 GetPosition() {
-            return this.rb.position;
+            return rb.position;
         }
 
         // This is used by typescript to allow custom data to be compared in TS and the result used
@@ -1532,9 +1740,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnCompareSnapshots?.Invoke(a, b);
         }
 
-        #endregion
+#endregion
 
-        #region RPCs
+#region RPCs
 
         [Command]
         public void CAuthJumpedEvent(Vector3 velocity) {
@@ -1607,6 +1815,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             SetFlying(flying);
         }
 
-        #endregion
+#endregion
     }
 }
