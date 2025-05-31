@@ -538,7 +538,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
             //Check to see if we can stand up from a crouch
-            if ((movementSettings.autoCrouch || currentMoveSnapshot.prevState == CharacterState.Crouching) &&
+            if ((movementSettings.autoCrouch || currentMoveSnapshot.state == CharacterState.Crouching) &&
                 !canStand) {
                 groundedState = CharacterState.Crouching;
             } else if (command.crouch && grounded) {
