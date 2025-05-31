@@ -92,7 +92,7 @@ namespace Code.Network.StateSystem
         // Observer history stores authoritative state and uses the server's times. This data can be interpolated
         // with NetworkTime.time. It is converted into state history on the local clients physics timeline
         // in the observer snapshot function.
-        private History<State> observerHistory;
+        public History<State> observerHistory;
         private double lastReceivedSnapshotTime = 0;
 
         // Client interpolation fields
@@ -201,7 +201,7 @@ namespace Code.Network.StateSystem
             AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.OnLagCompensationCheck;
         }
 
-        private void Update()
+        private void SendNetworkMessages()
         {
             if (isClient && isServer)
             {
@@ -256,8 +256,7 @@ namespace Code.Network.StateSystem
             }
 
             // We are operating as a server
-            if (isServer &&
-                AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastServerSend))
+            if (isServer && AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastServerSend))
             {
                 // No matter what mode the server is operating in, we send our latest state to clients.
                 // If we have no state yet, don't send
@@ -276,6 +275,8 @@ namespace Code.Network.StateSystem
             {
                 this.Interpolate();
             }
+
+            SendNetworkMessages();
         }
 
         #endregion
@@ -976,8 +977,7 @@ namespace Code.Network.StateSystem
             }
 
             lastReceivedSnapshotTime = state.time;
-
-            // Debug.Log("Client receive snapshot" + state);
+            
             // The client is a non-authoritative owner and should update
             // their local state with the authoritative state from the server.
             if (isOwned && serverAuth)
