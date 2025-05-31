@@ -3,7 +3,6 @@ using Assets.Luau;
 using Code.Network.StateSystem;
 using Code.Network.StateSystem.Structures;
 using Mirror;
-using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEngine;
 
 namespace Code.Player.Character.MovementSystems.Character
