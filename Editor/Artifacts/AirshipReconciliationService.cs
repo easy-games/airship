@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Editor.EditorInternal;
 using Luau;
+using Mirror;
 using Mirror.SimpleWeb;
 using Newtonsoft.Json;
 using UnityEditor;
@@ -251,7 +252,7 @@ namespace Airship.Editor {
                 status = ReconcileStatus.Unsuccessful;
                 return false;
             }
-            
+
             var artifactData = AirshipLocalArtifactDatabase.instance;
             
             // Ensure we have the script asset data first, if not we'll just have to queue it for the compiler to process...
@@ -334,10 +335,7 @@ namespace Airship.Editor {
             
             if (ReconcilerVersion == ReconcilerVersion.Version2) {
                 var component = eventData.Component;
-
-                var isPrefab = PrefabUtility.IsPartOfAnyPrefab(component);
-                var prefabOriginalComponent = PrefabUtility.GetCorrespondingObjectFromOriginalSource(component);
-                if (isPrefab && prefabOriginalComponent.script != null) {
+                if (AirshipPrefabUtility.FindReconcilablePrefabComponent(component, out var prefabOriginalComponent)) {
                     // If it's a instance component:
                     // - We need to reconcile the source component first:
                     //      - If successful: We can then reconcile the instance
@@ -365,6 +363,9 @@ namespace Airship.Editor {
                                 break;
                         }
                     }
+                    
+                    
+                    
                 }
                 else {
                     // It's just an orphaned instance, or we're reconciling the original component, we can just reconcile it outright. No silly business required.
@@ -372,6 +373,7 @@ namespace Airship.Editor {
                 }
             }
             else {
+               
                 var component = eventData.Component;
                 ReconcileComponent(component);
                 //component.componentHash = component.scriptHash;

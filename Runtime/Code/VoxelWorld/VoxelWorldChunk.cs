@@ -443,7 +443,7 @@ namespace VoxelWorldStuff {
         /// </summary>
         public void WriteTemporaryCollision(Vector3 position, bool hasCollision) {
             if (hasCollision) {
-                VoxelWorldCollision.MakeCollider(this, position, Vector3Int.one);
+                VoxelWorldCollision.MakeCollider(this, Vector3Int.FloorToInt(position) + Vector3.one / 2, Vector3Int.one);
             } else {
                 VoxelWorldCollision.RemoveSingleVoxelCollision(this, position);
             }

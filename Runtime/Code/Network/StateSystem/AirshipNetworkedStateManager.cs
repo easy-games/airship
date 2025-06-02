@@ -1,15 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Code.Network.Simulation;
 using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror;
-using RSG.Promises;
-using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Code.Network.StateSystem
 {
@@ -92,7 +87,7 @@ namespace Code.Network.StateSystem
         // Observer history stores authoritative state and uses the server's times. This data can be interpolated
         // with NetworkTime.time. It is converted into state history on the local clients physics timeline
         // in the observer snapshot function.
-        private History<State> observerHistory;
+        public History<State> observerHistory;
         private double lastReceivedSnapshotTime = 0;
 
         // Client interpolation fields
@@ -165,7 +160,7 @@ namespace Code.Network.StateSystem
         private void Awake()
         {
             AirshipSimulationManager.Instance.ActivateSimulationManager();
-            AirshipSimulationManager.Instance.OnPerformTick += this.OnPerformTick;
+            AirshipSimulationManager.Instance.OnTick += this.OnTick;
             AirshipSimulationManager.Instance.OnSetSnapshot += this.OnSetSnapshot;
             AirshipSimulationManager.Instance.OnCaptureSnapshot += this.OnCaptureSnapshot;
             AirshipSimulationManager.Instance.OnLagCompensationCheck += this.OnLagCompensationCheck;
@@ -180,7 +175,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
                     ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 2);
-            print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
+            // print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
 
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
@@ -195,13 +190,13 @@ namespace Code.Network.StateSystem
 
         public void OnDestroy()
         {
-            AirshipSimulationManager.Instance.OnPerformTick -= this.OnPerformTick;
+            AirshipSimulationManager.Instance.OnTick -= this.OnTick;
             AirshipSimulationManager.Instance.OnSetSnapshot -= this.OnSetSnapshot;
             AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.OnCaptureSnapshot;
             AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.OnLagCompensationCheck;
         }
 
-        private void Update()
+        private void SendNetworkMessages()
         {
             if (isClient && isServer)
             {
@@ -256,8 +251,7 @@ namespace Code.Network.StateSystem
             }
 
             // We are operating as a server
-            if (isServer &&
-                AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastServerSend))
+            if (isServer && AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastServerSend))
             {
                 // No matter what mode the server is operating in, we send our latest state to clients.
                 // If we have no state yet, don't send
@@ -276,14 +270,17 @@ namespace Code.Network.StateSystem
             {
                 this.Interpolate();
             }
+
+            SendNetworkMessages();
         }
 
         #endregion
 
         #region Top Level Event Functions
 
-        private void OnPerformTick(double time, bool replay)
-        {
+        private void OnTick(object timeObj, object replayObj) {
+            if (timeObj is not double time || replayObj is not bool replay) return;
+            
             // We are in shared mode
             if (isServer && isClient)
             {
@@ -944,19 +941,16 @@ namespace Code.Network.StateSystem
             }
 
             Debug.LogWarning("Misprediction for " + this.name + " on cmd#" + state.lastProcessedCommand + ". Requesting resimulation.");
-
-            // Correct our networked system state to match the authoritative answer from the server
-            this.stateSystem.SetCurrentState(state);
-            Physics.SyncTransforms();
-            // Build an updated state entry for the command that was processed by the server.
-            // We use the client prediction time so we can act like we got this right in our history
-            var updatedState = this.stateSystem.GetCurrentState(state.lastProcessedCommand,
-                clientPredictedState.time);
-            // Debug.Log("Generated updated state for prediction history: " + updatedState + " based on authed state: " + state);
+            
+            // We use the client prediction time so we can act like we got this right in our history. Server gives us
+            // a time value in its local timeline so the provided time is not useful to us.
+            state.time = clientPredictedState.time;
+            
             // Overwrite the time we should have predicted this on the client so it
             // appears from the client perspective that we predicted the command correctly.
-            this.stateHistory.Overwrite(clientPredictedState.time, updatedState);
+            this.stateHistory.Overwrite(clientPredictedState.time, state);
             this.stateHistory.SetAuthoritativeEntry(clientPredictedState.time, true);
+            
             // Resimulate all commands performed after the incorrect prediction so that
             // our future predictions are (hopefully) correct.
             resimulate(clientPredictedState.time);
@@ -979,8 +973,7 @@ namespace Code.Network.StateSystem
             }
 
             lastReceivedSnapshotTime = state.time;
-
-            // Debug.Log("Client receive snapshot" + state);
+            
             // The client is a non-authoritative owner and should update
             // their local state with the authoritative state from the server.
             if (isOwned && serverAuth)
