@@ -448,6 +448,10 @@ public static class Bridge {
         return scenes.ToArray();
     }
 
+    public static void SetSkyboxMaterial(Material material) {
+        RenderSettings.skybox = material;
+    }
+
     public static float[] MakeFloatArray(int size) {
         return new float[size];
     }
