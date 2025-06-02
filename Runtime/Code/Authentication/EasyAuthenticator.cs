@@ -182,7 +182,7 @@ namespace Code.Authentication {
                 tcs.SetResult(new UserData() {
                     uid = this.connectionCounter + "",
                     username = "Player" + this.connectionCounter,
-                    orgRoleName = string.Empty,
+                    orgRoleName = "Dev",
                     profileImageId = string.Empty,
                     fullTransferPacket = "{}"
                 });
