@@ -87,6 +87,9 @@ public class MessagingManager : Singleton<MessagingManager>
         {
             UseTls = true,
             AllowUntrustedCertificates = true, // TODO: FIX
+            IgnoreCertificateChainErrors = true,
+            IgnoreCertificateRevocationErrors = true,
+            CertificateValidationHandler = (x) => true
         };
 
         var mqttClientOptions = new MqttClientOptionsBuilder()
