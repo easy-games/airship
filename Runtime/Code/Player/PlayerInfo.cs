@@ -10,6 +10,7 @@ public class PlayerInfoDto {
 	public string userId;
 	public string username;
 	public string profileImageId;
+	public string orgRoleName;
 	public GameObject gameObject;
 }
 
@@ -76,6 +77,7 @@ public class PlayerInfo : NetworkBehaviour {
 			userId = this.userId,
 			username = this.username,
 			profileImageId = this.profileImageId,
+			orgRoleName = this.orgRoleName,
 			gameObject = this.gameObject,
 		};
 	}
