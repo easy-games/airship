@@ -231,25 +231,34 @@ using Object = UnityEngine.Object;
                 try {
                     AssetDatabase.StartAssetEditing();
                     var compileFileList = CompiledFileQueue.ToArray();
+                    LuauCompiler.CompilationResult compilationResult = default;
                     
                     foreach (var file in compileFileList) {
                         var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
+                        var outFile = TypescriptProjectsService.Project.GetOutputPath(file);
                         
                         if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
                             if (outFileHash != data.metadata.compiledHash) {
-                                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                                var script = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                                compilationResult = LuauCompiler.EditorCompile(script, outFile);
+             
                                 data.metadata.compiledHash = outFileHash;
                                 modifiedDatabase = true;
                             }
                         }
                         else {
-                            var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
+                            var script = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                            var scriptData = artifacts.GetOrCreateScriptAssetData(script);
                             scriptData.metadata = new TypescriptCompilerMetadata() {
                                 compiledHash = outFileHash
                             };
                             
-                            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                            compilationResult = LuauCompiler.EditorCompile(script, outFile);
                             modifiedDatabase = true;
+                        }
+
+                        if (!compilationResult.Compiled) {
+                            // TODO: Error?
                         }
                     }
                     
