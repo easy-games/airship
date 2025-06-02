@@ -13,7 +13,8 @@ using Code.Util;
 using System.Collections.Generic;
 
 record PubSubMessage {
-    public string topic { get; set; }
+    public string topicNamespace { get; set; }
+    public string topicName { get; set; }
     public string payload { get; set; }
 }
 
@@ -83,10 +84,11 @@ public class MessagingManager : Singleton<MessagingManager>
         Instance.mqttClient = mqttClient;
 
         var mqttClientOptions = new MqttClientOptionsBuilder()
-            .WithTcpServer(host: "34.31.203.159", port: 1883)
+            .WithTcpServer(host: "nats-internal-staging.airship.gg", port: 1883)
             .WithCleanSession(true)
             .WithProtocolVersion(MQTTnet.Formatter.MqttProtocolVersion.V311)
             .WithWillQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce)
+            .WithCredentials($"gameserver:{Instance.currentGameId}:{Instance.serverBootstrap.serverId}", Instance.serverBootstrap.airshipJWT)
             .Build();
 
         // Setup message handling before connecting so that queued messages  
@@ -119,11 +121,20 @@ public class MessagingManager : Singleton<MessagingManager>
         var res = await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
         var res0 = res.Items.ToArray()[0];
 
-        foreach (var (topicNamespace, topicName) in pendingSubscriptions)
+
+        var toSubscribe = pendingSubscriptions;
+        pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
+        foreach (var (topicNamespace, topicName) in toSubscribe)
         {
             await SubscribeAsync(topicNamespace, topicName);
         }
-        pendingSubscriptions.Clear();
+
+        var toSend = queuedOutgoingPackets;
+        queuedOutgoingPackets = new List<PubSubMessage>();
+        foreach (var msg in toSend)
+        {
+            await PublishAsync(msg.topicNamespace, msg.topicName, msg.payload);
+        }
 
         return true;
     }
@@ -176,21 +187,21 @@ public class MessagingManager : Singleton<MessagingManager>
             return false;
         }
         return true;
-        // if (Instance.socket == null || !Instance.socket.Connected) {
-        //     // queue outgoing
-        //     Instance.queuedOutgoingPackets.Add(new SocketPacket {
-        //         eventName = eventName,
-        //         data = data
-        //     });
-        //     return;
-        // }
-
-        // var json = Instance.socket.JsonSerializer.Deserialize<JObject>(data);
-        // await Instance.socket.EmitAsync(eventName, json);
     }
 
     public static async Task<bool> PublishAsync(string topicNamespace, string topicName, string data)
     {
+        if (Instance.mqttClient == null || !Instance.mqttClient.IsConnected)
+        {
+            MessagingManager.queuedOutgoingPackets.Add(new PubSubMessage
+            {
+                topicNamespace = topicNamespace,
+                topicName = topicName,
+                payload = data,
+            });
+            return false;
+        }
+
         var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
         var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(fullTopic)
@@ -204,32 +215,10 @@ public class MessagingManager : Singleton<MessagingManager>
             return false;
         }
         return true;
-        // if (Instance.socket == null || !Instance.socket.Connected) {
-        //     // queue outgoing
-        //     Instance.queuedOutgoingPackets.Add(new SocketPacket {
-        //         eventName = eventName,
-        //         data = data
-        //     });
-        //     return;
-        // }
-
-        // var json = Instance.socket.JsonSerializer.Deserialize<JObject>(data);
-        // await Instance.socket.EmitAsync(eventName, json);
     }
 
     public static bool IsConnected()
     {
         return Instance.mqttClient != null && Instance.mqttClient.IsConnected;
-    }
-
-    public static void SetScriptListening(bool val)
-    {
-        // Instance.isScriptListening = val;
-        // if (val) {
-        //     foreach (var packet in Instance.queuedIncomingPackets) {
-        //         Instance.OnEvent?.Invoke(packet.eventName, packet.data);
-        //     }
-        //     Instance.queuedIncomingPackets.Clear();
-        // }
     }
 }
