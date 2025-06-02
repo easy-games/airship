@@ -18,7 +18,7 @@ record PubSubMessage {
     public string payload { get; set; }
 }
 
-[LuauAPI]
+[LuauAPI(LuauContext.Protected)]
 public class MessagingManager : Singleton<MessagingManager>
 {
     private static List<PubSubMessage> queuedOutgoingPackets = new();
