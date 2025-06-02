@@ -83,12 +83,20 @@ public class MessagingManager : Singleton<MessagingManager>
         var mqttClient = mqttFactory.CreateMqttClient();
         Instance.mqttClient = mqttClient;
 
+        var tlsOptions = new MqttClientTlsOptions()
+        {
+            UseTls = true,
+            AllowUntrustedCertificates = true, // TODO: FIX
+        };
+
         var mqttClientOptions = new MqttClientOptionsBuilder()
+            .WithTlsOptions(tlsOptions)
             .WithTcpServer(host: "nats-internal-staging.airship.gg", port: 1883)
             .WithCleanSession(true)
             .WithProtocolVersion(MQTTnet.Formatter.MqttProtocolVersion.V311)
             .WithWillQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce)
             .WithCredentials($"gameserver:{Instance.currentGameId}:{Instance.serverBootstrap.serverId}", Instance.serverBootstrap.airshipJWT)
+            .WithTimeout(TimeSpan.FromSeconds(10))
             .Build();
 
         // Setup message handling before connecting so that queued messages  
