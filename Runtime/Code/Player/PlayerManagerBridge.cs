@@ -28,7 +28,7 @@ namespace Code.Player {
 		public PlayerInfo localPlayer;
 		public bool localPlayerReady = false;
 
-		private List<PlayerInfo> players = new();
+		public List<PlayerInfo> players = new();
 
 		private int botPlayerIdCounter = 1;
 
