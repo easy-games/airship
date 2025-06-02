@@ -127,12 +127,6 @@ public class MessagingManager : Singleton<MessagingManager>
 
         await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
 
-        var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter(topic: "updates", qualityOfServiceLevel: MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce).Build();
-
-        var res = await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
-        var res0 = res.Items.ToArray()[0];
-
-
         var toSubscribe = pendingSubscriptions;
         pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
         foreach (var (topicNamespace, topicName) in toSubscribe)
@@ -183,9 +177,11 @@ public class MessagingManager : Singleton<MessagingManager>
         
         if (Instance.mqttClient == null || !Instance.mqttClient.IsConnected)
         {
+            Debug.Log($"Queueing subscribe request {topicNamespace}/{topicName}");
             pendingSubscriptions.Add((topicNamespace, topicName));
             return false;
         }
+        Debug.Log($"Subscribing {topicNamespace}/{topicName}");
 
         var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
         var mqttFactory = new MqttFactory();
@@ -204,6 +200,7 @@ public class MessagingManager : Singleton<MessagingManager>
     {
         if (Instance.mqttClient == null || !Instance.mqttClient.IsConnected)
         {
+            Debug.Log($"Queueing publish request {topicNamespace}/{topicName}");
             MessagingManager.queuedOutgoingPackets.Add(new PubSubMessage
             {
                 topicNamespace = topicNamespace,
@@ -212,7 +209,7 @@ public class MessagingManager : Singleton<MessagingManager>
             });
             return false;
         }
-
+        Debug.Log($"Publishing {topicNamespace}/{topicName}");
         var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
         var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(fullTopic)
