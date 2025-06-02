@@ -12,6 +12,7 @@ public class User {
     public string usernameLower;
     public string lastUsernameChangeTime;
     public string profileImageId;
+    public string orgRoleName;
 }
 
 

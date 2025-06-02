@@ -19,6 +19,7 @@ public class PlayerInfo : NetworkBehaviour {
 	[SyncVar] public string username;
 	[SyncVar] public int connectionId;
 	[SyncVar] public string profileImageId;
+	[SyncVar] public string orgRoleName;
 	public AudioSource voiceChatAudioSource;
 
 	private void Start() {
@@ -26,13 +27,14 @@ public class PlayerInfo : NetworkBehaviour {
 		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
-	public void Init(int connectionId, string userId, string username, string profileImageId) {
+	public void Init(int connectionId, string userId, string username, string profileImageId, string orgRoleName) {
 		this.gameObject.name = "Player_" + username;
 		this.connectionId = connectionId;
 		this.userId = userId;
 		this.username = username;
 		this.profileImageId = profileImageId;
-
+		this.orgRoleName = orgRoleName;
+		
 		this.InitVoiceChat();
 	}
 
