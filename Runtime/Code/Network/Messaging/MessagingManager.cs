@@ -196,7 +196,7 @@ public class MessagingManager : Singleton<MessagingManager>
         {
             Debug.Log($"Queueing subscribe request {topicNamespace}/{topicName}");
             pendingSubscriptions.Add((topicNamespace, topicName));
-            return false;
+            return true; // Optimistically return true
         }
         Debug.Log($"Subscribing {topicNamespace}/{topicName}");
 
@@ -228,7 +228,7 @@ public class MessagingManager : Singleton<MessagingManager>
                 topicName = topicName,
                 payload = data,
             });
-            return false;
+            return true; // Optimistically return true
         }
         Debug.Log($"Publishing {topicNamespace}/{topicName}");
         var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
