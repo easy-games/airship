@@ -89,7 +89,7 @@ public class MessagingManager : Singleton<MessagingManager>
             AllowUntrustedCertificates = true, // TODO: FIX
             IgnoreCertificateChainErrors = true,
             IgnoreCertificateRevocationErrors = true,
-            CertificateValidationHandler = (x) => true
+            CertificateValidationHandler = (x) => true,
         };
 
         var mqttClientOptions = new MqttClientOptionsBuilder()
@@ -124,28 +124,44 @@ public class MessagingManager : Singleton<MessagingManager>
 
             return Task.CompletedTask;
         };
+       
+
+        mqttClient.ConnectedAsync += async e => {
+            Debug.Log("### CONNECTED WITH SERVER ###");
+
+            // Subscribe to a topic
+            var toSubscribe = pendingSubscriptions;
+            pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
+            foreach (var (topicNamespace, topicName) in toSubscribe)
+            {
+                await SubscribeAsync(topicNamespace, topicName);
+            }
+
+            var toSend = queuedOutgoingPackets;
+            queuedOutgoingPackets = new List<PubSubMessage>();
+            foreach (var msg in toSend)
+            {
+                await PublishAsync(msg.topicNamespace, msg.topicName, msg.payload);
+            }
+
+
+            Debug.Log("### SUBSCRIBED ###");
+        };
+
+        mqttClient.DisconnectedAsync += async e =>
+        {
+            Debug.Log($"### Disconnected from server ### {e.ReasonString}");
+        };
+
 
         await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
-
-        var toSubscribe = pendingSubscriptions;
-        pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
-        foreach (var (topicNamespace, topicName) in toSubscribe)
-        {
-            await SubscribeAsync(topicNamespace, topicName);
-        }
-
-        var toSend = queuedOutgoingPackets;
-        queuedOutgoingPackets = new List<PubSubMessage>();
-        foreach (var msg in toSend)
-        {
-            await PublishAsync(msg.topicNamespace, msg.topicName, msg.payload);
-        }
 
         return true;
     }
 
     public static async Task Disconnect()
     {
+        Debug.Log("Calling disconnect");
         if (Instance.mqttClient != null)
         {
             Instance.mqttClient = null;
@@ -175,7 +191,7 @@ public class MessagingManager : Singleton<MessagingManager>
     public static async Task<bool> SubscribeAsync(string topicNamespace, string topicName)
     {
         
-        if (Instance.mqttClient == null || !Instance.mqttClient.IsConnected)
+        if (!IsConnected())
         {
             Debug.Log($"Queueing subscribe request {topicNamespace}/{topicName}");
             pendingSubscriptions.Add((topicNamespace, topicName));
@@ -193,12 +209,16 @@ public class MessagingManager : Singleton<MessagingManager>
             Debug.LogError($"Failed to subscribe to {fullTopic}: {res0.ResultCode}");
             return false;
         }
+        else
+        {
+            Debug.Log($"Subscribe successful");
+        }
         return true;
     }
 
     public static async Task<bool> PublishAsync(string topicNamespace, string topicName, string data)
     {
-        if (Instance.mqttClient == null || !Instance.mqttClient.IsConnected)
+        if (!IsConnected())
         {
             Debug.Log($"Queueing publish request {topicNamespace}/{topicName}");
             MessagingManager.queuedOutgoingPackets.Add(new PubSubMessage
@@ -221,6 +241,10 @@ public class MessagingManager : Singleton<MessagingManager>
         {
             Debug.LogError($"Failed to publish to {fullTopic}: {res.ReasonCode}");
             return false;
+        }
+        else
+        {
+            Debug.Log($"Publish success");
         }
         return true;
     }
