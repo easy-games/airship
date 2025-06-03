@@ -120,6 +120,7 @@ public class MessagingManager : Singleton<MessagingManager>
             }
             var topicNamespace = topicParts[4];
             var topicName = topicParts[5];
+            Debug.Log($"Sending message downstream: {topicNamespace} {topicName}");
             UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(topicNamespace, topicName, e.ApplicationMessage.ConvertPayloadToString()));
 
             return Task.CompletedTask;
