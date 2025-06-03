@@ -63,6 +63,7 @@ public partial class LuauCore : MonoBehaviour {
         public Delegate GetProperty;
         public bool HasGetPropertyFunc;
         public bool IsNativeClass;
+        public bool IsStruct;
     }
 
     // Hopefully faster dictionary comparison / hash time
@@ -659,7 +660,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
-        if (typeof(T) == typeof(object) || cacheData.IsNativeClass) {
+        if (typeof(T) == typeof(object) || cacheData.IsNativeClass || cacheData.IsStruct) {
             return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
         }
     
@@ -671,7 +672,7 @@ public partial class LuauCore : MonoBehaviour {
                     .MethodHandle
                     .GetFunctionPointer()
                     .ToPointer();
-            
+
                 // Create a delegate that wraps the function pointer
                 var getter = new Getter<T>(obj => {
                     unsafe {
@@ -1670,7 +1671,8 @@ public partial class LuauCore : MonoBehaviour {
             t = propertyInfo.PropertyType,
             propertyInfo = propertyInfo,
             IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
-                .Any(attr => attr.GetType().Name == "NativeClassAttribute")
+                .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
+            IsStruct = propertyInfo.DeclaringType.IsValueType && !propertyInfo.DeclaringType.IsPrimitive,
         };
         LuauCore.propertyGetCache[new PropertyCacheKey(objectType, propName)] = cacheData;
         return cacheData;
