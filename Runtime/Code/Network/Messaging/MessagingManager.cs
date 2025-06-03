@@ -120,7 +120,7 @@ public class MessagingManager : Singleton<MessagingManager>
             }
             var topicNamespace = topicParts[4];
             var topicName = topicParts[5];
-            Debug.Log($"Sending message downstream: {topicNamespace} {topicName}");
+
             UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(topicNamespace, topicName, e.ApplicationMessage.ConvertPayloadToString()));
 
             return Task.CompletedTask;
@@ -128,8 +128,6 @@ public class MessagingManager : Singleton<MessagingManager>
        
 
         mqttClient.ConnectedAsync += async e => {
-            Debug.Log("### CONNECTED WITH SERVER ###");
-
             // Subscribe to a topic
             var toSubscribe = pendingSubscriptions;
             pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
@@ -144,14 +142,11 @@ public class MessagingManager : Singleton<MessagingManager>
             {
                 await PublishAsync(msg.topicNamespace, msg.topicName, msg.payload);
             }
-
-
-            Debug.Log("### SUBSCRIBED ###");
         };
 
         mqttClient.DisconnectedAsync += async e =>
         {
-            Debug.Log($"### Disconnected from server ### {e.ReasonString}");
+            Debug.LogWarning($"Disconnected from messaging server {e.ReasonString}");
         };
 
 
@@ -162,7 +157,6 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static async Task Disconnect()
     {
-        Debug.Log("Calling disconnect");
         if (Instance.mqttClient != null)
         {
             Instance.mqttClient = null;
@@ -198,7 +192,6 @@ public class MessagingManager : Singleton<MessagingManager>
             pendingSubscriptions.Add((topicNamespace, topicName));
             return true; // Optimistically return true
         }
-        Debug.Log($"Subscribing {topicNamespace}/{topicName}");
 
         var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
         var mqttFactory = new MqttFactory();
@@ -210,10 +203,7 @@ public class MessagingManager : Singleton<MessagingManager>
             Debug.LogError($"Failed to subscribe to {fullTopic}: {res0.ResultCode}");
             return false;
         }
-        else
-        {
-            Debug.Log($"Subscribe successful");
-        }
+
         return true;
     }
 
@@ -230,7 +220,7 @@ public class MessagingManager : Singleton<MessagingManager>
             });
             return true; // Optimistically return true
         }
-        Debug.Log($"Publishing {topicNamespace}/{topicName}");
+
         var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
         var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(fullTopic)
@@ -243,10 +233,7 @@ public class MessagingManager : Singleton<MessagingManager>
             Debug.LogError($"Failed to publish to {fullTopic}: {res.ReasonCode}");
             return false;
         }
-        else
-        {
-            Debug.Log($"Publish success");
-        }
+
         return true;
     }
 
