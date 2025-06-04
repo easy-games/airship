@@ -236,7 +236,7 @@ using Object = UnityEngine.Object;
                         var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
                         
                         if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
-                            if (outFileHash != data.metadata.compiledHash) {
+                            if (string.IsNullOrEmpty(outFileHash) || outFileHash != data.metadata.compiledHash) {
                                 AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                                 data.metadata.compiledHash = outFileHash;
                                 modifiedDatabase = true;
