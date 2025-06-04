@@ -24,8 +24,6 @@ namespace Code.Player.Character.NetworkedMovement
 
         [SerializeField] public NetworkAnimator? networkAnimator;
         public AnimationEventListener? animationEvents;
-        public ParticleSystem? sprintVfx;
-        public ParticleSystem? jumpPoofVfx;
 
         [Header("Variables")] public float minAirborneTime = .25f;
         public float particleMaxDistance = 25f;
@@ -59,19 +57,8 @@ namespace Code.Player.Character.NetworkedMovement
         private float lastGroundedTime = 0;
         private bool grounded = false;
 
-        private void Awake()
-        {
-            if (this.sprintVfx)
-            {
-                sprintVfx.Stop();
-            }
-
-            if (this.jumpPoofVfx)
-            {
-                jumpPoofVfx.Stop();
-            }
-
-            //   // Make a new instance of the animator override controller
+        private void Awake() {
+            // Make a new instance of the animator override controller
             if (!this.animatorOverride)
             {
                 if (this.animator.runtimeAnimatorController is AnimatorOverrideController over)
@@ -128,19 +115,6 @@ namespace Code.Player.Character.NetworkedMovement
 
             //Enter default state
             SetState(new CharacterAnimationSyncData());
-        }
-
-        private void OnDisable()
-        {
-            if (sprintVfx)
-            {
-                sprintVfx.Stop();
-            }
-
-            if (jumpPoofVfx)
-            {
-                jumpPoofVfx.Stop();
-            }
         }
 
         public bool IsInParticleDistance()
@@ -262,24 +236,8 @@ namespace Code.Player.Character.NetworkedMovement
             animator.SetBool("Sprinting",
                 !syncedState.crouching && (syncedState.sprinting || syncedState.state == CharacterState.Sprinting));
 
-            if (syncedState.jumping)
-            {
+            if (syncedState.jumping) {
                 SetTrigger("Jump");
-            }
-
-            if (sprintVfx)
-            {
-                if (newState == CharacterState.Sprinting)
-                {
-                    if (this.IsInParticleDistance() && !sprintVfx.isPlaying)
-                    {
-                        sprintVfx.Play();
-                    }
-                }
-                else
-                {
-                    sprintVfx.Stop();
-                }
             }
 
             if (this.firstPerson)
@@ -294,24 +252,8 @@ namespace Code.Player.Character.NetworkedMovement
             //print("Set state: " + currentState);
         }
 
-        [HideFromTS]
-        public void OnCharacterMovementDisabled()
-        {
-            if (this.sprintVfx)
-            {
-                sprintVfx.Stop();
-            }
-
-            if (this.jumpPoofVfx)
-            {
-                jumpPoofVfx.Stop();
-            }
-        }
-
-        private void SetTrigger(string trigger)
-        {
-            if (networkAnimator != null)
-            {
+        private void SetTrigger(string trigger) {
+            if (networkAnimator != null) {
                 networkAnimator.SetTrigger(trigger);
                 return;
             }
