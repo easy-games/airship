@@ -27,6 +27,27 @@ namespace Code.Network.StateSystem.Structures
             throw new NotImplementedException("Subclasses should implement this method.");
         }
 
+        /// <summary>
+        /// Creates a diff that will generate the passed snapshot paramter when applied to the base state using ApplyDiff().
+        /// </summary>
+        /// <param name="snapshot"></param>
+        /// <typeparam name="TState"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public virtual StateDiff CreateDiff<TState>(TState snapshot) where TState : StateSnapshot {
+            throw new NotImplementedException("Subclasses should implement this method.");
+        }
+
+        /// <summary>
+        /// Applies a diff to the given state snapshot and returns the new resulting state.
+        /// </summary>
+        /// <param name="diff"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public virtual StateSnapshot ApplyDiff(StateDiff diff) {
+            throw new NotImplementedException("Subclasses should implement this method.");
+        }
+
         public virtual object Clone()
         {
             throw new NotImplementedException("Subclasses should implement this method.");

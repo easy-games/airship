@@ -1,6 +1,8 @@
 ﻿using System;
 using Assets.Luau;
+using Code.Misc;
 using Code.Player.Character.Net;
+using Mirror;
 using UnityEngine;
 
 namespace Code.Player.Character.MovementSystems.Character
@@ -42,6 +44,45 @@ namespace Code.Player.Character.MovementSystems.Character
 					dataSize = customData.dataSize,
 					data = (byte[])customData.data.Clone(),
 				} : default,
+			};
+		}
+	}
+
+	public static class CharacterInputDataSerializer {
+		public static void WriteCharacterInputData(this NetworkWriter writer, CharacterInputData value) {
+			byte bools = 0;
+			BitUtil.SetBit(ref bools, 0, value.crouch);
+			BitUtil.SetBit(ref bools, 1, value.jump);
+			BitUtil.SetBit(ref bools, 2, value.sprint);
+			writer.Write(bools);
+			
+			writer.WriteInt(value.customData.dataSize);
+			writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+			
+			writer.Write(value.time);
+			writer.Write(value.commandNumber);
+			
+			writer.Write((short)(value.lookVector.x * 1000f));
+			writer.Write((short)(value.lookVector.y * 1000f));
+			writer.Write((short)(value.lookVector.z * 1000f));
+
+			writer.Write(value.moveDir);
+		}
+
+		public static CharacterInputData ReadCharacterInputData(this NetworkReader reader) {
+			var bools = reader.Read<byte>();
+			var customDataSize = reader.ReadInt();
+			var customDataArray = reader.ReadBytes(customDataSize);
+			var customData = new BinaryBlob(customDataArray);
+			return new CharacterInputData() {
+				crouch = BitUtil.GetBit(bools, 0),
+				jump = BitUtil.GetBit(bools, 1),
+				sprint = BitUtil.GetBit(bools, 2),
+				customData = customData,
+				time = reader.Read<double>(),
+				commandNumber = reader.Read<int>(),
+				lookVector = new Vector3(reader.Read<short>() / 1000f, reader.Read<short>() / 1000f, reader.Read<short>() / 1000f),
+				moveDir = reader.Read<Vector3>(),
 			};
 		}
 	}
