@@ -235,9 +235,6 @@ namespace VoxelWorldStuff {
 
         public static void RemoveSingleVoxelCollision(Chunk chunk, Vector3 pos) {
             var chunkGO = chunk.GetGameObject();
-            // var worldPosition = chunk.chunkKey * VoxelWorld.chunkSize + pos;
-            // Debug.Log("World position is " + worldPosition);
-            Debug.DrawLine(pos - Vector3.one / 3, pos + Vector3.one / 3, Color.blue, 25);
             var resultCount = Physics.OverlapBoxNonAlloc(pos, Vector3.one / 3, chunkOverlapResults, chunkGO.transform.rotation, 1 << chunkGO.layer, QueryTriggerInteraction.Ignore);
             if (resultCount == 0) return; // Already no collider here
 
@@ -251,7 +248,11 @@ namespace VoxelWorldStuff {
             var minCorner = (bcCenter - bcSize / 2);
             var posRelativeToSize = Vector3Int.FloorToInt(pos - minCorner);
             
-            Debug.Log($"Splitting! posRelativeToSize={posRelativeToSize} bcSize={bcSize} minCorner={minCorner} bcCenter={bcCenter}");
+            // Debug.Log($"Splitting! posRelativeToSize={posRelativeToSize} bcSize={bcSize} minCorner={minCorner} bcCenter={bcCenter}");
+            
+            var bcComp = new GameObject("ComponentTrue");
+            bcComp.transform.localScale = bcSize;
+            bcComp.transform.position = bcCenter;
             
             // Create 6 new colliders split off
             if (posRelativeToSize.x > 0) {
@@ -266,22 +267,22 @@ namespace VoxelWorldStuff {
             }
             if (posRelativeToSize.y > 0) {
                 var size = new Vector3(1, posRelativeToSize.y, bcSize.z);
-                var center = new Vector3(bcCenter.x, minCorner.y + posRelativeToSize.y / 2f, bcCenter.z);
+                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + posRelativeToSize.y / 2f, bcCenter.z);
                 MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
             }
             if (posRelativeToSize.y < bcSize.y - 1) {
                 var size = new Vector3(1, bcSize.y - posRelativeToSize.y - 1, bcSize.z);
-                var center = new Vector3(bcCenter.x, minCorner.y + (posRelativeToSize.y + 1) + (bcSize.y - (posRelativeToSize.y + 1)) / 2, bcCenter.z);
+                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + (posRelativeToSize.y + 1) + (bcSize.y - (posRelativeToSize.y + 1)) / 2, bcCenter.z);
                 MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
             }
             if (posRelativeToSize.z > 0) {
                 var size = new Vector3(1, 1, posRelativeToSize.z);
-                var center = new Vector3(bcCenter.x, bcCenter.y, minCorner.z + posRelativeToSize.z / 2f);
+                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + posRelativeToSize.y + 0.5f, minCorner.z + posRelativeToSize.z / 2f);
                 MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
             }
             if (posRelativeToSize.z < bcSize.z - 1) {
                 var size = new Vector3(1, 1, bcSize.z - posRelativeToSize.z - 1);
-                var center = new Vector3(bcCenter.x, bcCenter.y, minCorner.z + (posRelativeToSize.z + 1) + (bcSize.z - (posRelativeToSize.z + 1)) / 2);
+                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + posRelativeToSize.y + 0.5f, minCorner.z + (posRelativeToSize.z + 1) + (bcSize.z - (posRelativeToSize.z + 1)) / 2);
                 MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
             }
             Object.Destroy(bc);
