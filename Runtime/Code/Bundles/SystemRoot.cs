@@ -169,6 +169,29 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// }
 		var sw = Stopwatch.StartNew();
 
+		int GetPackageOrdering(AirshipPackageType packageType) {
+			if (packageType == AirshipPackageType.Package) {
+				return 1;
+			} else if (packageType == AirshipPackageType.Game) {
+				return 2;
+			}
+
+			return 3;
+		}
+		
+		packages.Sort((a, b) => {
+			int aOrdering = GetPackageOrdering(a.packageType);
+			int bOrdering = GetPackageOrdering(b.packageType);
+
+			if (aOrdering < bOrdering) {
+				return -1;
+			}
+			if (aOrdering > bOrdering) {
+				return 1;
+			}
+			return 0;
+		});
+
 		// Find packages we should UNLOAD
 		List<string> unloadList = new();
 		foreach (var loadedPair in this.loadedAssetBundles) {
