@@ -345,7 +345,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {
-#if !UNITY_IOS && !UNITY_ANDROID && !UNITY_EDITOR
+#if !UNITY_IOS && !UNITY_ANDROID && AIRSHIP_PLAYER
 				preWarmedCoreShaders = true;
 				string[] collections = new[] {
 					"MainMenu",
