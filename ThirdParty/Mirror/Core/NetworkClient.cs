@@ -1045,7 +1045,7 @@ namespace Mirror
         // the players object for example.
         public static bool Ready()
         {
-            // Debug.Log($"NetworkClient.Ready() called with active scene: " + SceneManager.GetActiveScene().name);
+            Debug.Log($"NetworkClient.Ready() called with active scene: " + SceneManager.GetActiveScene().name);
             if (ready)
             {
                 Debug.LogError("NetworkClient is already ready. It shouldn't be called twice.");
