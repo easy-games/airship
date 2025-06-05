@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class TestMovement : NetworkedStateSystem<TestMovement, TestMovementState, TestMovementInput>
+    public class TestMovement : NetworkedStateSystem<TestMovement, TestMovementState, TestMovementDiff, TestMovementInput>
     {
         private Rigidbody rb;
         private Vector3 moveVector;

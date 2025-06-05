@@ -41,7 +41,7 @@ namespace Code.Player.Character.MovementSystems.Character
         // Cloning will not clone this field, so you can safely clone then modify and existing snapshot and regenerate the crc32
         private uint _crc32;
 
-        public override bool Compare<TSystem, TState, TInput>(NetworkedStateSystem<TSystem, TState, TInput> system, TState snapshot)
+        public override bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
         {
             // TODO: could probably be optimized?
             if (system.GetType() != typeof(CharacterMovement))
@@ -176,8 +176,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 throw new Exception("Invalid snapshot for diff generation.");
             }
 
-            
-
             // Determine which fields changed
             byte oldBools = 0;
             byte newBools = 0;
@@ -211,7 +209,8 @@ namespace Code.Player.Character.MovementSystems.Character
 
             // Write only changed fields
             var writer = new NetworkWriter();
-            writer.Write(snapshot.lastProcessedCommand);
+            writer.Write(other.time);
+            writer.Write(other.lastProcessedCommand);
             writer.Write(changedMask);
             if (boolsChanged) writer.Write(newBools);
             if (positionChanged) writer.Write(other.position);
@@ -231,9 +230,10 @@ namespace Code.Player.Character.MovementSystems.Character
 
             // Always write custom data. TODO: we will want to apply a diffing algorithm to the byte array
             writer.WriteInt(other.customData.dataSize);
-            writer.WriteBytes(other.customData.data, 0, other.customData.dataSize);
+            writer.WriteBytes(other.customData.data, 0, other.customData.data.Length);
 
             return new CharacterStateDiff {
+                baseTime = snapshot.time,
                 crc32 = other.ComputeCrc32(),
                 data = writer.ToArray()
             };
@@ -251,11 +251,19 @@ namespace Code.Player.Character.MovementSystems.Character
                 throw new Exception("Invalid snapshot for applying diff.");
             }
 
+            if (time != diff.baseTime) {
+                // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
+                // using this snapshot as the base.
+                Debug.LogWarning("Snapshot diff was applied to the wrong base snapshot. Report this.");
+                return null;
+            }
+
             var reader = new NetworkReader(stateDiff.data);
             var snapshot = (CharacterSnapshotData) this.Clone();
 
+            snapshot.time = reader.Read<double>();
             snapshot.lastProcessedCommand = reader.Read<int>();
-            var changedMask = reader.Read<byte>();
+            var changedMask = reader.Read<short>();
 
             if (BitUtil.GetBit(changedMask, 0)) {
                 byte bools = reader.Read<byte>();
@@ -292,6 +300,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (crc32 != diff.crc32) {
                 // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
                 // using this snapshot as the base.
+                Debug.LogWarning("Applying diff failed CRC check. This may happen due to poor network connection.");
                 return null;
             }
 

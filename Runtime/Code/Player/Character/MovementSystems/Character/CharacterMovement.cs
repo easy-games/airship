@@ -24,7 +24,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     [LuauAPI]
     public class
-        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterInputData> {
+        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script

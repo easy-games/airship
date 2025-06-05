@@ -4,40 +4,70 @@ using Mirror;
 namespace Code.Player.Character.MovementSystems.Character
 {
     [LuauAPI]
-    public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterSnapshotData, CharacterInputData>
+    public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData>
     {
         public override void SendClientInputToServer(CharacterInputData input)
         {
-            this.RpcClientInputToServer(input);
+            this.CmdClientInputToServer(input);
         }
 
         public override void SendClientSnapshotToServer(CharacterSnapshotData snapshot)
         {
-            this.RpcClientSnapshotToServer(snapshot);
+            this.CmdClientSnapshotToServer(snapshot);
         }
 
-        public override void SendServerSnapshotToClients(CharacterSnapshotData snapshot)
+        public override void SendRequestFullSnapshotToServer() {
+            this.CmdClientRequestFullSnapshot();
+        }
+
+        public override void SendAckSnapshotToServer(double time) {
+            this.CmdClientAckSnapshot(time);
+        }
+
+        public override void SendServerSnapshotToClient(NetworkConnection client, CharacterSnapshotData snapshot)
         {
-            this.RpcServerSnapshotToClients(snapshot);
+            this.RpcServerSnapshotToClients(client, snapshot);
         }
 
-
-        [ClientRpc(channel = Channels.Unreliable)]
-        private void RpcServerSnapshotToClients(CharacterSnapshotData snapshot)
+        public override void SendServerDiffToClient(NetworkConnection client, CharacterStateDiff diff) {
+            this.RpcSendServerDiffToClients(client, diff);
+        }
+        
+        
+        [TargetRpc(channel = Channels.Unreliable)]
+        private void RpcServerSnapshotToClients(NetworkConnection client, CharacterSnapshotData snapshot)
         {
             this.OnClientReceiveSnapshot?.Invoke(snapshot);
         }
+        
+        [TargetRpc(channel = Channels.Unreliable)]
+        private void RpcSendServerDiffToClients(NetworkConnection client, CharacterStateDiff diff)
+        {
+            this.OnClientReceiveDiff?.Invoke(diff);
+        }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientInputToServer(CharacterInputData input)
+        private void CmdClientInputToServer(CharacterInputData input)
         {
             this.OnServerReceiveInput?.Invoke(input);
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientSnapshotToServer(CharacterSnapshotData snapshot)
+        private void CmdClientSnapshotToServer(CharacterSnapshotData snapshot)
         {
             this.OnServerReceiveSnapshot?.Invoke(snapshot);
+        }
+        
+        [Command(channel = Channels.Reliable, requiresAuthority = false)]
+        private void CmdClientRequestFullSnapshot(NetworkConnectionToClient sender = null) {
+            if (sender == null) return;
+            this.OnServerReceiveFullSnapshotRequest?.Invoke(sender.connectionId);
+        }
+
+        [Command(channel = Channels.Reliable, requiresAuthority = false)]
+        private void CmdClientAckSnapshot(double time, NetworkConnectionToClient sender = null) {
+            if (sender == null) return;
+            this.OnServerReceiveSnapshotAck?.Invoke(sender.connectionId, time);
         }
     }
 }

@@ -19,7 +19,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
                    this.time;
         }
 
-        public override bool Compare<TSystem, TState, TInput>(NetworkedStateSystem<TSystem, TState, TInput> system, TState snapshot)
+        public override bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
         {
             if (snapshot is not TestMovementState other) return false;
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&

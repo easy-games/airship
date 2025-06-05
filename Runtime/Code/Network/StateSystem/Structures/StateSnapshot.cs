@@ -20,9 +20,10 @@ namespace Code.Network.StateSystem.Structures
          */
         // Note: this should only be called to reconcile client predicted state with server authoritative state (ex. predicted.Compare(authoritative)). If we change this in the future
         // our custom command system will not be able to know if a command was authoritatively cancelled by the server on the client (see PredictedCommandManager.ts in Core)
-        public virtual bool Compare<TSystem, TState, TInput>(NetworkedStateSystem<TSystem, TState, TInput> system, TState snapshot) where TState : StateSnapshot
+        public virtual bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot) where TState : StateSnapshot
+            where TDiff : StateDiff
             where TInput : InputCommand
-            where TSystem : NetworkedStateSystem<TSystem, TState, TInput>
+            where TSystem : NetworkedStateSystem<TSystem, TState, TDiff, TInput>
         {
             throw new NotImplementedException("Subclasses should implement this method.");
         }

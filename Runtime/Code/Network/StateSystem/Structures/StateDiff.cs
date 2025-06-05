@@ -12,6 +12,11 @@ namespace Code.Network.StateSystem.Structures
     public class StateDiff: ICloneable {
 
         /// <summary>
+        /// The time of the base snapshot
+        /// </summary>
+        public double baseTime;
+        
+        /// <summary>
         /// The CRC32 of the resulting snapshot when applied to the correct base.
         /// </summary>
         public uint crc32;

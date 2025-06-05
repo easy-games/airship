@@ -8,6 +8,4 @@ namespace Code.Player.Character.MovementSystems.Character {
         // Diff data encoded as a byte array. Will be decoded by ApplyDiff.
         public byte[] data;
     }
-    
-    
 }
