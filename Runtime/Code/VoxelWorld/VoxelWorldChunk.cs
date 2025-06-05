@@ -442,10 +442,11 @@ namespace VoxelWorldStuff {
         /// need quick collision changes that don't intend to persist.
         /// </summary>
         public void WriteTemporaryCollision(Vector3 position, bool hasCollision) {
+            var centerOfPos = Vector3Int.FloorToInt(position) + Vector3.one / 2;
             if (hasCollision) {
-                VoxelWorldCollision.MakeCollider(this, Vector3Int.FloorToInt(position) + Vector3.one / 2, Vector3Int.one);
+                VoxelWorldCollision.MakeCollider(this, centerOfPos, Vector3Int.one);
             } else {
-                VoxelWorldCollision.RemoveSingleVoxelCollision(this, position);
+                VoxelWorldCollision.RemoveSingleVoxelCollision(this, centerOfPos);
             }
         }
 
