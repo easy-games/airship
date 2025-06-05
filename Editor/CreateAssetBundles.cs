@@ -255,9 +255,14 @@ public static class CreateAssetBundles {
 			layers.Add(layerName);
 		}
 		gameConfig.gameLayers = layers.ToArray();
-
 		gameConfig.SerializeSettings();       
 		
+		// Local source packages set to forceLatest
+		foreach (var package in gameConfig.packages) {
+			if (package.localSource) {
+				package.forceLatestVersion = true;
+			}
+		}
 		
 		EditorUtility.SetDirty(gameConfig);
 		AssetDatabase.SaveAssetIfDirty(gameConfig);

@@ -70,7 +70,7 @@ namespace Code.Bootstrap {
             var assetVersionInt = Int32.Parse(this.assetVersion);
             if (this.packageType == AirshipPackageType.Game) {
                 // folders to delete
-                var folders = Directory.GetDirectories(Application.persistentDataPath, "Games")
+                var folders = Directory.GetDirectories(Path.Join(Application.persistentDataPath, "Games"))
                     .Where((path) => path.Contains(this.id + "_v"))
                     .Where((path) => {
                         try {

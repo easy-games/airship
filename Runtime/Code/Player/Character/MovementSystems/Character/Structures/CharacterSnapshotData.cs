@@ -58,36 +58,69 @@ namespace Code.Player.Character.MovementSystems.Character
 
             string message = "";
             
-            if (this.lastProcessedCommand != other.lastProcessedCommand)
+            var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
+            var positionEqual = this.position == other.position;
+            var velocityEqual = this.velocity == other.velocity;
+            var currentSpeedEqual = CharacterSnapshotDataSerializer.CompressToShort(this.currentSpeed) == CharacterSnapshotDataSerializer.CompressToShort(other.currentSpeed);
+            var speedModifierEqual = CharacterSnapshotDataSerializer.CompressToShort(this.speedModifier) == CharacterSnapshotDataSerializer.CompressToShort(other.speedModifier);
+            var inputDisabledEqual = inputDisabled == other.inputDisabled;
+            var isFlyingEqual = isFlying == other.isFlying;
+            var isSprintingEqual = isSprinting == other.isSprinting;
+            var jumpCountEqual = jumpCount == other.jumpCount;
+            var airborneFromImpulseEqual = airborneFromImpulse == other.airborneFromImpulse;
+            var alreadyJumpedEqual = alreadyJumped == other.alreadyJumped;
+            var isCrouchingEqual = isCrouching == other.isCrouching;
+            var prevStepUpEqual = prevStepUp == other.prevStepUp;
+            var isGroundedEqual = isGrounded == other.isGrounded;
+            var stateEqual = state == other.state;
+
+            if (!lastProcessedCommandEqual)
                 message += $"lastProcessedCommand: {this.lastProcessedCommand} != {other.lastProcessedCommand}\n";
-            if (this.position != other.position) message += $"position: {this.position} != {other.position}\n";
-            if (this.velocity != other.velocity) message += $"velocity: {this.velocity} != {other.velocity}\n";
-            if (this.currentSpeed != other.currentSpeed) message += $"currentSpeed: {this.currentSpeed} != {other.currentSpeed}\n";
-            if (this.speedModifier != other.speedModifier)
-                message += $"speedModifier: {this.speedModifier} != {other.speedModifier}";
-            if (inputDisabled != other.inputDisabled)
+            if (!positionEqual)
+                message += $"position: {this.position} != {other.position}\n";
+            if (!velocityEqual)
+                message += $"velocity: {this.velocity} != {other.velocity}\n";
+            if (!currentSpeedEqual)
+                message += $"currentSpeed: {this.currentSpeed} != {other.currentSpeed}\n";
+            if (!speedModifierEqual)
+                message += $"speedModifier: {this.speedModifier} != {other.speedModifier}\n";
+            if (!inputDisabledEqual)
                 message += $"inputDisabled: {inputDisabled} != {other.inputDisabled}\n";
-            if (isFlying != other.isFlying) message += $"isFlying: {isFlying} != {other.isFlying}\n";
-            if (isSprinting != other.isSprinting) message += $"isSprinting: {isSprinting} != {other.isSprinting}\n";
-            if (jumpCount != other.jumpCount) message += $"jumpCount: {jumpCount} != {other.jumpCount}\n";
-            if (airborneFromImpulse != other.airborneFromImpulse)
+            if (!isFlyingEqual)
+                message += $"isFlying: {isFlying} != {other.isFlying}\n";
+            if (!isSprintingEqual)
+                message += $"isSprinting: {isSprinting} != {other.isSprinting}\n";
+            if (!jumpCountEqual)
+                message += $"jumpCount: {jumpCount} != {other.jumpCount}\n";
+            if (!airborneFromImpulseEqual)
                 message += $"airborneFromImpulse: {airborneFromImpulse} != {other.airborneFromImpulse}\n";
-            if (alreadyJumped != other.alreadyJumped)
+            if (!alreadyJumpedEqual)
                 message += $"alreadyJumped: {alreadyJumped} != {other.alreadyJumped}\n";
-            if (isCrouching != other.isCrouching) message += $"prevCrouch: {isCrouching} != {other.isCrouching}\n";
-            if (prevStepUp != other.prevStepUp) message += $"prevStepUp: {prevStepUp} != {other.prevStepUp}\n";
-            if (isGrounded != other.isGrounded)
+            if (!isCrouchingEqual)
+                message += $"prevCrouch: {isCrouching} != {other.isCrouching}\n";
+            if (!prevStepUpEqual)
+                message += $"prevStepUp: {prevStepUp} != {other.prevStepUp}\n";
+            if (!isGroundedEqual)
                 message += $"prevGrounded: {isGrounded} != {other.isGrounded}\n";
-            if (state != other.state) message += $"state: {state} != {other.state}\n";
-            
-            var same =  this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
-                        this.velocity == other.velocity && this.currentSpeed == other.currentSpeed && this.speedModifier == other.speedModifier &&
-                        inputDisabled == other.inputDisabled
-                        && isFlying == other.isFlying && isSprinting == other.isSprinting && jumpCount == other.jumpCount &&
-                        airborneFromImpulse == other.airborneFromImpulse &&
-                        alreadyJumped == other.alreadyJumped
-                        && isCrouching == other.isCrouching && prevStepUp == other.prevStepUp &&
-                        isGrounded == other.isGrounded && state == other.state;
+            if (!stateEqual)
+                message += $"state: {state} != {other.state}\n";
+
+            var same =
+                lastProcessedCommandEqual &&
+                positionEqual &&
+                velocityEqual &&
+                currentSpeedEqual &&
+                speedModifierEqual &&
+                inputDisabledEqual &&
+                isFlyingEqual &&
+                isSprintingEqual &&
+                jumpCountEqual &&
+                airborneFromImpulseEqual &&
+                alreadyJumpedEqual &&
+                isCrouchingEqual &&
+                prevStepUpEqual &&
+                isGroundedEqual &&
+                stateEqual;
 
             if (same)
             {
@@ -330,24 +363,45 @@ namespace Code.Player.Character.MovementSystems.Character
             BitUtil.SetBit(ref bools, 7, value.isGrounded);
         }
         
+        public static ushort CompressToUshort(float value) {
+            return (ushort)Math.Clamp(value * 1000f, 0, ushort.MaxValue);
+        }
+        
+        public static short CompressToShort(float value) {
+            return (short)Math.Clamp(value * 1000f, short.MinValue, short.MaxValue);
+        }
+
+        public static float DecompressUShort(ushort value) {
+            return value / 1000f;
+        }
+
+        public static float DecompressShort(short value) {
+            return value / 1000f;
+        }
+        
         public static void WriteCharacterSnapshotData(this NetworkWriter writer, CharacterSnapshotData value) {
             byte bools = 0;
             EncodeBools(ref bools, value);
             writer.Write(bools);
-            
-            writer.WriteInt(value.customData.dataSize);
-            writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+
+            if (value.customData != null) {
+                writer.WriteInt(value.customData.dataSize);
+                writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+            }
+            else {
+                writer.WriteInt(0);
+            }
             
             writer.Write(value.time);
             writer.Write(value.lastProcessedCommand);
             writer.Write(value.position);
             writer.Write(value.velocity);
-            writer.Write((short)(value.lookVector.x * 1000f));
-            writer.Write((short)(value.lookVector.y * 1000f));
-            writer.Write((short)(value.lookVector.z * 1000f));
+            writer.Write(CompressToShort(value.lookVector.x));
+            writer.Write(CompressToShort(value.lookVector.y));
+            writer.Write(CompressToShort(value.lookVector.z));
             writer.Write(value.currentSpeed);
             // This makes our max speed modifier 65.535 with a 0.001 precision.
-            writer.Write((ushort) Math.Clamp(value.speedModifier * 1000f, 0, ushort.MaxValue));
+            writer.Write(CompressToUshort(value.speedModifier));
             writer.Write((byte) Math.Min(Math.Floor(value.timeSinceJump / Time.fixedDeltaTime), 255));
             writer.Write((byte) Math.Min(Math.Floor(value.timeSinceWasGrounded / Time.fixedDeltaTime), 255));
             writer.Write((byte) Math.Min(Math.Floor(value.timeSinceBecameGrounded / Time.fixedDeltaTime), 255));
@@ -358,8 +412,11 @@ namespace Code.Player.Character.MovementSystems.Character
         public static CharacterSnapshotData ReadCharacterSnapshotData(this NetworkReader reader) {
             var bools = reader.Read<byte>();
             var customDataSize = reader.ReadInt();
-            var customDataArray = reader.ReadBytes(customDataSize);
-            var customData = new BinaryBlob(customDataArray);
+            BinaryBlob customData = default;
+            if (customDataSize != 0) {
+                var customDataArray = reader.ReadBytes(customDataSize);
+                customData = new BinaryBlob(customDataArray);
+            }
             return new CharacterSnapshotData() {
                 inputDisabled = BitUtil.GetBit(bools, 0),
                 isFlying = BitUtil.GetBit(bools, 1),
@@ -374,9 +431,12 @@ namespace Code.Player.Character.MovementSystems.Character
                 lastProcessedCommand = reader.Read<int>(),
                 position = reader.Read<Vector3>(),
                 velocity = reader.Read<Vector3>(),
-                lookVector = new Vector3(reader.Read<short>() / 1000f, reader.Read<short>() / 1000f, reader.Read<short>() / 1000f),
+                lookVector = new Vector3(
+                    DecompressShort(reader.Read<short>()), 
+                    DecompressShort(reader.Read<short>()), 
+                    DecompressShort(reader.Read<short>())),
                 currentSpeed = reader.Read<float>(),
-                speedModifier = reader.Read<ushort>() / 1000f,
+                speedModifier = DecompressUShort(reader.Read<ushort>()),
                 timeSinceJump = reader.Read<byte>() * Time.fixedDeltaTime,
                 timeSinceWasGrounded = reader.Read<byte>() * Time.fixedDeltaTime,
                 timeSinceBecameGrounded = reader.Read<byte>() * Time.fixedDeltaTime,

@@ -233,24 +233,24 @@ using Object = UnityEngine.Object;
                     var compileFileList = CompiledFileQueue.ToArray();
                     
                     foreach (var file in compileFileList) {
-                        var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
-                        
-                        if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
-                            if (outFileHash != data.metadata.compiledHash) {
-                                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                                data.metadata.compiledHash = outFileHash;
-                                modifiedDatabase = true;
-                            }
-                        }
-                        else {
-                            var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
-                            scriptData.metadata = new TypescriptCompilerMetadata() {
-                                compiledHash = outFileHash
-                            };
+                        // var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
+                        //
+                        // if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
+                        //     if (string.IsNullOrEmpty(outFileHash) || string.IsNullOrEmpty(data.metadata.compiledHash) || outFileHash != data.metadata.compiledHash) {
+                        //         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                        //         data.metadata.compiledHash = outFileHash;
+                        //         modifiedDatabase = true;
+                        //     }
+                        // }
+                        // else {
+                        //     var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
+                        //     scriptData.metadata = new TypescriptCompilerMetadata() {
+                        //         compiledHash = outFileHash
+                        //     };
                             
                             AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                            modifiedDatabase = true;
-                        }
+                        //     modifiedDatabase = true;
+                        // }
                     }
                     
                     AssetDatabase.Refresh();
