@@ -1155,7 +1155,7 @@ namespace Mirror
         {
             // debug message is very important. if we ever break anything then
             // it's very obvious to notice.
-            //Debug.Log("Finished loading scene in client-only mode.");
+            Debug.Log("Finished loading scene in client-only mode.");
 
             if (clientReadyConnection != null)
             {
@@ -1165,6 +1165,7 @@ namespace Mirror
 
             if (NetworkClient.isConnected)
                 OnClientSceneChanged();
+            else Debug.LogWarning("Not sending client ready: not connected");
         }
 
         /// <summary>
@@ -1529,6 +1530,8 @@ namespace Mirror
         public virtual void OnClientSceneChanged()
         {
             // always become ready.
+            if (!NetworkClient.connection.isAuthenticated) Debug.LogWarning("Not sending client ready: not authenticated");
+            if (NetworkClient.ready) Debug.LogWarning("Not sending client ready: already ready");
             if (NetworkClient.connection.isAuthenticated && !NetworkClient.ready) NetworkClient.Ready();
 
             // Only call AddPlayer for normal scene changes, not additive load/unload

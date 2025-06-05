@@ -196,7 +196,13 @@ namespace Code.Player {
 				return;
 			}
 
+			var startPollingTime = Time.time;
+			var sentFailedToReadyMsg = false;
 			while (!conn.isAuthenticated || !conn.isReady) {
+				if (!sentFailedToReadyMsg && (Time.time - startPollingTime) > 10) {
+					sentFailedToReadyMsg = true;
+					Debug.LogError($"Failed to setup player for connection id {conn.connectionId}: isAuthenticated={conn.isAuthenticated} isReady={conn.isReady}");
+				}
 				// print($"Waiting for {conn.connectionId} to be ready.");
 				await Awaitable.NextFrameAsync();
 			}
