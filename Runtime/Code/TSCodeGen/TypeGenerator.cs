@@ -334,7 +334,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.MonoBehaviour$",
             "\\.InternalCameraScreenshotRecorder$",
             "\\.OcclusionCam$",
-            "\\.AirshipUniVoiceNetwork$"
+            "\\.AirshipUniVoiceNetwork$",
+            "\\.ServerConsole$",
         };
         
         var options = new TypeScriptOptions

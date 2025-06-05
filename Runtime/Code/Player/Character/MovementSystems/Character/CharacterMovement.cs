@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Assets.Luau;
 using Code.Network.Simulation;
 using Code.Network.StateSystem;
@@ -33,13 +32,11 @@ namespace Code.Player.Character.MovementSystems.Character {
         public CharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
 
-        [Header("Optional Refs")]
-        public CharacterAnimationHelper animationHelper;
+        [Header("Optional Refs")] public CharacterAnimationHelper animationHelper;
 
         public Transform slopeVisualizer;
 
-        [Header("Debug")]
-        public bool drawDebugGizmos_FORWARD = false;
+        [Header("Debug")] public bool drawDebugGizmos_FORWARD = false;
 
         public bool drawDebugGizmos_WALLCLIPPING = false;
         public bool drawDebugGizmos_CROUCH = false;
@@ -59,8 +56,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             "Controls the maximum magnitude of the correction interp. Mis-predictions larger that this magnitude will instantly teleport the character to the correct location.")]
         public float correctionMaxMagnitude = 10;
 
-        [Header("Visual Variables")]
-        public bool autoCalibrateSkiddingSpeed = true;
+        [Header("Visual Variables")] public bool autoCalibrateSkiddingSpeed = true;
 
         [Tooltip("Controls the speed in which local character rotates to face look direction.")]
         public float ownerRotationLerpMod = 6;
@@ -225,7 +221,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void SetMode(NetworkedStateSystemMode mode) {
-            // Debug.Log("Running movement in " + mode + " mode for " + name + ".");
+            // Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
@@ -541,7 +537,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
             //Check to see if we can stand up from a crouch
-            if ((movementSettings.autoCrouch || currentMoveSnapshot.prevState == CharacterState.Crouching) &&
+            if ((movementSettings.autoCrouch || currentMoveSnapshot.state == CharacterState.Crouching) &&
                 !canStand) {
                 groundedState = CharacterState.Crouching;
             } else if (command.crouch && grounded) {
@@ -565,10 +561,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 currentMoveSnapshot.state = groundedState;
             }
 
-            if (useExtraLogging && currentMoveSnapshot.prevState != currentMoveSnapshot.state) {
-                print("New State: " + currentMoveSnapshot.state);
-            }
-
             if (!tryingToSprint) {
                 currentMoveSnapshot.isSprinting = false;
             }
@@ -589,6 +581,43 @@ namespace Code.Player.Character.MovementSystems.Character {
                 currentMoveSnapshot.timeSinceWasGrounded =
                     Math.Min(currentMoveSnapshot.timeSinceWasGrounded + deltaTime, 100f);
             }
+
+            #region CROUCH
+
+            // Prevent falling off blocks while crouching
+            currentMoveSnapshot.isCrouching = groundedState == CharacterState.Crouching;
+            if (movementSettings.preventFallingWhileCrouching && !currentMoveSnapshot.prevStepUp &&
+                currentMoveSnapshot.isCrouching && isMoving &&
+                grounded) {
+                var posInMoveDirection = rootPosition + normalizedMoveDir * 0.2f;
+                var (groundedInMoveDirection, _, _) =
+                    physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
+                var foundGroundedDir = false;
+                if (!groundedInMoveDirection) {
+                    // Determine which direction we're mainly moving toward
+                    var xFirst = Math.Abs(command.moveDir.x) > Math.Abs(command.moveDir.z);
+                    Vector3[] vecArr = { new(command.moveDir.x, 0, 0), new(0, 0, command.moveDir.z) };
+                    for (var i = 0; i < 2; i++) {
+                        // We will try x dir first if x magnitude is greater
+                        var index = (xFirst ? i : i + 1) % 2;
+                        var safeDirection = vecArr[index];
+                        var stepPosition = rootPosition + safeDirection.normalized * 0.2f;
+                        (foundGroundedDir, _, _) =
+                            physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
+                        if (foundGroundedDir) {
+                            characterMoveVelocity = safeDirection;
+                            break;
+                        }
+                    }
+
+                    // Only if we didn't find a safe direction set move to 0
+                    if (!foundGroundedDir) {
+                        characterMoveVelocity = Vector3.zero;
+                    }
+                }
+            }
+
+            #endregion
 
             // Modify colliders size based on movement state
             var offsetExtent = movementSettings.colliderGroundOffset / 2;
@@ -770,7 +799,116 @@ namespace Code.Player.Character.MovementSystems.Character {
                 newVelocity += -Vector3.ClampMagnitude(flatVelocity, currentMoveSnapshot.currentSpeed) * parallelDot *
                                movementSettings.accelerationTurnFriction;
             }
-            
+
+            //Stop character from moveing into colliders (Helps prevent axis aligned box colliders from colliding when they shouldn't like jumping in a voxel world)
+            if (movementSettings.preventWallClipping && !currentMoveSnapshot.prevStepUp) {
+                var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime +
+                                      (characterRadius + forwardMargin);
+                var forwardVector = (characterMoveVelocity + newVelocity).normalized *
+                                    Mathf.Max(forwardDistance, bumpSize);
+                //print("Forward vec: " + forwardVector);
+
+                //Do raycasting after we have claculated our move direction
+                var forwardHits =
+                    physics.CheckAllForwardHits(rootPosition - flatVelocity.normalized * -.01f, forwardVector, true,
+                        true);
+
+                float i = 0;
+                foreach (var forwardHitResult in forwardHits) {
+                    //Check if this is a valid wall and not something behind a surface
+                    var forwardHit = forwardHitResult;
+                    var checkPoint = transform.position + new Vector3(0, characterHalfExtents.y, 0);
+
+                    //Valid result from BoxCastAll but not a hit we want to use (happens on corners of voxels sometimes)
+                    if (forwardHitResult.distance == 0) {
+                        forwardHit.point = checkPoint + forwardVector;
+                    }
+
+                    if (Physics.Raycast(checkPoint, forwardHit.point - checkPoint,
+                            out var rayTestHit, forwardMargin + forwardHit.distance,
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                        //This is more accurate and may be a complete different wall than the box cast found
+                        forwardHit = rayTestHit;
+                        if (drawDebugGizmos_WALLCLIPPING) {
+                            Debug.DrawLine(checkPoint, rayTestHit.point, Color.magenta);
+                            GizmoUtils.DrawSphere(rayTestHit.point, .15f, Color.magenta);
+                        }
+                    }
+                    else if (drawDebugGizmos_WALLCLIPPING) {
+                        GizmoUtils.DrawSphere(checkPoint, .05f, Color.white);
+                        Debug.DrawLine(checkPoint, checkPoint + (forwardHit.point - checkPoint), Color.white);
+                    }
+
+                    if (drawDebugGizmos_WALLCLIPPING) {
+                        var color = Color.Lerp(Color.green, Color.cyan, i / (forwardHits.Length - 1f));
+                        GizmoUtils.DrawSphere(forwardHit.point, .1f, color);
+                        Debug.DrawLine(forwardHit.point, forwardHit.point + forwardHit.normal, color);
+                    }
+
+                    i++;
+                    if (forwardHit.distance == 0) {
+                        //still invalid so skip
+                        continue;
+                    }
+
+                    var isVerticalWall = 1 - Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >=
+                                         movementSettings.maxSlopeDelta;
+                    var isKinematic = forwardHit.collider?.attachedRigidbody == null ||
+                                      forwardHit.collider.attachedRigidbody.isKinematic;
+
+                    //print("Avoiding wall: " + forwardHit.collider.gameObject.name + " distance: " + forwardHit.distance + " isVerticalWall: " + isVerticalWall + " isKinematic: " + isKinematic);
+                    //Stop character from walking into walls but Let character push into rigidbodies	
+                    if (isVerticalWall && isKinematic) {
+                        //Stop movement into this surface
+                        var colliderDot = 1 - Mathf.Max(0,
+                            -Vector3.Dot(forwardHit.normal, forwardVector));
+                        //var colliderDot = 1 - -Vector3.Dot(forwardHit.normal, forwardVector);
+                        if (Mathf.Abs(colliderDot) < .01) {
+                            //|| forwardHit.distance < bumpSize) {
+                            colliderDot = 0;
+                        }
+
+                        //limit movement dir based on how straight you are walking into the wall
+                        characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, forwardHit.normal);
+                        characterMoveVelocity.y = 0;
+                        characterMoveVelocity *= colliderDot;
+
+                        if (forwardHit.distance < characterRadius + .15f) {
+                            // newVelocity.x = 0;
+                            // newVelocity.z = 0;
+                            //newVelocity -= flatVelocity * (1 - colliderDot);
+                            //transform.position = forwardHit.point - forwardHit.normal * bumpSize;
+                        }
+                        //print("Collider Dot: " + colliderDot.ToString("R") + " moveVector: " + characterMoveVelocity.magnitude.ToString("R"));
+                    }
+
+                    //Push the character out of any colliders
+                    // if (forwardHit.distance < characterRadius + .15f) {
+                    //     newVelocity.x = 0;
+                    //     newVelocity.z = 0;
+                    // }
+                    flatVelocity = Vector3.ClampMagnitude(newVelocity,
+                        forwardHit.distance - characterRadius - forwardMargin);
+                    //print("FLAT VEL: " + flatVelocity);
+                    newVelocity.x -= flatVelocity.x;
+                    newVelocity.z -= flatVelocity.z;
+                }
+
+                // if (forwardHits.Length == 0) {
+                //     //Not hitting anything forwad, but make sure we aren't already overlapping something
+                //     var boundHits = Physics.OverlapBox(transform.position + new Vector3(0, characterHalfExtents.y, 0),
+                //         characterHalfExtents + new Vector3(forwardMargin, forwardMargin, forwardMargin),
+                //         Quaternion.identity);
+                // }
+
+                if (!grounded && detectedGround) {
+                    //Hit ground but its not valid ground, push away from it
+                    print("PUSHING AWAY FROM: " + groundHit.normal);
+                    newVelocity += groundHit.normal * physics.GetFlatDistance(rootPosition, groundHit.point) * .25f /
+                                   deltaTime;
+                }
+            }
+
             //Instantly move at the desired speed
             var moveMagnitude = characterMoveVelocity.magnitude;
             var flatVelMagnitude = flatVelocity.magnitude;
@@ -1178,7 +1316,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Record variables that will not change due to physics tick. Variables affected by physics tick will need to be
             // recorded as part of OnCaptureSnapshot so that they record the value post physics tick.
             currentMoveSnapshot.lookVector = command.lookVector;
-            currentMoveSnapshot.prevState = currentMoveSnapshot.state;
             currentMoveSnapshot.isCrouching = command.crouch;
             currentMoveSnapshot.isGrounded = grounded;
             currentMoveSnapshot.prevStepUp = didStepUp;
@@ -1451,7 +1588,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 RpcTeleportAndLook(position, lookVector);
                 return;
             }
-            
+
             // TS listens to this to update the local camera.
             // Position will update from reconcile, but we handle look direction manually.
             if (mode == NetworkedStateSystemMode.Authority && isServer) {

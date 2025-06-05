@@ -174,14 +174,16 @@ namespace Code.Authentication {
                     tcs.SetResult(new UserData() {
                         uid = InternalHttpManager.editorUserId,
                         username = loginMessage.editorUsername,
-                        profileImageId = loginMessage.editorProfileImageId
+                        orgRoleName = "Dev",
+                        profileImageId = loginMessage.editorProfileImageId,
                     });
                     return await tcs.Task;
                 }
                 tcs.SetResult(new UserData() {
                     uid = this.connectionCounter + "",
                     username = "Player" + this.connectionCounter,
-                    profileImageId = "",
+                    orgRoleName = "Dev",
+                    profileImageId = string.Empty,
                     fullTransferPacket = "{}"
                 });
                 return await tcs.Task;
@@ -210,6 +212,7 @@ namespace Code.Authentication {
                     uid = transferData.user.uid,
                     username = transferData.user.username,
                     profileImageId = transferData.user.profileImageId,
+                    orgRoleName = transferData.user.orgRoleName,
                     fullTransferPacket = fullTransferPacket
                 });
             }).Catch((err) => {

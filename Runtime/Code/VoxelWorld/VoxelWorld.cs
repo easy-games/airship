@@ -343,23 +343,6 @@ public partial class VoxelWorld : MonoBehaviour {
         return affectedChunk;
     }
 
-    public void WriteVoxelGroupAtTS(object blob, bool priority) {
-        var data = ((BinaryBlob)blob).GetDictionary();
-        Vector3[] positions = new Vector3[data.Count]; ;
-        double[] nums = new double[data.Count];
-
-        // Parse binaryblob
-        int i = 0;
-        foreach (var kvp in data) {
-            var values = kvp.Value as Dictionary<object, object>;
-            positions[i] = (Vector3)values["pos"];
-            nums[i] = Convert.ToDouble((byte)values["blockId"]);
-            i++;
-        }
-
-        this.WriteVoxelGroupAt(positions, nums, priority);
-    }
-
     public ushort[] BulkReadVoxels(Vector3[] positions) {
         var result = new ushort[positions.Length];
         for (var i = 0; i < positions.Length; i++) {

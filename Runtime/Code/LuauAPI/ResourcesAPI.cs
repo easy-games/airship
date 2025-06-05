@@ -1,6 +1,6 @@
 using System;
 
-[LuauAPI]
+[LuauAPI(LuauContext.Protected)]
 public class ResourcesAPI : BaseLuaAPIClass
 {
     public override Type GetAPIType()

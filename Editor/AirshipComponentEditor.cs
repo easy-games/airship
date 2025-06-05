@@ -645,10 +645,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private void RenderArrayElement(Rect rect, SerializedProperty arraySerializedProperty, SerializedProperty itemInfo, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
         var label = $"Element {index}";
         errorReason = "";
+        var arrayType = itemInfo.FindPropertyRelative("type");
         switch (elementType) {
             case AirshipComponentPropertyType.AirshipString: {
-                var arrayType = itemInfo.FindPropertyRelative("type");
-
                 if (arrayType.stringValue == "StringEnum") {
                     var tsEnum = AirshipEditorInfo.Enums.GetEnum(arraySerializedProperty.FindPropertyRelative("refPath").stringValue);
                     DrawCustomStringEnumDropdown(new GUIContent(label), tsEnum, serializedElement, arrayModified, rect);
@@ -664,6 +663,19 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 
                 break;
             }
+            case AirshipComponentPropertyType.AirshipPod:
+                if (arrayType.stringValue == "Color") {
+                    var currentValue = serializedElement.stringValue != "" ? JsonUtility.FromJson<Color>(serializedElement.stringValue) : default;
+                    var newValue = EditorGUI.ColorField(rect, label, currentValue);
+                    if (newValue != currentValue)
+                    {
+                        serializedElement.stringValue = JsonUtility.ToJson(newValue);
+                        arrayModified.boolValue = true;
+                    }
+                    break;
+                }
+                errorReason = $"Pod type not yet supported in Airship Array ({arrayType.stringValue})";
+                break;
             case AirshipComponentPropertyType.AirshipBoolean:
                 var boolOld = serializedElement.stringValue != "0";
                 var boolNew = EditorGUI.Toggle(rect, label, boolOld);
@@ -681,8 +693,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 }
                 break;
             case AirshipComponentPropertyType.AirshipInt: {
-                var arrayType = itemInfo.FindPropertyRelative("type");
-
                 if (arrayType.stringValue == "IntEnum") {
                     var tsEnum = AirshipEditorInfo.Enums.GetEnum(arraySerializedProperty.FindPropertyRelative("refPath").stringValue);
                     DrawCustomIntEnumDropdown(new GUIContent(label), tsEnum, serializedElement, arrayModified, rect);
