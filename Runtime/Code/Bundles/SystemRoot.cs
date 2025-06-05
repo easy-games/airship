@@ -184,10 +184,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 			int bOrdering = GetPackageOrdering(b.packageType);
 
 			if (aOrdering < bOrdering) {
-				return -1;
+				return 1;
 			}
 			if (aOrdering > bOrdering) {
-				return 1;
+				return -1;
 			}
 			return 0;
 		});
