@@ -39,7 +39,7 @@ namespace Code.Player.Character.MovementSystems.Character
         // Cached for reuse. This assumes the fields on the snapshot will never change. (Which should be the case)
         // Cloning will not clone this field, so you can safely clone then modify and existing snapshot and regenerate the crc32
         private uint _crc32;
-
+        
         public override bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
         {
             // TODO: could probably be optimized?
@@ -173,9 +173,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 $"Velocity: {velocity}\n" +
                 $"CurrentSpeed: {currentSpeed}\n" +
                 $"SpeedModifier: {speedModifier} ({CharacterSnapshotDataSerializer.CompressToUshort(speedModifier)})\n" +
-                $"TimeSinceJump: {timeSinceJump} ({(byte)Math.Min(Math.Floor(timeSinceJump / Time.fixedDeltaTime), 255)})\n" +
-                $"TimeSinceWasGrounded: {timeSinceWasGrounded} ({(byte)Math.Min(Math.Floor(timeSinceWasGrounded / Time.fixedDeltaTime), 255)})\n" +
-                $"TimeSinceBecameGrounded: {timeSinceBecameGrounded} ({(byte)Math.Min(Math.Floor(timeSinceBecameGrounded / Time.fixedDeltaTime), 255)})\n" +
+                $"CanJump: {canJump}\n" +
                 $"State: {state}\n" +
                 $"IsGrounded: {isGrounded}\n" +
                 $"PrevStepUp: {prevStepUp}\n" +
@@ -238,9 +236,7 @@ namespace Code.Player.Character.MovementSystems.Character
             bool modifierChanged = this.speedModifier != other.speedModifier;
             bool jumpCountChanged = this.jumpCount != other.jumpCount;
             bool stateChanged = this.state != other.state;
-            bool becameGroundedChanged = this.timeSinceBecameGrounded != other.timeSinceBecameGrounded;
-            bool wasGroundedChanged = this.timeSinceWasGrounded != other.timeSinceWasGrounded;
-            bool timeSinceJumpChanged = this.timeSinceJump != other.timeSinceJump;
+            bool canJumpChanged = this.canJump != other.canJump;
             
             // Set the changed mask to reflect changed fields
             short changedMask = 0;
@@ -252,9 +248,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (modifierChanged) BitUtil.SetBit(ref changedMask, 5, true);
             if (jumpCountChanged) BitUtil.SetBit(ref changedMask, 6, true);
             if (stateChanged) BitUtil.SetBit(ref changedMask, 7, true);
-            if (becameGroundedChanged) BitUtil.SetBit(ref changedMask, 8, true);
-            if (wasGroundedChanged) BitUtil.SetBit(ref changedMask, 9, true);
-            if (timeSinceJumpChanged) BitUtil.SetBit(ref changedMask, 10, true);
+            if (canJumpChanged) BitUtil.SetBit(ref changedMask, 8, true);
 
             // Write only changed fields
             var writer = new NetworkWriter();
@@ -273,9 +267,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (modifierChanged) writer.Write(CharacterSnapshotDataSerializer.CompressToUshort(other.speedModifier));
             if (jumpCountChanged) writer.Write(other.jumpCount);
             if (stateChanged) writer.Write((byte)other.state);
-            if (becameGroundedChanged) writer.Write((byte)Math.Min(Math.Floor(other.timeSinceBecameGrounded / Time.fixedDeltaTime), 255));
-            if (wasGroundedChanged) writer.Write((byte)Math.Min(Math.Floor(other.timeSinceWasGrounded / Time.fixedDeltaTime), 255));
-            if (timeSinceJumpChanged) writer.Write((byte)Math.Min(Math.Floor(other.timeSinceJump / Time.fixedDeltaTime), 255));
+            if (canJumpChanged) writer.Write(other.canJump);
 
             // Always write custom data. TODO: we will want to apply a diffing algorithm to the byte array
             if (other.customData != null) {
@@ -343,9 +335,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (BitUtil.GetBit(changedMask, 5)) snapshot.speedModifier = CharacterSnapshotDataSerializer.DecompressUShort(reader.Read<ushort>());
             if (BitUtil.GetBit(changedMask, 6)) snapshot.jumpCount = reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 7)) snapshot.state = (CharacterState)reader.Read<byte>();
-            if (BitUtil.GetBit(changedMask, 8)) snapshot.timeSinceBecameGrounded = reader.Read<byte>() * Time.fixedDeltaTime;
-            if (BitUtil.GetBit(changedMask, 9)) snapshot.timeSinceWasGrounded = reader.Read<byte>() * Time.fixedDeltaTime;
-            if (BitUtil.GetBit(changedMask, 10)) snapshot.timeSinceJump = reader.Read<byte>() * Time.fixedDeltaTime;
+            if (BitUtil.GetBit(changedMask, 8)) snapshot.canJump = reader.Read<byte>();
                 
             int size = reader.ReadInt();
             if (size != 0) {
@@ -372,8 +362,6 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotDataSerializer.WriteCharacterSnapshotData(writer, this);
             var bytes = writer.ToArray();
             _crc32 = Crc32Algorithm.Compute(bytes);
-            Debug.Log("Computed CRC32 for time " + time + ": " + _crc32);
-            Debug.Log(this);
             return _crc32;
         }
     }
