@@ -155,7 +155,9 @@ namespace UnityEditor.Build.Pipeline.Tasks
             {
                 foreach (AssetOutput o in output.AssetResults)
                 {
-                    m_DependencyData.AssetInfo.Add(o.asset, o.assetInfo);
+                    if (!m_DependencyData.AssetInfo.TryAdd(o.asset, o.assetInfo)) {
+                        Debug.LogWarning("m_DependencyData already contained asset: " + AssetDatabase.GUIDToAssetPath(o.asset));
+                    }
                     foreach (var objectDependencyInfo in o.objectDependencyInfo)
                         m_ObjectDependencyData.ObjectDependencyMap[objectDependencyInfo.Object] = objectDependencyInfo.Dependencies;
                 }
@@ -167,7 +169,7 @@ namespace UnityEditor.Build.Pipeline.Tasks
                         ExpandReferences(assetOutput, m_ObjectDependencyData.ObjectDependencyMap);
 #endif
 
-                    m_DependencyData.AssetUsage.Add(assetOutput.asset, assetOutput.usageTags);
+                    m_DependencyData.AssetUsage.TryAdd(assetOutput.asset, assetOutput.usageTags);
 
                     Dictionary<ObjectIdentifier, System.Type[]> objectTypes = new Dictionary<ObjectIdentifier, Type[]>();
                     foreach (var objectType in assetOutput.objectTypes)
@@ -183,21 +185,21 @@ namespace UnityEditor.Build.Pipeline.Tasks
                             ReferencedObjects = assetOutput.assetInfo.referencedObjects,
                             ObjectTypes = objectTypes
                         };
-                        m_Results.AssetResults.Add(assetOutput.asset, resultData);
+                        m_Results.AssetResults.TryAdd(assetOutput.asset, resultData);
                     }
 
                     if (assetOutput.spriteData != null)
                     {
                         if (m_SpriteData == null)
                             m_SpriteData = new BuildSpriteData();
-                        m_SpriteData.ImporterData.Add(assetOutput.asset, assetOutput.spriteData);
+                        m_SpriteData.ImporterData.TryAdd(assetOutput.asset, assetOutput.spriteData);
                     }
 
                     if (!m_Parameters.DisableVisibleSubAssetRepresentations && assetOutput.extendedData != null)
                     {
                         if (m_ExtendedAssetData == null)
                             m_ExtendedAssetData = new BuildExtendedAssetData();
-                        m_ExtendedAssetData.ExtendedData.Add(assetOutput.asset, assetOutput.extendedData);
+                        m_ExtendedAssetData.ExtendedData.TryAdd(assetOutput.asset, assetOutput.extendedData);
                     }
 
                     if (assetOutput.objectTypes != null)
