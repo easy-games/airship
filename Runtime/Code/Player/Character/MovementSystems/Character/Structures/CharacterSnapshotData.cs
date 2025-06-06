@@ -169,7 +169,28 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public override string ToString()
         {
-            return "Last cmd#" + this.lastProcessedCommand + " time: " + this.time + "Pos: " + this.position + " Vel: " + velocity;
+            return
+                $"Time: {time}\n" +
+                $"LastProcessedCommand: {lastProcessedCommand}\n" +
+                $"Position: {position}\n" +
+                $"Velocity: {velocity}\n" +
+                $"CurrentSpeed: {currentSpeed}\n" +
+                $"SpeedModifier: {speedModifier}\n" +
+                $"TimeSinceJump: {timeSinceJump}\n" +
+                $"TimeSinceWasGrounded: {timeSinceWasGrounded}\n" +
+                $"TimeSinceBecameGrounded: {timeSinceBecameGrounded}\n" +
+                $"State: {state}\n" +
+                $"IsGrounded: {isGrounded}\n" +
+                $"PrevStepUp: {prevStepUp}\n" +
+                $"IsCrouching: {isCrouching}\n" +
+                $"IsSprinting: {isSprinting}\n" +
+                $"AlreadyJumped: {alreadyJumped}\n" +
+                $"AirborneFromImpulse: {airborneFromImpulse}\n" +
+                $"JumpCount: {jumpCount}\n" +
+                $"IsFlying: {isFlying}\n" +
+                $"InputDisabled: {inputDisabled}\n" +
+                $"LookVector: {lookVector}\n" +
+                $"CustomData: {(customData != null ? $"Size: {customData.dataSize}" : "null")}";
         }
 
         public override object Clone()
@@ -262,11 +283,16 @@ namespace Code.Player.Character.MovementSystems.Character
             if (timeSinceJumpChanged) writer.Write((byte)Math.Min(Math.Floor(other.timeSinceJump / Time.fixedDeltaTime), 255));
 
             // Always write custom data. TODO: we will want to apply a diffing algorithm to the byte array
-            writer.WriteInt(other.customData.dataSize);
-            writer.WriteBytes(other.customData.data, 0, other.customData.data.Length);
+            if (other.customData != null) {
+                writer.WriteInt(other.customData.dataSize);
+                writer.WriteBytes(other.customData.data, 0, other.customData.data.Length);
+            }
+            else {
+                writer.WriteInt(0);
+            }
 
             return new CharacterStateDiff {
-                baseTime = snapshot.time,
+                baseTime = time, // The base is the instance CreateDiff is being called on, so use our instance time value as the base time.
                 crc32 = other.ComputeCrc32(),
                 data = writer.ToArray()
             };
@@ -327,13 +353,18 @@ namespace Code.Player.Character.MovementSystems.Character
             if (BitUtil.GetBit(changedMask, 10)) snapshot.timeSinceJump = reader.Read<byte>() * Time.fixedDeltaTime;
                 
             int size = reader.ReadInt();
-            snapshot.customData = new BinaryBlob(reader.ReadBytes(size));
+            if (size != 0) {
+                snapshot.customData = new BinaryBlob(reader.ReadBytes(size));
+            }
+            else {
+                snapshot.customData = default;
+            }
 
             var crc32 = snapshot.ComputeCrc32();
             if (crc32 != diff.crc32) {
                 // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
                 // using this snapshot as the base.
-                Debug.LogWarning("Applying diff failed CRC check. This may happen due to poor network connection.");
+                Debug.LogWarning("Applying diff failed CRC check. This may happen due to poor network connection. Expected " + diff.crc32 + ", got " + crc32);
                 return null;
             }
 
@@ -346,6 +377,8 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotDataSerializer.WriteCharacterSnapshotData(writer, this);
             var bytes = writer.ToArray();
             _crc32 = Crc32Algorithm.Compute(bytes);
+            Debug.Log("Computed CRC32 for time " + time + ": " + _crc32);
+            Debug.Log(this);
             return _crc32;
         }
     }

@@ -296,6 +296,7 @@ namespace Code.Network.StateSystem
                     
                     if (!this.serverAckedSnapshots.TryGetValue(client.Key, out var lastAckedTime)) {
                         this.SendServerSnapshotToClient(client.Value, state);
+                        print("sending snapshot at time " + state.time + " because no lastAcked was set.");
                         continue;
                     }
 
@@ -305,11 +306,17 @@ namespace Code.Network.StateSystem
                         // We will expect the client to receive this and send snapshots after this
                         // as an optimization.
                         this.serverAckedSnapshots[client.Key] = state.time;
+                        print("sending snapshot at time " + state.time + " because no base state with acked time could be found.");
                         continue;
                     }
 
                     var diff = baseState.CreateDiff(state) as Diff;
+                    if (diff == null) {
+                        Debug.LogWarning("Could not generate diff for client " + client.Key + ". Report this.");
+                        continue;
+                    } 
                     this.SendServerDiffToClient(client.Value, diff);
+                    print("Sending diff of base time " + baseState.time + " with state of " + state.time + " diff time is " + diff.baseTime);
                 }
             }
         }
