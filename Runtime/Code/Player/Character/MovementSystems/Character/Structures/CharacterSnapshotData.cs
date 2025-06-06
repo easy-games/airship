@@ -27,9 +27,8 @@ namespace Code.Player.Character.MovementSystems.Character
         public float speedModifier = 1; // Not used yet
         public byte jumpCount;
         public CharacterState state = CharacterState.Idle;
-        public float timeSinceBecameGrounded;
-        public float timeSinceWasGrounded;
-        public float timeSinceJump;
+        // > 0 means it is possible to jump. Value is the number of ticks they have left until they can no longer jump. byte.MaxValue when grounded.
+        public byte canJump;
     
         public BinaryBlob customData;
 
@@ -136,9 +135,7 @@ namespace Code.Player.Character.MovementSystems.Character
             this.velocity = copySnapshot.velocity;
             this.currentSpeed = copySnapshot.currentSpeed;
             this.speedModifier = copySnapshot.speedModifier;
-            this.timeSinceJump = copySnapshot.timeSinceJump;
-            this.timeSinceWasGrounded = copySnapshot.timeSinceWasGrounded;
-            this.timeSinceBecameGrounded = copySnapshot.timeSinceBecameGrounded;
+            this.canJump = copySnapshot.canJump;
             this.state = copySnapshot.state;
             this.isGrounded = copySnapshot.isGrounded;
             this.prevStepUp = copySnapshot.prevStepUp;
@@ -174,9 +171,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 velocity = velocity,
                 currentSpeed = currentSpeed,
                 speedModifier = speedModifier,
-                timeSinceJump = timeSinceJump,
-                timeSinceWasGrounded = timeSinceWasGrounded,
-                timeSinceBecameGrounded = timeSinceBecameGrounded,
+                canJump = canJump,
                 state = state, 
                 isGrounded = isGrounded,
                 prevStepUp = prevStepUp,
@@ -245,9 +240,7 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(value.currentSpeed);
             // This makes our max speed modifier 65.535 with a 0.001 precision.
             writer.Write(CompressToUshort(value.speedModifier));
-            writer.Write((byte) Math.Min(Math.Floor(value.timeSinceJump / Time.fixedDeltaTime), 255));
-            writer.Write((byte) Math.Min(Math.Floor(value.timeSinceWasGrounded / Time.fixedDeltaTime), 255));
-            writer.Write((byte) Math.Min(Math.Floor(value.timeSinceBecameGrounded / Time.fixedDeltaTime), 255));
+            writer.Write(value.canJump);
             writer.Write((byte) value.state);
             writer.Write(value.jumpCount);
         }
@@ -279,9 +272,7 @@ namespace Code.Player.Character.MovementSystems.Character
                     DecompressShort(reader.Read<short>())),
                 currentSpeed = reader.Read<float>(),
                 speedModifier = DecompressUShort(reader.Read<ushort>()),
-                timeSinceJump = reader.Read<byte>() * Time.fixedDeltaTime,
-                timeSinceWasGrounded = reader.Read<byte>() * Time.fixedDeltaTime,
-                timeSinceBecameGrounded = reader.Read<byte>() * Time.fixedDeltaTime,
+                canJump = reader.Read<byte>(),
                 state = (CharacterState) reader.Read<byte>(),
                 jumpCount = reader.Read<byte>(),
                 customData = customData,
