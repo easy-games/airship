@@ -675,8 +675,6 @@ namespace Airship.DevConsole
             _inputField.textComponent.alignment = TextAnchor.MiddleLeft;
            
             if (EventSystem.current != null) {
-                // if (_inputField.isFocused)
-                print("setting to null");
                 EventSystem.current.SetSelectedGameObject(null);
             }
 
@@ -1385,7 +1383,6 @@ namespace Airship.DevConsole
 
             // Force the input field to be focused by the event system
             if (_focusInputField && !Application.isMobilePlatform) {
-                Debug.Log("Selecting input field.");
                 EventSystem.current.SetSelectedGameObject(_inputField.gameObject);
                 _focusInputField = false;
             }
