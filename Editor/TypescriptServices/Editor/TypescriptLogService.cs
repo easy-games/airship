@@ -75,8 +75,7 @@ namespace Airship.Editor {
                     }
                 }
                 
-                
-                await Task.Delay(1); // tune as needed
+                await Task.Delay(100); // tune as needed
             }
         }
 
