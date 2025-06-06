@@ -400,16 +400,24 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (grounded && !currentMoveSnapshot.isGrounded) {
                 currentMoveSnapshot.jumpCount = 0;
-                currentMoveSnapshot.timeSinceBecameGrounded = 0f;
+                currentMoveSnapshot.canJump = 255;
                 OnImpactWithGround?.Invoke(currentVelocity, groundHit);
                 if (mode == NetworkedStateSystemMode.Authority && isServer) {
                     SAuthImpactEvent(currentVelocity, groundHit);
                 } else if (mode == NetworkedStateSystemMode.Authority && isClient) {
                     CAuthImpactEvent(currentVelocity, groundHit);
                 }
-            } else {
-                currentMoveSnapshot.timeSinceBecameGrounded =
-                    Math.Min(currentMoveSnapshot.timeSinceBecameGrounded + deltaTime, 100f);
+            }
+
+            // If we have transitioned to airborne
+            if (!grounded && currentMoveSnapshot.isGrounded) {
+                // Set canJump to the number of ticks of coyote time we have
+                currentMoveSnapshot.canJump = (byte) Math.Min(Math.Floor(movementSettings.jumpCoyoteTime / Time.fixedDeltaTime), 255);
+            }
+
+            if (!grounded && !currentMoveSnapshot.isGrounded) {
+                // If we've now ticked once in the air, remove a tick of canJump time.
+                currentMoveSnapshot.canJump = (byte) Math.Max(currentMoveSnapshot.canJump - 1, 0);
             }
 
             var groundSlopeDir = detectedGround
@@ -463,8 +471,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                     //In the air
                     // coyote jump
                     if (currentVelocity.y < 0f &&
-                        currentMoveSnapshot.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime &&
-                        currentMoveSnapshot.timeSinceJump > movementSettings.jumpCoyoteTime) {
+                        // currentMoveSnapshot.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime &&
+                        // currentMoveSnapshot.timeSinceJump > movementSettings.jumpCoyoteTime
+                        currentMoveSnapshot.canJump > 0
+                        ) {
                         canJump = true;
                     }
                     //the first jump requires grounded, so if in the air bump the currentMoveState.jumpCount up
@@ -563,23 +573,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (!tryingToSprint) {
                 currentMoveSnapshot.isSprinting = false;
-            }
-
-            /*
-             * Update Time Since:
-             */
-
-            if (didJump) {
-                currentMoveSnapshot.timeSinceJump = 0f;
-            } else {
-                currentMoveSnapshot.timeSinceJump = Math.Min(currentMoveSnapshot.timeSinceJump + deltaTime, 100f);
-            }
-
-            if (grounded) {
-                currentMoveSnapshot.timeSinceWasGrounded = 0f;
-            } else {
-                currentMoveSnapshot.timeSinceWasGrounded =
-                    Math.Min(currentMoveSnapshot.timeSinceWasGrounded + deltaTime, 100f);
             }
 
             #region CROUCH
@@ -985,7 +978,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             var didStepUp = false;
             if (movementSettings.detectStepUps && //Want to check step ups
                 (!command.crouch || !movementSettings.preventStepUpWhileCrouching) && //Not blocked by crouch
-                (movementSettings.assistedLedgeJump || currentMoveSnapshot.timeSinceBecameGrounded > .05) && //Grounded
+                (movementSettings.assistedLedgeJump || currentMoveSnapshot.canJump > 0) && //Grounded // Used to be currentMoveSnapshot.timeSinceBecameGrounded > .05
                 Mathf.Abs(newVelocity.x) + Mathf.Abs(newVelocity.z) > .05f) {
                 //Moveing
                 var (hitStepUp, onRamp, pointOnRamp, stepUpVel) = physics.StepUp(rootPosition,
@@ -1572,7 +1565,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TS listens to this to update the local camera.
             // Position will update from reconcile, but we handle look direction manually.
-            if (mode == NetworkedStateSystemMode.Authority && isServer) {
+            if (mode == NetworkedStateSystemMode.Authority && isServer && !this.manager.serverGeneratesCommands) {
                 RpcSetLookVector(lookVector);
             }
 
@@ -1633,14 +1626,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public bool IsIgnoringCollider(Collider collider) {
             return physics.ignoredColliders.ContainsKey(collider.GetInstanceID());
-        }
-
-        public float GetTimeSinceWasGrounded() {
-            return currentMoveSnapshot.timeSinceWasGrounded;
-        }
-
-        public float GetTimeSinceBecameGrounded() {
-            return currentMoveSnapshot.timeSinceBecameGrounded;
         }
 
         public void SetVelocity(Vector3 velocity) {
