@@ -175,10 +175,10 @@ namespace Code.Player.Character.MovementSystems.Character
                 $"Position: {position}\n" +
                 $"Velocity: {velocity}\n" +
                 $"CurrentSpeed: {currentSpeed}\n" +
-                $"SpeedModifier: {speedModifier}\n" +
-                $"TimeSinceJump: {timeSinceJump}\n" +
-                $"TimeSinceWasGrounded: {timeSinceWasGrounded}\n" +
-                $"TimeSinceBecameGrounded: {timeSinceBecameGrounded}\n" +
+                $"SpeedModifier: {speedModifier} ({CharacterSnapshotDataSerializer.CompressToUshort(speedModifier)})\n" +
+                $"TimeSinceJump: {timeSinceJump} ({(byte)Math.Min(Math.Floor(timeSinceJump / Time.fixedDeltaTime), 255)})\n" +
+                $"TimeSinceWasGrounded: {timeSinceWasGrounded} ({(byte)Math.Min(Math.Floor(timeSinceWasGrounded / Time.fixedDeltaTime), 255)})\n" +
+                $"TimeSinceBecameGrounded: {timeSinceBecameGrounded} ({(byte)Math.Min(Math.Floor(timeSinceBecameGrounded / Time.fixedDeltaTime), 255)})\n" +
                 $"State: {state}\n" +
                 $"IsGrounded: {isGrounded}\n" +
                 $"PrevStepUp: {prevStepUp}\n" +
@@ -189,7 +189,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 $"JumpCount: {jumpCount}\n" +
                 $"IsFlying: {isFlying}\n" +
                 $"InputDisabled: {inputDisabled}\n" +
-                $"LookVector: {lookVector}\n" +
+                $"LookVector: {lookVector} ({CharacterSnapshotDataSerializer.CompressToShort(lookVector.x)}, {CharacterSnapshotDataSerializer.CompressToShort(lookVector.y)}, {CharacterSnapshotDataSerializer.CompressToShort(lookVector.z)})\n" +
                 $"CustomData: {(customData != null ? $"Size: {customData.dataSize}" : "null")}";
         }
 
@@ -270,12 +270,12 @@ namespace Code.Player.Character.MovementSystems.Character
             if (positionChanged) writer.Write(other.position);
             if (velocityChanged) writer.Write(other.velocity);
             if (lookVectorChanged) {
-                writer.Write((short)(other.lookVector.x * 1000f));
-                writer.Write((short)(other.lookVector.y * 1000f));
-                writer.Write((short)(other.lookVector.z * 1000f));
+                writer.Write(CharacterSnapshotDataSerializer.CompressToShort(other.lookVector.x));
+                writer.Write(CharacterSnapshotDataSerializer.CompressToShort(other.lookVector.y));
+                writer.Write(CharacterSnapshotDataSerializer.CompressToShort(other.lookVector.z));
             }
             if (speedChanged) writer.Write(other.currentSpeed);
-            if (modifierChanged) writer.Write((ushort)Mathf.Clamp(other.speedModifier * 1000f, 0, ushort.MaxValue));
+            if (modifierChanged) writer.Write(CharacterSnapshotDataSerializer.CompressToUshort(other.speedModifier));
             if (jumpCountChanged) writer.Write(other.jumpCount);
             if (stateChanged) writer.Write((byte)other.state);
             if (becameGroundedChanged) writer.Write((byte)Math.Min(Math.Floor(other.timeSinceBecameGrounded / Time.fixedDeltaTime), 255));
@@ -339,13 +339,13 @@ namespace Code.Player.Character.MovementSystems.Character
             if (BitUtil.GetBit(changedMask, 2)) snapshot.velocity = reader.Read<Vector3>();
             if (BitUtil.GetBit(changedMask, 3)) {
                 snapshot.lookVector = new Vector3(
-                    reader.Read<short>() / 1000f,
-                    reader.Read<short>() / 1000f,
-                    reader.Read<short>() / 1000f
+                    CharacterSnapshotDataSerializer.DecompressShort(reader.Read<short>()),
+                    CharacterSnapshotDataSerializer.DecompressShort(reader.Read<short>()),
+                    CharacterSnapshotDataSerializer.DecompressShort(reader.Read<short>())
                 );
             }
             if (BitUtil.GetBit(changedMask, 4)) snapshot.currentSpeed = reader.Read<float>();
-            if (BitUtil.GetBit(changedMask, 5)) snapshot.speedModifier = reader.Read<ushort>() / 1000f;
+            if (BitUtil.GetBit(changedMask, 5)) snapshot.speedModifier = CharacterSnapshotDataSerializer.DecompressUShort(reader.Read<ushort>());
             if (BitUtil.GetBit(changedMask, 6)) snapshot.jumpCount = reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 7)) snapshot.state = (CharacterState)reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 8)) snapshot.timeSinceBecameGrounded = reader.Read<byte>() * Time.fixedDeltaTime;
