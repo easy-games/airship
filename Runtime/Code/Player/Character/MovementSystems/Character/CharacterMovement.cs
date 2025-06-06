@@ -1565,7 +1565,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TS listens to this to update the local camera.
             // Position will update from reconcile, but we handle look direction manually.
-            if (mode == NetworkedStateSystemMode.Authority && isServer) {
+            if (mode == NetworkedStateSystemMode.Authority && isServer && !this.manager.serverGeneratesCommands) {
                 RpcSetLookVector(lookVector);
             }
 
