@@ -157,7 +157,11 @@ namespace Code.Network.Simulation
             G_ResimMonitor.FrameObserverBuffer = buffer;
             
             if (!isActive) return;
-            if (Physics.simulationMode != SimulationMode.Script) return;
+            if (Physics.simulationMode != SimulationMode.Script) {
+                // reset the simulation mode if it changed for some reason. This seems to happen on the server when you change prefabs
+                // while in play mode with mppm.
+                Physics.simulationMode = SimulationMode.Script;
+            }
             
             // Before running any commands, we perform any resimulation requests that were made during
             // the last tick. This ensures that resimulations don't affect command processing and

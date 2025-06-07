@@ -483,6 +483,13 @@ public partial class LuauCore : MonoBehaviour
             return true;
         }
         
+        if (t == byteType) {
+            byte byteVal = (byte)value;
+            System.Int32 integer = byteVal;
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
+            return true;
+        }
+        
         if (t == longType) {
             Int64 intVal = (Int64)value;
             System.Int32 integer = unchecked((int)intVal);

@@ -400,16 +400,24 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (grounded && !currentMoveSnapshot.isGrounded) {
                 currentMoveSnapshot.jumpCount = 0;
-                currentMoveSnapshot.timeSinceBecameGrounded = 0f;
+                currentMoveSnapshot.canJump = 255;
                 OnImpactWithGround?.Invoke(currentVelocity, groundHit);
                 if (mode == NetworkedStateSystemMode.Authority && isServer) {
                     SAuthImpactEvent(currentVelocity, groundHit);
                 } else if (mode == NetworkedStateSystemMode.Authority && isClient) {
                     CAuthImpactEvent(currentVelocity, groundHit);
                 }
-            } else {
-                currentMoveSnapshot.timeSinceBecameGrounded =
-                    Math.Min(currentMoveSnapshot.timeSinceBecameGrounded + deltaTime, 100f);
+            }
+
+            // If we have transitioned to airborne
+            if (!grounded && currentMoveSnapshot.isGrounded) {
+                // Set canJump to the number of ticks of coyote time we have
+                currentMoveSnapshot.canJump = (byte) Math.Min(Math.Floor(movementSettings.jumpCoyoteTime / Time.fixedDeltaTime), 255);
+            }
+
+            if (!grounded && !currentMoveSnapshot.isGrounded) {
+                // If we've now ticked once in the air, remove a tick of canJump time.
+                currentMoveSnapshot.canJump = (byte) Math.Max(currentMoveSnapshot.canJump - 1, 0);
             }
 
             var groundSlopeDir = detectedGround
@@ -463,8 +471,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                     //In the air
                     // coyote jump
                     if (currentVelocity.y < 0f &&
-                        currentMoveSnapshot.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime &&
-                        currentMoveSnapshot.timeSinceJump > movementSettings.jumpCoyoteTime) {
+                        // currentMoveSnapshot.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime &&
+                        // currentMoveSnapshot.timeSinceJump > movementSettings.jumpCoyoteTime
+                        currentMoveSnapshot.canJump > 0
+                        ) {
                         canJump = true;
                     }
                     //the first jump requires grounded, so if in the air bump the currentMoveState.jumpCount up
@@ -563,23 +573,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (!tryingToSprint) {
                 currentMoveSnapshot.isSprinting = false;
-            }
-
-            /*
-             * Update Time Since:
-             */
-
-            if (didJump) {
-                currentMoveSnapshot.timeSinceJump = 0f;
-            } else {
-                currentMoveSnapshot.timeSinceJump = Math.Min(currentMoveSnapshot.timeSinceJump + deltaTime, 100f);
-            }
-
-            if (grounded) {
-                currentMoveSnapshot.timeSinceWasGrounded = 0f;
-            } else {
-                currentMoveSnapshot.timeSinceWasGrounded =
-                    Math.Min(currentMoveSnapshot.timeSinceWasGrounded + deltaTime, 100f);
             }
 
             #region CROUCH
@@ -985,7 +978,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             var didStepUp = false;
             if (movementSettings.detectStepUps && //Want to check step ups
                 (!command.crouch || !movementSettings.preventStepUpWhileCrouching) && //Not blocked by crouch
-                (movementSettings.assistedLedgeJump || currentMoveSnapshot.timeSinceBecameGrounded > .05) && //Grounded
+                (movementSettings.assistedLedgeJump || currentMoveSnapshot.canJump > 0) && //Grounded // Used to be currentMoveSnapshot.timeSinceBecameGrounded > .05
                 Mathf.Abs(newVelocity.x) + Mathf.Abs(newVelocity.z) > .05f) {
                 //Moveing
                 var (hitStepUp, onRamp, pointOnRamp, stepUpVel) = physics.StepUp(rootPosition,
@@ -1039,7 +1032,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             .1f);
                     }
 
-                    if (Physics.Raycast(projectedPosition + new Vector3(0, -.5f, 0), -normalizedVel,
+                    if (Physics.Raycast(projectedPosition + new Vector3(0, -.25f, 0), -normalizedVel,
                             out var cliffHit, distanceCheck,
                             movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
 
@@ -1048,54 +1041,35 @@ namespace Code.Player.Character.MovementSystems.Character {
                         }
 
                         //Stop movement into this surface
-                        var colliderDot = 1 - Mathf.Max(0,
-                            -Vector3.Dot(-cliffHit.normal, normalizedVel));
-                        colliderDot *= .8f;
+                        // var colliderDot = 1 - Mathf.Max(0,
+                        //     -Vector3.Dot(-cliffHit.normal, newVelocity));
+                        var colliderDot = Vector3.Dot(newVelocity, -cliffHit.normal);
+                        //colliderDot *= .9f;
                         //var colliderDot = 1 - -Vector3.Dot(forwardHit.normal, forwardVector);
-                        if (Mathf.Abs(colliderDot) < .01f || normalizedVel.sqrMagnitude < 1f) {
-                            colliderDot = 0;
-                        }
-
-                        colliderDot = 0;
+                        // if (Mathf.Abs(colliderDot) < .01f || normalizedVel.sqrMagnitude < 1f) {
+                        //     colliderDot = 0;
+                        // }
                         var flatPoint = new Vector3(cliffHit.point.x, transform.position.y, cliffHit.point.z);
-                        if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin) {
+                        //If we are too close to the edge or if there is an obstruction in the way
+                        if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
+                            || Physics.Raycast(transform.position + new Vector3(0,.25f, 0), newVelocity, distanceCheck, movementSettings.groundCollisionLayerMask)) {
                             //Snap back to the bump distance so you never inch your way to the edge 
                             //newVelocity = new Vector3(0, newVelocity.y, 0);
                             //var newPos = cliffHit.point - normalizedVel * (bumpSize-forwardMargin);
                             //transform.position = new Vector3(newPos.x, transform.position.y, newPos.z);
-
+                        
                             newVelocity = -normalizedVel;
                         } else {
-                            //limit movement dir based on how straight you are walking into the wall
+                            //limit movement dir based on how straight you are walking into the edge
                             characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, -cliffHit.normal);
                             characterMoveVelocity.y = 0;
                             characterMoveVelocity *= colliderDot;
                             normalizedMoveDir = characterMoveVelocity.normalized;
 
-                            newVelocity = Vector3.ProjectOnPlane(newVelocity, -cliffHit.normal);
-                            newVelocity *= colliderDot;
+                            newVelocity -= colliderDot * -cliffHit.normal;
+                            //newVelocity *= colliderDot;
                         }
                     }
-                    // Determine which direction we're mainly moving toward
-                    // var xFirst = Math.Abs(command.moveDir.x) > Math.Abs(command.moveDir.z);
-                    // Vector3[] vecArr = { new(command.moveDir.x, 0, 0), new(0, 0, command.moveDir.z) };
-                    // for (var i = 0; i < 2; i++) {
-                    //     // We will try x dir first if x magnitude is greater
-                    //     var index = (xFirst ? i : i + 1) % 2;
-                    //     var safeDirection = vecArr[index];
-                    //     var stepPosition = rootPosition + safeDirection.normalized * 0.2f;
-                    //     (foundGroundedDir, _, _) =
-                    //         physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
-                    //     if (foundGroundedDir) {
-                    //         characterMoveVelocity = safeDirection;
-                    //         break;
-                    //     }
-                    // }
-
-                    // Only if we didn't find a safe direction set move to 0
-                    // if (!foundGroundedDir) {
-                    //     characterMoveVelocity = Vector3.zero;
-                    // }
                 }
             }
 
@@ -1591,7 +1565,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TS listens to this to update the local camera.
             // Position will update from reconcile, but we handle look direction manually.
-            if (mode == NetworkedStateSystemMode.Authority && isServer) {
+            if (mode == NetworkedStateSystemMode.Authority && isServer && !this.manager.serverGeneratesCommands) {
                 RpcSetLookVector(lookVector);
             }
 
@@ -1652,14 +1626,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public bool IsIgnoringCollider(Collider collider) {
             return physics.ignoredColliders.ContainsKey(collider.GetInstanceID());
-        }
-
-        public float GetTimeSinceWasGrounded() {
-            return currentMoveSnapshot.timeSinceWasGrounded;
-        }
-
-        public float GetTimeSinceBecameGrounded() {
-            return currentMoveSnapshot.timeSinceBecameGrounded;
         }
 
         public void SetVelocity(Vector3 velocity) {
