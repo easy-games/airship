@@ -29,6 +29,7 @@ namespace Airship.Editor {
         [SerializeField] internal bool overrideMemory = false;
         [SerializeField] internal int overrideMemoryMb = 0;
         [SerializeField] internal bool useNodeInspect = false;
+        public bool postTypescriptCompileLuau;
 
         private void OnEnable() {
             AirshipComponent.UsePostCompileReconciliation = usePostCompileReconciliation;
@@ -50,6 +51,15 @@ namespace Airship.Editor {
     /// </summary>
     public static class TypescriptServices {
         internal static event CompilerCrashEvent CompilerCrash;
+
+        internal static bool UseShortcircuitLuauCompilation {
+            get {
+                return  TypescriptServicesLocalConfig.instance.postTypescriptCompileLuau;
+            }
+            set {
+                TypescriptServicesLocalConfig.instance.postTypescriptCompileLuau = value;
+            }
+        }
         
         /// <summary>
         /// Returns true if this is a valid editor window to run TSS in

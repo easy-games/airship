@@ -205,6 +205,7 @@ namespace Airship.Editor {
             var localSettings = TypescriptServicesLocalConfig.instance;
             
             var currentCompiler = TypescriptCompilationService.CompilerVersion;
+           
             
             AirshipEditorGUI.BeginSettingGroup(new GUIContent("Compiler Options"));
             if (TypescriptCompilationService.UsableVersions.Length > 1 && TypescriptCompilationService.ShowDeveloperOptions) {
@@ -263,6 +264,16 @@ namespace Airship.Editor {
             
             AirshipEditorGUI.BeginSettingGroup(new GUIContent("Editor Options"));
             {
+                GUILayout.Space(5);
+                GUILayout.Label("Post-Compilation", EditorStyles.boldLabel);
+                
+                var useExperimentalCompilation = TypescriptServices.UseShortcircuitLuauCompilation;
+                TypescriptServices.UseShortcircuitLuauCompilation = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Compile Luau on post-compile instead of reimport"), useExperimentalCompilation);
+                if (useExperimentalCompilation != TypescriptServices.UseShortcircuitLuauCompilation) {
+                    TypescriptCompilationService.StopCompilerServices(shouldRestart: true);
+                }
+                
                 GUILayout.Space(5);
                 GUILayout.Label("Play Mode", EditorStyles.boldLabel);
                 

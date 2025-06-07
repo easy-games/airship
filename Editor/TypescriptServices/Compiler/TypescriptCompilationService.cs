@@ -231,7 +231,13 @@ using Object = UnityEngine.Object;
                 try {
                     AssetDatabase.StartAssetEditing();
                     var compileFileList = CompiledFileQueue.ToArray();
-                    
+
+                    int progress = 0;
+                    if (TypescriptServices.UseShortcircuitLuauCompilation) {
+                        progress = Progress.Start("Compiling Luau", "compiling Luau files");
+                    }
+
+                    int count = 0;
                     foreach (var file in compileFileList) {
                         // var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
                         //
@@ -247,12 +253,36 @@ using Object = UnityEngine.Object;
                         //     scriptData.metadata = new TypescriptCompilerMetadata() {
                         //         compiledHash = outFileHash
                         //     };
+
+                        if (TypescriptServices.UseShortcircuitLuauCompilation) {
+                            var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
                             
+                            var compilationResult = LuauCompiler.EditorCompile(asset, TypescriptProjectsService.Project.GetOutputPath(file));
+                            if (compilationResult.Compiled) {
+                                if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
+                                    // Debug.Log($"Found artifact for {file}");
+                                    var targets = artifacts.components.Where(c => c.script == data.script);
+                                    foreach (var target in targets) {
+                                        // Debug.Log($"reconcile {target.guid} ({target.script})");
+                                        if (target.Component == null) continue;
+                                        AirshipReconciliationService.ReconcileComponent(target.Component);
+                                    }
+                                }
+                            }
+                            
+                            Progress.Report(progress, (float) count / compileFileList.Length);
+                        }
+                        else {
                             AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                        }
+                        
+                            
                         //     modifiedDatabase = true;
                         // }
+                        count += 1;
                     }
                     
+                    if (progress != 0) Progress.Finish(progress);
                     AssetDatabase.Refresh();
                 } catch (Exception ex) {
                     Debug.LogException(ex);

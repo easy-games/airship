@@ -90,7 +90,11 @@ namespace Airship.Editor {
         /// </summary>
         /// <param name="script">The script to reconcile dependencies for</param>
         internal static void ReconcileImportDependencies(AirshipScript script) {
+            if (script == null) return;
+            
             foreach (var component in _airshipComponentCache) {
+                if (component == null) continue;
+                if (component.script == null) continue;
                 if (component.script.assetPath != script.assetPath) continue;
                 component.ReconcileMetadata(ReconcileSource.ForceReconcile, script.m_metadata);
             }
@@ -110,6 +114,11 @@ namespace Airship.Editor {
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
+            if (component == null) {
+                Debug.LogWarning("no component");
+                return false;
+            }
+            
             if (component.script == null) {
                 Debug.LogWarning("no script");
                 return false;

@@ -118,8 +118,8 @@ public class LuauCompiler {
         // Figure out what happened
         var compilationResult = Marshal.PtrToStructure<CompilationResult>(res);
 
-        var ext = Path.GetExtension(assetPath);
-        var fileName = assetPath.Substring(0, assetPath.Length - ext.Length) + ".bytes";
+        // var ext = Path.GetExtension(assetPath);
+        // var fileName = assetPath.Substring(0, assetPath.Length - ext.Length) + ".bytes";
 
         var compileSuccess = true;
         var compileErrMessage = "none";
@@ -147,7 +147,7 @@ public class LuauCompiler {
             compileErrMessage = resString;
         }
         else {
-            Debug.Log($"[LuauCompiler] Compiled {assetPath} to {fileName}");
+            Debug.Log($"[LuauCompiler] Compiled {assetPath} (bytes: {compilationResult.DataSize})");
         }
         
         asset.m_compiled = compileSuccess;
