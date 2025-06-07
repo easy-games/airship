@@ -362,6 +362,7 @@ namespace Code.Player.Character.MovementSystems.Character
             CharacterSnapshotDataSerializer.WriteCharacterSnapshotData(writer, this);
             var bytes = writer.ToArray();
             _crc32 = Crc32Algorithm.Compute(bytes);
+            Debug.Log(this);
             return _crc32;
         }
     }
