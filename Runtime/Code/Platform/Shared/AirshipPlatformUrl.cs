@@ -2,6 +2,8 @@ namespace Code.Platform.Shared {
     [LuauAPI]
     public class AirshipPlatformUrl {
 #if AIRSHIP_STAGING
+        public static string messaging = "nats-internal-staging.airship.gg";
+
     #if UNITY_SERVER
         public static string gameCoordinatorSocket = "https://gc-edge-staging.easy.gg";
         public static string gameCoordinator = "https://game-coordinator-fxy2zritya-uc.a.run.app";
@@ -28,6 +30,9 @@ namespace Code.Platform.Shared {
         public static string firebaseApiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
     #endif
 #else
+
+        public static string messaging = "nats-internal.airship.gg";
+
     #if UNITY_SERVER
         public static string gameCoordinatorSocket = "https://gc-edge.airship.gg";
         public static string gameCoordinator = "https://game-coordinator-hwcvz2epka-uc.a.run.app";

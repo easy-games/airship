@@ -11,6 +11,7 @@ using System.Threading;
 using System.Linq;
 using Code.Util;
 using System.Collections.Generic;
+using Code.Platform.Shared;
 
 record PubSubMessage {
     public string topicNamespace { get; set; }
@@ -83,10 +84,11 @@ public class MessagingManager : Singleton<MessagingManager>
         var mqttClient = mqttFactory.CreateMqttClient();
         Instance.mqttClient = mqttClient;
 
+        // TODO: Figure out how to properly handle certificate validation from our private CA
         var tlsOptions = new MqttClientTlsOptions()
         {
             UseTls = true,
-            AllowUntrustedCertificates = true, // TODO: FIX
+            AllowUntrustedCertificates = true,
             IgnoreCertificateChainErrors = true,
             IgnoreCertificateRevocationErrors = true,
             CertificateValidationHandler = (x) => true,
@@ -94,7 +96,7 @@ public class MessagingManager : Singleton<MessagingManager>
 
         var mqttClientOptions = new MqttClientOptionsBuilder()
             .WithTlsOptions(tlsOptions)
-            .WithTcpServer(host: "nats-internal-staging.airship.gg", port: 1883)
+            .WithTcpServer(host: AirshipPlatformUrl.messaging, port: 1883)
             .WithCleanSession(true)
             .WithProtocolVersion(MQTTnet.Formatter.MqttProtocolVersion.V311)
             .WithWillQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce)
