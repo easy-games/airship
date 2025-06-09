@@ -6,6 +6,8 @@ using Code.Player.Character.NetworkedMovement;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Serialization;
+using Quaternion = UnityEngine.Quaternion;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Code.Player.Character.MovementSystems.Character {
     public enum CharacterState {
@@ -1022,7 +1024,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Prevent falling off blocks while crouching
             if (movementSettings.preventFallingWhileCrouching && !currentMoveSnapshot.prevStepUp &&
                 currentMoveSnapshot.isCrouching && !didJump && grounded) {
-                var distanceCheck = movementSettings.characterRadius * 4 + newVelocity.magnitude * deltaTime;
+                var distanceCheck = movementSettings.characterRadius * 3 + newVelocity.magnitude * deltaTime;
                 var normalizedVel = newVelocity.normalized;
                 var projectedPosition = rootPosition + normalizedVel * distanceCheck;
                 if (drawDebugGizmos_CROUCH) {
@@ -1065,15 +1067,28 @@ namespace Code.Player.Character.MovementSystems.Character {
                             //var newPos = cliffHit.point - normalizedVel * (bumpSize-forwardMargin);
                             //transform.position = new Vector3(newPos.x, transform.position.y, newPos.z);
                         
-                            newVelocity = -normalizedVel;
+                            newVelocity = -cliffHit.normal;
                         } else {
                             //limit movement dir based on how straight you are walking into the edge
-                            characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, -cliffHit.normal);
-                            characterMoveVelocity.y = 0;
-                            characterMoveVelocity *= colliderDot;
-                            normalizedMoveDir = characterMoveVelocity.normalized;
+                            // characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, -cliffHit.normal);
+                            // characterMoveVelocity.y = 0;
+                            // characterMoveVelocity *= colliderDot;
+                            // normalizedMoveDir = characterMoveVelocity.normalized;
 
                             newVelocity -= colliderDot * -cliffHit.normal;
+                            //newVelocity *= Mathf.Max(0, -colliderDot);
+                            if (newVelocity.sqrMagnitude < 2f) {
+                                newVelocity = Vector3.zero;
+                            }
+                            
+                            //With this new velocity are we going to fall off a different ledge? 
+                            if (!Physics.Raycast(
+                                    new Vector3(0, 1.25f, 0) + transform.position +
+                                    newVelocity.normalized * distanceCheck, Vector3.down, 1.5f)) {
+                                //Nothing in the direction of the new velocity
+                                newVelocity = Vector3.zero;
+                                print("Nothing in dir of vel");
+                            }
                             //newVelocity *= colliderDot;
                         }
                     }
