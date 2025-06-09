@@ -35,7 +35,9 @@ namespace Code.RemoteConsole {
         private Task writeTask;
 
         private void Awake() {
-            writeTask = Task.Run(ProcessQueue);
+            if (RunCore.IsClient() && !RunCore.IsServer()) {
+                writeTask = Task.Run(ProcessQueue);
+            }
         }
 
         private async Task ProcessQueue() {
