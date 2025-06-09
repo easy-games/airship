@@ -24,6 +24,7 @@ public static class LuauPlugin {
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate void ToggleProfilerCallback(int componentId, IntPtr str, int strLen);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
+	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len); 
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
@@ -64,6 +65,7 @@ public static class LuauPlugin {
 		public ToStringCallback toStringCallback;
 		public ToggleProfilerCallback toggleProfilerCallback;
 		public IsObjectDestroyedCallback isObjectDestroyedCallback;
+		public GetUnityObjectName getUnityObjectNameCallback;
 		
 		public IntPtr staticList;
 		public int staticCount;
