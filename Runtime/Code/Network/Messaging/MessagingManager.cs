@@ -63,7 +63,7 @@ public class MessagingManager : Singleton<MessagingManager>
     }
     
     private void Start() {
-        this.serverBootstrap = FindObjectOfType<ServerBootstrap>();
+        this.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
     }
 
     public static async Task<bool> ConnectAsyncInternal()
@@ -104,9 +104,6 @@ public class MessagingManager : Singleton<MessagingManager>
             .WithTimeout(TimeSpan.FromSeconds(10))
             .Build();
 
-        // Setup message handling before connecting so that queued messages  
-        // are also handled properly. When there is no event handler attached all
-        // received messages get lost.  
         mqttClient.ApplicationMessageReceivedAsync += e =>
         {
             var topicParts = e.ApplicationMessage.Topic.Split('/');
@@ -130,7 +127,6 @@ public class MessagingManager : Singleton<MessagingManager>
        
 
         mqttClient.ConnectedAsync += async e => {
-            // Subscribe to a topic
             var toSubscribe = pendingSubscriptions;
             pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
             foreach (var (topicNamespace, topicName) in toSubscribe)
@@ -169,9 +165,8 @@ public class MessagingManager : Singleton<MessagingManager>
 
     private async void OnDisable()
     {
-        // await SendDisconnectIntent();
+        await mqttClient.DisconnectAsync();
         LuauCore.onResetInstance -= LuauCore_OnResetInstance;
-        pendingSubscriptions.Clear();
     }
 
     private IEnumerator FireOnEvent(string topicNamespace, string topicName, string data)
@@ -182,12 +177,11 @@ public class MessagingManager : Singleton<MessagingManager>
 
     private static void LuauCore_OnResetInstance(LuauContext context)
     {
-            pendingSubscriptions.Clear();
+
     }
 
     public static async Task<bool> SubscribeAsync(string topicNamespace, string topicName)
     {
-        
         if (!IsConnected())
         {
             Debug.Log($"Queueing subscribe request {topicNamespace}/{topicName}");
