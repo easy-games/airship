@@ -115,7 +115,7 @@ namespace Code.Player {
 				Debug.Log($"Players ({this.players.Count}):");
 				int i = 1;
 				foreach (var player in this.players) {
-					Debug.Log($"  {i}. {player.username} - connectionId: {player.connectionId}, userId: {player.userId}");
+					Debug.Log($"  {i}. {player.username} - connectionId: {player.connectionId}, userId: {player.userId}, orgRole: {player.orgRoleName}");
 					i++;
 				}
 			}));
@@ -167,6 +167,7 @@ namespace Code.Player {
         
 		private void OnDestroy() {
 			NetworkServer.OnConnectedEvent -= NetworkServer_OnConnected;
+			DevConsole.RemoveCommand("players");
 		}
 
 		public void AddBotPlayer(string username, string userId, string profilePictureId) {

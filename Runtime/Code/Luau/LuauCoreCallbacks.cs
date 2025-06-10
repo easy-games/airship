@@ -41,8 +41,8 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.ConstructorCallback constructorCallback_holder;
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
-    private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
     private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
+    private LuauPlugin.GetUnityObjectName getUnityObjectNameCallback_holder;
     
 
     private struct AwaitingTask {
@@ -116,8 +116,8 @@ public partial class LuauCore : MonoBehaviour {
         requirePathCallback_holder = RequirePathCallback;
         toStringCallback_holder = ToStringCallback;
         componentSetEnabledCallback_holder = SetComponentEnabledCallback;
-        toggleProfilerCallback_holder = ToggleProfilerCallback;
         isObjectDestroyedCallback_holder = IsObjectDestroyedCallback;
+        getUnityObjectNameCallback_holder = GetUnityObjectNameCallback;
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -190,39 +190,25 @@ public partial class LuauCore : MonoBehaviour {
 
         Marshal.Copy(bytes, 0, str, len);
     }
-    
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToggleProfilerCallback))]
-    static void ToggleProfilerCallback(int componentId, IntPtr strPtr, int strLen) {
-        // Disable
-        if (componentId == -1) {
-            Profiler.EndSample();
-            return;
-        }
-        // Not tagged to component
-        if (componentId < -1) {
-            if (strLen > 0) {
-                // No need to free strPtr -- it is stack allocated
-                var str = PtrToStringUTF8(strPtr, strLen);
-                Profiler.BeginSample($"{str}");
-                return;
-            }
-        }
-        
-
-        if (AirshipComponent.ComponentIdToScriptName.TryGetValue(componentId, out var componentName)) {
-            if (strLen > 0) {
-                var str = PtrToStringUTF8(strPtr, strLen);
-                Profiler.BeginSample($"{componentName}{str}");
-            }
-            else {
-                Profiler.BeginSample($"{componentName}");
-            }
-        }
-    }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.IsObjectDestroyedCallback))]
     static int IsObjectDestroyedCallback(int instanceId) {
         return ThreadDataManager.IsUnityObjectReferenceDestroyed(instanceId) ? 1 : 0;
+    }
+
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetUnityObjectName))]
+    static void GetUnityObjectNameCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
+        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true, true);
+        if (obj is UnityEngine.Object unityObj) {
+            var n = unityObj.name;
+            var bytes = Encoding.UTF8.GetBytes(n);
+            len = bytes.Length > maxLen ? maxLen : bytes.Length;
+            Marshal.Copy(bytes, 0, str, len);
+            
+            return;
+        }
+
+        len = 0;
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
@@ -713,16 +699,22 @@ public partial class LuauCore : MonoBehaviour {
     private static int GetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
         var ret = 0;
         try {
-            ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength);
-        } catch (Exception e) {
+            Profiler.BeginSample("GetProperty");
+            ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName,
+                propertyNameLength);
+        }
+        catch (Exception e) {
             ret = LuauError(thread, e.Message);
+        } finally {
+            Profiler.EndSample();
         }
 
         return ret;
     }
 
+    // private static readonly ProfilerMarker<string> getPropertyMarker = new ProfilerMarker<string>("LuauCore.GetProperty", "asd");
+
     private static int GetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
-        Profiler.BeginSample("LuauCore.GetProperty");
         CurrentContext = context;
 
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
@@ -756,14 +748,12 @@ public partial class LuauCore : MonoBehaviour {
                 // Type t = propertyInfo.PropertyType;
                 System.Object value = cacheData.Value.propertyInfo.GetValue(null);
                 WritePropertyToThread(thread, value, cacheData.Value.t);
-                Profiler.EndSample();
                 return 1;
             }
 
             // Get C# event:
             var eventInfo = objectType.GetRuntimeEvent(propName);
             if (eventInfo != null) {
-                Profiler.EndSample();
                 return LuauSignalWrapper.HandleCsEvent(context, thread, staticClassApi, instanceId, propNameHash,
                     eventInfo, true);
             }
@@ -774,11 +764,9 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = fieldInfo.FieldType;
                 System.Object value = fieldInfo.GetValue(null);
                 WritePropertyToThread(thread, value, t);
-                Profiler.EndSample();
                 return 1;
             }
 
-            Profiler.EndSample();
             return LuauError(thread, "ERROR - " + propName + " get property not found on class " + staticClassName);
         }
         else {
@@ -788,7 +776,6 @@ public partial class LuauCore : MonoBehaviour {
             System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
             // Profiler.EndSample();
             if (objectReference == null) {
-                Profiler.EndSample();
                 return LuauError(thread,
                     "Error: InstanceId not currently available:" + instanceId + ". propName=" + propName);
             }
@@ -801,7 +788,6 @@ public partial class LuauCore : MonoBehaviour {
                 if (objectReference is GameObject targetGo) {
                     // var target = (GameObject)objectReference;
                     if (IsAccessBlocked(context, targetGo)) {
-                        Profiler.EndSample();
                         return LuauError(thread,
                             "[Airship] Access denied when trying to read " + targetGo.name + ".");
                     }
@@ -809,7 +795,6 @@ public partial class LuauCore : MonoBehaviour {
                 else if (sourceType.IsAssignableFrom(typeof(Component))) {
                     var target = (Component)objectReference;
                     if (target && IsAccessBlocked(context, target.gameObject)) {
-                        Profiler.EndSample();
                         return LuauError(thread,
                             "[Airship] Access denied when trying to read " + target.name + ".");
                     }
@@ -821,7 +806,6 @@ public partial class LuauCore : MonoBehaviour {
             if (valueTypeAPI != null) {
                 var retValue = valueTypeAPI.OverrideMemberGetter(context, thread, objectReference, propName);
                 if (retValue >= 0) {
-                    Profiler.EndSample();
                     return retValue;
                 }
             }
@@ -841,7 +825,6 @@ public partial class LuauCore : MonoBehaviour {
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
-                        Profiler.EndSample();
                         return 1;
                     }
 
@@ -876,16 +859,11 @@ public partial class LuauCore : MonoBehaviour {
                             }
                         }
 
-                        // Profiler.BeginSample("WriteToThread");
                         WritePropertyToThread(thread, value, t);
-                        // Profiler.EndSample();
-                        Profiler.EndSample();
                         return 1;
                     }
                     else {
-                        // Debug.Log("Value was null in dictionary. propName=" + propName + ", object=" + sourceType.Name);
                         WritePropertyToThread(thread, null, null);
-                        Profiler.EndSample();
                         return 1;
                     }
                 }
@@ -902,11 +880,8 @@ public partial class LuauCore : MonoBehaviour {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
                     if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {
                         WritePropertyToThread(thread, null, null);
-                        Profiler.EndSample();
                         return 1;
                     }
-
-                    Profiler.EndSample();
                     return LuauError(thread, "Failed to get property in dictionary. propName=" + propName +
                                              ", object=" +
                                              sourceType.Name + ", msg=" + e.Message);
@@ -936,7 +911,6 @@ public partial class LuauCore : MonoBehaviour {
                     // print("key: " + propName + " " + keyInt);
                     // Debug.Log("[Luau]: Dictionary had key but value was null. propName=" + propName + ", sourceType=" + sourceType.Name + ", obj=" + objectReference);
                     WritePropertyToThread(thread, null, null);
-                    Profiler.EndSample();
                     return 1;
                 }
 
@@ -944,14 +918,12 @@ public partial class LuauCore : MonoBehaviour {
                     object value = dict[propName];
                     Type t = value.GetType();
                     WritePropertyToThread(thread, value, t);
-                    Profiler.EndSample();
                     return 1;
                 }
                 else {
                     // Debug.Log("[Luau]: Dictionary was found but key was not found. propName=" + propName +
                     //           ", sourceType=" + sourceType.Name);
                     WritePropertyToThread(thread, null, null);
-                    Profiler.EndSample();
                     return 1;
                 }
             }
@@ -959,7 +931,6 @@ public partial class LuauCore : MonoBehaviour {
             // Get C# event:
             var eventInfo = sourceType.GetRuntimeEvent(propName);
             if (eventInfo != null) {
-                Profiler.EndSample();
                 return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
                     eventInfo, false);
             }
@@ -970,11 +941,9 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = field.FieldType;
                 System.Object value = field.GetValue(objectReference);
                 WritePropertyToThread(thread, value, t);
-                Profiler.EndSample();
                 return 1;
             }
 
-            Profiler.EndSample();
             return LuauError(thread, $"ERROR - ({sourceType.Name}).{propName} property/field not found");
         }
     }

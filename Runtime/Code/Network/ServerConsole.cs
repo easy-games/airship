@@ -76,8 +76,11 @@ namespace Code.RemoteConsole {
                 Application.logMessageReceived += LogCallback;
             }
             NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
-                foreach (var startupMessage in startupMessages) {
-                    conn.Send(startupMessage);
+                var player = PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(conn.connectionId);
+                if (player.IsInGameOrg()) {
+                    foreach (var startupMessage in startupMessages) {
+                        conn.Send(startupMessage);
+                    }   
                 }
             }, false);
         }
@@ -129,7 +132,10 @@ namespace Code.RemoteConsole {
         }
 
         private void SendServerLogMessage(string message, LogType logType = LogType.Log, string stackTrace = "") {
-            if (RunCore.IsServer() && !RunCore.IsEditor()) {
+            if (RunCore.IsEditor()) {
+                return;
+            }
+            if (RunCore.IsServer()) {
                 var time = DateTime.Now.ToString("HH:mm:ss");
                 if (this.startupMessages.Count < maxStartupMessages) {
                     this.startupMessages.Add(new ServerConsoleBroadcast() {
@@ -149,10 +155,9 @@ namespace Code.RemoteConsole {
                         stackTrace = stackTrace,
                         time = time,
                     };
-                    // bool sendToReadyOnly = Application.isEditor;
                     foreach (var player in PlayerManagerBridge.Instance.players) {
-                        if (!string.IsNullOrEmpty(player.orgRoleName)) {
-                            player.connectionToClient.Send(packet, Channels.Reliable);
+                        if (player.IsInGameOrg()) {
+                            player.connectionToClient.Send(packet);
                         }
                     }
                 }
