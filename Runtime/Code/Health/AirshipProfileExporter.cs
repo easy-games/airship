@@ -56,6 +56,7 @@ namespace Code.Health
     
     public struct StartServerProfileMessage : NetworkMessage {
         public int DurationSecs;
+        public bool CallstacksEnabled;
     }
 
     public struct ServerProfileCompleteMessage : NetworkMessage
@@ -88,13 +89,14 @@ namespace Code.Health
                 NetworkClient.RegisterHandler<ClientProfileUploadResponse>(OnClientUploadResponse);
             }
 
-            DevConsole.AddCommand(Command.Create<string, int>(
+            DevConsole.AddCommand(Command.Create<string, int, bool>(
                 "profile", 
                 "",
                 "Starts and uploads a profile. Once complete the download link will be printed.", 
                     Parameter.Create("Context", "Options: Server | Client"),
                 Parameter.Create("Duration", "Duration of profile in seconds (max 5s)"),
-                (context, d) => {
+                Parameter.Create("Callstacks", "Enable callstacks for profile (this is laggy)"), 
+                (context, d, callstacks) => {
                     if (d is < 0 or > 5) {
                         Debug.LogError("You can only profile for a max of 5s.");
                         return;
@@ -106,10 +108,10 @@ namespace Code.Health
                                 "Unable to capture profile log because debug mode is not enabled. Use the development build branch on Steam to enable debug mode.");
                             return;
                         }
-                        StartProfiling(d, null);
+                        StartProfiling(d, null, callstacks);
                     } else if (context.Equals("server", StringComparison.OrdinalIgnoreCase)) {
                         Debug.Log("Starting a server profile, view server console to monitor progress.");
-                        NetworkClient.Send(new StartServerProfileMessage { DurationSecs = d });
+                        NetworkClient.Send(new StartServerProfileMessage { DurationSecs = d, CallstacksEnabled = callstacks });
                     }
                 }));
         }
@@ -141,9 +143,9 @@ namespace Code.Health
             }, msg.logLocation, null);
         }
 
-        public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartServerProfileMessage msg) {
+        public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartServerProfileMessage msg, bool enableCallstacks) {
             // TODO Validate sender is dev
-            StartProfiling(msg.DurationSecs, sender);
+            StartProfiling(msg.DurationSecs, sender, enableCallstacks);
         }
 
         public async void OnServerProfileCompleteMessage(ServerProfileCompleteMessage msg)
@@ -163,7 +165,7 @@ namespace Code.Health
             GUIUtility.systemCopyBuffer = data.url;
         }
 
-        public void StartProfiling(int durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
+        public void StartProfiling(int durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator, bool enableCallstacks) {
             // TODO check that sender is game dev
             // if (Profiler.enabled) {
             //     Debug.LogWarning("Profiler is already running.");
@@ -183,12 +185,14 @@ namespace Code.Health
             
             Debug.Log($"Starting profiler for {durationSecs} seconds.");
             Profiler.enabled = true;
+            Profiler.enableAllocationCallstacks = enableCallstacks;
             StopProfilingAfterDelay(logPath, fileName, durationSecs, profileInitiator);
         }
 
         private async void StopProfilingAfterDelay(string logPath, string fileName, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             await Task.Delay((int)(durationSecs * 1000));
             Profiler.enabled = false;
+            Profiler.enableAllocationCallstacks = false;
             var info = new FileInfo(logPath);
 
             Debug.Log($"Profiling completed. Retrieving upload URL...");
