@@ -1,11 +1,10 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Airship.DevConsole;
 using Code.Http.Internal;
 using Code.Platform.Shared;
-using Code.UI;
+using Code.Player;
 using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
@@ -143,9 +142,11 @@ namespace Code.Health
             }, msg.logLocation, null);
         }
 
-        public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartServerProfileMessage msg, bool enableCallstacks) {
-            // TODO Validate sender is dev
-            StartProfiling(msg.DurationSecs, sender, enableCallstacks);
+        public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartServerProfileMessage msg) {
+            var player = PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(sender.connectionId);
+            if (player.IsInGameOrg()) {
+                StartProfiling(msg.DurationSecs, sender, msg.CallstacksEnabled);
+            }
         }
 
         public async void OnServerProfileCompleteMessage(ServerProfileCompleteMessage msg)

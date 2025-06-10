@@ -77,7 +77,7 @@ namespace Code.RemoteConsole {
             }
             NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
                 var player = PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(conn.connectionId);
-                if (!string.IsNullOrEmpty(player.orgRoleName)) {
+                if (player.IsInGameOrg()) {
                     foreach (var startupMessage in startupMessages) {
                         conn.Send(startupMessage);
                     }   
@@ -156,7 +156,7 @@ namespace Code.RemoteConsole {
                         time = time,
                     };
                     foreach (var player in PlayerManagerBridge.Instance.players) {
-                        if (!string.IsNullOrEmpty(player.orgRoleName)) {
+                        if (player.IsInGameOrg()) {
                             player.connectionToClient.Send(packet);
                         }
                     }
