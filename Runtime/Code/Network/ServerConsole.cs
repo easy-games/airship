@@ -76,8 +76,11 @@ namespace Code.RemoteConsole {
                 Application.logMessageReceived += LogCallback;
             }
             NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
-                foreach (var startupMessage in startupMessages) {
-                    conn.Send(startupMessage);
+                var player = PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(conn.connectionId);
+                if (!string.IsNullOrEmpty(player.orgRoleName)) {
+                    foreach (var startupMessage in startupMessages) {
+                        conn.Send(startupMessage);
+                    }   
                 }
             }, false);
         }
