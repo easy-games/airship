@@ -300,7 +300,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (time != diff.baseTime) {
                 // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
                 // using this snapshot as the base.
-                Debug.LogWarning("Snapshot diff was applied to the wrong base snapshot. Report this.");
+                Debug.LogWarning($"Snapshot diff was applied to the wrong base snapshot. Report this. Diff base {diff.baseTime} was applied to {time}");
                 return null;
             }
 
@@ -358,11 +358,42 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public uint ComputeCrc32() {
             if (_crc32 != 0) return _crc32;
+            
+            // We serialize to a byte array for calculating the CRC32. We use slightly more lenient compression
+            // on things like the vectors so that floating point errors don't cause the crc checks to fail.
             var writer = new NetworkWriter();
-            CharacterSnapshotDataSerializer.WriteCharacterSnapshotData(writer, this);
+            byte bools = 0;
+            CharacterSnapshotDataSerializer.EncodeBools(ref bools, this);
+            writer.Write(bools);
+            if (this.customData != null) {
+                writer.WriteInt(this.customData.dataSize);
+                writer.WriteBytes(this.customData.data, 0, this.customData.data.Length);
+            }
+            else {
+                writer.WriteInt(0);
+            }
+            writer.Write(this.time);
+            writer.Write(this.lastProcessedCommand);
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.position.x));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.position.y));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.position.z));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.velocity.x));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.velocity.y));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.velocity.z));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.lookVector.x));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.lookVector.y));
+            writer.Write(CharacterSnapshotDataSerializer.CompressToShort(this.lookVector.z));
+            writer.Write(this.currentSpeed);
+            // This makes our max speed modifier 65.535 with a 0.001 precision.
+            writer.Write(CharacterSnapshotDataSerializer.CompressToUshort(this.speedModifier));
+            writer.Write(this.canJump);
+            writer.Write((byte) this.state);
+            writer.Write(this.jumpCount);
             var bytes = writer.ToArray();
+            
             _crc32 = Crc32Algorithm.Compute(bytes);
             Debug.Log(this);
+            
             return _crc32;
         }
     }
@@ -393,6 +424,14 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         public static float DecompressShort(short value) {
+            return value / 1000f;
+        }
+
+        public static int CompressToInt(float value) {
+            return (int)value * 1000;
+        }
+
+        public static float DecompressInt(int value) {
             return value / 1000f;
         }
         

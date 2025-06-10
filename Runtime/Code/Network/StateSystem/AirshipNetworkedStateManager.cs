@@ -1002,6 +1002,7 @@ namespace Code.Network.StateSystem
             
             // We use the client prediction time so we can act like we got this right in our history. Server gives us
             // a time value in its local timeline so the provided time is not useful to us.
+            state = state.Clone() as State;
             state.time = clientPredictedState.time;
             
             // Overwrite the time we should have predicted this on the client so it

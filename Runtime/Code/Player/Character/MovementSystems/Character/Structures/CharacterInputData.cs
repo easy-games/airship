@@ -55,9 +55,14 @@ namespace Code.Player.Character.MovementSystems.Character
 			BitUtil.SetBit(ref bools, 1, value.jump);
 			BitUtil.SetBit(ref bools, 2, value.sprint);
 			writer.Write(bools);
-			
-			writer.WriteInt(value.customData.dataSize);
-			writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+
+			if (value.customData != null) {
+				writer.WriteInt(value.customData.dataSize);
+				writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+			}
+			else {
+				writer.WriteInt(0);
+			}
 			
 			writer.Write(value.time);
 			writer.Write(value.commandNumber);
@@ -72,8 +77,12 @@ namespace Code.Player.Character.MovementSystems.Character
 		public static CharacterInputData ReadCharacterInputData(this NetworkReader reader) {
 			var bools = reader.Read<byte>();
 			var customDataSize = reader.ReadInt();
-			var customDataArray = reader.ReadBytes(customDataSize);
-			var customData = new BinaryBlob(customDataArray);
+			BinaryBlob customData = default;
+			if (customDataSize != 0) {
+				var customDataArray = reader.ReadBytes(customDataSize); 
+				customData = new BinaryBlob(customDataArray);
+			}
+			
 			return new CharacterInputData() {
 				crouch = BitUtil.GetBit(bools, 0),
 				jump = BitUtil.GetBit(bools, 1),
