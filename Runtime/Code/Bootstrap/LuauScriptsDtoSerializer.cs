@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -7,7 +8,26 @@ using UnityEngine;
 using UnityEngine.Profiling;
 
 namespace Code.Bootstrap {
+
+    class CachedCompressedFile {
+        public byte[] compressedBytes;
+        public int compressedLength;
+
+        public CachedCompressedFile(byte[] compressedBytes, int compressedLength) {
+            this.compressedBytes = compressedBytes;
+            this.compressedLength = compressedLength;
+        }
+    }
+    
     public static class LuauScriptsDtoSerializer {
+        private static Zstd.Zstd zstd = new(1024 * 4);
+        private static readonly Dictionary<string, CachedCompressedFile> compressedFileCache = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void OnReload() {
+            compressedFileCache.Clear();
+        }
+        
         public static void WriteLuauScriptsDto(this NetworkWriter writer, LuauScriptsDto scripts) {
             Profiler.BeginSample("WriteLuauScriptsDto");
             writer.WriteInt(scripts.files.Count);
@@ -18,16 +38,22 @@ namespace Code.Bootstrap {
                 foreach (var file in pair.Value) {
                     writer.WriteString(file.path);
 
-                    // Compress the byte array
-                    Profiler.BeginSample("Array Compress");
-                    byte[] compressedBytes;
-                    using (MemoryStream ms = new MemoryStream()) {
-                        using (DeflateStream deflateStream = new DeflateStream(ms, CompressionMode.Compress)) {
-                            deflateStream.Write(file.bytes, 0, file.bytes.Length);
-                        }
-                        compressedBytes = ms.ToArray();
+                    string cacheId = $"{packageId}:{file.path}";
+                    if (compressedFileCache.TryGetValue(cacheId, out var cache)) {
+                        writer.WriteInt(cache.compressedLength);
+                        writer.WriteBytes(cache.compressedBytes, 0, cache.compressedLength);
+                    } else {
+                        // Compress the byte array
+                        Profiler.BeginSample("Luau Compress");
+                        var maxCompressionSize = Zstd.Zstd.GetCompressionBound(file.bytes);
+                        byte[] compressedBytes = new byte[maxCompressionSize];
+                        var compressedSize = zstd.Compress(file.bytes, compressedBytes);
+                        writer.WriteInt(compressedSize);
+                        writer.WriteBytes(compressedBytes, 0, compressedSize);
+                        
+                        compressedFileCache.Add(cacheId, new CachedCompressedFile(compressedBytes, compressedSize));
                     }
-                    writer.WriteArray(compressedBytes);
+                    
                     writer.WriteBool(file.airshipBehaviour);
                     Profiler.EndSample();
                 }
@@ -36,7 +62,6 @@ namespace Code.Bootstrap {
         }
 
         public static LuauScriptsDto ReadLuauScriptsDto(this NetworkReader reader) {
-            var totalBytes = reader.Remaining;
             LuauScriptsDto dto = new LuauScriptsDto();
             int packagesLength = reader.ReadInt();
             for (int pkgI = 0; pkgI < packagesLength; pkgI++) {
@@ -49,15 +74,15 @@ namespace Code.Bootstrap {
                     LuauFileDto script = new LuauFileDto();
                     script.path = reader.ReadString();
 
-                    var byteArray = reader.ReadArray<byte>();
-                    using (MemoryStream compressedStream = new MemoryStream(byteArray)) {
-                        using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
-                            using (MemoryStream outputStream = new MemoryStream()) {
-                                deflateStream.CopyTo(outputStream);
-                                script.bytes = outputStream.ToArray();
-                            }
-                        }
-                    }
+                    // Read the compressed bytes
+                    var compressedBytesLen = reader.ReadInt();
+                    byte[] compressedBytes = ArrayPool<byte>.Shared.Rent(compressedBytesLen);
+                    reader.ReadBytes(compressedBytes, compressedBytesLen);
+
+                    // Decompress the bytes
+                    var bytes = ArrayPool<byte>.Shared.Rent(Zstd.Zstd.GetDecompressionBound(compressedBytes));
+                    zstd.Decompress(new ReadOnlySpan<byte>(compressedBytes, 0, compressedBytesLen), bytes);
+                    Buffer.BlockCopy(bytes, 0, script.bytes, 0, bytes.Length);
 
                     script.airshipBehaviour = reader.ReadBool();
 
