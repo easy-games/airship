@@ -20,22 +20,22 @@ public static class ChunkSerializer {
         var voxelDataLengthBytes = value.readWriteVoxel.Length * sizeof(short);
         var colDataLengthBytes = value.color.Length * sizeof(uint);
         
-        writer.WriteInt(voxelDataLengthBytes);
-        writer.WriteInt(colDataLengthBytes);
-        
         // Input byte array
         byte[] byteArray = ArrayPool<byte>.Shared.Rent(voxelDataLengthBytes);
-        Buffer.BlockCopy(value.readWriteVoxel, 0, byteArray, 0, byteArray.Length);
         byte[] colorArray = ArrayPool<byte>.Shared.Rent(colDataLengthBytes);
-        Buffer.BlockCopy(value.color, 0, colorArray, 0, colorArray.Length);
+        Buffer.BlockCopy(value.readWriteVoxel, 0, byteArray, 0, voxelDataLengthBytes);
+        Buffer.BlockCopy(value.color, 0, colorArray, 0, colDataLengthBytes);
 
         // Compress the byte array
         Profiler.BeginSample("WriteChunk.Compress");
 
-        var byteArrayCompressed = zstd.Compress(byteArray, 0, byteArray.Length);
+        var byteArrayCompressed = zstd.Compress(byteArray, 0, voxelDataLengthBytes);
+        var colorArrayCompressed = zstd.Compress(colorArray, 0, colDataLengthBytes);
+        
+        writer.WriteInt(byteArrayCompressed.Length);
+        writer.WriteInt(colorArrayCompressed.Length);
+        
         writer.WriteBytes(byteArrayCompressed, 0, byteArrayCompressed.Length);
-            
-        var colorArrayCompressed = zstd.Compress(colorArray, 0, colorArray.Length);
         writer.WriteBytes(colorArrayCompressed, 0, colorArrayCompressed.Length);
         
         ArrayPool<byte>.Shared.Return(byteArray);
@@ -54,27 +54,21 @@ public static class ChunkSerializer {
 
         Chunk chunk = VoxelWorld.CreateChunk(key);
 
-        Debug.Log("voxel data length: " + voxelDataLength);
         byte[] byteArray = ArrayPool<byte>.Shared.Rent(voxelDataLength);
+        byte[] colorArray = ArrayPool<byte>.Shared.Rent(colorDataLength);
+        
         reader.ReadBytes(byteArray, voxelDataLength);
-        byteArray = zstd.Decompress(byteArray, 0, voxelDataLength);
-        Buffer.BlockCopy(byteArray, 0, chunk.readWriteVoxel, 0, voxelDataLength);
+        reader.ReadBytes(colorArray, colorDataLength);
+        
+        var decompressedByteArray = zstd.Decompress(byteArray, 0, voxelDataLength);
+        var decompressedColorArray = zstd.Decompress(colorArray, 0, colorDataLength);
+        
+        Buffer.BlockCopy(decompressedByteArray, 0, chunk.readWriteVoxel, 0, decompressedByteArray.Length);
+        Buffer.BlockCopy(decompressedColorArray, 0, chunk.color, 0, decompressedColorArray.Length);
+        
         ArrayPool<byte>.Shared.Return(byteArray);
+        ArrayPool<byte>.Shared.Return(colorArray);
         
-        // todo: color array
-        
-        // byte[] byteArray = reader.ReadArray<byte>();
-        // using (MemoryStream compressedStream = new MemoryStream(byteArray)) {
-        //     using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
-        //         using (MemoryStream outputStream = new MemoryStream()) {
-        //             deflateStream.CopyTo(outputStream);
-        //             // chunk.readWriteVoxel = outputStream.ToArray();
-        //             var output = outputStream.ToArray();
-        //             Buffer.BlockCopy(output, 0, chunk.readWriteVoxel, 0, voxelDataLength);
-        //             Buffer.BlockCopy(output, voxelDataLength, chunk.color, 0, colorDataLength);
-        //         }
-        //     }
-        // }
         chunk.MarkKeysWithVoxelsDirty();
         return chunk;
     }
