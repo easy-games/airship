@@ -59,6 +59,10 @@ public class PlayerInfo : NetworkBehaviour {
 		}
 	}
 
+	public bool IsInGameOrg() {
+		return !string.IsNullOrEmpty(this.orgRoleName);
+	}
+
 	public override void OnStopServer() {
 		PlayerManagerBridge.Instance.HandlePlayerLeave(this);
 		base.OnStopServer();

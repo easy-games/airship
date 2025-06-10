@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Airship.DevConsole;
 using Code.Http.Internal;
 using Code.Platform.Shared;
+using Code.Player;
 using Code.UI;
 using JetBrains.Annotations;
 using Mirror;
@@ -142,8 +143,10 @@ namespace Code.Health
         }
 
         public void OnStartProfilingMessage(NetworkConnectionToClient sender, StartServerProfileMessage msg) {
-            // TODO Validate sender is dev
-            StartProfiling(msg.DurationSecs, sender);
+            var player = PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(sender.connectionId);
+            if (player.IsInGameOrg()) {
+                StartProfiling(msg.DurationSecs, sender);
+            }
         }
 
         public async void OnServerProfileCompleteMessage(ServerProfileCompleteMessage msg)
