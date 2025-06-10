@@ -174,6 +174,7 @@ public partial class LuauCore : MonoBehaviour {
                 constructorCallback = constructorCallback_holder,
                 toStringCallback = toStringCallback_holder,
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
+                getUnityObjectNameCallback = getUnityObjectNameCallback_holder,
                 staticList = stringAddresses.AddrOfPinnedObject(),
                 staticCount = stringCount,
                 isServer = RunCore.IsServer() ? 1 : 0,

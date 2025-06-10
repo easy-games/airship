@@ -42,6 +42,7 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
     private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
+    private LuauPlugin.GetUnityObjectName getUnityObjectNameCallback_holder;
     
 
     private struct AwaitingTask {
@@ -116,6 +117,7 @@ public partial class LuauCore : MonoBehaviour {
         toStringCallback_holder = ToStringCallback;
         componentSetEnabledCallback_holder = SetComponentEnabledCallback;
         isObjectDestroyedCallback_holder = IsObjectDestroyedCallback;
+        getUnityObjectNameCallback_holder = GetUnityObjectNameCallback;
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -192,6 +194,21 @@ public partial class LuauCore : MonoBehaviour {
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.IsObjectDestroyedCallback))]
     static int IsObjectDestroyedCallback(int instanceId) {
         return ThreadDataManager.IsUnityObjectReferenceDestroyed(instanceId) ? 1 : 0;
+    }
+
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetUnityObjectName))]
+    static void GetUnityObjectNameCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
+        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true, true);
+        if (obj is UnityEngine.Object unityObj) {
+            var n = unityObj.name;
+            var bytes = Encoding.UTF8.GetBytes(n);
+            len = bytes.Length > maxLen ? maxLen : bytes.Length;
+            Marshal.Copy(bytes, 0, str, len);
+            
+            return;
+        }
+
+        len = 0;
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
