@@ -58,12 +58,14 @@ public static class ChunkSerializer {
         byte[] voxelByteAndColorArray = ArrayPool<byte>.Shared.Rent(compressedBytesLen);
         
         reader.ReadBytes(voxelByteAndColorArray, compressedBytesLen);
-        var decompressedData = zstd.Decompress(voxelByteAndColorArray, 0, compressedBytesLen);
+        var decompressedData = ArrayPool<byte>.Shared.Rent(Zstd.GetDecompressionBound(voxelByteAndColorArray));
+        var decompressedDataSize = zstd.Decompress(new ReadOnlySpan<byte>(voxelByteAndColorArray, 0, compressedBytesLen), decompressedData);
         
         Buffer.BlockCopy(decompressedData, 0, chunk.readWriteVoxel, 0, voxelDataLength);
         Buffer.BlockCopy(decompressedData, voxelDataLength, chunk.color, 0, colorDataLength);
         
         ArrayPool<byte>.Shared.Return(voxelByteAndColorArray);
+        ArrayPool<byte>.Shared.Return(decompressedData);
         
         chunk.MarkKeysWithVoxelsDirty();
         return chunk;

@@ -68,8 +68,8 @@ namespace Code.Zstd {
 		}
 
 		/// <summary>
-		/// Compress the data with a destination buffer. This buffer must be the correct size. Use the
-		/// <c>Zstd.GetCompressionBound</c> method to ensure the buffer is large enough.
+		/// Compress the data into the given destination buffer. This buffer must be the correct size.
+		/// Use the <c>Zstd.GetCompressionBound</c> method to ensure the buffer is large enough.
 		/// </summary>
 		/// <returns>The number of bytes written to the buffer.</returns>
 		public int Compress(ReadOnlySpan<byte> data, byte[] dstBuffer) {
@@ -88,6 +88,15 @@ namespace Code.Zstd {
 		/// </summary>
 		public byte[] Decompress(ReadOnlySpan<byte> data) {
 			return DecompressData(data, _ctx);
+		}
+		
+		/// <summary>
+		/// Decompress the data into the given destination buffer.
+		/// Use the <c>Zstd.GetDecompressionBound</c> method to ensure the buffer is large enough.
+		/// </summary>
+		/// <returns>The number of bytes written to the buffer.</returns>
+		public int Decompress(ReadOnlySpan<byte> data, byte[] dstBuffer) {
+			return DecompressWithBuffer(data, dstBuffer, _ctx);
 		}
 
 		public void Dispose() {
@@ -201,6 +210,23 @@ namespace Code.Zstd {
 			}
 			Array.Resize(ref decompressedData, (int)decompressedSize);
 			return decompressedData;
+		}
+
+		private static unsafe int DecompressWithBuffer(ReadOnlySpan<byte> data, byte[] dstBuffer, ZstdContext ctx) {
+			ulong decompressedSize;
+			fixed (byte* src = data) {
+				fixed (byte* dst = dstBuffer) {
+					if (ctx != null) {
+						decompressedSize = ZSTD_decompressDCtx(ctx.Dctx, new IntPtr(dst), (ulong)dstBuffer.Length, new IntPtr(src), (ulong)data.Length);
+					} else {
+						decompressedSize = ZSTD_decompress(new IntPtr(dst), (ulong)dstBuffer.Length, new IntPtr(src), (ulong)data.Length);
+					}
+				}
+			}
+			if (ZSTD_isError(decompressedSize)) {
+				throw new ZstdException(decompressedSize);
+			}
+			return (int)decompressedSize;
 		}
 
 		private static unsafe byte[] CompressWithStack(ReadOnlySpan<byte> data, ulong bound, int compressionLevel, ZstdContext ctx) {
