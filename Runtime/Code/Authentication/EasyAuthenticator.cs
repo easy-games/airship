@@ -212,7 +212,7 @@ namespace Code.Authentication {
                     uid = transferData.user.uid,
                     username = transferData.user.username,
                     profileImageId = transferData.user.profileImageId,
-                    orgRoleName = transferData.user.orgRoleName,
+                    orgRoleName = transferData.orgRoleName,
                     fullTransferPacket = fullTransferPacket
                 });
             }).Catch((err) => {
