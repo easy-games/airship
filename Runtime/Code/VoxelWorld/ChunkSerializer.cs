@@ -32,11 +32,14 @@ public static class ChunkSerializer {
         // Compress the byte array
         Profiler.BeginSample("WriteChunk.Compress");
 
-        var voxelDataCompressed = zstd.Compress(voxelByteAndColorArray);
-        writer.WriteInt(voxelDataCompressed.Length);
-        writer.WriteBytes(voxelDataCompressed, 0, voxelDataCompressed.Length);
+        var maxCompressionSize = Zstd.GetCompressionBound(voxelByteAndColorArray);
+        var compressionBuffer = ArrayPool<byte>.Shared.Rent(maxCompressionSize);
+        var voxelDataCompressedSize = zstd.Compress(voxelByteAndColorArray, compressionBuffer);
+        writer.WriteInt(voxelDataCompressedSize);
+        writer.WriteBytes(compressionBuffer, 0, voxelDataCompressedSize);
         
         ArrayPool<byte>.Shared.Return(voxelByteAndColorArray);
+        ArrayPool<byte>.Shared.Return(compressionBuffer);
         
         Profiler.EndSample();
         Profiler.EndSample();
