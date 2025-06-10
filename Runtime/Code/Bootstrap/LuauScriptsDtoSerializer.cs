@@ -80,9 +80,8 @@ namespace Code.Bootstrap {
                     reader.ReadBytes(compressedBytes, compressedBytesLen);
 
                     // Decompress the bytes
-                    var bytes = ArrayPool<byte>.Shared.Rent(Zstd.Zstd.GetDecompressionBound(compressedBytes));
-                    zstd.Decompress(new ReadOnlySpan<byte>(compressedBytes, 0, compressedBytesLen), bytes);
-                    Buffer.BlockCopy(bytes, 0, script.bytes, 0, bytes.Length);
+                    script.bytes = new byte[Zstd.Zstd.GetDecompressionBound(compressedBytes)];
+                    zstd.Decompress(new ReadOnlySpan<byte>(compressedBytes, 0, compressedBytesLen), script.bytes);
 
                     script.airshipBehaviour = reader.ReadBool();
 
