@@ -77,11 +77,11 @@ namespace Code.RemoteConsole {
             }
             NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
                 var player = PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(conn.connectionId);
-                if (!string.IsNullOrEmpty(player.orgRoleName)) {
+                // if (!string.IsNullOrEmpty(player.orgRoleName)) {
                     foreach (var startupMessage in startupMessages) {
                         conn.Send(startupMessage);
                     }   
-                }
+                // }
             }, false);
         }
 
@@ -156,9 +156,9 @@ namespace Code.RemoteConsole {
                         time = time,
                     };
                     foreach (var player in PlayerManagerBridge.Instance.players) {
-                        if (!string.IsNullOrEmpty(player.orgRoleName)) {
+                        // if (!string.IsNullOrEmpty(player.orgRoleName)) {
                             player.connectionToClient.Send(packet);
-                        }
+                        // }
                     }
                 }
             }
