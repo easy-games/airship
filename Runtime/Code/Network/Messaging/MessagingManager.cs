@@ -27,62 +27,37 @@ public class MessagingManager : Singleton<MessagingManager>
     public event Action<string, string, string> OnEvent;
     public event Action<string> OnDisconnected;
 
-    private bool firstConnect = true;
-    private string currentOrgId;
-    private string currentGameId;
+    private static IMqttClient mqttClient;
 
-    private IMqttClient mqttClient;
-
-    private ServerBootstrap serverBootstrap;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private void onLoad()
-    {
-        firstConnect = true;
-    }
-
-#if UNITY_EDITOR
-    static MessagingManager()
-    {
-        EditorApplication.playModeStateChanged += ModeChanged;
-    }
-
-    static void ModeChanged(PlayModeStateChange change)
-    {
-        if (change == PlayModeStateChange.ExitingPlayMode)
-        {
-            Disconnect();
-        }
-    }
-#endif
+    private static ServerBootstrap serverBootstrap;
 
     private void Awake()
     {
         DontDestroyOnLoad(this);
-        
     }
     
     private void Start() {
-        this.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
+        MessagingManager.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
     }
 
     public static async Task<bool> ConnectAsyncInternal()
     {
         if (RunCore.IsEditor())
         {
-            Instance.currentGameId = Instance.serverBootstrap?.gameId ?? "unknowngame";
-            Instance.currentOrgId = "unityeditor";
-        }
-        else
-        {
-            Instance.currentGameId = Instance.serverBootstrap?.gameId ?? "unknowngame";
-            Instance.currentOrgId = Instance.serverBootstrap?.organizationId ?? "unknownorg";
+            return false;
         }
 
-        var test = UnityMainThreadDispatcher.Instance;
+        if (!MessagingManager.serverBootstrap)
+        {
+            Debug.LogError("MessagingManager: ServerBootstrap not found in scene. Please ensure it is present.");
+            return false;
+        }
+
+        var test = UnityMainThreadDispatcher.Instance; // Generate instance now so it is available later
+
         var mqttFactory = new MqttFactory();
         var mqttClient = mqttFactory.CreateMqttClient();
-        Instance.mqttClient = mqttClient;
+        MessagingManager.mqttClient = mqttClient;
 
         // TODO: Figure out how to properly handle certificate validation from our private CA
         var tlsOptions = new MqttClientTlsOptions()
@@ -100,19 +75,25 @@ public class MessagingManager : Singleton<MessagingManager>
             .WithCleanSession(true)
             .WithProtocolVersion(MQTTnet.Formatter.MqttProtocolVersion.V311)
             .WithWillQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce)
-            .WithCredentials($"gameserver:{Instance.currentGameId}:{Instance.serverBootstrap.serverId}", Instance.serverBootstrap.airshipJWT)
+            .WithCredentials($"gameserver:{MessagingManager.serverBootstrap.gameId}:{MessagingManager.serverBootstrap.serverId}", MessagingManager.serverBootstrap.airshipJWT)
             .WithTimeout(TimeSpan.FromSeconds(10))
             .Build();
 
+        var disconnected = false;
+
         mqttClient.ApplicationMessageReceivedAsync += e =>
         {
+            if (disconnected)
+            {
+                return Task.CompletedTask;
+            }
             var topicParts = e.ApplicationMessage.Topic.Split('/');
             if (topicParts.Length != 6)
             {
                 Debug.LogError($"Invalid topic, parts count ({topicParts.Length}): {e.ApplicationMessage.Topic}");
                 return Task.CompletedTask;
             }
-            if (topicParts[0] != "org" || topicParts[1] != Instance.currentOrgId || topicParts[2] != "game" || topicParts[3] != Instance.currentGameId)
+            if (topicParts[0] != "org" || topicParts[1] != MessagingManager.serverBootstrap.organizationId || topicParts[2] != "game" || topicParts[3] != MessagingManager.serverBootstrap.gameId)
             {
                 Debug.LogError($"Invalid topic, unknown format: {e.ApplicationMessage.Topic}");
                 return Task.CompletedTask;
@@ -124,9 +105,12 @@ public class MessagingManager : Singleton<MessagingManager>
 
             return Task.CompletedTask;
         };
-       
 
         mqttClient.ConnectedAsync += async e => {
+            if (disconnected)
+            {
+                return;
+            }
             var toSubscribe = pendingSubscriptions;
             pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
             foreach (var (topicNamespace, topicName) in toSubscribe)
@@ -144,7 +128,14 @@ public class MessagingManager : Singleton<MessagingManager>
 
         mqttClient.DisconnectedAsync += async e =>
         {
+            if (disconnected)
+            {
+                return;
+            }
             Debug.LogWarning($"Disconnected from messaging server {e.ReasonString}");
+            UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnDisconnect(e.ReasonString));
+            MessagingManager.mqttClient = null;
+            disconnected = true;
         };
 
 
@@ -155,10 +146,10 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static async Task Disconnect()
     {
-        if (Instance.mqttClient != null)
+        if (MessagingManager.mqttClient != null)
         {
-            Instance.mqttClient = null;
-            await Instance.mqttClient.DisconnectAsync();
+            MessagingManager.mqttClient = null;
+            await MessagingManager.mqttClient.DisconnectAsync();
         }
         pendingSubscriptions.Clear();
     }
@@ -166,7 +157,6 @@ public class MessagingManager : Singleton<MessagingManager>
     private async void OnDisable()
     {
         await mqttClient.DisconnectAsync();
-        LuauCore.onResetInstance -= LuauCore_OnResetInstance;
     }
 
     private IEnumerator FireOnEvent(string topicNamespace, string topicName, string data)
@@ -175,9 +165,10 @@ public class MessagingManager : Singleton<MessagingManager>
         yield return null;
     }
 
-    private static void LuauCore_OnResetInstance(LuauContext context)
+    private IEnumerator FireOnDisconnect(string reason)
     {
-
+        Instance.OnDisconnected?.Invoke(reason);
+        yield return null;
     }
 
     public static async Task<bool> SubscribeAsync(string topicNamespace, string topicName)
@@ -189,10 +180,10 @@ public class MessagingManager : Singleton<MessagingManager>
             return true; // Optimistically return true
         }
 
-        var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
+        var fullTopic = $"org/{MessagingManager.serverBootstrap.organizationId}/game/{MessagingManager.serverBootstrap.gameId}/{topicNamespace}/{topicName}";
         var mqttFactory = new MqttFactory();
         var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter(topic: fullTopic, qualityOfServiceLevel: MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce).Build();
-        var res = await Instance.mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+        var res = await MessagingManager.mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
         var res0 = res.Items.ToArray()[0];
         if (res0.ResultCode != MqttClientSubscribeResultCode.GrantedQoS0)
         {
@@ -217,13 +208,13 @@ public class MessagingManager : Singleton<MessagingManager>
             return true; // Optimistically return true
         }
 
-        var fullTopic = $"org/{Instance.currentOrgId}/game/{Instance.currentGameId}/{topicNamespace}/{topicName}";
+        var fullTopic = $"org/{MessagingManager.serverBootstrap.organizationId}/game/{MessagingManager.serverBootstrap.gameId}/{topicNamespace}/{topicName}";
         var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(fullTopic)
                 .WithPayload(data)
                 .Build();
 
-        var res = await Instance.mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        var res = await MessagingManager.mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
         if (!res.IsSuccess)
         {
             Debug.LogError($"Failed to publish to {fullTopic}: {res.ReasonCode}");
@@ -235,6 +226,6 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static bool IsConnected()
     {
-        return Instance.mqttClient != null && Instance.mqttClient.IsConnected;
+        return MessagingManager.mqttClient != null && MessagingManager.mqttClient.IsConnected;
     }
 }
