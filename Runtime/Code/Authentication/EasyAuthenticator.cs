@@ -205,7 +205,7 @@ namespace Code.Authentication {
                 }
 
             })).Then((res) => {
-                print($"[Transfer Packet] {res.Text}");
+                // print($"[Transfer Packet] {res.Text}");
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 tcs.SetResult(new UserData() {
