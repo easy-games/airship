@@ -129,7 +129,10 @@ namespace Code.RemoteConsole {
         }
 
         private void SendServerLogMessage(string message, LogType logType = LogType.Log, string stackTrace = "") {
-            if (RunCore.IsServer() && !RunCore.IsEditor()) {
+            if (RunCore.IsEditor()) {
+                return;
+            }
+            if (RunCore.IsServer()) {
                 var time = DateTime.Now.ToString("HH:mm:ss");
                 if (this.startupMessages.Count < maxStartupMessages) {
                     this.startupMessages.Add(new ServerConsoleBroadcast() {
@@ -149,10 +152,9 @@ namespace Code.RemoteConsole {
                         stackTrace = stackTrace,
                         time = time,
                     };
-                    // bool sendToReadyOnly = Application.isEditor;
                     foreach (var player in PlayerManagerBridge.Instance.players) {
                         if (!string.IsNullOrEmpty(player.orgRoleName)) {
-                            player.connectionToClient.Send(packet, Channels.Reliable);
+                            player.connectionToClient.Send(packet);
                         }
                     }
                 }
