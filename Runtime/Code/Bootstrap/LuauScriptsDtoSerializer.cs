@@ -4,11 +4,13 @@ using System.IO;
 using System.IO.Compression;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Code.Bootstrap {
     public static class LuauScriptsDtoSerializer {
         public static void WriteLuauScriptsDto(this NetworkWriter writer, LuauScriptsDto scripts) {
-            writer.WriteInt(scripts.files.Count);;
+            Profiler.BeginSample("WriteLuauScriptsDto");
+            writer.WriteInt(scripts.files.Count);
             foreach (var pair in scripts.files) {
                 string packageId = pair.Key;
                 writer.WriteString(packageId);
@@ -17,6 +19,7 @@ namespace Code.Bootstrap {
                     writer.WriteString(file.path);
 
                     // Compress the byte array
+                    Profiler.BeginSample("Array Compress");
                     byte[] compressedBytes;
                     using (MemoryStream ms = new MemoryStream()) {
                         using (DeflateStream deflateStream = new DeflateStream(ms, CompressionMode.Compress)) {
@@ -26,8 +29,10 @@ namespace Code.Bootstrap {
                     }
                     writer.WriteArray(compressedBytes);
                     writer.WriteBool(file.airshipBehaviour);
+                    Profiler.EndSample();
                 }
             }
+            Profiler.EndSample();
         }
 
         public static LuauScriptsDto ReadLuauScriptsDto(this NetworkReader reader) {
