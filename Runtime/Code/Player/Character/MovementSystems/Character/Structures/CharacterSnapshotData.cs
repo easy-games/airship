@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using Assets.Luau;
 using Code.Misc;
 using Code.Network.StateSystem;
@@ -238,6 +239,24 @@ namespace Code.Player.Character.MovementSystems.Character
             bool stateChanged = this.state != other.state;
             bool canJumpChanged = this.canJump != other.canJump;
             
+            // var log = new StringBuilder();
+            // log.AppendLine("Changed Fields:");
+            //
+            // if (boolsChanged) log.AppendLine($"- Bools changed: {oldBools} -> {newBools}");
+            // if (positionChanged) log.AppendLine($"- Position changed: {this.position} -> {other.position}");
+            // if (velocityChanged) log.AppendLine($"- Velocity changed: {this.velocity} -> {other.velocity}");
+            // if (lookVectorChanged) log.AppendLine($"- LookVector changed: {this.lookVector} -> {other.lookVector}");
+            // if (speedChanged) log.AppendLine($"- CurrentSpeed changed: {this.currentSpeed} -> {other.currentSpeed}");
+            // if (modifierChanged) log.AppendLine($"- SpeedModifier changed: {this.speedModifier} -> {other.speedModifier}");
+            // if (jumpCountChanged) log.AppendLine($"- JumpCount changed: {this.jumpCount} -> {other.jumpCount}");
+            // if (stateChanged) log.AppendLine($"- State changed: {this.state} -> {other.state}");
+            // if (canJumpChanged) log.AppendLine($"- CanJump changed: {this.canJump} -> {other.canJump}");
+            //
+            // if (log.Length > 0)
+            // {
+            //     Debug.Log(log.ToString());
+            // }
+            
             // Set the changed mask to reflect changed fields
             short changedMask = 0;
             if (boolsChanged) BitUtil.SetBit(ref changedMask, 0, true);
@@ -350,6 +369,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
                 // using this snapshot as the base.
                 Debug.LogWarning("Applying diff failed CRC check. This may happen due to poor network connection. Expected " + diff.crc32 + ", got " + crc32);
+                Debug.Log(this);
                 return null;
             }
 
@@ -392,8 +412,6 @@ namespace Code.Player.Character.MovementSystems.Character
             var bytes = writer.ToArray();
             
             _crc32 = Crc32Algorithm.Compute(bytes);
-            Debug.Log(this);
-            
             return _crc32;
         }
     }
@@ -412,11 +430,17 @@ namespace Code.Player.Character.MovementSystems.Character
         }
         
         public static ushort CompressToUshort(float value) {
-            return (ushort)Math.Clamp(value * 1000f, 0, ushort.MaxValue);
+            double scaled = (double)value * 1000.0;
+            int quantised = (int)Math.Round(scaled, MidpointRounding.AwayFromZero);
+            quantised = Math.Clamp(quantised, 0, ushort.MaxValue);
+            return (ushort)quantised;
         }
         
         public static short CompressToShort(float value) {
-            return (short)Math.Clamp(value * 1000f, short.MinValue, short.MaxValue);
+            double scaled = (double)value * 1000.0;
+            int quantised = (int)Math.Round(scaled, MidpointRounding.AwayFromZero);
+            quantised = Math.Clamp(quantised, short.MinValue, short.MaxValue);
+            return (short)quantised;
         }
 
         public static float DecompressUShort(ushort value) {
@@ -428,7 +452,8 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         public static int CompressToInt(float value) {
-            return (int)value * 1000;
+            double scaled = (double)value * 1000.0;
+            return (int)Math.Round(scaled, MidpointRounding.AwayFromZero);
         }
 
         public static float DecompressInt(int value) {

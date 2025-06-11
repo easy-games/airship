@@ -316,7 +316,9 @@ namespace Code.Network.StateSystem
                         continue;
                     } 
                     this.SendServerDiffToClient(client.Value, diff);
-                    // print("Sending diff of base time " + baseState.time + " with state of " + state.time + " diff time is " + diff.baseTime);
+                    // print("Sending diff for " + this.name + ". Base time: " + baseState.time + " Expected result time: " + state.time + " (" + diff.crc32 + ")");
+                    // print(baseState);
+                    // print(state);
                 }
             }
         }
@@ -1086,7 +1088,7 @@ namespace Code.Network.StateSystem
 
             var snapshot = baseState.ApplyDiff(diff);
             if (snapshot == null) {
-                print("Diff failed to apply.");
+                print("Diff failed to apply for " + this.name);
                 SendRequestFullSnapshotToServer();
                 return;
             }
