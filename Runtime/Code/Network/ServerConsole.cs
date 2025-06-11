@@ -75,8 +75,8 @@ namespace Code.RemoteConsole {
             if (!RunCore.IsClient()) {
                 Application.logMessageReceived += LogCallback;
             }
-            NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
-                var player = PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(conn.connectionId);
+            NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>(async (conn, data) => {
+                var player = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(conn.connectionId);
                 if (player.IsInGameOrg()) {
                     foreach (var startupMessage in startupMessages) {
                         conn.Send(startupMessage);
