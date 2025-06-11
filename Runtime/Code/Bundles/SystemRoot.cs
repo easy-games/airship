@@ -324,7 +324,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 #if AIRSHIP_PLAYER || true
 			try {
-				Debug.Log("Scanning network prefabs...");
+				// Debug.Log("Scanning network prefabs...");
 				Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
 				int i = 1;
 				foreach (var pair in NetworkClient.prefabs) {

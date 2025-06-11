@@ -252,7 +252,7 @@ namespace Code.Bootstrap {
 
             this.codeReceiveSt.Restart();
 
-            print("Requesting scripts from server..");
+            print("[Airship] Requesting scripts from server...");
             NetworkClient.Send(new RequestScriptsMessage());
         }
 
