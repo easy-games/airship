@@ -211,6 +211,7 @@ public partial class LuauCore : MonoBehaviour
 
         propDict.TryGetValue(propNameHash, out PropertyInfo property);
         if (property == null) {
+            Debug.Log($"AYO prop is NULL!! {sourceType.Name} {propName}");
             property = sourceType.GetProperty(propName);
 
             //Still null?

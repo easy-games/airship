@@ -184,7 +184,7 @@ namespace Code.Health
             Profiler.logFile = logPath;
             Profiler.enableBinaryLog = true;
             
-            Debug.Log($"Starting profiler for {durationSecs} seconds.");
+            Debug.Log($"Starting profiler for {durationSecs} seconds. Callstacks = {enableCallstacks}");
             Profiler.enabled = true;
             Profiler.enableAllocationCallstacks = enableCallstacks;
             StopProfilingAfterDelay(logPath, fileName, durationSecs, profileInitiator);

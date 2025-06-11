@@ -58,6 +58,12 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private struct PropertyGetReflectionCache {
+        /// <summary>
+        /// This is true if the property info exists for this type / prop combo. This
+        /// is to avoid trying to look up the property info constantly if it doesn't exist.
+        /// </summary>
+        public bool Exists;
+        
         public Type t;
         [FormerlySerializedAs("pi")] public PropertyInfo propertyInfo;
         public Delegate GetProperty;
@@ -284,11 +290,21 @@ public partial class LuauCore : MonoBehaviour {
             PropertyInfo property = null;
             FieldInfo field = null;
             
-            if (classNameSize != 0) {
-                property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-            } else {
-                property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            PropertyGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
+                var propertyInfo = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
             }
+
+            if (cacheData.Value.Exists) {
+                property = cacheData.Value.propertyInfo;
+            }
+            
+            // if (classNameSize != 0) {
+            //     property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+            // } else {
+            //     property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            // }
 
             if (property != null) {
                 t = property.PropertyType;
@@ -738,13 +754,10 @@ public partial class LuauCore : MonoBehaviour {
             if (!(cacheData = LuauCore.GetPropertyCacheValue(objectType, propName)).HasValue) {
                 var propertyInfo = objectType.GetProperty(propName,
                     BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-                if (propertyInfo != null) {
-                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, true);
-                    cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
-                }
+                cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
             }
 
-            if (cacheData != null) {
+            if (cacheData.Value.Exists) {
                 // Type t = propertyInfo.PropertyType;
                 System.Object value = cacheData.Value.propertyInfo.GetValue(null);
                 WritePropertyToThread(thread, value, cacheData.Value.t);
@@ -814,13 +827,10 @@ public partial class LuauCore : MonoBehaviour {
             PropertyGetReflectionCache? cacheData;
             if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
                 var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                if (propertyInfo != null) {
-                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
-                    cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
-                }
+                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
             }
 
-            if (cacheData != null) {
+            if (cacheData.Value.Exists) {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
@@ -934,7 +944,7 @@ public partial class LuauCore : MonoBehaviour {
                 return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
                     eventInfo, false);
             }
-
+            
             // Get field:
             FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
             if (field != null) {
@@ -1612,6 +1622,16 @@ public partial class LuauCore : MonoBehaviour {
     private static PropertyGetReflectionCache[] fastPropGetCacheValues = new PropertyGetReflectionCache[propGetFastCacheSize];
 
     private static PropertyGetReflectionCache? GetPropertyCacheValue(Type objectType, string propName) {
+        // Avoid caching result of int field access of a dictionary (because this is a non-discrete
+        // prop name and may flood look up table)
+        if (typeof(IDictionary).IsAssignableFrom(objectType)) {
+            if (int.TryParse(propName, out int keyInt)) {
+                return new PropertyGetReflectionCache {
+                    Exists = false,
+                };
+            }
+        }
+        
         var key = new PropertyCacheKey(objectType, propName);
         var l1Key = key.GetHashCode() % propGetFastCacheSize;
         if (l1Key < 0) l1Key += propGetFastCacheSize;
@@ -1636,13 +1656,22 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo) {
-        var cacheData = new PropertyGetReflectionCache {
-            t = propertyInfo.PropertyType,
-            propertyInfo = propertyInfo,
-            IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
-                .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
-            IsStruct = propertyInfo.DeclaringType.IsValueType && !propertyInfo.DeclaringType.IsPrimitive,
-        };
+        PropertyGetReflectionCache cacheData;
+        if (propertyInfo != null) {
+            cacheData = new PropertyGetReflectionCache {
+                t = propertyInfo.PropertyType,
+                propertyInfo = propertyInfo,
+                IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
+                    .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
+                IsStruct = propertyInfo.DeclaringType.IsValueType && !propertyInfo.DeclaringType.IsPrimitive,
+                Exists = true,
+            };
+        } else {
+            cacheData = new PropertyGetReflectionCache {
+                Exists = false,
+            };
+        }
+
         LuauCore.propertyGetCache[new PropertyCacheKey(objectType, propName)] = cacheData;
         return cacheData;
     }
