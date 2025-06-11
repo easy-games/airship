@@ -233,7 +233,7 @@ namespace Code.Player {
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
 			if (RunCore.IsServer() && !RunCore.IsClient()) {
-				Debug.Log(playerInfo.username + " joined the server.");
+				Debug.Log($"{playerInfo.username} joined the server. orgRole: {playerInfo.orgRoleName}");
 			}
 
 			if (this.agones) {
