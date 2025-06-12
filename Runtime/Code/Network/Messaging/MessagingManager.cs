@@ -13,6 +13,7 @@ using Code.Util;
 using System.Collections.Generic;
 using Code.Platform.Shared;
 using UnityEngine.Rendering.Universal;
+using System.Collections.Concurrent;
 
 record PubSubMessage
 {
@@ -43,11 +44,13 @@ public record ParseTopicResponse
 [LuauAPI(LuauContext.Protected)]
 public class MessagingManager : Singleton<MessagingManager>
 {
-    private static List<PubSubMessage> queuedOutgoingPackets = new();
-    private static List<TopicDescription> pendingSubscriptions = new();
-    private static List<TopicDescription> pendingUnsubscribes = new();
+    private static ConcurrentBag<PubSubMessage> queuedOutgoingPackets = new();
+    private static ConcurrentBag<TopicDescription> pendingSubscriptions = new();
+    private static ConcurrentBag<TopicDescription> pendingUnsubscribes = new();
+    private static MqttFactory mqttFactory = new MqttFactory();
     public event Action<TopicDescription, string> OnEvent;
     public event Action<string> OnDisconnected;
+    private static bool disconnectedIntent = false;
 
     private static IMqttClient mqttClient;
 
@@ -78,7 +81,6 @@ public class MessagingManager : Singleton<MessagingManager>
 
         var test = UnityMainThreadDispatcher.Instance; // Generate instance now so it is available later
 
-        var mqttFactory = new MqttFactory();
         var mqttClient = mqttFactory.CreateMqttClient();
         MessagingManager.mqttClient = mqttClient;
 
@@ -102,11 +104,11 @@ public class MessagingManager : Singleton<MessagingManager>
             .WithTimeout(TimeSpan.FromSeconds(10))
             .Build();
 
-        var disconnected = false;
+        disconnectedIntent = false;
 
         mqttClient.ApplicationMessageReceivedAsync += e =>
         {
-            if (disconnected)
+            if (disconnectedIntent)
             {
                 return Task.CompletedTask;
             }
@@ -131,27 +133,22 @@ public class MessagingManager : Singleton<MessagingManager>
 
         mqttClient.ConnectedAsync += async e =>
         {
-            if (disconnected)
+            if (disconnectedIntent)
             {
                 return;
             }
-            var toSubscribe = pendingSubscriptions;
-            pendingSubscriptions = new List<TopicDescription>();
-            foreach (var topic in toSubscribe)
+
+            while (pendingSubscriptions.TryTake(out var topic))
             {
                 await SubscribeAsync(topic);
             }
 
-            var toSend = queuedOutgoingPackets;
-            queuedOutgoingPackets = new List<PubSubMessage>();
-            foreach (var msg in toSend)
+            while (queuedOutgoingPackets.TryTake(out var msg))
             {
                 await PublishAsync(msg.topic, msg.payload);
             }
 
-            var toUnsubscribe = pendingUnsubscribes;
-            pendingUnsubscribes = new List<TopicDescription>();
-            foreach (var topic in toUnsubscribe)
+            while (pendingUnsubscribes.TryTake(out var topic))
             {
                 await UnsubscribeAsync(topic);
             }
@@ -159,14 +156,10 @@ public class MessagingManager : Singleton<MessagingManager>
 
         mqttClient.DisconnectedAsync += async e =>
         {
-            if (disconnected)
-            {
-                return;
-            }
+            disconnectedIntent = true;
             Debug.LogWarning($"Disconnected from messaging server {e.ReasonString}");
             UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnDisconnect(e.ReasonString));
             MessagingManager.mqttClient = null;
-            disconnected = true;
         };
 
 
@@ -177,17 +170,24 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static async Task Disconnect()
     {
+        disconnectedIntent = true;
         if (MessagingManager.mqttClient != null)
         {
-            MessagingManager.mqttClient = null;
             await MessagingManager.mqttClient.DisconnectAsync();
         }
+
         pendingSubscriptions.Clear();
+        pendingUnsubscribes.Clear();
+        queuedOutgoingPackets.Clear();
     }
 
-    private async void OnDisable()
+    private void OnDisable()
     {
-        await mqttClient.DisconnectAsync();
+        if (IsConnected())
+        {
+            // Fire and forget
+            mqttClient.DisconnectAsync();
+        }
     }
 
     private IEnumerator FireOnEvent(TopicDescription topic, string data)
@@ -271,8 +271,8 @@ public class MessagingManager : Singleton<MessagingManager>
             }
 
             // This is a server topic
-            var topicNamespace = topicParts[4];
-            var topicName = topicParts[5];
+            var topicNamespace = topicParts[6];
+            var topicName = topicParts[7];
 
             return new ParseTopicResponse
             {
@@ -305,7 +305,6 @@ public class MessagingManager : Singleton<MessagingManager>
         }
 
         var fullTopic = GetFullTopic(topic);
-        var mqttFactory = new MqttFactory();
         var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter(topic: fullTopic, qualityOfServiceLevel: MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce).Build();
         var res = await MessagingManager.mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
         var res0 = res.Items.ToArray()[0];
@@ -328,7 +327,6 @@ public class MessagingManager : Singleton<MessagingManager>
         }
 
         var fullTopic = GetFullTopic(topic);
-        var mqttFactory = new MqttFactory();
         var mqttUnsubscribeOptions = mqttFactory.CreateUnsubscribeOptionsBuilder().WithTopicFilter(topic: fullTopic).Build();
         var res = await MessagingManager.mqttClient.UnsubscribeAsync(mqttUnsubscribeOptions, CancellationToken.None);
         var res0 = res.Items.ToArray()[0];
@@ -373,6 +371,6 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static bool IsConnected()
     {
-        return MessagingManager.mqttClient != null && MessagingManager.mqttClient.IsConnected;
+        return !disconnectedIntent && MessagingManager.mqttClient != null && MessagingManager.mqttClient.IsConnected;
     }
 }
