@@ -1058,7 +1058,7 @@ namespace Mirror
 
             // airship begin
             if (!Application.isEditor) {
-                print("setting active scene to " + networkSceneName);
+                print("[Airship] Setting active scene to " + networkSceneName);
             }
 
             Scene scene;
@@ -1155,7 +1155,7 @@ namespace Mirror
         {
             // debug message is very important. if we ever break anything then
             // it's very obvious to notice.
-            Debug.Log("Finished loading scene in client-only mode.");
+            Debug.Log("[Airship] Finished loading scene in client-only mode.");
 
             if (clientReadyConnection != null)
             {

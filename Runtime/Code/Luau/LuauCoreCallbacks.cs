@@ -58,6 +58,12 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private struct PropertyGetReflectionCache {
+        /// <summary>
+        /// This is true if the property info exists for this type / prop combo. This
+        /// is to avoid trying to look up the property info constantly if it doesn't exist.
+        /// </summary>
+        public bool Exists;
+        
         public Type t;
         [FormerlySerializedAs("pi")] public PropertyInfo propertyInfo;
         public Delegate GetProperty;
@@ -284,11 +290,21 @@ public partial class LuauCore : MonoBehaviour {
             PropertyInfo property = null;
             FieldInfo field = null;
             
-            if (classNameSize != 0) {
-                property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-            } else {
-                property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            PropertyGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
+                var propertyInfo = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
             }
+
+            if (cacheData.Value.Exists) {
+                property = cacheData.Value.propertyInfo;
+            }
+            
+            // if (classNameSize != 0) {
+            //     property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+            // } else {
+            //     property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            // }
 
             if (property != null) {
                 t = property.PropertyType;
@@ -699,14 +715,10 @@ public partial class LuauCore : MonoBehaviour {
     private static int GetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
         var ret = 0;
         try {
-            Profiler.BeginSample("GetProperty");
             ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName,
                 propertyNameLength);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             ret = LuauError(thread, e.Message);
-        } finally {
-            Profiler.EndSample();
         }
 
         return ret;
@@ -738,13 +750,10 @@ public partial class LuauCore : MonoBehaviour {
             if (!(cacheData = LuauCore.GetPropertyCacheValue(objectType, propName)).HasValue) {
                 var propertyInfo = objectType.GetProperty(propName,
                     BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-                if (propertyInfo != null) {
-                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, true);
-                    cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
-                }
+                cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
             }
 
-            if (cacheData != null) {
+            if (cacheData.Value.Exists) {
                 // Type t = propertyInfo.PropertyType;
                 System.Object value = cacheData.Value.propertyInfo.GetValue(null);
                 WritePropertyToThread(thread, value, cacheData.Value.t);
@@ -814,13 +823,10 @@ public partial class LuauCore : MonoBehaviour {
             PropertyGetReflectionCache? cacheData;
             if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
                 var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                if (propertyInfo != null) {
-                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
-                    cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
-                }
+                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
             }
 
-            if (cacheData != null) {
+            if (cacheData.Value.Exists) {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
@@ -934,7 +940,7 @@ public partial class LuauCore : MonoBehaviour {
                 return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
                     eventInfo, false);
             }
-
+            
             // Get field:
             FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
             if (field != null) {
@@ -1118,7 +1124,6 @@ public partial class LuauCore : MonoBehaviour {
     // When a lua object wants to call a method
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
-        Profiler.BeginSample("LuauCore.CallMethod");
         CurrentContext = context;
         
         // if (s_shutdown) return 0;
@@ -1154,7 +1159,6 @@ public partial class LuauCore : MonoBehaviour {
             //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
             int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (retValue >= 0) {
-                Profiler.EndSample();
                 return retValue;
             }
         }
@@ -1163,7 +1167,6 @@ public partial class LuauCore : MonoBehaviour {
             reflectionObject = ThreadDataManager.GetObjectReference(thread, instanceId);
 
             if (reflectionObject == null) {
-                Profiler.EndSample();
                 return LuauError(thread, $"Error: InstanceId not currently available for {instanceId} {methodName} {staticClassName} ({LuaThreadToString(thread)})");
             }
             
@@ -1187,13 +1190,11 @@ public partial class LuauCore : MonoBehaviour {
                     if (type == typeof(GameObject)) {
                         var target = (GameObject) reflectionObject;
                         if (IsAccessBlocked(context, target)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
                         if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     }
@@ -1202,7 +1203,6 @@ public partial class LuauCore : MonoBehaviour {
                 int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
                     parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 if (retValue >= 0) {
-                    Profiler.EndSample();
                     return retValue;
                 }
             }
@@ -1215,14 +1215,12 @@ public partial class LuauCore : MonoBehaviour {
             var t = ReflectionList.AttemptGetTypeFromString(typeName);
 
             if (t == null) {
-                Profiler.EndSample();
                 return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
             }
 
             var isA = t.IsAssignableFrom(type);
             WritePropertyToThread(thread, isA, typeof(bool));
 
-            Profiler.EndSample();
             return 1;
         }
 
@@ -1244,11 +1242,9 @@ public partial class LuauCore : MonoBehaviour {
             if (eventInfo != null) {
                 //There is an event
                 if (numParameters != 1) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"Error: {methodName} takes 1 parameter (a function!)");
                 }
                 if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"Error: {methodName} parameter must be a function");
                 }
 
@@ -1257,7 +1253,6 @@ public partial class LuauCore : MonoBehaviour {
 
                 foreach (ParameterInfo param in eventInfoParams) {
                     if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false && param.ParameterType.IsEnum == false) {
-                        Profiler.EndSample();
                         return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                     }
                 }
@@ -1285,7 +1280,6 @@ public partial class LuauCore : MonoBehaviour {
                 // print("added eventConnection (" + eventConnections.Count + "): " + methodName);
 
                 LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
-                Profiler.EndSample();
                 return 1;
             }
         }
@@ -1303,8 +1297,6 @@ public partial class LuauCore : MonoBehaviour {
         Profiler.EndSample();
 
         if (finalMethod == null) {
-            Profiler.EndSample();
-            
             if (insufficientContext) {
 #if AIRSHIP_INTERNAL
                 return LuauError(thread, $"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
@@ -1327,7 +1319,6 @@ public partial class LuauCore : MonoBehaviour {
             parsedData[0] = context;
         }
         if (success == false) {
-            Profiler.EndSample();
             return LuauError(thread, $"Error: Unable to parse parameters for {type.Name} {finalMethod.Name}");
         }
 
@@ -1346,7 +1337,6 @@ public partial class LuauCore : MonoBehaviour {
                 }
 
                 if (targetTransform != null && IsProtectedScene(targetTransform.gameObject.scene)) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                 }
             } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
@@ -1355,13 +1345,11 @@ public partial class LuauCore : MonoBehaviour {
                     if (paramType == typeof(GameObject)) {
                         var param = parsedData[0] as GameObject;
                         if (param != null && IsProtectedScene(param.scene)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected GameObject \"{param.name}\"");
                         }
                     } else if (paramType == typeof(Component)) {
                         var param = parsedData[0] as Component;
                         if (param != null && IsProtectedScene(param.gameObject.scene)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected Component \"{param.gameObject.name}\"");
                         }
                     }
@@ -1369,14 +1357,12 @@ public partial class LuauCore : MonoBehaviour {
             } else if (methodName == "SetParent" && type == typeof(Transform)) {
                 var callingTransform = reflectionObject as Transform;
                 if (callingTransform != null && IsAccessBlocked(context, callingTransform.gameObject)) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"[Airship] Access denied when trying set parent of a transform inside a protected scene \"{callingTransform.gameObject.scene.name}\"");
                 }
 
                 if (parsedData[0] != null && parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
                     if (targetTransform != null && IsAccessBlocked(context, targetTransform.gameObject)) {
-                        Profiler.EndSample();
                         return LuauError(thread, $"[Airship] Access denied when trying set parent to a transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                     }
                 }
@@ -1405,29 +1391,28 @@ public partial class LuauCore : MonoBehaviour {
                                                        typeof(Task<>))) {
             var ret = InvokeMethodAsync(context, thread, type, finalMethod, invokeObj, parsedData, out var shouldYieldBool);
             if (ret == -1) {
-                Profiler.EndSample();
                 return ret;
             }
             Marshal.WriteInt32(shouldYield, shouldYieldBool ? 1 : 0);
-            Profiler.EndSample();
             return returnCount;
         }
 
         Profiler.BeginSample("LuauCore.InvokeMethod");
         try {
             returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
-        } catch (TargetInvocationException e) {
-            Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException);
-        } catch (Exception e) {
-            Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
+        }
+        catch (TargetInvocationException e) {
+            return LuauError(thread,
+                "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException);
+        }
+        catch (Exception e) {
+            return LuauError(thread,
+                "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
         } finally {
             Profiler.EndSample();
         }
 
         WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData.Array);
-        Profiler.EndSample();
         return returnCount;
     }
 
@@ -1612,6 +1597,16 @@ public partial class LuauCore : MonoBehaviour {
     private static PropertyGetReflectionCache[] fastPropGetCacheValues = new PropertyGetReflectionCache[propGetFastCacheSize];
 
     private static PropertyGetReflectionCache? GetPropertyCacheValue(Type objectType, string propName) {
+        // Avoid caching result of int field access of a dictionary (because this is a non-discrete
+        // prop name and may flood look up table)
+        if (typeof(IDictionary).IsAssignableFrom(objectType)) {
+            if (int.TryParse(propName, out int keyInt)) {
+                return new PropertyGetReflectionCache {
+                    Exists = false,
+                };
+            }
+        }
+        
         var key = new PropertyCacheKey(objectType, propName);
         var l1Key = key.GetHashCode() % propGetFastCacheSize;
         if (l1Key < 0) l1Key += propGetFastCacheSize;
@@ -1636,13 +1631,22 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo) {
-        var cacheData = new PropertyGetReflectionCache {
-            t = propertyInfo.PropertyType,
-            propertyInfo = propertyInfo,
-            IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
-                .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
-            IsStruct = propertyInfo.DeclaringType.IsValueType && !propertyInfo.DeclaringType.IsPrimitive,
-        };
+        PropertyGetReflectionCache cacheData;
+        if (propertyInfo != null) {
+            cacheData = new PropertyGetReflectionCache {
+                t = propertyInfo.PropertyType,
+                propertyInfo = propertyInfo,
+                IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
+                    .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
+                IsStruct = propertyInfo.DeclaringType.IsValueType && !propertyInfo.DeclaringType.IsPrimitive,
+                Exists = true,
+            };
+        } else {
+            cacheData = new PropertyGetReflectionCache {
+                Exists = false,
+            };
+        }
+
         LuauCore.propertyGetCache[new PropertyCacheKey(objectType, propName)] = cacheData;
         return cacheData;
     }

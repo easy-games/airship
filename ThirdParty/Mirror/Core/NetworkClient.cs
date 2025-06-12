@@ -1046,7 +1046,7 @@ namespace Mirror
         public static bool Ready()
         {
             #if AIRSHIP_PLAYER
-            Debug.Log($"NetworkClient.Ready() called with active scene: " + SceneManager.GetActiveScene().name);
+            Debug.Log($"[Airship] NetworkClient.Ready() called with active scene: " + SceneManager.GetActiveScene().name);
             #endif
             if (ready)
             {
