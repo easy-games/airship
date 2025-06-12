@@ -21,15 +21,9 @@ struct PubSubMessage
     public string payload { get; set; }
 }
 
-public enum Scope
-{
-    Game,
-    Server,
-}
-
 public struct TopicDescription
 {
-    public Scope scope { get; set; }
+    public string scope { get; set; }
     public string topicNamespace { get; set; }
     public string topicName { get; set; }
 }
@@ -205,11 +199,11 @@ public class MessagingManager : Singleton<MessagingManager>
     private static string GetFullTopic(TopicDescription topic)
     {
         var gamePrefix = $"org/{MessagingManager.serverBootstrap.organizationId}/game/{MessagingManager.serverBootstrap.gameId}";
-        if (topic.scope == Scope.Server)
+        if (topic.scope == "server")
         {
             return $"{gamePrefix}/server/{MessagingManager.serverBootstrap.serverId}/{topic.topicNamespace}/{topic.topicName}";
         }
-        else if (topic.scope == Scope.Game)
+        else if (topic.scope == "game")
         {
             return $"{gamePrefix}/{topic.topicNamespace}/{topic.topicName}";
         }
@@ -251,7 +245,7 @@ public class MessagingManager : Singleton<MessagingManager>
             {
                 topic = new TopicDescription
                 {
-                    scope = Scope.Game,
+                    scope = "game",
                     topicNamespace = topicNamespace,
                     topicName = topicName,
                 },
@@ -279,7 +273,7 @@ public class MessagingManager : Singleton<MessagingManager>
                 isValid = true,
                 topic = new TopicDescription
                 {
-                    scope = Scope.Server,
+                    scope = "server",
                     topicNamespace = topicNamespace,
                     topicName = topicName,
                 },
