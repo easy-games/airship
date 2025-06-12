@@ -311,7 +311,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 sprint = sprintInput,
                 lookVector = lookVector,
                 customData = customInputData,
-                time = time
             };
             // Reset the custom data again
             customInputData = null;
@@ -326,7 +325,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // We replace the base inputs with the last known state input so that players do not feel that their inputs were lost from dropped packets.
                 command = new CharacterInputData() {
                     commandNumber = currentMoveSnapshot.lastProcessedCommand,
-                    time = time,
                     jump = currentMoveSnapshot.alreadyJumped,
                     crouch = currentMoveSnapshot.isCrouching,
                     sprint = currentMoveSnapshot.isSprinting,

@@ -33,7 +33,6 @@ namespace Code.Player.Character.MovementSystems.Character
 			return new CharacterInputData()
 			{
 				commandNumber = commandNumber,
-				time = time,
 				moveDir = moveDir,
 				jump = jump,
 				crouch = crouch,
@@ -64,12 +63,11 @@ namespace Code.Player.Character.MovementSystems.Character
 				writer.WriteInt(0);
 			}
 			
-			writer.Write(value.time);
 			writer.Write(value.commandNumber);
 			
-			writer.Write((short)(value.lookVector.x * 1000f));
-			writer.Write((short)(value.lookVector.y * 1000f));
-			writer.Write((short)(value.lookVector.z * 1000f));
+			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.x));
+			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.y));
+			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.z));
 
 			writer.Write(value.moveDir);
 		}
@@ -88,9 +86,11 @@ namespace Code.Player.Character.MovementSystems.Character
 				jump = BitUtil.GetBit(bools, 1),
 				sprint = BitUtil.GetBit(bools, 2),
 				customData = customData,
-				time = reader.Read<double>(),
 				commandNumber = reader.Read<int>(),
-				lookVector = new Vector3(reader.Read<short>() / 1000f, reader.Read<short>() / 1000f, reader.Read<short>() / 1000f),
+				lookVector = new Vector3(
+					NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
+					NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
+					NetworkSerializationUtil.DecompressShort(reader.Read<short>())),
 				moveDir = reader.Read<Vector3>(),
 			};
 		}

@@ -6,7 +6,7 @@ namespace Code.Player.Character.MovementSystems.Character
     [LuauAPI]
     public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData>
     {
-        public override void SendClientInputToServer(CharacterInputData input)
+        public override void SendClientInputToServer(CharacterInputData[] input)
         {
             this.CmdClientInputToServer(input);
         }
@@ -20,8 +20,8 @@ namespace Code.Player.Character.MovementSystems.Character
             this.CmdClientRequestFullSnapshot();
         }
 
-        public override void SendAckSnapshotToServer(double time) {
-            this.CmdClientAckSnapshot(time);
+        public override void SendAckSnapshotToServer(uint tick) {
+            this.CmdClientAckSnapshot(tick);
         }
 
         public override void SendServerSnapshotToClient(NetworkConnection client, CharacterSnapshotData snapshot)
@@ -47,7 +47,7 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void CmdClientInputToServer(CharacterInputData input)
+        private void CmdClientInputToServer(CharacterInputData[] input)
         {
             this.OnServerReceiveInput?.Invoke(input);
         }
@@ -65,9 +65,9 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         [Command(channel = Channels.Reliable, requiresAuthority = false)]
-        private void CmdClientAckSnapshot(double time, NetworkConnectionToClient sender = null) {
+        private void CmdClientAckSnapshot(uint tick, NetworkConnectionToClient sender = null) {
             if (sender == null) return;
-            this.OnServerReceiveSnapshotAck?.Invoke(sender.connectionId, time);
+            this.OnServerReceiveSnapshotAck?.Invoke(sender.connectionId, tick);
         }
     }
 }

@@ -11,18 +11,18 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     public static class CharacterDiffDataSerializer {
         public static void WriteCharacterStateDiff(this NetworkWriter writer, CharacterStateDiff diff) {
-            writer.Write(diff.baseTime);
+            writer.Write(diff.baseTick);
             writer.Write(diff.crc32);
             writer.WriteBytes(diff.data, 0, diff.data.Length);
         }
         
         public static CharacterStateDiff ReadCharacterStateDiff(this NetworkReader reader) {
-            var baseTime = reader.Read<double>();
+            var baseTick = reader.Read<uint>();
             var crc32 = reader.Read<uint>();
             var data = new byte[reader.Remaining];
             data = reader.ReadBytes(data, reader.Remaining);
             return new CharacterStateDiff() {
-                baseTime = baseTime,
+                baseTick = baseTick,
                 crc32 = crc32,
                 data = data,
             };

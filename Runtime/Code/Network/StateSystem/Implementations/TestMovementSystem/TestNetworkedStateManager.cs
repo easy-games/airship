@@ -6,7 +6,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
     public class TestNetworkedStateManager: AirshipNetworkedStateManager<TestMovement, TestMovementState, TestMovementDiff, TestMovementInput>
     {
         
-        public override void SendClientInputToServer(TestMovementInput input)
+        public override void SendClientInputToServer(TestMovementInput[] input)
         {
             this.RpcClientInputToServer(input);
         }
@@ -20,8 +20,8 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             this.CmdClientRequestFullSnapshot();
         }
 
-        public override void SendAckSnapshotToServer(double time) {
-            this.CmdClientAckSnapshot(time);
+        public override void SendAckSnapshotToServer(uint tick) {
+            this.CmdClientAckSnapshot(tick);
         }
 
         public override void SendServerSnapshotToClient(NetworkConnection client, TestMovementState snapshot)
@@ -45,7 +45,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientInputToServer(TestMovementInput input)
+        private void RpcClientInputToServer(TestMovementInput[] input)
         {
             this.OnServerReceiveInput?.Invoke(input);
         }
@@ -63,9 +63,9 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         }
 
         [Command(channel = Channels.Reliable, requiresAuthority = false)]
-        private void CmdClientAckSnapshot(double time, NetworkConnectionToClient sender = null) {
+        private void CmdClientAckSnapshot(uint tick, NetworkConnectionToClient sender = null) {
             if (sender == null) return;
-            this.OnServerReceiveSnapshotAck?.Invoke(sender.connectionId, time);
+            this.OnServerReceiveSnapshotAck?.Invoke(sender.connectionId, tick);
         }
 
     }
