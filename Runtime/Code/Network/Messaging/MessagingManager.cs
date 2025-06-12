@@ -15,7 +15,7 @@ using Code.Platform.Shared;
 using UnityEngine.Rendering.Universal;
 using System.Collections.Concurrent;
 
-record PubSubMessage
+struct PubSubMessage
 {
     public TopicDescription topic { get; set; }
     public string payload { get; set; }
@@ -27,14 +27,14 @@ public enum Scope
     Server,
 }
 
-public record TopicDescription
+public struct TopicDescription
 {
     public Scope scope { get; set; }
     public string topicNamespace { get; set; }
     public string topicName { get; set; }
 }
 
-public record ParseTopicResponse
+public struct ParseTopicResponse
 {
     public TopicDescription topic { get; set; }
     public bool isValid { get; set; }
