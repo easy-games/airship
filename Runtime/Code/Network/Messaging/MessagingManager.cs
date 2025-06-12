@@ -15,20 +15,26 @@ using Code.Platform.Shared;
 using UnityEngine.Rendering.Universal;
 using System.Collections.Concurrent;
 
-struct PubSubMessage
+record PubSubMessage
 {
     public TopicDescription topic { get; set; }
     public string payload { get; set; }
 }
 
-public struct TopicDescription
+public enum Scope
 {
-    public string scope { get; set; }
+    Game = 0,
+    Server = 1,
+}
+
+public record TopicDescription
+{
+    public Scope scope { get; set; }
     public string topicNamespace { get; set; }
     public string topicName { get; set; }
 }
 
-public struct ParseTopicResponse
+public record ParseTopicResponse
 {
     public TopicDescription topic { get; set; }
     public bool isValid { get; set; }
@@ -199,11 +205,11 @@ public class MessagingManager : Singleton<MessagingManager>
     private static string GetFullTopic(TopicDescription topic)
     {
         var gamePrefix = $"org/{MessagingManager.serverBootstrap.organizationId}/game/{MessagingManager.serverBootstrap.gameId}";
-        if (topic.scope == "server")
+        if (topic.scope == Scope.Server)
         {
             return $"{gamePrefix}/server/{MessagingManager.serverBootstrap.serverId}/{topic.topicNamespace}/{topic.topicName}";
         }
-        else if (topic.scope == "game")
+        else if (topic.scope == Scope.Game)
         {
             return $"{gamePrefix}/{topic.topicNamespace}/{topic.topicName}";
         }
@@ -245,7 +251,7 @@ public class MessagingManager : Singleton<MessagingManager>
             {
                 topic = new TopicDescription
                 {
-                    scope = "game",
+                    scope = Scope.Game,
                     topicNamespace = topicNamespace,
                     topicName = topicName,
                 },
@@ -273,7 +279,7 @@ public class MessagingManager : Singleton<MessagingManager>
                 isValid = true,
                 topic = new TopicDescription
                 {
-                    scope = "server",
+                    scope = Scope.Server,
                     topicNamespace = topicNamespace,
                     topicName = topicName,
                 },
