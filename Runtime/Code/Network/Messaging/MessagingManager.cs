@@ -12,19 +12,41 @@ using System.Linq;
 using Code.Util;
 using System.Collections.Generic;
 using Code.Platform.Shared;
+using UnityEngine.Rendering.Universal;
 
-record PubSubMessage {
+record PubSubMessage
+{
+    public TopicDescription topic { get; set; }
+    public string payload { get; set; }
+}
+
+public enum Scope
+{
+    Game,
+    Server,
+}
+
+public record TopicDescription
+{
+    public Scope scope { get; set; }
     public string topicNamespace { get; set; }
     public string topicName { get; set; }
-    public string payload { get; set; }
+}
+
+public record ParseTopicResponse
+{
+    public TopicDescription topic { get; set; }
+    public bool isValid { get; set; }
+    public string errorMessage { get; set; }
 }
 
 [LuauAPI(LuauContext.Protected)]
 public class MessagingManager : Singleton<MessagingManager>
 {
     private static List<PubSubMessage> queuedOutgoingPackets = new();
-    private static List<(string topicNamespace, string topicName)> pendingSubscriptions = new();
-    public event Action<string, string, string> OnEvent;
+    private static List<TopicDescription> pendingSubscriptions = new();
+    private static List<TopicDescription> pendingUnsubscribes = new();
+    public event Action<TopicDescription, string> OnEvent;
     public event Action<string> OnDisconnected;
 
     private static IMqttClient mqttClient;
@@ -35,8 +57,9 @@ public class MessagingManager : Singleton<MessagingManager>
     {
         DontDestroyOnLoad(this);
     }
-    
-    private void Start() {
+
+    private void Start()
+    {
         MessagingManager.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
     }
 
@@ -87,42 +110,50 @@ public class MessagingManager : Singleton<MessagingManager>
             {
                 return Task.CompletedTask;
             }
-            var topicParts = e.ApplicationMessage.Topic.Split('/');
-            if (topicParts.Length != 6)
+            if (e.ApplicationMessage == null || string.IsNullOrEmpty(e.ApplicationMessage.Topic))
             {
-                Debug.LogError($"Invalid topic, parts count ({topicParts.Length}): {e.ApplicationMessage.Topic}");
+                Debug.LogError("Received an empty application message or topic.");
                 return Task.CompletedTask;
             }
-            if (topicParts[0] != "org" || topicParts[1] != MessagingManager.serverBootstrap.organizationId || topicParts[2] != "game" || topicParts[3] != MessagingManager.serverBootstrap.gameId)
-            {
-                Debug.LogError($"Invalid topic, unknown format: {e.ApplicationMessage.Topic}");
-                return Task.CompletedTask;
-            }
-            var topicNamespace = topicParts[4];
-            var topicName = topicParts[5];
 
-            UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(topicNamespace, topicName, e.ApplicationMessage.ConvertPayloadToString()));
+            ParseTopicResponse parseResult = ParseMqttTopic(e.ApplicationMessage.Topic);
+
+            if (!parseResult.isValid)
+            {
+                Debug.LogError($"Invalid topic, error: {parseResult.errorMessage}");
+                return Task.CompletedTask;
+            }
+
+            UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(parseResult.topic, e.ApplicationMessage.ConvertPayloadToString()));
 
             return Task.CompletedTask;
         };
 
-        mqttClient.ConnectedAsync += async e => {
+        mqttClient.ConnectedAsync += async e =>
+        {
             if (disconnected)
             {
                 return;
             }
             var toSubscribe = pendingSubscriptions;
-            pendingSubscriptions = new List<(string topicNamespace, string topicName)>();
-            foreach (var (topicNamespace, topicName) in toSubscribe)
+            pendingSubscriptions = new List<TopicDescription>();
+            foreach (var topic in toSubscribe)
             {
-                await SubscribeAsync(topicNamespace, topicName);
+                await SubscribeAsync(topic);
             }
 
             var toSend = queuedOutgoingPackets;
             queuedOutgoingPackets = new List<PubSubMessage>();
             foreach (var msg in toSend)
             {
-                await PublishAsync(msg.topicNamespace, msg.topicName, msg.payload);
+                await PublishAsync(msg.topic, msg.payload);
+            }
+
+            var toUnsubscribe = pendingUnsubscribes;
+            pendingUnsubscribes = new List<TopicDescription>();
+            foreach (var topic in toUnsubscribe)
+            {
+                await UnsubscribeAsync(topic);
             }
         };
 
@@ -159,9 +190,9 @@ public class MessagingManager : Singleton<MessagingManager>
         await mqttClient.DisconnectAsync();
     }
 
-    private IEnumerator FireOnEvent(string topicNamespace, string topicName, string data)
+    private IEnumerator FireOnEvent(TopicDescription topic, string data)
     {
-        Instance.OnEvent?.Invoke(topicNamespace, topicName, data);
+        Instance.OnEvent?.Invoke(topic, data);
         yield return null;
     }
 
@@ -171,16 +202,109 @@ public class MessagingManager : Singleton<MessagingManager>
         yield return null;
     }
 
-    public static async Task<bool> SubscribeAsync(string topicNamespace, string topicName)
+    private static string GetFullTopic(TopicDescription topic)
+    {
+        var gamePrefix = $"org/{MessagingManager.serverBootstrap.organizationId}/game/{MessagingManager.serverBootstrap.gameId}";
+        if (topic.scope == Scope.Server)
+        {
+            return $"{gamePrefix}/server/{MessagingManager.serverBootstrap.serverId}/{topic.topicNamespace}/{topic.topicName}";
+        }
+        else if (topic.scope == Scope.Game)
+        {
+            return $"{gamePrefix}/{topic.topicNamespace}/{topic.topicName}";
+        }
+        else
+        {
+            // This should not happen, but just in case
+            Debug.LogError($"Unknown topic scope: {topic.scope}");
+            throw new ArgumentException($"Unknown topic scope: {topic.scope}");
+        }
+    }
+
+    private static ParseTopicResponse ParseMqttTopic(string topic)
+    {
+        var topicParts = topic.Split('/');
+        if (topicParts.Length < 6)
+        {
+            return new ParseTopicResponse
+            {
+                isValid = false,
+                errorMessage = $"Invalid topic, parts count ({topicParts.Length}): {topic}"
+            };
+        }
+        if (topicParts[0] != "org" || topicParts[1] != MessagingManager.serverBootstrap.organizationId || topicParts[2] != "game" || topicParts[3] != MessagingManager.serverBootstrap.gameId)
+        {
+            return new ParseTopicResponse
+            {
+                isValid = false,
+                errorMessage = $"Invalid topic, unknown format: {topic}"
+            };
+        }
+
+        if (topicParts.Length == 6)
+        {
+            // This is a game topic
+            var topicNamespace = topicParts[4];
+            var topicName = topicParts[5];
+
+            return new ParseTopicResponse
+            {
+                topic = new TopicDescription
+                {
+                    scope = Scope.Game,
+                    topicNamespace = topicNamespace,
+                    topicName = topicName,
+                },
+                isValid = true,
+                errorMessage = null
+            };
+        }
+        else if (topicParts.Length == 8)
+        {
+            if (topicParts[4] != "server" || topicParts[5] != MessagingManager.serverBootstrap.serverId)
+            {
+                return new ParseTopicResponse
+                {
+                    isValid = false,
+                    errorMessage = $"Invalid topic, unknown format: {topic}"
+                };
+            }
+
+            // This is a server topic
+            var topicNamespace = topicParts[4];
+            var topicName = topicParts[5];
+
+            return new ParseTopicResponse
+            {
+                isValid = true,
+                topic = new TopicDescription
+                {
+                    scope = Scope.Server,
+                    topicNamespace = topicNamespace,
+                    topicName = topicName,
+                },
+            };
+        }
+        else
+        {
+            return new ParseTopicResponse
+            {
+                isValid = false,
+                errorMessage = $"Invalid topic, parts count ({topicParts.Length}): {topic}"
+            };
+        }
+    }
+
+    public static async Task<bool> SubscribeAsync(TopicDescription topic)
     {
         if (!IsConnected())
         {
-            Debug.Log($"Queueing subscribe request {topicNamespace}/{topicName}");
-            pendingSubscriptions.Add((topicNamespace, topicName));
+            Debug.Log($"Queueing subscribe request {topic.topicNamespace}/{topic.topicName}");
+            pendingSubscriptions.Add(topic);
             return true; // Optimistically return true
         }
 
-        var fullTopic = $"org/{MessagingManager.serverBootstrap.organizationId}/game/{MessagingManager.serverBootstrap.gameId}/{topicNamespace}/{topicName}";
+        var fullTopic = GetFullTopic(topic);
         var mqttFactory = new MqttFactory();
         var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter(topic: fullTopic, qualityOfServiceLevel: MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce).Build();
         var res = await MessagingManager.mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
@@ -194,21 +318,44 @@ public class MessagingManager : Singleton<MessagingManager>
         return true;
     }
 
-    public static async Task<bool> PublishAsync(string topicNamespace, string topicName, string data)
+    public static async Task<bool> UnsubscribeAsync(TopicDescription topic)
     {
         if (!IsConnected())
         {
-            Debug.Log($"Queueing publish request {topicNamespace}/{topicName}");
+            Debug.Log($"Queueing unsubscribe request {topic.topicNamespace}/{topic.topicName}");
+            pendingUnsubscribes.Add(topic);
+            return true; // Optimistically return true
+        }
+
+        var fullTopic = GetFullTopic(topic);
+        var mqttFactory = new MqttFactory();
+        var mqttUnsubscribeOptions = mqttFactory.CreateUnsubscribeOptionsBuilder().WithTopicFilter(topic: fullTopic).Build();
+        var res = await MessagingManager.mqttClient.UnsubscribeAsync(mqttUnsubscribeOptions, CancellationToken.None);
+        var res0 = res.Items.ToArray()[0];
+        if (res0.ResultCode == MqttClientUnsubscribeResultCode.NoSubscriptionExisted || res0.ResultCode == MqttClientUnsubscribeResultCode.Success)
+        {
+            // No subscription existed or successfully unsubscribed
+            return true;
+        }
+
+        Debug.LogError($"Failed to subscribe to {fullTopic}: {res0.ResultCode}");
+        return false;
+    }
+
+    public static async Task<bool> PublishAsync(TopicDescription topic, string data)
+    {
+        if (!IsConnected())
+        {
+            Debug.Log($"Queueing publish request {topic.topicNamespace}/{topic.topicName}");
             MessagingManager.queuedOutgoingPackets.Add(new PubSubMessage
             {
-                topicNamespace = topicNamespace,
-                topicName = topicName,
+                topic = topic,
                 payload = data,
             });
             return true; // Optimistically return true
         }
 
-        var fullTopic = $"org/{MessagingManager.serverBootstrap.organizationId}/game/{MessagingManager.serverBootstrap.gameId}/{topicNamespace}/{topicName}";
+        var fullTopic = GetFullTopic(topic);
         var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(fullTopic)
                 .WithPayload(data)
