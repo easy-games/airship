@@ -347,6 +347,10 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static async Task<bool> PublishAsync(Scope scope, string topicNamespace, string topicName, string data)
     {
+        if (!IsConnected())
+        {
+            return false;
+        }
 
         var topic = new TopicDescription
         {
