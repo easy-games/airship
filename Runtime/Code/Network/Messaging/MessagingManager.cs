@@ -140,17 +140,17 @@ public class MessagingManager : Singleton<MessagingManager>
 
             while (pendingSubscriptions.TryTake(out var topic))
             {
-                await SubscribeAsync(topic);
+                await SubscribeAsync(topic.scope, topic.topicNamespace, topic.topicName);
             }
 
             while (queuedOutgoingPackets.TryTake(out var msg))
             {
-                await PublishAsync(msg.topic, msg.payload);
+                await PublishAsync(msg.topic.scope, msg.topic.topicNamespace, msg.topic.topicName, msg.payload);
             }
 
             while (pendingUnsubscribes.TryTake(out var topic))
             {
-                await UnsubscribeAsync(topic);
+                await UnsubscribeAsync(topic.scope, topic.topicNamespace, topic.topicName);
             }
         };
 
@@ -295,8 +295,14 @@ public class MessagingManager : Singleton<MessagingManager>
         }
     }
 
-    public static async Task<bool> SubscribeAsync(TopicDescription topic)
+    public static async Task<bool> SubscribeAsync(Scope scope, string topicNamespace, string topicName)
     {
+        var topic = new TopicDescription
+        {
+            scope = scope,
+            topicNamespace = topicNamespace,
+            topicName = topicName,
+        };
         if (!IsConnected())
         {
             Debug.Log($"Queueing subscribe request {topic.topicNamespace}/{topic.topicName}");
@@ -317,8 +323,14 @@ public class MessagingManager : Singleton<MessagingManager>
         return true;
     }
 
-    public static async Task<bool> UnsubscribeAsync(TopicDescription topic)
+    public static async Task<bool> UnsubscribeAsync(Scope scope, string topicNamespace, string topicName)
     {
+        var topic = new TopicDescription
+        {
+            scope = scope,
+            topicNamespace = topicNamespace,
+            topicName = topicName,
+        };
         if (!IsConnected())
         {
             Debug.Log($"Queueing unsubscribe request {topic.topicNamespace}/{topic.topicName}");
@@ -340,8 +352,14 @@ public class MessagingManager : Singleton<MessagingManager>
         return false;
     }
 
-    public static async Task<bool> PublishAsync(TopicDescription topic, string data)
+    public static async Task<bool> PublishAsync(Scope scope, string topicNamespace, string topicName, string data)
     {
+        var topic = new TopicDescription
+        {
+            scope = scope,
+            topicNamespace = topicNamespace,
+            topicName = topicName,
+        };
         if (!IsConnected())
         {
             Debug.Log($"Queueing publish request {topic.topicNamespace}/{topic.topicName}");
