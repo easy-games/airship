@@ -141,6 +141,7 @@ namespace Code.Player.Character.MovementSystems.Character
         [Tooltip("How much to multiply speed while you are in the air")] [Range(0, 2f)]
         public float airSpeedMultiplier = 1;
 
+        public float airAcceleration = 25;
 
         [Header("Step Ups")] [Tooltip("Push the character up when they stop over a set threshold")]
         public bool detectStepUps = true;

@@ -733,7 +733,20 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (movementSettings.useAccelerationMovement) {
                 characterMoveVelocity *= currentAcc;
             } else {
-                characterMoveVelocity *= currentMoveSnapshot.currentSpeed;
+                if (inAir)  {
+                    Vector3 targetVelocity = normalizedMoveDir * currentMoveSnapshot.currentSpeed;
+                    float maxDelta = movementSettings.airAcceleration * Time.deltaTime;
+
+                    // Calculate change and update tracker
+                    Vector3 velocityDiff = targetVelocity - currentMoveSnapshot.velocity;
+
+                    Vector3 velocityChange = Vector3.ClampMagnitude(velocityDiff, maxDelta);
+
+                    // Assign this air velocity to the character velocity
+                    characterMoveVelocity = currentMoveSnapshot.velocity + velocityChange;
+                } else {
+                    characterMoveVelocity *= currentMoveSnapshot.currentSpeed;
+                }
             }
 
 #region SLOPE
