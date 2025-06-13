@@ -10,10 +10,7 @@ using MQTTnet.Client;
 using System.Threading;
 using System.Linq;
 using Code.Util;
-using System.Collections.Generic;
 using Code.Platform.Shared;
-using UnityEngine.Rendering.Universal;
-using System.Collections.Concurrent;
 
 class PubSubMessage
 {
@@ -44,9 +41,6 @@ public class ParseTopicResponse
 [LuauAPI(LuauContext.Protected)]
 public class MessagingManager : Singleton<MessagingManager>
 {
-    private static ConcurrentBag<PubSubMessage> queuedOutgoingPackets = new();
-    private static ConcurrentBag<TopicDescription> pendingSubscriptions = new();
-    private static ConcurrentBag<TopicDescription> pendingUnsubscribes = new();
     private static MqttFactory mqttFactory = new MqttFactory();
     public event Action<TopicDescription, string> OnEvent;
     public event Action<string> OnDisconnected;
@@ -137,21 +131,6 @@ public class MessagingManager : Singleton<MessagingManager>
             {
                 return;
             }
-
-            while (pendingSubscriptions.TryTake(out var topic))
-            {
-                await SubscribeAsync(topic.scope, topic.topicNamespace, topic.topicName);
-            }
-
-            while (queuedOutgoingPackets.TryTake(out var msg))
-            {
-                await PublishAsync(msg.topic.scope, msg.topic.topicNamespace, msg.topic.topicName, msg.payload);
-            }
-
-            while (pendingUnsubscribes.TryTake(out var topic))
-            {
-                await UnsubscribeAsync(topic.scope, topic.topicNamespace, topic.topicName);
-            }
         };
 
         mqttClient.DisconnectedAsync += async e =>
@@ -175,10 +154,6 @@ public class MessagingManager : Singleton<MessagingManager>
         {
             await MessagingManager.mqttClient.DisconnectAsync();
         }
-
-        pendingSubscriptions.Clear();
-        pendingUnsubscribes.Clear();
-        queuedOutgoingPackets.Clear();
     }
 
     private void OnDisable()
@@ -297,22 +272,31 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static async Task<bool> SubscribeAsync(Scope scope, string topicNamespace, string topicName)
     {
+        if (!IsConnected())
+        {
+            return false;
+        }
+
         var topic = new TopicDescription
         {
             scope = scope,
             topicNamespace = topicNamespace,
             topicName = topicName,
         };
-        if (!IsConnected())
-        {
-            Debug.Log($"Queueing subscribe request {topic.topicNamespace}/{topic.topicName}");
-            pendingSubscriptions.Add(topic);
-            return true; // Optimistically return true
-        }
 
         var fullTopic = GetFullTopic(topic);
         var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter(topic: fullTopic, qualityOfServiceLevel: MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce).Build();
-        var res = await MessagingManager.mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+        MqttClientSubscribeResult res;
+        try
+        {
+            res = await MessagingManager.mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Exception while subscribing to {fullTopic}: {ex.Message}");
+            return false;
+        }
+
         var res0 = res.Items.ToArray()[0];
         if (res0.ResultCode != MqttClientSubscribeResultCode.GrantedQoS0)
         {
@@ -325,22 +309,31 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static async Task<bool> UnsubscribeAsync(Scope scope, string topicNamespace, string topicName)
     {
+        if (!IsConnected())
+        {
+            return false;
+        }
+
         var topic = new TopicDescription
         {
             scope = scope,
             topicNamespace = topicNamespace,
             topicName = topicName,
         };
-        if (!IsConnected())
-        {
-            Debug.Log($"Queueing unsubscribe request {topic.topicNamespace}/{topic.topicName}");
-            pendingUnsubscribes.Add(topic);
-            return true; // Optimistically return true
-        }
 
         var fullTopic = GetFullTopic(topic);
         var mqttUnsubscribeOptions = mqttFactory.CreateUnsubscribeOptionsBuilder().WithTopicFilter(topic: fullTopic).Build();
-        var res = await MessagingManager.mqttClient.UnsubscribeAsync(mqttUnsubscribeOptions, CancellationToken.None);
+        MqttClientUnsubscribeResult res;
+        try
+        {
+            res = await MessagingManager.mqttClient.UnsubscribeAsync(mqttUnsubscribeOptions, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Exception while unsubscribing to {fullTopic}: {ex.Message}");
+            return false;
+        }
+
         var res0 = res.Items.ToArray()[0];
         if (res0.ResultCode == MqttClientUnsubscribeResultCode.NoSubscriptionExisted || res0.ResultCode == MqttClientUnsubscribeResultCode.Success)
         {
@@ -354,22 +347,13 @@ public class MessagingManager : Singleton<MessagingManager>
 
     public static async Task<bool> PublishAsync(Scope scope, string topicNamespace, string topicName, string data)
     {
+
         var topic = new TopicDescription
         {
             scope = scope,
             topicNamespace = topicNamespace,
             topicName = topicName,
         };
-        if (!IsConnected())
-        {
-            Debug.Log($"Queueing publish request {topic.topicNamespace}/{topic.topicName}");
-            MessagingManager.queuedOutgoingPackets.Add(new PubSubMessage
-            {
-                topic = topic,
-                payload = data,
-            });
-            return true; // Optimistically return true
-        }
 
         var fullTopic = GetFullTopic(topic);
         var applicationMessage = new MqttApplicationMessageBuilder()
@@ -377,7 +361,17 @@ public class MessagingManager : Singleton<MessagingManager>
                 .WithPayload(data)
                 .Build();
 
-        var res = await MessagingManager.mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        MqttClientPublishResult res;
+        try
+        {
+            res = await MessagingManager.mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Exception while publishing to {fullTopic}: {ex.Message}");
+            return false;
+        }
+
         if (!res.IsSuccess)
         {
             Debug.LogError($"Failed to publish to {fullTopic}: {res.ReasonCode}");
