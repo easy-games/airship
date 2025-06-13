@@ -136,7 +136,6 @@ public class MessagingManager : Singleton<MessagingManager>
         mqttClient.DisconnectedAsync += async e =>
         {
             disconnectedIntent = true;
-            Debug.LogWarning($"Disconnected from messaging server {e.ReasonString}");
             UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnDisconnect(e.ReasonString));
             MessagingManager.mqttClient = null;
         };
@@ -191,7 +190,6 @@ public class MessagingManager : Singleton<MessagingManager>
         else
         {
             // This should not happen, but just in case
-            Debug.LogError($"Unknown topic scope: {topic.scope}");
             throw new ArgumentException($"Unknown topic scope: {topic.scope}");
         }
     }
