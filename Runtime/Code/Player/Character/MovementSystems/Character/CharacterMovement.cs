@@ -1382,7 +1382,10 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnInterpolateReachedState?.Invoke(snapshot);
         }
 
-        public void LateUpdate() {
+        /// <summary>
+        /// Called externally so that we can prioritize the calling script in a later step of LateUpdate
+        /// </summary>
+        internal void TryUpdateDirection() {
             // We only update rotation in late update if we are running on a client that is controlling
             // this system
             if (isServer && !isClient) {
@@ -1407,7 +1410,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 if (lookTarget == Vector3.zero) {
                     lookTarget = new Vector3(0, 0, .01f);
                 }
-
                 airshipTransform.rotation = Quaternion.Lerp(
                     airshipTransform.rotation,
                     Quaternion.LookRotation(lookTarget),
