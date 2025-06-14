@@ -11,20 +11,28 @@ public class RendererAPI : BaseLuaAPIClass {
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
         ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
-        if (methodName is "SetMaterial") {
+
+        var isSetMaterial = methodName is "SetMaterial";
+        if (isSetMaterial || methodName is "SetSharedMaterial") {
             if (numParameters == 2) {
                 var indx = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 var materialObj = LuauCore.GetParameterAsObject(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, thread);
 
                 if (targetObject is Renderer renderer && materialObj is Material material && indx >= 0) {
                     List<Material> materials = new();
-                    renderer.GetMaterials(materials);
+                    
+                    if (isSetMaterial) renderer.GetMaterials(materials);
+                    else renderer.GetSharedMaterials(materials);
+                    
                     if (materials.Count <= indx) {
                         materials.Add(material);
                     } else {
                         materials[indx] = material;
                     }
-                    renderer.SetMaterials(materials);
+                    
+                    if (isSetMaterial) renderer.SetMaterials(materials);
+                    else renderer.SetSharedMaterials(materials);
+                    
                     return 0;
                 }
             }
