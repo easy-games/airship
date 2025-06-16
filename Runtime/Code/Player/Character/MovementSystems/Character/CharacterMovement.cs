@@ -733,17 +733,36 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (movementSettings.useAccelerationMovement) {
                 characterMoveVelocity *= currentAcc;
             } else {
-                if (inAir)  {
-                    Vector3 targetVelocity = normalizedMoveDir * currentMoveSnapshot.currentSpeed;
-                    float maxDelta = movementSettings.airAcceleration * Time.deltaTime;
+                if (inAir) {
+                    // If no input carry some momentum, but apply an additional slowdown value per second
+                    if (normalizedMoveDir == Vector3.zero)
+                    {
+                        float additionalDragMultiplier = 1f - (movementSettings.additionalNoInputDrag * Time.deltaTime);
+                        additionalDragMultiplier = Mathf.Clamp(additionalDragMultiplier, 0f, 1f);
 
-                    // Calculate change and update tracker
-                    Vector3 velocityDiff = targetVelocity - currentMoveSnapshot.velocity;
+                        Vector3 horizontalVelocity = new Vector3(currentMoveSnapshot.velocity.x, 0f, currentMoveSnapshot.velocity.z);
+                        Vector3 draggedHorizontal = horizontalVelocity * additionalDragMultiplier;
 
-                    Vector3 velocityChange = Vector3.ClampMagnitude(velocityDiff, maxDelta);
+                        characterMoveVelocity = new Vector3(draggedHorizontal.x, currentMoveSnapshot.velocity.y, draggedHorizontal.z);
+                    }
+                    else
+                    {
+                        Vector3 targetVelocity = normalizedMoveDir * currentMoveSnapshot.currentSpeed;
+                        float maxDelta = movementSettings.airInputAcceleration * Time.deltaTime;
 
-                    // Assign this air velocity to the character velocity
-                    characterMoveVelocity = currentMoveSnapshot.velocity + velocityChange;
+                        Vector3 velocityDiff = targetVelocity - currentMoveSnapshot.velocity;
+
+                        // Scale acceleration if we are reversing direction
+                        float dot = Vector3.Dot(currentMoveSnapshot.velocity.normalized, targetVelocity.normalized);
+                        // Check if we are moving in the direction of the target velocity and assign it a value between 0 and 1
+                        float directionAlignment = Mathf.Clamp01((dot + 1f) / 2f);
+
+                        // Ease acceleration to scale towards max accel
+                        float reverseScale = Mathf.SmoothStep(0.5f, 1f, directionAlignment);
+                        Vector3 velocityChange = Vector3.ClampMagnitude(velocityDiff, maxDelta * reverseScale);
+
+                        characterMoveVelocity = currentMoveSnapshot.velocity + velocityChange;
+                    }
                 } else {
                     characterMoveVelocity *= currentMoveSnapshot.currentSpeed;
                 }

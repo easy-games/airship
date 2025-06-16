@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -141,8 +142,11 @@ namespace Code.Player.Character.MovementSystems.Character
         [Tooltip("How much to multiply speed while you are in the air")] [Range(0, 2f)]
         public float airSpeedMultiplier = 1;
 
-        [Tooltip("How fast your player will accelerate in the air ")]
-        public float airAcceleration = 60f;
+        [Tooltip("How much to decelerate when no input is given in the air at a per second rate")]
+        public float additionalNoInputDrag = 3f;
+
+        [Tooltip("How fast your player will accelerate in the air from player input at a per second rate")]
+        public float airInputAcceleration = 60f;
 
         [Header("Step Ups")] [Tooltip("Push the character up when they stop over a set threshold")]
         public bool detectStepUps = true;
