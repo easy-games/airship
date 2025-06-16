@@ -1540,6 +1540,7 @@ namespace Airship.DevConsole
             }
         }
 
+        #if !UNITY_SERVER
         private void OnGUI()
         {
             if (!ConsoleIsEnabled)
@@ -1661,6 +1662,7 @@ namespace Airship.DevConsole
                 GUI.contentColor = oldContentColour;
             }
         }
+        #endif
 
         private void OnDestroy()
         {
