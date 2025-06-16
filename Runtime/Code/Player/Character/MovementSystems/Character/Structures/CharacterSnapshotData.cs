@@ -1,12 +1,9 @@
 using System;
-using System.IO;
-using System.Text;
 using Assets.Luau;
-using Code.Misc;
 using Code.Network.StateSystem;
 using Code.Network.StateSystem.Structures;
+using Code.Util;
 using Force.Crc32;
-using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 
@@ -288,13 +285,20 @@ namespace Code.Player.Character.MovementSystems.Character
             if (stateChanged) writer.Write((byte)other.state);
             if (canJumpChanged) writer.Write(other.canJump);
 
-            // Always write custom data. TODO: we will want to apply a diffing algorithm to the byte array
-            if (other.customData != null) {
-                writer.WriteInt(other.customData.dataSize);
-                writer.WriteBytes(other.customData.data, 0, other.customData.data.Length);
+            // // Always write custom data. TODO: we will want to apply a diffing algorithm to the byte array
+            // if (other.customData != null) {
+            //     writer.WriteInt(other.customData.dataSize);
+            //     writer.WriteBytes(other.customData.data, 0, other.customData.data.Length);
+            // }
+            // else {
+            //     writer.WriteInt(0);
+            // }
+            if (customData != null) {
+                var customDataDiff = customData.CreateDiff(other.customData);
+                writer.Write(customDataDiff);
             }
             else {
-                writer.WriteInt(0);
+                writer.WriteByte(0);
             }
 
             return new CharacterStateDiff {

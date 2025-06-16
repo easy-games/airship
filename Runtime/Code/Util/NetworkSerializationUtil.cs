@@ -1,6 +1,6 @@
 using System;
 
-namespace Code.Misc {
+namespace Code.Util {
     public static class NetworkSerializationUtil {
         public static ushort CompressToUshort(float value) {
             double scaled = (double)value * 1000.0;

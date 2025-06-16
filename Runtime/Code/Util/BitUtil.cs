@@ -1,4 +1,4 @@
-namespace Code.Misc {
+namespace Code.Util {
     public static class BitUtil {
         public static bool GetBit(byte bools, int bit) => (bools & (1 << bit)) != 0;
         public static bool GetBit(short bools, int bit) => (bools & (1 << bit)) != 0;
