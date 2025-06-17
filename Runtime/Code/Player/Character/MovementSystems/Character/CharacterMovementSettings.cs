@@ -2,11 +2,9 @@ using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Code.Player.Character.MovementSystems.Character
-{
+namespace Code.Player.Character.MovementSystems.Character {
     [LuauAPI]
-    public class CharacterMovementSettings: MonoBehaviour
-    {
+    public class CharacterMovementSettings : MonoBehaviour {
         [Header("Collider Size")] [Tooltip("Height of the character hit box")] [Min(.01f)]
         public float characterHeight = 1.8f;
 
@@ -120,7 +118,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         [Header("Physics")] [Tooltip("What layers will count as walkable ground")]
         public LayerMask
-            groundCollisionLayerMask = 1 << 0 | 1 << 8 | 1 << 11; // Layers Default, VisuallyHidden and VoxelWorld
+            groundCollisionLayerMask = (1 << 0) | (1 << 8) | (1 << 11); // Layers Default, VisuallyHidden and VoxelWorld
 
         [Tooltip("Maximum fall speed m/s")] public float terminalVelocity = 50;
 
