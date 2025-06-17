@@ -68,11 +68,6 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 				var n = "(Destroyed)";
 				if (unityObj != null) {
 					n = unityObj.name;
-				} else {
-					var cachedName = ThreadDataManager.GetObjectReferenceName_TEMP_DEBUG(instanceId);
-					if (cachedName != null) {
-						n = cachedName + " (Destroyed)";
-					}
 				}
 				var objName = $"[{t.Name}] {n}";
 				if (!countByName.TryAdd(objName, 1)) {
