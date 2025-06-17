@@ -71,6 +71,7 @@ namespace Code.Player.Character.MovementSystems.Character
             var isGroundedEqual = isGrounded == other.isGrounded;
             var stateEqual = state == other.state;
 
+#if UNITY_EDITOR
             if (!lastProcessedCommandEqual)
                 message += $"lastProcessedCommand: {this.lastProcessedCommand} != {other.lastProcessedCommand}\n";
             if (!positionEqual)
@@ -101,6 +102,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 message += $"prevGrounded: {isGrounded} != {other.isGrounded}\n";
             if (!stateEqual)
                 message += $"state: {state} != {other.state}\n";
+#endif
 
             var same =
                 lastProcessedCommandEqual &&
@@ -125,11 +127,14 @@ namespace Code.Player.Character.MovementSystems.Character
                 movement.compareResult = true;
                 movement.FireTsCompare(this, other);
                 same = movement.compareResult;
+#if UNITY_EDITOR
                 if (same == false) message += $"customData: a != b";
+#endif
             }
             
+#if UNITY_EDITOR
             if (message.Length != 0) Debug.Log(message.TrimEnd());
-
+#endif
             return same;
         }
 
@@ -236,24 +241,6 @@ namespace Code.Player.Character.MovementSystems.Character
             bool stateChanged = this.state != other.state;
             bool canJumpChanged = this.canJump != other.canJump;
             
-            // var log = new StringBuilder();
-            // log.AppendLine("Changed Fields:");
-            //
-            // if (boolsChanged) log.AppendLine($"- Bools changed: {oldBools} -> {newBools}");
-            // if (positionChanged) log.AppendLine($"- Position changed: {this.position} -> {other.position}");
-            // if (velocityChanged) log.AppendLine($"- Velocity changed: {this.velocity} -> {other.velocity}");
-            // if (lookVectorChanged) log.AppendLine($"- LookVector changed: {this.lookVector} -> {other.lookVector}");
-            // if (speedChanged) log.AppendLine($"- CurrentSpeed changed: {this.currentSpeed} -> {other.currentSpeed}");
-            // if (modifierChanged) log.AppendLine($"- SpeedModifier changed: {this.speedModifier} -> {other.speedModifier}");
-            // if (jumpCountChanged) log.AppendLine($"- JumpCount changed: {this.jumpCount} -> {other.jumpCount}");
-            // if (stateChanged) log.AppendLine($"- State changed: {this.state} -> {other.state}");
-            // if (canJumpChanged) log.AppendLine($"- CanJump changed: {this.canJump} -> {other.canJump}");
-            //
-            // if (log.Length > 0)
-            // {
-            //     Debug.Log(log.ToString());
-            // }
-            
             // Set the changed mask to reflect changed fields
             short changedMask = 0;
             if (boolsChanged) BitUtil.SetBit(ref changedMask, 0, true);
@@ -285,14 +272,9 @@ namespace Code.Player.Character.MovementSystems.Character
             if (stateChanged) writer.Write((byte)other.state);
             if (canJumpChanged) writer.Write(other.canJump);
 
-            // // Always write custom data. TODO: we will want to apply a diffing algorithm to the byte array
-            // if (other.customData != null) {
-            //     writer.WriteInt(other.customData.dataSize);
-            //     writer.WriteBytes(other.customData.data, 0, other.customData.data.Length);
-            // }
-            // else {
-            //     writer.WriteInt(0);
-            // }
+            // We are cheating here by only writing bytes at the end if we have custom data. We can do this because we know the expected size
+            // of the above bytes and we know that a diff packet will only contain one diff. If we were to pass multiple diffs in a single packet,
+            // we could not do this optimization since there would be no way to know where the next packet starts.
             if (customData != null) {
                 var customDataDiff = customData.CreateDiff(other.customData);
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);

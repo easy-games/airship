@@ -54,30 +54,32 @@ namespace Code.Player.Character.MovementSystems.Character
 			BitUtil.SetBit(ref bools, 1, value.jump);
 			BitUtil.SetBit(ref bools, 2, value.sprint);
 			writer.Write(bools);
-
-			if (value.customData != null) {
-				writer.WriteInt(value.customData.dataSize);
-				writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
-			}
-			else {
-				writer.WriteInt(0);
-			}
-			
 			writer.Write(value.commandNumber);
-			
 			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.x));
 			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.y));
 			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.z));
-
 			writer.Write(value.moveDir);
+			
+			// We are cheating here by only writing bytes at the end if we have custom data. We can do this because we know the expected size
+			// of the above bytes and we know that we send each cmd packet individually. If we were to pass multiple cmds as an array in a single packet,
+			// we could not do this optimization since there would be no way to know where the next cmd starts.
+			if (value.customData != null) {
+				writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+			}
 		}
 
 		public static CharacterInputData ReadCharacterInputData(this NetworkReader reader) {
 			var bools = reader.Read<byte>();
-			var customDataSize = reader.ReadInt();
+			var commandNumber = reader.Read<int>();
+			var lookVector = new Vector3(
+				NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
+				NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
+				NetworkSerializationUtil.DecompressShort(reader.Read<short>()));
+			var moveDir = reader.Read<Vector3>();
+			
 			BinaryBlob customData = default;
-			if (customDataSize != 0) {
-				var customDataArray = reader.ReadBytes(customDataSize); 
+			if (reader.Remaining != 0) {
+				var customDataArray = reader.ReadBytes(reader.Remaining); 
 				customData = new BinaryBlob(customDataArray);
 			}
 			
@@ -86,12 +88,9 @@ namespace Code.Player.Character.MovementSystems.Character
 				jump = BitUtil.GetBit(bools, 1),
 				sprint = BitUtil.GetBit(bools, 2),
 				customData = customData,
-				commandNumber = reader.Read<int>(),
-				lookVector = new Vector3(
-					NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
-					NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
-					NetworkSerializationUtil.DecompressShort(reader.Read<short>())),
-				moveDir = reader.Read<Vector3>(),
+				commandNumber = commandNumber,
+				lookVector = lookVector,
+				moveDir = moveDir,
 			};
 		}
 	}

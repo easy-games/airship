@@ -108,10 +108,10 @@ namespace Code.Network.StateSystem
         protected Action<int> OnServerReceiveFullSnapshotRequest;
         protected Action<int, uint> OnServerReceiveSnapshotAck;
         protected Action<State> OnServerReceiveSnapshot;
-        protected Action<Input[]> OnServerReceiveInput;
+        protected Action<Input> OnServerReceiveInput;
 
         // Functions to be implemented by subclass that perform networking actions
-        public abstract void SendClientInputToServer(Input[] input);
+        public abstract void SendClientInputToServer(Input input);
         public abstract void SendClientSnapshotToServer(State snapshot);
         /// <summary>
         /// Used by the client to request the server to send a full snapshot next time it sends an update.
@@ -250,12 +250,11 @@ namespace Code.Network.StateSystem
                         // Debug.LogWarning("Sending no commands on interval");
                     }
 
-                    // We make multiple calls so that Mirror can batch the commands efficiently
-                    // foreach (var command in commands)
-                    // {
-                    //     this.SendClientInputToServer(command);
-                    // }
-                    this.SendClientInputToServer(commands);
+                    // We make multiple calls so that Mirror can batch the commands efficiently.
+                    foreach (var command in commands)
+                    {
+                        this.SendClientInputToServer(command);
+                    }
                 }
 
                 // We are an authoritative client and should send our latest state
@@ -1022,20 +1021,19 @@ namespace Code.Network.StateSystem
 
         #region Networking
 
-        private void ClientReceiveSnapshot(State state)
-        {
-            if (state == null) return;
+        private void ProcessNewStateOnClient(State state, bool fromDiff) {
+             if (state == null) return;
             
             // Clients store all received snapshots so they can correctly generate new snapshots
             // from diffs received from the server. Observers will render observerHistory using the
             // server's timeline via NetworkTime.
             this.observerHistory.Set(state.time, state);
             
-            // TODO: we theoretically only need to ack this if it's a new snapshot from the server.
-            // We could reduce send rate further by not acking every time we correctly calculate a diff. Just keep in mind that
-            // the server would then have to send updated snapshots instead of only diffs when the snapshot the diffs are based
-            // on for this client get too old.
-            SendAckSnapshotToServer(state.tick);
+            // We ack full snapshots from the server, not new snapshots generated from diffs. This means
+            // less ack packets sent.
+            if (!fromDiff) {
+                SendAckSnapshotToServer(state.tick);
+            }
             
             // If we get a snapshot out of order, we don't need to do reconcile processing since the later
             // snapshot we already received will result in fewer resimulations.
@@ -1073,6 +1071,11 @@ namespace Code.Network.StateSystem
             }
         }
 
+        private void ClientReceiveSnapshot(State state)
+        {
+           ProcessNewStateOnClient(state, false);
+        }
+
         private void ClientReceiveDiff(StateDiff diff) {
             var baseState = this.observerHistory.GetExact(diff.baseTick * Time.fixedDeltaTime);
             if (baseState == null) {
@@ -1098,7 +1101,7 @@ namespace Code.Network.StateSystem
             // Call the standard receive snapshot logic, since we've build the new snapshot received from the server.
             // This will also add the generated snapshot to the observerHistory so that it can be used as a base for new
             // diffs if required.
-            this.ClientReceiveSnapshot(snapshot as State);
+            this.ProcessNewStateOnClient(snapshot as State, true);
         }
 
         private void ProcessClientInputOnServer(Input command) {
@@ -1135,11 +1138,9 @@ namespace Code.Network.StateSystem
             this.serverCommandBuffer.Add(command.commandNumber, command);
         }
 
-        private void ServerReceiveInputCommand(Input[] commands)
+        private void ServerReceiveInputCommand(Input command)
         {
-            foreach (var command in commands) {
-                ProcessClientInputOnServer(command);
-            }
+            ProcessClientInputOnServer(command);
         }
 
         private void ServerReceiveSnapshot(State snapshot)
