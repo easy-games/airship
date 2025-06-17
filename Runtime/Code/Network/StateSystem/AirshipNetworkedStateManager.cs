@@ -10,8 +10,8 @@ namespace Code.Network.StateSystem
 {
     [LuauAPI]
     [RequireComponent(typeof(NetworkIdentity))]
-    public abstract class AirshipNetworkedStateManager<StateSystem, State, Input> : NetworkBehaviour
-        where State : StateSnapshot where Input : InputCommand where StateSystem : NetworkedStateSystem<StateSystem, State, Input>
+    public abstract class AirshipNetworkedStateManager<StateSystem, State, Diff, Input> : NetworkBehaviour
+        where State : StateSnapshot where Diff : StateDiff where Input : InputCommand where StateSystem : NetworkedStateSystem<StateSystem, State, Diff, Input>
     {
         #region Inspector Settings
 
@@ -86,12 +86,17 @@ namespace Code.Network.StateSystem
 
         // Observer history stores authoritative state and uses the server's times. This data can be interpolated
         // with NetworkTime.time. It is converted into state history on the local clients physics timeline
-        // in the observer snapshot function.
+        // in the observer snapshot function. Clients build observer history out of the state snapshots they
+        // receive as well as by applying diffs received to existing state in this history.
         public History<State> observerHistory;
         private double lastReceivedSnapshotTime = 0;
 
         // Client interpolation fields
         private double clientLastInterpolatedStateTime = 0;
+        
+        // A map between clientId and the last acked snapshot they received. We use this to select
+        // the snapshot we use to generate diffs for the client.
+        private Dictionary<int, uint> serverAckedSnapshots = new();
 
         #endregion
 
@@ -99,13 +104,25 @@ namespace Code.Network.StateSystem
 
         // Networking actions to be used by subclass;
         protected Action<State> OnClientReceiveSnapshot;
+        protected Action<Diff> OnClientReceiveDiff;
+        protected Action<int> OnServerReceiveFullSnapshotRequest;
+        protected Action<int, uint> OnServerReceiveSnapshotAck;
         protected Action<State> OnServerReceiveSnapshot;
         protected Action<Input> OnServerReceiveInput;
 
         // Functions to be implemented by subclass that perform networking actions
         public abstract void SendClientInputToServer(Input input);
         public abstract void SendClientSnapshotToServer(State snapshot);
-        public abstract void SendServerSnapshotToClients(State snapshot);
+        /// <summary>
+        /// Used by the client to request the server to send a full snapshot next time it sends an update.
+        /// The client can call this as often as it wants, but the server will only send a full snapshot on the
+        /// next send interval.
+        /// </summary>
+        /// <param name="sender"></param>
+        public abstract void SendRequestFullSnapshotToServer();
+        public abstract void SendAckSnapshotToServer(uint tick);
+        public abstract void SendServerSnapshotToClient(NetworkConnection client, State snapshot);
+        public abstract void SendServerDiffToClient(NetworkConnection client, Diff diff);
 
         #endregion
 
@@ -165,6 +182,11 @@ namespace Code.Network.StateSystem
             AirshipSimulationManager.Instance.OnCaptureSnapshot += this.OnCaptureSnapshot;
             AirshipSimulationManager.Instance.OnLagCompensationCheck += this.OnLagCompensationCheck;
 
+            // Cleanup acked snapshot data for clients that are leaving the game.
+            NetworkServer.OnDisconnectedEvent += client => {
+                this.serverAckedSnapshots.Remove(client.connectionId);
+            };
+
             // We will keep up to 1 second of commands in the buffer. After that, we will start dropping new commands.
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
             this.serverCommandBufferMaxSize = NetworkClient.sendRate;
@@ -182,9 +204,12 @@ namespace Code.Network.StateSystem
             this.observerHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
 
             this.OnClientReceiveSnapshot += ClientReceiveSnapshot;
+            this.OnClientReceiveDiff += ClientReceiveDiff;
             this.OnServerReceiveSnapshot += ServerReceiveSnapshot;
             this.OnServerReceiveInput += ServerReceiveInputCommand;
-
+            this.OnServerReceiveSnapshotAck += ServerReceiveSnapshotAck;
+            this.OnServerReceiveFullSnapshotRequest += ServerReceiveFullSnapshotRequest;
+            
             this.stateSystem.manager = this;
         }
 
@@ -225,7 +250,7 @@ namespace Code.Network.StateSystem
                         // Debug.LogWarning("Sending no commands on interval");
                     }
 
-                    // We make multiple calls so that Mirror can batch the commands efficiently
+                    // We make multiple calls so that Mirror can batch the commands efficiently.
                     foreach (var command in commands)
                     {
                         this.SendClientInputToServer(command);
@@ -259,7 +284,42 @@ namespace Code.Network.StateSystem
                 var state = this.stateHistory.Values[^1];
                 // If we have no state yet, don't send (this shouldn't be possible)
                 if (state == null) return;
-                this.SendServerSnapshotToClients(state);
+                
+                foreach (var client in NetworkServer.connections) {
+                    if (!client.Value.isAuthenticated || !client.Value.isReady) continue;
+                    if (!serverAuth && client.Key == this.netIdentity.connectionToClient.connectionId)
+                    {
+                        // This client is the authoritative owner and doesn't need snapshot data,
+                        // it is only meant for observers
+                        continue;
+                    }
+                    
+                    if (!this.serverAckedSnapshots.TryGetValue(client.Key, out var lastAckedTick)) {
+                        this.SendServerSnapshotToClient(client.Value, state);
+                        // print("sending snapshot at time " + state.time + " because no lastAcked was set.");
+                        continue;
+                    }
+
+                    var baseState = this.stateHistory.GetExact(lastAckedTick * Time.fixedDeltaTime);
+                    if (baseState == null) {
+                        this.SendServerSnapshotToClient(client.Value, state);
+                        // We will expect the client to receive this and send snapshots after this
+                        // as an optimization.
+                        this.serverAckedSnapshots[client.Key] = state.tick;
+                        // print("sending snapshot at time " + state.time + " because no base state with acked time could be found.");
+                        continue;
+                    }
+
+                    var diff = baseState.CreateDiff(state) as Diff;
+                    if (diff == null) {
+                        Debug.LogWarning("Could not generate diff for client " + client.Key + ". Report this.");
+                        continue;
+                    } 
+                    this.SendServerDiffToClient(client.Value, diff);
+                    // print("Sending diff for " + this.name + ". Base time: " + baseState.time + " Expected result time: " + state.time + " (" + diff.crc32 + ")");
+                    // print(baseState);
+                    // print(state);
+                }
             }
         }
 
@@ -512,7 +572,7 @@ namespace Code.Network.StateSystem
                     }
 
                     // tick command
-                    command.time = time; // Correct time to local timeline for ticking on the server.
+                    // command.time = time; // Correct time to local timeline for ticking on the server.
                     this.stateSystem.Tick(command, time, false);
                 }
                 else
@@ -944,6 +1004,7 @@ namespace Code.Network.StateSystem
             
             // We use the client prediction time so we can act like we got this right in our history. Server gives us
             // a time value in its local timeline so the provided time is not useful to us.
+            state = state.Clone() as State;
             state.time = clientPredictedState.time;
             
             // Overwrite the time we should have predicted this on the client so it
@@ -960,12 +1021,22 @@ namespace Code.Network.StateSystem
 
         #region Networking
 
-        // TODO: consider sending all tick data from the last snapshot time to the new time so
-        // we can rebuild a completely accurate history for other re-simulations
-        private void ClientReceiveSnapshot(State state)
-        {
-            if (state == null) return;
-
+        private void ProcessNewStateOnClient(State state, bool fromDiff) {
+             if (state == null) return;
+            
+            // Clients store all received snapshots so they can correctly generate new snapshots
+            // from diffs received from the server. Observers will render observerHistory using the
+            // server's timeline via NetworkTime.
+            this.observerHistory.Set(state.time, state);
+            
+            // We ack full snapshots from the server, not new snapshots generated from diffs. This means
+            // less ack packets sent.
+            if (!fromDiff) {
+                SendAckSnapshotToServer(state.tick);
+            }
+            
+            // If we get a snapshot out of order, we don't need to do reconcile processing since the later
+            // snapshot we already received will result in fewer resimulations.
             if (lastReceivedSnapshotTime >= state.time)
             {
                 // print("Ignoring out of order snapshot");
@@ -976,17 +1047,14 @@ namespace Code.Network.StateSystem
             
             // The client is a non-authoritative owner and should update
             // their local state with the authoritative state from the server.
-            if (isOwned && serverAuth)
-            {
+            if (isOwned && serverAuth) {
                 // We just got a new confirmed state and we have already processed
                 // our most recent reconcile.
-                if (this.clientLastConfirmedState == null)
-                {
+                if (this.clientLastConfirmedState == null) {
                     // Store the state so we can use it when the callback is fired.
                     this.clientLastConfirmedState = state;
                     // Schedule the resimulation with the simulation manager.
-                    AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) =>
-                    {
+                    AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) => {
                         // Reconcile when this callback is executed. Use the last confirmed state received,
                         // (since more could come in from the network while we are waiting for the callback)
                         this.ReconcileInputHistory(resimulate, this.clientLastConfirmedState);
@@ -995,31 +1063,48 @@ namespace Code.Network.StateSystem
                 }
                 // We received a new state update before we were able to reconcile, just update the stored
                 // latest state so we use the latest in our scheduled resimulation.
-                else
-                {
+                else {
                     clientLastConfirmedState = state;
                 }
 
                 return;
             }
+        }
 
-            // This client is an authoritative owner and should ignore the snapshot,
-            // it is only meant for observers
-            if (isOwned && !serverAuth)
-            {
+        private void ClientReceiveSnapshot(State state)
+        {
+           ProcessNewStateOnClient(state, false);
+        }
+
+        private void ClientReceiveDiff(StateDiff diff) {
+            var baseState = this.observerHistory.GetExact(diff.baseTick * Time.fixedDeltaTime);
+            if (baseState == null) {
+                // TODO: We could reduce network by throttling this so we only call it once
+                // per round trip time + a little buffer for the send interval. Right now, we
+                // will call this until our request reaches the server and the snapshot gets sent
+                // back.
+                // This might be ok though because it means in situations with high loss, the server
+                // will continue to send full snapshots all the time to this client instead of just diffs.
+                // It will make for smoother gameplay at the cost of higher network usage.
+                print("No base state for " + diff.baseTick + " (" + (diff.baseTick * Time.fixedDeltaTime) + "). Requesting new snapshot.");
+                SendRequestFullSnapshotToServer();
                 return;
             }
 
-            // This client is an observer and should store and interpolate the snapshot.
-            if (!isOwned)
-            {
-                // Observers will render using the server's timeline via NetworkTime
-                this.observerHistory.Add(state.time, state);
+            var snapshot = baseState.ApplyDiff(diff);
+            if (snapshot == null) {
+                print("Diff failed to apply for " + this.name);
+                SendRequestFullSnapshotToServer();
+                return;
             }
+            
+            // Call the standard receive snapshot logic, since we've build the new snapshot received from the server.
+            // This will also add the generated snapshot to the observerHistory so that it can be used as a base for new
+            // diffs if required.
+            this.ProcessNewStateOnClient(snapshot as State, true);
         }
 
-        private void ServerReceiveInputCommand(Input command)
-        {
+        private void ProcessClientInputOnServer(Input command) {
             // Debug.Log("Server received command " + command.commandNumber + " for " + this.gameObject.name);
             // This should only occur if the server is authoritative.
             if (!serverAuth) return;
@@ -1051,6 +1136,11 @@ namespace Code.Network.StateSystem
 
             // Queue the command for processing
             this.serverCommandBuffer.Add(command.commandNumber, command);
+        }
+
+        private void ServerReceiveInputCommand(Input command)
+        {
+            ProcessClientInputOnServer(command);
         }
 
         private void ServerReceiveSnapshot(State snapshot)
@@ -1085,6 +1175,16 @@ namespace Code.Network.StateSystem
             // We order by clients last processed command. This is effectively the same as ordering
             // by time, but avoids the confusion around client vs server timelines.
             this.serverRecievedStateBuffer.Add(snapshot.lastProcessedCommand, snapshot);
+        }
+
+        private void ServerReceiveFullSnapshotRequest(int connectionId) {
+            // This essentially removes the server's knowledge that the client has a valid snapshot to diff
+            // off of and triggers the sending of a new full snapshot.
+            this.serverAckedSnapshots.Remove(connectionId);
+        }
+
+        private void ServerReceiveSnapshotAck(int connectionId, uint tick) {
+            this.serverAckedSnapshots[connectionId] = tick;
         }
 
         #endregion
