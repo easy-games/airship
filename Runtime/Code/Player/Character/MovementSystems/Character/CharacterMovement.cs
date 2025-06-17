@@ -305,6 +305,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData() {
                 commandNumber = commandNumber,
+                time = time,
                 moveDir = moveDirInput,
                 jump = jumpInput,
                 crouch = crouchInput,

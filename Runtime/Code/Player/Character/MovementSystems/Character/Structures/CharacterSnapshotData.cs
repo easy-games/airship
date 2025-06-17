@@ -295,10 +295,7 @@ namespace Code.Player.Character.MovementSystems.Character
             // }
             if (customData != null) {
                 var customDataDiff = customData.CreateDiff(other.customData);
-                writer.Write(customDataDiff);
-            }
-            else {
-                writer.WriteByte(0);
+                writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
 
             return new CharacterStateDiff {
@@ -359,13 +356,13 @@ namespace Code.Player.Character.MovementSystems.Character
             if (BitUtil.GetBit(changedMask, 6)) snapshot.jumpCount = reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 7)) snapshot.state = (CharacterState)reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 8)) snapshot.canJump = reader.Read<byte>();
-                
-            int size = reader.ReadInt();
-            if (size != 0) {
-                snapshot.customData = new BinaryBlob(reader.ReadBytes(size));
+            
+            if (reader.Remaining != 0) {
+                var cDataDiff = reader.ReadBytes(reader.Remaining);
+                snapshot.customData = customData.ApplyDiff(cDataDiff);
             }
             else {
-                snapshot.customData = default;
+                snapshot.customData = null;
             }
 
             var crc32 = snapshot.ComputeCrc32();
@@ -413,6 +410,7 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(this.canJump);
             writer.Write((byte) this.state);
             writer.Write(this.jumpCount);
+            if (this.customData != null) writer.Write(this.customData.data);
             var bytes = writer.ToArray();
             
             _crc32 = Crc32Algorithm.Compute(bytes);
