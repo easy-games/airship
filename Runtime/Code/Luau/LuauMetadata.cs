@@ -244,7 +244,11 @@ namespace Luau {
         /// <summary>
         /// Path to a file
         /// </summary>
+        [JsonProperty][NonSerialized]
         public string fileRef;
+
+        // [JsonIgnore]
+        // [SerializeReference] public LuauSerializedValue value;
         
         [JsonProperty("jsdoc")][SerializeField]
         private LuauMetadataJsDoc jsDocs;
@@ -255,11 +259,16 @@ namespace Luau {
         [JsonProperty][SerializeField]
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
+        
+        [JsonProperty][NonSerialized]
         public bool nullable;
+        
+#if !UNITY_EDITOR
+        [NonSerialized] // only needs to be serialized in-editor
+#endif
         [JsonProperty("default")]
         public object defaultValue;
         
-        // Misc:
         public string serializedValue;
         public UnityEngine.Object serializedObject;
         public bool modified;
@@ -626,8 +635,11 @@ namespace Luau {
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
-        [CanBeNull] public Texture2D displayIcon;
 
+#if UNITY_EDITOR
+        [SerializeField]        
+#endif
+        [CanBeNull] internal Texture2D displayIcon;
         public string displayName;
         
         /** Converts json to LuauMetadata (if this errors we return the error message) */
