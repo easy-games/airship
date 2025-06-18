@@ -24,12 +24,12 @@ namespace Code.Network.StateSystem
     }
 
     [RequireComponent(typeof(NetworkIdentity))]
-    public abstract class NetworkedStateSystem<StateSystem, State, Diff, Input> : NetworkBehaviour
-        where State : StateSnapshot where Diff : StateDiff where Input : InputCommand 
-        where StateSystem : NetworkedStateSystem<StateSystem, State, Diff, Input >
+    public abstract class NetworkedStateSystem<StateSystem, State, Input> : NetworkBehaviour
+        where State : StateSnapshot where Input : InputCommand
+        where StateSystem : NetworkedStateSystem<StateSystem, State, Input>
     {
         [NonSerialized] public NetworkedStateSystemMode mode;
-        [NonSerialized] public AirshipNetworkedStateManager<StateSystem, State, Diff, Input> manager;
+        [NonSerialized] public AirshipNetworkedStateManager<StateSystem, State, Input> manager;
 
         /**
         * This function is called to update the system on how it will be used.

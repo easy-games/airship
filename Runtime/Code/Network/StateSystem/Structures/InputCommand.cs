@@ -1,6 +1,5 @@
 using System;
 using JetBrains.Annotations;
-using UnityEngine;
 
 namespace Code.Player.Character.Net
 {
@@ -12,16 +11,10 @@ namespace Code.Player.Character.Net
         /** The number this command is in the clients stream of commands. */
         public int commandNumber;
         /**
-         * The time the input was created. This time is local to the client/server that created it.
-         */
-        public double time {
-            get {
-                return tick * Time.fixedDeltaTime;
-            }
-            set {
-                tick = (uint) Math.Round(value / Time.fixedDeltaTime);
-            } }
-        public uint tick;
+        * The time the input was created. This time is local to the client that created it. The server corrects this
+         * time to it's local timeline before using it in the server tick processing.
+        */
+        public double time;
         
         public virtual object Clone()
         {
