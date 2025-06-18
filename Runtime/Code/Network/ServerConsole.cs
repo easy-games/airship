@@ -97,6 +97,7 @@ namespace Code.RemoteConsole {
             }
 
             // Setup logs
+#if !UNITY_IOS && !UNITY_ANDROID
             if (RunCore.IsClient()) {
                 string logDir = Path.GetDirectoryName(Application.consoleLogPath);
                 logPath = Path.Combine(logDir, "Server.log");
@@ -116,6 +117,7 @@ namespace Code.RemoteConsole {
                 writer = new StreamWriter(logPath, false); // overwrite existing
                 writer.AutoFlush = true;
             }
+#endif
         }
 
         public void OnStopClient() {
