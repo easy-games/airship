@@ -474,21 +474,20 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr CreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
-	public static IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
+	private static extern unsafe IntPtr CreateThread(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
+	public static unsafe IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
 		
-		var scriptBytecodeHandle = GCHandle.Alloc(scriptBytecode, GCHandleType.Pinned);
-		var scriptBytecodePtr = scriptBytecodeHandle.AddrOfPinnedObject();
-		
 		var filenamePtr = Marshal.StringToCoTaskMemUTF8(filename);
 		var filenameLength = Encoding.UTF8.GetByteCount(filename);
-		
-		var returnValue = CreateThread(context, scriptBytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+
+		IntPtr returnValue;
+		fixed (byte* bytecodePtr = scriptBytecode) {
+			returnValue = CreateThread(context, bytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+		}
 		
 		Marshal.FreeCoTaskMem(filenamePtr);
-		scriptBytecodeHandle.Free();
 		
         EndExecutionCheck();
         
@@ -538,6 +537,7 @@ public static class LuauPlugin {
 #endif
 	private static extern IntPtr SetMutableGlobals(IntPtr strings, IntPtr stringLengths, int numStrings);
 	public static unsafe void LuauSetMutableGlobals(string[] mutableGlobals) {
+		Span<GCHandle> handles = stackalloc GCHandle[mutableGlobals.Length];
 		var strings = stackalloc IntPtr[mutableGlobals.Length];
 		var lengths = stackalloc int[mutableGlobals.Length];
         
@@ -546,11 +546,16 @@ public static class LuauPlugin {
 			var bytes = System.Text.Encoding.UTF8.GetBytes(str);
 			var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
 			var bytesPtr = handle.AddrOfPinnedObject();
+			handles[i] = handle;
 			strings[i] = bytesPtr;
 			lengths[i] = bytes.Length;
 		}
 		
 		var res = SetMutableGlobals(new IntPtr(strings), new IntPtr(lengths), mutableGlobals.Length);
+
+		foreach (var handle in handles) {
+			handle.Free();
+		}
 		
 		ThrowIfNotNullPtr(res);
 	}
