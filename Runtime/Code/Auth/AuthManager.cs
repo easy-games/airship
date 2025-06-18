@@ -5,7 +5,9 @@ using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
 using Code.Http.Internal;
+#if UNITY_ANDROID
 using Google;
+#endif
 using JetBrains.Annotations;
 using Proyecto26;
 using RSG;
@@ -112,6 +114,7 @@ public class AuthManager {
             scope = "openid email profile",
         });
 
+#if UNITY_ANDROID
         GoogleSignIn.Configuration = new GoogleSignInConfiguration() {
 			RequestEmail = true,
 			RequestProfile = true,
@@ -121,6 +124,7 @@ public class AuthManager {
 			ClientSecret = clientSecret,
 #endif
         };
+#endif
         
 #if AIRSHIP_ANDROID_DEBUG
         GoogleSignIn.DefaultInstance.EnableDebugLogging(true);
