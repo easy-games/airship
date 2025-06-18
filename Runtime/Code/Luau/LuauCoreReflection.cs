@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Airship.DevConsole;
 using Assets.Luau;
 using Code.Luau;
@@ -458,10 +459,11 @@ public partial class LuauCore : MonoBehaviour
         }
 
         if (t == stringType) {
-            byte[] str = System.Text.Encoding.UTF8.GetBytes((string)value);
-            fixed (byte* ptr = str) {
-                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, new IntPtr(ptr), str.Length);
-            }
+            var str = (string)value;
+            var strPtr = Marshal.StringToCoTaskMemUTF8(str);
+            var strLen = Encoding.UTF8.GetByteCount(str);
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, strLen);
+            Marshal.FreeCoTaskMem(strPtr);
             return true;
         }
 

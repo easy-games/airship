@@ -535,26 +535,26 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr SetMutableGlobals(IntPtr strings, IntPtr stringLengths, int numStrings);
+	private static extern unsafe IntPtr SetMutableGlobals(IntPtr* strings, IntPtr stringLengths, int numStrings);
 	public static unsafe void LuauSetMutableGlobals(string[] mutableGlobals) {
-		Span<GCHandle> handles = stackalloc GCHandle[mutableGlobals.Length];
-		var strings = stackalloc IntPtr[mutableGlobals.Length];
+		Span<IntPtr> strings = stackalloc IntPtr[mutableGlobals.Length];
 		var lengths = stackalloc int[mutableGlobals.Length];
         
 		for (var i = 0; i < mutableGlobals.Length; i++) {
 			var str = mutableGlobals[i];
-			var bytes = System.Text.Encoding.UTF8.GetBytes(str);
-			var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-			var bytesPtr = handle.AddrOfPinnedObject();
-			handles[i] = handle;
-			strings[i] = bytesPtr;
-			lengths[i] = bytes.Length;
+			var strPtr = Marshal.StringToCoTaskMemUTF8(str);
+			var len = Encoding.UTF8.GetByteCount(str);
+			strings[i] = strPtr;
+			lengths[i] = len;
 		}
-		
-		var res = SetMutableGlobals(new IntPtr(strings), new IntPtr(lengths), mutableGlobals.Length);
 
-		foreach (var handle in handles) {
-			handle.Free();
+		IntPtr res;
+		fixed (IntPtr* stringsPtr = &MemoryMarshal.GetReference(strings)) {
+			res = SetMutableGlobals(stringsPtr, new IntPtr(lengths), mutableGlobals.Length);
+		}
+
+		foreach (var strPtr in strings) {
+			Marshal.FreeCoTaskMem(strPtr);
 		}
 		
 		ThrowIfNotNullPtr(res);
@@ -804,12 +804,12 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern unsafe void PushCsError(byte* errPtr, int errLen);
-	public static unsafe void LuauPushCsError(string err) {
-		var bytes = Encoding.UTF8.GetBytes(err);
-		fixed (byte* bytesPtr = bytes) {
-			PushCsError(bytesPtr, bytes.Length);
-		}
+	private static extern void PushCsError(IntPtr errPtr, int errLen);
+	public static void LuauPushCsError(string err) {
+		var errPtr = Marshal.StringToCoTaskMemUTF8(err);
+		var errLen = Encoding.UTF8.GetByteCount(err);
+		PushCsError(errPtr, errLen);
+		Marshal.FreeCoTaskMem(errPtr);
 	}
 
 	public enum LuauGCState {
