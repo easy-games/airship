@@ -362,6 +362,7 @@ namespace Code.Network.Simulation
             finally
             {
                 this.replaying = false;
+                Debug.Log($"Completed resimulation from {baseTime}");
             }
         }
 

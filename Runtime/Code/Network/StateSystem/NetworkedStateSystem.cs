@@ -73,7 +73,7 @@ namespace Code.Network.StateSystem
          *
          * The time value of the states is the time on the server when the state was generated (NetworkTime.time).
          */
-        public abstract void Interpolate(float delta, State stateOld, State stateNew);
+        public abstract void Interpolate(double delta, State stateOld, State stateNew);
 
         /**
          * This function is called when the interpolation on an observing client passes the provided state.

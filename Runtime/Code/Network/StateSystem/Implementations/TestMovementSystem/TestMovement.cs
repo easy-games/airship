@@ -73,10 +73,10 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             if (jumpTicksUntil > 0) jumpTicksUntil--;
         }
 
-        public override void Interpolate(float delta, TestMovementState stateOld, TestMovementState stateNew)
+        public override void Interpolate(double delta, TestMovementState stateOld, TestMovementState stateNew)
         {
-            this.rb.position = Vector3.Lerp(stateOld.position, stateNew.position, delta);
-            this.rb.rotation = Quaternion.Lerp(stateOld.rotation, stateNew.rotation, delta);
+            this.rb.position = Vector3.Lerp(stateOld.position, stateNew.position, (float) delta);
+            this.rb.rotation = Quaternion.Lerp(stateOld.rotation, stateNew.rotation, (float) delta);
         }
 
         public override void InterpolateReachedState(TestMovementState state)

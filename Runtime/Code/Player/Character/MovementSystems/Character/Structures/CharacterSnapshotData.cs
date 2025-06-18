@@ -71,7 +71,6 @@ namespace Code.Player.Character.MovementSystems.Character
             var isGroundedEqual = isGrounded == other.isGrounded;
             var stateEqual = state == other.state;
 
-#if UNITY_EDITOR
             if (!lastProcessedCommandEqual)
                 message += $"lastProcessedCommand: {this.lastProcessedCommand} != {other.lastProcessedCommand}\n";
             if (!positionEqual)
@@ -102,7 +101,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 message += $"prevGrounded: {isGrounded} != {other.isGrounded}\n";
             if (!stateEqual)
                 message += $"state: {state} != {other.state}\n";
-#endif
 
             var same =
                 lastProcessedCommandEqual &&
@@ -127,14 +125,10 @@ namespace Code.Player.Character.MovementSystems.Character
                 movement.compareResult = true;
                 movement.FireTsCompare(this, other);
                 same = movement.compareResult;
-#if UNITY_EDITOR
                 if (same == false) message += $"customData: a != b";
-#endif
             }
             
-#if UNITY_EDITOR
             if (message.Length != 0) Debug.Log(message.TrimEnd());
-#endif
             return same;
         }
 
@@ -310,7 +304,6 @@ namespace Code.Player.Character.MovementSystems.Character
             var snapshot = (CharacterSnapshotData) this.Clone();
 
             snapshot.tick = tick + reader.Read<byte>();
-            Debug.Log($"Applied diff and got tick {snapshot.tick}");
             snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<byte>();
             var changedMask = reader.Read<short>();
 

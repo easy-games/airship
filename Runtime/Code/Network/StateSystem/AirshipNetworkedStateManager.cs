@@ -907,7 +907,7 @@ namespace Code.Network.StateSystem
             if (this.observerHistory.Values.Count == 0) return;
 
             // Get the time we should render on the client.
-            var clientTime = (float)NetworkTime.time - (NetworkClient.bufferTime / Math.Min(Time.timeScale, 1)); // Don't reduce buffer on TS higher than one since send rate is unaffected
+            var clientTime = NetworkTime.time - (NetworkClient.bufferTime / Math.Min(Time.timeScale, 1)); // Don't reduce buffer on TS higher than one since send rate is unaffected
 
             // Get the state history around the time that's currently being rendered.
             if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
@@ -924,7 +924,7 @@ namespace Code.Network.StateSystem
             var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time);
 
             // Call interp on the networked state system so it can place things properly for the render.
-            this.stateSystem.Interpolate((float)timeDelta, prevState, nextState);
+            this.stateSystem.Interpolate(timeDelta, prevState, nextState);
         }
 
         /**
@@ -1027,7 +1027,6 @@ namespace Code.Network.StateSystem
             // Clients store all received snapshots so they can correctly generate new snapshots
             // from diffs received from the server. Observers will render observerHistory using the
             // server's timeline via NetworkTime.
-            Debug.Log($"Got state {state.tick} from diff? {fromDiff}");
             this.observerHistory.Set(state.time, state);
             
             // We ack full snapshots from the server, not new snapshots generated from diffs. This means

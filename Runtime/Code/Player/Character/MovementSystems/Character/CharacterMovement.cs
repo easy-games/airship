@@ -1311,10 +1311,10 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void Interpolate(
-            float delta,
+            double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
-            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
+            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta);
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
@@ -1328,7 +1328,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation(oldLook),
                 Quaternion.LookRotation(newLook),
-                delta);
+                (float)delta);
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
 
