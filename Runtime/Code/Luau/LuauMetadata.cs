@@ -246,7 +246,9 @@ namespace Luau {
         /// </summary>
         public string fileRef;
         
+        #if UNITY_EDITOR
         [JsonProperty("jsdoc")][SerializeField]
+        #endif
         private LuauMetadataJsDoc jsDocs;
         public LuauMetadataJsDoc JsDoc => jsDocs;
         public string Documentation => JsDoc?.RichText;

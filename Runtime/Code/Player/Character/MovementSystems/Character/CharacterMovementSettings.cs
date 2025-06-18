@@ -1,11 +1,10 @@
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Code.Player.Character.MovementSystems.Character
-{
+namespace Code.Player.Character.MovementSystems.Character {
     [LuauAPI]
-    public class CharacterMovementSettings: MonoBehaviour
-    {
+    public class CharacterMovementSettings : MonoBehaviour {
         [Header("Collider Size")] [Tooltip("Height of the character hit box")] [Min(.01f)]
         public float characterHeight = 1.8f;
 
@@ -119,7 +118,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         [Header("Physics")] [Tooltip("What layers will count as walkable ground")]
         public LayerMask
-            groundCollisionLayerMask = 1 << 0 | 1 << 8 | 1 << 11; // Layers Default, VisuallyHidden and VoxelWorld
+            groundCollisionLayerMask = (1 << 0) | (1 << 8) | (1 << 11); // Layers Default, VisuallyHidden and VoxelWorld
 
         [Tooltip("Maximum fall speed m/s")] public float terminalVelocity = 50;
 
@@ -141,6 +140,11 @@ namespace Code.Player.Character.MovementSystems.Character
         [Tooltip("How much to multiply speed while you are in the air")] [Range(0, 2f)]
         public float airSpeedMultiplier = 1;
 
+        [Tooltip("How much to decelerate when no input is given in the air at a per second rate")]
+        public float additionalNoInputDrag = 3f;
+
+        [Tooltip("How fast your player will accelerate in the air from player input at a per second rate")]
+        public float airInputAcceleration = 60f;
 
         [Header("Step Ups")] [Tooltip("Push the character up when they stop over a set threshold")]
         public bool detectStepUps = true;
