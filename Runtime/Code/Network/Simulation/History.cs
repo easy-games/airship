@@ -52,15 +52,6 @@ namespace Code.Network.Simulation
             return entry;
         }
 
-        /**
-         * Sets the entry at the provided time. Will always set the value of the entry.
-         */
-        public T Set(double time, T entry) {
-            this.history.Remove(time);
-            this.history.Add(time, entry);
-            return entry;
-        }
-
         public void SetAuthoritativeEntry(double time, bool authority)
         {
             var hasEntry = this.authoritativeEntries.Contains(time);
@@ -92,7 +83,8 @@ namespace Code.Network.Simulation
         public void Overwrite(double time, T entry)
         {
             var removed = this.history.Remove(time);
-            if (removed) {
+            if (removed)
+            {
                 this.history.Add(time, entry);
             }
         }
