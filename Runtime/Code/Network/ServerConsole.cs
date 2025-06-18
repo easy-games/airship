@@ -35,9 +35,12 @@ namespace Code.RemoteConsole {
         private Task writeTask;
 
         private void Awake() {
+
+            #if !UNITY_IOS && !UNITY_ANDROID
             if (RunCore.IsClient() && !RunCore.IsServer()) {
                 writeTask = Task.Run(ProcessQueue);
             }
+            #endif
         }
 
         private async Task ProcessQueue() {
@@ -67,8 +70,10 @@ namespace Code.RemoteConsole {
             if (!DevConsole.console.loggingEnabled) return;
             DevConsole.console.OnLogMessageReceived(args.message, args.stackTrace, args.logType, LogContext.Server, args.time);
 
+#if !UNITY_IOS && !UNITY_ANDROID
             string timeStamped = $"[{DateTime.Now:HH:mm:ss}] {args.message}";
             logQueue.Enqueue(timeStamped);
+#endif
         }
 
         public void OnStartServer() {
