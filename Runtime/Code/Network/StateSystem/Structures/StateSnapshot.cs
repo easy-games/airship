@@ -18,8 +18,10 @@ namespace Code.Network.StateSystem.Structures
                 return tick * Time.fixedDeltaTime;
             }
             set {
+                Debug.LogWarning($"Setting state snapshot to {(uint) Math.Round(value / Time.fixedDeltaTime)} was {tick}");
                 tick = (uint) Math.Round(value / Time.fixedDeltaTime);
-            } }
+            }
+        }
         public uint tick;
 
         /**

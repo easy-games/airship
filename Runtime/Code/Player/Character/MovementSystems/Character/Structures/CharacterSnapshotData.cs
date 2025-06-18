@@ -310,6 +310,7 @@ namespace Code.Player.Character.MovementSystems.Character
             var snapshot = (CharacterSnapshotData) this.Clone();
 
             snapshot.tick = tick + reader.Read<byte>();
+            Debug.Log($"Applied diff and got tick {snapshot.tick}");
             snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<byte>();
             var changedMask = reader.Read<short>();
 

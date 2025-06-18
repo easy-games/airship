@@ -875,12 +875,12 @@ namespace Code.Network.StateSystem
             // Store the state in our state history for re-simulation later if needed.
             this.stateHistory.Add(time, state);
 
-            // Handle observer interpolation as well. We use observedState for this since we want the interp to be able
-            // to use NetworkTime.time with this state.
+            // Handle observer interpolation
+            if (clientLastInterpolatedStateTime >= observedState.time) return;
             // Update our last state time so we don't call InterpolateReachedState more than once on the same state.
             this.clientLastInterpolatedStateTime = observedState.time;
             // Notify the system of a new reached state
-            this.stateSystem.InterpolateReachedState(observedState);
+            this.stateSystem.InterpolateReachedState(state);
         }
 
         public void ObservingClientTick(double time, bool replay)
@@ -1027,6 +1027,7 @@ namespace Code.Network.StateSystem
             // Clients store all received snapshots so they can correctly generate new snapshots
             // from diffs received from the server. Observers will render observerHistory using the
             // server's timeline via NetworkTime.
+            Debug.Log($"Got state {state.tick} from diff? {fromDiff}");
             this.observerHistory.Set(state.time, state);
             
             // We ack full snapshots from the server, not new snapshots generated from diffs. This means
@@ -1094,6 +1095,11 @@ namespace Code.Network.StateSystem
             var snapshot = baseState.ApplyDiff(diff);
             if (snapshot == null) {
                 print("Diff failed to apply for " + this.name);
+                var str = "";
+                foreach (var v in this.observerHistory.Values) {
+                    str += $" {v.tick}";
+                }
+                print(str);
                 SendRequestFullSnapshotToServer();
                 return;
             }
