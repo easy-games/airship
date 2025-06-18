@@ -24,7 +24,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     [LuauAPI]
     public class
-        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterInputData> {
+        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
@@ -305,13 +305,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData() {
                 commandNumber = commandNumber,
+                time = time,
                 moveDir = moveDirInput,
                 jump = jumpInput,
                 crouch = crouchInput,
                 sprint = sprintInput,
                 lookVector = lookVector,
                 customData = customInputData,
-                time = time
             };
             // Reset the custom data again
             customInputData = null;
@@ -326,7 +326,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // We replace the base inputs with the last known state input so that players do not feel that their inputs were lost from dropped packets.
                 command = new CharacterInputData() {
                     commandNumber = currentMoveSnapshot.lastProcessedCommand,
-                    time = time,
                     jump = currentMoveSnapshot.alreadyJumped,
                     crouch = currentMoveSnapshot.isCrouching,
                     sprint = currentMoveSnapshot.isSprinting,

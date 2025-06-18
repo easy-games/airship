@@ -3,7 +3,7 @@ using Mirror;
 
 namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class TestNetworkedStateManager: AirshipNetworkedStateManager<TestMovement, TestMovementState, TestMovementInput>
+    public class TestNetworkedStateManager: AirshipNetworkedStateManager<TestMovement, TestMovementState, TestMovementDiff, TestMovementInput>
     {
         
         public override void SendClientInputToServer(TestMovementInput input)
@@ -15,17 +15,33 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         {
             this.RpcClientSnapshotToServer(snapshot);
         }
-
-        public override void SendServerSnapshotToClients(TestMovementState snapshot)
-        {
-            this.RpcServerSnapshotToClients(snapshot);
+        
+        public override void SendRequestFullSnapshotToServer() {
+            this.CmdClientRequestFullSnapshot();
         }
 
+        public override void SendAckSnapshotToServer(uint tick) {
+            this.CmdClientAckSnapshot(tick);
+        }
 
-        [ClientRpc(channel = Channels.Unreliable)]
-        private void RpcServerSnapshotToClients(TestMovementState state)
+        public override void SendServerSnapshotToClient(NetworkConnection client, TestMovementState snapshot)
+        {
+            this.RpcServerSnapshotToClient(snapshot);
+        }
+
+        public override void SendServerDiffToClient(NetworkConnection client, TestMovementDiff diff) {
+            this.RpcServerDiffToClient(diff);
+        }
+        
+        [TargetRpc(channel = Channels.Unreliable)]
+        private void RpcServerSnapshotToClient(TestMovementState state)
         {
             this.OnClientReceiveSnapshot?.Invoke(state);
+        }
+        
+        [TargetRpc(channel = Channels.Unreliable)]
+        private void RpcServerDiffToClient(TestMovementDiff diff) {
+            this.OnClientReceiveDiff?.Invoke(diff);
         }
 
         [Command(channel = Channels.Unreliable)]
@@ -39,5 +55,18 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         {
             this.OnServerReceiveSnapshot?.Invoke(state);
         }
+        
+        [Command(channel = Channels.Reliable, requiresAuthority = false)]
+        private void CmdClientRequestFullSnapshot(NetworkConnectionToClient sender = null) {
+            if (sender == null) return;
+            this.OnServerReceiveFullSnapshotRequest?.Invoke(sender.connectionId);
+        }
+
+        [Command(channel = Channels.Reliable, requiresAuthority = false)]
+        private void CmdClientAckSnapshot(uint tick, NetworkConnectionToClient sender = null) {
+            if (sender == null) return;
+            this.OnServerReceiveSnapshotAck?.Invoke(sender.connectionId, tick);
+        }
+
     }
 }
