@@ -295,10 +295,12 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps);
-	public static void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props) {
+	private static extern unsafe IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto* props, int nProps);
+	public static unsafe void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, Span<LuauMetadataPropertyMarshalDto> props) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length));
+		fixed (LuauMetadataPropertyMarshalDto* ptr = &MemoryMarshal.GetReference(props)) {
+			ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, ptr, props.Length));
+		}
 	}
 	
 #if UNITY_IPHONE
