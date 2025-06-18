@@ -263,6 +263,14 @@ public class AirshipComponent : MonoBehaviour {
 		}
 		
 		LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
+
+		// Free handles:
+		foreach (var handle in gcHandles) {
+			handle.Free();
+		}
+		foreach (var strPtr in stringPtrs) {
+			Marshal.FreeCoTaskMem(strPtr);
+		}
 	}
 
 	private void Start() {
