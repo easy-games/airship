@@ -9,11 +9,11 @@ public partial class LuauCore : MonoBehaviour {
         LuauState.FromContext(context).AddThread(thread, binding);
     }
 
-    public static void ErrorThread(IntPtr thread, string errorMsg) {
-        byte[] str = System.Text.Encoding.UTF8.GetBytes((string) errorMsg);
-        var allocation = GCHandle.Alloc(str, GCHandleType.Pinned); //Ok
-        LuauPlugin.LuauErrorThread(thread, allocation.AddrOfPinnedObject(), str.Length);
-        allocation.Free();
+    public static unsafe void ErrorThread(IntPtr thread, string errorMsg) {
+        byte[] str = System.Text.Encoding.UTF8.GetBytes(errorMsg);
+        fixed (byte* ptr = str) {
+            LuauPlugin.LuauErrorThread(thread, new IntPtr(ptr), str.Length);
+        }
     }
 
     /// <summary>

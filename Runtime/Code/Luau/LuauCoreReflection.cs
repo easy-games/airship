@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Airship.DevConsole;
 using Assets.Luau;
 using Code.Luau;
@@ -458,10 +459,11 @@ public partial class LuauCore : MonoBehaviour
         }
 
         if (t == stringType) {
-            byte[] str = System.Text.Encoding.UTF8.GetBytes((string)value);
-            var allocation = GCHandle.Alloc(str, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, allocation.AddrOfPinnedObject(), str.Length);
-            allocation.Free();
+            var str = (string)value;
+            var strPtr = Marshal.StringToCoTaskMemUTF8(str);
+            var strLen = Encoding.UTF8.GetByteCount(str);
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, strLen);
+            Marshal.FreeCoTaskMem(strPtr);
             return true;
         }
 
@@ -563,11 +565,11 @@ public partial class LuauCore : MonoBehaviour
         }
 
         if (t == binaryBlobType) {
-            Assets.Luau.BinaryBlob blob = (Assets.Luau.BinaryBlob)value;
+            var blob = (BinaryBlob)value;
 
-            var gch = GCHandle.Alloc(blob.data, GCHandleType.Pinned); //Ok
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, gch.AddrOfPinnedObject(), (int)blob.dataSize); // 0, because we know how big an intPtr is
-            gch.Free();
+            fixed (byte* dataPtr = blob.data) {
+                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), blob.dataSize);
+            }
 
             return true;
         }
