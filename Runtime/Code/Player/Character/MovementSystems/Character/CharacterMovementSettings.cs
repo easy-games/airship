@@ -56,7 +56,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public bool autoCrouch = true;
 
         [Tooltip("While crouching, prevent falling of ledges")]
-        public bool preventFallingWhileCrouching = true;
+        public CrouchEdgeDetection preventFallingWhileCrouching = CrouchEdgeDetection.GridBased;
 
         [Tooltip("While crouching dont step up onto ledges")]
         public bool preventStepUpWhileCrouching = true;
@@ -175,5 +175,11 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [Tooltip("Slopes above this threshold will be treated as walls")] [Range(0, 1)]
         public float maxSlopeDelta = .3f;
+    }
+
+    public enum CrouchEdgeDetection {
+        None,
+        Everything,
+        GridBased
     }
 }
