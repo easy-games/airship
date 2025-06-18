@@ -151,7 +151,6 @@ namespace Code.Network.Simulation
             // and a client should convert server authoritative state received to its own timeline by interpolating with NetworkTime.time
             // and capturing snapshots of the interpolated state on its own timeline.
             var time = NetworkServer.active ? NetworkTime.time : Time.unscaledTimeAsDouble;
-            time = Math.Round(time / Time.fixedDeltaTime) * Time.fixedDeltaTime; // for removing precision errors on tick conversion. TODO: just migrate to ticks and remove all this time stuff.
             
             // Update debug overlay
             var buffer = NetworkClient.bufferTime / Math.Min(Time.timeScale, 1);
