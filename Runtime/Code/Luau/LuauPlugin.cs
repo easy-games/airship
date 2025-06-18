@@ -785,12 +785,13 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CopyTableToArray(IntPtr thread, IntPtr array, int type, int size, int idx);
-	public static void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) {
-		array = new T[size];
-		var gc = GCHandle.Alloc(array, GCHandleType.Pinned);
-		var arrayPtr = gc.AddrOfPinnedObject();
-		var res = CopyTableToArray(thread, arrayPtr, (int)type, size, idx);
-		gc.Free();
+	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
+		var arr = new T[size];
+		array = arr;
+		IntPtr res;
+		fixed (T* arrayPtr = arr) {
+			res = CopyTableToArray(thread, new IntPtr(arrayPtr), (int)type, size, idx);
+		}
 		ThrowIfNotNullPtr(res);
 
 		if (asList) {
@@ -803,13 +804,12 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void PushCsError(IntPtr errPtr, int errLen);
-	public static void LuauPushCsError(string err) {
-		var bytes = System.Text.Encoding.UTF8.GetBytes(err);
-		var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-		var bytesPtr = handle.AddrOfPinnedObject();
-		PushCsError(bytesPtr, bytes.Length);
-		handle.Free();
+	private static extern unsafe void PushCsError(byte* errPtr, int errLen);
+	public static unsafe void LuauPushCsError(string err) {
+		var bytes = Encoding.UTF8.GetBytes(err);
+		fixed (byte* bytesPtr = bytes) {
+			PushCsError(bytesPtr, bytes.Length);
+		}
 	}
 
 	public enum LuauGCState {
