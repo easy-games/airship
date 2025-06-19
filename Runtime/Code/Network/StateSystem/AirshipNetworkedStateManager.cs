@@ -48,7 +48,7 @@ namespace Code.Network.StateSystem
         private double lastClientSend = 0;
         private double lastServerSend = 0;
         // The local time contained in the last data sent. This is used to know which data we have already sent to the server
-        private double clientLastSentLocalTime = 0;
+        private uint clientLastSentLocalTick = 0;
 
         // Server processing for commands
         private Input lastProcessedCommand;
@@ -235,15 +235,15 @@ namespace Code.Network.StateSystem
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
                     var commands =
-                        this.inputHistory.GetAllAfter((uint) (clientLastSentLocalTime - (NetworkClient.sendInterval / Time.fixedDeltaTime)));
+                        this.inputHistory.GetAllAfter((uint) (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedDeltaTime)));
                     if (commands.Length > 0)
                     {
-                        // Debug.Log($"Sending {commands.Length} commands. Last command: " + commands[^1].commandNumber + $" T: {Time.unscaledTimeAsDouble}");
-                        this.clientLastSentLocalTime = this.inputHistory.Keys[^1];
+                        Debug.Log($"Sending {commands.Length} commands. Last command: " + commands[^1].commandNumber);
+                        this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
                     else
                     {
-                        // Debug.LogWarning("Sending no commands on interval");
+                        Debug.LogWarning($"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}");
                     }
 
                     // We make multiple calls so that Mirror can batch the commands efficiently.
@@ -257,10 +257,10 @@ namespace Code.Network.StateSystem
                 if (isClient && isOwned && !serverAuth)
                 {
                     if (this.stateHistory.Keys.Count == 0) return;
-                    var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTime));
+                    var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTick));
                     if (states.Length > 0)
                     {
-                        this.clientLastSentLocalTime = this.stateHistory.Keys[^1];
+                        this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
                     }
 
                     // We make multiple calls so that Mirror can batch the snapshots efficiently
@@ -1089,18 +1089,24 @@ namespace Code.Network.StateSystem
         }
 
         private void ProcessClientInputOnServer(Input command) {
-            // Debug.Log("Server received command " + command.commandNumber + " for " + this.gameObject.name);
+            Debug.Log("Server received command " + command.commandNumber + " for " + this.gameObject.name);
             // This should only occur if the server is authoritative.
-            if (!serverAuth) return;
+            if (!serverAuth) {
+                Debug.LogWarning($"Received input command from {this.name}, but the networking mode is not server authoritative. Command will be ignored.");
+                return;
+            }
 
             // We may get null commands when the client pauses command sending because of unconfirmed commands.
             // We basically ignore these as this is the client telling us "nothing". We could consider filtering
             // these on the client before sending.
-            if (command == null) return;
+            if (command == null) {
+                Debug.LogWarning($"Received null input command from {this.name}. Is the client ok?");
+                return;
+            }
 
             if (this.serverCommandBuffer.TryGetValue(command.commandNumber, out Input existingInput))
             {
-                // Debug.Log("Received duplicate command number from client. Ignoring");
+                Debug.Log("Received duplicate command number from client. Ignoring");
                 return;
             }
 
@@ -1114,7 +1120,7 @@ namespace Code.Network.StateSystem
 
             if (this.serverLastProcessedCommandNumber >= command.commandNumber)
             {
-                // Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
+                Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
                 return;
             }
 
