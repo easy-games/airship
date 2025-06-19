@@ -57,7 +57,7 @@ public static class LuauPluginUpdateCheck {
         if (lastHash != "") {
             // Check if user wants to restart
             var acceptsRestart = EditorUtility.DisplayDialog("Luau Plugin Updated",
-                "The Luau plugin has updated. Restart Unity to apply changes. We're sorry for this..", "Quit", "Cancel");
+                "Airship Luau plugin has updated. Restart Unity to apply changes.", "Quit", "Cancel");
             if (acceptsRestart) {
                 // Verify any unsaved changes are saved
                 var confirmedSaveState = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();

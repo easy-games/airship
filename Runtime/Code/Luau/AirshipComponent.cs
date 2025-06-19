@@ -61,6 +61,9 @@ public class AirshipComponent : MonoBehaviour {
 	internal static bool UsePostCompileReconciliation { get; set; } = true;
 	private const bool ElevateToProtectedWithinCoreScene = true;
 	
+	private static readonly List<GCHandle> InitGcHandles = new();
+	private static readonly List<IntPtr> InitStringPtrs = new();
+	
 	public static LuauScript.AwakeData QueuedAwakeData = null;
 	public static readonly Dictionary<int, string> ComponentIdToScriptName = new();
 	
@@ -110,6 +113,8 @@ public class AirshipComponent : MonoBehaviour {
 		_validatedSceneInGameConfig = false;
 		QueuedAwakeData = null;
 		ComponentIdToScriptName.Clear();
+		InitGcHandles.Clear();
+		InitStringPtrs.Clear();
 	}
 	
 	public static AirshipComponent Create(GameObject go, string scriptPath, LuauContext context) {
@@ -226,16 +231,17 @@ public class AirshipComponent : MonoBehaviour {
 
 		InitAirshipComponent();
 	}
-	
-	private void InitAirshipComponent() {
-		InitializeAirshipReference();
 
+	private unsafe void InitAirshipComponent() {
+		InitializeAirshipReference();
+		
 		// Ensure all AirshipComponent dependencies are ready first
 		foreach (var dependency in GetDependencies()) {
 			dependency.Init();
 		}
 		
-		var properties = new List<LuauMetadataProperty>(metadata.properties);
+		var properties = metadata.properties;
+		var propertiesCopied = false;
         
 		// Ensure allowed objects
 		for (var i = metadata.properties.Count - 1; i >= 0; i--) {
@@ -245,6 +251,11 @@ public class AirshipComponent : MonoBehaviour {
 				case "object": {
 					if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
 						Debug.LogError($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
+						if (!propertiesCopied) {
+							// As an optimization, we use the original metadata.properties list until we need to modify it at all, such as here:
+							propertiesCopied = true;
+							properties = new List<LuauMetadataProperty>(metadata.properties);
+						}
 						properties.RemoveAt(i);
 					}
 
@@ -253,16 +264,27 @@ public class AirshipComponent : MonoBehaviour {
 			}
 		}
 
-		var propertyDtos = new LuauMetadataPropertyMarshalDto[properties.Count];
-		var gcHandles = new List<GCHandle>();
-		var stringPtrs = new List<IntPtr>();
+		var propertyDtos = properties.Count <= 1024 ?
+			stackalloc LuauMetadataPropertyMarshalDto[properties.Count] : 
+			new LuauMetadataPropertyMarshalDto[properties.Count];
+		
 		for (var i = 0; i < properties.Count; i++) {
 			var property = properties[i];
-			property.AsStructDto(thread, gcHandles, stringPtrs, out var dto);
+			property.AsStructDto(thread, InitGcHandles, InitStringPtrs, out var dto);
 			propertyDtos[i] = dto;
 		}
 		
 		LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
+
+		// Free handles:
+		foreach (var handle in InitGcHandles) {
+			handle.Free();
+		}
+		foreach (var strPtr in InitStringPtrs) {
+			Marshal.FreeCoTaskMem(strPtr);
+		}
+		InitGcHandles.Clear();
+		InitStringPtrs.Clear();
 	}
 
 	private void Start() {
@@ -470,6 +492,9 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     private void OnValidate() {
+	    if (Application.isPlaying) {
+		    return;
+	    }
 	    Validate();
     }
 

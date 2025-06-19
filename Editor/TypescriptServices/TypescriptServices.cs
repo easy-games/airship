@@ -163,7 +163,11 @@ namespace Airship.Editor {
         private  static IEnumerator StartTypescriptRuntime() {
             TypescriptProjectsService.ReloadProject();
             
-            // if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
+            // Wait for updates
+            if (AirshipUpdateService.IsUpdatingAirship || AirshipPackagesWindow.IsModifyingPackages) {
+                yield return new WaitUntil(() =>
+                    !AirshipPackagesWindow.IsModifyingPackages && !AirshipUpdateService.IsUpdatingAirship);
+            }
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
                 TypescriptCompilationService.StopCompilerServices(true);
