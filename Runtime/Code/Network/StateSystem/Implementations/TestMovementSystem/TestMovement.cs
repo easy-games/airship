@@ -45,16 +45,16 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             }
         }
 
-        public override TestMovementState GetCurrentState(int commandNumber, double time)
+        public override TestMovementState GetCurrentState(int commandNumber, uint tick)
         {
             return new TestMovementState()
             {
                 position = rb.position, rotation = rb.rotation, velocity = rb.linearVelocity,
-                angularVelocity = rb.angularVelocity, lastProcessedCommand = commandNumber, time = time, jumpTicksUntil = jumpTicksUntil
+                angularVelocity = rb.angularVelocity, lastProcessedCommand = commandNumber, tick = tick, jumpTicksUntil = jumpTicksUntil
             };
         }
 
-        public override void Tick(TestMovementInput command, double time, bool replay)
+        public override void Tick(TestMovementInput command, uint tick, bool replay)
         {
             if (command == null) return;
             //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
@@ -84,7 +84,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             // Noop
         }
 
-        public override TestMovementInput GetCommand(int commandNumber, double time)
+        public override TestMovementInput GetCommand(int commandNumber, uint tick)
         {
             var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, jump = jump};
             jump = false;

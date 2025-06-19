@@ -46,36 +46,36 @@ namespace Code.Network.Simulation
             AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.LagCompensationCheck;
         }
 
-        private void CaptureSnapshot(double time, bool replay)
+        private void CaptureSnapshot(uint tick, bool replay)
         {
             if (replay)
             {
-                var state = this.history.Get(time);
+                var state = this.history.Get(tick);
                 this.transform.position = state.position;
                 this.transform.rotation = state.rotation;
                 return;
             }
             
-            this.history.Add(time, new TransformSnapshot()
+            this.history.Add(tick, new TransformSnapshot()
             {
                 position = this.transform.position,
                 rotation = this.transform.rotation
             });
         }
 
-        private void SetSnapshot(object objTime)
+        private void SetSnapshot(object objTick)
         {
-            if (objTime is double time) {
-                var snapshot = this.history.Get(time);
+            if (objTick is uint tick) {
+                var snapshot = this.history.Get(tick);
                 this.transform.position = snapshot.position;
                 this.transform.rotation = snapshot.rotation;
             }
         }
 
-        private void LagCompensationCheck(int clientId, double time, double latency)
+        private void LagCompensationCheck(int clientId, uint tick, double latency)
         {
-            var bufferedTime = time - latency - NetworkClient.bufferTime;
-            this.SetSnapshot(bufferedTime);
+            var bufferedTicks = Math.Round((latency - NetworkClient.bufferTime) / Time.fixedDeltaTime);
+            this.SetSnapshot((uint) tick - bufferedTicks);
         }
     }
 }

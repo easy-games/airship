@@ -164,7 +164,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public override string ToString()
         {
             return
-                $"Time: {time}\n" +
+                $"Tick: {tick}\n" +
                 $"LastProcessedCommand: {lastProcessedCommand}\n" +
                 $"Position: {position}\n" +
                 $"Velocity: {velocity}\n" +

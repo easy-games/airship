@@ -69,10 +69,6 @@ namespace Code.Network.StateSystem
         // Client processing for input prediction
         private State clientLastConfirmedState;
 
-        // When the client doesn't recieve confirmation of it's commands for an extended time, we pause
-        // predictions until we receive more commands from the server.
-        private bool clientPausePrediction = false;
-
         // Fields for managing re-simulations
         /**
          * We store a max of 1 second of history
@@ -89,10 +85,10 @@ namespace Code.Network.StateSystem
         // in the observer snapshot function. Clients build observer history out of the state snapshots they
         // receive as well as by applying diffs received to existing state in this history.
         public History<State> observerHistory;
-        private double lastReceivedSnapshotTime = 0;
+        private double lastReceivedSnapshotTick = 0;
 
         // Client interpolation fields
-        private double clientLastInterpolatedStateTime = 0;
+        private double clientLastInterpolatedStateTick = 0;
         
         // A map between clientId and the last acked snapshot they received. We use this to select
         // the snapshot we use to generate diffs for the client.
@@ -239,7 +235,7 @@ namespace Code.Network.StateSystem
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
                     var commands =
-                        this.inputHistory.GetAllAfter(clientLastSentLocalTime - NetworkClient.sendInterval);
+                        this.inputHistory.GetAllAfter((uint) (clientLastSentLocalTime - (NetworkClient.sendInterval / Time.fixedDeltaTime)));
                     if (commands.Length > 0)
                     {
                         // Debug.Log($"Sending {commands.Length} commands. Last command: " + commands[^1].commandNumber + $" T: {Time.unscaledTimeAsDouble}");
@@ -261,7 +257,7 @@ namespace Code.Network.StateSystem
                 if (isClient && isOwned && !serverAuth)
                 {
                     if (this.stateHistory.Keys.Count == 0) return;
-                    var states = this.stateHistory.GetAllAfter(this.clientLastSentLocalTime);
+                    var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTime));
                     if (states.Length > 0)
                     {
                         this.clientLastSentLocalTime = this.stateHistory.Keys[^1];
@@ -300,7 +296,7 @@ namespace Code.Network.StateSystem
                         continue;
                     }
 
-                    var baseState = this.stateHistory.GetExact(lastAckedTick * Time.fixedDeltaTime);
+                    var baseState = this.stateHistory.GetExact(lastAckedTick);
                     if (baseState == null) {
                         this.SendServerSnapshotToClient(client.Value, state);
                         // We will expect the client to receive this and send snapshots after this
@@ -338,126 +334,126 @@ namespace Code.Network.StateSystem
 
         #region Top Level Event Functions
 
-        private void OnTick(object timeObj, object replayObj) {
-            if (timeObj is not double time || replayObj is not bool replay) return;
+        private void OnTick(object tickObj, object replayObj) {
+            if (tickObj is not uint tick || replayObj is not bool replay) return;
             
             // We are in shared mode
             if (isServer && isClient)
             {
-                this.AuthClientTick(time, replay);
+                this.AuthClientTick(tick, replay);
                 return;
             }
 
             // We are the client and we are authoritative. Report our state to the server.
             if (isClient && isOwned && !serverAuth)
             {
-                this.AuthClientTick(time, replay);
+                this.AuthClientTick(tick, replay);
             }
 
             // We are the server, and we are the authority. Expect commands to come from owning client.
             // Process those commands and distribute and authoritative answer.
             if (isServer && serverAuth)
             {
-                this.AuthServerTick(time, replay);
+                this.AuthServerTick(tick, replay);
             }
 
             // We are the client and the server is authoritative. Send our input commands and handle prediction
             if (isClient && isOwned && serverAuth)
             {
-                this.NonAuthClientTick(time, replay);
+                this.NonAuthClientTick(tick, replay);
             }
 
             // We are the server and we are not authoritative.
             if (isServer && !serverAuth)
             {
-                this.NonAuthServerTick(time, replay);
+                this.NonAuthServerTick(tick, replay);
             }
 
             // We are an observing client
             if (isClient && !isOwned)
             {
-                this.ObservingClientTick(time, replay);
+                this.ObservingClientTick(tick, replay);
             }
         }
 
-        private void OnCaptureSnapshot(double time, bool replay)
+        private void OnCaptureSnapshot(uint tick, bool replay)
         {
             // We are in shared mode
             if (isClient && isServer)
             {
-                this.AuthClientCaptureSnapshot(time, replay);
+                this.AuthClientCaptureSnapshot(tick, replay);
                 return;
             }
 
             // We are the client and we are authoritative. Report our state to the server.
             if (isClient && isOwned && !serverAuth)
             {
-                this.AuthClientCaptureSnapshot(time, replay);
+                this.AuthClientCaptureSnapshot(tick, replay);
             }
 
             // We are the server, and we are the authority. Expect commands to come from owning client.
             // Process those commands and distribute and authoritative answer.
             if (isServer && serverAuth)
             {
-                this.AuthServerCaptureSnapshot(time, replay);
+                this.AuthServerCaptureSnapshot(tick, replay);
             }
 
             // We are the server, but the client is authoritative. Simply forward to observers.
             if (isServer && !serverAuth)
             {
-                this.NonAuthServerCaptureSnapshot(time, replay);
+                this.NonAuthServerCaptureSnapshot(tick, replay);
             }
 
             // We are the client and the server is authoritative. Send our input commands and handle prediction
             if (isClient && isOwned && serverAuth)
             {
-                this.NonAuthClientCaptureSnapshot(time, replay);
+                this.NonAuthClientCaptureSnapshot(tick, replay);
             }
 
             // We are an observing client
             if (isClient && !isOwned)
             {
-                this.ObservingClientCaptureSnapshot(time, replay);
+                this.ObservingClientCaptureSnapshot(tick, replay);
             }
         }
 
-        private void OnSetSnapshot(object objTime)
+        private void OnSetSnapshot(object objTick)
         {
-            if (objTime is double time) {
+            if (objTick is uint tick) {
                 // we are in shared mode
                 if (isClient && isServer) {
-                    this.AuthClientSetSnapshot(time);
+                    this.AuthClientSetSnapshot(tick);
                     return;
                 }
 
                 // We are the client and we are authoritative.
                 if (isClient && isOwned && !serverAuth) {
-                    this.AuthClientSetSnapshot(time);
+                    this.AuthClientSetSnapshot(tick);
                 }
 
                 // We are the server, and we are the authority.
                 if (isServer && serverAuth) {
-                    this.AuthServerSetSnapshot(time);
+                    this.AuthServerSetSnapshot(tick);
                 }
 
                 // We are the server, but the client is authoritative.
                 if (isServer && !serverAuth) {
-                    this.NonAuthServerSetSnapshot(time);
+                    this.NonAuthServerSetSnapshot(tick);
                 }
 
                 // We are the client and the server is authoritative.
                 if (isClient && isOwned && serverAuth) {
-                    this.NonAuthClientSetSnapshot(time);
+                    this.NonAuthClientSetSnapshot(tick);
                 }
 
                 // We are an observing client
                 if (isClient && !isOwned) {
-                    this.ObservingClientSetSnapshot(time);
+                    this.ObservingClientSetSnapshot(tick);
                 }
             }
         }
 
-        private void OnLagCompensationCheck(int clientId, double currentTime, double ping)
+        private void OnLagCompensationCheck(int clientId, uint currentTick, double ping)
         {
             // Only the server can perform lag compensation checks.
             if (!isServer) return;
@@ -468,7 +464,7 @@ namespace Code.Network.StateSystem
             // saw themselves where the server sees them at the current time.
             if (this.netIdentity.connectionToClient != null && clientId == this.netIdentity.connectionToClient.connectionId)
             {
-                this.OnSetSnapshot(currentTime);
+                this.OnSetSnapshot(currentTick);
                 return;
             }
 
@@ -481,21 +477,19 @@ namespace Code.Network.StateSystem
             // TODO: We treat estimatedCommandDelay as a constant, but we should determine this by calculating how long the command that triggered the lag comp was buffered
             // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
             // That may prove difficult, so we use a constant for now.
-            var estimatedCommandDelay = this.serverCommandBufferTargetSize * Time.fixedDeltaTime;
-            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime / Math.Min(Time.timeScale, 1); // client buffers more when timescale is set lower than 1
-            // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " command delay: " + estimatedCommandDelay + " for a result of: " + (- ping -
-            //     clientBufferTime - estimatedCommandDelay));
-            var lagCompensatedTickTime =
-                AirshipSimulationManager.Instance.GetLastSimulationTime(currentTime - ping -
-                                                                        clientBufferTime - estimatedCommandDelay);
-            this.OnSetSnapshot(lagCompensatedTickTime);
+            var estimatedCommandDelayTicks = this.serverCommandBufferTargetSize;
+            var clientBufferTimeTicks  = (NetworkServer.connections[clientId].bufferTime / Math.Min(Time.timeScale, 1)) / Time.fixedDeltaTime; // client buffers more when timescale is set lower than 1
+            var pingTicks = ping / Time.fixedDeltaTime;
+            // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + pingTicks + " buffer time: " + clientBufferTimeTicks + " command delay: " + estimatedCommandDelayTicks + " for a result of: " + (- Math.Round(pingTicks - clientBufferTimeTicks - estimatedCommandDelayTicks));
+            var lagCompensatedTick = currentTick - Math.Round(pingTicks - clientBufferTimeTicks - estimatedCommandDelayTicks);
+            this.OnSetSnapshot(lagCompensatedTick);
         }
 
         #endregion
 
         #region Authoritative Server Functions
 
-        public void AuthServerTick(double time, bool replay)
+        public void AuthServerTick(uint tick, bool replay)
         {
             if (replay)
             {
@@ -508,9 +502,9 @@ namespace Code.Network.StateSystem
             if (this.serverGeneratesCommands)
             {
                 // Server generated commands will never be replayed or stored
-                var command = this.stateSystem.GetCommand(this.serverLastProcessedCommandNumber, time);
+                var command = this.stateSystem.GetCommand(this.serverLastProcessedCommandNumber, tick);
                 this.serverLastProcessedCommandNumber++;
-                this.stateSystem.Tick(command, time,false);
+                this.stateSystem.Tick(command, tick,false);
                 return;
             }
 
@@ -572,14 +566,14 @@ namespace Code.Network.StateSystem
                     }
 
                     // tick command
-                    // command.time = time; // Correct time to local timeline for ticking on the server.
-                    this.stateSystem.Tick(command, time, false);
+                    // command.tick = tick; // Correct tick to local timeline for ticking on the server.
+                    this.stateSystem.Tick(command, tick, false);
                 }
                 else
                 {
                     // Ensure that we always tick the system even if there's no command to process.
                     Debug.LogWarning("No commands left. Last command processed: " + this.lastProcessedCommand);
-                    this.stateSystem.Tick(null, time, false);
+                    this.stateSystem.Tick(null, tick, false);
                 }
             } while (this.serverCommandBuffer.Count >
                      this.serverCommandBufferTargetSize &&
@@ -592,7 +586,7 @@ namespace Code.Network.StateSystem
             }
         }
 
-        public void AuthServerCaptureSnapshot(double time, bool replay)
+        public void AuthServerCaptureSnapshot(uint tick, bool replay)
         {
             if (replay)
             {
@@ -602,14 +596,14 @@ namespace Code.Network.StateSystem
 
             // get snapshot to send to clients
             var state = this.stateSystem.GetCurrentState(this.serverLastProcessedCommandNumber,
-                time);
-            this.stateHistory.Add(time, state);
+                tick);
+            this.stateHistory.Add(tick, state);
             // Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
         }
 
-        public void AuthServerSetSnapshot(double time)
+        public void AuthServerSetSnapshot(uint tick)
         {
-            var state = this.stateHistory.GetExact(time);
+            var state = this.stateHistory.GetExact(tick);
             if (state == null)
             {
                 // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
@@ -623,58 +617,42 @@ namespace Code.Network.StateSystem
 
         #region Non-Authoritative Client Functions
 
-        public void NonAuthClientTick(double time, bool replay)
+        public void NonAuthClientTick(uint tick, bool replay)
         {
             // If it's a replay, we will take inputs from our input history for this tick
             if (replay)
             {
                 // Get the command that we used at this tick previously
-                var command = this.inputHistory.GetExact(time);
+                var command = this.inputHistory.GetExact(tick);
                 // Process the command again like before, but pass replay into the network system so that
                 // it doesn't replay effects or animations, etc.
-                this.stateSystem.Tick(command, time, true);
+                this.stateSystem.Tick(command, tick, true);
                 return;
             }
 
-            // I think for now, I'm just going to remove this because I'm having trouble justifying the actual purpose
-            // of this. If there's a network issue, then mirror will disconnect us, and any other case we would want to
-            // continue as if we will recover and trust that resimulations will correct any mistakes. If the server is
-            // lagging out, ticking the characters will still occur even if we don't send cmds, so we might as well try
-            // // If the prediction is paused, we still tick the system, but we include no command
-            // // for the tick. We want to wait for our current set of commands to be confirmed before
-            // // we start predicting again, so it's important that we do not continue processing new commands
-            // // and incrementing our commandNumber.
-            // if (this.clientPausePrediction)
-            // {
-            //     // this.stateSystem.GetCommand(this
-            //     //     .clientCommandNumber, time); // We tick GetCommand to clear any input, but we don't use it
-            //     // this.stateSystem.Tick(null, time, false);
-            //     this.inputHistory.Add(time, null);
-            //     return;
-            // }
-
             // Update our command number and process the next tick.
             clientCommandNumber++;
-            var input = this.stateSystem.GetCommand(this.clientCommandNumber, time);
-            input = this.inputHistory.Add(time, input);
-            this.stateSystem.Tick(input, time, false);
+            var input = this.stateSystem.GetCommand(this.clientCommandNumber, tick);
+            input = this.inputHistory.Add(tick, input);
+            this.stateSystem.Tick(input, tick, false);
         }
 
-        public void NonAuthClientCaptureSnapshot(double time, bool replay)
+        public void NonAuthClientCaptureSnapshot(uint tick, bool replay)
         {
             // We are replaying a previously captured tick
             if (replay)
             {
                 // Check if we had input for that tick. If we did, we will want to use the command number for that
                 // input to capture our snapshot
-                var input = this.inputHistory.GetExact(time);
+                var input = this.inputHistory.GetExact(tick);
                 // If we didn't have any input, just skip capturing the tick since we won't expect
                 // to see it in our state history either.
                 if (input == null) return;
 
-                if (this.stateHistory.IsAuthoritativeEntry(time))
+                if (this.stateHistory.IsAuthoritativeEntry(tick))
                 {
-                    var oldState = this.stateHistory.GetExact(time);
+                    var oldState = this.stateHistory.GetExact(tick);
+                    // Debug.Log(("Replayed command " + input.commandNumber + " authoritatively resulted in " + oldState));
                     if (oldState == null) return;
                     this.stateSystem.SetCurrentState(oldState);
                 }
@@ -682,24 +660,25 @@ namespace Code.Network.StateSystem
                 {
                     // Capture the state and overwrite our history for this tick since it may be different
                     // due to corrected collisions or positions of other objects.
-                    var replayState = this.stateSystem.GetCurrentState(input.commandNumber, time);
+                    var replayState = this.stateSystem.GetCurrentState(input.commandNumber, tick);
+                    var oldState = this.stateHistory.GetExact(tick);
                     // Debug.Log(("Replayed command " + input.commandNumber + " resulted in " + replayState + " Old state: " + oldState));
-                    this.stateHistory.Overwrite(time, replayState);
+                    this.stateHistory.Overwrite(tick, replayState);
                 }
                 return;
             }
 
             // Store the current physics state for prediction
-            var state = this.stateSystem.GetCurrentState(clientCommandNumber, time);
-            this.stateHistory.Add(time, state);
+            var state = this.stateSystem.GetCurrentState(clientCommandNumber, tick);
+            this.stateHistory.Add(tick, state);
             // Debug.Log("Processing command " + state.lastProcessedCommand + " resulted in " + state);
         }
 
-        public void NonAuthClientSetSnapshot(double time)
+        public void NonAuthClientSetSnapshot(uint tick)
         {
             // Use Get() so that we use the oldest state possible
             // if our history does not include the time
-            var state = this.stateHistory.Get(time);
+            var state = this.stateHistory.Get(tick);
             this.stateSystem.SetCurrentState(state);
         }
 
@@ -707,12 +686,12 @@ namespace Code.Network.StateSystem
 
         #region Non-Authoritative Server Functions
 
-        public void NonAuthServerTick(double time, bool replay)
+        public void NonAuthServerTick(uint tick, bool replay)
         {
             // Non auth server ticks have no functionality
         }
 
-        public void NonAuthServerCaptureSnapshot(double time, bool replay)
+        public void NonAuthServerCaptureSnapshot(uint tick, bool replay)
         {
             if (replay)
             {
@@ -762,19 +741,19 @@ namespace Code.Network.StateSystem
                 // the current authoritative state for all observers
                 // Remember that state snapshots use the local simulation time where they were created,
                 // not a shared timeline.
-                latestState.time = time;
+                latestState.tick = tick;
                 // Use this as the current state for the server
                 this.stateSystem.SetCurrentState(latestState);
                 // Since it's new, update our server interpolation functions
                 this.stateSystem.InterpolateReachedState(latestState);
                 // Add the state to our history as we would in a authoritative setup
-                this.stateHistory.Add(time, latestState);
+                this.stateHistory.Add(tick, latestState);
             }
         }
 
-        public void NonAuthServerSetSnapshot(double time)
+        public void NonAuthServerSetSnapshot(uint tick)
         {
-            var state = this.stateHistory.GetExact(time);
+            var state = this.stateHistory.GetExact(tick);
             if (state == null)
             {
                 // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
@@ -788,7 +767,7 @@ namespace Code.Network.StateSystem
 
         #region Authoritative Client Functions
 
-        public void AuthClientTick(double time, bool replay)
+        public void AuthClientTick(uint tick, bool replay)
         {
             // Auth clients may experience a replay when a non-auth networked system experiences a
             // mis-predict. In that case, we will want to roll back our authoritative objects as well
@@ -796,25 +775,25 @@ namespace Code.Network.StateSystem
             if (replay)
             {
                 // In the case of ticks, we simply replay the tick as if it was a predicted object.
-                var input = this.inputHistory.GetExact(time);
+                var input = this.inputHistory.GetExact(tick);
                 // Ignore if we don't have any input history for this tick. The object will remain as
                 // it was on it's last snapshot (we will also set the authoritative position on snapshot capture
                 // later)
                 if (input == null) return;
-                this.stateSystem.Tick(input, time, true);
+                this.stateSystem.Tick(input, tick, true);
                 return;
             }
 
             // Update our command number and process the next tick
             clientCommandNumber++;
             // Read input from system
-            var command = this.stateSystem.GetCommand(clientCommandNumber, time);
-            this.inputHistory.Add(time, command);
+            var command = this.stateSystem.GetCommand(clientCommandNumber, tick);
+            this.inputHistory.Add(tick, command);
             // Tick system
-            this.stateSystem.Tick(command, time, false);
+            this.stateSystem.Tick(command, tick, false);
         }
 
-        public void AuthClientCaptureSnapshot(double time, bool replay)
+        public void AuthClientCaptureSnapshot(uint tick, bool replay)
         {
             // We don't want a predicted history resim to change an authoritative history,
             // so in the case of a replay, we don't actually capture the new snapshot
@@ -824,20 +803,20 @@ namespace Code.Network.StateSystem
             // will not affect client history that has already been reported to the server.
             if (replay)
             {
-                var authoritativeState = this.stateHistory.Get(time);
+                var authoritativeState = this.stateHistory.Get(tick);
                 this.stateSystem.SetCurrentState(authoritativeState);
                 return;
             }
 
-            var state = this.stateSystem.GetCurrentState(clientCommandNumber, time);
-            this.stateHistory.Add(time, state);
+            var state = this.stateSystem.GetCurrentState(clientCommandNumber, tick);
+            this.stateHistory.Add(tick, state);
         }
 
-        public void AuthClientSetSnapshot(double time)
+        public void AuthClientSetSnapshot(uint tick)
         {
             // Clients rolling back for resims on predicted objects will want to
             // have those resims properly affected by client auth objects.
-            var state = this.stateHistory.Get(time);
+            var state = this.stateHistory.Get(tick);
             this.stateSystem.SetCurrentState(state);
         }
 
@@ -845,14 +824,14 @@ namespace Code.Network.StateSystem
 
         #region Observing Client Functions
 
-        public void ObservingClientCaptureSnapshot(double time, bool replay)
+        public void ObservingClientCaptureSnapshot(uint tick, bool replay)
         {
             // No matter what, an observing client should always have the state
             // in the authoritative state from the server during resims. We use our
             // local timeline record for this.
             if (replay)
             {
-                var authoritativeState = this.stateHistory.Get(time);
+                var authoritativeState = this.stateHistory.Get(tick);
                 if (authoritativeState == null) return;
                 this.stateSystem.SetCurrentState(authoritativeState);
                 return;
@@ -861,7 +840,9 @@ namespace Code.Network.StateSystem
             // Get the authoritative state received just before the current observer time. (remember interpolation is buffered by bufferTime)
             // Note: if we get multiple fixed update calls per frame, we will use the same state for all fixedUpdate calls
             // because NetworkTime.time is only advanced on Update(). This might cause resim issues with low framerates...
-            var observedState = this.observerHistory.Get(NetworkTime.time - NetworkClient.bufferTime);
+            var serverTime = NetworkTime.time - NetworkClient.bufferTime;
+            var serverTick = (uint) Math.Floor(serverTime / Time.fixedDeltaTime);
+            var observedState = this.observerHistory.Get(serverTick);
             if (observedState == null)
             {
                 // We don't have state to use for interping or we haven't reached a new state yet. Don't add any
@@ -871,14 +852,14 @@ namespace Code.Network.StateSystem
             
             // Clone the observed state and update it to be on the local physics timeline.
             var state = (State) observedState.Clone();
-            state.time = time;
+            state.tick = tick;
             // Store the state in our state history for re-simulation later if needed.
-            this.stateHistory.Add(time, state);
+            this.stateHistory.Add(tick, state);
 
             // Handle observer interpolation
-            if (clientLastInterpolatedStateTime >= observedState.time) return;
-            // Update our last state time so we don't call InterpolateReachedState more than once on the same state.
-            this.clientLastInterpolatedStateTime = observedState.time;
+            if (clientLastInterpolatedStateTick >= observedState.tick) return;
+            // Update our last state tick so we don't call InterpolateReachedState more than once on the same state.
+            this.clientLastInterpolatedStateTick = observedState.tick;
             // Notify the system of a new reached state
             this.stateSystem.InterpolateReachedState(state);
         }
@@ -888,9 +869,9 @@ namespace Code.Network.StateSystem
             // No actions on observing tick.
         }
 
-        public void ObservingClientSetSnapshot(double time)
+        public void ObservingClientSetSnapshot(uint tick)
         {
-            var authoritativeState = this.stateHistory.Get(time);
+            var authoritativeState = this.stateHistory.Get(tick);
             if (authoritativeState == null) return;
             this.stateSystem.SetCurrentState(authoritativeState);
         }
@@ -908,20 +889,22 @@ namespace Code.Network.StateSystem
 
             // Get the time we should render on the client.
             var clientTime = NetworkTime.time - (NetworkClient.bufferTime / Math.Min(Time.timeScale, 1)); // Don't reduce buffer on TS higher than one since send rate is unaffected
-
+            var clientTick = clientTime / Time.fixedDeltaTime; // TODO: This won't work because we have no gaurantee that the unscaledTime will match up with a tick initially. There will be an offset. tick 0 might start at time 2.5
+                // I think this was the problem that fishnet was trying to solve with a bunch of tick offset calculations. Perhaps we should always render some offset of the "latest" tick? How does source do this...
+            
             // Get the state history around the time that's currently being rendered.
-            if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
+            if (!this.observerHistory.GetAround(clientTick, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
-                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
-                //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                //                  this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
-                //                  (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
+                Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
+                                 " entries. First " + this.observerHistory.Keys[0] + " Last " +
+                                 this.observerHistory.Keys[^1] + " Target " + clientTick + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
+                                 (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
                 return;
             }
 
             // How far along are we in this interp?
-            var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time);
+            var timeDelta = (clientTick - prevState.tick) / (nextState.tick - prevState.tick);
 
             // Call interp on the networked state system so it can place things properly for the render.
             this.stateSystem.Interpolate(timeDelta, prevState, nextState);
@@ -988,15 +971,11 @@ namespace Code.Network.StateSystem
                 return;
             }
 
-            // No matter what, if we get here, we are safe to send commands since we have a command that has been
-            // confirmed by the server that we have locally in our state history.
-            this.clientPausePrediction = false;
-
             // Check if our predicted state matches up with our new authoritative state.
             if (clientPredictedState.Compare(this.stateSystem, state))
             {
                 // If it does, we can just return since our predictions have all been correct so far.
-                this.stateHistory.SetAuthoritativeEntry(clientPredictedState.time, true);
+                this.stateHistory.SetAuthoritativeEntry(clientPredictedState.tick, true);
                 return;
             }
 
@@ -1004,17 +983,17 @@ namespace Code.Network.StateSystem
             
             // We use the client prediction time so we can act like we got this right in our history. Server gives us
             // a time value in its local timeline so the provided time is not useful to us.
-            state = state.Clone() as State;
-            state.time = clientPredictedState.time;
+            var newState = state.Clone() as State;
+            newState.tick = clientPredictedState.tick;
             
             // Overwrite the time we should have predicted this on the client so it
             // appears from the client perspective that we predicted the command correctly.
-            this.stateHistory.Overwrite(clientPredictedState.time, state);
-            this.stateHistory.SetAuthoritativeEntry(clientPredictedState.time, true);
+            this.stateHistory.Overwrite(clientPredictedState.tick, newState);
+            this.stateHistory.SetAuthoritativeEntry(clientPredictedState.tick, true);
             
             // Resimulate all commands performed after the incorrect prediction so that
             // our future predictions are (hopefully) correct.
-            resimulate(clientPredictedState.time);
+            resimulate(clientPredictedState.tick);
         }
 
         #endregion
@@ -1027,7 +1006,7 @@ namespace Code.Network.StateSystem
             // Clients store all received snapshots so they can correctly generate new snapshots
             // from diffs received from the server. Observers will render observerHistory using the
             // server's timeline via NetworkTime.
-            this.observerHistory.Set(state.time, state);
+            this.observerHistory.Set(state.tick, state);
             
             // We ack full snapshots from the server, not new snapshots generated from diffs. This means
             // less ack packets sent.
@@ -1037,13 +1016,13 @@ namespace Code.Network.StateSystem
             
             // If we get a snapshot out of order, we don't need to do reconcile processing since the later
             // snapshot we already received will result in fewer resimulations.
-            if (lastReceivedSnapshotTime >= state.time)
+            if (lastReceivedSnapshotTick >= state.tick)
             {
                 // print("Ignoring out of order snapshot");
                 return;
             }
 
-            lastReceivedSnapshotTime = state.time;
+            lastReceivedSnapshotTick = state.tick;
             
             // The client is a non-authoritative owner and should update
             // their local state with the authoritative state from the server.
@@ -1077,7 +1056,7 @@ namespace Code.Network.StateSystem
         }
 
         private void ClientReceiveDiff(StateDiff diff) {
-            var baseState = this.observerHistory.GetExact(diff.baseTick * Time.fixedDeltaTime);
+            var baseState = this.observerHistory.GetExact(diff.baseTick);
             if (baseState == null) {
                 // TODO: We could reduce network by throttling this so we only call it once
                 // per round trip time + a little buffer for the send interval. Right now, we
@@ -1086,7 +1065,7 @@ namespace Code.Network.StateSystem
                 // This might be ok though because it means in situations with high loss, the server
                 // will continue to send full snapshots all the time to this client instead of just diffs.
                 // It will make for smoother gameplay at the cost of higher network usage.
-                print("No base state for " + diff.baseTick + " (" + (diff.baseTick * Time.fixedDeltaTime) + "). Requesting new snapshot.");
+                print("No base state for " + diff.baseTick + ". Requesting new snapshot.");
                 SendRequestFullSnapshotToServer();
                 return;
             }

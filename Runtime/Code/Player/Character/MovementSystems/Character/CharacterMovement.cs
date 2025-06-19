@@ -281,13 +281,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnSetSnapshot?.Invoke(snapshot);
         }
 
-        public override CharacterSnapshotData GetCurrentState(int commandNumber, double time) {
+        public override CharacterSnapshotData GetCurrentState(int commandNumber, uint tick) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific state capture function don't find their way into our state record.
             customSnapshotData = null;
-            OnCaptureSnapshot?.Invoke(commandNumber, time);
+            OnCaptureSnapshot?.Invoke(commandNumber, tick);
             currentMoveSnapshot.customData = customSnapshotData;
-            currentMoveSnapshot.time = time;
+            currentMoveSnapshot.tick = tick;
             currentMoveSnapshot.lastProcessedCommand = commandNumber;
             currentMoveSnapshot.position = rb.position;
             currentMoveSnapshot.velocity = rb.linearVelocity;
@@ -298,14 +298,14 @@ namespace Code.Player.Character.MovementSystems.Character {
             return snapshot;
         }
 
-        public override CharacterInputData GetCommand(int commandNumber, double time) {
+        public override CharacterInputData GetCommand(int commandNumber, uint tick) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific command generation function don't find their way into our command.
             customInputData = null;
             OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData() {
                 commandNumber = commandNumber,
-                time = time,
+                tick = tick,
                 moveDir = moveDirInput,
                 jump = jumpInput,
                 crouch = crouchInput,
@@ -318,7 +318,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             return data;
         }
 
-        public override void Tick(CharacterInputData command, double time, bool replay) {
+        public override void Tick(CharacterInputData command, uint tick, bool replay) {
             if (command == null) {
                 // If there is no command, we use a "no input" command. This command uses the same command number as our lastProcessedCommand state data
                 // so that we treat this input essentially as a ghost input that doesn't effect our stored command information, but allows us to
@@ -326,6 +326,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // We replace the base inputs with the last known state input so that players do not feel that their inputs were lost from dropped packets.
                 command = new CharacterInputData() {
                     commandNumber = currentMoveSnapshot.lastProcessedCommand,
+                    tick = tick,
                     jump = currentMoveSnapshot.alreadyJumped,
                     crouch = currentMoveSnapshot.isCrouching,
                     sprint = currentMoveSnapshot.isSprinting,
@@ -338,6 +339,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // to still read what direction the character wants to move, even if processing that input is disabled.
             if (disableInput) {
                 var replacementCmd = command.Clone() as CharacterInputData;
+                replacementCmd.tick = tick;
                 replacementCmd.moveDir = new Vector3();
                 replacementCmd.lookVector = currentMoveSnapshot.lookVector;
                 replacementCmd.jump = false;
@@ -1411,7 +1413,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region TypeScript Interaction
 
-        public double GetLocalSimulationTimeFromCommandNumber(int commandNumber) {
+        public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
@@ -1426,7 +1428,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return 0;
             }
 
-            return localState.time;
+            return localState.tick;
         }
 
         public bool RequestResimulation(int commandNumber) {
@@ -1446,7 +1448,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) => {
                 Debug.LogWarning("Resimulating for TS");
-                resimulate(clientPredictedState.time);
+                resimulate(clientPredictedState.tick);
             });
 
             return true;

@@ -13,14 +13,14 @@ namespace Code.Network.StateSystem.Structures
         /**
          * The time the snapshot was created. This time is local to the client/server that created it.
          */
-        public double time {
-            get {
-                return tick * Time.fixedDeltaTime;
-            }
-            set {
-                tick = (uint) Math.Round(value / Time.fixedDeltaTime);
-            }
-        }
+        // public double time {
+        //     get {
+        //         return tick * Time.fixedDeltaTime;
+        //     }
+        //     set {
+        //         tick = (uint) Math.Round(value / Time.fixedDeltaTime);
+        //     }
+        // }
         public uint tick;
 
         /**
