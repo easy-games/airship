@@ -170,6 +170,11 @@ namespace Code.Network.StateSystem
             }
         }
 
+        public override void OnStartAuthority() {
+            base.OnStartAuthority();
+            print("Started authority");
+        }
+
         private void Awake()
         {
             AirshipSimulationManager.Instance.ActivateSimulationManager();
