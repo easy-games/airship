@@ -161,10 +161,16 @@ namespace Code.Network.Simulation
             
             if (tick == lastTick) {
                 Debug.LogWarning($"Tick did not advance.");
+                return; // We don't want to overwrite a tick we already ran. Just wait until the next tick.
             }
 
             if (tick != lastTick + 1) {
                 Debug.LogWarning($"Tick skipped. {lastTick} -> {tick}");
+                // Skipping ticks is acceptable since the client and server use separate timelines. The client
+                // does not care when it's commands are processed and will match up the result in it's own timeline regardless
+                // of the server tick number. This will however affect players being observed since time will "jump" forward,
+                // but the clock will continue to progress smoothly. It just makes players look a little funny, but that's ok
+                // since skipping is rare.
             }
 
             // Update debug overlay
@@ -201,7 +207,7 @@ namespace Code.Network.Simulation
 
             // Perform the standard tick behavior
             OnTick?.Invoke(tick, false);
-            // Debug.Log("Simulate call. Main Tick: " + NetworkTime.time);
+            // Debug.Log($"Simulate call. Main tick {tick}");
             Physics.Simulate(Time.fixedDeltaTime);
             OnCaptureSnapshot?.Invoke(tick, false);
 
@@ -337,7 +343,7 @@ namespace Code.Network.Simulation
         /// </summary>
         private void PerformResimulation(uint baseTick)
         {
-            Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTick} to {this.previousTicks[^1]}");
+            // Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTick} to {this.previousTicks[^1]}");
             G_ResimMonitor.FrameResimValue = 100;
             
             if (replaying)

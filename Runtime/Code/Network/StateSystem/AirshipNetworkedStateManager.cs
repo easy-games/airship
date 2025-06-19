@@ -164,7 +164,7 @@ namespace Code.Network.StateSystem
             }
             else
             {
-                Debug.LogWarning("Unable to determine networked state system mode. Did we miss a case? " + isServer +
+                Debug.LogWarning($"Unable to determine networked state system mode for {this.name}. Did we miss a case? " + isServer +
                                  " " +
                                  isClient + " " + isOwned + " " + serverAuth);
             }
@@ -235,15 +235,15 @@ namespace Code.Network.StateSystem
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
                     var commands =
-                        this.inputHistory.GetAllAfter((uint) (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedDeltaTime)));
+                        this.inputHistory.GetAllAfter((uint) Math.Max(0, (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedDeltaTime))));
                     if (commands.Length > 0)
                     {
-                        Debug.Log($"Sending {commands.Length} commands. Last command: " + commands[^1].commandNumber);
+                        // Debug.Log($"Sending {commands.Length} commands. Last command: " + commands[^1].commandNumber);
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
                     else
                     {
-                        Debug.LogWarning($"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}");
+                        Debug.LogWarning($"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}. Local command history size: {this.inputHistory.Keys.Count}");
                     }
 
                     // We make multiple calls so that Mirror can batch the commands efficiently.
@@ -312,9 +312,6 @@ namespace Code.Network.StateSystem
                         continue;
                     } 
                     this.SendServerDiffToClient(client.Value, diff);
-                    // print("Sending diff for " + this.name + ". Base time: " + baseState.time + " Expected result time: " + state.time + " (" + diff.crc32 + ")");
-                    // print(baseState);
-                    // print(state);
                 }
             }
         }
@@ -335,7 +332,10 @@ namespace Code.Network.StateSystem
         #region Top Level Event Functions
 
         private void OnTick(object tickObj, object replayObj) {
-            if (tickObj is not uint tick || replayObj is not bool replay) return;
+            if (tickObj is not uint tick || replayObj is not bool replay) {
+                Debug.LogWarning($"OnTick: Unexpected value in tick object.");
+                return;
+            }
             
             // We are in shared mode
             if (isServer && isClient)
@@ -451,6 +451,9 @@ namespace Code.Network.StateSystem
                     this.ObservingClientSetSnapshot(tick);
                 }
             }
+            else {
+                Debug.LogWarning($"OnSetSnapshot: Unexpected value in tick object.");
+            }
         }
 
         private void OnLagCompensationCheck(int clientId, uint currentTick, double ping)
@@ -481,7 +484,7 @@ namespace Code.Network.StateSystem
             var clientBufferTimeTicks  = (NetworkServer.connections[clientId].bufferTime / Math.Min(Time.timeScale, 1)) / Time.fixedDeltaTime; // client buffers more when timescale is set lower than 1
             var pingTicks = ping / Time.fixedDeltaTime;
             // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + pingTicks + " buffer time: " + clientBufferTimeTicks + " command delay: " + estimatedCommandDelayTicks + " for a result of: " + (- Math.Round(pingTicks - clientBufferTimeTicks - estimatedCommandDelayTicks));
-            var lagCompensatedTick = currentTick - Math.Round(pingTicks - clientBufferTimeTicks - estimatedCommandDelayTicks);
+            var lagCompensatedTick = (uint) Math.Max(0, currentTick - Math.Round(pingTicks - clientBufferTimeTicks - estimatedCommandDelayTicks));
             this.OnSetSnapshot(lagCompensatedTick);
         }
 
@@ -546,7 +549,7 @@ namespace Code.Network.StateSystem
                                                                          Time.fixedDeltaTime)))
                     {
                         Debug.LogWarning("Missing command " + expectedNextCommandNumber +
-                                         " in the command buffer. Next command was: " + command.commandNumber +
+                                         " in the command buffer for " + this.name + ". Next command was: " + command.commandNumber +
                                          ". Predicted " +
                                          (this.serverPredictedCommandCount + 1) + " command(s) so far.");
                         this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
@@ -708,7 +711,7 @@ namespace Code.Network.StateSystem
                 statesProcessed++;
                 if (statesProcessed > 1)
                 {
-                    Debug.Log("Processing additional client auth state for catchup.");
+                    Debug.Log($"Processing additional client auth state for {this.name}. The server needs to catch up.");
                 }
 
                 // Attempt to get a new state out of the buffer.
@@ -1065,19 +1068,13 @@ namespace Code.Network.StateSystem
                 // This might be ok though because it means in situations with high loss, the server
                 // will continue to send full snapshots all the time to this client instead of just diffs.
                 // It will make for smoother gameplay at the cost of higher network usage.
-                print("No base state for " + diff.baseTick + ". Requesting new snapshot.");
+                // print("No base state for " + diff.baseTick + ". Requesting new snapshot.");
                 SendRequestFullSnapshotToServer();
                 return;
             }
 
             var snapshot = baseState.ApplyDiff(diff);
             if (snapshot == null) {
-                print("Diff failed to apply for " + this.name);
-                var str = "";
-                foreach (var v in this.observerHistory.Values) {
-                    str += $" {v.tick}";
-                }
-                print(str);
                 SendRequestFullSnapshotToServer();
                 return;
             }
@@ -1089,7 +1086,7 @@ namespace Code.Network.StateSystem
         }
 
         private void ProcessClientInputOnServer(Input command) {
-            Debug.Log("Server received command " + command.commandNumber + " for " + this.gameObject.name);
+            // Debug.Log("Server received command " + command.commandNumber + " for " + this.gameObject.name);
             // This should only occur if the server is authoritative.
             if (!serverAuth) {
                 Debug.LogWarning($"Received input command from {this.name}, but the networking mode is not server authoritative. Command will be ignored.");
@@ -1100,13 +1097,13 @@ namespace Code.Network.StateSystem
             // We basically ignore these as this is the client telling us "nothing". We could consider filtering
             // these on the client before sending.
             if (command == null) {
-                Debug.LogWarning($"Received null input command from {this.name}. Is the client ok?");
+                // Debug.LogWarning($"Received null input command from {this.name}. Is the client ok?");
                 return;
             }
 
             if (this.serverCommandBuffer.TryGetValue(command.commandNumber, out Input existingInput))
             {
-                Debug.Log("Received duplicate command number from client. Ignoring");
+                // Debug.Log("Received duplicate command number from client. Ignoring");
                 return;
             }
 
@@ -1114,13 +1111,13 @@ namespace Code.Network.StateSystem
             if (this.serverCommandBuffer.Count > this.serverCommandBufferMaxSize)
             {
                 Debug.LogWarning("Dropping command " + command.commandNumber +
-                                 " due to exceeding command buffer size. First command in buffer is " + this.serverCommandBuffer.Values[0]);
+                                 " for "+ this.name + " due to exceeding command buffer size. First command in buffer is " + this.serverCommandBuffer.Values[0]);
                 return;
             }
 
             if (this.serverLastProcessedCommandNumber >= command.commandNumber)
             {
-                Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
+                // Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
                 return;
             }
 
