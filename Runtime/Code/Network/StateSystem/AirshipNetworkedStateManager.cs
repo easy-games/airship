@@ -170,11 +170,6 @@ namespace Code.Network.StateSystem
             }
         }
 
-        public override void OnStartAuthority() {
-            base.OnStartAuthority();
-            print("Started authority");
-        }
-
         private void Awake()
         {
             AirshipSimulationManager.Instance.ActivateSimulationManager();
@@ -901,10 +896,10 @@ namespace Code.Network.StateSystem
             if (!this.observerHistory.GetAround(clientTick, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
-                Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
-                                 " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                                 this.observerHistory.Keys[^1] + " Target " + clientTick + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
-                                 (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
+                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
+                //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
+                //                  this.observerHistory.Keys[^1] + " Target " + clientTick + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
+                //                  (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
                 return;
             }
 
