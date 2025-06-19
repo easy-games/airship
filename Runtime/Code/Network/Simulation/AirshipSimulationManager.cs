@@ -149,29 +149,32 @@ namespace Code.Network.Simulation
         {
             if (!isActive) return;
             
+            // --- Notes about tick calculation ---
+            
             // Clients use their own timelines for physics. Do not compare ticks generated on a client with a tick generated
             // on the server. The Server should estimate when a client created a command using it's own timeline and ping calculations
             // and a client should convert server authoritative state received to its own timeline by interpolating with NetworkTime.time
             // and capturing snapshots of the interpolated state on its own timeline.
-            var tick = NetworkServer.active ? (uint) Math.Floor(Time.unscaledTimeAsDouble / Time.fixedDeltaTime) : lastTick + 1;
+            
             // Server calculates it's tick based on unscaledTime so that tick values can be converted and compared to NetworkTime.time. This
             // is not necessary for the client. The side effect is that it's possible for the server to skip over ticks or run twice with the same tick
             // value. This may cause problems later and could be resolved by instead applying a clock correction to the tick -> time conversion.
             // Note that NetworkTime.time will return the Time.unscaledTimeAsDouble on the server and if used in fixedupdate, will return unscaledFixedTime
             
-            if (tick == lastTick) {
-                Debug.LogWarning($"Tick did not advance.");
-                return; // We don't want to overwrite a tick we already ran. Just wait until the next tick.
-            }
-
-            if (tick != lastTick + 1) {
-                Debug.LogWarning($"Tick skipped. {lastTick} -> {tick}");
-                // Skipping ticks is acceptable since the client and server use separate timelines. The client
-                // does not care when it's commands are processed and will match up the result in it's own timeline regardless
-                // of the server tick number. This will however affect players being observed since time will "jump" forward,
-                // but the clock will continue to progress smoothly. It just makes players look a little funny, but that's ok
-                // since skipping is rare.
-            }
+            // It is possible for the server to tick the same tick number twice. When this occurs, it generally means
+            // our timescale is above one. The effect is that OnTick functions on the server will be ticked twice with
+            // the same tick number, and the previous result of that tick number will be overwritten. This is acceptable
+            // as server OnTick already must account for multiple ticks on the same tick value due to command catchup.
+            // This will never occur on the client, as we always advance the client tick by 1 each FixedUpdate.
+            
+            // Skipping ticks is acceptable since the client and server use separate timelines. The client
+            // does not care when it's commands are processed and will match up the result in it's own timeline regardless
+            // of the server tick number. Skipping ticks will however affect players being observed, since time will "jump" forward,
+            // but the clock will continue to progress smoothly. It just makes players look a little funny, but that's ok
+            // since skipping is rare.
+            
+            // ---
+            var tick = NetworkServer.active ? (uint) Math.Floor(Time.unscaledTimeAsDouble / Time.fixedDeltaTime) : lastTick + 1;
 
             // Update debug overlay
             var buffer = NetworkClient.bufferTime / Math.Min(Time.timeScale, 1);

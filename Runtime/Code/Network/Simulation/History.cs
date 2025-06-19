@@ -141,6 +141,10 @@ namespace Code.Network.Simulation
 
             return prev;
         }
+
+        public bool Has(uint tick) {
+           return this.history.ContainsKey(tick);
+        }
         
         /**
          * Given a fractional tick (ie. 295.4), gets the ticks that are next to that

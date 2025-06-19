@@ -249,7 +249,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             // Write only changed fields
             var writer = new NetworkWriter();
-            writer.Write((byte)(other.tick - tick)); // We should send diffs far before 255 ticks have passed
+            writer.Write((ushort)(other.tick - tick)); // We should send diffs far before 65,535 ticks have passed. 255 is a little too low if messing with time scale (ticks will skip in slow timescales)
             writer.Write((byte)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
             writer.Write(changedMask);
             if (boolsChanged) writer.Write(newBools);
@@ -303,7 +303,7 @@ namespace Code.Player.Character.MovementSystems.Character
             var reader = new NetworkReader(stateDiff.data);
             var snapshot = (CharacterSnapshotData) this.Clone();
 
-            snapshot.tick = tick + reader.Read<byte>();
+            snapshot.tick = tick + reader.Read<ushort>();
             snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<byte>();
             var changedMask = reader.Read<short>();
 
@@ -345,8 +345,9 @@ namespace Code.Player.Character.MovementSystems.Character
             if (crc32 != diff.crc32) {
                 // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
                 // using this snapshot as the base.
-                Debug.LogWarning("Applying diff failed CRC check. This may happen due to poor network connection. Expected " + diff.crc32 + ", got " + crc32);
+                Debug.LogWarning($"Applying diff failed CRC check. This may happen due to poor network connection. Base tick: {diff.baseTick}");
                 Debug.Log(this);
+                Debug.Log(snapshot);
                 return null;
             }
 

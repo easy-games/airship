@@ -19,11 +19,6 @@ namespace Code.Player.Character.MovementSystems.Character
         public override void SendRequestFullSnapshotToServer() {
             this.CmdClientRequestFullSnapshot();
         }
-
-        public override void SendAckSnapshotToServer(uint tick) {
-            this.CmdClientAckSnapshot(tick);
-        }
-
         public override void SendServerSnapshotToClient(NetworkConnection client, CharacterSnapshotData snapshot)
         {
             this.RpcServerSnapshotToClients(client, snapshot);
@@ -62,12 +57,6 @@ namespace Code.Player.Character.MovementSystems.Character
         private void CmdClientRequestFullSnapshot(NetworkConnectionToClient sender = null) {
             if (sender == null) return;
             this.OnServerReceiveFullSnapshotRequest?.Invoke(sender.connectionId);
-        }
-
-        [Command(channel = Channels.Reliable, requiresAuthority = false)]
-        private void CmdClientAckSnapshot(uint tick, NetworkConnectionToClient sender = null) {
-            if (sender == null) return;
-            this.OnServerReceiveSnapshotAck?.Invoke(sender.connectionId, tick);
         }
     }
 }

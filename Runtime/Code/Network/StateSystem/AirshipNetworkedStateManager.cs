@@ -116,7 +116,6 @@ namespace Code.Network.StateSystem
         /// </summary>
         /// <param name="sender"></param>
         public abstract void SendRequestFullSnapshotToServer();
-        public abstract void SendAckSnapshotToServer(uint tick);
         public abstract void SendServerSnapshotToClient(NetworkConnection client, State snapshot);
         public abstract void SendServerDiffToClient(NetworkConnection client, Diff diff);
 
@@ -203,7 +202,6 @@ namespace Code.Network.StateSystem
             this.OnClientReceiveDiff += ClientReceiveDiff;
             this.OnServerReceiveSnapshot += ServerReceiveSnapshot;
             this.OnServerReceiveInput += ServerReceiveInputCommand;
-            this.OnServerReceiveSnapshotAck += ServerReceiveSnapshotAck;
             this.OnServerReceiveFullSnapshotRequest += ServerReceiveFullSnapshotRequest;
             
             this.stateSystem.manager = this;
@@ -291,8 +289,11 @@ namespace Code.Network.StateSystem
                     }
                     
                     if (!this.serverAckedSnapshots.TryGetValue(client.Key, out var lastAckedTick)) {
-                        this.SendServerSnapshotToClient(client.Value, state);
                         // print("sending snapshot at time " + state.time + " because no lastAcked was set.");
+                        this.SendServerSnapshotToClient(client.Value, state);
+                        // We will expect the client to receive this and send snapshots after this
+                        // as an optimization.
+                        this.serverAckedSnapshots[client.Key] = state.tick;
                         continue;
                     }
 
@@ -575,7 +576,7 @@ namespace Code.Network.StateSystem
                 else
                 {
                     // Ensure that we always tick the system even if there's no command to process.
-                    Debug.LogWarning("No commands left. Last command processed: " + this.lastProcessedCommand);
+                    Debug.LogWarning($"No commands left for {this.name}. Last command processed: " + this.lastProcessedCommand);
                     this.stateSystem.Tick(null, tick, false);
                 }
             } while (this.serverCommandBuffer.Count >
@@ -600,7 +601,23 @@ namespace Code.Network.StateSystem
             // get snapshot to send to clients
             var state = this.stateSystem.GetCurrentState(this.serverLastProcessedCommandNumber,
                 tick);
-            this.stateHistory.Add(tick, state);
+            
+            // The server Sets the history instead of Adds since host timescale > 1 may cause us to use the same tick number twice.
+            // If we are overwriting the snapshot that a client is using as it's diff base, we need to send them a new snapshot.
+            // TODO: this seems to not _completely_ solve the issue. I'm suspicious that the time it takes for an ack to occur
+            // may play a factor in this.
+            if (this.stateHistory.Has(tick)) {
+                var keysToRemove = new List<int>(this.serverAckedSnapshots.Count);
+                foreach (var serverAckedSnapshot in this.serverAckedSnapshots) {
+                    if (serverAckedSnapshot.Value == tick) {
+                        keysToRemove.Add(serverAckedSnapshot.Key);
+                    }
+                }
+                foreach (var key in keysToRemove)  {
+                    this.serverAckedSnapshots.Remove(key);
+                }
+            }
+            this.stateHistory.Set(tick, state);
             // Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
         }
 
@@ -750,7 +767,20 @@ namespace Code.Network.StateSystem
                 // Since it's new, update our server interpolation functions
                 this.stateSystem.InterpolateReachedState(latestState);
                 // Add the state to our history as we would in a authoritative setup
-                this.stateHistory.Add(tick, latestState);
+                // We Set instead of Add so that we always use the latest state if host timescale > 1 caused us to reuse the same tick number
+                // If we are overwriting the snapshot that a client is using as it's diff base, we need to send them a new snapshot.
+                if (this.stateHistory.Has(tick)) {
+                    var keysToRemove = new List<int>(this.serverAckedSnapshots.Count);
+                    foreach (var serverAckedSnapshot in this.serverAckedSnapshots) {
+                        if (serverAckedSnapshot.Value == tick) {
+                            keysToRemove.Add(serverAckedSnapshot.Key);
+                        }
+                    }
+                    foreach (var key in keysToRemove) {
+                        this.serverAckedSnapshots.Remove(key);
+                    }
+                }
+                this.stateHistory.Set(tick, latestState);
             }
         }
 
@@ -1003,19 +1033,13 @@ namespace Code.Network.StateSystem
 
         #region Networking
 
-        private void ProcessNewStateOnClient(State state, bool fromDiff) {
+        private void ProcessNewStateOnClient(State state) {
              if (state == null) return;
             
             // Clients store all received snapshots so they can correctly generate new snapshots
             // from diffs received from the server. Observers will render observerHistory using the
             // server's timeline via NetworkTime.
             this.observerHistory.Set(state.tick, state);
-            
-            // We ack full snapshots from the server, not new snapshots generated from diffs. This means
-            // less ack packets sent.
-            if (!fromDiff) {
-                SendAckSnapshotToServer(state.tick);
-            }
             
             // If we get a snapshot out of order, we don't need to do reconcile processing since the later
             // snapshot we already received will result in fewer resimulations.
@@ -1055,7 +1079,7 @@ namespace Code.Network.StateSystem
 
         private void ClientReceiveSnapshot(State state)
         {
-           ProcessNewStateOnClient(state, false);
+           ProcessNewStateOnClient(state);
         }
 
         private void ClientReceiveDiff(StateDiff diff) {
@@ -1082,7 +1106,7 @@ namespace Code.Network.StateSystem
             // Call the standard receive snapshot logic, since we've build the new snapshot received from the server.
             // This will also add the generated snapshot to the observerHistory so that it can be used as a base for new
             // diffs if required.
-            this.ProcessNewStateOnClient(snapshot as State, true);
+            this.ProcessNewStateOnClient(snapshot as State);
         }
 
         private void ProcessClientInputOnServer(Input command) {
@@ -1168,10 +1192,6 @@ namespace Code.Network.StateSystem
             // This essentially removes the server's knowledge that the client has a valid snapshot to diff
             // off of and triggers the sending of a new full snapshot.
             this.serverAckedSnapshots.Remove(connectionId);
-        }
-
-        private void ServerReceiveSnapshotAck(int connectionId, uint tick) {
-            this.serverAckedSnapshots[connectionId] = tick;
         }
 
         #endregion
