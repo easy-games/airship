@@ -507,6 +507,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fullscreen: 0
+  primaryColor:
+    serializedVersion: 2
+    rgba: 4279900440
+  darkColor:
+    serializedVersion: 2
+    rgba: 4279900440
 --- !u!4 &1088136028
 Transform:
   m_ObjectHideFlags: 0
