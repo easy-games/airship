@@ -580,7 +580,7 @@ namespace Code.Network.StateSystem
                     }
 
                     // tick command
-                    // command.tick = tick; // Correct tick to local timeline for ticking on the server.
+                    command.tick = tick; // Correct tick to local timeline for ticking on the server.
                     this.stateSystem.Tick(command, tick, false);
                 }
                 else
