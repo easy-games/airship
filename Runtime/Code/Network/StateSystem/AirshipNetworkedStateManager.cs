@@ -86,6 +86,16 @@ namespace Code.Network.StateSystem
         // receive as well as by applying diffs received to existing state in this history.
         public History<State> observerHistory;
         private double lastReceivedSnapshotTick = 0;
+        // The clock correction offset is the difference between the server's Time.unscaledTime and it's tick timeline.
+        // We calculate this every time we receive a new diff or snapshot from the server.
+        // Since our client uses NetworkTime.time to observe server ticks, we need to be able to associate a tick with
+        // a NetworkTime.time value where we would want to be displaying that tick. We treat the remote timestamp that
+        // the server sent us this state as the time we should display the tick. We store observer history using the tick
+        // so this offset is part of the calculation for our interpolation to know which tick it should be accessing at a
+        // given NetworkTime.time. The clock correction offset value does NOT affect lag compensation. It's just a mapping from
+        // NetworkTime.time to the server tick timeline. An inaccurate offset value _can_ affect lag compensation however, so
+        // it's important that we try to match this as accurately as possible to the actual timeline offset on the server.
+        private ExponentialMovingAverage observerClockCorrection = new ExponentialMovingAverage(20); // Arbitrary value copied from Mirror's clock correction
 
         // Client interpolation fields
         private double clientLastInterpolatedStateTick = 0;
@@ -921,10 +931,10 @@ namespace Code.Network.StateSystem
             if (this.observerHistory.Values.Count == 0) return;
 
             // Get the time we should render on the client.
-            var clientTime = NetworkTime.time - (NetworkClient.bufferTime / Math.Min(Time.timeScale, 1)); // Don't reduce buffer on TS higher than one since send rate is unaffected
-            var clientTick = clientTime / Time.fixedDeltaTime; // TODO: This won't work because we have no gaurantee that the unscaledTime will match up with a tick initially. There will be an offset. tick 0 might start at time 2.5
-                // I think this was the problem that fishnet was trying to solve with a bunch of tick offset calculations. Perhaps we should always render some offset of the "latest" tick? How does source do this...
-            
+            var clientTime = NetworkTime.time - (NetworkClient.bufferTime / Math.Min(Time.timeScale, 1)) - observerClockCorrection.Value; // Don't reduce buffer on TS higher than one since send rate is unaffected
+            var clientTick = clientTime / Time.fixedDeltaTime;
+            // Debug.Log($"Observing {clientTick}. {NetworkTime.time} - ({NetworkClient.bufferTime} / {Math.Min(Time.timeScale, 1)}) - {observerClockCorrection.Value}");
+                
             // Get the state history around the time that's currently being rendered.
             if (!this.observerHistory.GetAround(clientTick, out State prevState, out State nextState))
             {
@@ -1048,8 +1058,10 @@ namespace Code.Network.StateSystem
                 // print("Ignoring out of order snapshot");
                 return;
             }
-
+            
             lastReceivedSnapshotTick = state.tick;
+            var tickTime = state.tick * Time.fixedDeltaTime;
+            observerClockCorrection.Add(NetworkClient.connection.remoteTimeStamp - tickTime);
             
             // The client is a non-authoritative owner and should update
             // their local state with the authoritative state from the server.

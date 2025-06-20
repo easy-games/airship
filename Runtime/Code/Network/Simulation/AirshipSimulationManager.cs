@@ -174,8 +174,9 @@ namespace Code.Network.Simulation
             // since skipping is rare.
             
             // ---
-            var tick = NetworkServer.active ? (uint) Math.Floor(Time.unscaledTimeAsDouble / Time.fixedDeltaTime) : lastTick + 1;
-
+            // var tick = NetworkServer.active ? (uint) Math.Floor(Time.unscaledTimeAsDouble / Time.fixedDeltaTime) : lastTick + 1;
+            uint tick = (uint)Mathf.RoundToInt(Time.fixedTime / Time.fixedDeltaTime);
+            
             // Update debug overlay
             var buffer = NetworkClient.bufferTime / Math.Min(Time.timeScale, 1);
             G_ResimMonitor.FrameObserverBuffer = buffer;
