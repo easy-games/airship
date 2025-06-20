@@ -56,7 +56,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public bool autoCrouch = true;
 
         [Tooltip("While crouching, prevent falling of ledges")]
-        public CrouchEdgeDetection preventFallingWhileCrouching = CrouchEdgeDetection.GridBased;
+        public CrouchEdgeDetection preventFallingWhileCrouching = CrouchEdgeDetection.UseAxisAlignedNormals;
 
         [Tooltip("While crouching dont step up onto ledges")]
         public bool preventStepUpWhileCrouching = true;
@@ -179,7 +179,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     public enum CrouchEdgeDetection {
         None,
-        Everything,
-        GridBased
+        UseMeshNormals,
+        UseAxisAlignedNormals
     }
 }
