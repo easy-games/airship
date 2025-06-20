@@ -380,11 +380,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // currentMoveSnapshot.lastGroundedMoveDir = command.moveDir;
 
                 //Snap to the ground if you are falling into the ground
-                if (newVelocity.y < 1 &&
+                if (newVelocity.y < 1 && !isImpulsing && !currentMoveSnapshot.airborneFromImpulse &&
                     ((!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0) ||
                      //Snap if we always snap to ground
-                     (movementSettings.alwaysSnapToGround && !currentMoveSnapshot.prevStepUp && !isImpulsing &&
-                      !currentMoveSnapshot.airborneFromImpulse))) {
+                     (movementSettings.alwaysSnapToGround && !currentMoveSnapshot.prevStepUp))) {
                     SnapToY(groundHit.point.y);
                     newVelocity.y = 0;
                 }
