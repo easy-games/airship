@@ -492,10 +492,10 @@ namespace Code.Network.StateSystem
             // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
             // That may prove difficult, so we use a constant for now.
             var estimatedCommandDelayTicks = this.serverCommandBufferTargetSize;
-            var clientBufferTimeTicks  = (NetworkServer.connections[clientId].bufferTime / Math.Min(Time.timeScale, 1)) / Time.fixedDeltaTime; // client buffers more when timescale is set lower than 1
-            var pingTicks = ping / Time.fixedDeltaTime;
-            // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + pingTicks + " buffer time: " + clientBufferTimeTicks + " command delay: " + estimatedCommandDelayTicks + " for a result of: " + (- Math.Round(pingTicks - clientBufferTimeTicks - estimatedCommandDelayTicks));
-            var lagCompensatedTick = (uint) Math.Max(0, currentTick - Math.Round(pingTicks - clientBufferTimeTicks - estimatedCommandDelayTicks));
+            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime / Math.Min(Time.timeScale, 1); // client buffers more when timescale is set lower than 1
+            var pingAndBufferTicks = Math.Round((ping + clientBufferTime) / Time.fixedDeltaTime);
+            // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " (combined to: " + pingAndBufferTicks + " ticks) command delay ticks: " + estimatedCommandDelayTicks + " for a result of: -" + (pingAndBufferTicks + estimatedCommandDelayTicks) + " ticks");
+            var lagCompensatedTick = (uint) Math.Max(0, currentTick - pingAndBufferTicks - estimatedCommandDelayTicks);
             this.OnSetSnapshot(lagCompensatedTick);
         }
 
@@ -638,6 +638,7 @@ namespace Code.Network.StateSystem
             {
                 // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
                 // that freshly spawned players will exist in rollback when they shouldn't but we won't handle that edge case for now.
+                Debug.LogWarning($"Set snapshot to {tick} resulted in null state for {this.name}. State history size is {this.stateHistory.Keys.Count}");
                 return;
             }
             this.stateSystem.SetCurrentState(state);
