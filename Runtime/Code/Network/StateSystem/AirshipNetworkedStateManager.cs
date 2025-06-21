@@ -95,7 +95,7 @@ namespace Code.Network.StateSystem
         // given NetworkTime.time. The clock correction offset value does NOT affect lag compensation. It's just a mapping from
         // NetworkTime.time to the server tick timeline. An inaccurate offset value _can_ affect lag compensation however, so
         // it's important that we try to match this as accurately as possible to the actual timeline offset on the server.
-        private ExponentialMovingAverage observerClockCorrection = new ExponentialMovingAverage(20); // Arbitrary value copied from Mirror's clock correction
+        private ExponentialMovingAverage observerClockCorrection = new ExponentialMovingAverage(1); // Arbitrary value copied from Mirror's clock correction
 
         // Client interpolation fields
         private double clientLastInterpolatedStateTick = 0;
@@ -932,18 +932,20 @@ namespace Code.Network.StateSystem
             if (this.observerHistory.Values.Count == 0) return;
 
             // Get the time we should render on the client.
-            var clientTime = NetworkTime.time - (NetworkClient.bufferTime / Math.Min(Time.timeScale, 1)) - observerClockCorrection.Value; // Don't reduce buffer on TS higher than one since send rate is unaffected
-            var clientTick = clientTime / Time.fixedDeltaTime;
+            var bufferTime = (NetworkClient.bufferTime) / Math.Min(Time.timeScale, 1); // Don't reduce buffer on TS higher than one since send rate is unaffected
+            var clockCorrection = observerClockCorrection.Value;
+            var clientTime = NetworkTime.time - bufferTime - clockCorrection;
+            var clientTick = clientTime / (Time.fixedDeltaTime);
             // Debug.Log($"Observing {clientTick}. {NetworkTime.time} - ({NetworkClient.bufferTime} / {Math.Min(Time.timeScale, 1)}) - {observerClockCorrection.Value}");
                 
             // Get the state history around the time that's currently being rendered.
             if (!this.observerHistory.GetAround(clientTick, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
-                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
-                //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                //                  this.observerHistory.Keys[^1] + " Target " + clientTick + " Buffer is: " + NetworkClient.bufferTime + " Estimated Latency (1 way): " +
-                //                  (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
+                Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
+                                 " entries. First " + this.observerHistory.Keys[0] + " Last " +
+                                 this.observerHistory.Keys[^1] + " Target " + clientTick + " Buffer is: " +bufferTime + "Correction is: "  + clockCorrection + " Estimated Latency (1 way): " +
+                                 (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
                 return;
             }
 
@@ -1063,6 +1065,7 @@ namespace Code.Network.StateSystem
             lastReceivedSnapshotTick = state.tick;
             var tickTime = state.tick * Time.fixedDeltaTime;
             observerClockCorrection.Add(NetworkClient.connection.remoteTimeStamp - tickTime);
+            print($"Calculated clock correction: {NetworkClient.connection.remoteTimeStamp - tickTime}. Actual: {observerClockCorrection.Value}");
             
             // The client is a non-authoritative owner and should update
             // their local state with the authoritative state from the server.
