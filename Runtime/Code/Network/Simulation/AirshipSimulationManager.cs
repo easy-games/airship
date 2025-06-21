@@ -153,33 +153,20 @@ namespace Code.Network.Simulation
             
             // Clients use their own timelines for physics. Do not compare ticks generated on a client with a tick generated
             // on the server. The Server should estimate when a client created a command using it's own timeline and ping calculations
-            // and a client should convert server authoritative state received to its own timeline by interpolating with NetworkTime.time
+            // and a client should convert observed server authoritative state received to its own timeline by interpolating with NetworkTime.time
             // and capturing snapshots of the interpolated state on its own timeline.
             
-            // Server calculates it's tick based on unscaledTime so that tick values can be converted and compared to NetworkTime.time. This
-            // is not necessary for the client. The side effect is that it's possible for the server to skip over ticks or run twice with the same tick
-            // value. This may cause problems later and could be resolved by instead applying a clock correction to the tick -> time conversion.
-            // Note that NetworkTime.time will return the Time.unscaledTimeAsDouble on the server and if used in fixedupdate, will return unscaledFixedTime
-            
-            // It is possible for the server to tick the same tick number twice. When this occurs, it generally means
-            // our timescale is above one. The effect is that OnTick functions on the server will be ticked twice with
-            // the same tick number, and the previous result of that tick number will be overwritten. This is acceptable
-            // as server OnTick already must account for multiple ticks on the same tick value due to command catchup.
-            // This will never occur on the client, as we always advance the client tick by 1 each FixedUpdate.
-            
-            // Skipping ticks is acceptable since the client and server use separate timelines. The client
-            // does not care when it's commands are processed and will match up the result in it's own timeline regardless
-            // of the server tick number. Skipping ticks will however affect players being observed, since time will "jump" forward,
-            // but the clock will continue to progress smoothly. It just makes players look a little funny, but that's ok
-            // since skipping is rare.
+            // The calculation below creates a tick number that always increases by one (meaning it is affected by timescale). Unscaled fixed
+            // time is also passed through and is used for observing characters. We use unscaled fixed time so that we can always
+            // display a smooth observed player using NetworkTime.time which uses unscaled time.
             
             // ---
-            // var tick = NetworkServer.active ? (uint) Math.Floor(Time.unscaledTimeAsDouble / Time.fixedDeltaTime) : lastTick + 1;
             uint tick = (uint)Mathf.RoundToInt(Time.fixedTime / Time.fixedDeltaTime);
+            double time = Time.fixedUnscaledTimeAsDouble; // TODO: pass this time to the callback functions so they can always use the same time values during replays. Will need to be tracked
             
             // Update debug overlay
-            var buffer = NetworkClient.bufferTime / Math.Min(Time.timeScale, 1);
-            G_ResimMonitor.FrameObserverBuffer = buffer;
+            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
+            G_ResimMonitor.FrameObserverBuffer =  NetworkClient.bufferTime + tickGenerationTime;
             
             if (Physics.simulationMode != SimulationMode.Script) {
                 // reset the simulation mode if it changed for some reason. This seems to happen on the server when you change prefabs

@@ -55,6 +55,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             string message = "";
             
+            // We do not compare time since it does not affect local client simulation
             var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
             var positionEqual = this.position == other.position;
             var velocityEqual = this.velocity == other.velocity;
@@ -132,8 +133,8 @@ namespace Code.Player.Character.MovementSystems.Character
             return same;
         }
 
-        public void CopyFrom(CharacterSnapshotData copySnapshot)
-        {
+        public void CopyFrom(CharacterSnapshotData copySnapshot) {
+            this.time = copySnapshot.time;
             this.tick = copySnapshot.tick;
             this.lastProcessedCommand = copySnapshot.lastProcessedCommand;
             this.position = copySnapshot.position;
@@ -164,6 +165,7 @@ namespace Code.Player.Character.MovementSystems.Character
         public override string ToString()
         {
             return
+                $"Time: {time}\n" +
                 $"Tick: {tick}\n" +
                 $"LastProcessedCommand: {lastProcessedCommand}\n" +
                 $"Position: {position}\n" +
@@ -189,6 +191,7 @@ namespace Code.Player.Character.MovementSystems.Character
         {
             return new CharacterSnapshotData()
             {
+                time = time,
                 tick = tick,
                 lastProcessedCommand = lastProcessedCommand,
                 position = position,
@@ -249,6 +252,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             // Write only changed fields
             var writer = new NetworkWriter();
+            writer.Write(NetworkSerializationUtil.CompressToUshort(other.time - time));
             writer.Write((ushort)(other.tick - tick)); // We should send diffs far before 65,535 ticks have passed. 255 is a little too low if messing with time scale (ticks will skip in slow timescales)
             writer.Write((byte)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
             writer.Write(changedMask);
@@ -303,6 +307,7 @@ namespace Code.Player.Character.MovementSystems.Character
             var reader = new NetworkReader(stateDiff.data);
             var snapshot = (CharacterSnapshotData) this.Clone();
 
+            snapshot.time = time + NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
             snapshot.tick = tick + reader.Read<ushort>();
             snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<byte>();
             var changedMask = reader.Read<short>();
@@ -420,6 +425,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 writer.WriteInt(0);
             }
             
+            writer.Write(value.time);
             writer.Write(value.tick);
             writer.Write(value.lastProcessedCommand);
             writer.Write(value.position);
@@ -453,6 +459,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 prevStepUp = BitUtil.GetBit(bools, 6),
                 isGrounded = BitUtil.GetBit(bools, 7),
                 
+                time = reader.Read<double>(),
                 tick = reader.Read<uint>(),
                 lastProcessedCommand = reader.Read<int>(),
                 position = reader.Read<Vector3>(),

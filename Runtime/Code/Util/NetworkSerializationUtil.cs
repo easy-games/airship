@@ -3,7 +3,11 @@ using System;
 namespace Code.Util {
     public static class NetworkSerializationUtil {
         public static ushort CompressToUshort(float value) {
-            double scaled = (double)value * 1000.0;
+            return (ushort) CompressToUshort((double) value);
+        }
+        
+        public static ushort CompressToUshort(double value) {
+            double scaled = value * 1000.0;
             int quantised = (int)Math.Round(scaled, MidpointRounding.AwayFromZero);
             quantised = Math.Clamp(quantised, 0, ushort.MaxValue);
             return (ushort)quantised;

@@ -84,18 +84,14 @@ namespace Code.Network.StateSystem
         // with NetworkTime.time. It is converted into state history on the local clients physics timeline
         // in the observer snapshot function. Clients build observer history out of the state snapshots they
         // receive as well as by applying diffs received to existing state in this history.
-        public History<State> observerHistory;
+        public ObservableHistory<State> observerHistory;
+        private double lastObserverClientTime = 0;
+
+        // Base history is the history that is used as a base for snapshot diffing. We only need to keep a few snapshots
+        // around for applying diffs, so we keep a much smaller history of base states the server might use to generate diffs.
+        // Both observers and local players use this history.
+        public History<State> baseHistory;
         private double lastReceivedSnapshotTick = 0;
-        // The clock correction offset is the difference between the server's Time.unscaledTime and it's tick timeline.
-        // We calculate this every time we receive a new diff or snapshot from the server.
-        // Since our client uses NetworkTime.time to observe server ticks, we need to be able to associate a tick with
-        // a NetworkTime.time value where we would want to be displaying that tick. We treat the remote timestamp that
-        // the server sent us this state as the time we should display the tick. We store observer history using the tick
-        // so this offset is part of the calculation for our interpolation to know which tick it should be accessing at a
-        // given NetworkTime.time. The clock correction offset value does NOT affect lag compensation. It's just a mapping from
-        // NetworkTime.time to the server tick timeline. An inaccurate offset value _can_ affect lag compensation however, so
-        // it's important that we try to match this as accurately as possible to the actual timeline offset on the server.
-        private ExponentialMovingAverage observerClockCorrection = new ExponentialMovingAverage(1); // Arbitrary value copied from Mirror's clock correction
 
         // Client interpolation fields
         private double clientLastInterpolatedStateTick = 0;
@@ -207,6 +203,9 @@ namespace Code.Network.StateSystem
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.observerHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
+            // 3 is an arbitrary value, technically we only really need to store 1, but keeping more than one around
+            // means diff packets arriving out of order would still be able to be applied.
+            this.baseHistory = new History<State>(3);
 
             this.OnClientReceiveSnapshot += ClientReceiveSnapshot;
             this.OnClientReceiveDiff += ClientReceiveDiff;
@@ -492,8 +491,9 @@ namespace Code.Network.StateSystem
             // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
             // That may prove difficult, so we use a constant for now.
             var estimatedCommandDelayTicks = this.serverCommandBufferTargetSize;
-            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime / Math.Min(Time.timeScale, 1); // client buffers more when timescale is set lower than 1
-            var pingAndBufferTicks = Math.Round((ping + clientBufferTime) / Time.fixedDeltaTime);
+            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
+            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime;
+            var pingAndBufferTicks = Math.Round((ping + clientBufferTime + tickGenerationTime) / Time.fixedDeltaTime);
             // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " (combined to: " + pingAndBufferTicks + " ticks) command delay ticks: " + estimatedCommandDelayTicks + " for a result of: -" + (pingAndBufferTicks + estimatedCommandDelayTicks) + " ticks");
             var lagCompensatedTick = (uint) Math.Max(0, currentTick - pingAndBufferTicks - estimatedCommandDelayTicks);
             this.OnSetSnapshot(lagCompensatedTick);
@@ -611,6 +611,7 @@ namespace Code.Network.StateSystem
             // get snapshot to send to clients
             var state = this.stateSystem.GetCurrentState(this.serverLastProcessedCommandNumber,
                 tick);
+            state.time = Time.unscaledTimeAsDouble;
             
             // The server Sets the history instead of Adds since host timescale > 1 may cause us to use the same tick number twice.
             // If we are overwriting the snapshot that a client is using as it's diff base, we need to send them a new snapshot.
@@ -701,6 +702,7 @@ namespace Code.Network.StateSystem
 
             // Store the current physics state for prediction
             var state = this.stateSystem.GetCurrentState(clientCommandNumber, tick);
+            state.time = Time.unscaledTimeAsDouble;
             this.stateHistory.Add(tick, state);
             // Debug.Log("Processing command " + state.lastProcessedCommand + " resulted in " + state);
         }
@@ -773,6 +775,7 @@ namespace Code.Network.StateSystem
                 // Remember that state snapshots use the local simulation time where they were created,
                 // not a shared timeline.
                 latestState.tick = tick;
+                latestState.time = Time.unscaledTimeAsDouble;
                 // Use this as the current state for the server
                 this.stateSystem.SetCurrentState(latestState);
                 // Since it's new, update our server interpolation functions
@@ -853,6 +856,7 @@ namespace Code.Network.StateSystem
             }
 
             var state = this.stateSystem.GetCurrentState(clientCommandNumber, tick);
+            state.time = Time.unscaledTimeAsDouble;
             this.stateHistory.Add(tick, state);
         }
 
@@ -884,9 +888,9 @@ namespace Code.Network.StateSystem
             // Get the authoritative state received just before the current observer time. (remember interpolation is buffered by bufferTime)
             // Note: if we get multiple fixed update calls per frame, we will use the same state for all fixedUpdate calls
             // because NetworkTime.time is only advanced on Update(). This might cause resim issues with low framerates...
-            var serverTime = NetworkTime.time - NetworkClient.bufferTime;
-            var serverTick = (uint) Math.Floor(serverTime / Time.fixedDeltaTime);
-            var observedState = this.observerHistory.Get(serverTick);
+            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
+            var serverTime = NetworkTime.time - NetworkClient.bufferTime - tickGenerationTime;
+            var observedState = this.observerHistory.Get(serverTime);
             if (observedState == null)
             {
                 // We don't have state to use for interping or we haven't reached a new state yet. Don't add any
@@ -897,6 +901,7 @@ namespace Code.Network.StateSystem
             // Clone the observed state and update it to be on the local physics timeline.
             var state = (State) observedState.Clone();
             state.tick = tick;
+            state.time = Time.unscaledTimeAsDouble;
             // Store the state in our state history for re-simulation later if needed.
             this.stateHistory.Add(tick, state);
 
@@ -932,25 +937,25 @@ namespace Code.Network.StateSystem
             if (this.observerHistory.Values.Count == 0) return;
 
             // Get the time we should render on the client.
-            var bufferTime = (NetworkClient.bufferTime) / Math.Min(Time.timeScale, 1); // Don't reduce buffer on TS higher than one since send rate is unaffected
-            var clockCorrection = observerClockCorrection.Value;
-            var clientTime = NetworkTime.time - bufferTime - clockCorrection;
-            var clientTick = clientTime / (Time.fixedDeltaTime);
-            // Debug.Log($"Observing {clientTick}. {NetworkTime.time} - ({NetworkClient.bufferTime} / {Math.Min(Time.timeScale, 1)}) - {observerClockCorrection.Value}");
+            // We include tick generation time since we need at least 1 additional tick to interpolate between. This becomes very important when timescale changes.
+            // as it may take far longer to generate a single tick than are standard network send rate buffer.
+            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
+            var clientTime = NetworkTime.time - NetworkClient.bufferTime - tickGenerationTime; // TODO: time jumps forward or backward when timescale changes. We should smooth this somehow
+            Debug.Log($"Observing {clientTime}. {NetworkTime.time} - {NetworkClient.bufferTime} - {tickGenerationTime}");
                 
             // Get the state history around the time that's currently being rendered.
-            if (!this.observerHistory.GetAround(clientTick, out State prevState, out State nextState))
+            if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
                 Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
                                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                                 this.observerHistory.Keys[^1] + " Target " + clientTick + " Buffer is: " +bufferTime + "Correction is: "  + clockCorrection + " Estimated Latency (1 way): " +
+                                 this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " +  NetworkClient.bufferTime + " tick gen time is: " + tickGenerationTime + " Estimated Latency (1 way): " +
                                  (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
                 return;
             }
 
             // How far along are we in this interp?
-            var timeDelta = (clientTick - prevState.tick) / (nextState.tick - prevState.tick);
+            var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time);
 
             // Call interp on the networked state system so it can place things properly for the render.
             this.stateSystem.Interpolate(timeDelta, prevState, nextState);
@@ -1031,6 +1036,7 @@ namespace Code.Network.StateSystem
             // a time value in its local timeline so the provided time is not useful to us.
             var newState = state.Clone() as State;
             newState.tick = clientPredictedState.tick;
+            newState.time = clientPredictedState.time;
             
             // Overwrite the time we should have predicted this on the client so it
             // appears from the client perspective that we predicted the command correctly.
@@ -1047,13 +1053,16 @@ namespace Code.Network.StateSystem
         #region Networking
 
         private void ProcessNewStateOnClient(State state) {
-             if (state == null) return;
+            if (state == null) return;
             
-            // Clients store all received snapshots so they can correctly generate new snapshots
-            // from diffs received from the server. Observers will render observerHistory using the
-            // server's timeline via NetworkTime.
-            this.observerHistory.Set(state.tick, state);
-            
+            // Observers record all snapshots received, even if they are the same tick values. This allows us to
+            // interpolate over unscaledTime accurately. The remote timestamp is what the server was rendering
+            // at that time, which may be the same tick twice (especially with modified timescales)
+            if (!isOwned) {
+                // state.time = NetworkClient.connection.remoteTimeStamp;
+                this.observerHistory.Set(state.time, state);
+            }
+             
             // If we get a snapshot out of order, we don't need to do reconcile processing since the later
             // snapshot we already received will result in fewer resimulations.
             if (lastReceivedSnapshotTick >= state.tick)
@@ -1063,9 +1072,6 @@ namespace Code.Network.StateSystem
             }
             
             lastReceivedSnapshotTick = state.tick;
-            var tickTime = state.tick * Time.fixedDeltaTime;
-            observerClockCorrection.Add(NetworkClient.connection.remoteTimeStamp - tickTime);
-            print($"Calculated clock correction: {NetworkClient.connection.remoteTimeStamp - tickTime}. Actual: {observerClockCorrection.Value}");
             
             // The client is a non-authoritative owner and should update
             // their local state with the authoritative state from the server.
@@ -1091,15 +1097,21 @@ namespace Code.Network.StateSystem
 
                 return;
             }
+
+            
         }
 
-        private void ClientReceiveSnapshot(State state)
-        {
-           ProcessNewStateOnClient(state);
+        private void ClientReceiveSnapshot(State state) {
+            // Clients store all received snapshots so they can correctly generate new snapshots
+            // from diffs received from the server. Observers will render observerHistory using the
+            // server's timeline via NetworkTime.
+            this.baseHistory.Set(state.tick, state);
+            
+            ProcessNewStateOnClient(state);
         }
 
         private void ClientReceiveDiff(StateDiff diff) {
-            var baseState = this.observerHistory.GetExact(diff.baseTick);
+            var baseState = this.baseHistory.GetExact(diff.baseTick);
             if (baseState == null) {
                 // TODO: We could reduce network by throttling this so we only call it once
                 // per round trip time + a little buffer for the send interval. Right now, we
@@ -1108,7 +1120,7 @@ namespace Code.Network.StateSystem
                 // This might be ok though because it means in situations with high loss, the server
                 // will continue to send full snapshots all the time to this client instead of just diffs.
                 // It will make for smoother gameplay at the cost of higher network usage.
-                // print("No base state for " + diff.baseTick + ". Requesting new snapshot.");
+                print("No base state for " + diff.baseTick + ". Requesting new snapshot.");
                 SendRequestFullSnapshotToServer();
                 return;
             }

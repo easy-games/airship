@@ -10,17 +10,13 @@ namespace Code.Network.StateSystem.Structures
     public class StateSnapshot: ICloneable
     {
         public int lastProcessedCommand;
+
         /**
-         * The time the snapshot was created. This time is local to the client/server that created it.
+         * The unscaled time the snapshot was created. This time is local to the client/server that created it. In server
+         * authoritative mode, this time is what is used to render observed characters. This should _not_ be converted
+         * to ticks! Ticks use scaled time and will not always map 1 to 1 with a real time value.
          */
-        // public double time {
-        //     get {
-        //         return tick * Time.fixedDeltaTime;
-        //     }
-        //     set {
-        //         tick = (uint) Math.Round(value / Time.fixedDeltaTime);
-        //     }
-        // }
+        public double time; // we use float because precision errors
         public uint tick;
 
         /**
