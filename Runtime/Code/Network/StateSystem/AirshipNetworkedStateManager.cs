@@ -937,26 +937,26 @@ namespace Code.Network.StateSystem
             if (this.observerHistory.Values.Count == 0) return;
 
             // Get the time we should render on the client.
-            // We include tick generation time since we need at least 1 additional tick to interpolate between. This becomes very important when timescale changes.
-            // as it may take far longer to generate a single tick than are standard network send rate buffer.
-            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
-            var clientTime = NetworkTime.time - NetworkClient.bufferTime - tickGenerationTime; // TODO: time jumps forward or backward when timescale changes. We should smooth this somehow
-            Debug.Log($"Observing {clientTime}. {NetworkTime.time} - {NetworkClient.bufferTime} - {tickGenerationTime}");
+            // We include tick generation time since we need at least 1 additional tick to interpolate between. This becomes very important when timescale changes,
+            // as it may take far longer to generate a single tick than our standard network send rate buffer.
+            // TODO: this is also the source of the backwards movement when timescale changes as our generation time jumps up making the time we render move backwards.
+            var tickGenerationTime = (Time.fixedDeltaTime / Time.timeScale); // how long it takes to generate a single tick in real time.
+            var clientTime = NetworkTime.time - NetworkClient.bufferTime - tickGenerationTime;
                 
             // Get the state history around the time that's currently being rendered.
             if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
-                Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
-                                 " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                                 this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " +  NetworkClient.bufferTime + " tick gen time is: " + tickGenerationTime + " Estimated Latency (1 way): " +
-                                 (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
+                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
+                //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
+                //                  this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " +  NetworkClient.bufferTime + " tick gen time is: " + tickGenerationTime + " Estimated Latency (1 way): " +
+                //                  (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
                 return;
             }
-
-            // How far along are we in this interp?
-            var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time);
-
+            
+            // TODO: for some reason, on low host timescales, there's a small pause between ticks. I'm not entirely sure why this happens
+            var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time); // todo: this might break if clientTime is too high?
+            // Debug.Log($"Observing {clientTime} <{Time.unscaledDeltaTime}> on {this.name} ({NetworkTime.time} - {NetworkClient.bufferTime} - {tickGenerationTime}) delta: {timeDelta} prev: {prevState.time} next: {nextState.time}.");
             // Call interp on the networked state system so it can place things properly for the render.
             this.stateSystem.Interpolate(timeDelta, prevState, nextState);
         }
@@ -1059,7 +1059,6 @@ namespace Code.Network.StateSystem
             // interpolate over unscaledTime accurately. The remote timestamp is what the server was rendering
             // at that time, which may be the same tick twice (especially with modified timescales)
             if (!isOwned) {
-                // state.time = NetworkClient.connection.remoteTimeStamp;
                 this.observerHistory.Set(state.time, state);
             }
              
