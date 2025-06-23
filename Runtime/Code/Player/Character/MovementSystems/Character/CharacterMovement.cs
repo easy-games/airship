@@ -224,7 +224,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.interpolation = RigidbodyInterpolation.None;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 
@@ -1316,7 +1316,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
-            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta);
+            rb.MovePosition(Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta));
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
@@ -1345,18 +1345,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                 jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount
             };
             var changed = newState.state != currentAnimState.state;
-
+            
             if (animationHelper) {
                 animationHelper.SetState(newState);
             }
-
+            
             currentMoveSnapshot = snapshot;
             currentAnimState = newState;
-
+            
             if (changed) {
                 stateChanged?.Invoke((int)newState.state);
             }
-
+            
             OnInterpolateReachedState?.Invoke(snapshot);
         }
 
