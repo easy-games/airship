@@ -659,10 +659,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 newVelocity += pendingImpulse;
                 currentMoveSnapshot.airborneFromImpulse = !grounded || pendingImpulse.y > .01f;
                 pendingImpulse = Vector3.zero;
-                if (isImpulsing) {
-                    // print(" isImpulsing: " + isImpulsing + " impulse force: " + this.pendingImpulse + "New Vel: " +
-                    //       newVelocity);
-                }
+                // if (isImpulsing) {
+                //     print(" isImpulsing: " + isImpulsing + " impulse force: " + pendingImpulse + "New Vel: " +
+                //           newVelocity);
+                // }
             }
 
 #endregion
@@ -1465,13 +1465,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
             }
-            
+
             if (!_smoothLookVector) {
                 var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
                 if (lookTarget == Vector3.zero) {
                     lookTarget = new Vector3(0, 0, .01f);
                 }
-                
+
                 //Instantly rotate for owner
                 airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
             } else {
@@ -1499,6 +1499,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region Helpers
 
         private void SnapToY(float newY) {
+            //print("Snapping to Y: " + newY);
             var newPos = rb.position;
             newPos.y = newY;
             rb.position = newPos;
@@ -1707,7 +1708,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public void AddImpulse(Vector3 impulse) {
-            // print("Adding impulse: " + impulse);
+            //print("Adding impulse: " + impulse);
             if (mode == NetworkedStateSystemMode.Observer && isServer) {
                 RpcAddImpulse(impulse);
                 return;
