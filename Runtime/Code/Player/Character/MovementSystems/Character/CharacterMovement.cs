@@ -1465,13 +1465,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
             }
-
+            
             if (!_smoothLookVector) {
                 var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
                 if (lookTarget == Vector3.zero) {
                     lookTarget = new Vector3(0, 0, .01f);
                 }
-
+                
                 //Instantly rotate for owner
                 airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
             } else {
@@ -1577,9 +1577,15 @@ namespace Code.Player.Character.MovementSystems.Character {
             _smoothLookVector = moveDirMode == MoveDirectionMode.Camera;
         }
 
-        public void SetLookVector(Vector3 lookVector) {
+        /// <summary>
+        /// Call this from C# to let Luau scripts know we've updated the look vector.
+        /// Example: A teleport RPC.
+        /// </summary>
+        /// <param name="lookVector"></param>
+        [HideFromTS]
+        public void SetLookVectorAndNotifyLuau(Vector3 lookVector) {
             OnNewLookVector?.Invoke(lookVector);
-            SetLookVectorRecurring(lookVector);
+            SetLookVector(lookVector);
         }
 
         /// <summary>
@@ -1587,7 +1593,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         /// Useful for something that is updating the lookVector frequently and needs to listen for other scripts modifying the lookVector. 
         /// </summary>
         /// <param name="lookVector"></param>
-        public void SetLookVectorRecurring(Vector3 lookVector) {
+        public void SetLookVector(Vector3 lookVector) {
             // Don't set look vectors on observed characters
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
@@ -1612,7 +1618,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
         }
 
-        public void SetLookVectorRecurringToMoveDir() {
+        public void SetLookVectorToMoveDir() {
             // Don't set look vectors on observed characters
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
@@ -1675,7 +1681,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
             rb.MovePosition(position);
-            SetLookVector(lookVector);
+            SetLookVectorAndNotifyLuau(lookVector);
         }
 
         public void SetMovementEnabled(bool isEnabled) {
@@ -1870,7 +1876,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [TargetRpc]
         public void RpcSetLookVector(Vector3 lookVector) {
-            SetLookVector(lookVector);
+            SetLookVectorAndNotifyLuau(lookVector);
         }
 
         [TargetRpc]
