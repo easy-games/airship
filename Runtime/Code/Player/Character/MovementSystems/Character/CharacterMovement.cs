@@ -1080,96 +1080,78 @@ namespace Code.Player.Character.MovementSystems.Character {
                         }
                     }
                 } else {
+                    //GRID BASED EDGE DETECTION
                     //Find the edge of the characters collider
-                    var axisAlignedDir = new Vector3(Mathf.Round(velocityNorm.x), 0, Mathf.Round(velocityNorm.z));
-                    // if (Mathf.Abs(axisAlignedDir.x) > Mathf.Abs(axisAlignedDir.z)) {
-                    //     axisAlignedDir.z = 0;
-                    // } else {
-                    //     axisAlignedDir.x = 0;
-                    // }
-
+                    var smallRadius = (characterRadius - forwardMargin) * .9f;
                     var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
-                                            axisAlignedDir * distanceCheck +
                                             velocityNorm * velocityMag;
 
                     if (drawDebugGizmos_CROUCH) {
                         GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
-                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
-                                              axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
+                        //GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
+                        //axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
                         GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
                     }
 
-                    //Cast to see if there is ground where we want to walk (to handle cases where you can walk across gaps even if technically there is air in the voxel you are stepping onto)
-                    var hitGround = Physics.BoxCast(projectedPosition,
-                        new Vector3(characterRadius - forwardMargin, .05f, characterRadius - forwardMargin),
-                        Vector3.down, out var groundHitInfo, Quaternion.identity, .25f,
-                        movementSettings.groundCollisionLayerMask);
-
-                    if (drawDebugGizmos_CROUCH) {
-                        GizmoUtils.DrawBox(projectedPosition, Quaternion.identity,
-                            new Vector3(characterRadius, .05f, characterRadius), Color.white, .1f);
-                        Debug.DrawLine(projectedPosition, projectedPosition + Vector3.down * .25f,
-                            hitGround ? Color.white : Color.red, .1f);
+                    var validGround = false;
+                    var groundCheckI = 0;
+                    var groundCheckPositions = new[] { projectedPosition, projectedPosition, projectedPosition };
+                    var groundVelocities = new[] { newVelocity, newVelocity, newVelocity };
+                    if (Mathf.Abs(newVelocity.x) > Mathf.Abs(newVelocity.z)) {
+                        //Check X Dir first
+                        groundCheckPositions[1].z = transform.position.z;
+                        groundCheckPositions[2].x = transform.position.x;
+                        groundVelocities[1].z = 0;
+                        groundVelocities[2].x = 0;
+                    } else {
+                        //Check Z dir first
+                        groundCheckPositions[1].x = transform.position.x;
+                        groundCheckPositions[2].z = transform.position.z;
+                        groundVelocities[1].x = 0;
+                        groundVelocities[2].z = 0;
                     }
 
-                    if (hitGround) {
-                        //Raycast to see if there is a path to this ground we found
-                        var rayCheckPos = transform.position + new Vector3(0, .175f, 0);
-                        var endPos = projectedPosition + new Vector3(0, .175f, 0);
-                        var dist = Vector3.Distance(groundHitInfo.point, rayCheckPos);
-                        if (Physics.Raycast(rayCheckPos, endPos - rayCheckPos, dist)) {
-                            //Something is in the way of the ground
-                            hitGround = false;
-                        }
+                    do {
+                        //Cast to see if there is ground where we want to walk (to handle cases where you can walk across gaps even if technically there is air in the voxel you are stepping onto)
+                        validGround = Physics.BoxCast(groundCheckPositions[groundCheckI],
+                            new Vector3(smallRadius, .05f, smallRadius),
+                            Vector3.down, out var groundHitInfo, Quaternion.identity, .25f,
+                            movementSettings.groundCollisionLayerMask);
 
                         if (drawDebugGizmos_CROUCH) {
-                            Debug.DrawLine(rayCheckPos, rayCheckPos + (endPos - rayCheckPos) * dist,
-                                hitGround ? Color.green : Color.magenta, .1f);
-                            GizmoUtils.DrawSphere(groundHitInfo.point, .05f, hitGround ? Color.green : Color.magenta, 4,
-                                .1f);
+                            GizmoUtils.DrawBox(groundCheckPositions[groundCheckI], Quaternion.identity,
+                                new Vector3(characterRadius, .05f, characterRadius),
+                                validGround ? Color.white : Color.red, .1f);
                         }
-                    }
 
-                    //var hitGround = false;
-
-                    if (!hitGround) {
-                        // Block Movement by pushing to perpendicular directions
-                        // Find out which directions are empty air
-                        var dirDistance = characterRadius + forwardMargin;
-                        var cornerDistance = characterRadius - forwardMargin;
-                        var offsetDirs = new Vector3[] {
-                            new(-dirDistance, .1f, 0),
-                            new(dirDistance, .1f, 0),
-                            new(0, .1f, -dirDistance),
-                            new(0, .1f, dirDistance),
-                            new(cornerDistance, .1f, -cornerDistance),
-                            new(cornerDistance, .1f, cornerDistance),
-                            new(-cornerDistance, .1f, -cornerDistance),
-                            new(-cornerDistance, .1f, cornerDistance)
-                        };
-                        Vector3 currentDir;
-                        Color color;
-                        for (var i = 0; i < offsetDirs.Length; i++) {
-                            color = Color.green;
-                            currentDir = offsetDirs[i];
-                            var dot = Vector3.Dot(newVelocity, currentDir);
-                            if (dot > 0 && !Physics.Raycast(transform.position + currentDir, Vector3.down, .25f,
+                        if (validGround) {
+                            //Raycast to see if there is a path to this ground we found
+                            var rayCheckPos = transform.position + new Vector3(0, .175f, 0);
+                            var endPos = groundCheckPositions[groundCheckI] + new Vector3(0, .175f, 0);
+                            var dist = Vector3.Distance(groundHitInfo.point, rayCheckPos);
+                            if (Physics.Raycast(rayCheckPos, endPos - rayCheckPos, dist,
                                     movementSettings.groundCollisionLayerMask)) {
-                                //Empty air in this dir
-                                newVelocity.x = currentDir.x == 0
-                                    ? Mathf.Sign(newVelocity.x) * Mathf.Abs(newVelocity.x)
-                                    : 0;
-                                newVelocity.z = currentDir.z == 0
-                                    ? Mathf.Sign(newVelocity.z) * Mathf.Abs(newVelocity.z)
-                                    : 0;
-                                color = Color.red;
+                                //Something is in the way of the ground
+                                validGround = false;
                             }
 
                             if (drawDebugGizmos_CROUCH) {
-                                Debug.DrawLine(transform.position + currentDir,
-                                    transform.position + offsetDirs[i] - Vector3.down * .25f, color, .1f);
+                                Debug.DrawLine(rayCheckPos, rayCheckPos + (endPos - rayCheckPos) * dist,
+                                    validGround ? Color.green : Color.magenta, .1f);
+                                GizmoUtils.DrawSphere(groundHitInfo.point, .05f,
+                                    validGround ? Color.green : Color.magenta, 4,
+                                    .1f);
                             }
                         }
+
+                        groundCheckI++;
+                    } while (!validGround && groundCheckI < 3);
+
+                    if (validGround) {
+                        newVelocity = groundVelocities[groundCheckI - 1];
+                    } else {
+                        newVelocity.x = 0;
+                        newVelocity.z = 0;
                     }
                 }
             }
