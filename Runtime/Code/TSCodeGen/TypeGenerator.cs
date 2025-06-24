@@ -258,6 +258,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CurveUtility),
             typeof(Spline),
             typeof(SplineAnimate),
+            typeof(SplineContainer),
             typeof(SplineUtility),
             typeof(float3),
 
