@@ -663,7 +663,7 @@ public partial class LuauCore : MonoBehaviour {
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
         if (typeof(T) == typeof(object) || cacheData.IsNativeClass || cacheData.IsStruct) {
-            return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
+            return (T) cacheData.propertyInfo.GetValue(instance);
         }
     
         if (!cacheData.HasGetPropertyFunc) {
