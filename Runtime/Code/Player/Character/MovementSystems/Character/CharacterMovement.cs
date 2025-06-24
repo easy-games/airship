@@ -1317,6 +1317,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
+            // Make sure you use MovePosition so that unity actually renders this character here right away.
+            // rb.position = value; will cause irregular movement.
             rb.MovePosition(Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta));
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);

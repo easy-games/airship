@@ -611,23 +611,6 @@ namespace Code.Network.StateSystem
             // get snapshot to send to clients
             var state = this.stateSystem.GetCurrentState(this.serverLastProcessedCommandNumber,
                 tick, time);
-            
-            // The server Sets the history instead of Adds since host timescale > 1 may cause us to use the same tick number twice.
-            // If we are overwriting the snapshot that a client is using as it's diff base, we need to send them a new snapshot.
-            // TODO: this seems to not _completely_ solve the issue. I'm suspicious that the time it takes for an ack to occur
-            // may play a factor in this.
-            // TODO: i think this isn't required now that we used scaled time for ticks
-            if (this.stateHistory.Has(tick)) {
-                var keysToRemove = new List<int>(this.serverAckedSnapshots.Count);
-                foreach (var serverAckedSnapshot in this.serverAckedSnapshots) {
-                    if (serverAckedSnapshot.Value == tick) {
-                        keysToRemove.Add(serverAckedSnapshot.Key);
-                    }
-                }
-                foreach (var key in keysToRemove)  {
-                    this.serverAckedSnapshots.Remove(key);
-                }
-            }
             this.stateHistory.Set(tick, state);
             // Debug.Log("Processing commands up to " + this.lastProcessedCommandNumber + " resulted in " + state);
         }
@@ -780,20 +763,6 @@ namespace Code.Network.StateSystem
                 // Since it's new, update our server interpolation functions
                 this.stateSystem.InterpolateReachedState(latestState);
                 // Add the state to our history as we would in a authoritative setup
-                // We Set instead of Add so that we always use the latest state if host timescale > 1 caused us to reuse the same tick number
-                // If we are overwriting the snapshot that a client is using as it's diff base, we need to send them a new snapshot.
-                // todo: remove now that we use scaled time for ticks
-                if (this.stateHistory.Has(tick)) {
-                    var keysToRemove = new List<int>(this.serverAckedSnapshots.Count);
-                    foreach (var serverAckedSnapshot in this.serverAckedSnapshots) {
-                        if (serverAckedSnapshot.Value == tick) {
-                            keysToRemove.Add(serverAckedSnapshot.Key);
-                        }
-                    }
-                    foreach (var key in keysToRemove) {
-                        this.serverAckedSnapshots.Remove(key);
-                    }
-                }
                 this.stateHistory.Set(tick, latestState);
             }
         }
