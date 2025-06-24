@@ -606,7 +606,11 @@ namespace CsToTs.TypeScript {
                 return $"{typeName}<{string.Join(", ", genericPrms)}>";
             }
 
-            return typeName.Replace("&", "");
+            // Clear off the ending "&" from type name. This exists for ref types (which we support)
+            // and for out types (which we exclude anyway, so this doesn't matter for those).
+            typeName = typeName.Replace("&", "");
+            
+            return typeName;
         }
         
         private static string GetPrimitiveMemberType(TypeCode typeCode, TypeScriptOptions options) {
