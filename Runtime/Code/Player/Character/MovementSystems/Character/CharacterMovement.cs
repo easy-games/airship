@@ -382,11 +382,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // currentMoveSnapshot.lastGroundedMoveDir = command.moveDir;
 
                 //Snap to the ground if you are falling into the ground
-                if (newVelocity.y < 1 &&
+                if (newVelocity.y < 1 && !isImpulsing && !currentMoveSnapshot.airborneFromImpulse &&
                     ((!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0) ||
                      //Snap if we always snap to ground
-                     (movementSettings.alwaysSnapToGround && !currentMoveSnapshot.prevStepUp && !isImpulsing &&
-                      !currentMoveSnapshot.airborneFromImpulse))) {
+                     (movementSettings.alwaysSnapToGround && !currentMoveSnapshot.prevStepUp))) {
                     SnapToY(groundHit.point.y);
                     newVelocity.y = 0;
                 }
@@ -662,10 +661,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 newVelocity += pendingImpulse;
                 currentMoveSnapshot.airborneFromImpulse = !grounded || pendingImpulse.y > .01f;
                 pendingImpulse = Vector3.zero;
-                if (isImpulsing) {
-                    // print(" isImpulsing: " + isImpulsing + " impulse force: " + this.pendingImpulse + "New Vel: " +
-                    //       newVelocity);
-                }
+                // if (isImpulsing) {
+                //     print(" isImpulsing: " + isImpulsing + " impulse force: " + pendingImpulse + "New Vel: " +
+                //           newVelocity);
+                // }
             }
 
 #endregion
@@ -1011,71 +1010,168 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region CROUCH
 
             // Prevent falling off blocks while crouching
-            if (movementSettings.preventFallingWhileCrouching && currentMoveSnapshot.isCrouching && !didJump &&
-                grounded) {
+            if (movementSettings.preventFallingWhileCrouching != CrouchEdgeDetection.None
+                && currentMoveSnapshot.isCrouching && !didJump && grounded && !isImpulsing) {
                 var velocityMag = newVelocity.magnitude * deltaTime + forwardMargin;
                 var velocityNorm = newVelocity.normalized;
+                var distanceCheck
+                    = (movementSettings.preventFallingWhileCrouching == CrouchEdgeDetection.UseAxisAlignedNormals
+                        ? characterRadius * 2
+                        : bumpSize) + forwardMargin;
 
-                //Find the edge of the characters collider
-                var axisAlignedDir = new Vector3(Mathf.Round(velocityNorm.x), 0, Mathf.Round(velocityNorm.y));
-                var distanceCheck = bumpSize + forwardMargin;
-                var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
-                                        axisAlignedDir * distanceCheck +
-                                        velocityNorm * velocityMag;
+                if (movementSettings.preventFallingWhileCrouching == CrouchEdgeDetection.UseMeshNormals) {
+                    //Find the edge of the characters collider
+                    var axisAlignedDir = new Vector3(Mathf.Round(velocityNorm.x), 0, Mathf.Round(velocityNorm.z));
+                    var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
+                                            axisAlignedDir * distanceCheck +
+                                            velocityNorm * velocityMag;
 
-                if (drawDebugGizmos_CROUCH) {
-                    GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
-                    GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
-                                          axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
-                    GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
-                }
-
-                if (!Physics.Raycast(projectedPosition
-                        , Vector3.down, out var airHitInfo, .5f,
-                        movementSettings.groundCollisionLayerMask)) {
-                    //Air ahead of character
-                    var wallStartPos = projectedPosition + new Vector3(0, -.5f, 0);
                     if (drawDebugGizmos_CROUCH) {
-                        GizmoUtils.DrawSphere(wallStartPos, .1f, Color.white, 4, .1f);
-                        Debug.DrawLine(wallStartPos, wallStartPos + -distanceCheck * velocityNorm, Color.white,
-                            .1f);
+                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
+                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
+                                              axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
+                        GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
                     }
 
-                    if (Physics.Raycast(wallStartPos, -velocityNorm,
-                            out var cliffHit, distanceCheck,
-                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                    if (!Physics.Raycast(projectedPosition
+                            , Vector3.down, out var airHitInfo, .5f,
+                            movementSettings.groundCollisionLayerMask)) {
+                        //Air ahead of character
+                        var wallStartPos = projectedPosition + new Vector3(0, -.5f, 0);
                         if (drawDebugGizmos_CROUCH) {
-                            GizmoUtils.DrawSphere(cliffHit.point, .1f, Color.red, 4, .1f);
+                            GizmoUtils.DrawSphere(wallStartPos, .1f, Color.white, 4, .1f);
+                            Debug.DrawLine(wallStartPos, wallStartPos + -distanceCheck * velocityNorm, Color.white,
+                                .1f);
                         }
 
-                        //Stop movement into this surface
-                        var colliderDot = Vector3.Dot(newVelocity, -cliffHit.normal);
-                        var flatPoint = new Vector3(cliffHit.point.x, transform.position.y, cliffHit.point.z);
-                        //If we are too close to the edge or if there is an obstruction in the way
-                        if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
-                            || Physics.Raycast(transform.position + new Vector3(0, .25f, 0), newVelocity,
-                                distanceCheck,
-                                movementSettings.groundCollisionLayerMask)) {
-                            //Snap back to the bump distance so you never inch your way to the edge 
-                            newVelocity = -cliffHit.normal;
+                        if (Physics.Raycast(wallStartPos, -velocityNorm,
+                                out var cliffHit, distanceCheck,
+                                movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                            if (drawDebugGizmos_CROUCH) {
+                                GizmoUtils.DrawSphere(cliffHit.point, .1f, Color.red, 4, .1f);
+                            }
+
+                            //Stop movement into this surface
+                            var colliderDot = Vector3.Dot(newVelocity, -cliffHit.normal);
+                            var flatPoint = new Vector3(cliffHit.point.x, transform.position.y, cliffHit.point.z);
+                            //If we are too close to the edge or if there is an obstruction in the way
+                            if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
+                                || Physics.Raycast(transform.position + new Vector3(0, .25f, 0), newVelocity,
+                                    distanceCheck,
+                                    movementSettings.groundCollisionLayerMask)) {
+                                //Snap back to the bump distance so you never inch your way to the edge 
+                                newVelocity = -cliffHit.normal;
+                            } else {
+                                //limit movement dir based on how straight you are walking into the edge
+                                newVelocity -= colliderDot * -cliffHit.normal;
+                                if (newVelocity.sqrMagnitude < 1) {
+                                    newVelocity = Vector3.zero;
+                                }
+
+                                //With this new velocity are we going to fall off a different ledge? 
+                                if (!Physics.Raycast(
+                                        new Vector3(0, 1.25f, 0) + transform.position +
+                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f)) {
+                                    //Nothing in the direction of the new velocity
+                                    newVelocity = Vector3.zero;
+                                }
+                            }
                         } else {
-                            //limit movement dir based on how straight you are walking into the edge
-                            newVelocity -= colliderDot * -cliffHit.normal;
-                            if (newVelocity.sqrMagnitude < 1) {
-                                newVelocity = Vector3.zero;
+                            //can't find the angle to move so stop movement
+                            newVelocity = Vector3.zero;
+                        }
+                    }
+                } else {
+                    //Find the edge of the characters collider
+                    var axisAlignedDir = new Vector3(Mathf.Round(velocityNorm.x), 0, Mathf.Round(velocityNorm.z));
+                    // if (Mathf.Abs(axisAlignedDir.x) > Mathf.Abs(axisAlignedDir.z)) {
+                    //     axisAlignedDir.z = 0;
+                    // } else {
+                    //     axisAlignedDir.x = 0;
+                    // }
+
+                    var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
+                                            axisAlignedDir * distanceCheck +
+                                            velocityNorm * velocityMag;
+
+                    if (drawDebugGizmos_CROUCH) {
+                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
+                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
+                                              axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
+                        GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
+                    }
+
+                    //Cast to see if there is ground where we want to walk (to handle cases where you can walk across gaps even if technically there is air in the voxel you are stepping onto)
+                    var hitGround = Physics.BoxCast(projectedPosition,
+                        new Vector3(characterRadius - forwardMargin, .05f, characterRadius - forwardMargin),
+                        Vector3.down, out var groundHitInfo, Quaternion.identity, .25f,
+                        movementSettings.groundCollisionLayerMask);
+
+                    if (drawDebugGizmos_CROUCH) {
+                        GizmoUtils.DrawBox(projectedPosition, Quaternion.identity,
+                            new Vector3(characterRadius, .05f, characterRadius), Color.white, .1f);
+                        Debug.DrawLine(projectedPosition, projectedPosition + Vector3.down * .25f,
+                            hitGround ? Color.white : Color.red, .1f);
+                    }
+
+                    if (hitGround) {
+                        //Raycast to see if there is a path to this ground we found
+                        var rayCheckPos = transform.position + new Vector3(0, .175f, 0);
+                        var endPos = projectedPosition + new Vector3(0, .175f, 0);
+                        var dist = Vector3.Distance(groundHitInfo.point, rayCheckPos);
+                        if (Physics.Raycast(rayCheckPos, endPos - rayCheckPos, dist)) {
+                            //Something is in the way of the ground
+                            hitGround = false;
+                        }
+
+                        if (drawDebugGizmos_CROUCH) {
+                            Debug.DrawLine(rayCheckPos, rayCheckPos + (endPos - rayCheckPos) * dist,
+                                hitGround ? Color.green : Color.magenta, .1f);
+                            GizmoUtils.DrawSphere(groundHitInfo.point, .05f, hitGround ? Color.green : Color.magenta, 4,
+                                .1f);
+                        }
+                    }
+
+                    //var hitGround = false;
+
+                    if (!hitGround) {
+                        // Block Movement by pushing to perpendicular directions
+                        // Find out which directions are empty air
+                        var dirDistance = characterRadius + forwardMargin;
+                        var cornerDistance = characterRadius - forwardMargin;
+                        var offsetDirs = new Vector3[] {
+                            new(-dirDistance, .1f, 0),
+                            new(dirDistance, .1f, 0),
+                            new(0, .1f, -dirDistance),
+                            new(0, .1f, dirDistance),
+                            new(cornerDistance, .1f, -cornerDistance),
+                            new(cornerDistance, .1f, cornerDistance),
+                            new(-cornerDistance, .1f, -cornerDistance),
+                            new(-cornerDistance, .1f, cornerDistance)
+                        };
+                        Vector3 currentDir;
+                        Color color;
+                        for (var i = 0; i < offsetDirs.Length; i++) {
+                            color = Color.green;
+                            currentDir = offsetDirs[i];
+                            var dot = Vector3.Dot(newVelocity, currentDir);
+                            if (dot > 0 && !Physics.Raycast(transform.position + currentDir, Vector3.down, .25f,
+                                    movementSettings.groundCollisionLayerMask)) {
+                                //Empty air in this dir
+                                newVelocity.x = currentDir.x == 0
+                                    ? Mathf.Sign(newVelocity.x) * Mathf.Abs(newVelocity.x)
+                                    : 0;
+                                newVelocity.z = currentDir.z == 0
+                                    ? Mathf.Sign(newVelocity.z) * Mathf.Abs(newVelocity.z)
+                                    : 0;
+                                color = Color.red;
                             }
 
-                            //With this new velocity are we going to fall off a different ledge? 
-                            if (!Physics.Raycast(
-                                    new Vector3(0, 1.25f, 0) + transform.position +
-                                    newVelocity.normalized * distanceCheck, Vector3.down, 1.5f)) {
-                                //Nothing in the direction of the new velocity
-                                newVelocity = Vector3.zero;
+                            if (drawDebugGizmos_CROUCH) {
+                                Debug.DrawLine(transform.position + currentDir,
+                                    transform.position + offsetDirs[i] - Vector3.down * .25f, color, .1f);
                             }
                         }
-                    } else {
-                        //can't find the angle to move so stop movement
-                        newVelocity = Vector3.zero;
                     }
                 }
             }
@@ -1407,6 +1503,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region Helpers
 
         private void SnapToY(float newY) {
+            //print("Snapping to Y: " + newY);
             var newPos = rb.position;
             newPos.y = newY;
             rb.position = newPos;
@@ -1485,9 +1582,15 @@ namespace Code.Player.Character.MovementSystems.Character {
             _smoothLookVector = moveDirMode == MoveDirectionMode.Camera;
         }
 
-        public void SetLookVector(Vector3 lookVector) {
+        /// <summary>
+        /// Call this from C# to let Luau scripts know we've updated the look vector.
+        /// Example: A teleport RPC.
+        /// </summary>
+        /// <param name="lookVector"></param>
+        [HideFromTS]
+        public void SetLookVectorAndNotifyLuau(Vector3 lookVector) {
             OnNewLookVector?.Invoke(lookVector);
-            SetLookVectorRecurring(lookVector);
+            SetLookVector(lookVector);
         }
 
         /// <summary>
@@ -1495,7 +1598,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         /// Useful for something that is updating the lookVector frequently and needs to listen for other scripts modifying the lookVector. 
         /// </summary>
         /// <param name="lookVector"></param>
-        public void SetLookVectorRecurring(Vector3 lookVector) {
+        public void SetLookVector(Vector3 lookVector) {
             // Don't set look vectors on observed characters
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
@@ -1520,7 +1623,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
         }
 
-        public void SetLookVectorRecurringToMoveDir() {
+        public void SetLookVectorToMoveDir() {
             // Don't set look vectors on observed characters
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
@@ -1583,7 +1686,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
             rb.MovePosition(position);
-            SetLookVector(lookVector);
+            SetLookVectorAndNotifyLuau(lookVector);
         }
 
         public void SetMovementEnabled(bool isEnabled) {
@@ -1609,7 +1712,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public void AddImpulse(Vector3 impulse) {
-            // print("Adding impulse: " + impulse);
+            //print("Adding impulse: " + impulse);
             if (mode == NetworkedStateSystemMode.Observer && isServer) {
                 RpcAddImpulse(impulse);
                 return;
@@ -1778,7 +1881,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [TargetRpc]
         public void RpcSetLookVector(Vector3 lookVector) {
-            SetLookVector(lookVector);
+            SetLookVectorAndNotifyLuau(lookVector);
         }
 
         [TargetRpc]

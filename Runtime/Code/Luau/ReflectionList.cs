@@ -4,6 +4,7 @@ using System.Reflection;
 using ElRaccoone.Tweens;
 using Mirror;
 using TMPro;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
@@ -14,6 +15,7 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using UnityEngine.Splines;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
@@ -184,6 +186,13 @@ namespace Luau {
             [typeof(MeshFilter)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
             [typeof(DecalProjector)] = LuauContextAll,
+            //Spline
+            [typeof(Spline)] = LuauContextAll,
+            [typeof(BezierCurve)] = LuauContextAll,
+            [typeof(CurveUtility)] = LuauContextAll,
+            [typeof(SplineUtility)] = LuauContextAll,
+            [typeof(BezierKnot)] = LuauContextAll,
+            [typeof(float3)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
