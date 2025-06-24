@@ -14,6 +14,7 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using UnityEngine.Splines;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
@@ -184,6 +185,12 @@ namespace Luau {
             [typeof(MeshFilter)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
             [typeof(DecalProjector)] = LuauContextAll,
+            //Spline
+            [typeof(Spline)] = LuauContextAll,
+            [typeof(BezierCurve)] = LuauContextAll,
+            [typeof(CurveUtility)] = LuauContextAll,
+            [typeof(SplineUtility)] = LuauContextAll,
+            [typeof(BezierKnot)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
