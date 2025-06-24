@@ -224,7 +224,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
-                rb.interpolation = RigidbodyInterpolation.None;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 

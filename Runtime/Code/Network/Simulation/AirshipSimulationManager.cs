@@ -163,9 +163,6 @@ namespace Code.Network.Simulation
             // ---
             uint tick = (uint)Mathf.RoundToInt(Time.fixedTime / Time.fixedDeltaTime);
             double time = Time.fixedUnscaledTimeAsDouble; // TODO: pass this time to the callback functions so they can always use the same time values during replays. Will need to be tracked
-            if (NetworkServer.active) {
-                Debug.Log($"Frame: {Time.frameCount} Tick {tick}, UFT: {Time.fixedUnscaledTimeAsDouble} UT: {Time.unscaledTimeAsDouble}");
-            }
             
             // Update debug overlay
             var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
