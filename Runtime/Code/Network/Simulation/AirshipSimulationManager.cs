@@ -142,7 +142,9 @@ namespace Code.Network.Simulation
         private Dictionary<uint, double> tickTimes = new();
         private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
-        private uint lastTick = 0; // Tracks the last tick number
+        
+        public uint tick;
+        public double time;
 
         public void ActivateSimulationManager()
         {
@@ -167,8 +169,8 @@ namespace Code.Network.Simulation
             // display a smooth observed player using NetworkTime.time which uses unscaled time.
             
             // ---
-            uint tick = (uint)Mathf.RoundToInt(Time.fixedTime / Time.fixedDeltaTime);
-            double time = Time.fixedUnscaledTimeAsDouble; // TODO: pass this time to the callback functions so they can always use the same time values during replays. Will need to be tracked
+            tick = (uint)Mathf.RoundToInt(Time.fixedTime / Time.fixedDeltaTime);
+            time = Time.fixedUnscaledTimeAsDouble; // TODO: pass this time to the callback functions so they can always use the same time values during replays. Will need to be tracked
             
             // Update debug overlay
             var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
@@ -257,7 +259,6 @@ namespace Code.Network.Simulation
             // Add our completed tick time into our history
             this.previousTicks.Add(tick);
             this.tickTimes.Add(tick, time);
-            lastTick = tick;
             // Keep the tick history around only for 1 second. This limits our lag compensation amount.
             var ticksPerSecond = 1 / Time.fixedDeltaTime;
             while (this.previousTicks.Count > 0 && tick - this.previousTicks[0] > ticksPerSecond)
@@ -344,6 +345,8 @@ namespace Code.Network.Simulation
         {
             // Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTick} to {this.previousTicks[^1]}");
             G_ResimMonitor.FrameResimValue = 100;
+            var prevTick = tick;
+            var prevTime = time;
             
             if (replaying)
             {
@@ -358,27 +361,29 @@ namespace Code.Network.Simulation
             }
 
             // If the base time further in the past that our history goes, we reset to the oldest history we have (0) instead.
-            uint tick = baseTick;
+            uint targetTick = baseTick;
             if (baseTick < previousTicks[0]) {
-                tick = previousTicks[0];
+                targetTick = previousTicks[0];
             }
 
             this.replaying = true;
             try
             {
                 OnSetPaused?.Invoke(true);
-                OnSetSnapshot?.Invoke(tick);
+                OnSetSnapshot?.Invoke(targetTick);
                 Physics.SyncTransforms();
                 // Advance the tick so that we are re-processing the next tick after the base time provided.
-                tick++;
+                targetTick++;
 
-                while (tick <= this.previousTicks[^1]) {
-                    tickTimes.TryGetValue(tick, out double time);
-                    OnTick?.Invoke(tick, time, true);
+                while (targetTick <= this.previousTicks[^1]) {
+                    tickTimes.TryGetValue(targetTick, out double targetTime);
+                    tick = targetTick;
+                    time = targetTime;
+                    OnTick?.Invoke(targetTick, targetTime, true);
                     // Debug.Log("Simulate call. Replay Tick: " + tick);
                     Physics.Simulate(Time.fixedDeltaTime);
-                    OnCaptureSnapshot?.Invoke(tick, time, true);
-                    tick++;
+                    OnCaptureSnapshot?.Invoke(targetTick, targetTime, true);
+                    targetTick++;
                 }
 
                 OnSetPaused?.Invoke(false);
@@ -390,6 +395,8 @@ namespace Code.Network.Simulation
             finally
             {
                 this.replaying = false;
+                tick = prevTick;
+                time = prevTime;
                 Debug.Log($"Completed resimulation from {baseTick} to {this.previousTicks[^1]}");
             }
         }

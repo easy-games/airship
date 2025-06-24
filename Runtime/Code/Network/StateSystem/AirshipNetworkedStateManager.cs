@@ -1092,7 +1092,7 @@ namespace Code.Network.StateSystem
                 // This might be ok though because it means in situations with high loss, the server
                 // will continue to send full snapshots all the time to this client instead of just diffs.
                 // It will make for smoother gameplay at the cost of higher network usage.
-                print("No base state for " + diff.baseTick + ". Requesting new snapshot.");
+                // print("No base state for " + diff.baseTick + ". Requesting new snapshot.");
                 SendRequestFullSnapshotToServer();
                 return;
             }
