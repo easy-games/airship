@@ -136,15 +136,14 @@ namespace Code.Network.Simulation
         public event Action<object> OnLagCompensationRequestComplete;
 
         [NonSerialized] public bool replaying = false;
+        [NonSerialized] public uint tick;
+        [NonSerialized] public double time;
         
         private bool isActive = false;
         private List<uint> previousTicks = new List<uint>();
         private Dictionary<uint, double> tickTimes = new();
         private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
-        
-        public uint tick;
-        public double time;
 
         public void ActivateSimulationManager()
         {
