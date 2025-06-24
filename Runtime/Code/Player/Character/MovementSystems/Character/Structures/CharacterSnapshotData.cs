@@ -56,9 +56,10 @@ namespace Code.Player.Character.MovementSystems.Character
             string message = "";
             
             // We do not compare time since it does not affect local client simulation
+            var vectorTolerance = 0.01 * 0.01; // sqr since we use sqr magnitude
             var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
-            var positionEqual = this.position == other.position;
-            var velocityEqual = this.velocity == other.velocity;
+            var positionEqual = (this.position - other.position).sqrMagnitude < vectorTolerance;
+            var velocityEqual =  (this.velocity - other.velocity).sqrMagnitude < vectorTolerance;
             var currentSpeedEqual = NetworkSerializationUtil.CompressToShort(this.currentSpeed) == NetworkSerializationUtil.CompressToShort(other.currentSpeed);
             var speedModifierEqual = NetworkSerializationUtil.CompressToShort(this.speedModifier) == NetworkSerializationUtil.CompressToShort(other.speedModifier);
             var inputDisabledEqual = inputDisabled == other.inputDisabled;
