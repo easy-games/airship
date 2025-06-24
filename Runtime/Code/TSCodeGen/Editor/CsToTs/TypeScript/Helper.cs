@@ -323,11 +323,21 @@ namespace CsToTs.TypeScript {
                 var commentLines = GetFunctionComment(method);
                 string generics = "";
                 if (method.IsGenericMethod) {
-                    var genericPrms = method.GetGenericArguments().Select(t => GetTypeRef(t, context));
+                    var genericPrms = method.GetGenericArguments().Select(t => {
+                        var baseStr = GetTypeRef(t, context);
+                        var constraints = t.GetGenericParameterConstraints();
+                        if (constraints.Length > 0) {
+                            baseStr = $"{baseStr} extends {string.Join(", ", constraints.Select((constraintType) => GetTypeRef(constraintType, context)))}";
+                        }
+                        return baseStr;
+                    });
                     generics = $"<{string.Join(", ", genericPrms)}>";
                 }
 
-                var parameters = method.GetParameters()
+                var paramInfos = method.GetParameters();
+                if (paramInfos.Any(p => p.IsOut)) continue; // Skip over any out variable methods
+                
+                var parameters = paramInfos
                     .Select(p => new MemberDefinition(p.Name, GetTypeRef(p.ParameterType, context)));
                 
                 var decorators = useDecorators(method);
