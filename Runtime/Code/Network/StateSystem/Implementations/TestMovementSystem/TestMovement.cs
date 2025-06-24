@@ -45,16 +45,17 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             }
         }
 
-        public override TestMovementState GetCurrentState(int commandNumber, uint tick)
+        public override TestMovementState GetCurrentState(int commandNumber, uint tick, double time)
         {
             return new TestMovementState()
             {
+                time = time,
                 position = rb.position, rotation = rb.rotation, velocity = rb.linearVelocity,
                 angularVelocity = rb.angularVelocity, lastProcessedCommand = commandNumber, tick = tick, jumpTicksUntil = jumpTicksUntil
             };
         }
 
-        public override void Tick(TestMovementInput command, uint tick, bool replay)
+        public override void Tick(TestMovementInput command, uint tick, double time, bool replay)
         {
             if (command == null) return;
             //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);

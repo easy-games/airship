@@ -50,7 +50,7 @@ namespace Code.Network.StateSystem
         /**
          * Gets the current state of the system. The time value provided is the local time for the tick (Time.unscaledTimeAsDouble)
          */
-        public abstract State GetCurrentState(int commandNumber, uint tick);
+        public abstract State GetCurrentState(int commandNumber, uint tick, double time);
 
         /**
          * Gets the latest command retrieved during the update loop. This command will be sent to the server and predicted.
@@ -65,7 +65,7 @@ namespace Code.Network.StateSystem
          * This function is called at least as often as FixedUpdate, but may be called more often during re-simulations
          * or on the server when there is a backup of commands.
          */
-        public abstract void Tick([CanBeNull] Input command, uint tick, bool replay);
+        public abstract void Tick([CanBeNull] Input command, uint tick, double time, bool replay);
 
         /**
          * Set the state to be the interpolated state between these two snapshots. This is called every frame

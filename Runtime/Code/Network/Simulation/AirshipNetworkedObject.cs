@@ -46,7 +46,7 @@ namespace Code.Network.Simulation
             AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.LagCompensationCheck;
         }
 
-        private void CaptureSnapshot(uint tick, bool replay)
+        private void CaptureSnapshot(uint tick, double time, bool replay)
         {
             if (replay)
             {
@@ -72,9 +72,9 @@ namespace Code.Network.Simulation
             }
         }
 
-        private void LagCompensationCheck(int clientId, uint tick, double latency)
+        private void LagCompensationCheck(int clientId, uint tick, double time, double latency)
         {
-            var bufferedTicks = Math.Round((latency - NetworkClient.bufferTime) / Time.fixedDeltaTime);
+            var bufferedTicks = Math.Round((latency - NetworkClient.bufferTime - Time.fixedDeltaTime) / Time.fixedDeltaTime);
             this.SetSnapshot((uint) tick - bufferedTicks);
         }
     }

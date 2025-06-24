@@ -98,22 +98,27 @@ namespace Code.Network.Simulation
          *
          * clientId - The connectionId of the client we are simulating the view of
          * tick - The tick that triggered this compensation check
+         * time - unscaled time for the tick
          * rtt - The estimated time it takes for a message to reach the client and then be returned to the server (aka. ping) (rtt / 2 = latency)
          */
-        public event Action<int, uint, double> OnLagCompensationCheck;
+        public event Action<int, uint, double, double> OnLagCompensationCheck;
 
         /// <summary>
         /// This action tells all watching components that they need to perform a tick.
         /// A Physics.Simulate() call will be made after PerformTick completes.
+        /// params:
+        /// -tick - the tick number
+        /// -time - unscaled time of the tick
+        /// -replay - if this is a replay of a tick
         /// </summary>
-        public event Action<object, object> OnTick;
+        public event Action<object, object, object> OnTick;
 
         /**
          * Informs all watching components that the simulation tick has been performed
          * and that a new snapshot of the resulting Physics.Simulate() should be captured.
          * This snapshot should be the state for the provided tick number in history.
          */
-        public event Action<uint, bool> OnCaptureSnapshot;
+        public event Action<uint, double, bool> OnCaptureSnapshot;
 
         /**
          * Fired when a tick leaves local history and will never be referenced again. You can use this
@@ -134,6 +139,7 @@ namespace Code.Network.Simulation
         
         private bool isActive = false;
         private List<uint> previousTicks = new List<uint>();
+        private Dictionary<uint, double> tickTimes = new();
         private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
         private uint lastTick = 0; // Tracks the last tick number
@@ -197,10 +203,10 @@ namespace Code.Network.Simulation
             if (resimBackTo != tick) this.PerformResimulation(resimBackTo);
 
             // Perform the standard tick behavior
-            OnTick?.Invoke(tick, false);
+            OnTick?.Invoke(tick, time, false);
             // Debug.Log($"Simulate call. Main tick {tick}");
             Physics.Simulate(Time.fixedDeltaTime);
-            OnCaptureSnapshot?.Invoke(tick, false);
+            OnCaptureSnapshot?.Invoke(tick, time, false);
 
             // Process any lag compensation requests now that we have completed the ticking and snapshot creation
             // Note: This process is placed after snapshot processing so that changes made to physics (like an impulse)
@@ -212,7 +218,7 @@ namespace Code.Network.Simulation
                 {
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
-                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, entry.Key.rtt);
+                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt);
                     foreach (var request in entry.Value)
                     {
                         request.check();
@@ -250,12 +256,14 @@ namespace Code.Network.Simulation
 
             // Add our completed tick time into our history
             this.previousTicks.Add(tick);
+            this.tickTimes.Add(tick, time);
             lastTick = tick;
             // Keep the tick history around only for 1 second. This limits our lag compensation amount.
             var ticksPerSecond = 1 / Time.fixedDeltaTime;
             while (this.previousTicks.Count > 0 && tick - this.previousTicks[0] > ticksPerSecond)
             {
                 OnHistoryLifetimeReached?.Invoke(this.previousTicks[0]);
+                this.tickTimes.Remove(this.previousTicks[0]);
                 this.previousTicks.RemoveAt(0);
             }
         }
@@ -364,12 +372,12 @@ namespace Code.Network.Simulation
                 // Advance the tick so that we are re-processing the next tick after the base time provided.
                 tick++;
 
-                while (tick <= this.previousTicks[^1])
-                {
-                    OnTick?.Invoke(tick, true);
+                while (tick <= this.previousTicks[^1]) {
+                    tickTimes.TryGetValue(tick, out double time);
+                    OnTick?.Invoke(tick, time, true);
                     // Debug.Log("Simulate call. Replay Tick: " + tick);
                     Physics.Simulate(Time.fixedDeltaTime);
-                    OnCaptureSnapshot?.Invoke(tick, true);
+                    OnCaptureSnapshot?.Invoke(tick, time, true);
                     tick++;
                 }
 
