@@ -47,6 +47,7 @@ using UnityEngine.VFX;
 using Code.Player.Accessories;
 using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.NetworkedMovement;
+using Unity.Mathematics;
 using UnityEngine.Splines;
 
 public class TypeGenerator : MonoBehaviour
@@ -258,6 +259,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Spline),
             typeof(SplineAnimate),
             typeof(SplineUtility),
+            typeof(float3),
 
             // Airship
             typeof(AnimationEventData),

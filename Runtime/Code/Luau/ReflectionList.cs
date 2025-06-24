@@ -4,6 +4,7 @@ using System.Reflection;
 using ElRaccoone.Tweens;
 using Mirror;
 using TMPro;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
@@ -191,6 +192,7 @@ namespace Luau {
             [typeof(CurveUtility)] = LuauContextAll,
             [typeof(SplineUtility)] = LuauContextAll,
             [typeof(BezierKnot)] = LuauContextAll,
+            [typeof(float3)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
