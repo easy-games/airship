@@ -12,7 +12,7 @@ public class SplineUtilityAPI : BaseLuaAPIClass {
         ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
         
         if (methodName == "EvaluatePosition") {
-            var spline = (Spline) LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+            var spline = (ISpline) LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                 parameterDataSizes, thread);
 
             var f = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
@@ -24,7 +24,7 @@ public class SplineUtilityAPI : BaseLuaAPIClass {
         }
         
         if (methodName == "EvaluateTangent") {
-            var spline = (Spline) LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+            var spline = (ISpline) LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                 parameterDataSizes, thread);
 
             var f = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
@@ -36,7 +36,7 @@ public class SplineUtilityAPI : BaseLuaAPIClass {
         }
         
         if (methodName == "EvaluateUpVector") {
-            var spline = (Spline) LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+            var spline = (ISpline) LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                 parameterDataSizes, thread);
 
             var f = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
