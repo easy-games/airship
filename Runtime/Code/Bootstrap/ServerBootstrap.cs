@@ -257,7 +257,7 @@ public class ServerBootstrap : MonoBehaviour
 		if (this.allocatedByAgones) return;
 		var annotations = server.ObjectMeta.Annotations;
 		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages")) {
-			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
+			Debug.Log($"[Agones]: Server {annotations["ServerId"]} will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
 			this.allocatedByAgones = true;
 			startupConfig.GameBundleId = annotations["GameId"];
 			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];

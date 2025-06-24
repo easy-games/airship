@@ -24,7 +24,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     [LuauAPI]
     public class
-        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterInputData> {
+        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
@@ -281,12 +281,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnSetSnapshot?.Invoke(snapshot);
         }
 
-        public override CharacterSnapshotData GetCurrentState(int commandNumber, double time) {
+        public override CharacterSnapshotData GetCurrentState(int commandNumber, uint tick, double time) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific state capture function don't find their way into our state record.
             customSnapshotData = null;
-            OnCaptureSnapshot?.Invoke(commandNumber, time);
+            OnCaptureSnapshot?.Invoke(commandNumber, tick);
             currentMoveSnapshot.customData = customSnapshotData;
+            currentMoveSnapshot.tick = tick;
             currentMoveSnapshot.time = time;
             currentMoveSnapshot.lastProcessedCommand = commandNumber;
             currentMoveSnapshot.position = rb.position;
@@ -298,27 +299,27 @@ namespace Code.Player.Character.MovementSystems.Character {
             return snapshot;
         }
 
-        public override CharacterInputData GetCommand(int commandNumber, double time) {
+        public override CharacterInputData GetCommand(int commandNumber, uint tick) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific command generation function don't find their way into our command.
             customInputData = null;
             OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData() {
                 commandNumber = commandNumber,
+                tick = tick,
                 moveDir = moveDirInput,
                 jump = jumpInput,
                 crouch = crouchInput,
                 sprint = sprintInput,
                 lookVector = lookVector,
                 customData = customInputData,
-                time = time
             };
             // Reset the custom data again
             customInputData = null;
             return data;
         }
 
-        public override void Tick(CharacterInputData command, double time, bool replay) {
+        public override void Tick(CharacterInputData command, uint tick, double time, bool replay) {
             if (command == null) {
                 // If there is no command, we use a "no input" command. This command uses the same command number as our lastProcessedCommand state data
                 // so that we treat this input essentially as a ghost input that doesn't effect our stored command information, but allows us to
@@ -326,7 +327,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // We replace the base inputs with the last known state input so that players do not feel that their inputs were lost from dropped packets.
                 command = new CharacterInputData() {
                     commandNumber = currentMoveSnapshot.lastProcessedCommand,
-                    time = time,
+                    tick = tick,
                     jump = currentMoveSnapshot.alreadyJumped,
                     crouch = currentMoveSnapshot.isCrouching,
                     sprint = currentMoveSnapshot.isSprinting,
@@ -339,6 +340,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // to still read what direction the character wants to move, even if processing that input is disabled.
             if (disableInput) {
                 var replacementCmd = command.Clone() as CharacterInputData;
+                replacementCmd.tick = tick;
                 replacementCmd.moveDir = new Vector3();
                 replacementCmd.lookVector = currentMoveSnapshot.lookVector;
                 replacementCmd.jump = false;
@@ -1390,10 +1392,12 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void Interpolate(
-            float delta,
+            double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
-            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
+            // Make sure you use MovePosition so that unity actually renders this character here right away.
+            // rb.position = value; will cause irregular movement.
+            rb.MovePosition(Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta));
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
@@ -1407,7 +1411,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation(oldLook),
                 Quaternion.LookRotation(newLook),
-                delta);
+                (float)delta);
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
 
@@ -1422,18 +1426,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                 jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount
             };
             var changed = newState.state != currentAnimState.state;
-
+            
             if (animationHelper) {
                 animationHelper.SetState(newState);
             }
-
+            
             currentMoveSnapshot = snapshot;
             currentAnimState = newState;
-
+            
             if (changed) {
                 stateChanged?.Invoke((int)newState.state);
             }
-
+            
             OnInterpolateReachedState?.Invoke(snapshot);
         }
 
@@ -1491,7 +1495,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region TypeScript Interaction
 
-        public double GetLocalSimulationTimeFromCommandNumber(int commandNumber) {
+        public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
@@ -1506,7 +1510,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return 0;
             }
 
-            return localState.time;
+            return localState.tick;
         }
 
         public bool RequestResimulation(int commandNumber) {
@@ -1526,7 +1530,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) => {
                 Debug.LogWarning("Resimulating for TS");
-                resimulate(clientPredictedState.time);
+                resimulate(clientPredictedState.tick);
             });
 
             return true;

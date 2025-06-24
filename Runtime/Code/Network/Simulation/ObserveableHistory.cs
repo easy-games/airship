@@ -6,23 +6,22 @@ using UnityEngine;
 namespace Code.Network.Simulation
 {
     /**
-     * The history class can be used to store a value on a sorted tick timeline. This class works much like a SortedList,
-     * but includes additional convenience functions for working with SortedLists in the context of storing a tick history
-     * over time and marking entries as authoritative.
+     * The history class can be used to store a value on a sorted timeline. This class works much like a SortedList,
+     * but includes additional convenience functions for working with SortedLists in the context of storing a history
+     * over time. This class differs from history in that it works with actual time values instead of ticks.
      */
-    public class History<T>
+    public class ObservableHistory<T>
     {
         private int maxSize;
-        private SortedList<uint, T> history = new SortedList<uint, T>();
-        private List<uint> authoritativeEntries = new List<uint>();
+        private SortedList<double, T> history = new ();
 
         public IList<T> Values => history.Values;
-        public IList<uint> Keys => history.Keys;
+        public IList<double> Keys => history.Keys;
         
         /**
          * Creates a history with the provided maximum entry size. You can set the max size to 0 for no maximum size.
          */
-        public History(int maxSize)
+        public ObservableHistory(int maxSize)
         {
             this.maxSize = maxSize;
         }
@@ -31,20 +30,19 @@ namespace Code.Network.Simulation
          * Adds an entry at the provided time. Additionally makes room for the entry
          * by removing the oldest entry if the list has reached its maximum capacity.
          */
-        public T Add(uint tick, T entry)
+        public T Add(double time, T entry)
         {
-            var added = this.history.TryAdd(tick, entry);
+            var added = this.history.TryAdd(time, entry);
             if (!added)
             {
-                Debug.LogWarning("Attempted to add an entry to history that already exists. The new entry will be ignored. Time: " + tick);
-                return this.GetExact(tick);
+                Debug.LogWarning("Attempted to add an entry to history that already exists. The new entry will be ignored. Time: " + time);
+                return this.GetExact(time);
             }
 
             if (maxSize != 0)
             {
                 while (this.history.Count > this.maxSize)
                 {
-                    this.authoritativeEntries.Remove(this.history.Keys[0]);
                     this.history.RemoveAt(0);
                 }
             }
@@ -55,62 +53,38 @@ namespace Code.Network.Simulation
         /**
          * Sets the entry at the provided time. Will always set the value of the entry.
          */
-        public T Set(uint tick, T entry) {
-            this.history.Remove(tick);
-            this.Add(tick, entry);
+        public T Set(double time, T entry) {
+            this.history.Remove(time);
+            this.Add(time, entry);
             return entry;
-        }
-
-        public void SetAuthoritativeEntry(uint tick, bool authority)
-        {
-            var hasEntry = this.authoritativeEntries.Contains(tick);
-            if (authority && hasEntry) return;
-            if (!authority && !hasEntry) return;
-
-            if (authority && !hasEntry)
-            {
-                this.authoritativeEntries.Add(tick);
-                return;
-            }
-
-            if (!authority && hasEntry)
-            {
-                this.authoritativeEntries.Remove(tick);
-                return;
-            }
-        }
-
-        public bool IsAuthoritativeEntry(uint tick)
-        {
-            return this.authoritativeEntries.Contains(tick);
         }
 
         /**
          * Overwrites an exact entry. If an existing entry can't be found, it will
          * not create a new entry.
          */
-        public void Overwrite(uint tick, T entry)
+        public void Overwrite(double time, T entry)
         {
-            var removed = this.history.Remove(tick);
+            var removed = this.history.Remove(time);
             if (removed) {
-                this.history.Add(tick, entry);
+                this.history.Add(time, entry);
             }
         }
 
         /**
-         * Gets the entry nearest entry before or at the provided tick.
+         * Gets the entry nearest entry before or at the provided time.
          */
-        public T Get(uint tick)
+        public T Get(double time)
         {
             if (history.Count == 0) return default;
             
             // older than oldest
-            if (tick <= history.Keys[0]) {
+            if (time <= history.Keys[0]) {
                 return history.Values[0];
             }
             
             // newer than the newest
-            if (tick >= history.Keys[^1])
+            if (time >= history.Keys[^1])
             {
                 return history.Values[^1];
             }
@@ -124,13 +98,13 @@ namespace Code.Network.Simulation
                 var key = history.Keys[i];
 
                 // exact match?
-                if (tick == key)
+                if (time == key)
                 {
                     return history.Values[i];
                 }
 
-                // did we check beyond tick? then return the previous.
-                if (key > tick)
+                // did we check beyond time? then return the previous.
+                if (key > time)
                 {
                     return prev;
                 }
@@ -142,15 +116,15 @@ namespace Code.Network.Simulation
             return prev;
         }
 
-        public bool Has(uint tick) {
-           return this.history.ContainsKey(tick);
+        public bool Has(double time) {
+           return this.history.ContainsKey(time);
         }
         
         /**
-         * Given a fractional tick (ie. 295.4), gets the ticks that are next to that
-         * tick (ie. 295 and 296).
+         * Given a time, gets the entries that are just before and just after that time. If the time
+         * matches a value exactly, the same value will be returned for both before and after.
          */
-        public bool GetAround(double fractionalTick, out T before, out T after)
+        public bool GetAround(double time, out T before, out T after)
         {
             before = default;
             after  = default;
@@ -160,12 +134,12 @@ namespace Code.Network.Simulation
             }
 
             // older than oldest
-            if (fractionalTick < history.Keys[0]) {
+            if (time < history.Keys[0]) {
                 return false;
             }
             
             int index = 0; // manually count when iterating. easier than for-int loop.
-            KeyValuePair<uint, T> prev = new KeyValuePair<uint, T>();
+            KeyValuePair<double, T> prev = new();
             
             for (int i = 0; i < history.Count; ++i)
             {
@@ -173,15 +147,15 @@ namespace Code.Network.Simulation
                 T value = history.Values[i];
 
                 // exact match?
-                if (fractionalTick == key)
+                if (time == key)
                 {
                     before = value;
                     after = value;
                     return true;
                 }
 
-                // did we check beyond tick? then return the previous two.
-                if (key > fractionalTick)
+                // did we check beyond time? then return the previous two.
+                if (key > time)
                 {
                     before = prev.Value;
                     after = value;
@@ -189,26 +163,26 @@ namespace Code.Network.Simulation
                 }
 
                 // remember the last
-                prev = new KeyValuePair<uint, T>(key, value);
+                prev = new KeyValuePair<double, T>(key, value);
                 index += 1;
             }
 
             return false;
         }
 
-        public T GetExact(uint tick)
+        public T GetExact(double time)
         {
-            this.history.TryGetValue(tick, out T value);
+            this.history.TryGetValue(time, out T value);
             return value;
         }
 
         /**
-         * Gets all entries after the provided tick. Does _not_ get the
-         * entry at that tick.
+         * Gets all entries after the provided time. Does _not_ get the
+         * entry at that time.
          */
-        public T[] GetAllAfter(uint tick)
+        public T[] GetAllAfter(double time)
         {
-            if (this.history.Keys.Count == 0 || tick > this.history.Keys[^1])
+            if (this.history.Keys.Count == 0 || time > this.history.Keys[^1])
             {
                 return new T[] {};
             }
@@ -217,7 +191,7 @@ namespace Code.Network.Simulation
             // Iterate in reverse since our return values will likely include the end
             for (var i = this.history.Count - 1; i >= 0; i--)
             {
-                if (this.history.Keys[i] < tick)
+                if (this.history.Keys[i] < time)
                 {
                     after.Reverse();
                     return after.ToArray();
@@ -232,18 +206,16 @@ namespace Code.Network.Simulation
         public void RemoveAt(int index)
         {
             if (index < 0 || index >= this.history.Count) return;
-            var tick = this.history.Keys[index];
-            this.authoritativeEntries.Remove(tick);
+            var time = this.history.Keys[index];
             this.history.RemoveAt(index);
         }
 
         /**
-         * Removes the entry directly at the given tick.
+         * Removes the entry directly at the given time.
          */
-        public bool Remove(uint tick)
+        public bool Remove(double time)
         {
-            this.authoritativeEntries.Remove(tick);
-            return this.history.Remove(tick);
+            return this.history.Remove(time);
         }
 
         /**
@@ -251,19 +223,17 @@ namespace Code.Network.Simulation
          */
         public void Clear()
         {
-            this.authoritativeEntries.Clear();
             this.history.Clear();
         }
 
         /**
-         * Clears all history entries before the provided tick. Does _not_ clear
-         * the entry at that tick.
+         * Clears all history entries before the provided time. Does _not_ clear
+         * the entry at that time.
          */
-        public void ClearAllBefore(uint tick)
+        public void ClearAllBefore(double time)
         {
-            while (this.history.Count > 0 && this.history.Keys[0] < tick)
+            while (this.history.Count > 0 && this.history.Keys[0] < time)
             {
-                this.authoritativeEntries.Remove(this.history.Keys[0]);
                 this.history.RemoveAt(0);
             }
         }
