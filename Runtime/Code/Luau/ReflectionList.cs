@@ -193,6 +193,7 @@ namespace Luau {
             [typeof(SplineUtility)] = LuauContextAll,
             [typeof(BezierKnot)] = LuauContextAll,
             [typeof(float3)] = LuauContextAll,
+            [typeof(SplineAnimate)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
