@@ -325,9 +325,9 @@ namespace CsToTs.TypeScript {
                 if (method.IsGenericMethod) {
                     var genericPrms = method.GetGenericArguments().Select(t => {
                         var baseStr = GetTypeRef(t, context);
-                        var constraints = t.GetGenericParameterConstraints();
+                        var constraints = t.GetGenericParameterConstraints().Where(c => c != typeof(ValueType)).ToArray();
                         if (constraints.Length > 0) {
-                            baseStr = $"{baseStr} extends {string.Join(", ", constraints.Select((constraintType) => GetTypeRef(constraintType, context)))}";
+                            baseStr = $"{baseStr} extends {string.Join(" & ", constraints.Select((constraintType) => GetTypeRef(constraintType, context)))}";
                         }
                         return baseStr;
                     });
@@ -606,7 +606,7 @@ namespace CsToTs.TypeScript {
                 return $"{typeName}<{string.Join(", ", genericPrms)}>";
             }
 
-            return typeName;
+            return typeName.Replace("&", "");
         }
         
         private static string GetPrimitiveMemberType(TypeCode typeCode, TypeScriptOptions options) {
