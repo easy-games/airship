@@ -990,6 +990,7 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     public static string GetRequirePath(string originalScriptPath, string fileNameStr) {
+        Profiler.BeginSample("GetRequirePath");
         if (!string.IsNullOrEmpty(originalScriptPath)) {
             if (!fileNameStr.Contains("/")) {
                 // Get a stripped name
@@ -1026,6 +1027,7 @@ public partial class LuauCore : MonoBehaviour {
         //Fully qualify it
         fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
 
+        Profiler.EndSample();
         return fileNameStr;
     }
 
