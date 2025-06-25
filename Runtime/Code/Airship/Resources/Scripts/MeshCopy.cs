@@ -239,19 +239,22 @@ namespace Code.Airship.Resources.Scripts {
 
             // int instancePropertyID = Shader.PropertyToID("_BaseColor");
 
+            bool isClient = RunCore.IsClient();
             for (int i = 0; i < mesh.subMeshCount; i++) {
                 SubMesh subMesh = new();
 
-                Material mat = null;
-                if (i < materials.Length) {
-                    mat = materials[i];
+                if (isClient) {
+                    Material mat = null;
+                    if (i < materials.Length) {
+                        mat = materials[i];
+                    }
+                    else {
+                        //default material
+                        mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    }
+                    subMesh.material = mat;
                 }
-                else {
-                    //default material
-                    mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                }
-                subMesh.material = mat;
-
+                
                 //id if the material is batchable
 
                 /*
@@ -781,9 +784,11 @@ namespace Code.Airship.Resources.Scripts {
 
             }
 
+            var isClient = RunCore.IsClient();
+
             for (int i = 0; i < source.subMeshes.Count; i++) {
                 SubMesh sourceMesh = source.subMeshes[i];
-                if (sourceMesh.material == null) {
+                if (isClient && sourceMesh.material == null) {
                     sourceMesh.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 }
 
