@@ -1403,15 +1403,17 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (oldLook == Vector3.zero) {
                 oldLook.z = 0.01f;
             }
-
             if (newLook == Vector3.zero) {
                 newLook.z = 0.01f;
             }
-
+            
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation(oldLook),
                 Quaternion.LookRotation(newLook),
                 (float)delta);
+
+            this.lookVector = Vector3.Lerp(snapshotOld.lookVector, snapshotNew.lookVector, (float)delta);
+            
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
 
@@ -1766,6 +1768,10 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             if (mode == NetworkedStateSystemMode.Authority && isClient) {
+                return lookVector;
+            }
+
+            if (mode == NetworkedStateSystemMode.Observer && isClient) {
                 return lookVector;
             }
 
