@@ -1,23 +1,24 @@
 using System;
+using Code.Managers;
 using UnityEngine;
 
 
 // todo: delete this stupid component
+[LuauAPI]
 public class CanvasDistanceCondition : MonoBehaviour {
-    public Canvas canvas;
-    public float maxDistance = 50f;
+    public float maxDistance {
+        get => _maxDistance;
+        set {
+            _maxDistance = value;
+            maxDistanceSqrd = Mathf.Pow(value, 2);
+        }
+    }
+    [SerializeField]
+    private float _maxDistance = 50.0f;
+    [NonSerialized]
+    public float maxDistanceSqrd = 2500.0f;
 
-    private void Update() {
-        if (RunCore.IsServer()) return;
-        Vector3 pos = Vector3.zero;
-        if (Camera.main) {
-            pos = Camera.main.transform.position;
-        }
-        var distance = (pos - this.transform.position).magnitude;
-        if (distance <= maxDistance) {
-            canvas.enabled = true;
-        } else {
-            canvas.enabled = false;
-        }
+    private void Start() {
+        CanvasDistanceManager.Instance.Register(this);
     }
 }

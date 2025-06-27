@@ -13,6 +13,7 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
+using Code.Managers;
 using Code.Network;
 using Code.Network.Simulation;
 using Code.Player;
@@ -265,6 +266,8 @@ public class TypeGenerator : MonoBehaviour
             // Airship
             typeof(AnimationEventData),
             typeof(VoxelWorld),
+            typeof(CanvasDistanceCondition),
+            typeof(CanvasDistanceManager),
             // typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
