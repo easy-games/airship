@@ -136,12 +136,12 @@ namespace Code.Network.Simulation
         public event Action<object> OnLagCompensationRequestComplete;
 
         [NonSerialized] public bool replaying = false;
-        [NonSerialized] public uint tick;
-        [NonSerialized] public double time;
+        [NonSerialized] public uint tick = 0;
+        [NonSerialized] public double time = 0;
         
         private bool isActive = false;
         private List<uint> previousTicks = new List<uint>();
-        private Dictionary<uint, double> tickTimes = new();
+        private List<double> previousTimes = new();
         private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
 
@@ -204,6 +204,7 @@ namespace Code.Network.Simulation
             if (resimBackTo != tick) this.PerformResimulation(resimBackTo);
 
             // Perform the standard tick behavior
+            print($"Tick is {tick} {this.GetInstanceID()}");
             OnTick?.Invoke(tick, time, false);
             // Debug.Log($"Simulate call. Main tick {tick}");
             Physics.Simulate(Time.fixedDeltaTime);
@@ -220,6 +221,7 @@ namespace Code.Network.Simulation
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
                     OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt);
+                    Physics.SyncTransforms();
                     foreach (var request in entry.Value)
                     {
                         request.check();
@@ -237,6 +239,7 @@ namespace Code.Network.Simulation
                 // Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
                 // Reset back to the server view of the world at the current time.
                 OnSetSnapshot?.Invoke(tick);
+                Physics.SyncTransforms();
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
                 foreach (var entry in this.lagCompensationRequests)
                 {
@@ -257,13 +260,13 @@ namespace Code.Network.Simulation
 
             // Add our completed tick time into our history
             this.previousTicks.Add(tick);
-            this.tickTimes.Add(tick, time);
+            this.previousTimes.Add(time);
             // Keep the tick history around only for 1 second. This limits our lag compensation amount.
             var ticksPerSecond = 1 / Time.fixedDeltaTime;
             while (this.previousTicks.Count > 0 && tick - this.previousTicks[0] > ticksPerSecond)
             {
                 OnHistoryLifetimeReached?.Invoke(this.previousTicks[0]);
-                this.tickTimes.Remove(this.previousTicks[0]);
+                this.previousTimes.RemoveAt(0);
                 this.previousTicks.RemoveAt(0);
             }
         }
@@ -333,6 +336,45 @@ namespace Code.Network.Simulation
         }
 
         /// <summary>
+        /// Attempts to find the tick number with an associated unscaled time just before or just after
+        /// the given time. This can be used to convert unscaled times in the local timeline
+        /// to a local tick number which best represents that time. This is useful for things like
+        /// lag compensation which operate in unscaled time.
+        /// </summary>
+        /// <param name="time"></param>
+        /// <returns></returns>
+        public uint GetNearestTickForUnscaledTime(double time) {
+            if (previousTimes.Count == 0) return 0;
+            if (time > previousTimes[^1]) {
+                return previousTicks[^1];
+            }
+
+            if (time < previousTimes[0]) {
+                return previousTicks[0];
+            }
+            
+            // Check for equality at 0 to handle the case of only one entry
+            if (time == previousTimes[0]) {
+                return previousTicks[0];
+            }
+            
+            for (var i = 0; i < previousTimes.Count; i++) {
+                var currTime = previousTimes[i];
+                if (currTime > time) {
+                    // -1 since the time at i is greater than time and we want the time before the provided time
+                    var prevTime = previousTimes[i - 1];
+                    var delta = Mathd.InverseLerp( prevTime, currTime, time);
+                    print($"Nearest to {time} between {prevTime} and {currTime} ({delta}) is {delta < 0.5}");
+                    return delta < 0.5 ? previousTicks[i - 1] : previousTicks[i]; // if delta is less that .5, prev tick is closer
+                }
+            }
+
+            // This case shouldn't happen. since times before or after are handled before the loop.
+            // we should always find something within the loop.
+            return 0;
+        }
+
+        /// <summary>
         /// Requests a simulation based on the provided time. Requesting a simulation will roll back the physics
         /// world to the snapshot just before or at the base time provided. Calling the returned tick function
         /// will advance the simulation and re-simulate the calls to <see cref="OnTick"/>, Physics.Simulate,
@@ -373,16 +415,18 @@ namespace Code.Network.Simulation
                 Physics.SyncTransforms();
                 // Advance the tick so that we are re-processing the next tick after the base time provided.
                 targetTick++;
+                // index of the tick in the previousTicks list, we use this to access the associated time.
+                var tickIndex = previousTicks.IndexOf(targetTick);
 
                 while (targetTick <= this.previousTicks[^1]) {
-                    tickTimes.TryGetValue(targetTick, out double targetTime);
                     tick = targetTick;
-                    time = targetTime;
-                    OnTick?.Invoke(targetTick, targetTime, true);
+                    time = previousTimes[tickIndex];
+                    OnTick?.Invoke(tick, time, true);
                     // Debug.Log("Simulate call. Replay Tick: " + tick);
                     Physics.Simulate(Time.fixedDeltaTime);
-                    OnCaptureSnapshot?.Invoke(targetTick, targetTime, true);
+                    OnCaptureSnapshot?.Invoke(tick, time, true);
                     targetTick++;
+                    tickIndex++; // increment tick index so we also get the next time.
                 }
 
                 OnSetPaused?.Invoke(false);

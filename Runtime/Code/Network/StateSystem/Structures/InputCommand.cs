@@ -1,6 +1,7 @@
 using System;
 using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character.Net
 {
@@ -15,6 +16,10 @@ namespace Code.Player.Character.Net
          * The tick the input was created. This time is local to the client/server that created it.
          */
         public uint tick;
+        /**
+         * The NetworkClient.bufferTime when this command was generated in milliseconds.
+         */
+        public short clientBufferMilli;
         
         public virtual object Clone()
         {

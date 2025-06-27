@@ -267,6 +267,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public override void SetCurrentState(CharacterSnapshotData snapshot) {
             currentMoveSnapshot.CopyFrom(snapshot);
             rb.position = snapshot.position;
+            rootTransform.position = snapshot.position;
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
             }
@@ -306,6 +307,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData() {
                 commandNumber = commandNumber,
+                clientBufferMilli = (short) (NetworkClient.bufferTime * 1000),
                 tick = tick,
                 moveDir = moveDirInput,
                 jump = jumpInput,
@@ -1497,6 +1499,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
+            
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
                     localState = state;

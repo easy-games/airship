@@ -18,6 +18,7 @@ namespace Code.Network.StateSystem.Structures
          */
         public double time; // we use float because precision errors
         public uint tick;
+        public double arrivedAt;
 
         /**
          * Compares two snapshots.

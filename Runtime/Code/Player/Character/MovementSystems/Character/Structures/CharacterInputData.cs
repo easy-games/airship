@@ -33,6 +33,7 @@ namespace Code.Player.Character.MovementSystems.Character
 			return new CharacterInputData()
 			{
 				commandNumber = commandNumber,
+				clientBufferMilli = clientBufferMilli,
 				moveDir = moveDir,
 				jump = jump,
 				crouch = crouch,
@@ -55,6 +56,7 @@ namespace Code.Player.Character.MovementSystems.Character
 			BitUtil.SetBit(ref bools, 2, value.sprint);
 			writer.Write(bools);
 			writer.Write(value.commandNumber);
+			writer.Write(value.clientBufferMilli);
 			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.x));
 			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.y));
 			writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.z));
@@ -71,6 +73,7 @@ namespace Code.Player.Character.MovementSystems.Character
 		public static CharacterInputData ReadCharacterInputData(this NetworkReader reader) {
 			var bools = reader.Read<byte>();
 			var commandNumber = reader.Read<int>();
+			var buffer = reader.Read<short>();
 			var lookVector = new Vector3(
 				NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
 				NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
@@ -89,6 +92,7 @@ namespace Code.Player.Character.MovementSystems.Character
 				sprint = BitUtil.GetBit(bools, 2),
 				customData = customData,
 				commandNumber = commandNumber,
+				clientBufferMilli = buffer,
 				lookVector = lookVector,
 				moveDir = moveDir,
 			};
