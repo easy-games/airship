@@ -61,6 +61,8 @@ namespace Code.Network.StateSystem
         private SortedList<int, Input> serverCommandBuffer = new SortedList<int, Input>();
         private int serverCommandBufferMaxSize = 0;
         private int serverCommandBufferTargetSize = 0;
+        // multiple of serverCommandBufferTargetSize to use as the max size before we start processing catchup ticks
+        private int serverCommandBufferLimitMultiple = 2;
 
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
@@ -190,15 +192,15 @@ namespace Code.Network.StateSystem
 
             // We will keep up to 1 second of commands in the buffer. After that, we will start dropping new commands.
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
-            this.serverCommandBufferMaxSize = NetworkClient.sendRate;
+            this.serverCommandBufferMaxSize = (int)(1f / Time.fixedDeltaTime);
             // Use 2 times the command buffer size as the target size for the buffer. We will process additional ticks when
             // the buffer is larger than this number. A multiple of 2 means that we may end up delaying command processing
             // by up to two sendIntervals. A higher multiple would cause more obvious delay, but result in smoother movement
             // in poor network conditions.
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 2);
-            // print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
+                    (int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime));
+            print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize + " int: " + NetworkClient.sendInterval);
 
             this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
             this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
@@ -519,7 +521,8 @@ namespace Code.Network.StateSystem
             // NetworkTime.bufferTime (sendInterval * multiple) - rendering is delayed to give time for us to receive at least one packet
             
             var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
-            var estimatedCommandDelay = this.serverCommandBufferTargetSize * tickGenerationTime;
+            // we half the time because the target size is set to double the expected size.
+            var estimatedCommandDelay = (this.serverCommandBufferTargetSize * tickGenerationTime); 
             
             var additionalBuffer = Math.Max(NetworkClient.sendInterval, tickGenerationTime);
             var bufferTime = NetworkServer.sendInterval * NetworkManager.singleton.snapshotSettings.bufferTimeMultiplier;
@@ -527,7 +530,7 @@ namespace Code.Network.StateSystem
            
             var latency = ping / 2f;
 
-            var totalBuffer = latency + clientRenderBuffer + estimatedCommandDelay;
+            var totalBuffer = latency + clientRenderBuffer; // + estimatedCommandDelay; // + NetworkServer.sendInterval;
             var lagCompensatedTime = currentTime - totalBuffer;
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             Debug.Log($"{latency} {clientRenderBuffer} ({bufferTime} + {additionalBuffer}) {estimatedCommandDelay} ({this.serverCommandBufferTargetSize} * {tickGenerationTime})");
@@ -562,7 +565,8 @@ namespace Code.Network.StateSystem
             if (this.maxServerCommandCatchup == 0)
             {
                 var dropCount = 0;
-                while (this.serverCommandBuffer.Count > this.serverCommandBufferTargetSize && dropCount < 3) // TODO: calculate drop number based on send rate for 1 send worth
+                var optimalMax = this.serverCommandBufferTargetSize * this.serverCommandBufferLimitMultiple;
+                while (this.serverCommandBuffer.Count > optimalMax && dropCount < this.serverCommandBufferTargetSize)
                 {
                     this.serverCommandBuffer.RemoveAt(0);
                     dropCount++;
@@ -956,7 +960,7 @@ namespace Code.Network.StateSystem
             var tickGenerationTime = (Time.fixedDeltaTime / Time.timeScale); // how long it takes to generate a single tick in real time.
             var additionalBuffer = Math.Max(NetworkClient.sendInterval, tickGenerationTime); // additional buffer needs to be at least as long as send interval because we always need at least 2 snapshots to interp between.
             // ^ consider replacing with only the additional amount of time needed over the send interval? If send rate is lower or equal to tick rate we only need to wait one send interval
-            var clientTime = NetworkTime.time - additionalBuffer;
+            var clientTime = NetworkTime.time; // - additionalBuffer;
                 
             // Get the state history around the time that's currently being rendered.
             if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
