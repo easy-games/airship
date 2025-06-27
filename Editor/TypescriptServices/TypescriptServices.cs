@@ -111,17 +111,30 @@ namespace Airship.Editor {
             }
 
             // Require files compiled to go into play mode
-            if (obj == PlayModeStateChange.ExitingEditMode && EditorApplication.isPlayingOrWillChangePlaymode && TypescriptCompilationService.IsCompilingFiles) {
-                // We'll yield the editor to wait for those files to finish compiling before entering play mode...
-                while (TypescriptCompilationService.IsCompilingFiles || TypescriptCompilationService.IsImportingFiles) {
-                    var compilationState = TypescriptProjectsService.Project.CompilationState;
-                    EditorUtility.DisplayProgressBar("Typescript Services", 
-                        $"Finishing compilation of Typescript files ({compilationState.CompiledFileCount}/{compilationState.FilesToCompileCount})", 
-                        (float) compilationState.CompiledFileCount / compilationState.FilesToCompileCount);
-                    Thread.Sleep(10);
+            if (obj == PlayModeStateChange.ExitingEditMode && EditorApplication.isPlayingOrWillChangePlaymode) {
+                if (!TypescriptCompilationService.IsWatchModeRunning) {
+                    // EditorUtility.DisplayDialog("Typescript Services", "TypeScript is currently not running!", "Ok");
+                    foreach (SceneView scene in SceneView.sceneViews) {
+                        scene.ShowNotification(new GUIContent("The Typescript compiler is currently not running!"));
+                    }
+                    
+                    EditorApplication.ExitPlaymode();
+                    return;
                 }
                 
-                EditorUtility.ClearProgressBar();
+                if (TypescriptCompilationService.IsCompilingFiles) {
+                    // We'll yield the editor to wait for those files to finish compiling before entering play mode...
+                    while (TypescriptCompilationService.IsCompilingFiles || TypescriptCompilationService.IsImportingFiles) {
+                        var compilationState = TypescriptProjectsService.Project.CompilationState;
+                        EditorUtility.DisplayProgressBar("Typescript Services", 
+                            $"Finishing compilation of Typescript files ({compilationState.CompiledFileCount}/{compilationState.FilesToCompileCount})", 
+                            (float) compilationState.CompiledFileCount / compilationState.FilesToCompileCount);
+                        Thread.Sleep(10);
+                    }
+                
+                    EditorUtility.ClearProgressBar();
+                }
+
             }
         }
 
