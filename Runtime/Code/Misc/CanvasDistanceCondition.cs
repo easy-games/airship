@@ -3,7 +3,6 @@ using Code.Managers;
 using UnityEngine;
 
 
-// todo: delete this stupid component
 [LuauAPI]
 public class CanvasDistanceCondition : MonoBehaviour {
     public float maxDistance {
