@@ -156,7 +156,7 @@ namespace Code.PoolManager {
 		
 		public static GameObject SpawnObject(GameObject prefab, Transform parent)
 		{
-			return Instance.InternalSpawnObject(prefab, prefab.transform.localPosition, prefab.transform.localRotation, parent);
+			return Instance.InternalSpawnObject(prefab, prefab.transform.position, prefab.transform.rotation, parent);
 		}
 
 		public static GameObject SpawnObject(GameObject prefab, Vector3 localPosition, Quaternion localRotation, Transform parent)
