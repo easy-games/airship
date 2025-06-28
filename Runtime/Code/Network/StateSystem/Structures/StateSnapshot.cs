@@ -16,7 +16,7 @@ namespace Code.Network.StateSystem.Structures
          * authoritative mode, this time is what is used to render observed characters. This should _not_ be converted
          * to ticks! Ticks use scaled time and will not always map 1 to 1 with a real time value.
          */
-        public double time; // we use float because precision errors
+        public double time;
         public uint tick;
         public double arrivedAt;
 

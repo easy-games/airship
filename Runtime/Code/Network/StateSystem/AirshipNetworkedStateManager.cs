@@ -255,6 +255,8 @@ namespace Code.Network.StateSystem
                         Debug.LogWarning($"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}. Local command history size: {this.inputHistory.Keys.Count}");
                     }
 
+                    print($"Took {AirshipSimulationManager.Instance.tick - commands[^1].tick} ticks to send newest command {AirshipSimulationManager.Instance.tick - commands[0].tick} for oldest");
+
                     // We make multiple calls so that Mirror can batch the commands efficiently.
                     foreach (var command in commands)
                     {
@@ -526,11 +528,13 @@ namespace Code.Network.StateSystem
             
             var additionalBuffer = Math.Max(NetworkClient.sendInterval, tickGenerationTime);
             var bufferTime = NetworkServer.sendInterval * NetworkManager.singleton.snapshotSettings.bufferTimeMultiplier;
-            var clientRenderBuffer = bufferTime + additionalBuffer;
+            var clientRenderBuffer = bufferTime; // + additionalBuffer;
            
             var latency = ping / 2f;
 
-            var totalBuffer = latency + clientRenderBuffer; // + estimatedCommandDelay; // + NetworkServer.sendInterval;
+            // We add a tickGenerationTime delay because lag comp always seems to need to go back 1 full tick more than it does.
+            // I think this may be because unscaledFixedTime is generally 1 tick time behind unscaledTime and we are always rendering unscaledTime on the client.
+            var totalBuffer = latency + clientRenderBuffer + tickGenerationTime; // + estimatedCommandDelay; // + NetworkServer.sendInterval;
             var lagCompensatedTime = currentTime - totalBuffer;
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             Debug.Log($"{latency} {clientRenderBuffer} ({bufferTime} + {additionalBuffer}) {estimatedCommandDelay} ({this.serverCommandBufferTargetSize} * {tickGenerationTime})");
@@ -978,7 +982,7 @@ namespace Code.Network.StateSystem
             var t = Time.unscaledTimeAsDouble + clientClockCorrection.Value;
             Debug.Log($"[rollback] {this.name} observing server time {clientTime} <-{NetworkClient.bufferTime + additionalBuffer}> " + 
                       $"({prevState.tick} [{prevState.time}], {nextState.tick} [{nextState.time}]) <> {timeDelta} ({this.observerHistory.Values[^1].tick}). BT: {NetworkClient.bufferTime} " +
-                      $"ATB: {additionalBuffer} Latency: {NetworkTime.rtt / 2f}");
+                      $"ATB: {additionalBuffer} Latency: {NetworkTime.rtt / 2f} Clock diff: {NetworkTime.predictedTime - NetworkTime.time}");
             // Call interp on the networked state system so it can place things properly for the render.
             this.stateSystem.Interpolate(timeDelta, prevState, nextState);
             
