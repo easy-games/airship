@@ -1035,7 +1035,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                     if (!Physics.Raycast(projectedPosition
                             , Vector3.down, out var airHitInfo, .5f,
-                            movementSettings.groundCollisionLayerMask)) {
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                         //Air ahead of character
                         var wallStartPos = projectedPosition + new Vector3(0, -.5f, 0);
                         if (drawDebugGizmos_CROUCH) {
@@ -1058,7 +1058,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
                                 || Physics.Raycast(transform.position + new Vector3(0, .25f, 0), newVelocity,
                                     distanceCheck,
-                                    movementSettings.groundCollisionLayerMask)) {
+                                    movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                 //Snap back to the bump distance so you never inch your way to the edge 
                                 newVelocity = -cliffHit.normal;
                             } else {
@@ -1071,7 +1071,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                                 //With this new velocity are we going to fall off a different ledge? 
                                 if (!Physics.Raycast(
                                         new Vector3(0, 1.25f, 0) + transform.position +
-                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f)) {
+                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f, movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                     //Nothing in the direction of the new velocity
                                     newVelocity = Vector3.zero;
                                 }
@@ -1118,7 +1118,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                         validGround = Physics.BoxCast(groundCheckPositions[groundCheckI],
                             new Vector3(smallRadius, .05f, smallRadius),
                             Vector3.down, out var groundHitInfo, Quaternion.identity, .25f,
-                            movementSettings.groundCollisionLayerMask);
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore);
 
                         if (drawDebugGizmos_CROUCH) {
                             GizmoUtils.DrawBox(groundCheckPositions[groundCheckI], Quaternion.identity,
@@ -1132,7 +1132,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             var endPos = groundCheckPositions[groundCheckI] + new Vector3(0, .175f, 0);
                             var dist = Vector3.Distance(groundHitInfo.point, rayCheckPos);
                             if (Physics.Raycast(rayCheckPos, endPos - rayCheckPos, dist,
-                                    movementSettings.groundCollisionLayerMask)) {
+                                    movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                 //Something is in the way of the ground
                                 validGround = false;
                             }
