@@ -299,7 +299,10 @@ namespace Luau {
             }
         }
         public bool HasDecorator(string modifier) {
-            return decorators.Exists((element) => element.name == modifier);
+            foreach (var dec in decorators) {
+                if (dec.name == modifier) return true;
+            }
+            return false;
         }
 
         internal bool HasSameTypesAs(LuauMetadataProperty other) {

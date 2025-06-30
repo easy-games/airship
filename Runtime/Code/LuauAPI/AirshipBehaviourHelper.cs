@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Luau;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 public static class AirshipBehaviourHelper {
     private static readonly List<int> ComponentIds = new();
@@ -28,7 +29,9 @@ public static class AirshipBehaviourHelper {
         if (!AirshipBehaviourRootV2.HasId(gameObject)) {
             // See if it just needs to be started first:
             foreach (var component in gameObject.GetComponents<AirshipComponent>()) {
+                Profiler.BeginSample("InitComponent");
                 component.Init();
+                Profiler.EndSample();
             }
         }
 
@@ -40,21 +43,30 @@ public static class AirshipBehaviourHelper {
     }
 
     private static bool IsTypeOrInheritingType(AirshipComponent airshipComponent, string typeName, string targetTypeScriptPath) {
+        Profiler.BeginSample("IsTypeOrInheritingType");
         var componentName = airshipComponent.GetAirshipComponentName();
         
         if (componentName == typeName) {
+            Profiler.EndSample();
             return true;
         }
 
         var buildInfo = AirshipBuildInfo.Instance;
-        if (!buildInfo) return false;
+        if (!buildInfo) {
+            Profiler.EndSample();
+            return false;
+        }
 
         // Check inheritance if possible
-        return targetTypeScriptPath != null && buildInfo.Inherits(airshipComponent.script, targetTypeScriptPath);
+        var result = targetTypeScriptPath != null && buildInfo.Inherits(airshipComponent.script, targetTypeScriptPath);
+        Profiler.EndSample();
+        return result;
     }
     
     public static int GetAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {
+        Profiler.BeginSample("GetBehaviorRootId");
         var unityInstanceId = GetAirshipBehaviourRootId(gameObject);
+        Profiler.EndSample();
         if (unityInstanceId == -1) {
             return PushNil(thread);
         }
@@ -63,7 +75,9 @@ public static class AirshipBehaviourHelper {
         var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
 
         foreach (var airshipComponent in gameObject.GetComponents<AirshipComponent>()) {
+            Profiler.BeginSample("InitComponent");
             airshipComponent.Init();
+            Profiler.EndSample();
             if (!IsTypeOrInheritingType(airshipComponent, typeName, targetTypeScriptPath)) continue;
 
             var componentId = airshipComponent.GetAirshipComponentId();

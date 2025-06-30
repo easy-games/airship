@@ -15,11 +15,11 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         public override string ToString()
         {
             return "lastcmd: " + this.lastProcessedCommand + " pos: " + position.ToString() + " rot: " +
-                   rotation.ToString() + " vel: " + this.velocity + " angVel: " + this.angularVelocity + " time: " +
-                   this.time;
+                   rotation.ToString() + " vel: " + this.velocity + " angVel: " + this.angularVelocity + " tick: " +
+                   this.tick;
         }
 
-        public override bool Compare<TSystem, TState, TInput>(NetworkedStateSystem<TSystem, TState, TInput> system, TState snapshot)
+        public override bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
         {
             if (snapshot is not TestMovementState other) return false;
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
@@ -30,7 +30,7 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         {
             return new TestMovementState()
             {
-                time = time,
+                tick = tick,
                 lastProcessedCommand = lastProcessedCommand,
                 position = position,
                 rotation = rotation,

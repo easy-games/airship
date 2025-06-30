@@ -24,7 +24,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     [LuauAPI]
     public class
-        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterInputData> {
+        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
@@ -281,12 +281,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnSetSnapshot?.Invoke(snapshot);
         }
 
-        public override CharacterSnapshotData GetCurrentState(int commandNumber, double time) {
+        public override CharacterSnapshotData GetCurrentState(int commandNumber, uint tick, double time) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific state capture function don't find their way into our state record.
             customSnapshotData = null;
-            OnCaptureSnapshot?.Invoke(commandNumber, time);
+            OnCaptureSnapshot?.Invoke(commandNumber, tick);
             currentMoveSnapshot.customData = customSnapshotData;
+            currentMoveSnapshot.tick = tick;
             currentMoveSnapshot.time = time;
             currentMoveSnapshot.lastProcessedCommand = commandNumber;
             currentMoveSnapshot.position = rb.position;
@@ -298,27 +299,27 @@ namespace Code.Player.Character.MovementSystems.Character {
             return snapshot;
         }
 
-        public override CharacterInputData GetCommand(int commandNumber, double time) {
+        public override CharacterInputData GetCommand(int commandNumber, uint tick) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific command generation function don't find their way into our command.
             customInputData = null;
             OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData() {
                 commandNumber = commandNumber,
+                tick = tick,
                 moveDir = moveDirInput,
                 jump = jumpInput,
                 crouch = crouchInput,
                 sprint = sprintInput,
                 lookVector = lookVector,
                 customData = customInputData,
-                time = time
             };
             // Reset the custom data again
             customInputData = null;
             return data;
         }
 
-        public override void Tick(CharacterInputData command, double time, bool replay) {
+        public override void Tick(CharacterInputData command, uint tick, double time, bool replay) {
             if (command == null) {
                 // If there is no command, we use a "no input" command. This command uses the same command number as our lastProcessedCommand state data
                 // so that we treat this input essentially as a ghost input that doesn't effect our stored command information, but allows us to
@@ -326,7 +327,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // We replace the base inputs with the last known state input so that players do not feel that their inputs were lost from dropped packets.
                 command = new CharacterInputData() {
                     commandNumber = currentMoveSnapshot.lastProcessedCommand,
-                    time = time,
+                    tick = tick,
                     jump = currentMoveSnapshot.alreadyJumped,
                     crouch = currentMoveSnapshot.isCrouching,
                     sprint = currentMoveSnapshot.isSprinting,
@@ -339,6 +340,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // to still read what direction the character wants to move, even if processing that input is disabled.
             if (disableInput) {
                 var replacementCmd = command.Clone() as CharacterInputData;
+                replacementCmd.tick = tick;
                 replacementCmd.moveDir = new Vector3();
                 replacementCmd.lookVector = currentMoveSnapshot.lookVector;
                 replacementCmd.jump = false;
@@ -380,11 +382,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // currentMoveSnapshot.lastGroundedMoveDir = command.moveDir;
 
                 //Snap to the ground if you are falling into the ground
-                if (newVelocity.y < 1 &&
+                if (newVelocity.y < 1 && !isImpulsing && !currentMoveSnapshot.airborneFromImpulse &&
                     ((!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0) ||
                      //Snap if we always snap to ground
-                     (movementSettings.alwaysSnapToGround && !currentMoveSnapshot.prevStepUp && !isImpulsing &&
-                      !currentMoveSnapshot.airborneFromImpulse))) {
+                     (movementSettings.alwaysSnapToGround && !currentMoveSnapshot.prevStepUp))) {
                     SnapToY(groundHit.point.y);
                     newVelocity.y = 0;
                 }
@@ -660,10 +661,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 newVelocity += pendingImpulse;
                 currentMoveSnapshot.airborneFromImpulse = !grounded || pendingImpulse.y > .01f;
                 pendingImpulse = Vector3.zero;
-                if (isImpulsing) {
-                    // print(" isImpulsing: " + isImpulsing + " impulse force: " + this.pendingImpulse + "New Vel: " +
-                    //       newVelocity);
-                }
+                // if (isImpulsing) {
+                //     print(" isImpulsing: " + isImpulsing + " impulse force: " + pendingImpulse + "New Vel: " +
+                //           newVelocity);
+                // }
             }
 
 #endregion
@@ -1009,71 +1010,150 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region CROUCH
 
             // Prevent falling off blocks while crouching
-            if (movementSettings.preventFallingWhileCrouching && currentMoveSnapshot.isCrouching && !didJump &&
-                grounded) {
+            if (movementSettings.preventFallingWhileCrouching != CrouchEdgeDetection.None
+                && currentMoveSnapshot.isCrouching && !didJump && grounded && !isImpulsing) {
                 var velocityMag = newVelocity.magnitude * deltaTime + forwardMargin;
                 var velocityNorm = newVelocity.normalized;
+                var distanceCheck
+                    = (movementSettings.preventFallingWhileCrouching == CrouchEdgeDetection.UseAxisAlignedNormals
+                        ? characterRadius * 2
+                        : bumpSize) + forwardMargin;
 
-                //Find the edge of the characters collider
-                var axisAlignedDir = new Vector3(Mathf.Round(velocityNorm.x), 0, Mathf.Round(velocityNorm.y));
-                var distanceCheck = bumpSize + forwardMargin;
-                var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
-                                        axisAlignedDir * distanceCheck +
-                                        velocityNorm * velocityMag;
+                if (movementSettings.preventFallingWhileCrouching == CrouchEdgeDetection.UseMeshNormals) {
+                    //Find the edge of the characters collider
+                    var axisAlignedDir = new Vector3(Mathf.Round(velocityNorm.x), 0, Mathf.Round(velocityNorm.z));
+                    var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
+                                            axisAlignedDir * distanceCheck +
+                                            velocityNorm * velocityMag;
 
-                if (drawDebugGizmos_CROUCH) {
-                    GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
-                    GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
-                                          axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
-                    GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
-                }
-
-                if (!Physics.Raycast(projectedPosition
-                        , Vector3.down, out var airHitInfo, .5f,
-                        movementSettings.groundCollisionLayerMask)) {
-                    //Air ahead of character
-                    var wallStartPos = projectedPosition + new Vector3(0, -.5f, 0);
                     if (drawDebugGizmos_CROUCH) {
-                        GizmoUtils.DrawSphere(wallStartPos, .1f, Color.white, 4, .1f);
-                        Debug.DrawLine(wallStartPos, wallStartPos + -distanceCheck * velocityNorm, Color.white,
-                            .1f);
+                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
+                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
+                                              axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
+                        GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
                     }
 
-                    if (Physics.Raycast(wallStartPos, -velocityNorm,
-                            out var cliffHit, distanceCheck,
-                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                    if (!Physics.Raycast(projectedPosition
+                            , Vector3.down, out var airHitInfo, .5f,
+                            movementSettings.groundCollisionLayerMask)) {
+                        //Air ahead of character
+                        var wallStartPos = projectedPosition + new Vector3(0, -.5f, 0);
                         if (drawDebugGizmos_CROUCH) {
-                            GizmoUtils.DrawSphere(cliffHit.point, .1f, Color.red, 4, .1f);
+                            GizmoUtils.DrawSphere(wallStartPos, .1f, Color.white, 4, .1f);
+                            Debug.DrawLine(wallStartPos, wallStartPos + -distanceCheck * velocityNorm, Color.white,
+                                .1f);
                         }
 
-                        //Stop movement into this surface
-                        var colliderDot = Vector3.Dot(newVelocity, -cliffHit.normal);
-                        var flatPoint = new Vector3(cliffHit.point.x, transform.position.y, cliffHit.point.z);
-                        //If we are too close to the edge or if there is an obstruction in the way
-                        if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
-                            || Physics.Raycast(transform.position + new Vector3(0, .25f, 0), newVelocity,
-                                distanceCheck,
-                                movementSettings.groundCollisionLayerMask)) {
-                            //Snap back to the bump distance so you never inch your way to the edge 
-                            newVelocity = -cliffHit.normal;
+                        if (Physics.Raycast(wallStartPos, -velocityNorm,
+                                out var cliffHit, distanceCheck,
+                                movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                            if (drawDebugGizmos_CROUCH) {
+                                GizmoUtils.DrawSphere(cliffHit.point, .1f, Color.red, 4, .1f);
+                            }
+
+                            //Stop movement into this surface
+                            var colliderDot = Vector3.Dot(newVelocity, -cliffHit.normal);
+                            var flatPoint = new Vector3(cliffHit.point.x, transform.position.y, cliffHit.point.z);
+                            //If we are too close to the edge or if there is an obstruction in the way
+                            if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
+                                || Physics.Raycast(transform.position + new Vector3(0, .25f, 0), newVelocity,
+                                    distanceCheck,
+                                    movementSettings.groundCollisionLayerMask)) {
+                                //Snap back to the bump distance so you never inch your way to the edge 
+                                newVelocity = -cliffHit.normal;
+                            } else {
+                                //limit movement dir based on how straight you are walking into the edge
+                                newVelocity -= colliderDot * -cliffHit.normal;
+                                if (newVelocity.sqrMagnitude < 1) {
+                                    newVelocity = Vector3.zero;
+                                }
+
+                                //With this new velocity are we going to fall off a different ledge? 
+                                if (!Physics.Raycast(
+                                        new Vector3(0, 1.25f, 0) + transform.position +
+                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f)) {
+                                    //Nothing in the direction of the new velocity
+                                    newVelocity = Vector3.zero;
+                                }
+                            }
                         } else {
-                            //limit movement dir based on how straight you are walking into the edge
-                            newVelocity -= colliderDot * -cliffHit.normal;
-                            if (newVelocity.sqrMagnitude < 1) {
-                                newVelocity = Vector3.zero;
+                            //can't find the angle to move so stop movement
+                            newVelocity = Vector3.zero;
+                        }
+                    }
+                } else {
+                    //GRID BASED EDGE DETECTION
+                    //Find the edge of the characters collider
+                    var smallRadius = (characterRadius - forwardMargin) * .9f;
+                    var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
+                                            velocityNorm * velocityMag;
+
+                    if (drawDebugGizmos_CROUCH) {
+                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
+                        //GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
+                        //axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
+                        GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
+                    }
+
+                    var validGround = false;
+                    var groundCheckI = 0;
+                    var groundCheckPositions = new[] { projectedPosition, projectedPosition, projectedPosition };
+                    var groundVelocities = new[] { newVelocity, newVelocity, newVelocity };
+                    if (Mathf.Abs(newVelocity.x) > Mathf.Abs(newVelocity.z)) {
+                        //Check X Dir first
+                        groundCheckPositions[1].z = transform.position.z;
+                        groundCheckPositions[2].x = transform.position.x;
+                        groundVelocities[1].z = 0;
+                        groundVelocities[2].x = 0;
+                    } else {
+                        //Check Z dir first
+                        groundCheckPositions[1].x = transform.position.x;
+                        groundCheckPositions[2].z = transform.position.z;
+                        groundVelocities[1].x = 0;
+                        groundVelocities[2].z = 0;
+                    }
+
+                    do {
+                        //Cast to see if there is ground where we want to walk (to handle cases where you can walk across gaps even if technically there is air in the voxel you are stepping onto)
+                        validGround = Physics.BoxCast(groundCheckPositions[groundCheckI],
+                            new Vector3(smallRadius, .05f, smallRadius),
+                            Vector3.down, out var groundHitInfo, Quaternion.identity, .25f,
+                            movementSettings.groundCollisionLayerMask);
+
+                        if (drawDebugGizmos_CROUCH) {
+                            GizmoUtils.DrawBox(groundCheckPositions[groundCheckI], Quaternion.identity,
+                                new Vector3(characterRadius, .05f, characterRadius),
+                                validGround ? Color.white : Color.red, .1f);
+                        }
+
+                        if (validGround) {
+                            //Raycast to see if there is a path to this ground we found
+                            var rayCheckPos = transform.position + new Vector3(0, .175f, 0);
+                            var endPos = groundCheckPositions[groundCheckI] + new Vector3(0, .175f, 0);
+                            var dist = Vector3.Distance(groundHitInfo.point, rayCheckPos);
+                            if (Physics.Raycast(rayCheckPos, endPos - rayCheckPos, dist,
+                                    movementSettings.groundCollisionLayerMask)) {
+                                //Something is in the way of the ground
+                                validGround = false;
                             }
 
-                            //With this new velocity are we going to fall off a different ledge? 
-                            if (!Physics.Raycast(
-                                    new Vector3(0, 1.25f, 0) + transform.position +
-                                    newVelocity.normalized * distanceCheck, Vector3.down, 1.5f)) {
-                                //Nothing in the direction of the new velocity
-                                newVelocity = Vector3.zero;
+                            if (drawDebugGizmos_CROUCH) {
+                                Debug.DrawLine(rayCheckPos, rayCheckPos + (endPos - rayCheckPos) * dist,
+                                    validGround ? Color.green : Color.magenta, .1f);
+                                GizmoUtils.DrawSphere(groundHitInfo.point, .05f,
+                                    validGround ? Color.green : Color.magenta, 4,
+                                    .1f);
                             }
                         }
+
+                        groundCheckI++;
+                    } while (!validGround && groundCheckI < 3);
+
+                    if (validGround) {
+                        newVelocity = groundVelocities[groundCheckI - 1];
                     } else {
-                        //can't find the angle to move so stop movement
-                        newVelocity = Vector3.zero;
+                        newVelocity.x = 0;
+                        newVelocity.z = 0;
                     }
                 }
             }
@@ -1312,24 +1392,28 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void Interpolate(
-            float delta,
+            double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
-            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, delta);
+            // Make sure you use MovePosition so that unity actually renders this character here right away.
+            // rb.position = value; will cause irregular movement.
+            rb.MovePosition(Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta));
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
                 oldLook.z = 0.01f;
             }
-
             if (newLook == Vector3.zero) {
                 newLook.z = 0.01f;
             }
-
+            
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation(oldLook),
                 Quaternion.LookRotation(newLook),
-                delta);
+                (float)delta);
+
+            this.lookVector = Vector3.Lerp(snapshotOld.lookVector, snapshotNew.lookVector, (float)delta);
+            
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
 
@@ -1344,18 +1428,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                 jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount
             };
             var changed = newState.state != currentAnimState.state;
-
+            
             if (animationHelper) {
                 animationHelper.SetState(newState);
             }
-
+            
             currentMoveSnapshot = snapshot;
             currentAnimState = newState;
-
+            
             if (changed) {
                 stateChanged?.Invoke((int)newState.state);
             }
-
+            
             OnInterpolateReachedState?.Invoke(snapshot);
         }
 
@@ -1403,6 +1487,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region Helpers
 
         private void SnapToY(float newY) {
+            //print("Snapping to Y: " + newY);
             var newPos = rb.position;
             newPos.y = newY;
             rb.position = newPos;
@@ -1412,7 +1497,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region TypeScript Interaction
 
-        public double GetLocalSimulationTimeFromCommandNumber(int commandNumber) {
+        public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
@@ -1427,7 +1512,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return 0;
             }
 
-            return localState.time;
+            return localState.tick;
         }
 
         public bool RequestResimulation(int commandNumber) {
@@ -1447,7 +1532,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) => {
                 Debug.LogWarning("Resimulating for TS");
-                resimulate(clientPredictedState.time);
+                resimulate(clientPredictedState.tick);
             });
 
             return true;
@@ -1481,9 +1566,15 @@ namespace Code.Player.Character.MovementSystems.Character {
             _smoothLookVector = moveDirMode == MoveDirectionMode.Camera;
         }
 
-        public void SetLookVector(Vector3 lookVector) {
+        /// <summary>
+        /// Call this from C# to let Luau scripts know we've updated the look vector.
+        /// Example: A teleport RPC.
+        /// </summary>
+        /// <param name="lookVector"></param>
+        [HideFromTS]
+        public void SetLookVectorAndNotifyLuau(Vector3 lookVector) {
             OnNewLookVector?.Invoke(lookVector);
-            SetLookVectorRecurring(lookVector);
+            SetLookVector(lookVector);
         }
 
         /// <summary>
@@ -1491,7 +1582,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         /// Useful for something that is updating the lookVector frequently and needs to listen for other scripts modifying the lookVector. 
         /// </summary>
         /// <param name="lookVector"></param>
-        public void SetLookVectorRecurring(Vector3 lookVector) {
+        public void SetLookVector(Vector3 lookVector) {
             // Don't set look vectors on observed characters
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
@@ -1516,7 +1607,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
         }
 
-        public void SetLookVectorRecurringToMoveDir() {
+        public void SetLookVectorToMoveDir() {
             // Don't set look vectors on observed characters
             if (mode == NetworkedStateSystemMode.Observer) {
                 return;
@@ -1579,7 +1670,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
             rb.MovePosition(position);
-            SetLookVector(lookVector);
+            SetLookVectorAndNotifyLuau(lookVector);
         }
 
         public void SetMovementEnabled(bool isEnabled) {
@@ -1605,7 +1696,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public void AddImpulse(Vector3 impulse) {
-            // print("Adding impulse: " + impulse);
+            //print("Adding impulse: " + impulse);
             if (mode == NetworkedStateSystemMode.Observer && isServer) {
                 RpcAddImpulse(impulse);
                 return;
@@ -1677,6 +1768,10 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             if (mode == NetworkedStateSystemMode.Authority && isClient) {
+                return lookVector;
+            }
+
+            if (mode == NetworkedStateSystemMode.Observer && isClient) {
                 return lookVector;
             }
 
@@ -1774,7 +1869,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [TargetRpc]
         public void RpcSetLookVector(Vector3 lookVector) {
-            SetLookVector(lookVector);
+            SetLookVectorAndNotifyLuau(lookVector);
         }
 
         [TargetRpc]

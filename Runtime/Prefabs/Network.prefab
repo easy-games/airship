@@ -53,7 +53,7 @@ MonoBehaviour:
   runInBackground: 1
   headlessStartMode: 0
   editorAutoStart: 0
-  sendRate: 50
+  sendRate: 40
   autoStartServerBuild: 0
   autoConnectClientBuild: 0
   offlineScene: 

@@ -323,11 +323,21 @@ namespace CsToTs.TypeScript {
                 var commentLines = GetFunctionComment(method);
                 string generics = "";
                 if (method.IsGenericMethod) {
-                    var genericPrms = method.GetGenericArguments().Select(t => GetTypeRef(t, context));
+                    var genericPrms = method.GetGenericArguments().Select(t => {
+                        var baseStr = GetTypeRef(t, context);
+                        var constraints = t.GetGenericParameterConstraints().Where(c => c != typeof(ValueType)).ToArray();
+                        if (constraints.Length > 0) {
+                            baseStr = $"{baseStr} extends {string.Join(" & ", constraints.Select((constraintType) => GetTypeRef(constraintType, context)))}";
+                        }
+                        return baseStr;
+                    });
                     generics = $"<{string.Join(", ", genericPrms)}>";
                 }
 
-                var parameters = method.GetParameters()
+                var paramInfos = method.GetParameters();
+                if (paramInfos.Any(p => p.IsOut)) continue; // Skip over any out variable methods
+                
+                var parameters = paramInfos
                     .Select(p => new MemberDefinition(p.Name, GetTypeRef(p.ParameterType, context)));
                 
                 var decorators = useDecorators(method);
@@ -596,6 +606,10 @@ namespace CsToTs.TypeScript {
                 return $"{typeName}<{string.Join(", ", genericPrms)}>";
             }
 
+            // Clear off the ending "&" from type name. This exists for ref types (which we support)
+            // and for out types (which we exclude anyway, so this doesn't matter for those).
+            typeName = typeName.Replace("&", "");
+            
             return typeName;
         }
         

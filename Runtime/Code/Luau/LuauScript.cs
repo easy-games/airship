@@ -2,6 +2,7 @@
 using System.IO;
 using Luau;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -153,6 +154,7 @@ public class LuauScript : MonoBehaviour {
 	/// that indicates that Luau failed to load the script.
 	/// </summary>
 	public static IntPtr LoadAndExecuteScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script, out int status) {
+		Profiler.BeginSample("LoadAndExecuteScript");
 		status = -1;
 		
 		var thread = LoadScript(obj, context, cacheMode, script);
@@ -166,6 +168,7 @@ public class LuauScript : MonoBehaviour {
 		// need to check for the nullptr and stop here:
 		if (thread == IntPtr.Zero) {
 			Debug.LogError($"[LuauScript] Failed to create Luau thread for script: {script.m_path}");
+			Profiler.EndSample();
 			return thread;
 		}
 
@@ -180,6 +183,7 @@ public class LuauScript : MonoBehaviour {
 			LuauPlugin.LuauCacheModuleOnThread(thread, requirePath);
 		}
 
+		Profiler.EndSample();
 		return thread;
 	}
 

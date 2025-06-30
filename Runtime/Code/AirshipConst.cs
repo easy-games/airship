@@ -1,11 +1,11 @@
 // ReSharper disable InconsistentNaming
 namespace Code {
     public static class AirshipConst {
-        public const int playerVersion = 9;
+        public const int playerVersion = 11;
 
         /// <summary>
         /// The server will kick clients that have a playerVersion lower than this value.
         /// </summary>
-        public const int minAcceptedPlayerVersionOnServer = 9;
+        public const int minAcceptedPlayerVersionOnServer = 11;
     }
 }

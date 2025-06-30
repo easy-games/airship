@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
+using Code.Luau;
 using JetBrains.Annotations;
 using Luau;
 using UnityEngine;
@@ -57,7 +58,7 @@ internal delegate void ReconcileAirshipComponent(AirshipReconcileEventData data)
 [AddComponentMenu("Airship/Airship Component")]
 [HelpURL("https://docs.airship.gg/typescript/airshipbehaviour")]
 [LuauAPI(LuauContext.Protected)]
-public class AirshipComponent : MonoBehaviour {
+public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	internal static bool UsePostCompileReconciliation { get; set; } = true;
 	private const bool ElevateToProtectedWithinCoreScene = true;
 	
@@ -230,6 +231,7 @@ public class AirshipComponent : MonoBehaviour {
 		LuauCore.onResetInstance += OnLuauReset;
 
 		InitAirshipComponent();
+		InitTriggerEvents();
 	}
 
 	private unsafe void InitAirshipComponent() {
@@ -285,6 +287,13 @@ public class AirshipComponent : MonoBehaviour {
 		}
 		InitGcHandles.Clear();
 		InitStringPtrs.Clear();
+	}
+
+	private void InitTriggerEvents() {
+		if (HasAirshipMethod(AirshipComponentUpdateType.AirshipTriggerStay)) {
+			var triggerEvent = gameObject.AddComponent<AirshipComponentTriggerEvents>();
+			triggerEvent.AttachReceiver(this);
+		}
 	}
 
 	private void Start() {
@@ -367,11 +376,11 @@ public class AirshipComponent : MonoBehaviour {
 		
 		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerEnter, other);
 	}
-	
-	private void OnTriggerStay(Collider other) {
+
+	public void OnTriggerStayReceiver(Collider other) {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay, other);
+		InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay, other);	
 	}
 	
 	private void OnTriggerExit(Collider other) {

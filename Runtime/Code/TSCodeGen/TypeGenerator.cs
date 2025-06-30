@@ -13,6 +13,7 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
+using Code.Managers;
 using Code.Network;
 using Code.Network.Simulation;
 using Code.Player;
@@ -47,6 +48,8 @@ using UnityEngine.VFX;
 using Code.Player.Accessories;
 using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.NetworkedMovement;
+using Unity.Mathematics;
+using UnityEngine.Splines;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -249,10 +252,22 @@ public class TypeGenerator : MonoBehaviour
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
+            
+            // Splines
+            typeof(BezierCurve),
+            typeof(BezierKnot),
+            typeof(CurveUtility),
+            typeof(Spline),
+            typeof(SplineAnimate),
+            typeof(SplineContainer),
+            typeof(SplineUtility),
+            typeof(float3),
 
             // Airship
             typeof(AnimationEventData),
             typeof(VoxelWorld),
+            typeof(CanvasDistanceCondition),
+            typeof(CanvasDistanceManager),
             // typeof(AccessorySkin),
             typeof(AccessoryComponent),
             typeof(ActiveAccessory),
