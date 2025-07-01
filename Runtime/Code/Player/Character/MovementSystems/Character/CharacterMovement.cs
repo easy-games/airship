@@ -212,12 +212,12 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public override void OnStartClient() {
             base.OnStartClient();
-            lookVector = startingLookVector;
+            lookVector = startingLookVector.normalized;
         }
 
         public override void OnStartServer() {
             base.OnStartServer();
-            lookVector = startingLookVector;
+            lookVector = startingLookVector.normalized;
         }
 
         public override void SetMode(NetworkedStateSystemMode mode) {
@@ -1593,7 +1593,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // If we are the client creating input, we want to set the actual local look vector.
             // It will be moved into the state and sent to the server in the next snapshot.
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
-                this.lookVector = lookVector;
+                this.lookVector = lookVector.normalized;
                 return;
             }
 
@@ -1603,9 +1603,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             // It's generally better to just force a look vector on the client because reconciled camera
             // rotation makes people nauseous.
             if (mode == NetworkedStateSystemMode.Authority) {
-                this.lookVector = lookVector; // we set the input look vector for server generated commands
+                this.lookVector = lookVector.normalized; // we set the input look vector for server generated commands
                 currentMoveSnapshot.lookVector
-                    = lookVector; // we set the snapshot vector for predicted client reconcile
+                    = lookVector.normalized; // we set the snapshot vector for predicted client reconcile
             }
         }
 
@@ -1622,7 +1622,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // If we are the client creating input, we want to set the actual local look vector.
             // It will be moved into the state and sent to the server in the next snapshot.
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
-                lookVector = moveDirInput;
+                lookVector = moveDirInput.normalized;
                 return;
             }
 
@@ -1632,8 +1632,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             // It's generally better to just force a look vector on the client because reconciled camera
             // rotation makes people nauseous.
             if (mode == NetworkedStateSystemMode.Authority) {
-                lookVector = moveDirInput; // for server generated commands. Ignored in any other case
-                currentMoveSnapshot.lookVector = moveDirInput;
+                lookVector = moveDirInput.normalized; // for server generated commands. Ignored in any other case
+                currentMoveSnapshot.lookVector = moveDirInput.normalized;
             }
         }
 
