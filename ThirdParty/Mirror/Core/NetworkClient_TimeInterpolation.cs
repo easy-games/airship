@@ -15,7 +15,7 @@ namespace Mirror
         // buffer time is dynamically adjusted.
         // store the current multiplier here, without touching the original in settings.
         // this way we can easily reset to or compare with original where needed.
-        public static double bufferTimeMultiplier;
+        public static double bufferTimeMultiplier = snapshotSettings.bufferTimeMultiplier;
 
         // original buffer time based on the settings
         // dynamically adjusted buffer time based on dynamically adjusted multiplier
@@ -45,7 +45,7 @@ namespace Mirror
         // manually averaging the last second worth of values with a for loop
         // would be the same, but a moving average is faster because we only
         // ever add one value.
-        static ExponentialMovingAverage driftEma;
+        public static ExponentialMovingAverage driftEma;
 
         // dynamic buffer time adjustment //////////////////////////////////////
         // dynamically adjusts bufferTimeMultiplier for smooth results.
@@ -114,16 +114,17 @@ namespace Mirror
             // Debug.Log($"NetworkClient: OnTimeSnapshot @ {snap.remoteTime:F3}");
 
             // (optional) dynamic adjustment
-            if (snapshotSettings.dynamicAdjustment)
-            {
-                // set bufferTime on the fly.
-                // shows in inspector for easier debugging :)
-                bufferTimeMultiplier = SnapshotInterpolation.DynamicAdjustment(
-                    NetworkServer.sendInterval,
-                    deliveryTimeEma.StandardDeviation,
-                    snapshotSettings.dynamicAdjustmentTolerance
-                );
-            }
+            // Disabled on airship. Changing buffer size on client will change lag compensation behavior
+            // if (snapshotSettings.dynamicAdjustment)
+            // {
+            //     // set bufferTime on the fly.
+            //     // shows in inspector for easier debugging :)
+            //     bufferTimeMultiplier = SnapshotInterpolation.DynamicAdjustment(
+            //         NetworkServer.sendInterval,
+            //         deliveryTimeEma.StandardDeviation,
+            //         snapshotSettings.dynamicAdjustmentTolerance
+            //     );
+            // }
 
             // insert into the buffer & initialize / adjust / catchup
             SnapshotInterpolation.InsertAndAdjust(

@@ -72,7 +72,7 @@ namespace Code.Network.Simulation
             }
         }
 
-        private void LagCompensationCheck(int clientId, uint tick, double time, double latency)
+        private void LagCompensationCheck(int clientId, uint tick, double time, double latency, double buffer)
         {
             var bufferedTicks = Math.Round((latency - NetworkClient.bufferTime - Time.fixedDeltaTime) / Time.fixedDeltaTime);
             this.SetSnapshot((uint) tick - bufferedTicks);

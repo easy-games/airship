@@ -78,7 +78,7 @@ MonoBehaviour:
     catchupSpeed: 0.019999999552965164
     slowdownSpeed: 0.03999999910593033
     driftEmaDuration: 1
-    dynamicAdjustment: 1
+    dynamicAdjustment: 0
     dynamicAdjustmentTolerance: 1
     deliveryTimeEmaDuration: 2
   evaluationMethod: 0

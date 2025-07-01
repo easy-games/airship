@@ -267,6 +267,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public override void SetCurrentState(CharacterSnapshotData snapshot) {
             currentMoveSnapshot.CopyFrom(snapshot);
             rb.position = snapshot.position;
+            rootTransform.position = snapshot.position;
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
             }
@@ -1499,6 +1500,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
+            
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
                     localState = state;

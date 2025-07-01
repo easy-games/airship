@@ -1,6 +1,7 @@
 using System;
 using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character.Net
 {

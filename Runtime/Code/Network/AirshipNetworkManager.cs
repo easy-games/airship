@@ -11,7 +11,7 @@ public class AirshipNetworkManager : NetworkManager {
     public Net net;
     public ServerConsole serverConsole;
     public ClientBundleLoader clientBundleLoader;
-
+    
     public override void OnStartServer() {
         this.net.OnStartServer();
         this.serverConsole.OnStartServer();
