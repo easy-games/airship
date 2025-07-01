@@ -71,7 +71,6 @@ namespace Code.Player.Character.MovementSystems.Character
 		public static CharacterInputData ReadCharacterInputData(this NetworkReader reader) {
 			var bools = reader.Read<byte>();
 			var commandNumber = reader.Read<int>();
-			var buffer = reader.Read<short>();
 			var lookVector = new Vector3(
 				NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
 				NetworkSerializationUtil.DecompressShort(reader.Read<short>()),

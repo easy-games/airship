@@ -50,8 +50,6 @@ namespace Code.Network.Simulation
     {
         public CheckWorld check;
         public RollbackComplete complete;
-        // /** Amount of additional rollback for this request in seconds. This adjustment will be applied to the standard */
-        // public double additionalRollback;
     }
 
     struct ResimulationRequest
@@ -207,7 +205,6 @@ namespace Code.Network.Simulation
             if (resimBackTo != tick) this.PerformResimulation(resimBackTo);
 
             // Perform the standard tick behavior
-            print($"Tick is {tick} {this.GetInstanceID()}");
             OnTick?.Invoke(tick, time, false);
             // Debug.Log($"Simulate call. Main tick {tick}");
             Physics.Simulate(Time.fixedDeltaTime);
@@ -223,7 +220,6 @@ namespace Code.Network.Simulation
                 {
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
-                    print($"server ema: {entry.Key.driftEma.Value} rtt: {entry.Key.rtt}");
                     OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt / 2f, entry.Key.bufferTime);
                     Physics.SyncTransforms();
                     foreach (var request in entry.Value)
@@ -368,7 +364,6 @@ namespace Code.Network.Simulation
                     // -1 since the time at i is greater than time and we want the time before the provided time
                     var prevTime = previousTimes[i - 1];
                     var delta = Mathd.InverseLerp( prevTime, currTime, time);
-                    print($"Nearest to {time} between {prevTime} and {currTime} ({delta}) is {delta < 0.5}");
                     return delta < 0.5 ? previousTicks[i - 1] : previousTicks[i]; // if delta is less that .5, prev tick is closer
                 }
             }

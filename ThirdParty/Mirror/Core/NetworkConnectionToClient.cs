@@ -29,7 +29,7 @@ namespace Mirror
         // TODO move them along server's timeline in the future.
         //      perhaps with an offset.
         //      for now, keep compatibility by manually constructing a timeline.
-        public ExponentialMovingAverage driftEma;
+        ExponentialMovingAverage driftEma;
         ExponentialMovingAverage deliveryTimeEma; // average delivery time (standard deviation gives average jitter)
         public double remoteTimeline;
         public double remoteTimescale;

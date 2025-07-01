@@ -61,9 +61,8 @@ namespace Code.Network.StateSystem
         private int serverPredictedCommandCount = 0;
         private SortedList<int, Input> serverCommandBuffer = new SortedList<int, Input>();
         private int serverCommandBufferMaxSize = 0;
+        // How many commands we should generally have in the command buffer
         private int serverCommandBufferTargetSize = 0;
-        // multiple of serverCommandBufferTargetSize to use as the max size before we start processing catchup ticks
-        private int serverCommandBufferLimitMultiple = 1;
 
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
@@ -194,10 +193,6 @@ namespace Code.Network.StateSystem
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
             // This value is refreshed in auth server tick
             this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
-            // Use 2 times the command buffer size as the target size for the buffer. We will process additional ticks when
-            // the buffer is larger than this number. A multiple of 2 means that we may end up delaying command processing
-            // by up to two sendIntervals. A higher multiple would cause more obvious delay, but result in smoother movement
-            // in poor network conditions.
             // must convert send interval to scaled time because fixedDeltaTime is scaled
             // This value is refreshed in auth server tick
             this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
@@ -495,11 +490,20 @@ namespace Code.Network.StateSystem
             // to use the ideal commands in one interval for now though.
             var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
             var commandsInOneInterval = Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime;
+            // This basically just calculates out to sendInterval...
             var commandBufferTime = tickGenerationTime * commandsInOneInterval * 2; // how long will it take for us to process a command added to the end of the buffer
             
             var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
             var lagCompensatedTime = currentTime - totalBuffer;
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
+            // It seems like we can get better results by doing a combination of adding 1 send rate and/or 1 tick time
+            // This test was with .34 timescale and 1/40 send rate
+            // 12.9068027064583 - (13.1350901077098 - ((0.0275639141664629 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * .34) + 0.07352941)) = 0.00036983722
+            // 16.074496323404 - (16.296857560941 - ((0.0142610969939435 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00469036659
+            // 19.2368007725462 - (19.4586250708617 - ((0.0123929982200843 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00149110826
+            // 22.5390862366273 - (22.7674515306122 - ((0.0122401664944862 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + .025)) = -0.00535555085
+            // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {NetworkServer.sendInterval} + ({tickGenerationTime} * {commandsInOneInterval})))");
+            // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {commandBufferTime}))");
             // print(
             //     $"{currentTime} - (({latency} * 2) + {bufferTime} + ({tickGenerationTime} * {commandsInOneInterval} * 2)) = {lagCompensatedTime} ({lagCompensatedTick})");
             this.OnSetSnapshot(lagCompensatedTick);
@@ -939,6 +943,7 @@ namespace Code.Network.StateSystem
             }
             
             var timeDelta = (NetworkTime.time - prevState.time) / (nextState.time - prevState.time);
+            // print($"Viewing {this.name} at {NetworkTime.time} <{timeDelta}> lat: {NetworkTime.rtt / 2f}");
             // Call interp on the networked state system so it can place things properly for the render.
             this.stateSystem.Interpolate(timeDelta, prevState, nextState);
         }
