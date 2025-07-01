@@ -50,6 +50,8 @@ namespace Code.Network.Simulation
     {
         public CheckWorld check;
         public RollbackComplete complete;
+        // /** Amount of additional rollback for this request in seconds. This adjustment will be applied to the standard */
+        // public double additionalRollback;
     }
 
     struct ResimulationRequest
@@ -99,9 +101,10 @@ namespace Code.Network.Simulation
          * clientId - The connectionId of the client we are simulating the view of
          * tick - The tick that triggered this compensation check
          * time - unscaled time for the tick
-         * rtt - The estimated time it takes for a message to reach the client and then be returned to the server (aka. ping) (rtt / 2 = latency)
+         * latency - The estimated time it takes for a message to reach the server from this client. (rtt / 2 = latency)
+         * bufferTime - The estimated buffer on the client
          */
-        public event Action<int, uint, double, double> OnLagCompensationCheck;
+        public event Action<int, uint, double, double, double> OnLagCompensationCheck;
 
         /// <summary>
         /// This action tells all watching components that they need to perform a tick.
@@ -220,7 +223,8 @@ namespace Code.Network.Simulation
                 {
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
-                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt);
+                    print($"server ema: {entry.Key.driftEma.Value} rtt: {entry.Key.rtt}");
+                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt / 2f, entry.Key.bufferTime);
                     Physics.SyncTransforms();
                     foreach (var request in entry.Value)
                     {

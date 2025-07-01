@@ -307,7 +307,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnCreateCommand?.Invoke(commandNumber);
             var data = new CharacterInputData() {
                 commandNumber = commandNumber,
-                clientBufferMilli = (short) (NetworkClient.bufferTime * 1000),
                 tick = tick,
                 moveDir = moveDirInput,
                 jump = jumpInput,

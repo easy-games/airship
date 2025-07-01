@@ -12,7 +12,7 @@ namespace Code.Network.Simulation
      */
     public class ObservableHistory<T>
     {
-        private int maxSize;
+        private float maxSizeSec;
         private SortedList<double, T> history = new ();
 
         public IList<T> Values => history.Values;
@@ -21,9 +21,9 @@ namespace Code.Network.Simulation
         /**
          * Creates a history with the provided maximum entry size. You can set the max size to 0 for no maximum size.
          */
-        public ObservableHistory(int maxSize)
+        public ObservableHistory(float maxSizeSec)
         {
-            this.maxSize = maxSize;
+            this.maxSizeSec = maxSizeSec;
         }
 
         /**
@@ -39,9 +39,9 @@ namespace Code.Network.Simulation
                 return this.GetExact(time);
             }
 
-            if (maxSize != 0)
-            {
-                while (this.history.Count > this.maxSize)
+            if (maxSizeSec != 0) {
+                int max = (int)Math.Ceiling((Time.timeScale * maxSizeSec) / Time.fixedDeltaTime);
+                while (this.history.Count > max)
                 {
                     this.history.RemoveAt(0);
                 }

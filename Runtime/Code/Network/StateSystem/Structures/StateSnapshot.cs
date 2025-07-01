@@ -18,7 +18,6 @@ namespace Code.Network.StateSystem.Structures
          */
         public double time;
         public uint tick;
-        public double arrivedAt;
 
         /**
          * Compares two snapshots.
