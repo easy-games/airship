@@ -25,20 +25,24 @@ namespace Code.Managers {
 
         private void Tick() {
             var cameraPosition = _camera.transform.position;
-            for (var i = _canvasObjects.Count - 1; i >= 0; i--) {
-                var canvDistComp = _canvasObjects[i];
-                if (canvDistComp.IsDestroyed()) {
-                    _canvasObjects.RemoveAt(i);
-                    continue;
-                }
+            try {
+                for (var i = _canvasObjects.Count - 1; i >= 0; i--) {
+                    var canvDistComp = _canvasObjects[i];
+                    if (canvDistComp.IsDestroyed()) {
+                        _canvasObjects.RemoveAt(i);
+                        continue;
+                    }
 
-                var canvGo = canvDistComp.gameObject;
+                    var canvGo = canvDistComp.gameObject;
 
-                var distSqr = Vector3.SqrMagnitude(canvDistComp.transform.position - cameraPosition);
-                var shouldBeEnabled = distSqr < canvDistComp.maxDistanceSqrd;
-                if (shouldBeEnabled != canvGo.activeSelf) {
-                    canvGo.SetActive(shouldBeEnabled);
+                    var distSqr = Vector3.SqrMagnitude(canvDistComp.transform.position - cameraPosition);
+                    var shouldBeEnabled = distSqr < canvDistComp.maxDistanceSqrd;
+                    if (shouldBeEnabled != canvGo.activeSelf) {
+                        canvGo.SetActive(shouldBeEnabled);
+                    }
                 }
+            } catch (Exception ex) {
+                Debug.LogError("Error ticking canvas distance: " + ex);
             }
         }
     }
