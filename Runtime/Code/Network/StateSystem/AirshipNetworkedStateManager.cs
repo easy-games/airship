@@ -197,8 +197,7 @@ namespace Code.Network.StateSystem
             // This value is refreshed in auth server tick
             this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
                     (int)Math.Ceiling(Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime));
-            print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize + " int: " + NetworkClient.sendInterval);
-
+            
             this.inputHistory = new(1);
             this.stateHistory = new(1);
             this.observerHistory = new(1);
@@ -244,7 +243,6 @@ namespace Code.Network.StateSystem
                         this.inputHistory.GetAllAfter((uint) Math.Max(0, (clientLastSentLocalTick - (Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime))));
                     if (commands.Length > 0)
                     {
-                        Debug.Log($"Sending {commands.Length} commands. Last command: " + commands[^1].commandNumber);
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
                     else
