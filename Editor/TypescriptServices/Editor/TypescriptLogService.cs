@@ -109,6 +109,10 @@ namespace Airship.Editor {
             Log(TypescriptLogLevel.Information, message);
         }
 
+        internal static void LogWarning(string message) {
+            Log(TypescriptLogLevel.Warning, message);
+        }
+
         internal static void LogEvent(CompiledFileEvent compiledFileEvent) {
             // var project = TypescriptProjectsService.Project;
             // var relative = PosixPath.Join("Assets", Path.GetRelativePath(project.Directory, compiledFileEvent.fileName));
