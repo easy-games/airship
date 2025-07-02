@@ -57,6 +57,14 @@ public class AirshipNetworkManager : NetworkManager {
         this.clientBundleLoader.CleanupServer();
     }
 
+    public override void ConfigureHeadlessFrameRate() {
+        // Override default behavior of setting target frame rate equal to send rate. 
+        // Since we aren't rendering anything, doing tons of Update calls isn't really very important, so we definitely should
+        // lower the target frame rate, we just don't want to use the mirror default of using send rate because we may
+        // set send rate lower than tick rate in the future and we want framerate to always match tick rate for dedicated servers.
+        Application.targetFrameRate = (int)(1f / Time.fixedDeltaTime);
+    }
+
     public override void ServerChangeScene(string newSceneName) {
         if (string.IsNullOrWhiteSpace(newSceneName))
         {

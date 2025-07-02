@@ -71,7 +71,7 @@ MonoBehaviour:
   spawnPrefabs: []
   exceptionsDisconnect: 0
   snapshotSettings:
-    bufferTimeMultiplier: 2
+    bufferTimeMultiplier: 3
     bufferLimit: 32
     catchupNegativeThreshold: -1
     catchupPositiveThreshold: 1

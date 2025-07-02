@@ -173,8 +173,8 @@ namespace Code.Network.Simulation
             time = Time.fixedUnscaledTimeAsDouble; // TODO: pass this time to the callback functions so they can always use the same time values during replays. Will need to be tracked
             
             // Update debug overlay
-            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
-            G_ResimMonitor.FrameObserverBuffer =  NetworkClient.bufferTime + tickGenerationTime;
+            // var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
+            G_ResimMonitor.FrameObserverBuffer =  NetworkClient.bufferTime;
             
             if (Physics.simulationMode != SimulationMode.Script) {
                 // reset the simulation mode if it changed for some reason. This seems to happen on the server when you change prefabs

@@ -224,7 +224,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                // We move the transform per-frame, so no interpolation is needed
+                rb.interpolation = RigidbodyInterpolation.None;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 
@@ -267,6 +268,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public override void SetCurrentState(CharacterSnapshotData snapshot) {
             currentMoveSnapshot.CopyFrom(snapshot);
             rb.position = snapshot.position;
+            print($"Set {this.name} to {rb.position} {this.transform.position} {snapshot.tick}");
             rootTransform.position = snapshot.position;
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
@@ -1396,9 +1398,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
-            // Make sure you use MovePosition so that unity actually renders this character here right away.
-            // rb.position = value; will cause irregular movement.
-            rb.MovePosition(Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta));
+            // Rigidbody position will not update until the next physics tick.
+            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta);
+            this.transform.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float)delta);
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
