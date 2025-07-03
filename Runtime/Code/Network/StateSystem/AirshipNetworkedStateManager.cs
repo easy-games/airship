@@ -720,11 +720,6 @@ namespace Code.Network.StateSystem
 
         public void NonAuthServerTick(uint tick, double time, bool replay)
         {
-            // Non auth server ticks have no functionality
-        }
-
-        public void NonAuthServerCaptureSnapshot(uint tick, double time, bool replay)
-        {
             if (replay)
             {
                 Debug.LogError(
@@ -788,6 +783,13 @@ namespace Code.Network.StateSystem
                 // Add the state to our history as we would in a authoritative setup
                 this.stateHistory.Set(tick, latestState);
             }
+        }
+
+        public void NonAuthServerCaptureSnapshot(uint tick, double time, bool replay)
+        {
+            // Non server auth will accept the client auth as the official possition. No need to capture
+            // the state after the physics tick as the position that was pulled from the buffer in OnTick
+            // was already added to the state timeline as the official position.
         }
 
         public void NonAuthServerSetSnapshot(uint tick)

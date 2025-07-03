@@ -221,7 +221,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void SetMode(NetworkedStateSystemMode mode) {
-            // Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
+            Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
                 // We move the transform per-frame, so no interpolation is needed
@@ -268,7 +268,6 @@ namespace Code.Player.Character.MovementSystems.Character {
         public override void SetCurrentState(CharacterSnapshotData snapshot) {
             currentMoveSnapshot.CopyFrom(snapshot);
             rb.position = snapshot.position;
-            print($"Set {this.name} to {rb.position} {this.transform.position} {snapshot.tick}");
             rootTransform.position = snapshot.position;
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
