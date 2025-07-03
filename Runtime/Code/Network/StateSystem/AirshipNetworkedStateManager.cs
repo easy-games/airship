@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Code.Network.Simulation;
 using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
+using Code.Util;
 using Mirror;
 using UnityEngine;
 
@@ -60,6 +61,7 @@ namespace Code.Network.StateSystem
         private int serverPredictedCommandCount = 0;
         private SortedList<int, Input> serverCommandBuffer = new SortedList<int, Input>();
         private int serverCommandBufferMaxSize = 0;
+        // How many commands we should generally have in the command buffer
         private int serverCommandBufferTargetSize = 0;
 
         // Non-auth server command tracking
@@ -108,7 +110,6 @@ namespace Code.Network.StateSystem
         protected Action<State> OnClientReceiveSnapshot;
         protected Action<Diff> OnClientReceiveDiff;
         protected Action<int> OnServerReceiveFullSnapshotRequest;
-        protected Action<int, uint> OnServerReceiveSnapshotAck;
         protected Action<State> OnServerReceiveSnapshot;
         protected Action<Input> OnServerReceiveInput;
 
@@ -190,19 +191,16 @@ namespace Code.Network.StateSystem
 
             // We will keep up to 1 second of commands in the buffer. After that, we will start dropping new commands.
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
-            this.serverCommandBufferMaxSize = NetworkClient.sendRate;
-            // Use 2 times the command buffer size as the target size for the buffer. We will process additional ticks when
-            // the buffer is larger than this number. A multiple of 2 means that we may end up delaying command processing
-            // by up to two sendIntervals. A higher multiple would cause more obvious delay, but result in smoother movement
-            // in poor network conditions.
-            this.serverCommandBufferTargetSize =
-                Math.Min(this.serverCommandBufferMaxSize,
-                    ((int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedDeltaTime)) * 2);
-            // print("Command buffer max size is " + this.serverCommandBufferMaxSize + ". Target size: " + this.serverCommandBufferTargetSize);
-
-            this.inputHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
-            this.stateHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
-            this.observerHistory = new((int)Math.Ceiling(1f / Time.fixedDeltaTime));
+            // This value is refreshed in auth server tick
+            this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
+            // must convert send interval to scaled time because fixedDeltaTime is scaled
+            // This value is refreshed in auth server tick
+            this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
+                    (int)Math.Ceiling(Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime));
+            
+            this.inputHistory = new(1);
+            this.stateHistory = new(1);
+            this.observerHistory = new(1);
             // 3 is an arbitrary value, technically we only really need to store 1, but keeping more than one around
             // means diff packets arriving out of order would still be able to be applied.
             this.baseHistory = new History<State>(3);
@@ -242,10 +240,9 @@ namespace Code.Network.StateSystem
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
                     var commands =
-                        this.inputHistory.GetAllAfter((uint) Math.Max(0, (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedDeltaTime))));
+                        this.inputHistory.GetAllAfter((uint) Math.Max(0, (clientLastSentLocalTick - (Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime))));
                     if (commands.Length > 0)
                     {
-                        // Debug.Log($"Sending {commands.Length} commands. Last command: " + commands[^1].commandNumber);
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
                     else
@@ -254,8 +251,7 @@ namespace Code.Network.StateSystem
                     }
 
                     // We make multiple calls so that Mirror can batch the commands efficiently.
-                    foreach (var command in commands)
-                    {
+                    foreach (var command in commands) {
                         this.SendClientInputToServer(command);
                     }
                 }
@@ -264,7 +260,7 @@ namespace Code.Network.StateSystem
                 if (isClient && isOwned && !serverAuth)
                 {
                     if (this.stateHistory.Keys.Count == 0) return;
-                    var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTick));
+                    var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTick - (Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime)));
                     if (states.Length > 0)
                     {
                         this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
@@ -466,7 +462,7 @@ namespace Code.Network.StateSystem
             }
         }
 
-        private void OnLagCompensationCheck(int clientId, uint currentTick, double currentTime, double ping)
+        private void OnLagCompensationCheck(int clientId, uint currentTick, double currentTime, double latency, double bufferTime)
         {
             // Only the server can perform lag compensation checks.
             if (!isServer) return;
@@ -487,15 +483,27 @@ namespace Code.Network.StateSystem
             // ensures that we are rolling back to the time the user actually saw on their
             // client when they issued the command.
             
-            // TODO: We treat estimatedCommandDelay as a constant, but we should determine this by calculating how long the command that triggered the lag comp was buffered
-            // we would need to pass that into lag comp event as an additional parameter since it would need to be calculated in the predicted character component that generated the command.
-            // That may prove difficult, so we use a constant for now.
-            var estimatedCommandDelayTicks = this.serverCommandBufferTargetSize;
+            // This buffer covers the command buffer time.
+            // TODO: We could get lag comp a little more accurate if we tracked the actual time the command was buffered. It's good enough
+            // to use the ideal commands in one interval for now though.
             var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
-            var clientBufferTime  = NetworkServer.connections[clientId].bufferTime;
-            var pingAndBufferTicks = Math.Round((ping + clientBufferTime + tickGenerationTime) / Time.fixedDeltaTime);
-            // Debug.Log("Calculated rollback time for " + this.gameObject.name + " as ping: " + ping + " buffer time: " + clientBufferTime + " (combined to: " + pingAndBufferTicks + " ticks) command delay ticks: " + estimatedCommandDelayTicks + " for a result of: -" + (pingAndBufferTicks + estimatedCommandDelayTicks) + " ticks");
-            var lagCompensatedTick = (uint) Math.Max(0, currentTick - pingAndBufferTicks - estimatedCommandDelayTicks);
+            var commandsInOneInterval = Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime;
+            // This basically just calculates out to sendInterval...
+            var commandBufferTime = tickGenerationTime * commandsInOneInterval * 2; // how long will it take for us to process a command added to the end of the buffer
+            
+            var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
+            var lagCompensatedTime = currentTime - totalBuffer;
+            var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
+            // It seems like we can get better results by doing a combination of adding 1 send rate and/or 1 tick time
+            // This test was with .34 timescale and 1/40 send rate
+            // 12.9068027064583 - (13.1350901077098 - ((0.0275639141664629 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * .34) + 0.07352941)) = 0.00036983722
+            // 16.074496323404 - (16.296857560941 - ((0.0142610969939435 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00469036659
+            // 19.2368007725462 - (19.4586250708617 - ((0.0123929982200843 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00149110826
+            // 22.5390862366273 - (22.7674515306122 - ((0.0122401664944862 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + .025)) = -0.00535555085
+            // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {NetworkServer.sendInterval} + ({tickGenerationTime} * {commandsInOneInterval})))");
+            // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {commandBufferTime}))");
+            // print(
+            //     $"{currentTime} - (({latency} * 2) + {bufferTime} + ({tickGenerationTime} * {commandsInOneInterval} * 2)) = {lagCompensatedTime} ({lagCompensatedTick})");
             this.OnSetSnapshot(lagCompensatedTick);
         }
 
@@ -521,19 +529,28 @@ namespace Code.Network.StateSystem
                 this.stateSystem.Tick(command, tick, time,false);
                 return;
             }
+            
+            // We must recalculate target size if the timescale has changed.
+            this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
+            this.serverCommandBufferTargetSize =
+                Math.Min(this.serverCommandBufferMaxSize,
+                    (int)Math.Ceiling(Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime));
+            // Optimal max is when we will start processing extra commands.
+            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize} {NetworkClient.bufferTime} {NetworkClient.bufferTimeMultiplier}");
 
             // If we don't allow command catchup, drop commands to get to the target buffer size.
             if (this.maxServerCommandCatchup == 0)
             {
                 var dropCount = 0;
-                while (this.serverCommandBuffer.Count > this.serverCommandBufferTargetSize && dropCount < 3) // TODO: calculate drop number based on send rate for 1 send worth
+                
+                while (this.serverCommandBuffer.Count > serverCommandBufferTargetSize && dropCount < this.serverCommandBufferTargetSize)
                 {
                     this.serverCommandBuffer.RemoveAt(0);
                     dropCount++;
                 }
                 print("Dropped " + dropCount + " command(s) from " + this.gameObject.name + " due to exceeding command buffer size.");
             }
-
+           
             var commandsProcessed = 0;
             do
             {
@@ -556,7 +573,7 @@ namespace Code.Network.StateSystem
                     // commands contained in a single input message
                     if (this.lastProcessedCommand != null && command.commandNumber != expectedNextCommandNumber &&
                         this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction *
-                                                                        (NetworkServer.sendInterval /
+                                                                        (Time.timeScale * NetworkServer.sendInterval /
                                                                          Time.fixedDeltaTime)))
                     {
                         Debug.LogWarning("Missing command " + expectedNextCommandNumber +
@@ -590,13 +607,13 @@ namespace Code.Network.StateSystem
                     this.stateSystem.Tick(null, tick, time, false);
                 }
             } while (this.serverCommandBuffer.Count >
-                     this.serverCommandBufferTargetSize &&
+                     serverCommandBufferTargetSize &&
                      commandsProcessed < 1 + this.maxServerCommandCatchup);
             // ^ we process up to maxServerCommandCatchup commands per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
 
             if (commandsProcessed > 1)
             {
-                print("Processed " + commandsProcessed + " additional commands for " + this.gameObject.name);
+                print("Processed " + commandsProcessed + " commands for " + this.gameObject.name + $". There are now {this.serverCommandBuffer.Count} commands in the buffer.");
             }
         }
 
@@ -703,17 +720,18 @@ namespace Code.Network.StateSystem
 
         public void NonAuthServerTick(uint tick, double time, bool replay)
         {
-            // Non auth server ticks have no functionality
-        }
-
-        public void NonAuthServerCaptureSnapshot(uint tick, double time, bool replay)
-        {
             if (replay)
             {
-                Debug.LogWarning(
-                    "Non-authoritative server should not replay ticks. It should only observe and report observed snapshots.");
+                Debug.LogError(
+                    "Non-authoritative server should not replay ticks. Report this.");
                 return;
             }
+            
+            this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
+            this.serverCommandBufferTargetSize =
+                Math.Min(this.serverCommandBufferMaxSize,
+                    (int)Math.Ceiling(Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime));
+            // print($"{this.name} {serverRecievedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Process the buffer of states that we've gotten from the authoritative client
             State latestState = null;
@@ -743,7 +761,7 @@ namespace Code.Network.StateSystem
                 // If we don't have a new state to process, that's ok. It just means that the client hasn't sent us
                 // their updated state yet.
             } while (this.serverRecievedStateBuffer.Count >
-                     this.serverCommandBufferTargetSize &&
+                     serverCommandBufferTargetSize &&
                      statesProcessed < 1 + this.maxServerCommandCatchup);
             // ^ we process up to maxServerCommandCatchup states per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
             // We re-use the command buffer settings since they are calculated to smooth out command processing in the same
@@ -761,10 +779,17 @@ namespace Code.Network.StateSystem
                 // Use this as the current state for the server
                 this.stateSystem.SetCurrentState(latestState);
                 // Since it's new, update our server interpolation functions
-                this.stateSystem.InterpolateReachedState(latestState);
+                this.stateSystem.InterpolateReachedState(latestState); 
                 // Add the state to our history as we would in a authoritative setup
                 this.stateHistory.Set(tick, latestState);
             }
+        }
+
+        public void NonAuthServerCaptureSnapshot(uint tick, double time, bool replay)
+        {
+            // Non server auth will accept the client auth as the official possition. No need to capture
+            // the state after the physics tick as the position that was pulled from the buffer in OnTick
+            // was already added to the state timeline as the official position.
         }
 
         public void NonAuthServerSetSnapshot(uint tick)
@@ -842,23 +867,25 @@ namespace Code.Network.StateSystem
 
         public void ObservingClientCaptureSnapshot(uint tick, double time, bool replay)
         {
-            // No matter what, an observing client should always have the state
-            // in the authoritative state from the server during resims. We use our
-            // local timeline record for this.
-            if (replay)
-            {
+            // Snapshots are authoritative for observed players. We just use whatever
+            // we pulled out of the observer timeline. Nothing to do here.
+        }
+
+        public void ObservingClientTick(uint tick, double time, bool replay)
+        {
+            // No actions on observing tick.
+            if (replay) {
                 var authoritativeState = this.stateHistory.Get(tick);
                 if (authoritativeState == null) return;
+                
                 this.stateSystem.SetCurrentState(authoritativeState);
                 return;
             }
-
+            
             // Get the authoritative state received just before the current observer time. (remember interpolation is buffered by bufferTime)
             // Note: if we get multiple fixed update calls per frame, we will use the same state for all fixedUpdate calls
             // because NetworkTime.time is only advanced on Update(). This might cause resim issues with low framerates...
-            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
-            var serverTime = NetworkTime.time - NetworkClient.bufferTime - tickGenerationTime;
-            var observedState = this.observerHistory.Get(serverTime);
+            var observedState = this.observerHistory.Get(NetworkTime.time);
             if (observedState == null)
             {
                 // We don't have state to use for interping or we haven't reached a new state yet. Don't add any
@@ -870,20 +897,21 @@ namespace Code.Network.StateSystem
             var state = (State) observedState.Clone();
             state.tick = tick;
             state.time = time;
-            // Store the state in our state history for re-simulation later if needed.
+            
+            // Set the current state to be what we observed at this time and store it to our
+            // local timeline for resims.
             this.stateHistory.Add(tick, state);
-
+            
+            // We don't call SetCurrentState because we control the actual position of the character
+            // in the LateUpdate Interpolate() call. The currentSnapshot will be update by InterpolateReachedState()
+            // below once we hit a new snapshot.
+            
             // Handle observer interpolation
             if (clientLastInterpolatedStateTick >= observedState.tick) return;
             // Update our last state tick so we don't call InterpolateReachedState more than once on the same state.
             this.clientLastInterpolatedStateTick = observedState.tick;
-            // Notify the system of a new reached state
+            // Notify the system of a new reached state.
             this.stateSystem.InterpolateReachedState(state);
-        }
-
-        public void ObservingClientTick(uint tick, double time, bool replay)
-        {
-            // No actions on observing tick.
         }
 
         public void ObservingClientSetSnapshot(uint tick)
@@ -904,21 +932,15 @@ namespace Code.Network.StateSystem
         {
             // -- Notes on Interpolation
             // Interpolation functions by selecting two snapshots from the server timeline. We can use network.time to access
-            // this timeline since Network.time is a unscaled time synchronized with the servers unscaled time. Snapshots include
-            // unscaled time specifically for the purpose of clients interpolating over the server timeline.
+            // this timeline since Network.time is unscaled time synchronized with the servers unscaled time minus the
+            // the configured Mirror buffer time. Snapshots include unscaled time specifically for the purpose of clients
+            // interpolating over the server timeline.
             // --
-            
             if (this.observerHistory.Values.Count == 0) return;
 
             // Get the time we should render on the client.
-            // We include tick generation time since we need at least 1 additional tick to interpolate between. This becomes very important when timescale changes,
-            // as it may take far longer to generate a single tick than our standard network send rate buffer.
-            // TODO: this is also the source of the backwards movement when timescale changes. The tick generation time jumps up making the time we render move backwards.
-            var tickGenerationTime = (Time.fixedDeltaTime / Time.timeScale); // how long it takes to generate a single tick in real time.
-            var clientTime = NetworkTime.time - NetworkClient.bufferTime - tickGenerationTime;
-                
             // Get the state history around the time that's currently being rendered.
-            if (!this.observerHistory.GetAround(clientTime, out State prevState, out State nextState))
+            if (!this.observerHistory.GetAround(NetworkTime.time, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
                 // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
@@ -928,10 +950,10 @@ namespace Code.Network.StateSystem
                 return;
             }
             
-            var timeDelta = (clientTime - prevState.time) / (nextState.time - prevState.time);
-            // Debug.Log($"Observing {clientTime} <{NetworkTime.time}> on {this.name} ({NetworkTime.time} - {NetworkClient.bufferTime} - {tickGenerationTime}) delta: {timeDelta} prev: {prevState.time} next: {nextState.time}.");
+            var timeDelta = (NetworkTime.time - prevState.time) / (nextState.time - prevState.time);
             // Call interp on the networked state system so it can place things properly for the render.
             this.stateSystem.Interpolate(timeDelta, prevState, nextState);
+            // print($"Viewing {this.name} at {NetworkTime.time} <{timeDelta}> lat: {NetworkTime.rtt / 2f} {this.transform.position} {this.GetComponent<Rigidbody>().position} {prevState.tick} {nextState.tick} {observerHistory.Values[^1].tick}");
         }
 
         /**
@@ -1144,7 +1166,7 @@ namespace Code.Network.StateSystem
                 // Debug.Log(("Command " + command.commandNumber + " arrived too late to be processed. Ignoring."));
                 return;
             }
-
+            
             // Queue the command for processing
             this.serverCommandBuffer.Add(command.commandNumber, command);
         }

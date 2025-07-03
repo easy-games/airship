@@ -12,7 +12,7 @@ namespace Code.Network.Simulation
      */
     public class History<T>
     {
-        private int maxSize;
+        private float maxSizeSec;
         private SortedList<uint, T> history = new SortedList<uint, T>();
         private List<uint> authoritativeEntries = new List<uint>();
 
@@ -22,9 +22,9 @@ namespace Code.Network.Simulation
         /**
          * Creates a history with the provided maximum entry size. You can set the max size to 0 for no maximum size.
          */
-        public History(int maxSize)
+        public History(float maxSizeSec)
         {
-            this.maxSize = maxSize;
+            this.maxSizeSec = maxSizeSec;
         }
 
         /**
@@ -40,9 +40,9 @@ namespace Code.Network.Simulation
                 return this.GetExact(tick);
             }
 
-            if (maxSize != 0)
-            {
-                while (this.history.Count > this.maxSize)
+            if (maxSizeSec != 0) {
+                int max = (int) Math.Ceiling(Time.timeScale * this.maxSizeSec / Time.fixedDeltaTime);
+                while (this.history.Count > max)
                 {
                     this.authoritativeEntries.Remove(this.history.Keys[0]);
                     this.history.RemoveAt(0);

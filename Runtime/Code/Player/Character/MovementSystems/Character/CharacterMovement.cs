@@ -212,19 +212,20 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public override void OnStartClient() {
             base.OnStartClient();
-            lookVector = startingLookVector;
+            lookVector = startingLookVector.normalized;
         }
 
         public override void OnStartServer() {
             base.OnStartServer();
-            lookVector = startingLookVector;
+            lookVector = startingLookVector.normalized;
         }
 
         public override void SetMode(NetworkedStateSystemMode mode) {
-            // Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
+            Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                // We move the transform per-frame, so no interpolation is needed
+                rb.interpolation = RigidbodyInterpolation.None;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             }
 
@@ -267,6 +268,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public override void SetCurrentState(CharacterSnapshotData snapshot) {
             currentMoveSnapshot.CopyFrom(snapshot);
             rb.position = snapshot.position;
+            rootTransform.position = snapshot.position;
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
             }
@@ -1035,7 +1037,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                     if (!Physics.Raycast(projectedPosition
                             , Vector3.down, out var airHitInfo, .5f,
-                            movementSettings.groundCollisionLayerMask)) {
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                         //Air ahead of character
                         var wallStartPos = projectedPosition + new Vector3(0, -.5f, 0);
                         if (drawDebugGizmos_CROUCH) {
@@ -1058,7 +1060,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
                                 || Physics.Raycast(transform.position + new Vector3(0, .25f, 0), newVelocity,
                                     distanceCheck,
-                                    movementSettings.groundCollisionLayerMask)) {
+                                    movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                 //Snap back to the bump distance so you never inch your way to the edge 
                                 newVelocity = -cliffHit.normal;
                             } else {
@@ -1071,7 +1073,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                                 //With this new velocity are we going to fall off a different ledge? 
                                 if (!Physics.Raycast(
                                         new Vector3(0, 1.25f, 0) + transform.position +
-                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f)) {
+                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f, movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                     //Nothing in the direction of the new velocity
                                     newVelocity = Vector3.zero;
                                 }
@@ -1118,7 +1120,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                         validGround = Physics.BoxCast(groundCheckPositions[groundCheckI],
                             new Vector3(smallRadius, .05f, smallRadius),
                             Vector3.down, out var groundHitInfo, Quaternion.identity, .25f,
-                            movementSettings.groundCollisionLayerMask);
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore);
 
                         if (drawDebugGizmos_CROUCH) {
                             GizmoUtils.DrawBox(groundCheckPositions[groundCheckI], Quaternion.identity,
@@ -1132,7 +1134,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             var endPos = groundCheckPositions[groundCheckI] + new Vector3(0, .175f, 0);
                             var dist = Vector3.Distance(groundHitInfo.point, rayCheckPos);
                             if (Physics.Raycast(rayCheckPos, endPos - rayCheckPos, dist,
-                                    movementSettings.groundCollisionLayerMask)) {
+                                    movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                 //Something is in the way of the ground
                                 validGround = false;
                             }
@@ -1395,9 +1397,11 @@ namespace Code.Player.Character.MovementSystems.Character {
             double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
-            // Make sure you use MovePosition so that unity actually renders this character here right away.
-            // rb.position = value; will cause irregular movement.
-            rb.MovePosition(Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta));
+            var position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float)delta);
+            
+            // Rigidbody position will not update until the next physics tick.
+            rb.position = position;
+            this.transform.position = position;
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
@@ -1499,6 +1503,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
+            
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
                     localState = state;
@@ -1591,7 +1596,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // If we are the client creating input, we want to set the actual local look vector.
             // It will be moved into the state and sent to the server in the next snapshot.
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
-                this.lookVector = lookVector;
+                this.lookVector = lookVector.normalized;
                 return;
             }
 
@@ -1601,9 +1606,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             // It's generally better to just force a look vector on the client because reconciled camera
             // rotation makes people nauseous.
             if (mode == NetworkedStateSystemMode.Authority) {
-                this.lookVector = lookVector; // we set the input look vector for server generated commands
+                this.lookVector = lookVector.normalized; // we set the input look vector for server generated commands
                 currentMoveSnapshot.lookVector
-                    = lookVector; // we set the snapshot vector for predicted client reconcile
+                    = lookVector.normalized; // we set the snapshot vector for predicted client reconcile
             }
         }
 
@@ -1620,7 +1625,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // If we are the client creating input, we want to set the actual local look vector.
             // It will be moved into the state and sent to the server in the next snapshot.
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
-                lookVector = moveDirInput;
+                lookVector = moveDirInput.normalized;
                 return;
             }
 
@@ -1630,8 +1635,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             // It's generally better to just force a look vector on the client because reconciled camera
             // rotation makes people nauseous.
             if (mode == NetworkedStateSystemMode.Authority) {
-                lookVector = moveDirInput; // for server generated commands. Ignored in any other case
-                currentMoveSnapshot.lookVector = moveDirInput;
+                lookVector = moveDirInput.normalized; // for server generated commands. Ignored in any other case
+                currentMoveSnapshot.lookVector = moveDirInput.normalized;
             }
         }
 

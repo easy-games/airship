@@ -93,6 +93,19 @@ namespace Luau {
             return s_keyGen;
         }
 
+        /// <summary>
+        /// When setting a property we update the reverse object key because in the case of a
+        /// mutable struct being modified the hashcode will change (and we will lose the ability
+        /// to find it).
+        /// </summary>
+        public static void UpdateReverseObjectKey(int instanceId, object newObject) {
+            s_reverseObjectKeys[newObject] = instanceId;
+        }
+        
+        public static bool DeleteReverseObjectKey(object o) {
+            return s_reverseObjectKeys.Remove(o);
+        }
+        
         private static ThreadData GetOrCreateThreadData(LuauContext context, IntPtr thread, string debugString) {
             bool found = m_threadData.TryGetValue(thread, out ThreadData threadData);
             if (found == false) {
@@ -352,6 +365,7 @@ namespace Luau {
                 }
                 s_objectKeys.Remove(key);
             }
+            // Debug.Log("Dict size: " + s_reverseObjectKeys.Count);
             s_cleanUpKeys.Clear();
             Profiler.EndSample();
         }

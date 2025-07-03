@@ -41,8 +41,26 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public const int chunkSize = 16;            //fixed size
  
     [HideInInspector]
-    [NonSerialized]
-    public Vector3 focusPosition = new Vector3(40, 77, 37);
+    public Vector3 focusPosition {
+        get {
+            #if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView) {
+                    var sceneCamera = sceneView.camera;
+                    if (sceneCamera) return sceneCamera.transform.position;
+                }
+            }
+            #endif
+            if (useCameraAsFocusPosition && _focusCameraTransform) return _focusCameraTransform.position;
+            return _focusPosition;
+        }
+        set => _focusPosition = value;
+    }
+    private Vector3 _focusPosition;
+    [Tooltip("If enabled we use the main camera position as the VoxelWorld focus position (prioritizing updates to nearby chunks)")]
+    public bool useCameraAsFocusPosition = true;
+    private Transform _focusCameraTransform;
 
     [SerializeField] public bool autoLoad = true;
     
@@ -948,6 +966,8 @@ public partial class VoxelWorld : MonoBehaviour {
  
 
     private void Awake() {
+        var mainCam = Camera.main;
+        if (mainCam) _focusCameraTransform = mainCam.transform;
         doVisuals = RunCore.IsClient() || Application.isEditor;
         PrepareVoxelWorldGameObject();
     }
@@ -957,7 +977,22 @@ public partial class VoxelWorld : MonoBehaviour {
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 #endif
-    } 
+    }
+
+    /// <summary>
+    /// When VoxelWorld is setup we set the focus camera to Camera.main. This function
+    /// is to change that camera at any point.
+    /// </summary>
+    public void UpdateFocusCamera(Camera focusCamera) {
+        if (!RunCore.IsClient()) {
+            Debug.LogError("VoxelWorld focus camera is client only.");
+            return;
+        }
+        if (!useCameraAsFocusPosition) {
+            Debug.LogWarning("Updated VoxelWorld focus camera won't be used (UseCameraAsFocusPosition is false).");
+        }
+        _focusCameraTransform = focusCamera.transform;
+    }
 
     private void OnEnable() {
 
@@ -1152,19 +1187,6 @@ public partial class VoxelWorld : MonoBehaviour {
                 return;
             }
             StepWorld();
-        }
-
-        if (!Application.isPlaying) {
-
-            if (Camera.main) {
-                this.focusPosition = Camera.main.transform.position;
-            }
-#if UNITY_EDITOR
-            if (SceneView.lastActiveSceneView != null) {
-                this.focusPosition = SceneView.lastActiveSceneView.camera.transform.position;
-            }
-#endif
-
         }
     }
 

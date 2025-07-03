@@ -408,6 +408,8 @@ namespace Airship.Editor
                     compilerText = TypescriptCompilationService.ShowDeveloperOptions && !TypescriptCompilationService.Crashed ? $" TypeScript" : "";
                 }
 
+
+                
                 var isDev = false;
                 if (TypescriptCompilationService.CompilerVersion ==
                     TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
@@ -426,6 +428,11 @@ namespace Airship.Editor
                     false => $"Using the {compilerName}",
                 };
 
+                if (!TypescriptServices.IsCompilerActive && !TypescriptServices.IsAwaitingRestart) {
+                    compilerText = " TypeScript [Inactive]";
+                    tooltip = "The typescript compiler is not running!";
+                }
+                
                 var style = new GUIStyle(ToolbarStyles.CompilerServicesButtonStyle);
                 if (project.HasCrashed && !TypescriptCompilationService.IsWatchModeRunning) {
                     compilerText = " Typescript <CRASHED>";

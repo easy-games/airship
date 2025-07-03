@@ -22,7 +22,7 @@ namespace Mirror
         // catchup /////////////////////////////////////////////////////////////
         // catchup thresholds in 'frames'.
         // half a frame might be too aggressive.
-        [Header("Catchup / Slowdown")]
+        [Header("Catchup / Slowdown (DISABLED IN AIRSHIP)")]
         [Tooltip("Slowdown begins when the local timeline is moving too fast towards remote time. Threshold is in frames worth of snapshots.\n\nThis needs to be negative.\n\nDon't modify unless you know what you are doing.")]
         public float catchupNegativeThreshold = -1; // careful, don't want to run out of snapshots
 
@@ -57,7 +57,7 @@ namespace Mirror
         // note that 20% jitter is extreme.
         // for this to be perfectly smooth, set the safety tolerance to '2'.
         // but realistically this is not necessary, and '1' is enough.
-        [Header("Dynamic Adjustment")]
+        [Header("Dynamic Adjustment (DISABLED IN AIRSHIP)")] // Dynamic adjustment breaks airships lag compensation due to unknown buffer size on the client
         [Tooltip("Automatically adjust bufferTimeMultiplier for smooth results.\nSets a low multiplier on stable connections, and a high multiplier on jittery connections.")]
         public bool dynamicAdjustment = true;
 

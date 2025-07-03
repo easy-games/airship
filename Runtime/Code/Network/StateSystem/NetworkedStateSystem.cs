@@ -77,7 +77,7 @@ namespace Code.Network.StateSystem
 
         /**
          * This function is called when the interpolation on an observing client passes the provided state.
-         * It will be called at a similar frequency to FixedUpdate (maybe more or less depending on simulation timing)
+         * It will be called at a similar frequency to the network send rate (maybe more or less depending on simulation timing)
          * and can be used for things like playing effects or updating animation state.
          *
          * The time value of the state is the time on the server when the state was generated (NetworkTime.time).
