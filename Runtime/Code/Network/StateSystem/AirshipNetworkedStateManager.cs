@@ -951,9 +951,9 @@ namespace Code.Network.StateSystem
             }
             
             var timeDelta = (NetworkTime.time - prevState.time) / (nextState.time - prevState.time);
-            // print($"Viewing {this.name} at {NetworkTime.time} <{timeDelta}> lat: {NetworkTime.rtt / 2f} {prevState.tick} {nextState.tick}");
             // Call interp on the networked state system so it can place things properly for the render.
             this.stateSystem.Interpolate(timeDelta, prevState, nextState);
+            // print($"Viewing {this.name} at {NetworkTime.time} <{timeDelta}> lat: {NetworkTime.rtt / 2f} {this.transform.position} {this.GetComponent<Rigidbody>().position} {prevState.tick} {nextState.tick} {observerHistory.Values[^1].tick}");
         }
 
         /**

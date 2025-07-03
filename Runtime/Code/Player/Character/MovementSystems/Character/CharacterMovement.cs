@@ -1397,9 +1397,11 @@ namespace Code.Player.Character.MovementSystems.Character {
             double delta,
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
+            var position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float)delta);
+            
             // Rigidbody position will not update until the next physics tick.
-            rb.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float) delta);
-            this.transform.position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float)delta);
+            rb.position = position;
+            this.transform.position = position;
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
