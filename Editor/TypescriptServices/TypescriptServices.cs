@@ -317,10 +317,10 @@ namespace Airship.Editor {
                 invokedCrashEvent = false;
             }
             
-            if (!IsCompilerActive && !TypescriptCompilationService.Crashed && !IsAwaitingRestart && !IsManuallyStopped) {
-                TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
-                EditorCoroutines.Execute(StartTypescriptRuntime());
-            }
+            // if (!IsCompilerActive && !TypescriptCompilationService.Crashed && !IsAwaitingRestart && !IsManuallyStopped) {
+            //     TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
+            //     EditorCoroutines.Execute(StartTypescriptRuntime());
+            // }
         }
     }
 }
