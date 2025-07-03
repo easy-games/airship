@@ -52,7 +52,23 @@ namespace Airship.Editor {
         internal static event CompilerCrashEvent CompilerCrash;
         
         /// <summary>
-        /// Returns true if this is a valid editor window to run TSS in
+        /// True if the compiler services is currently "restarting" due to something like packages updating
+        /// </summary>
+        public static bool IsAwaitingRestart { get; private set; }
+        
+        /// <summary>
+        /// True if the compiler is considered active
+        /// </summary>
+        public static bool IsCompilerActive => 
+            TypescriptCompilationService.CompilerState is not TypescriptCompilerState.Crashed and not TypescriptCompilerState.Inactive;
+        
+        /// <summary>
+        /// True if the compiler was manually stopped by the user
+        /// </summary>
+        public static bool IsManuallyStopped { get; internal set; }
+
+        /// <summary>
+        /// True if this is a valid editor window to run TSS in
         /// </summary>
         public static bool IsValidEditor =>
             !ClonesManager.IsClone() &&
@@ -95,17 +111,30 @@ namespace Airship.Editor {
             }
 
             // Require files compiled to go into play mode
-            if (obj == PlayModeStateChange.ExitingEditMode && EditorApplication.isPlayingOrWillChangePlaymode && TypescriptCompilationService.IsCompilingFiles) {
-                // We'll yield the editor to wait for those files to finish compiling before entering play mode...
-                while (TypescriptCompilationService.IsCompilingFiles || TypescriptCompilationService.IsImportingFiles) {
-                    var compilationState = TypescriptProjectsService.Project.CompilationState;
-                    EditorUtility.DisplayProgressBar("Typescript Services", 
-                        $"Finishing compilation of Typescript files ({compilationState.CompiledFileCount}/{compilationState.FilesToCompileCount})", 
-                        (float) compilationState.CompiledFileCount / compilationState.FilesToCompileCount);
-                    Thread.Sleep(10);
+            if (obj == PlayModeStateChange.ExitingEditMode && EditorApplication.isPlayingOrWillChangePlaymode) {
+                if (!TypescriptCompilationService.IsWatchModeRunning) {
+                    // EditorUtility.DisplayDialog("Typescript Services", "TypeScript is currently not running!", "Ok");
+                    foreach (SceneView scene in SceneView.sceneViews) {
+                        scene.ShowNotification(new GUIContent("The Typescript compiler is currently not running!"));
+                    }
+                    
+                    EditorApplication.ExitPlaymode();
+                    return;
                 }
                 
-                EditorUtility.ClearProgressBar();
+                if (TypescriptCompilationService.IsCompilingFiles) {
+                    // We'll yield the editor to wait for those files to finish compiling before entering play mode...
+                    while (TypescriptCompilationService.IsCompilingFiles || TypescriptCompilationService.IsImportingFiles) {
+                        var compilationState = TypescriptProjectsService.Project.CompilationState;
+                        EditorUtility.DisplayProgressBar("Typescript Services", 
+                            $"Finishing compilation of Typescript files ({compilationState.CompiledFileCount}/{compilationState.FilesToCompileCount})", 
+                            (float) compilationState.CompiledFileCount / compilationState.FilesToCompileCount);
+                        Thread.Sleep(10);
+                    }
+                
+                    EditorUtility.ClearProgressBar();
+                }
+
             }
         }
 
@@ -125,11 +154,6 @@ namespace Airship.Editor {
             yield return InitializeTypeScript();
             yield return StartTypescriptRuntime();
         }
-
-        /// <summary>
-        /// True if the compiler services is currently "restarting" due to something like packages updating
-        /// </summary>
-        internal static bool IsAwaitingRestart { get; private set; }
         
         internal static IEnumerator RestartAndAwaitUpdates() {
             if (!TypescriptCompilationService.IsWatchModeRunning || IsAwaitingRestart) {
@@ -165,8 +189,10 @@ namespace Airship.Editor {
             
             // Wait for updates
             if (AirshipUpdateService.IsUpdatingAirship || AirshipPackagesWindow.IsModifyingPackages) {
+                IsAwaitingRestart = true;
                 yield return new WaitUntil(() =>
                     !AirshipPackagesWindow.IsModifyingPackages && !AirshipUpdateService.IsUpdatingAirship);
+                IsAwaitingRestart = false;
             }
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
@@ -186,6 +212,8 @@ namespace Airship.Editor {
         }
 
         private static void OnLoadDeferred() {
+            EditorApplication.delayCall -= OnLoadDeferred;
+            
             var project = TypescriptProjectsService.ReloadProject();
             if (project == null) {
                 Debug.LogWarning($"Missing Typescript Project");
@@ -194,9 +222,6 @@ namespace Airship.Editor {
             }
 
             project.EnforceDefaultConfigurationSettings();
-            EditorApplication.delayCall -= OnLoadDeferred;
-            EditorApplication.update += OnUpdate;
-
             CompilerCrash += OnCrash;
 
             // If offline, only start TSServices if initialized
@@ -229,6 +254,8 @@ namespace Airship.Editor {
             else {
                 TypescriptCompilationService.StopCompilerServices(shouldRestart: TypescriptCompilationService.IsWatchModeRunning);
             }
+            
+            EditorApplication.update += OnUpdate;
         }
 
         private static void OnCrash(TypescriptCrashProblemItem problem) {
@@ -288,6 +315,11 @@ namespace Airship.Editor {
             }
             else if (!TypescriptCompilationService.Crashed) {
                 invokedCrashEvent = false;
+            }
+            
+            if (!IsCompilerActive && !TypescriptCompilationService.Crashed && !IsAwaitingRestart && !IsManuallyStopped) {
+                TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
+                EditorCoroutines.Execute(StartTypescriptRuntime());
             }
         }
     }

@@ -325,6 +325,7 @@ using Object = UnityEngine.Object;
                 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs, nodeJsArgs));
                 TypescriptLogService.Log(TypescriptLogLevel.Information, "Started compiler services.");
+                TypescriptServices.IsManuallyStopped = false;
             }
 
             [MenuItem("Airship/TypeScript/Stop Watch Mode")]
