@@ -255,7 +255,7 @@ namespace Editor {
             options.buildProfile = buildProfile;
             options.locationPathName = $"build/client_android/{ClientExecutableName}.{(buildApk ? "apk" : "aab")}";
             if (development) {
-                options.options = BuildOptions.Development;
+                options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
 
             var report = BuildPipeline.BuildPlayer(options);
