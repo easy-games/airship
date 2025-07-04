@@ -66,6 +66,23 @@ public partial class VoxelWorld : MonoBehaviour {
     public bool useCameraAsFocusPosition = true;
     private Transform _focusCameraTransform;
 
+    internal Camera focusCamera {
+        get {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView) {
+                    var sceneCamera = sceneView.camera;
+                    if (sceneCamera) return sceneCamera;
+                }
+            }
+#endif
+            return _focusCamera;
+        }
+        set => _focusCamera = value;
+    }
+    private Camera _focusCamera;
+
     [SerializeField] public bool autoLoad = true;
     
     [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
@@ -967,7 +984,10 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private void Awake() {
         var mainCam = Camera.main;
-        if (mainCam) _focusCameraTransform = mainCam.transform;
+        if (mainCam) {
+            _focusCameraTransform = mainCam.transform;
+            _focusCamera = mainCam;
+        }
         doVisuals = RunCore.IsClient() || Application.isEditor;
         PrepareVoxelWorldGameObject();
     }
@@ -992,6 +1012,7 @@ public partial class VoxelWorld : MonoBehaviour {
             Debug.LogWarning("Updated VoxelWorld focus camera won't be used (UseCameraAsFocusPosition is false).");
         }
         _focusCameraTransform = focusCamera.transform;
+        _focusCamera = focusCamera;
     }
 
     private void OnEnable() {
@@ -1075,10 +1096,33 @@ public partial class VoxelWorld : MonoBehaviour {
         maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
         int updateCounter = 0;
 
+        Camera relevantFocusCamera = null;
+        if (useCameraAsFocusPosition) relevantFocusCamera = focusCamera;
+        Vector3 forward = Vector3.zero;
+        Vector3 camPos = Vector3.zero;
+        if (relevantFocusCamera) {
+            var camTransform = relevantFocusCamera.transform;
+            forward = camTransform.rotation * Vector3.forward;
+            camPos = camTransform.position - forward * (chunkSize >> 1);
+        }
+
+        var cos50Deg = 0.6427;
+        
         if (maxChunksToUpdateVar > 0 && chunksThatNeedThreadKickoff.Count > 0) {
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
 
-            chunksThatNeedThreadKickoff.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
+            chunksThatNeedThreadKickoff.Sort((a, b) => {
+                var aDist = (a.chunkKey - focusPositionChunkKey).magnitude;
+                var bDist = (b.chunkKey - focusPositionChunkKey).magnitude;
+                // If chunk is beyond 55 degrees of view from camera then treat it as much (250 blocks) further
+                // in terms of priority
+                if (forward != Vector3.zero) {
+                    if (Vector3.Dot(forward, (((a.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) aDist += (250f / chunkSize);
+                    if (Vector3.Dot(forward, (((b.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) bDist += (250f / chunkSize);
+                }
+                
+                return aDist.CompareTo(bDist);
+            });
 
             float startTime = Time.realtimeSinceStartup;
 
