@@ -100,6 +100,9 @@ namespace VoxelWorldStuff {
                 mesh.normalsCount = 0;
                 mesh.uvsCount = 0;
                 mesh.damageUvsCount = 0;
+                foreach (var (_, submesh) in mesh.subMeshes) {
+                    SubMeshPool.Release(submesh);
+                }
                 mesh.subMeshes.Clear();
         
                 _pool.Add(mesh);
@@ -208,6 +211,26 @@ namespace VoxelWorldStuff {
         public bool GetHasDetailMeshes() {
             return hasDetailMeshes;
         }
+        
+        class SubMeshPool {
+            private static readonly ConcurrentBag<SubMesh> _pool = new();
+
+            public static SubMesh Rent(int originalMaterialId) {
+                if (_pool.TryTake(out var mesh)) {
+                    mesh.srcMaterialId = originalMaterialId;
+                    return mesh;
+                }
+        
+                return new SubMesh(originalMaterialId);
+            }
+
+            public static void Release(SubMesh mesh) {
+                // Reset counts
+                mesh.triangles.Clear();
+        
+                _pool.Add(mesh);
+            }
+        }
 
         class SubMesh {
             //Todo: Less garbage?
@@ -217,7 +240,6 @@ namespace VoxelWorldStuff {
             public SubMesh(int originalMaterialId) {
                 //material = new Material(originalMaterial);
                 srcMaterialId = originalMaterialId;
-                triangles = new List<int>();
             }
         };
 
@@ -891,7 +913,7 @@ namespace VoxelWorldStuff {
                 target.subMeshes.TryGetValue(block.meshMaterialInstanceId, out SubMesh subMesh);
                 
                 if (subMesh == null) {
-                    subMesh = new SubMesh(block.meshMaterialInstanceId);
+                    subMesh = SubMeshPool.Rent(block.meshMaterialInstanceId);
                     target.subMeshes[block.meshMaterialInstanceId] = subMesh;
                 }
                 targetSubMesh = subMesh;
@@ -910,7 +932,7 @@ namespace VoxelWorldStuff {
                     }               
                     target.subMeshes.TryGetValue(surface.meshMaterialId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(surface.meshMaterialId);
+                        subMesh = SubMeshPool.Rent(surface.meshMaterialId);
                         target.subMeshes[surface.meshMaterialId] = subMesh;
                     }
                     targetSubMesh = subMesh;
@@ -1329,7 +1351,7 @@ namespace VoxelWorldStuff {
                                 int faceMatId = placeBlockWithPerFaceMaterial ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
                                 faceMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
                                 if (subMesh == null) {
-                                    subMesh = new SubMesh(faceMatId);
+                                    subMesh = SubMeshPool.Rent(faceMatId);
                                     faceMeshData.subMeshes[faceMatId] = subMesh;
                                 }
 
@@ -1666,7 +1688,7 @@ namespace VoxelWorldStuff {
                     var matInstanceId = block.materialInstanceIds[faceIndex];
                     meshData.subMeshes.TryGetValue(matInstanceId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(matInstanceId);
+                        subMesh = SubMeshPool.Rent(matInstanceId);
                         meshData.subMeshes[matInstanceId] = subMesh;
                     }
 
