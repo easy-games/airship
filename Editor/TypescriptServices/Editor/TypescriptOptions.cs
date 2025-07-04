@@ -98,7 +98,7 @@ namespace Airship.Editor {
                     if (GUILayout.Button(
                             new GUIContent(" Stop TypeScript", StopIcon, "Restarts the TypeScript compilation service"),
                             MenuItem)) {
-                        TypescriptServices.IsManuallyStopped = true;
+                        TypescriptServices.IsCompilerStoppedByUser = true;
                         TypescriptCompilationService.StopCompilers();
                     }
 
