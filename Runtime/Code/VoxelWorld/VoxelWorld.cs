@@ -39,6 +39,10 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public bool debugReloadOnScriptReloadMode = false;   //Used when iterating on Airship Rendering, not for production
     
     [HideInInspector] public const int chunkSize = 16;            //fixed size
+    [NonSerialized] internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
+    
+    [NonSerialized] internal const bool chunkSizeIsPowerOfTwo = (chunkSize & (chunkSize - 1)) == 0;
+     
  
     [HideInInspector]
     public Vector3 focusPosition {
@@ -542,11 +546,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(Vector3Int globalCoordinate) {
-        int x = globalCoordinate.x >= 0 ? globalCoordinate.x / chunkSize : (globalCoordinate.x + 1) / chunkSize - 1;
-        int y = globalCoordinate.y >= 0 ? globalCoordinate.y / chunkSize : (globalCoordinate.y + 1) / chunkSize - 1;
-        int z = globalCoordinate.z >= 0 ? globalCoordinate.z / chunkSize : (globalCoordinate.z + 1) / chunkSize - 1;
-
-        return new Vector3Int(x, y, z);
+        return WorldPosToChunkKey(globalCoordinate.x, globalCoordinate.y, globalCoordinate.z);
     }
 
     [HideFromTS]
@@ -556,9 +556,9 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(int globalCoordinateX, int globalCoordinateY, int globalCoordinateZ) {
-        int x = globalCoordinateX >= 0 ? globalCoordinateX / chunkSize : (globalCoordinateX + 1) / chunkSize - 1;
-        int y = globalCoordinateY >= 0 ? globalCoordinateY / chunkSize : (globalCoordinateY + 1) / chunkSize - 1;
-        int z = globalCoordinateZ >= 0 ? globalCoordinateZ / chunkSize : (globalCoordinateZ + 1) / chunkSize - 1;
+        int x = globalCoordinateX >= 0 ? globalCoordinateX >> logChunkSize : -(-(globalCoordinateX + 1) >> logChunkSize) - 1;
+        int y = globalCoordinateY >= 0 ? globalCoordinateY >> logChunkSize : -(-(globalCoordinateY + 1) >> logChunkSize) - 1;
+        int z = globalCoordinateZ >= 0 ? globalCoordinateZ >> logChunkSize : -(-(globalCoordinateZ + 1) >> logChunkSize) - 1;
 
         return new Vector3Int(x, y, z);
     }
