@@ -310,7 +310,7 @@ public class VoxelBlocks : MonoBehaviour {
     [NonSerialized] private Dictionary<int, TexturePacker.TextureSet> temporaryTextures = new();
 
     [NonSerialized] private Dictionary<string, BlockId> blockIdLookup = new();
-    [NonSerialized] public Dictionary<BlockId, BlockDefinition> loadedBlocks = new();
+    [NonSerialized] public List<BlockDefinition> loadedBlocks = new();
 
     [NonSerialized] public string rootAssetPath;
     [NonSerialized] public List<string> m_bundlePaths = null;
@@ -320,22 +320,24 @@ public class VoxelBlocks : MonoBehaviour {
     private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
-        
         var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
-        loadedBlocks.TryGetValue(ix, out BlockDefinition value);
-        return value;
+        return loadedBlocks[ix];
     }
 
     [HideFromTS]
     public bool TryGetBlock(BlockId index, out BlockDefinition blockDefinition) {
-        var hasBlock = loadedBlocks.TryGetValue(index, out blockDefinition);
-        return hasBlock;
+        if (index >= loadedBlocks.Count) {
+            blockDefinition = null;
+            return false;
+        }
+        blockDefinition = loadedBlocks[index];
+        return true;
     }
     
     public BlockDefinition GetBlockDefinitionByStringId(string blockTypeId) {
         foreach (var block in this.loadedBlocks) {
-            if (block.Value.blockTypeId == blockTypeId)
-                return block.Value;
+            if (block.blockTypeId == blockTypeId)
+                return block;
         }
 
         return null;
@@ -372,8 +374,8 @@ public class VoxelBlocks : MonoBehaviour {
         SearchForBlockIdByString(string stringId) {
 
         foreach (var block in this.loadedBlocks) {
-            if (block.Value.blockTypeId.Contains(stringId, StringComparison.OrdinalIgnoreCase)) {
-                return block.Value.blockId;
+            if (block.blockTypeId.Contains(stringId, StringComparison.OrdinalIgnoreCase)) {
+                return block.blockId;
             }
         }
 
@@ -620,7 +622,7 @@ public class VoxelBlocks : MonoBehaviour {
         airBlock.blockTypeId = "air";
         airBlock.blockId = blockIdCounter++;
 
-        loadedBlocks.Add(airBlock.blockId, airBlock);
+        loadedBlocks.Add(airBlock);
         blockIdLookup.Add("air", airBlock.blockId);
 
         foreach (VoxelBlockDefinitionList voxelDefinitionList in blockDefinitionLists) {
@@ -668,7 +670,7 @@ public class VoxelBlocks : MonoBehaviour {
 
                 ParseGreedyTilingMeshBlock(block);
 
-                loadedBlocks.Add(block.blockId, block);
+                loadedBlocks.Add(block);
             }
         }
         
@@ -1015,28 +1017,28 @@ public class VoxelBlocks : MonoBehaviour {
         Profiler.BeginSample("CreateMaterials");
         foreach (var blockRec in loadedBlocks) {
             for (int i = 0; i < 6; i++) {
-                blockRec.Value.SetMaterial(i, atlasMaterial);
+                blockRec.SetMaterial(i, atlasMaterial);
             }
 
-            Material fullMaterial = blockRec.Value.definition.topTexture.material;
+            Material fullMaterial = blockRec.definition.topTexture.material;
             if (fullMaterial != null) {
                 for (var i = 0; i < 6; i++) {
-                    blockRec.Value.SetMaterial(i, fullMaterial);
+                    blockRec.SetMaterial(i, fullMaterial);
                 }
             }
 
-            if (blockRec.Value.definition.topTexture.material != null) {
-                blockRec.Value.SetMaterial(4, blockRec.Value.definition.topTexture.material);
+            if (blockRec.definition.topTexture.material != null) {
+                blockRec.SetMaterial(4, blockRec.definition.topTexture.material);
             }
             
-            if (blockRec.Value.definition.sideTexture.material != null) {
+            if (blockRec.definition.sideTexture.material != null) {
                 for (var i = 0; i < 4; i++) {
-                    blockRec.Value.SetMaterial(i, blockRec.Value.definition.sideTexture.material);
+                    blockRec.SetMaterial(i, blockRec.definition.sideTexture.material);
                 }
             }
 
-            if (blockRec.Value.definition.bottomTexture.material != null) {
-                blockRec.Value.SetMaterial(5, blockRec.Value.definition.bottomTexture.material);
+            if (blockRec.definition.bottomTexture.material != null) {
+                blockRec.SetMaterial(5, blockRec.definition.bottomTexture.material);
             }
 
             /*
@@ -1080,25 +1082,25 @@ public class VoxelBlocks : MonoBehaviour {
         //Finalize uvs etc
         foreach (var blockRec in loadedBlocks) {
 
-            if (blockRec.Value.definition.topTexture.diffuse != null) {
-                blockRec.Value.topUvs = atlas.GetUVs(blockRec.Value.definition.topTexture.diffuse);
+            if (blockRec.definition.topTexture.diffuse != null) {
+                blockRec.topUvs = atlas.GetUVs(blockRec.definition.topTexture.diffuse);
             }
             else {
-                blockRec.Value.topUvs = new Rect(0, 0, 0, 0);
+                blockRec.topUvs = new Rect(0, 0, 0, 0);
             }
 
-            if (blockRec.Value.definition.sideTexture.diffuse != null) {
-                blockRec.Value.sideUvs = atlas.GetUVs(blockRec.Value.definition.sideTexture.diffuse);
+            if (blockRec.definition.sideTexture.diffuse != null) {
+                blockRec.sideUvs = atlas.GetUVs(blockRec.definition.sideTexture.diffuse);
             }
             else {
-                blockRec.Value.sideUvs = blockRec.Value.topUvs; //Use other Uvs if none available
+                blockRec.sideUvs = blockRec.topUvs; //Use other Uvs if none available
             }
 
-            if (blockRec.Value.definition.bottomTexture.diffuse != null) {
-                blockRec.Value.bottomUvs = atlas.GetUVs(blockRec.Value.definition.bottomTexture.diffuse);
+            if (blockRec.definition.bottomTexture.diffuse != null) {
+                blockRec.bottomUvs = atlas.GetUVs(blockRec.definition.bottomTexture.diffuse);
             }
             else {
-                blockRec.Value.bottomUvs = blockRec.Value.topUvs; //use top uvs if bottom uvs not available
+                blockRec.bottomUvs = blockRec.topUvs; //use top uvs if bottom uvs not available
             }
 
             /*
@@ -1221,7 +1223,7 @@ public class VoxelBlocks : MonoBehaviour {
         blockDef.blockTypeId = name;
         blockDef.blockId = blockIdCounter++;
 
-        loadedBlocks.Add(blockDef.blockId, blockDef);
+        loadedBlocks.Add(blockDef);
         blockIdLookup.Add(name, blockDef.blockId);
 
         for (int i = 0; i < 6; i++) {

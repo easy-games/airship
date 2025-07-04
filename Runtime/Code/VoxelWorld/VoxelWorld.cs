@@ -756,8 +756,8 @@ public partial class VoxelWorld : MonoBehaviour {
         }
         
         foreach (var def in voxelBlocks.loadedBlocks) {
-            if (def.Value.definition.solid == true) {
-                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.Value.blockId);
+            if (def.definition.solid == true) {
+                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.blockId);
                 return;
             }
         }
