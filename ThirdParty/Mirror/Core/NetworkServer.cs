@@ -42,8 +42,8 @@ namespace Mirror
         // EASYMOD: When the send interval is higher than the tickrate, it breaks a lot of assumptions about availability of new
         // position data during snapshot interpolation. We lower the send rate to match the tick rate if our timescale is very low. We don't
         // ever need to raise send rate since having a higher tick rate than send rate is very normal (and a common performance optimization)
-        //
-        public static float sendInterval => sendRate < int.MaxValue ? Math.Max(1f / sendRate, Time.fixedDeltaTime / Time.timeScale) : 0; // for 30 Hz, that's 33ms
+        // also changed in NetworkClient
+        public static float sendInterval => sendRate < int.MaxValue ? Math.Max(1f / sendRate, Time.fixedUnscaledDeltaTime) : 0; // for 30 Hz, that's 33ms
         static double lastSendTime;
 
         /// <summary>Connection to host mode client (if any)</summary>
