@@ -152,7 +152,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             //Show a foldable help box
             EditorGUILayout.HelpBox(
-                "Left click to add\nShift+click to delete\nCtrl+click for repeat placement\nG to rotate highlighted block",
+                "Left click to add\nShift+click to delete\nCtrl+click for repeat placement\nAlt+click or I to select highlighted block type\nG to rotate highlighted block",
                 MessageType.Info);
 
             //active = EditorGUILayout.Toggle("Active", active);
@@ -166,6 +166,8 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             var blockData = world.GetVoxelAt(world.highlightedBlockPos);
 
+            var blockDef = world.voxelBlocks.GetBlock(blockData);
+
             GUILayout.Label("Highlighted Block");
 
             if (VoxelWorld.VoxelDataToBlockId(blockData) == 0) {
@@ -177,6 +179,13 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             var def = GUI.backgroundColor;
 
             GUILayout.BeginHorizontal();
+            if (blockDef != null) {
+                GUILayout.Label("Type: " + blockDef.definition.blockName);
+            }
+
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+
 
             GUILayout.Label("Rotation: " + VoxelWorld.flipNames[flipBits]);
 
@@ -199,17 +208,19 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             selectedStyle.normal.textColor = Color.green;
             selectedStyle.hover.textColor = Color.green;
 
-            foreach (var pair in world.voxelBlocks.loadedBlocks) {
-                var name = pair.Value.definition.name;
+            var loadedBlocks = world.voxelBlocks.loadedBlocks;
+            for (ushort id = 0; id < loadedBlocks.Count; id++) {
+                var block = loadedBlocks[id];
+                var name = block.definition.name;
                 if (name == "") {
                     name = "Air";
                 }
 
-                if (pair.Key == world.selectedBlockIndex) {
+                if (id == world.selectedBlockIndex) {
                     GUILayout.Button(name, selectedStyle);
                 } else {
                     if (GUILayout.Button(name)) {
-                        world.selectedBlockIndex = pair.Key;
+                        world.selectedBlockIndex = id;
                     }
                 }
             }
