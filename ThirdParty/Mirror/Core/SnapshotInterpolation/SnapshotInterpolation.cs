@@ -12,6 +12,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace Mirror
 {
@@ -261,8 +262,13 @@ namespace Mirror
                 // to one send interval off with the default mirror settings. I would guess the main effect here is that clock
                 // corrections occur over 1 send interval worth of time, but that could easily be scaled up if it looks bad. If
                 // anything I feel like observed objects look smoother using this method...
-                localTimescale = Math.Abs(drift) > 0.003 ? 1 + (drift / sendInterval) : 1; // only adjust timescale if we are more than 3ms off. Arbitrary, we just don't want floating point issues.
-                
+                // only adjust timescale if we are more than 3ms off. Arbitrary, we just don't want floating point issues or overshooting.
+                if (Math.Abs(drift) <= 0.003) {
+                    localTimescale = 1;
+                    return;
+                }
+                localTimescale = Math.Max(1 + (drift / bufferTime), 0);
+
                 // debug logging
                 // UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3} timeDiff={timeDiff}");
             }

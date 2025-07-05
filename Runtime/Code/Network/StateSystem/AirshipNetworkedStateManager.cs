@@ -6,14 +6,17 @@ using Code.Player.Character.Net;
 using Code.Util;
 using Mirror;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
 namespace Code.Network.StateSystem
 {
     [LuauAPI]
     [RequireComponent(typeof(NetworkIdentity))]
     public abstract class AirshipNetworkedStateManager<StateSystem, State, Diff, Input> : NetworkBehaviour
-        where State : StateSnapshot where Diff : StateDiff where Input : InputCommand where StateSystem : NetworkedStateSystem<StateSystem, State, Diff, Input>
-    {
+        where State : StateSnapshot
+        where Diff : StateDiff
+        where Input : InputCommand
+        where StateSystem : NetworkedStateSystem<StateSystem, State, Diff, Input> {
         #region Inspector Settings
 
         // Inspector settings
@@ -35,7 +38,8 @@ namespace Code.Network.StateSystem
         // Determines if the server has authority over the character
         public bool serverAuth = false;
 
-        [Tooltip("Determines if the server will process inputs from a client, or if it will create it's own input commands.")]
+        [Tooltip(
+            "Determines if the server will process inputs from a client, or if it will create it's own input commands.")]
         public bool serverGeneratesCommands = false;
 
         #endregion
@@ -47,7 +51,9 @@ namespace Code.Network.StateSystem
 
         // Send rate tracking fields
         private double lastClientSend = 0;
+
         private double lastServerSend = 0;
+
         // The local time contained in the last data sent. This is used to know which data we have already sent to the server
         private uint clientLastSentLocalTick = 0;
 
@@ -60,7 +66,9 @@ namespace Code.Network.StateSystem
         private int serverLastProcessedCommandNumber;
         private int serverPredictedCommandCount = 0;
         private SortedList<int, Input> serverCommandBuffer = new SortedList<int, Input>();
+
         private int serverCommandBufferMaxSize = 0;
+
         // How many commands we should generally have in the command buffer
         private int serverCommandBufferTargetSize = 0;
 
@@ -97,7 +105,7 @@ namespace Code.Network.StateSystem
 
         // Client interpolation fields
         private double clientLastInterpolatedStateTick = 0;
-        
+
         // A map between clientId and the last acked snapshot they received. We use this to select
         // the snapshot we use to generate diffs for the client.
         private Dictionary<int, uint> serverAckedSnapshots = new();
@@ -116,6 +124,7 @@ namespace Code.Network.StateSystem
         // Functions to be implemented by subclass that perform networking actions
         public abstract void SendClientInputToServer(Input input);
         public abstract void SendClientSnapshotToServer(State snapshot);
+
         /// <summary>
         /// Used by the client to request the server to send a full snapshot next time it sends an update.
         /// The client can call this as often as it wants, but the server will only send a full snapshot on the
@@ -123,6 +132,7 @@ namespace Code.Network.StateSystem
         /// </summary>
         /// <param name="sender"></param>
         public abstract void SendRequestFullSnapshotToServer();
+
         public abstract void SendServerSnapshotToClient(NetworkConnection client, State snapshot);
         public abstract void SendServerDiffToClient(NetworkConnection client, Diff diff);
 
@@ -130,54 +140,47 @@ namespace Code.Network.StateSystem
 
         #region Lifecycle Functions
 
-        private void Start()
-        {
+        private void Start() {
             // We are a shared client and server
-            if (isClient && isServer)
-            {
+            if (isClient && isServer) {
                 this.stateSystem.mode = NetworkedStateSystemMode.Authority;
                 this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are an authoritative client
-            else if (isClient && isOwned && !serverAuth)
-            {
+            else if (isClient && isOwned && !serverAuth) {
                 this.stateSystem.mode = NetworkedStateSystemMode.Authority;
                 this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative client
-            else if (isClient && isOwned && serverAuth)
-            {
+            else if (isClient && isOwned && serverAuth) {
                 this.stateSystem.mode = NetworkedStateSystemMode.Input;
                 this.stateSystem.SetMode(NetworkedStateSystemMode.Input);
             }
             // We are an observing client
-            else if (isClient && !isOwned)
-            {
+            else if (isClient && !isOwned) {
                 this.stateSystem.mode = NetworkedStateSystemMode.Observer;
                 this.stateSystem.SetMode(NetworkedStateSystemMode.Observer);
             }
             // We are an authoritative server
-            else if (isServer && serverAuth)
-            {
+            else if (isServer && serverAuth) {
                 this.stateSystem.mode = NetworkedStateSystemMode.Authority;
                 this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative server
-            else if (isServer && !serverAuth)
-            {
+            else if (isServer && !serverAuth) {
                 this.stateSystem.mode = NetworkedStateSystemMode.Observer;
                 this.stateSystem.SetMode(NetworkedStateSystemMode.Observer);
             }
-            else
-            {
-                Debug.LogWarning($"Unable to determine networked state system mode for {this.name}. Did we miss a case? " + isServer +
-                                 " " +
-                                 isClient + " " + isOwned + " " + serverAuth);
+            else {
+                Debug.LogWarning(
+                    $"Unable to determine networked state system mode for {this.name}. Did we miss a case? " +
+                    isServer +
+                    " " +
+                    isClient + " " + isOwned + " " + serverAuth);
             }
         }
 
-        private void Awake()
-        {
+        private void Awake() {
             AirshipSimulationManager.Instance.ActivateSimulationManager();
             AirshipSimulationManager.Instance.OnTick += this.OnTick;
             AirshipSimulationManager.Instance.OnSetSnapshot += this.OnSetSnapshot;
@@ -185,19 +188,17 @@ namespace Code.Network.StateSystem
             AirshipSimulationManager.Instance.OnLagCompensationCheck += this.OnLagCompensationCheck;
 
             // Cleanup acked snapshot data for clients that are leaving the game.
-            NetworkServer.OnDisconnectedEvent += client => {
-                this.serverAckedSnapshots.Remove(client.connectionId);
-            };
+            NetworkServer.OnDisconnectedEvent += client => { this.serverAckedSnapshots.Remove(client.connectionId); };
 
             // We will keep up to 1 second of commands in the buffer. After that, we will start dropping new commands.
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
             // This value is refreshed in auth server tick
-            this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
+            this.serverCommandBufferMaxSize = (int)(Time.timeScale / Time.fixedDeltaTime);
             // must convert send interval to scaled time because fixedDeltaTime is scaled
             // This value is refreshed in auth server tick
             this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime));
-            
+                (int)Math.Ceiling(Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime));
+
             this.inputHistory = new(1);
             this.stateHistory = new(1);
             this.observerHistory = new(1);
@@ -210,44 +211,40 @@ namespace Code.Network.StateSystem
             this.OnServerReceiveSnapshot += ServerReceiveSnapshot;
             this.OnServerReceiveInput += ServerReceiveInputCommand;
             this.OnServerReceiveFullSnapshotRequest += ServerReceiveFullSnapshotRequest;
-            
+
             this.stateSystem.manager = this;
         }
 
-        public void OnDestroy()
-        {
+        public void OnDestroy() {
             AirshipSimulationManager.Instance.OnTick -= this.OnTick;
             AirshipSimulationManager.Instance.OnSetSnapshot -= this.OnSetSnapshot;
             AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.OnCaptureSnapshot;
             AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.OnLagCompensationCheck;
         }
 
-        private void SendNetworkMessages()
-        {
-            if (isClient && isServer)
-            {
+        private void SendNetworkMessages() {
+            if (isClient && isServer) {
                 // no networking required in shared mode.
                 return;
             }
-            
+
             // We are operating as a client
             if (isClient &&
                 AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastClientSend))
             {
                 // We are a non-authoritative client and should send all of our latest commands.
-                if (isClient && isOwned && serverAuth)
-                {
+                if (isClient && isOwned && serverAuth) {
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
                     var commands =
-                        this.inputHistory.GetAllAfter((uint) Math.Max(0, (clientLastSentLocalTick - (Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime))));
-                    if (commands.Length > 0)
-                    {
+                        this.inputHistory.GetAllAfter((uint)Math.Max(0,
+                            (clientLastSentLocalTick - (Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime))));
+                    if (commands.Length > 0) {
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
-                    else
-                    {
-                        Debug.LogWarning($"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}. Local command history size: {this.inputHistory.Keys.Count}");
+                    else {
+                        Debug.LogWarning(
+                            $"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}. Local command history size: {this.inputHistory.Keys.Count}");
                     }
 
                     // We make multiple calls so that Mirror can batch the commands efficiently.
@@ -257,42 +254,40 @@ namespace Code.Network.StateSystem
                 }
 
                 // We are an authoritative client and should send our latest state
-                if (isClient && isOwned && !serverAuth)
-                {
+                if (isClient && isOwned && !serverAuth) {
                     if (this.stateHistory.Keys.Count == 0) return;
-                    var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTick - (Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime)));
-                    if (states.Length > 0)
-                    {
+                    var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTick -
+                                                                      (Time.timeScale * NetworkClient.bufferTime /
+                                                                       Time.fixedDeltaTime)));
+                    if (states.Length > 0) {
                         this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
                     }
 
                     // We make multiple calls so that Mirror can batch the snapshots efficiently
-                    foreach (var state in states)
-                    {
+                    foreach (var state in states) {
                         this.SendClientSnapshotToServer(state);
                     }
                 }
             }
 
             // We are operating as a server
-            if (isServer && AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastServerSend))
-            {
+            if (isServer &&
+                AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastServerSend)) {
                 // No matter what mode the server is operating in, we send our latest state to clients.
                 // If we have no state yet, don't send
                 if (this.stateHistory.Keys.Count == 0) return;
                 var state = this.stateHistory.Values[^1];
                 // If we have no state yet, don't send (this shouldn't be possible)
                 if (state == null) return;
-                
+
                 foreach (var client in NetworkServer.connections) {
                     if (!client.Value.isAuthenticated || !client.Value.isReady) continue;
-                    if (!serverAuth && client.Key == this.netIdentity.connectionToClient.connectionId)
-                    {
+                    if (!serverAuth && client.Key == this.netIdentity.connectionToClient.connectionId) {
                         // This client is the authoritative owner and doesn't need snapshot data,
                         // it is only meant for observers
                         continue;
                     }
-                    
+
                     if (!this.serverAckedSnapshots.TryGetValue(client.Key, out var lastAckedTick)) {
                         // print("sending snapshot at time " + state.time + " because no lastAcked was set.");
                         this.SendServerSnapshotToClient(client.Value, state);
@@ -316,7 +311,8 @@ namespace Code.Network.StateSystem
                     if (diff == null) {
                         Debug.LogWarning("Could not generate diff for client " + client.Key + ". Report this.");
                         continue;
-                    } 
+                    }
+
                     this.SendServerDiffToClient(client.Value, diff);
                 }
             }
@@ -534,9 +530,9 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime));
+                    (int)Math.Ceiling(NetworkServer.sendInterval / (Time.fixedDeltaTime / Time.timeScale)));
             // Optimal max is when we will start processing extra commands.
-            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize} {NetworkClient.bufferTime} {NetworkClient.bufferTimeMultiplier}");
+            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize} {NetworkClient.bufferTime} {NetworkClient.bufferTimeMultiplier} {Time.timeScale} {NetworkServer.sendInterval}");
 
             // If we don't allow command catchup, drop commands to get to the target buffer size.
             if (this.maxServerCommandCatchup == 0)
