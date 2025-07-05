@@ -39,7 +39,11 @@ namespace Mirror
         // -> value is interpolated per-component, i.e. NetworkTransform.
         // however, both need to be on the same send interval.
         public static int sendRate => tickRate;
-        public static float sendInterval => sendRate < int.MaxValue ? 1f / sendRate : 0; // for 30 Hz, that's 33ms
+        // EASYMOD: When the send interval is higher than the tickrate, it breaks a lot of assumptions about availability of new
+        // position data during snapshot interpolation. We lower the send rate to match the tick rate if our timescale is very low. We don't
+        // ever need to raise send rate since having a higher tick rate than send rate is very normal (and a common performance optimization)
+        //
+        public static float sendInterval => sendRate < int.MaxValue ? Math.Max(1f / sendRate, Time.fixedDeltaTime / Time.timeScale) : 0; // for 30 Hz, that's 33ms
         static double lastSendTime;
 
         /// <summary>Connection to host mode client (if any)</summary>
@@ -1942,6 +1946,26 @@ namespace Mirror
             //      socket send/recv later.
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
+            
+            // only broadcast world if active
+            // broadcast every sendInterval.
+            // AccurateInterval to avoid update frequency inaccuracy issues:
+            // https://github.com/vis2k/Mirror/pull/3153
+            //
+            // for example, host mode server doesn't set .targetFrameRate.
+            // Broadcast() would be called every tick.
+            // snapshots might be sent way too often, etc.
+            //
+            // during tests, we always call Broadcast() though.
+            //
+            // also important for syncInterval=0 components like
+            // NetworkTransform, so they can sync on same interval as time
+            // snapshots _but_ not every single tick.
+            // Unity 2019 doesn't have Time.timeAsDouble yet
+            // EASYMOD: moved into this function from OnNetworkLateUpdate() so it can be reused for all connections
+            // Broadcast() is now called every NetworkLateUpdate(), but we still only want to do the broadcast to each connection
+            // on the sendInterval.
+            bool sendIntervalElapsed = AccurateInterval.Elapsed(NetworkTime.localTime, sendInterval, ref lastSendTime);
 
             // go through all connections
             foreach (NetworkConnectionToClient connection in connectionsCopy)
@@ -1955,22 +1979,27 @@ namespace Mirror
                 //   pull in UpdateVarsMessage for each entity it observes
                 if (connection.isReady)
                 {
-                    // send time for snapshot interpolation every sendInterval.
-                    // BroadcastToConnection() may not send if nothing is new.
-                    //
-                    // sent over unreliable.
-                    // NetworkTime / Transform both use unreliable.
-                    //
-                    // make sure Broadcast() is only called every sendInterval,
-                    // even if targetFrameRate isn't set in host mode (!)
-                    // (done via AccurateInterval)
-                    connection.Send(new TimeSnapshotMessage(), Channels.Unreliable);
+                    // EASYMOD: interval check is done here so that we broadcast each connection on the interval,
+                    // but we still call connection update every network late update. Otherwise we delay sending network
+                    // messages by the send interval, which can be bad if the send interval is lower than the send rate.
+                    if (!Application.isPlaying || sendIntervalElapsed) {
+                        // send time for snapshot interpolation every sendInterval.
+                        // BroadcastToConnection() may not send if nothing is new.
+                        //
+                        // sent over unreliable.
+                        // NetworkTime / Transform both use unreliable.
+                        //
+                        // make sure Broadcast() is only called every sendInterval,
+                        // even if targetFrameRate isn't set in host mode (!)
+                        // (done via AccurateInterval)
+                        connection.Send(new TimeSnapshotMessage(), Channels.Unreliable);
 
-                    // broadcast world state to this connection
-                    BroadcastToConnection(connection);
+                        // broadcast world state to this connection
+                        BroadcastToConnection(connection);
+                    }
                 }
 
-                // update connection to flush out batched messages
+                // update connection to flush out batched messages.
                 connection.Update();
             }
         }
@@ -2004,25 +2033,10 @@ namespace Mirror
             {
                 // measure update time for profiling.
                 lateUpdateDuration.Begin();
-
-                // only broadcast world if active
-                // broadcast every sendInterval.
-                // AccurateInterval to avoid update frequency inaccuracy issues:
-                // https://github.com/vis2k/Mirror/pull/3153
-                //
-                // for example, host mode server doesn't set .targetFrameRate.
-                // Broadcast() would be called every tick.
-                // snapshots might be sent way too often, etc.
-                //
-                // during tests, we always call Broadcast() though.
-                //
-                // also important for syncInterval=0 components like
-                // NetworkTransform, so they can sync on same interval as time
-                // snapshots _but_ not every single tick.
-                // Unity 2019 doesn't have Time.timeAsDouble yet
-                bool sendIntervalElapsed = AccurateInterval.Elapsed(NetworkTime.localTime, sendInterval, ref lastSendTime);
-                if (!Application.isPlaying || sendIntervalElapsed)
-                    Broadcast();
+               
+                // EASYMOD: the send interval elapsed check was moved into the broadcast function
+                // see notes there as to why
+                Broadcast();
             }
 
             // process all outgoing messages after updating the world

@@ -201,7 +201,7 @@ namespace Mirror
             // however, we only want to call NetworkServer/Client in play mode.
             if (!Application.isPlaying) return;
 
-            //Debug.Log($"NetworkLateUpdate {Time.time}");
+            // Debug.Log($"NetworkLateUpdate {Time.time}");
             // invoke event before mirror does its final late updating.
             OnLateUpdate?.Invoke();
             NetworkServer.NetworkLateUpdate();

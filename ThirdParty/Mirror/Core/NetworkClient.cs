@@ -32,7 +32,7 @@ namespace Mirror
         // a component sends with client.interval but interpolates with
         // server.interval, etc.
         public static int sendRate => NetworkServer.sendRate;
-        public static float sendInterval => sendRate < int.MaxValue ? 1f / sendRate : 0; // for 30 Hz, that's 33ms
+        public static float sendInterval => sendRate < int.MaxValue ? Math.Max(1f / sendRate, Time.fixedDeltaTime / Time.timeScale) : 0; // for 30 Hz, that's 33ms
         static double lastSendTime;
 
         // For security, it is recommended to disconnect a player if a networked
