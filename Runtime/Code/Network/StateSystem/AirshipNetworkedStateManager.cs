@@ -193,11 +193,11 @@ namespace Code.Network.StateSystem
             // We will keep up to 1 second of commands in the buffer. After that, we will start dropping new commands.
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
             // This value is refreshed in auth server tick
-            this.serverCommandBufferMaxSize = (int)(Time.timeScale / Time.fixedDeltaTime);
+            this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
             // must convert send interval to scaled time because fixedDeltaTime is scaled
             // This value is refreshed in auth server tick
             this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
-                (int)Math.Ceiling(Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime));
+                (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -238,7 +238,7 @@ namespace Code.Network.StateSystem
                     // it has them already.
                     var commands =
                         this.inputHistory.GetAllAfter((uint)Math.Max(0,
-                            (clientLastSentLocalTick - (Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime))));
+                            (clientLastSentLocalTick - (NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime))));
                     if (commands.Length > 0) {
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
@@ -246,6 +246,8 @@ namespace Code.Network.StateSystem
                         Debug.LogWarning(
                             $"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}. Local command history size: {this.inputHistory.Keys.Count}");
                     }
+                    
+                    // print($"Sending {commands.Length} cmds to the server");
 
                     // We make multiple calls so that Mirror can batch the commands efficiently.
                     foreach (var command in commands) {
@@ -257,8 +259,8 @@ namespace Code.Network.StateSystem
                 if (isClient && isOwned && !serverAuth) {
                     if (this.stateHistory.Keys.Count == 0) return;
                     var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTick -
-                                                                      (Time.timeScale * NetworkClient.bufferTime /
-                                                                       Time.fixedDeltaTime)));
+                                                                      (NetworkClient.bufferTime /
+                                                                       Time.fixedUnscaledDeltaTime)));
                     if (states.Length > 0) {
                         this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
                     }
@@ -272,7 +274,7 @@ namespace Code.Network.StateSystem
 
             // We are operating as a server
             if (isServer &&
-                AccurateInterval.Elapsed(NetworkTime.localTime, NetworkClient.sendInterval, ref lastServerSend)) {
+                AccurateInterval.Elapsed(NetworkTime.localTime, NetworkServer.sendInterval, ref lastServerSend)) {
                 // No matter what mode the server is operating in, we send our latest state to clients.
                 // If we have no state yet, don't send
                 if (this.stateHistory.Keys.Count == 0) return;
@@ -482,10 +484,10 @@ namespace Code.Network.StateSystem
             // This buffer covers the command buffer time.
             // TODO: We could get lag comp a little more accurate if we tracked the actual time the command was buffered. It's good enough
             // to use the ideal commands in one interval for now though.
-            var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
-            var commandsInOneInterval = Time.timeScale * NetworkClient.sendInterval / Time.fixedDeltaTime;
+            // var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
+            var commandsInOneInterval = NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime;
             // This basically just calculates out to sendInterval...
-            var commandBufferTime = tickGenerationTime * commandsInOneInterval * 2; // how long will it take for us to process a command added to the end of the buffer
+            var commandBufferTime = Time.fixedUnscaledDeltaTime * commandsInOneInterval * 2; // how long will it take for us to process a command added to the end of the buffer
             
             var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
             var lagCompensatedTime = currentTime - totalBuffer;
@@ -527,10 +529,10 @@ namespace Code.Network.StateSystem
             }
             
             // We must recalculate target size if the timescale has changed.
-            this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
+            this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkServer.sendInterval / (Time.fixedDeltaTime / Time.timeScale)));
+                    (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
             // Optimal max is when we will start processing extra commands.
             // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize} {NetworkClient.bufferTime} {NetworkClient.bufferTimeMultiplier} {Time.timeScale} {NetworkServer.sendInterval}");
 
@@ -569,8 +571,8 @@ namespace Code.Network.StateSystem
                     // commands contained in a single input message
                     if (this.lastProcessedCommand != null && command.commandNumber != expectedNextCommandNumber &&
                         this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction *
-                                                                        (Time.timeScale * NetworkServer.sendInterval /
-                                                                         Time.fixedDeltaTime)))
+                                                                        (NetworkServer.sendInterval /
+                                                                         Time.fixedUnscaledDeltaTime)))
                     {
                         Debug.LogWarning("Missing command " + expectedNextCommandNumber +
                                          " in the command buffer for " + this.name + ". Next command was: " + command.commandNumber +
@@ -723,10 +725,10 @@ namespace Code.Network.StateSystem
                 return;
             }
             
-            this.serverCommandBufferMaxSize = (int)( Time.timeScale / Time.fixedDeltaTime);
+            this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(Time.timeScale * NetworkClient.bufferTime / Time.fixedDeltaTime));
+                    (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
             // print($"{this.name} {serverRecievedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Process the buffer of states that we've gotten from the authoritative client
