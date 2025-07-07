@@ -41,7 +41,9 @@ namespace Code.Network.Simulation
             }
 
             if (maxSizeSec != 0) {
-                int max = (int) Math.Ceiling(Time.timeScale * this.maxSizeSec / Time.fixedDeltaTime);
+                // Assuming each entry represents fixedUnscaledDeltaTime worth of time and the entry at the end
+                // is the most recent.
+                int max = (int) Math.Ceiling(this.maxSizeSec / Time.fixedUnscaledDeltaTime);
                 while (this.history.Count > max)
                 {
                     this.authoritativeEntries.Remove(this.history.Keys[0]);
