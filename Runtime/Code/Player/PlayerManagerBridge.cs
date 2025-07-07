@@ -28,7 +28,7 @@ namespace Code.Player {
 		public PlayerInfo localPlayer;
 		public bool localPlayerReady = false;
 
-		private List<PlayerInfo> players = new();
+		public List<PlayerInfo> players = new();
 
 		private int botPlayerIdCounter = 1;
 
@@ -115,7 +115,7 @@ namespace Code.Player {
 				Debug.Log($"Players ({this.players.Count}):");
 				int i = 1;
 				foreach (var player in this.players) {
-					Debug.Log($"  {i}. {player.username} - connectionId: {player.connectionId}, userId: {player.userId}");
+					Debug.Log($"  {i}. {player.username} - connectionId: {player.connectionId}, userId: {player.userId}, orgRole: {player.orgRoleName}");
 					i++;
 				}
 			}));
@@ -167,6 +167,7 @@ namespace Code.Player {
         
 		private void OnDestroy() {
 			NetworkServer.OnConnectedEvent -= NetworkServer_OnConnected;
+			DevConsole.RemoveCommand("players");
 		}
 
 		public void AddBotPlayer(string username, string userId, string profilePictureId) {
@@ -175,7 +176,7 @@ namespace Code.Player {
 			var go = Instantiate(this.playerPrefab, Instance.transform.parent);
 
 			var playerInfo = go.GetComponent<PlayerInfo>();
-			playerInfo.Init(connectionId, userId, username, profilePictureId);
+			playerInfo.Init(connectionId, userId, username, profilePictureId, string.Empty);
 
 			// var identity = go.GetComponent<NetworkIdentity>();
 			NetworkServer.Spawn(go);
@@ -196,7 +197,13 @@ namespace Code.Player {
 				return;
 			}
 
+			var startPollingTime = Time.time;
+			var sentFailedToReadyMsg = false;
 			while (!conn.isAuthenticated || !conn.isReady) {
+				if (!sentFailedToReadyMsg && (Time.time - startPollingTime) > 10) {
+					sentFailedToReadyMsg = true;
+					Debug.LogError($"Failed to setup player for connection id {conn.connectionId}: isAuthenticated={conn.isAuthenticated} isReady={conn.isReady}");
+				}
 				// print($"Waiting for {conn.connectionId} to be ready.");
 				await Awaitable.NextFrameAsync();
 			}
@@ -210,7 +217,7 @@ namespace Code.Player {
 // #if UNITY_SERVER || true
 // 				Debug.Log($"Initializing Player as {userData.username} owned by " + conn);
 // #endif
-				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId);
+				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId, userData.orgRoleName);
 			} else {
 #if UNITY_SERVER || true
 				Debug.Log("Missing UserData for " + conn);
@@ -226,7 +233,7 @@ namespace Code.Player {
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
 			if (RunCore.IsServer() && !RunCore.IsClient()) {
-				Debug.Log(playerInfo.username + " joined the server.");
+				Debug.Log($"{playerInfo.username} joined the server. orgRole: {playerInfo.orgRoleName}");
 			}
 
 			if (this.agones) {

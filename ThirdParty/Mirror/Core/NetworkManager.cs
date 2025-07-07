@@ -16,6 +16,8 @@ namespace Mirror
     [HelpURL("https://mirror-networking.gitbook.io/docs/components/network-manager")]
     public class NetworkManager : MonoBehaviour
     {
+        public static event Action onClientSetup; 
+        
         /// <summary>Enable to keep NetworkManager alive when changing scenes.</summary>
         // This should be set if your game has a single NetworkManager that exists for the lifetime of the process. If there is a NetworkManager in each scene, then this should not be set.</para>
         [Header("Configuration")]
@@ -418,6 +420,7 @@ namespace Mirror
                 authenticator.OnClientAuthenticated.AddListener(OnClientAuthenticated);
             }
 
+            onClientSetup?.Invoke();
         }
 
         /// <summary>Starts the client, connects it to the server with networkAddress.</summary>
@@ -1058,7 +1061,7 @@ namespace Mirror
 
             // airship begin
             if (!Application.isEditor) {
-                print("setting active scene to " + networkSceneName);
+                print("[Airship] Setting active scene to " + networkSceneName);
             }
 
             Scene scene;
@@ -1155,7 +1158,7 @@ namespace Mirror
         {
             // debug message is very important. if we ever break anything then
             // it's very obvious to notice.
-            //Debug.Log("Finished loading scene in client-only mode.");
+            Debug.Log("[Airship] Finished loading scene in client-only mode.");
 
             if (clientReadyConnection != null)
             {
@@ -1165,6 +1168,7 @@ namespace Mirror
 
             if (NetworkClient.isConnected)
                 OnClientSceneChanged();
+            else Debug.LogWarning("Not sending client ready: not connected");
         }
 
         /// <summary>
@@ -1529,6 +1533,8 @@ namespace Mirror
         public virtual void OnClientSceneChanged()
         {
             // always become ready.
+            if (!NetworkClient.connection.isAuthenticated) Debug.LogWarning("Not sending client ready: not authenticated");
+            if (NetworkClient.ready) Debug.LogWarning("Not sending client ready: already ready");
             if (NetworkClient.connection.isAuthenticated && !NetworkClient.ready) NetworkClient.Ready();
 
             // Only call AddPlayer for normal scene changes, not additive load/unload

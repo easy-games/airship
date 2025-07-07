@@ -39,10 +39,49 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public bool debugReloadOnScriptReloadMode = false;   //Used when iterating on Airship Rendering, not for production
     
     [HideInInspector] public const int chunkSize = 16;            //fixed size
+    [NonSerialized] internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
+    
+    [NonSerialized] internal const bool chunkSizeIsPowerOfTwo = (chunkSize & (chunkSize - 1)) == 0;
+     
  
     [HideInInspector]
-    [NonSerialized]
-    public Vector3 focusPosition = new Vector3(40, 77, 37);
+    public Vector3 focusPosition {
+        get {
+            #if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView) {
+                    var sceneCamera = sceneView.camera;
+                    if (sceneCamera) return sceneCamera.transform.position;
+                }
+            }
+            #endif
+            if (useCameraAsFocusPosition && _focusCameraTransform) return _focusCameraTransform.position;
+            return _focusPosition;
+        }
+        set => _focusPosition = value;
+    }
+    private Vector3 _focusPosition;
+    [Tooltip("If enabled we use the main camera position as the VoxelWorld focus position (prioritizing updates to nearby chunks)")]
+    public bool useCameraAsFocusPosition = true;
+    private Transform _focusCameraTransform;
+
+    internal Camera focusCamera {
+        get {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView) {
+                    var sceneCamera = sceneView.camera;
+                    if (sceneCamera) return sceneCamera;
+                }
+            }
+#endif
+            return _focusCamera;
+        }
+        set => _focusCamera = value;
+    }
+    private Camera _focusCamera;
 
     [SerializeField] public bool autoLoad = true;
     
@@ -524,11 +563,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(Vector3Int globalCoordinate) {
-        int x = globalCoordinate.x >= 0 ? globalCoordinate.x / chunkSize : (globalCoordinate.x + 1) / chunkSize - 1;
-        int y = globalCoordinate.y >= 0 ? globalCoordinate.y / chunkSize : (globalCoordinate.y + 1) / chunkSize - 1;
-        int z = globalCoordinate.z >= 0 ? globalCoordinate.z / chunkSize : (globalCoordinate.z + 1) / chunkSize - 1;
-
-        return new Vector3Int(x, y, z);
+        return WorldPosToChunkKey(globalCoordinate.x, globalCoordinate.y, globalCoordinate.z);
     }
 
     [HideFromTS]
@@ -538,9 +573,9 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(int globalCoordinateX, int globalCoordinateY, int globalCoordinateZ) {
-        int x = globalCoordinateX >= 0 ? globalCoordinateX / chunkSize : (globalCoordinateX + 1) / chunkSize - 1;
-        int y = globalCoordinateY >= 0 ? globalCoordinateY / chunkSize : (globalCoordinateY + 1) / chunkSize - 1;
-        int z = globalCoordinateZ >= 0 ? globalCoordinateZ / chunkSize : (globalCoordinateZ + 1) / chunkSize - 1;
+        int x = globalCoordinateX >= 0 ? globalCoordinateX >> logChunkSize : -(-(globalCoordinateX + 1) >> logChunkSize) - 1;
+        int y = globalCoordinateY >= 0 ? globalCoordinateY >> logChunkSize : -(-(globalCoordinateY + 1) >> logChunkSize) - 1;
+        int z = globalCoordinateZ >= 0 ? globalCoordinateZ >> logChunkSize : -(-(globalCoordinateZ + 1) >> logChunkSize) - 1;
 
         return new Vector3Int(x, y, z);
     }
@@ -721,8 +756,8 @@ public partial class VoxelWorld : MonoBehaviour {
         }
         
         foreach (var def in voxelBlocks.loadedBlocks) {
-            if (def.Value.definition.solid == true) {
-                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.Value.blockId);
+            if (def.definition.solid == true) {
+                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.blockId);
                 return;
             }
         }
@@ -948,6 +983,11 @@ public partial class VoxelWorld : MonoBehaviour {
  
 
     private void Awake() {
+        var mainCam = Camera.main;
+        if (mainCam) {
+            _focusCameraTransform = mainCam.transform;
+            _focusCamera = mainCam;
+        }
         doVisuals = RunCore.IsClient() || Application.isEditor;
         PrepareVoxelWorldGameObject();
     }
@@ -957,7 +997,23 @@ public partial class VoxelWorld : MonoBehaviour {
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 #endif
-    } 
+    }
+
+    /// <summary>
+    /// When VoxelWorld is setup we set the focus camera to Camera.main. This function
+    /// is to change that camera at any point.
+    /// </summary>
+    public void UpdateFocusCamera(Camera focusCamera) {
+        if (!RunCore.IsClient()) {
+            Debug.LogError("VoxelWorld focus camera is client only.");
+            return;
+        }
+        if (!useCameraAsFocusPosition) {
+            Debug.LogWarning("Updated VoxelWorld focus camera won't be used (UseCameraAsFocusPosition is false).");
+        }
+        _focusCameraTransform = focusCamera.transform;
+        _focusCamera = focusCamera;
+    }
 
     private void OnEnable() {
 
@@ -1040,10 +1096,33 @@ public partial class VoxelWorld : MonoBehaviour {
         maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
         int updateCounter = 0;
 
+        Camera relevantFocusCamera = null;
+        if (useCameraAsFocusPosition) relevantFocusCamera = focusCamera;
+        Vector3 forward = Vector3.zero;
+        Vector3 camPos = Vector3.zero;
+        if (relevantFocusCamera) {
+            var camTransform = relevantFocusCamera.transform;
+            forward = camTransform.rotation * Vector3.forward;
+            camPos = camTransform.position - forward * (chunkSize >> 1);
+        }
+
+        var cos50Deg = 0.6427;
+        
         if (maxChunksToUpdateVar > 0 && chunksThatNeedThreadKickoff.Count > 0) {
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
 
-            chunksThatNeedThreadKickoff.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
+            chunksThatNeedThreadKickoff.Sort((a, b) => {
+                var aDist = (a.chunkKey - focusPositionChunkKey).magnitude;
+                var bDist = (b.chunkKey - focusPositionChunkKey).magnitude;
+                // If chunk is beyond 55 degrees of view from camera then treat it as much (250 blocks) further
+                // in terms of priority
+                if (forward != Vector3.zero) {
+                    if (Vector3.Dot(forward, (((a.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) aDist += (250f / chunkSize);
+                    if (Vector3.Dot(forward, (((b.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) bDist += (250f / chunkSize);
+                }
+                
+                return aDist.CompareTo(bDist);
+            });
 
             float startTime = Time.realtimeSinceStartup;
 
@@ -1152,19 +1231,6 @@ public partial class VoxelWorld : MonoBehaviour {
                 return;
             }
             StepWorld();
-        }
-
-        if (!Application.isPlaying) {
-
-            if (Camera.main) {
-                this.focusPosition = Camera.main.transform.position;
-            }
-#if UNITY_EDITOR
-            if (SceneView.lastActiveSceneView != null) {
-                this.focusPosition = SceneView.lastActiveSceneView.camera.transform.position;
-            }
-#endif
-
         }
     }
 

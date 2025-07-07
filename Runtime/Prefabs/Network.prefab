@@ -53,7 +53,7 @@ MonoBehaviour:
   runInBackground: 1
   headlessStartMode: 0
   editorAutoStart: 0
-  sendRate: 50
+  sendRate: 40
   autoStartServerBuild: 0
   autoConnectClientBuild: 0
   offlineScene: 
@@ -71,14 +71,14 @@ MonoBehaviour:
   spawnPrefabs: []
   exceptionsDisconnect: 0
   snapshotSettings:
-    bufferTimeMultiplier: 2
+    bufferTimeMultiplier: 3
     bufferLimit: 32
     catchupNegativeThreshold: -1
     catchupPositiveThreshold: 1
     catchupSpeed: 0.019999999552965164
     slowdownSpeed: 0.03999999910593033
     driftEmaDuration: 1
-    dynamicAdjustment: 1
+    dynamicAdjustment: 0
     dynamicAdjustmentTolerance: 1
     deliveryTimeEmaDuration: 2
   evaluationMethod: 0

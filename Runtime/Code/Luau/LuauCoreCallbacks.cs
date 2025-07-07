@@ -41,8 +41,8 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.ConstructorCallback constructorCallback_holder;
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.ToStringCallback toStringCallback_holder;
-    private LuauPlugin.ToggleProfilerCallback toggleProfilerCallback_holder;
     private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
+    private LuauPlugin.GetUnityObjectName getUnityObjectNameCallback_holder;
     
 
     private struct AwaitingTask {
@@ -58,11 +58,18 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private struct PropertyGetReflectionCache {
+        /// <summary>
+        /// This is true if the property info exists for this type / prop combo. This
+        /// is to avoid trying to look up the property info constantly if it doesn't exist.
+        /// </summary>
+        public bool Exists;
+        
         public Type t;
         [FormerlySerializedAs("pi")] public PropertyInfo propertyInfo;
         public Delegate GetProperty;
         public bool HasGetPropertyFunc;
         public bool IsNativeClass;
+        public bool IsStruct;
     }
 
     // Hopefully faster dictionary comparison / hash time
@@ -84,6 +91,26 @@ public partial class LuauCore : MonoBehaviour {
 
         public bool Equals(PropertyCacheKey other) {
             return ReferenceEquals(_type, other._type) && string.Equals(_propertyName, other._propertyName);
+        }
+    }
+
+    private class ReverseObjectKeyUpdater : IDisposable {
+        private object _instance;
+        private int _instanceId;
+        private bool _isValueType;
+        public ReverseObjectKeyUpdater(object instance, int instanceId, Type instanceType) {
+            this._instance = instance;
+            this._instanceId = instanceId;
+            this._isValueType = instanceType.IsValueType;
+
+            if (this._isValueType) {
+                ThreadDataManager.DeleteReverseObjectKey(instance);
+            }
+        }
+        public void Dispose() {
+            if (this._isValueType) {
+                ThreadDataManager.UpdateReverseObjectKey(this._instanceId, this._instance);
+            }
         }
     }
     
@@ -115,8 +142,8 @@ public partial class LuauCore : MonoBehaviour {
         requirePathCallback_holder = RequirePathCallback;
         toStringCallback_holder = ToStringCallback;
         componentSetEnabledCallback_holder = SetComponentEnabledCallback;
-        toggleProfilerCallback_holder = ToggleProfilerCallback;
         isObjectDestroyedCallback_holder = IsObjectDestroyedCallback;
+        getUnityObjectNameCallback_holder = GetUnityObjectNameCallback;
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -189,46 +216,32 @@ public partial class LuauCore : MonoBehaviour {
 
         Marshal.Copy(bytes, 0, str, len);
     }
-    
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToggleProfilerCallback))]
-    static void ToggleProfilerCallback(int componentId, IntPtr strPtr, int strLen) {
-        // Disable
-        if (componentId == -1) {
-            Profiler.EndSample();
-            return;
-        }
-        // Not tagged to component
-        if (componentId < -1) {
-            if (strLen > 0) {
-                // No need to free strPtr -- it is stack allocated
-                var str = PtrToStringUTF8(strPtr, strLen);
-                Profiler.BeginSample($"{str}");
-                return;
-            }
-        }
-        
-
-        if (AirshipComponent.ComponentIdToScriptName.TryGetValue(componentId, out var componentName)) {
-            if (strLen > 0) {
-                var str = PtrToStringUTF8(strPtr, strLen);
-                Profiler.BeginSample($"{componentName}{str}");
-            }
-            else {
-                Profiler.BeginSample($"{componentName}");
-            }
-        }
-    }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.IsObjectDestroyedCallback))]
     static int IsObjectDestroyedCallback(int instanceId) {
         return ThreadDataManager.IsUnityObjectReferenceDestroyed(instanceId) ? 1 : 0;
     }
 
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetUnityObjectName))]
+    static void GetUnityObjectNameCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
+        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true, true);
+        if (obj is UnityEngine.Object unityObj) {
+            var n = unityObj.name;
+            var bytes = Encoding.UTF8.GetBytes(n);
+            len = bytes.Length > maxLen ? maxLen : bytes.Length;
+            Marshal.Copy(bytes, 0, str, len);
+            
+            return;
+        }
+
+        len = 0;
+    }
+
     //when a lua thread gc releases an object, make sure our GC knows too
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]
     static unsafe int ObjectGcCallback(int instanceId, IntPtr objectDebugPointer) {
         ThreadDataManager.DeleteObjectReference(instanceId);
-        //Debug.Log("GC " + instanceId + " ptr:" + objectDebugPointer);
+        // Debug.Log("GC " + instanceId + " ptr:" + objectDebugPointer);
         return 0;
     }
 
@@ -297,11 +310,21 @@ public partial class LuauCore : MonoBehaviour {
             PropertyInfo property = null;
             FieldInfo field = null;
             
-            if (classNameSize != 0) {
-                property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-            } else {
-                property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            PropertyGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
+                var propertyInfo = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
             }
+
+            if (cacheData.Value.Exists) {
+                property = cacheData.Value.propertyInfo;
+            }
+            
+            // if (classNameSize != 0) {
+            //     property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+            // } else {
+            //     property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            // }
 
             if (property != null) {
                 t = property.PropertyType;
@@ -325,294 +348,296 @@ public partial class LuauCore : MonoBehaviour {
                 referencedAssemblies.Add(sourceType.Assembly.FullName);
             }
 
-            if (valueTypeAPI != null) {
-                var retValue = valueTypeAPI.OverrideMemberSetter(context, thread, objectReference, propName, type, propertyData,
-                    propertyDataSize);
-                if (retValue >= 0) {
-                    return retValue;
+            using (new ReverseObjectKeyUpdater(objectReference, instanceId, sourceType)) {
+                if (valueTypeAPI != null) {
+                    var retValue = valueTypeAPI.OverrideMemberSetter(context, thread, objectReference, propName, type, propertyData,
+                        propertyDataSize);
+                    if (retValue >= 0) {
+                        return retValue;
+                    }
                 }
-            }
-
-            if (isTable != 0 && t.IsArray) {
-                var success = ParseTableParameter(thread, type, t, propertyDataSize, -1, out var value);
-                if (!success) {
-                    return LuauError(thread, $"Value of type {type} not valid table type");
+                
+                if (isTable != 0 && t.IsArray) {
+                    var success = ParseTableParameter(thread, type, t, propertyDataSize, -1, out var value);
+                    if (!success) {
+                        return LuauError(thread, $"Value of type {type} not valid table type");
+                    }
+                    if (field != null) {
+                        field.SetValue(objectReference, value);
+                    } else {
+                        property.SetValue(objectReference, value);
+                    }
+                    return 0;
                 }
-                if (field != null) {
-                    field.SetValue(objectReference, value);
-                } else {
-                    property.SetValue(objectReference, value);
-                }
-                return 0;
-            }
 
-            switch (type) {
-                case PODTYPE.POD_OBJECT: {
-                    int[] intData = new int[1];
-                    Marshal.Copy(propertyData, intData, 0, 1);
-                    int propertyInstanceId = intData[0];
+                switch (type) {
+                    case PODTYPE.POD_OBJECT: {
+                        int[] intData = new int[1];
+                        Marshal.Copy(propertyData, intData, 0, 1);
+                        int propertyInstanceId = intData[0];
 
-                    System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
+                        System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
 
-                    if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
-                        if (
-                            propName == "parent"
-                            && context != LuauContext.Protected
-                            && objectReference.GetType() == typeof(Transform)
-                            && propertyObjectRef.GetType() == typeof(Transform)
-                        ) {
-                            var targetTransform = (Transform)objectReference;
-                            if (IsProtectedScene(targetTransform.gameObject.scene)) {
-                                return LuauError(thread, "[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
+                        if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
+                            if (
+                                propName == "parent"
+                                && context != LuauContext.Protected
+                                && objectReference.GetType() == typeof(Transform)
+                                && propertyObjectRef.GetType() == typeof(Transform)
+                            ) {
+                                var targetTransform = (Transform)objectReference;
+                                if (IsProtectedScene(targetTransform.gameObject.scene)) {
+                                    return LuauError(thread, "[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
+                                }
+
+                                var valueTransform = (Transform)propertyObjectRef;
+                                if (IsProtectedScene(valueTransform.gameObject.scene)) {
+                                    return LuauError(thread, "[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
+                                }
+                            }
+                            
+                            if (field != null) {
+                                field.SetValue(objectReference, propertyObjectRef);
+                            } else {
+                                SetValue<object>(objectReference, propertyObjectRef, property);
+                            }
+                            return 0;
+                        }
+
+                        break;
+                    }
+
+                    case PODTYPE.POD_VECTOR3: {
+                        if (t.IsAssignableFrom(vector3Type)) {
+                            Profiler.BeginSample("AssignVec3");
+                            if (field != null) {
+                                // Debug.Log(field);
+                                Vector3 v = NewVector3FromPointer(propertyData);
+                                field.SetValue(objectReference, v);
+                            } else {
+                                // Debug.Log(property);
+                                Vector3 v = NewVector3FromPointer(propertyData);
+                                SetValue<Vector3>(objectReference, v, property);
+                                // property.SetValue(objectReference, v);
+                            }
+                            Profiler.EndSample();
+                            return 0;
+                        }
+                        if (t.IsAssignableFrom(vector3IntType)) {
+                            if (field != null) {
+                                // Debug.Log(field);
+                                Vector3 v = NewVector3FromPointer(propertyData);
+                                field.SetValue(objectReference, Vector3Int.FloorToInt(v));
+                            } else {
+                                // Debug.Log(property);
+                                Vector3 v = NewVector3FromPointer(propertyData);
+                                SetValue<Vector3Int>(objectReference, Vector3Int.FloorToInt(v), property);
+                            }
+                            return 0;
+                        }
+                        break;
+                    }
+                    case PODTYPE.POD_BOOL: {
+                        if (t.IsAssignableFrom(boolType)) {
+                            int[] ints = new int[1];
+                            Marshal.Copy(propertyData, ints, 0, 1);
+                            bool val = ints[0] != 0;
+                            
+                            if (field != null) {
+                                field.SetValue(objectReference, val);
+                            } else {
+                                SetValue<bool>(objectReference, val, property);
                             }
 
-                            var valueTransform = (Transform)propertyObjectRef;
-                            if (IsProtectedScene(valueTransform.gameObject.scene)) {
-                                return LuauError(thread, "[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
+                            return 0;
+                        }
+
+                        break;
+                    }
+
+                    case PODTYPE.POD_DOUBLE: { // Also integers
+                        double[] doubles = new double[1];
+                        Marshal.Copy(propertyData, doubles, 0, 1);
+
+                        if (t.IsAssignableFrom(doubleType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (double)doubles[0]);
+                            } else {
+                                SetValue<double>(objectReference, doubles[0], property);
                             }
+
+                            return 0;
+                        } else if (t.IsAssignableFrom(ushortType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (ushort) doubles[0]);
+                            } else {
+                                SetValue<ushort>(objectReference, (ushort) doubles[0], property);
+                            }
+
+                            return 0;
+                        } else if (t.IsAssignableFrom(floatType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (System.Single)doubles[0]);
+                            } else {
+                                SetValue<float>(objectReference, (System.Single) doubles[0], property);
+                            }
+                            return 0;
+                        } else if (t.IsAssignableFrom(intType) || t.BaseType == enumType || t.IsAssignableFrom(enumType) || t.IsAssignableFrom(byteType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (int)doubles[0]);
+                            } else {
+                                SetValue<int>(objectReference, (int)doubles[0], property);
+                            }
+                            return 0;
+                        } else if (t.IsAssignableFrom(uIntType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, unchecked((int)doubles[0]));
+                            } else {
+                                SetValue<uint>(objectReference, unchecked((uint) doubles[0]), property);
+                            }
+                        } else if (t.IsAssignableFrom(longType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (long)doubles[0]);
+                            } else {
+                                SetValue<long>(objectReference, (long) doubles[0], property);
+                            }
+                            return 0;
+                        } else if (t.IsAssignableFrom(uLongType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (ulong)doubles[0]);
+                            } else {
+                                SetValue<ulong>(objectReference, (ulong) doubles[0], property);
+                            }
+                            return 0;
                         }
-                        
-                        if (field != null) {
-                            field.SetValue(objectReference, propertyObjectRef);
-                        } else {
-                            SetValue<object>(objectReference, propertyObjectRef, property);
-                        }
-                        return 0;
+
+                        break;
                     }
 
-                    break;
-                }
-
-                case PODTYPE.POD_VECTOR3: {
-                    if (t.IsAssignableFrom(vector3Type)) {
-                        Profiler.BeginSample("AssignVec3");
-                        if (field != null) {
-                            // Debug.Log(field);
-                            Vector3 v = NewVector3FromPointer(propertyData);
-                            field.SetValue(objectReference, v);
-                        } else {
-                            // Debug.Log(property);
-                            Vector3 v = NewVector3FromPointer(propertyData);
-                            SetValue<Vector3>(objectReference, v, property);
-                            // property.SetValue(objectReference, v);
+                    case PODTYPE.POD_STRING: {
+                        if (t.IsAssignableFrom(stringType)) {
+                            string dataStr = LuauCore.PtrToStringUTF8NullTerminated(propertyData);
+                            if (field != null) {
+                                field.SetValue(objectReference, dataStr);
+                            } else {
+                                SetValue<string>(objectReference, dataStr, property);
+                            }
+                            return 0;
                         }
-                        Profiler.EndSample();
-                        return 0;
-                    }
-                    if (t.IsAssignableFrom(vector3IntType)) {
-                        if (field != null) {
-                            // Debug.Log(field);
-                            Vector3 v = NewVector3FromPointer(propertyData);
-                            field.SetValue(objectReference, Vector3Int.FloorToInt(v));
-                        } else {
-                            // Debug.Log(property);
-                            Vector3 v = NewVector3FromPointer(propertyData);
-                            SetValue<Vector3Int>(objectReference, Vector3Int.FloorToInt(v), property);
-                        }
-                        return 0;
-                    }
-                    break;
-                }
-                case PODTYPE.POD_BOOL: {
-                    if (t.IsAssignableFrom(boolType)) {
-                        int[] ints = new int[1];
-                        Marshal.Copy(propertyData, ints, 0, 1);
-                        bool val = ints[0] != 0;
-                        
-                        if (field != null) {
-                            field.SetValue(objectReference, val);
-                        } else {
-                            SetValue<bool>(objectReference, val, property);
-                        }
-
-                        return 0;
+                        break;
                     }
 
-                    break;
-                }
-
-                case PODTYPE.POD_DOUBLE: { // Also integers
-                    double[] doubles = new double[1];
-                    Marshal.Copy(propertyData, doubles, 0, 1);
-
-                    if (t.IsAssignableFrom(doubleType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, (double)doubles[0]);
-                        } else {
-                            SetValue<double>(objectReference, doubles[0], property);
+                    case PODTYPE.POD_NULL: {
+                        //nulling anything nullable
+                        // if (Nullable.GetUnderlyingType(t) != null) {
+                        if (t.IsClass) {
+                            if (field != null) {
+                                field.SetValue(objectReference, null);
+                            } else {
+                                SetValue<object>(objectReference, null, property);
+                            }
+                            return 0;
                         }
-
-                        return 0;
-                    } else if (t.IsAssignableFrom(ushortType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, (ushort) doubles[0]);
-                        } else {
-                            SetValue<ushort>(objectReference, (ushort) doubles[0], property);
-                        }
-
-                        return 0;
-                    } else if (t.IsAssignableFrom(floatType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, (System.Single)doubles[0]);
-                        } else {
-                            SetValue<float>(objectReference, (System.Single) doubles[0], property);
-                        }
-                        return 0;
-                    } else if (t.IsAssignableFrom(intType) || t.BaseType == enumType || t.IsAssignableFrom(enumType) || t.IsAssignableFrom(byteType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, (int)doubles[0]);
-                        } else {
-                            SetValue<int>(objectReference, (int)doubles[0], property);
-                        }
-                        return 0;
-                    } else if (t.IsAssignableFrom(uIntType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, unchecked((int)doubles[0]));
-                        } else {
-                            SetValue<uint>(objectReference, unchecked((uint) doubles[0]), property);
-                        }
-                    } else if (t.IsAssignableFrom(longType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, (long)doubles[0]);
-                        } else {
-                            SetValue<long>(objectReference, (long) doubles[0], property);
-                        }
-                        return 0;
-                    } else if (t.IsAssignableFrom(uLongType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, (ulong)doubles[0]);
-                        } else {
-                            SetValue<ulong>(objectReference, (ulong) doubles[0], property);
-                        }
-                        return 0;
+                        break;
                     }
 
-                    break;
-                }
-
-                case PODTYPE.POD_STRING: {
-                    if (t.IsAssignableFrom(stringType)) {
-                        string dataStr = LuauCore.PtrToStringUTF8NullTerminated(propertyData);
-                        if (field != null) {
-                            field.SetValue(objectReference, dataStr);
-                        } else {
-                            SetValue<string>(objectReference, dataStr, property);
+                    case PODTYPE.POD_RAY: {
+                        if (t.IsAssignableFrom(rayType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewRayFromPointer(propertyData));
+                            } else {
+                                SetValue<Ray>(objectReference, NewRayFromPointer(propertyData), property);
+                            }
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
 
-                case PODTYPE.POD_NULL: {
-                    //nulling anything nullable
-                    // if (Nullable.GetUnderlyingType(t) != null) {
-                    if (t.IsClass) {
-                        if (field != null) {
-                            field.SetValue(objectReference, null);
-                        } else {
-                            SetValue<object>(objectReference, null, property);
+                    case PODTYPE.POD_COLOR: {
+                        if (t.IsAssignableFrom(colorType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewColorFromPointer(propertyData));
+                            } else {
+                                SetValue<Color>(objectReference, NewColorFromPointer(propertyData), property);
+                            }
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
 
-                case PODTYPE.POD_RAY: {
-                    if (t.IsAssignableFrom(rayType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewRayFromPointer(propertyData));
-                        } else {
-                            SetValue<Ray>(objectReference, NewRayFromPointer(propertyData), property);
+                    case PODTYPE.POD_PLANE: {
+                        if (t.IsAssignableFrom(planeType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewPlaneFromPointer(propertyData));
+                            } else {
+                                SetValue<Plane>(objectReference, NewPlaneFromPointer(propertyData), property);
+                            }
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
 
-                case PODTYPE.POD_COLOR: {
-                    if (t.IsAssignableFrom(colorType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewColorFromPointer(propertyData));
-                        } else {
-                            SetValue<Color>(objectReference, NewColorFromPointer(propertyData), property);
+                    case PODTYPE.POD_QUATERNION: {
+                        if (t.IsAssignableFrom(quaternionType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
+                            } else {
+                                SetValue<Quaternion>(objectReference, NewQuaternionFromPointer(propertyData), property);
+                            }
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
 
-                case PODTYPE.POD_PLANE: {
-                    if (t.IsAssignableFrom(planeType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewPlaneFromPointer(propertyData));
-                        } else {
-                            SetValue<Plane>(objectReference, NewPlaneFromPointer(propertyData), property);
+                    case PODTYPE.POD_VECTOR2: {
+                        if (t.IsAssignableFrom(vector2Type)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewVector2FromPointer(propertyData));
+                            } else {
+                                SetValue<Vector2>(objectReference, NewVector2FromPointer(propertyData), property);
+                            }
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
 
-                case PODTYPE.POD_QUATERNION: {
-                    if (t.IsAssignableFrom(quaternionType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
-                        } else {
-                            SetValue<Quaternion>(objectReference, NewQuaternionFromPointer(propertyData), property);
+                    case PODTYPE.POD_VECTOR4: {
+                        if (t.IsAssignableFrom(vector4Type)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewVector4FromPointer(propertyData));
+                            } else {
+                                SetValue<Vector4>(objectReference, NewVector4FromPointer(propertyData), property);
+                            }
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
 
-                case PODTYPE.POD_VECTOR2: {
-                    if (t.IsAssignableFrom(vector2Type)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewVector2FromPointer(propertyData));
-                        } else {
-                            SetValue<Vector2>(objectReference, NewVector2FromPointer(propertyData), property);
+                    case PODTYPE.POD_MATRIX: {
+                        if (t.IsAssignableFrom(matrixType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewMatrixFromPointer(propertyData));
+                            } else {
+                                SetValue<Matrix4x4>(objectReference, NewMatrixFromPointer(propertyData), property);
+                            }
+
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
 
-                case PODTYPE.POD_VECTOR4: {
-                    if (t.IsAssignableFrom(vector4Type)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewVector4FromPointer(propertyData));
-                        } else {
-                            SetValue<Vector4>(objectReference, NewVector4FromPointer(propertyData), property);
+                    case PODTYPE.POD_BINARYBLOB: {
+                        if (t.IsAssignableFrom(binaryBlobType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
+                            } else {
+                                SetValue<BinaryBlob>(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize), property);
+                            }
+
+                            return 0;
                         }
-                        return 0;
+                        break;
                     }
-                    break;
-                }
-
-                case PODTYPE.POD_MATRIX: {
-                    if (t.IsAssignableFrom(matrixType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewMatrixFromPointer(propertyData));
-                        } else {
-                            SetValue<Matrix4x4>(objectReference, NewMatrixFromPointer(propertyData), property);
-                        }
-
-                        return 0;
-                    }
-                    break;
-                }
-
-                case PODTYPE.POD_BINARYBLOB: {
-                    if (t.IsAssignableFrom(binaryBlobType)) {
-                        if (field != null) {
-                            field.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
-                        } else {
-                            SetValue<BinaryBlob>(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize), property);
-                        }
-
-                        return 0;
-                    }
-                    break;
                 }
             }
 
@@ -659,8 +684,8 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
-        if (typeof(T) == typeof(object) || cacheData.IsNativeClass) {
-            return (T) cacheData.propertyInfo.GetMethod.Invoke(instance, null);
+        if (typeof(T) == typeof(object) || cacheData.IsNativeClass || cacheData.IsStruct) {
+            return (T) cacheData.propertyInfo.GetValue(instance);
         }
     
         if (!cacheData.HasGetPropertyFunc) {
@@ -671,7 +696,7 @@ public partial class LuauCore : MonoBehaviour {
                     .MethodHandle
                     .GetFunctionPointer()
                     .ToPointer();
-            
+
                 // Create a delegate that wraps the function pointer
                 var getter = new Getter<T>(obj => {
                     unsafe {
@@ -712,7 +737,8 @@ public partial class LuauCore : MonoBehaviour {
     private static int GetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
         var ret = 0;
         try {
-            ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength);
+            ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName,
+                propertyNameLength);
         } catch (Exception e) {
             ret = LuauError(thread, e.Message);
         }
@@ -720,8 +746,9 @@ public partial class LuauCore : MonoBehaviour {
         return ret;
     }
 
+    // private static readonly ProfilerMarker<string> getPropertyMarker = new ProfilerMarker<string>("LuauCore.GetProperty", "asd");
+
     private static int GetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
-        Profiler.BeginSample("LuauCore.GetProperty");
         CurrentContext = context;
 
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
@@ -745,24 +772,19 @@ public partial class LuauCore : MonoBehaviour {
             if (!(cacheData = LuauCore.GetPropertyCacheValue(objectType, propName)).HasValue) {
                 var propertyInfo = objectType.GetProperty(propName,
                     BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-                if (propertyInfo != null) {
-                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, true);
-                    cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
-                }
+                cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
             }
 
-            if (cacheData != null) {
+            if (cacheData.Value.Exists) {
                 // Type t = propertyInfo.PropertyType;
                 System.Object value = cacheData.Value.propertyInfo.GetValue(null);
                 WritePropertyToThread(thread, value, cacheData.Value.t);
-                Profiler.EndSample();
                 return 1;
             }
 
             // Get C# event:
             var eventInfo = objectType.GetRuntimeEvent(propName);
             if (eventInfo != null) {
-                Profiler.EndSample();
                 return LuauSignalWrapper.HandleCsEvent(context, thread, staticClassApi, instanceId, propNameHash,
                     eventInfo, true);
             }
@@ -773,11 +795,9 @@ public partial class LuauCore : MonoBehaviour {
                 Type t = fieldInfo.FieldType;
                 System.Object value = fieldInfo.GetValue(null);
                 WritePropertyToThread(thread, value, t);
-                Profiler.EndSample();
                 return 1;
             }
 
-            Profiler.EndSample();
             return LuauError(thread, "ERROR - " + propName + " get property not found on class " + staticClassName);
         }
         else {
@@ -787,7 +807,6 @@ public partial class LuauCore : MonoBehaviour {
             System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
             // Profiler.EndSample();
             if (objectReference == null) {
-                Profiler.EndSample();
                 return LuauError(thread,
                     "Error: InstanceId not currently available:" + instanceId + ". propName=" + propName);
             }
@@ -800,7 +819,6 @@ public partial class LuauCore : MonoBehaviour {
                 if (objectReference is GameObject targetGo) {
                     // var target = (GameObject)objectReference;
                     if (IsAccessBlocked(context, targetGo)) {
-                        Profiler.EndSample();
                         return LuauError(thread,
                             "[Airship] Access denied when trying to read " + targetGo.name + ".");
                     }
@@ -808,7 +826,6 @@ public partial class LuauCore : MonoBehaviour {
                 else if (sourceType.IsAssignableFrom(typeof(Component))) {
                     var target = (Component)objectReference;
                     if (target && IsAccessBlocked(context, target.gameObject)) {
-                        Profiler.EndSample();
                         return LuauError(thread,
                             "[Airship] Access denied when trying to read " + target.name + ".");
                     }
@@ -820,7 +837,6 @@ public partial class LuauCore : MonoBehaviour {
             if (valueTypeAPI != null) {
                 var retValue = valueTypeAPI.OverrideMemberGetter(context, thread, objectReference, propName);
                 if (retValue >= 0) {
-                    Profiler.EndSample();
                     return retValue;
                 }
             }
@@ -829,18 +845,14 @@ public partial class LuauCore : MonoBehaviour {
             PropertyGetReflectionCache? cacheData;
             if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
                 var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                if (propertyInfo != null) {
-                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
-                    cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
-                }
+                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
             }
 
-            if (cacheData != null) {
+            if (cacheData.Value.Exists) {
                 Type t = cacheData.Value.t;
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
-                        Profiler.EndSample();
                         return 1;
                     }
 
@@ -875,16 +887,11 @@ public partial class LuauCore : MonoBehaviour {
                             }
                         }
 
-                        // Profiler.BeginSample("WriteToThread");
                         WritePropertyToThread(thread, value, t);
-                        // Profiler.EndSample();
-                        Profiler.EndSample();
                         return 1;
                     }
                     else {
-                        // Debug.Log("Value was null in dictionary. propName=" + propName + ", object=" + sourceType.Name);
                         WritePropertyToThread(thread, null, null);
-                        Profiler.EndSample();
                         return 1;
                     }
                 }
@@ -901,11 +908,8 @@ public partial class LuauCore : MonoBehaviour {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
                     if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {
                         WritePropertyToThread(thread, null, null);
-                        Profiler.EndSample();
                         return 1;
                     }
-
-                    Profiler.EndSample();
                     return LuauError(thread, "Failed to get property in dictionary. propName=" + propName +
                                              ", object=" +
                                              sourceType.Name + ", msg=" + e.Message);
@@ -935,7 +939,6 @@ public partial class LuauCore : MonoBehaviour {
                     // print("key: " + propName + " " + keyInt);
                     // Debug.Log("[Luau]: Dictionary had key but value was null. propName=" + propName + ", sourceType=" + sourceType.Name + ", obj=" + objectReference);
                     WritePropertyToThread(thread, null, null);
-                    Profiler.EndSample();
                     return 1;
                 }
 
@@ -943,14 +946,12 @@ public partial class LuauCore : MonoBehaviour {
                     object value = dict[propName];
                     Type t = value.GetType();
                     WritePropertyToThread(thread, value, t);
-                    Profiler.EndSample();
                     return 1;
                 }
                 else {
                     // Debug.Log("[Luau]: Dictionary was found but key was not found. propName=" + propName +
                     //           ", sourceType=" + sourceType.Name);
                     WritePropertyToThread(thread, null, null);
-                    Profiler.EndSample();
                     return 1;
                 }
             }
@@ -958,22 +959,19 @@ public partial class LuauCore : MonoBehaviour {
             // Get C# event:
             var eventInfo = sourceType.GetRuntimeEvent(propName);
             if (eventInfo != null) {
-                Profiler.EndSample();
                 return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
                     eventInfo, false);
             }
-
+            
             // Get field:
             FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
             if (field != null) {
                 Type t = field.FieldType;
                 System.Object value = field.GetValue(objectReference);
                 WritePropertyToThread(thread, value, t);
-                Profiler.EndSample();
                 return 1;
             }
 
-            Profiler.EndSample();
             return LuauError(thread, $"ERROR - ({sourceType.Name}).{propName} property/field not found");
         }
     }
@@ -1014,6 +1012,7 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     public static string GetRequirePath(string originalScriptPath, string fileNameStr) {
+        Profiler.BeginSample("GetRequirePath");
         if (!string.IsNullOrEmpty(originalScriptPath)) {
             if (!fileNameStr.Contains("/")) {
                 // Get a stripped name
@@ -1050,6 +1049,7 @@ public partial class LuauCore : MonoBehaviour {
         //Fully qualify it
         fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
 
+        Profiler.EndSample();
         return fileNameStr;
     }
 
@@ -1148,7 +1148,6 @@ public partial class LuauCore : MonoBehaviour {
     // When a lua object wants to call a method
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
-        Profiler.BeginSample("LuauCore.CallMethod");
         CurrentContext = context;
         
         // if (s_shutdown) return 0;
@@ -1184,7 +1183,6 @@ public partial class LuauCore : MonoBehaviour {
             //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
             int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (retValue >= 0) {
-                Profiler.EndSample();
                 return retValue;
             }
         }
@@ -1193,7 +1191,6 @@ public partial class LuauCore : MonoBehaviour {
             reflectionObject = ThreadDataManager.GetObjectReference(thread, instanceId);
 
             if (reflectionObject == null) {
-                Profiler.EndSample();
                 return LuauError(thread, $"Error: InstanceId not currently available for {instanceId} {methodName} {staticClassName} ({LuaThreadToString(thread)})");
             }
             
@@ -1217,13 +1214,11 @@ public partial class LuauCore : MonoBehaviour {
                     if (type == typeof(GameObject)) {
                         var target = (GameObject) reflectionObject;
                         if (IsAccessBlocked(context, target)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
                         if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     }
@@ -1232,7 +1227,6 @@ public partial class LuauCore : MonoBehaviour {
                 int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
                     parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 if (retValue >= 0) {
-                    Profiler.EndSample();
                     return retValue;
                 }
             }
@@ -1245,14 +1239,12 @@ public partial class LuauCore : MonoBehaviour {
             var t = ReflectionList.AttemptGetTypeFromString(typeName);
 
             if (t == null) {
-                Profiler.EndSample();
                 return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
             }
 
             var isA = t.IsAssignableFrom(type);
             WritePropertyToThread(thread, isA, typeof(bool));
 
-            Profiler.EndSample();
             return 1;
         }
 
@@ -1274,11 +1266,9 @@ public partial class LuauCore : MonoBehaviour {
             if (eventInfo != null) {
                 //There is an event
                 if (numParameters != 1) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"Error: {methodName} takes 1 parameter (a function!)");
                 }
                 if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"Error: {methodName} parameter must be a function");
                 }
 
@@ -1287,7 +1277,6 @@ public partial class LuauCore : MonoBehaviour {
 
                 foreach (ParameterInfo param in eventInfoParams) {
                     if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false && param.ParameterType.IsEnum == false) {
-                        Profiler.EndSample();
                         return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                     }
                 }
@@ -1315,7 +1304,6 @@ public partial class LuauCore : MonoBehaviour {
                 // print("added eventConnection (" + eventConnections.Count + "): " + methodName);
 
                 LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
-                Profiler.EndSample();
                 return 1;
             }
         }
@@ -1333,8 +1321,6 @@ public partial class LuauCore : MonoBehaviour {
         Profiler.EndSample();
 
         if (finalMethod == null) {
-            Profiler.EndSample();
-            
             if (insufficientContext) {
 #if AIRSHIP_INTERNAL
                 return LuauError(thread, $"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
@@ -1357,7 +1343,6 @@ public partial class LuauCore : MonoBehaviour {
             parsedData[0] = context;
         }
         if (success == false) {
-            Profiler.EndSample();
             return LuauError(thread, $"Error: Unable to parse parameters for {type.Name} {finalMethod.Name}");
         }
 
@@ -1376,7 +1361,6 @@ public partial class LuauCore : MonoBehaviour {
                 }
 
                 if (targetTransform != null && IsProtectedScene(targetTransform.gameObject.scene)) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                 }
             } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
@@ -1385,13 +1369,11 @@ public partial class LuauCore : MonoBehaviour {
                     if (paramType == typeof(GameObject)) {
                         var param = parsedData[0] as GameObject;
                         if (param != null && IsProtectedScene(param.scene)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected GameObject \"{param.name}\"");
                         }
                     } else if (paramType == typeof(Component)) {
                         var param = parsedData[0] as Component;
                         if (param != null && IsProtectedScene(param.gameObject.scene)) {
-                            Profiler.EndSample();
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected Component \"{param.gameObject.name}\"");
                         }
                     }
@@ -1399,14 +1381,12 @@ public partial class LuauCore : MonoBehaviour {
             } else if (methodName == "SetParent" && type == typeof(Transform)) {
                 var callingTransform = reflectionObject as Transform;
                 if (callingTransform != null && IsAccessBlocked(context, callingTransform.gameObject)) {
-                    Profiler.EndSample();
                     return LuauError(thread, $"[Airship] Access denied when trying set parent of a transform inside a protected scene \"{callingTransform.gameObject.scene.name}\"");
                 }
 
                 if (parsedData[0] != null && parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
                     if (targetTransform != null && IsAccessBlocked(context, targetTransform.gameObject)) {
-                        Profiler.EndSample();
                         return LuauError(thread, $"[Airship] Access denied when trying set parent to a transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                     }
                 }
@@ -1435,29 +1415,28 @@ public partial class LuauCore : MonoBehaviour {
                                                        typeof(Task<>))) {
             var ret = InvokeMethodAsync(context, thread, type, finalMethod, invokeObj, parsedData, out var shouldYieldBool);
             if (ret == -1) {
-                Profiler.EndSample();
                 return ret;
             }
             Marshal.WriteInt32(shouldYield, shouldYieldBool ? 1 : 0);
-            Profiler.EndSample();
             return returnCount;
         }
 
         Profiler.BeginSample("LuauCore.InvokeMethod");
         try {
             returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
-        } catch (TargetInvocationException e) {
-            Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException);
-        } catch (Exception e) {
-            Profiler.EndSample();
-            return LuauError(thread, "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
+        }
+        catch (TargetInvocationException e) {
+            return LuauError(thread,
+                "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e.InnerException);
+        }
+        catch (Exception e) {
+            return LuauError(thread,
+                "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
         } finally {
             Profiler.EndSample();
         }
 
         WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData.Array);
-        Profiler.EndSample();
         return returnCount;
     }
 
@@ -1642,6 +1621,16 @@ public partial class LuauCore : MonoBehaviour {
     private static PropertyGetReflectionCache[] fastPropGetCacheValues = new PropertyGetReflectionCache[propGetFastCacheSize];
 
     private static PropertyGetReflectionCache? GetPropertyCacheValue(Type objectType, string propName) {
+        // Avoid caching result of int field access of a dictionary (because this is a non-discrete
+        // prop name and may flood look up table)
+        if (typeof(IDictionary).IsAssignableFrom(objectType)) {
+            if (int.TryParse(propName, out int keyInt)) {
+                return new PropertyGetReflectionCache {
+                    Exists = false,
+                };
+            }
+        }
+        
         var key = new PropertyCacheKey(objectType, propName);
         var l1Key = key.GetHashCode() % propGetFastCacheSize;
         if (l1Key < 0) l1Key += propGetFastCacheSize;
@@ -1666,12 +1655,22 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo) {
-        var cacheData = new PropertyGetReflectionCache {
-            t = propertyInfo.PropertyType,
-            propertyInfo = propertyInfo,
-            IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
-                .Any(attr => attr.GetType().Name == "NativeClassAttribute")
-        };
+        PropertyGetReflectionCache cacheData;
+        if (propertyInfo != null) {
+            cacheData = new PropertyGetReflectionCache {
+                t = propertyInfo.PropertyType,
+                propertyInfo = propertyInfo,
+                IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
+                    .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
+                IsStruct = propertyInfo.DeclaringType.IsValueType && !propertyInfo.DeclaringType.IsPrimitive,
+                Exists = true,
+            };
+        } else {
+            cacheData = new PropertyGetReflectionCache {
+                Exists = false,
+            };
+        }
+
         LuauCore.propertyGetCache[new PropertyCacheKey(objectType, propName)] = cacheData;
         return cacheData;
     }

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class TestMovement : NetworkedStateSystem<TestMovement, TestMovementState, TestMovementInput>
+    public class TestMovement : NetworkedStateSystem<TestMovement, TestMovementState, TestMovementDiff, TestMovementInput>
     {
         private Rigidbody rb;
         private Vector3 moveVector;
@@ -45,16 +45,17 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             }
         }
 
-        public override TestMovementState GetCurrentState(int commandNumber, double time)
+        public override TestMovementState GetCurrentState(int commandNumber, uint tick, double time)
         {
             return new TestMovementState()
             {
+                time = time,
                 position = rb.position, rotation = rb.rotation, velocity = rb.linearVelocity,
-                angularVelocity = rb.angularVelocity, lastProcessedCommand = commandNumber, time = time, jumpTicksUntil = jumpTicksUntil
+                angularVelocity = rb.angularVelocity, lastProcessedCommand = commandNumber, tick = tick, jumpTicksUntil = jumpTicksUntil
             };
         }
 
-        public override void Tick(TestMovementInput command, double time, bool replay)
+        public override void Tick(TestMovementInput command, uint tick, double time, bool replay)
         {
             if (command == null) return;
             //rb.MovePosition(rb.position + command.moveDirection * Time.fixedDeltaTime * 10f);
@@ -73,10 +74,10 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             if (jumpTicksUntil > 0) jumpTicksUntil--;
         }
 
-        public override void Interpolate(float delta, TestMovementState stateOld, TestMovementState stateNew)
+        public override void Interpolate(double delta, TestMovementState stateOld, TestMovementState stateNew)
         {
-            this.rb.position = Vector3.Lerp(stateOld.position, stateNew.position, delta);
-            this.rb.rotation = Quaternion.Lerp(stateOld.rotation, stateNew.rotation, delta);
+            this.rb.position = Vector3.Lerp(stateOld.position, stateNew.position, (float) delta);
+            this.rb.rotation = Quaternion.Lerp(stateOld.rotation, stateNew.rotation, (float) delta);
         }
 
         public override void InterpolateReachedState(TestMovementState state)
@@ -84,9 +85,9 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             // Noop
         }
 
-        public override TestMovementInput GetCommand(int commandNumber, double time)
+        public override TestMovementInput GetCommand(int commandNumber, uint tick)
         {
-            var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, jump = jump, time = time};
+            var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, jump = jump};
             jump = false;
             return command;
         }

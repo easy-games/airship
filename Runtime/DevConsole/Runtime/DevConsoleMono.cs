@@ -624,10 +624,8 @@ namespace Airship.DevConsole
         /// <summary>
         ///     Open the dev console - making it visible.
         /// </summary>
-        internal void OpenConsole()
-        {
-            if (!_init && (!ConsoleIsEnabled || ConsoleIsShowing))
-            {
+        internal void OpenConsole() {
+            if (!_init && (!ConsoleIsEnabled || ConsoleIsShowing)) {
                 return;
             }
 
@@ -644,6 +642,7 @@ namespace Airship.DevConsole
             // _canvasGroup.blocksRaycasts = true;
             this.canvas.enabled = true;
             ConsoleIsShowing = true;
+            this._inputField.gameObject.SetActive(true);
             _focusInputField = true;
 
             if (this.firstOpen) {
@@ -658,26 +657,25 @@ namespace Airship.DevConsole
         /// <summary>
         ///     Close the dev console - hiding it in the background.
         /// </summary>
-        public void CloseConsole()
-        {
-            if (!_init && (!ConsoleIsEnabled || !ConsoleIsShowing))
-            {
+        public void CloseConsole() {
+            if (!_init && (!ConsoleIsEnabled || !ConsoleIsShowing)) {
                 return;
             }
 
+            ConsoleIsShowing = false;
 
             // _canvasGroup.alpha = 0f;
             // _canvasGroup.interactable = false;
             // _canvasGroup.blocksRaycasts = false;
             this.canvas.enabled = false;
-            ConsoleIsShowing = false;
+            this._inputField.gameObject.SetActive(false);
             _repositioning = false;
             _resizing = false;
             _focusInputField = false;
-            if (_inputField.isFocused && EventSystem.current != null)
-            {
+            _inputField.textComponent.alignment = TextAnchor.MiddleLeft;
+           
+            if (EventSystem.current != null) {
                 EventSystem.current.SetSelectedGameObject(null);
-                this._inputField.textComponent.alignment = TextAnchor.MiddleLeft;
             }
 
             DevConsole.InvokeOnConsoleClosed();
@@ -1384,8 +1382,7 @@ namespace Airship.DevConsole
             }
 
             // Force the input field to be focused by the event system
-            if (_focusInputField && !Application.isMobilePlatform)
-            {
+            if (_focusInputField && !Application.isMobilePlatform) {
                 EventSystem.current.SetSelectedGameObject(_inputField.gameObject);
                 _focusInputField = false;
             }
@@ -1543,6 +1540,7 @@ namespace Airship.DevConsole
             }
         }
 
+        #if !UNITY_SERVER
         private void OnGUI()
         {
             if (!ConsoleIsEnabled)
@@ -1664,6 +1662,7 @@ namespace Airship.DevConsole
                 GUI.contentColor = oldContentColour;
             }
         }
+        #endif
 
         private void OnDestroy()
         {

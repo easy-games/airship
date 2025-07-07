@@ -62,7 +62,17 @@ public class MaterialColorURP : MonoBehaviour {
 
     // Called when the color is changed in the inspector
     private void OnValidate() {
-        DoUpdate();
+        #if UNITY_EDITOR
+                if (Application.isPlaying) {
+                    DoUpdate();
+                } else {
+                    EditorApplication.delayCall += () => {
+                        if (this != null) DoUpdate();
+                    };
+                }
+        #else
+            DoUpdate();
+        #endif
     }
 
     private void OnDestroy() {

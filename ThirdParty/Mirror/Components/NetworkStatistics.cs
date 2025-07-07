@@ -52,31 +52,36 @@ namespace Mirror
 
         // NetworkManager sets Transport.active in Awake().
         // so let's hook into it in Start().
-        void Start()
-        {
+        private void Start() {
+            if (NetworkClient.isConnected) {
+                this.SetupTransportEvents();
+            }
+            NetworkManager.onClientSetup += this.SetupTransportEvents;
+        }
+
+        private void SetupTransportEvents() {
             // find available transport
             Transport transport = Transport.active;
-            if (transport != null)
-            {
+            if (transport) {
                 transport.OnClientDataReceived += OnClientReceive;
                 transport.OnClientDataSent += OnClientSend;
                 transport.OnServerDataReceived += OnServerReceive;
                 transport.OnServerDataSent += OnServerSend;
             }
-            else Debug.LogError($"NetworkStatistics: no available or active Transport found on this platform: {Application.platform}");
         }
 
         void OnDestroy()
         {
             // remove transport hooks
             Transport transport = Transport.active;
-            if (transport != null)
-            {
+            if (transport != null) {
                 transport.OnClientDataReceived -= OnClientReceive;
                 transport.OnClientDataSent -= OnClientSend;
                 transport.OnServerDataReceived -= OnServerReceive;
                 transport.OnServerDataSent -= OnServerSend;
             }
+
+            NetworkManager.onClientSetup -= this.SetupTransportEvents;
         }
 
         void OnClientReceive(ArraySegment<byte> data, int channelId)

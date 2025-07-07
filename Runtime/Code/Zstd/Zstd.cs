@@ -31,23 +31,8 @@ namespace Code.Zstd {
 		/// Compress the data. The compression level can be between <c>Zstd.MinCompressionLevel</c>
 		/// and <c>Zstd.MaxCompressionLevel</c>. Most use-cases should use <c>Zstd.DefaultCompressionLevel</c>.
 		/// </summary>
-		public byte[] Compress(byte[] data, int compressionLevel) {
-			return Compress(new ReadOnlySpan<byte>(data), compressionLevel);
-		}
-		
-		/// <summary>
-		/// Compress the data. The compression level can be between <c>Zstd.MinCompressionLevel</c>
-		/// and <c>Zstd.MaxCompressionLevel</c>. Most use-cases should use <c>Zstd.DefaultCompressionLevel</c>.
-		/// </summary>
 		public byte[] Compress(byte[] data, int start, int length, int compressionLevel) {
 			return Compress(new ReadOnlySpan<byte>(data, start, length), compressionLevel);
-		}
-		
-		/// <summary>
-		/// Compress the data using the default compression level.
-		/// </summary>
-		public byte[] Compress(byte[] data) {
-			return Compress(new ReadOnlySpan<byte>(data));
 		}
 		
 		/// <summary>
@@ -71,12 +56,24 @@ namespace Code.Zstd {
 		public byte[] Compress(ReadOnlySpan<byte> data, int compressionLevel) {
 			return CompressData(data, compressionLevel, _ctx);
 		}
-		
+
 		/// <summary>
-		/// Decompress the data.
+		/// Compress the data with a destination buffer. This buffer must be the correct size. Use the
+		/// <c>Zstd.GetCompressionBound</c> method to ensure the buffer is large enough. The returned
+		/// span is a slice of the input destination buffer.
 		/// </summary>
-		public byte[] Decompress(byte[] data) {
-			return Decompress(new ReadOnlySpan<byte>(data));
+		/// <returns>The number of bytes written to the buffer.</returns>
+		public int Compress(ReadOnlySpan<byte> data, byte[] dstBuffer, int compressionLevel) {
+			return CompressWithBuffer(data, dstBuffer, compressionLevel, _ctx);
+		}
+
+		/// <summary>
+		/// Compress the data into the given destination buffer. This buffer must be the correct size.
+		/// Use the <c>Zstd.GetCompressionBound</c> method to ensure the buffer is large enough.
+		/// </summary>
+		/// <returns>The number of bytes written to the buffer.</returns>
+		public int Compress(ReadOnlySpan<byte> data, byte[] dstBuffer) {
+			return Compress(data, dstBuffer, DefaultCompressionLevel);
 		}
 		
 		/// <summary>
@@ -92,6 +89,15 @@ namespace Code.Zstd {
 		public byte[] Decompress(ReadOnlySpan<byte> data) {
 			return DecompressData(data, _ctx);
 		}
+		
+		/// <summary>
+		/// Decompress the data into the given destination buffer.
+		/// Use the <c>Zstd.GetDecompressionBound</c> method to ensure the buffer is large enough.
+		/// </summary>
+		/// <returns>The number of bytes written to the buffer.</returns>
+		public int Decompress(ReadOnlySpan<byte> data, byte[] dstBuffer) {
+			return DecompressWithBuffer(data, dstBuffer, _ctx);
+		}
 
 		public void Dispose() {
 			Dispose(true);
@@ -104,6 +110,31 @@ namespace Code.Zstd {
 
 		~Zstd() {
 			Dispose(false);
+		}
+
+		/// <summary>
+		/// Get the maximum buffer size needed for compression.
+		/// </summary>
+		public static int GetCompressionBound(ReadOnlySpan<byte> uncompressedData) {
+			var bound = ZSTD_compressBound((ulong)uncompressedData.Length);
+			if (ZSTD_isError(bound)) {
+				throw new ZstdException(bound);
+			}
+			return (int)bound;
+		}
+
+		/// <summary>
+		/// Get the maximum buffer size needed for decompression.
+		/// </summary>
+		public static unsafe int GetDecompressionBound(ReadOnlySpan<byte> compressedData) {
+			ulong rSize;
+			fixed (byte* src = compressedData) {
+				rSize = ZSTD_getFrameContentSize(new IntPtr(src), (ulong)compressedData.Length);
+			}
+			if (ZSTD_isError(rSize)) {
+				throw new ZstdException(rSize);
+			}
+			return (int)rSize;
 		}
 
 		/// <summary>
@@ -181,6 +212,23 @@ namespace Code.Zstd {
 			return decompressedData;
 		}
 
+		private static unsafe int DecompressWithBuffer(ReadOnlySpan<byte> data, byte[] dstBuffer, ZstdContext ctx) {
+			ulong decompressedSize;
+			fixed (byte* src = data) {
+				fixed (byte* dst = dstBuffer) {
+					if (ctx != null) {
+						decompressedSize = ZSTD_decompressDCtx(ctx.Dctx, new IntPtr(dst), (ulong)dstBuffer.Length, new IntPtr(src), (ulong)data.Length);
+					} else {
+						decompressedSize = ZSTD_decompress(new IntPtr(dst), (ulong)dstBuffer.Length, new IntPtr(src), (ulong)data.Length);
+					}
+				}
+			}
+			if (ZSTD_isError(decompressedSize)) {
+				throw new ZstdException(decompressedSize);
+			}
+			return (int)decompressedSize;
+		}
+
 		private static unsafe byte[] CompressWithStack(ReadOnlySpan<byte> data, ulong bound, int compressionLevel, ZstdContext ctx) {
 			var dst = stackalloc byte[(int)bound];
 			ulong compressedSize;
@@ -220,6 +268,24 @@ namespace Code.Zstd {
 			}
 			Array.Resize(ref dstBuf, (int)compressedSize);
 			return dstBuf;
+		}
+	
+		private static unsafe int CompressWithBuffer(ReadOnlySpan<byte> data, byte[] dstBuffer, int compressionLevel, ZstdContext ctx) {
+			ulong compressedSize;
+			fixed (byte* src = data) {
+				fixed (byte* dst = dstBuffer) {
+					if (ctx != null) {
+						compressedSize = ZSTD_compressCCtx(ctx.Cctx, new IntPtr(dst), (ulong)dstBuffer.Length, new IntPtr(src), (ulong)data.Length, compressionLevel);
+					}
+					else {
+						compressedSize = ZSTD_compress(new IntPtr(dst), (ulong)dstBuffer.Length, new IntPtr(src), (ulong)data.Length, compressionLevel);
+					}
+				}
+			}
+			if (ZSTD_isError(compressedSize)) {
+				throw new ZstdException(compressedSize);
+			}
+			return (int)compressedSize;
 		}
 	}
 

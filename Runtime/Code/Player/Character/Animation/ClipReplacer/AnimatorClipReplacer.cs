@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.Profiling;
 
 
 namespace Code.Player.Character
@@ -228,38 +229,27 @@ namespace Code.Player.Character
             }
 
             // Get the current overrides from the AnimatorOverrideController
-            var currentOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
-            overrideController.GetOverrides(currentOverrides);
-
+            // var currentOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
+            // overrideController.GetOverrides(currentOverrides);
+            
+            Profiler.BeginSample("ReplaceClips");
             // Create a new list to store the restored overrides
-            var restoredOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(currentOverrides);
-
-            // Restore only the clips configured in clipReplacements
-            foreach (var replacement in clipReplacements)
-            {
-                var baseClipName = replacement.baseClipName;
-                var originalOverride = originalOverrides.FirstOrDefault(o => o.Key.name == baseClipName);
-
-                if (originalOverride.Key != null)
-                {
-                    // Replace the current clip with the original
-                    for (int i = 0; i < restoredOverrides.Count; i++)
-                    {
-                        if (restoredOverrides[i].Key.name == baseClipName)
-                        {
-                            restoredOverrides[i] = originalOverride;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning($"Original clip for {baseClipName} not found in saved overrides.");
+            var restoredOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(clipReplacements.Count);
+            var replacementNames = new HashSet<string>(clipReplacements.Count);
+            foreach (var replacement in clipReplacements) {
+                replacementNames.Add(replacement.baseClipName);
+            }
+            foreach (var original in originalOverrides) {
+                if (replacementNames.Contains(original.Key.name)) {
+                    restoredOverrides.Add(original);
                 }
             }
+            Profiler.EndSample();
 
             // Apply the restored overrides to the AnimatorOverrideController
+            Profiler.BeginSample("ApplyOverrides");
             overrideController.ApplyOverrides(restoredOverrides);
+            Profiler.EndSample();
 
             if (!Application.isPlaying)
             {

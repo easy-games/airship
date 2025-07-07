@@ -22,8 +22,8 @@ public static class LuauPlugin {
 	public delegate void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen);
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
-	public delegate void ToggleProfilerCallback(int componentId, IntPtr str, int strLen);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
+	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len); 
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
@@ -62,8 +62,8 @@ public static class LuauPlugin {
 		public RequirePathCallback requirePathCallback;
 		public ConstructorCallback constructorCallback;
 		public ToStringCallback toStringCallback;
-		public ToggleProfilerCallback toggleProfilerCallback;
 		public IsObjectDestroyedCallback isObjectDestroyedCallback;
+		public GetUnityObjectName getUnityObjectNameCallback;
 		
 		public IntPtr staticList;
 		public int staticCount;
@@ -295,10 +295,12 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps);
-	public static void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props) {
+	private static extern unsafe IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto* props, int nProps);
+	public static unsafe void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, Span<LuauMetadataPropertyMarshalDto> props) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length));
+		fixed (LuauMetadataPropertyMarshalDto* ptr = &MemoryMarshal.GetReference(props)) {
+			ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, ptr, props.Length));
+		}
 	}
 	
 #if UNITY_IPHONE
@@ -472,21 +474,20 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr CreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
-	public static IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
+	private static extern unsafe IntPtr CreateThread(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
+	public static unsafe IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
 		
-		var scriptBytecodeHandle = GCHandle.Alloc(scriptBytecode, GCHandleType.Pinned);
-		var scriptBytecodePtr = scriptBytecodeHandle.AddrOfPinnedObject();
-		
 		var filenamePtr = Marshal.StringToCoTaskMemUTF8(filename);
 		var filenameLength = Encoding.UTF8.GetByteCount(filename);
-		
-		var returnValue = CreateThread(context, scriptBytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+
+		IntPtr returnValue;
+		fixed (byte* bytecodePtr = scriptBytecode) {
+			returnValue = CreateThread(context, bytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+		}
 		
 		Marshal.FreeCoTaskMem(filenamePtr);
-		scriptBytecodeHandle.Free();
 		
         EndExecutionCheck();
         
@@ -534,21 +535,27 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr SetMutableGlobals(IntPtr strings, IntPtr stringLengths, int numStrings);
+	private static extern unsafe IntPtr SetMutableGlobals(IntPtr* strings, IntPtr stringLengths, int numStrings);
 	public static unsafe void LuauSetMutableGlobals(string[] mutableGlobals) {
-		var strings = stackalloc IntPtr[mutableGlobals.Length];
+		Span<IntPtr> strings = stackalloc IntPtr[mutableGlobals.Length];
 		var lengths = stackalloc int[mutableGlobals.Length];
         
 		for (var i = 0; i < mutableGlobals.Length; i++) {
 			var str = mutableGlobals[i];
-			var bytes = System.Text.Encoding.UTF8.GetBytes(str);
-			var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-			var bytesPtr = handle.AddrOfPinnedObject();
-			strings[i] = bytesPtr;
-			lengths[i] = bytes.Length;
+			var strPtr = Marshal.StringToCoTaskMemUTF8(str);
+			var len = Encoding.UTF8.GetByteCount(str);
+			strings[i] = strPtr;
+			lengths[i] = len;
 		}
-		
-		var res = SetMutableGlobals(new IntPtr(strings), new IntPtr(lengths), mutableGlobals.Length);
+
+		IntPtr res;
+		fixed (IntPtr* stringsPtr = &MemoryMarshal.GetReference(strings)) {
+			res = SetMutableGlobals(stringsPtr, new IntPtr(lengths), mutableGlobals.Length);
+		}
+
+		foreach (var strPtr in strings) {
+			Marshal.FreeCoTaskMem(strPtr);
+		}
 		
 		ThrowIfNotNullPtr(res);
 	}
@@ -778,12 +785,13 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CopyTableToArray(IntPtr thread, IntPtr array, int type, int size, int idx);
-	public static void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) {
-		array = new T[size];
-		var gc = GCHandle.Alloc(array, GCHandleType.Pinned);
-		var arrayPtr = gc.AddrOfPinnedObject();
-		var res = CopyTableToArray(thread, arrayPtr, (int)type, size, idx);
-		gc.Free();
+	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
+		var arr = new T[size];
+		array = arr;
+		IntPtr res;
+		fixed (T* arrayPtr = arr) {
+			res = CopyTableToArray(thread, new IntPtr(arrayPtr), (int)type, size, idx);
+		}
 		ThrowIfNotNullPtr(res);
 
 		if (asList) {
@@ -798,11 +806,10 @@ public static class LuauPlugin {
 #endif
 	private static extern void PushCsError(IntPtr errPtr, int errLen);
 	public static void LuauPushCsError(string err) {
-		var bytes = System.Text.Encoding.UTF8.GetBytes(err);
-		var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-		var bytesPtr = handle.AddrOfPinnedObject();
-		PushCsError(bytesPtr, bytes.Length);
-		handle.Free();
+		var errPtr = Marshal.StringToCoTaskMemUTF8(err);
+		var errLen = Encoding.UTF8.GetByteCount(err);
+		PushCsError(errPtr, errLen);
+		Marshal.FreeCoTaskMem(errPtr);
 	}
 
 	public enum LuauGCState {

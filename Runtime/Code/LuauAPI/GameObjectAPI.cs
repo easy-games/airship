@@ -480,20 +480,30 @@ public class GameObjectAPI : BaseLuaAPIClass {
             return 0;
         }
 
-        if(methodName == "SetLayerRecursive") {
+        if (methodName == "SetLayerRecursive") {
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             int layer = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-            SetLayerRecursive(gameObject.transform, layer);
+            SetLayerRecursive(gameObject.transform, layer, ~0);
+            return 0;
+        }
+        if (methodName == "ReplaceLayerRecursive") {
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            int layer = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int replaceMask = LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            SetLayerRecursive(gameObject.transform, layer, replaceMask);
             return 0;
         }
 
         return -1;
     }
 
-    private void SetLayerRecursive(Transform transform, int layer){
-        transform.gameObject.layer = layer;
+    private void SetLayerRecursive(Transform transform, int layer, int replaceMask) {
+        if ((replaceMask & (1 << transform.gameObject.layer)) != 0) {
+            transform.gameObject.layer = layer;
+        }
+
         foreach (Transform child in transform) {
-            SetLayerRecursive(child, layer);
+            SetLayerRecursive(child, layer, replaceMask);
         }
     }
 }

@@ -245,6 +245,16 @@ namespace VoxelWorldStuff {
                     for (var z = 0; z < chunkSize; z++) {
                         var voxelData = GetLocalVoxelAt(x, y, z);
                         var blockId = VoxelWorld.VoxelDataToBlockId(voxelData);
+                        
+                        if (blockId == 0) {
+                            continue;
+                        }
+
+                        var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
+                        if (blockDefinition.definition.contextStyle != VoxelBlocks.ContextStyle.Prefab) {
+                            continue;
+                        }
+                        
                         var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
                         var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
 
@@ -275,15 +285,6 @@ namespace VoxelWorldStuff {
                                     Object.DestroyImmediate(prefabGameObject);
                                 }
                             }
-                        }
-
-                        if (blockId == 0) {
-                            continue;
-                        }
-
-                        var blockDefinition = world.voxelBlocks.GetBlockDefinitionFromBlockId(blockId);
-                        if (blockDefinition.definition.contextStyle != VoxelBlocks.ContextStyle.Prefab) {
-                            continue;
                         }
 
                         var isNetworked = false;
@@ -442,10 +443,11 @@ namespace VoxelWorldStuff {
         /// need quick collision changes that don't intend to persist.
         /// </summary>
         public void WriteTemporaryCollision(Vector3 position, bool hasCollision) {
+            var centerOfPos = Vector3Int.FloorToInt(position) + Vector3.one / 2;
             if (hasCollision) {
-                VoxelWorldCollision.MakeCollider(this, Vector3Int.FloorToInt(position) + Vector3.one / 2, Vector3Int.one);
+                VoxelWorldCollision.MakeCollider(this, centerOfPos, Vector3Int.one);
             } else {
-                VoxelWorldCollision.RemoveSingleVoxelCollision(this, position);
+                VoxelWorldCollision.RemoveSingleVoxelCollision(this, centerOfPos);
             }
         }
 
@@ -761,16 +763,13 @@ namespace VoxelWorldStuff {
                                 detailGameObjects[i].transform.localScale = Vector3.one;
                                 detailGameObjects[i].transform.localPosition = Vector3.zero;
 
+                                string name = "DetailMeshNear";
                                 if (i == 0) {
-                                    detailGameObjects[i].name = "DetailMeshNear";
-                                }
-
-                                if (i == 1) {
-                                    detailGameObjects[i].name = "DetailMeshFar";
-                                }
-
-                                if (i == 2) {
-                                    detailGameObjects[i].name = "DetailMeshVeryFar";
+                                    name = "DetailMeshNear";
+                                } else if (i == 1) {
+                                    name = "DetailMeshFar";
+                                } else  {
+                                    name = "DetailMeshVeryFar";
                                 }
 
                                 detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
@@ -778,7 +777,7 @@ namespace VoxelWorldStuff {
                                 detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
 
                                 detailMeshes[i] = new Mesh();
-                                detailMeshes[i].name = detailGameObjects[i].name;
+                                detailGameObjects[i].name = detailMeshes[i].name = name;
                                 // detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
                                 detailFilters[i].mesh = detailMeshes[i];

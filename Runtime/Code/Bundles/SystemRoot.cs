@@ -267,20 +267,24 @@ public class SystemRoot : Singleton<SystemRoot> {
 		this.networkCollectionIdCounter = 1;
 
 		// sort packages by load order
-		List<List<IEnumerator>> loadLists = new(3);
+		List<List<IEnumerator>> loadLists = new(2);
 		for (int i = 0; i < loadLists.Capacity; i++) {
 			loadLists.Add(new());
 		}
 
 		List<IEnumerator> GetLoadList(AirshipPackage package) {
-			return loadLists[0];
-			// if (package.id == "@Easy/CoreMaterials") {
+			// // Load core first because packages may depend them
+			// if (package.id == "@Easy/CoreMaterials" || package.id == "@Easy/Core") {
 			// 	return loadLists[0];
 			// }
-			// if (package.id == "@Easy/Core") {
-			// 	return loadLists[1];
-			// }
-			// return loadLists[2];
+
+			// All packages first
+			if (package.packageType == AirshipPackageType.Package) {
+				return loadLists[0];
+			}
+
+			// Games go last
+			return loadLists[1];
 		}
 
 		// Find packages to load
@@ -320,7 +324,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 #if AIRSHIP_PLAYER || true
 			try {
-				Debug.Log("Scanning network prefabs...");
+				// Debug.Log("Scanning network prefabs...");
 				Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
 				int i = 1;
 				foreach (var pair in NetworkClient.prefabs) {
@@ -334,7 +338,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 #endif
 
+			Debug.Log("Loading packages...");
 			yield return this.WaitAll(loadLists[0].ToArray());
+			Debug.Log("Loading game...");
+			yield return this.WaitAll(loadLists[1].ToArray());
 			
 			foreach (var ao in this.extraBundleLoadRequests) {
 				if (!ao.isDone) {
@@ -345,7 +352,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			// Shader Variant Collections
 			if (!preWarmedCoreShaders && RunCore.IsClient()) {
-#if !UNITY_IOS && !UNITY_ANDROID && !UNITY_EDITOR
+#if !UNITY_IOS && !UNITY_ANDROID && AIRSHIP_PLAYER
 				preWarmedCoreShaders = true;
 				string[] collections = new[] {
 					"MainMenu",

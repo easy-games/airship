@@ -425,9 +425,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         AirshipEditorGUI.HorizontalLine();
-        
+
         EditorGUILayout.LabelField("Quality", EditorStyles.boldLabel);
-        world.useSimplifiedVoxels = GUILayout.Toggle(world.useSimplifiedVoxels, new GUIContent("Simplified Voxels", "If enabled quarter blocks will be rendered as default cube voxels."));
+        world.useSimplifiedVoxels =
+            GUILayout.Toggle(world.useSimplifiedVoxels,
+                new GUIContent("Simplified Voxels",
+                    "If enabled quarter blocks will be rendered as default cube voxels."));
 
         EditorGUILayout.LabelField("Editing", EditorStyles.boldLabel);
 
@@ -509,14 +512,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             world.FullWorldUpdate();
         }
     }
-    
+
     private void OnEnable() {
         SceneView.duringSceneGui += GizmoRefreshEvent;
     }
 
     private void OnDisable() {
         SceneView.duringSceneGui -= GizmoRefreshEvent;
-        
+
         CleanupHandles();
     }
 
@@ -751,7 +754,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     } else if (currentEvent.alt) {
                         var voxel = world.GetVoxelAt(lastPos);
                         world.selectedBlockIndex = VoxelWorld.VoxelDataToBlockId(voxel);
-                        ;
                     } else {
                         // Add voxel
                         var voxelPos = lastNormalPos;
@@ -880,6 +882,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 UpdateHandlePosition(world);
                 //Repaint
                 SceneView.RepaintAll();
+            }
+
+            if (currentEvent.keyCode == KeyCode.I) {
+                //Eye dropper tool
+                var blockIndex = VoxelWorld.VoxelDataToBlockId(world.GetVoxelAt(lastPos));
+                world.selectedBlockIndex = blockIndex;
             }
         }
     }

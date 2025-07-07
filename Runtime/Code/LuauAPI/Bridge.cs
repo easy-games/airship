@@ -6,6 +6,7 @@ using Airship.DevConsole;
 using Code.VoiceChat;
 using Mirror;
 using Tayx.Graphy;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
@@ -446,6 +447,10 @@ public static class Bridge {
 
 
         return scenes.ToArray();
+    }
+
+    public static float3 MakeFloat3(Vector3 v) {
+        return new float3(v.x, v.y, v.z);
     }
 
     public static void SetSkyboxMaterial(Material material) {

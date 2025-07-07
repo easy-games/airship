@@ -246,7 +246,9 @@ namespace Luau {
         /// </summary>
         public string fileRef;
         
+        #if UNITY_EDITOR
         [JsonProperty("jsdoc")][SerializeField]
+        #endif
         private LuauMetadataJsDoc jsDocs;
         public LuauMetadataJsDoc JsDoc => jsDocs;
         public string Documentation => JsDoc?.RichText;
@@ -297,7 +299,10 @@ namespace Luau {
             }
         }
         public bool HasDecorator(string modifier) {
-            return decorators.Exists((element) => element.name == modifier);
+            foreach (var dec in decorators) {
+                if (dec.name == modifier) return true;
+            }
+            return false;
         }
 
         internal bool HasSameTypesAs(LuauMetadataProperty other) {

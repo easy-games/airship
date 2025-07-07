@@ -75,8 +75,7 @@ namespace Airship.Editor {
                     }
                 }
                 
-                
-                await Task.Delay(1); // tune as needed
+                await Task.Delay(100); // tune as needed
             }
         }
 
@@ -108,6 +107,10 @@ namespace Airship.Editor {
         
         internal static void LogInfo(string message) {
             Log(TypescriptLogLevel.Information, message);
+        }
+
+        internal static void LogWarning(string message) {
+            Log(TypescriptLogLevel.Warning, message);
         }
 
         internal static void LogEvent(CompiledFileEvent compiledFileEvent) {

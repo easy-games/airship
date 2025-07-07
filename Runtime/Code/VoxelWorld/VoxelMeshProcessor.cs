@@ -100,6 +100,9 @@ namespace VoxelWorldStuff {
                 mesh.normalsCount = 0;
                 mesh.uvsCount = 0;
                 mesh.damageUvsCount = 0;
+                foreach (var (_, submesh) in mesh.subMeshes) {
+                    SubMeshPool.Release(submesh);
+                }
                 mesh.subMeshes.Clear();
         
                 _pool.Add(mesh);
@@ -208,6 +211,26 @@ namespace VoxelWorldStuff {
         public bool GetHasDetailMeshes() {
             return hasDetailMeshes;
         }
+        
+        class SubMeshPool {
+            private static readonly ConcurrentBag<SubMesh> _pool = new();
+
+            public static SubMesh Rent(int originalMaterialId) {
+                if (_pool.TryTake(out var mesh)) {
+                    mesh.srcMaterialId = originalMaterialId;
+                    return mesh;
+                }
+        
+                return new SubMesh(originalMaterialId);
+            }
+
+            public static void Release(SubMesh mesh) {
+                // Reset counts
+                mesh.triangles.Clear();
+        
+                _pool.Add(mesh);
+            }
+        }
 
         class SubMesh {
             //Todo: Less garbage?
@@ -217,7 +240,6 @@ namespace VoxelWorldStuff {
             public SubMesh(int originalMaterialId) {
                 //material = new Material(originalMaterial);
                 srcMaterialId = originalMaterialId;
-                triangles = new List<int>();
             }
         };
 
@@ -690,53 +712,126 @@ namespace VoxelWorldStuff {
             }
             else {
                 // This triple nested loop is split into different sections for cache locality
-                
+
+                var srcVoxels = chunk.readWriteVoxel.AsSpan();
+                var srcColor = chunk.color.AsSpan();
                 //Main block
-                for (int x = 0; x < chunkSize; x++) {
+                Profiler.BeginSample("MainBlock");
+                for (int z = 0; z < chunkSize; z++) {
                     for (int y = 0; y < chunkSize; y++) {
-                        for (int z = 0; z < chunkSize; z++) {
+                        for (int x = 0; x < chunkSize; x++) {
                             int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
                             readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
                             readOnlyColor[index] = chunk.GetLocalColorAt(x, y, z);
                         }
+                        int startIndex = (1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
+                        int srcIndex = y * chunkSize + z * chunkSize * chunkSize;
+                        srcVoxels.Slice(srcIndex, chunkSize).CopyTo(readOnlyVoxel.AsSpan(startIndex, chunkSize));
                     }
                 }
+                Profiler.EndSample();
 
                 //xPlane
+                Profiler.BeginSample("XPlane");
+                chunk.world.chunks.TryGetValue(VoxelWorld.WorldPosToChunkKey(chunk.bottomLeftInt.x - 1, chunk.bottomLeftInt.y,
+                    chunk.bottomLeftInt.z), out var x0Chunk);
+                chunk.world.chunks.TryGetValue(VoxelWorld.WorldPosToChunkKey(chunk.bottomLeftInt.x + chunkSize, chunk.bottomLeftInt.y,
+                    chunk.bottomLeftInt.z), out var x1Chunk);
                 for (int y = 0; y < paddedChunkSize; y++) {
                     for (int z = 0; z < paddedChunkSize; z++) {
                         int x0 = 0;
                         int x1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyColor[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyColor[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+
+                        var x0Index = x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+                        var x1Index = x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+                        
+                        if (y > 0 && z > 0 && y < paddedChunkSize - 1 && z < paddedChunkSize - 1) {
+                            if (x0Chunk != null) {
+                                readOnlyVoxel[x0Index] = x0Chunk.readWriteVoxel[chunkSize - 1 + (y - 1) * chunkSize + (z - 1) * chunkSize * chunkSize];
+                                readOnlyColor[x0Index] = x0Chunk.GetLocalColorAt(chunkSize - 1, y - 1, z - 1);
+                            }
+
+                            if (x1Chunk != null) {
+                                readOnlyVoxel[x1Index] =
+                                    x1Chunk.readWriteVoxel[(y - 1) * chunkSize + (z - 1) * chunkSize * chunkSize];
+                                readOnlyColor[x1Index] = x1Chunk.GetLocalColorAt(0, y - 1, z - 1);
+                            }
+                        } else {
+                            var x0WorldPos = new Vector3Int(chunk.bottomLeftInt.x + x0 - 1,
+                                chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1);
+                            var x1WorldPos = new Vector3Int(chunk.bottomLeftInt.x + x1 - 1,
+                                chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1);
+                            
+                            readOnlyVoxel[x0Index] =
+                                chunk.world.ReadVoxelAtInternal(x0WorldPos);
+                            readOnlyVoxel[x1Index] =
+                                chunk.world.ReadVoxelAtInternal(x1WorldPos);
+                            readOnlyColor[x0Index] = chunk.world.GetVoxelColorAt(x0WorldPos);
+                            readOnlyColor[x1Index] = chunk.world.GetVoxelColorAt(x1WorldPos);
+                        }
                     }
                 }
+                Profiler.EndSample();
 
                 //yPlane, skipping the voxels already filled by x plane
+                Profiler.BeginSample("YPlane");
+                chunk.world.chunks.TryGetValue(VoxelWorld.WorldPosToChunkKey(chunk.bottomLeftInt.x, chunk.bottomLeftInt.y - 1,
+                    chunk.bottomLeftInt.z), out var y0Chunk);
+                chunk.world.chunks.TryGetValue(VoxelWorld.WorldPosToChunkKey(chunk.bottomLeftInt.x, chunk.bottomLeftInt.y + chunkSize,
+                    chunk.bottomLeftInt.z), out var y1Chunk);
                 for (int x = 1; x < paddedChunkSize - 1; x++) {
                     for (int z = 0; z < paddedChunkSize; z++) {
                         int y0 = 0;
                         int y1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyColor[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyColor[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+
+                        var y0Index = x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+                        var y1Index = x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+                        
+                        if (z > 0 && z < paddedChunkSize - 1) {
+                            if (y0Chunk != null) {
+                                readOnlyVoxel[y0Index] = y0Chunk.readWriteVoxel[x - 1 + (chunkSize - 1) * chunkSize + (z - 1) * chunkSize * chunkSize];
+                                readOnlyColor[y0Index] = y0Chunk.GetLocalColorAt(x - 1, chunkSize - 1, z - 1);
+                            }
+                            if (y1Chunk != null) {
+                                readOnlyVoxel[y1Index] = y1Chunk.readWriteVoxel[x - 1 + (z - 1) * chunkSize * chunkSize];
+                                readOnlyColor[y1Index] = y1Chunk.GetLocalColorAt(x - 1, 0, z - 1);
+                            }
+                        } else {
+                            readOnlyVoxel[y0Index] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
+                            readOnlyVoxel[y1Index] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                            readOnlyColor[y0Index] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
+                            readOnlyColor[y1Index] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                        }
                     }
                 }
+                Profiler.EndSample();
 
                 //Zplane, skipping the voxels already filled by x plane and y plane
-                for (int x = 1; x < paddedChunkSize - 1; x++) {
-                    for (int y = 1; y < paddedChunkSize - 1; y++) {
-                        int z0 = 0;
-                        int z1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
-                        readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
-                        readOnlyColor[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
-                        readOnlyColor[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
+                Profiler.BeginSample("ZPlane");
+                chunk.world.chunks.TryGetValue(VoxelWorld.WorldPosToChunkKey(chunk.bottomLeftInt.x, chunk.bottomLeftInt.y,
+                    chunk.bottomLeftInt.z - 1), out var z0Chunk);
+                chunk.world.chunks.TryGetValue(VoxelWorld.WorldPosToChunkKey(chunk.bottomLeftInt.x, chunk.bottomLeftInt.y,
+                    chunk.bottomLeftInt.z + chunkSize), out var z1Chunk);
+                for (int y = 1; y < paddedChunkSize - 1; y++) {
+                    int z0 = 0;
+                    int z1 = paddedChunkSize - 1;
+                    
+                    var z0StartIndex = 1 + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize;
+                    var z1StartIndex = 1 + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize;
+                    
+                    z0Chunk?.readWriteVoxel.AsSpan((y - 1) * chunkSize + (chunkSize - 1) * chunkSize * chunkSize, chunkSize).CopyTo(readOnlyVoxel.AsSpan(z0StartIndex, chunkSize));
+                    z1Chunk?.readWriteVoxel.AsSpan((y - 1) * chunkSize, chunkSize).CopyTo(readOnlyVoxel.AsSpan(z1StartIndex, chunkSize));
+
+                    for (int x = 1; x < paddedChunkSize - 1; x++) {
+                        if (z0Chunk != null) {
+                            readOnlyColor[z0StartIndex + x] = z0Chunk.GetLocalColorAt(x - 1, y - 1, chunkSize - 1);
+                        }
+                        if (z1Chunk != null) {
+                            readOnlyColor[z1StartIndex + x] = z1Chunk.GetLocalColorAt(x - 1, y - 1, 0);
+                        }
                     }
                 }
+                Profiler.EndSample();
 
 #pragma warning restore CS0162
 
@@ -746,7 +841,9 @@ namespace VoxelWorldStuff {
                 }
 
                 //Copy the damage values
+                Profiler.BeginSample("DamageMapCopy");
                 readOnlyDamageMap = new(chunk.damageMap);
+                Profiler.EndSample();
 
 
                 key = chunk.GetKey();
@@ -816,7 +913,7 @@ namespace VoxelWorldStuff {
                 target.subMeshes.TryGetValue(block.meshMaterialInstanceId, out SubMesh subMesh);
                 
                 if (subMesh == null) {
-                    subMesh = new SubMesh(block.meshMaterialInstanceId);
+                    subMesh = SubMeshPool.Rent(block.meshMaterialInstanceId);
                     target.subMeshes[block.meshMaterialInstanceId] = subMesh;
                 }
                 targetSubMesh = subMesh;
@@ -835,7 +932,7 @@ namespace VoxelWorldStuff {
                     }               
                     target.subMeshes.TryGetValue(surface.meshMaterialId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(surface.meshMaterialId);
+                        subMesh = SubMeshPool.Rent(surface.meshMaterialId);
                         target.subMeshes[surface.meshMaterialId] = subMesh;
                     }
                     targetSubMesh = subMesh;
@@ -1254,7 +1351,7 @@ namespace VoxelWorldStuff {
                                 int faceMatId = placeBlockWithPerFaceMaterial ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
                                 faceMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
                                 if (subMesh == null) {
-                                    subMesh = new SubMesh(faceMatId);
+                                    subMesh = SubMeshPool.Rent(faceMatId);
                                     faceMeshData.subMeshes[faceMatId] = subMesh;
                                 }
 
@@ -1591,7 +1688,7 @@ namespace VoxelWorldStuff {
                     var matInstanceId = block.materialInstanceIds[faceIndex];
                     meshData.subMeshes.TryGetValue(matInstanceId, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(matInstanceId);
+                        subMesh = SubMeshPool.Rent(matInstanceId);
                         meshData.subMeshes[matInstanceId] = subMesh;
                     }
 

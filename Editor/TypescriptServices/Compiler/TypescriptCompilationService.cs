@@ -49,6 +49,7 @@ using Object = UnityEngine.Object;
             /// The compiler has crashed
             /// </summary>
             Crashed,
+            Starting
         }
         
         /// <summary>
@@ -75,9 +76,11 @@ using Object = UnityEngine.Object;
             /// </summary>
             internal static bool IsCompilingFiles { get; private set; }
             internal static bool IsImportingFiles { get; private set; }
+            internal static bool IsStartingUp { get; private set; }
             
             public static TypescriptCompilerState CompilerState {
                 get {
+                    if (IsStartingUp) return TypescriptCompilerState.Starting;
                     if (Crashed) return TypescriptCompilerState.Crashed;
                     if (IsCompilingFiles) return TypescriptCompilerState.Compiling;
                     if (IsImportingFiles) return TypescriptCompilerState.PostCompile;
@@ -233,24 +236,24 @@ using Object = UnityEngine.Object;
                     var compileFileList = CompiledFileQueue.ToArray();
                     
                     foreach (var file in compileFileList) {
-                        var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
-                        
-                        if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
-                            if (outFileHash != data.metadata.compiledHash) {
-                                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                                data.metadata.compiledHash = outFileHash;
-                                modifiedDatabase = true;
-                            }
-                        }
-                        else {
-                            var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
-                            scriptData.metadata = new TypescriptCompilerMetadata() {
-                                compiledHash = outFileHash
-                            };
+                        // var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
+                        //
+                        // if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
+                        //     if (string.IsNullOrEmpty(outFileHash) || string.IsNullOrEmpty(data.metadata.compiledHash) || outFileHash != data.metadata.compiledHash) {
+                        //         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                        //         data.metadata.compiledHash = outFileHash;
+                        //         modifiedDatabase = true;
+                        //     }
+                        // }
+                        // else {
+                        //     var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
+                        //     scriptData.metadata = new TypescriptCompilerMetadata() {
+                        //         compiledHash = outFileHash
+                        //     };
                             
                             AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                            modifiedDatabase = true;
-                        }
+                        //     modifiedDatabase = true;
+                        // }
                     }
                     
                     AssetDatabase.Refresh();
@@ -287,7 +290,6 @@ using Object = UnityEngine.Object;
             
             public static int ErrorCount => TypescriptProjectsService.Projects.Sum(project => project.ErrorCount);
 
-            [MenuItem("Airship/TypeScript/Build")]
             internal static void FullRebuild() {
                 var flags = TypeScriptCompileFlags.FullClean;
                 if (EditorIntegrationsConfig.instance.typescriptIncremental) {
@@ -297,7 +299,6 @@ using Object = UnityEngine.Object;
                 BuildTypescript(flags);
             }
             
-            [MenuItem("Airship/TypeScript/Start Watch Mode")]
             internal static void StartCompilerServices() {
                 TypescriptLogService.StartLogging();
                 StopCompilers();
@@ -325,9 +326,10 @@ using Object = UnityEngine.Object;
                 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs, nodeJsArgs));
                 TypescriptLogService.Log(TypescriptLogLevel.Information, "Started compiler services.");
+                
+                TypescriptServices.IsCompilerStoppedByUser = false;
             }
-
-            [MenuItem("Airship/TypeScript/Stop Watch Mode")]
+            
             internal static void StopCompilers() {
                 StopCompilerServices();
             }

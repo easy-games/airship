@@ -8,8 +8,11 @@
 //   fholm: netcode streams
 //   fakebyte: standard deviation for dynamic adjustment
 //   ninjakicka: math & debugging
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace Mirror
 {
@@ -27,39 +30,40 @@ namespace Mirror
 
     public static class SnapshotInterpolation
     {
-        // calculate timescale for catch-up / slow-down
-        // note that negative threshold should be <0.
-        //   caller should verify (i.e. Unity OnValidate).
-        //   improves branch prediction.
-        public static double Timescale(
-            double drift,                    // how far we are off from bufferTime
-            double catchupSpeed,             // in % [0,1]
-            double slowdownSpeed,            // in % [0,1]
-            double absoluteCatchupNegativeThreshold, // in seconds (careful, we may run out of snapshots)
-            double absoluteCatchupPositiveThreshold) // in seconds
-        {
-            // if the drift time is too large, it means we are behind more time.
-            // so we need to speed up the timescale.
-            // note the threshold should be sendInterval * catchupThreshold.
-            if (drift > absoluteCatchupPositiveThreshold)
-            {
-                // localTimeline += 0.001; // too simple, this would ping pong
-                return 1 + catchupSpeed; // n% faster
-            }
-
-            // if the drift time is too small, it means we are ahead of time.
-            // so we need to slow down the timescale.
-            // note the threshold should be sendInterval * catchupThreshold.
-            if (drift < absoluteCatchupNegativeThreshold)
-            {
-                // localTimeline -= 0.001; // too simple, this would ping pong
-                return 1 - slowdownSpeed; // n% slower
-            }
-
-            // keep constant timescale while within threshold.
-            // this way we have perfectly smooth speed most of the time.
-            return 1;
-        }
+        // // calculate timescale for catch-up / slow-down
+        // // note that negative threshold should be <0.
+        // //   caller should verify (i.e. Unity OnValidate).
+        // //   improves branch prediction.
+        // public static double Timescale(
+        //     double drift,                    // how far we are off from bufferTime
+        //     double catchupSpeed,             // in % [0,1]
+        //     double slowdownSpeed,            // in % [0,1]
+        //     double absoluteCatchupNegativeThreshold, // in seconds (careful, we may run out of snapshots)
+        //     double absoluteCatchupPositiveThreshold) // in seconds
+        // {
+        //     // if the drift time is too large, it means we are behind more time.
+        //     // so we need to speed up the timescale.
+        //     // note the threshold should be sendInterval * catchupThreshold.
+        //     if (drift > absoluteCatchupPositiveThreshold)
+        //     {
+        //         // localTimeline += 0.001; // too simple, this would ping pong
+        //         return 1 + catchupSpeed; // n% faster
+        //     }
+        //
+        //     // if the drift time is too small, it means we are ahead of time.
+        //     // so we need to slow down the timescale.
+        //     // note the threshold should be sendInterval * catchupThreshold.
+        //     if (drift < absoluteCatchupNegativeThreshold)
+        //     {
+        //         // localTimeline -= 0.001; // too simple, this would ping pong
+        //         return 1 - slowdownSpeed; // n% slower
+        //     }
+        //
+        //     // keep constant timescale while within threshold.
+        //     // this way we have perfectly smooth speed most of the time.
+        //     return 1;
+        // }
+        // THIS WAS REPLACED WITH timescale = 1 + (drift / sendInterval);
 
         // calculate dynamic buffer time adjustment
         public static double DynamicAdjustment(
@@ -251,10 +255,25 @@ namespace Mirror
                 // this way we have 'default' speed most of the time(!).
                 // and only catch up / slow down for a little bit occasionally.
                 // a consistent multiplier would never be exactly 1.0.
-                localTimescale = Timescale(drift, catchupSpeed, slowdownSpeed, absoluteNegativeThreshold, absolutePositiveThreshold);
+                // EASY MOD:
+                // replaced this: Timescale(drift, catchupSpeed, slowdownSpeed, absoluteNegativeThreshold, absolutePositiveThreshold);
+                // I'm not entirely sure why Mirror went for the above algorithm for timescale. It seems to me that you would always
+                // want to keep the diff relatively close to 0, for something like lag comp it makes a huge difference since it's up
+                // to one send interval off with the default mirror settings. I would guess the main effect here is that clock
+                // corrections occur over 1 send interval worth of time, but that could easily be scaled up if it looks bad. If
+                // anything I feel like observed objects look smoother using this method...
+                // only adjust timescale if we are more than 3ms off. Arbitrary, we just don't want floating point issues or overshooting.
+                if (Math.Abs(drift) <= 0.003) {
+                    localTimescale = 1;
+                    return;
+                }
+                
+                // We allow much faster slowdowns because it's much worse to be ahead than behind. Being ahead will cause lots of
+                // glitchy looking stuff since we won't have snapshots to render yet.
+                localTimescale = Math.Clamp(Math.Max(1 + 0.5 * (drift / bufferTime), 0), 0.05f, 1.05f);
 
                 // debug logging
-                // UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3}");
+                // UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3} timeDiff={timeDiff}");
             }
         }
 

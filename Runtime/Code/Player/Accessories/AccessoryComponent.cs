@@ -54,12 +54,15 @@ namespace Code.Player.Accessories {
         }
 
         void Start() {
-            var renderers = this.gameObject.GetComponentsInChildren<MeshRenderer>();
-            foreach (var r in renderers) {
-                if (!r.sharedMaterial.shader.isSupported) {
-                    r.sharedMaterial.shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (RunCore.IsClient() || Application.isEditor) {
+                var renderers = this.gameObject.GetComponentsInChildren<MeshRenderer>();
+                foreach (var r in renderers) {
+                    if (!r.sharedMaterial.shader.isSupported) {
+                        r.sharedMaterial.shader = Shader.Find("Universal Render Pipeline/Lit");
+                    }
                 }
             }
+            
             // foreach (var r in renderers) {
             //     foreach (var mat in r.sharedMaterials) {
             //         if (!mat.shader.isSupported) {

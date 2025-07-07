@@ -63,6 +63,8 @@ namespace Mirror
 
             // buffer limit should be at least multiplier to have enough in there
             snapshotBufferSizeLimit = Mathf.Max((int)NetworkClient.snapshotSettings.bufferTimeMultiplier, snapshotBufferSizeLimit);
+            // EASY MOD: Added this because it seems like it's missing. Dynamic adjustment defaults to on and would overwrite this value, but would be a const of 2 if dynamic isn't on
+            bufferTimeMultiplier = NetworkClient.snapshotSettings.bufferTimeMultiplier;
         }
 
         public void OnTimeSnapshot(TimeSnapshot snapshot)
@@ -71,17 +73,18 @@ namespace Mirror
             if (snapshots.Count >= snapshotBufferSizeLimit) return;
 
             // (optional) dynamic adjustment
-            if (NetworkClient.snapshotSettings.dynamicAdjustment)
-            {
-                // set bufferTime on the fly.
-                // shows in inspector for easier debugging :)
-                bufferTimeMultiplier = SnapshotInterpolation.DynamicAdjustment(
-                    NetworkServer.sendInterval,
-                    deliveryTimeEma.StandardDeviation,
-                    NetworkClient.snapshotSettings.dynamicAdjustmentTolerance
-                );
-                // Debug.Log($"[Server]: {name} delivery std={serverDeliveryTimeEma.StandardDeviation} bufferTimeMult := {bufferTimeMultiplier} ");
-            }
+            // Disabled in Airship. Though server buffering doesn't break lag compensation, different behavior on server and client is an easy way to create bugs :)
+            // if (NetworkClient.snapshotSettings.dynamicAdjustment)
+            // {
+            //     // set bufferTime on the fly.
+            //     // shows in inspector for easier debugging :)
+            //     bufferTimeMultiplier = SnapshotInterpolation.DynamicAdjustment(
+            //         NetworkServer.sendInterval,
+            //         deliveryTimeEma.StandardDeviation,
+            //         NetworkClient.snapshotSettings.dynamicAdjustmentTolerance
+            //     );
+            //     // Debug.Log($"[Server]: {name} delivery std={serverDeliveryTimeEma.StandardDeviation} bufferTimeMult := {bufferTimeMultiplier} ");
+            // }
 
             // insert into the server buffer & initialize / adjust / catchup
             SnapshotInterpolation.InsertAndAdjust(

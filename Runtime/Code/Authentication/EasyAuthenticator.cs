@@ -174,14 +174,16 @@ namespace Code.Authentication {
                     tcs.SetResult(new UserData() {
                         uid = InternalHttpManager.editorUserId,
                         username = loginMessage.editorUsername,
-                        profileImageId = loginMessage.editorProfileImageId
+                        orgRoleName = "Dev",
+                        profileImageId = loginMessage.editorProfileImageId,
                     });
                     return await tcs.Task;
                 }
                 tcs.SetResult(new UserData() {
                     uid = this.connectionCounter + "",
                     username = "Player" + this.connectionCounter,
-                    profileImageId = "",
+                    orgRoleName = "Dev",
+                    profileImageId = string.Empty,
                     fullTransferPacket = "{}"
                 });
                 return await tcs.Task;
@@ -203,13 +205,14 @@ namespace Code.Authentication {
                 }
 
             })).Then((res) => {
-                // print($"[Transfer Packet] userIdToken: {userIdToken}, packet response: " + res.Text);
+                // print($"[Transfer Packet] {res.Text}");
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 tcs.SetResult(new UserData() {
                     uid = transferData.user.uid,
                     username = transferData.user.username,
                     profileImageId = transferData.user.profileImageId,
+                    orgRoleName = transferData.orgRoleName,
                     fullTransferPacket = fullTransferPacket
                 });
             }).Catch((err) => {

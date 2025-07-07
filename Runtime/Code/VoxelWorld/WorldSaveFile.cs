@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
@@ -98,10 +99,10 @@ public class WorldSaveFile : ScriptableObject {
     private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world) {
         blockIdToScopeName.Clear();
         var blockMap = world.voxelBlocks.loadedBlocks;
-        foreach (var block in blockMap) {
+        for (ushort id = 0; id < blockMap.Count; id++) {
             blockIdToScopeName.Add(new BlockIdToScopedName() {
-                id = block.Key,
-                name = block.Value.blockTypeId,
+                id = id,
+                name = blockMap[id].blockTypeId,
             });
         }
     }
@@ -119,13 +120,13 @@ public class WorldSaveFile : ScriptableObject {
 
         blockIdToScopeName.Clear();
         var blockMap = world.voxelBlocks.loadedBlocks;
-        foreach (var block in blockMap) {
+        for (ushort id = 0; id < blockMap.Count; id++) {
+            var block = blockMap[id];
 
-            if (UsedIds.Contains(block.Value.blockId)==true) {
-
+            if (UsedIds.Contains(id)) {
                 blockIdToScopeName.Add(new BlockIdToScopedName() {
-                    id = block.Key,
-                    name = block.Value.blockTypeId,
+                    id = id,
+                    name = block.blockTypeId,
                 });
             }
         }

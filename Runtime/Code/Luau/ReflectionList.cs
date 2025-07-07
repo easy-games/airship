@@ -4,6 +4,7 @@ using System.Reflection;
 using ElRaccoone.Tweens;
 using Mirror;
 using TMPro;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
@@ -14,6 +15,7 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using UnityEngine.Splines;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
@@ -184,6 +186,15 @@ namespace Luau {
             [typeof(MeshFilter)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
             [typeof(DecalProjector)] = LuauContextAll,
+            //Spline
+            [typeof(Spline)] = LuauContextAll,
+            [typeof(BezierCurve)] = LuauContextAll,
+            [typeof(CurveUtility)] = LuauContextAll,
+            [typeof(SplineUtility)] = LuauContextAll,
+            [typeof(BezierKnot)] = LuauContextAll,
+            [typeof(float3)] = LuauContextAll,
+            [typeof(SplineAnimate)] = LuauContextAll,
+            [typeof(SplineContainer)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
@@ -224,11 +235,16 @@ namespace Luau {
             ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
         };
 
+        private static readonly HashSet<string> SkipNamespaces = new() {
+            "UnityEditorInternal",
+        };
+
         public static Dictionary<Type, LuauContext> allowedTypesInternal;
         private static Dictionary<MethodInfo, LuauContext> _allowedMethodInfos;
         
         private static Dictionary<string, Type> _stringToTypeCache;
         private static Dictionary<Assembly, List<string>> _assemblyNamespaces;
+        private static Dictionary<Assembly, List<string>> _assemblyNamespacesUsed;
 
         /// <summary>
         /// Add a type to the reflection list with the given Luau context mask.
@@ -313,15 +329,37 @@ namespace Luau {
                 return t;
             }
             
-            foreach (var (assembly, namespaces) in _assemblyNamespaces) {
+            foreach (var (assembly, namespaces) in _assemblyNamespacesUsed) {
                 var type = assembly.GetType(typeStr);
                 if (type != null) {
                     return type;
                 }
                 
                 foreach (var ns in namespaces) {
+                    if (SkipNamespaces.Contains(ns)) continue;
                     type = assembly.GetType(ns + "." + typeStr);
                     if (type != null) {
+                        return type;
+                    }
+                }
+            }
+            
+            foreach (var (assembly, namespaces) in _assemblyNamespaces) {
+                if (_assemblyNamespacesUsed.ContainsKey(assembly)) {
+                    continue;
+                }
+                
+                var type = assembly.GetType(typeStr);
+                if (type != null) {
+                    _assemblyNamespacesUsed.Add(assembly, namespaces);
+                    return type;
+                }
+                
+                foreach (var ns in namespaces) {
+                    if (SkipNamespaces.Contains(ns)) continue;
+                    type = assembly.GetType(ns + "." + typeStr);
+                    if (type != null) {
+                        _assemblyNamespacesUsed.Add(assembly, namespaces);
                         return type;
                     }
                 }
@@ -338,6 +376,7 @@ namespace Luau {
 
             // Collect all namespaces per assembly:
             _assemblyNamespaces = new Dictionary<Assembly, List<string>>();
+            _assemblyNamespacesUsed = new Dictionary<Assembly, List<string>>();
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
                 var namespaces = new List<string>();
                 var nsSet = new HashSet<string>();

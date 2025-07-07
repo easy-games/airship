@@ -32,7 +32,11 @@ namespace Mirror
         // a component sends with client.interval but interpolates with
         // server.interval, etc.
         public static int sendRate => NetworkServer.sendRate;
-        public static float sendInterval => sendRate < int.MaxValue ? 1f / sendRate : 0; // for 30 Hz, that's 33ms
+        // EASYMOD: When the send interval is higher than the tickrate, it breaks a lot of assumptions about availability of new
+        // position data during snapshot interpolation. We lower the send rate to match the tick rate if our timescale is very low. We don't
+        // ever need to raise send rate since having a higher tick rate than send rate is very normal (and a common performance optimization)
+        // also changed in NetworkServer
+        public static float sendInterval => sendRate < int.MaxValue ? Math.Max(1f / sendRate, Time.fixedUnscaledDeltaTime) : 0; // for 30 Hz, that's 33ms
         static double lastSendTime;
 
         // For security, it is recommended to disconnect a player if a networked
@@ -1045,7 +1049,9 @@ namespace Mirror
         // the players object for example.
         public static bool Ready()
         {
-            // Debug.Log($"NetworkClient.Ready() called with active scene: " + SceneManager.GetActiveScene().name);
+            #if AIRSHIP_PLAYER
+            Debug.Log($"[Airship] NetworkClient.Ready() called with active scene: " + SceneManager.GetActiveScene().name);
+            #endif
             if (ready)
             {
                 Debug.LogError("NetworkClient is already ready. It shouldn't be called twice.");

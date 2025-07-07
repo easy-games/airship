@@ -2,6 +2,8 @@ using System;
 using Assets.Luau;
 using Code.Network.StateSystem;
 using Code.Network.StateSystem.Structures;
+using Code.Util;
+using Force.Crc32;
 using Mirror;
 using UnityEngine;
 
@@ -27,13 +29,16 @@ namespace Code.Player.Character.MovementSystems.Character
         public float speedModifier = 1; // Not used yet
         public byte jumpCount;
         public CharacterState state = CharacterState.Idle;
-        public float timeSinceBecameGrounded;
-        public float timeSinceWasGrounded;
-        public float timeSinceJump;
+        // > 0 means it is possible to jump. Value is the number of ticks they have left until they can no longer jump. byte.MaxValue when grounded.
+        public byte canJump;
     
         public BinaryBlob customData;
 
-        public override bool Compare<TSystem, TState, TInput>(NetworkedStateSystem<TSystem, TState, TInput> system, TState snapshot)
+        // Cached for reuse. This assumes the fields on the snapshot will never change. (Which should be the case)
+        // Cloning will not clone this field, so you can safely clone then modify and existing snapshot and regenerate the crc32
+        private uint _crc32;
+        
+        public override bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
         {
             // TODO: could probably be optimized?
             if (system.GetType() != typeof(CharacterMovement))
@@ -50,36 +55,71 @@ namespace Code.Player.Character.MovementSystems.Character
 
             string message = "";
             
-            if (this.lastProcessedCommand != other.lastProcessedCommand)
+            // We do not compare time since it does not affect local client simulation
+            var vectorTolerance = 0.01 * 0.01; // sqr since we use sqr magnitude
+            var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
+            var positionEqual = (this.position - other.position).sqrMagnitude < vectorTolerance;
+            var velocityEqual =  (this.velocity - other.velocity).sqrMagnitude < vectorTolerance;
+            var currentSpeedEqual = NetworkSerializationUtil.CompressToShort(this.currentSpeed) == NetworkSerializationUtil.CompressToShort(other.currentSpeed);
+            var speedModifierEqual = NetworkSerializationUtil.CompressToShort(this.speedModifier) == NetworkSerializationUtil.CompressToShort(other.speedModifier);
+            var inputDisabledEqual = inputDisabled == other.inputDisabled;
+            var isFlyingEqual = isFlying == other.isFlying;
+            var isSprintingEqual = isSprinting == other.isSprinting;
+            var jumpCountEqual = jumpCount == other.jumpCount;
+            var airborneFromImpulseEqual = airborneFromImpulse == other.airborneFromImpulse;
+            var alreadyJumpedEqual = alreadyJumped == other.alreadyJumped;
+            var isCrouchingEqual = isCrouching == other.isCrouching;
+            var prevStepUpEqual = prevStepUp == other.prevStepUp;
+            var isGroundedEqual = isGrounded == other.isGrounded;
+            var stateEqual = state == other.state;
+
+            if (!lastProcessedCommandEqual)
                 message += $"lastProcessedCommand: {this.lastProcessedCommand} != {other.lastProcessedCommand}\n";
-            if (this.position != other.position) message += $"position: {this.position} != {other.position}\n";
-            if (this.velocity != other.velocity) message += $"velocity: {this.velocity} != {other.velocity}\n";
-            if (this.currentSpeed != other.currentSpeed) message += $"currentSpeed: {this.currentSpeed} != {other.currentSpeed}\n";
-            if (this.speedModifier != other.speedModifier)
-                message += $"speedModifier: {this.speedModifier} != {other.speedModifier}";
-            if (inputDisabled != other.inputDisabled)
+            if (!positionEqual)
+                message += $"position: {this.position} != {other.position}\n";
+            if (!velocityEqual)
+                message += $"velocity: {this.velocity} != {other.velocity}\n";
+            if (!currentSpeedEqual)
+                message += $"currentSpeed: {this.currentSpeed} != {other.currentSpeed}\n";
+            if (!speedModifierEqual)
+                message += $"speedModifier: {this.speedModifier} != {other.speedModifier}\n";
+            if (!inputDisabledEqual)
                 message += $"inputDisabled: {inputDisabled} != {other.inputDisabled}\n";
-            if (isFlying != other.isFlying) message += $"isFlying: {isFlying} != {other.isFlying}\n";
-            if (isSprinting != other.isSprinting) message += $"isSprinting: {isSprinting} != {other.isSprinting}\n";
-            if (jumpCount != other.jumpCount) message += $"jumpCount: {jumpCount} != {other.jumpCount}\n";
-            if (airborneFromImpulse != other.airborneFromImpulse)
+            if (!isFlyingEqual)
+                message += $"isFlying: {isFlying} != {other.isFlying}\n";
+            if (!isSprintingEqual)
+                message += $"isSprinting: {isSprinting} != {other.isSprinting}\n";
+            if (!jumpCountEqual)
+                message += $"jumpCount: {jumpCount} != {other.jumpCount}\n";
+            if (!airborneFromImpulseEqual)
                 message += $"airborneFromImpulse: {airborneFromImpulse} != {other.airborneFromImpulse}\n";
-            if (alreadyJumped != other.alreadyJumped)
+            if (!alreadyJumpedEqual)
                 message += $"alreadyJumped: {alreadyJumped} != {other.alreadyJumped}\n";
-            if (isCrouching != other.isCrouching) message += $"prevCrouch: {isCrouching} != {other.isCrouching}\n";
-            if (prevStepUp != other.prevStepUp) message += $"prevStepUp: {prevStepUp} != {other.prevStepUp}\n";
-            if (isGrounded != other.isGrounded)
+            if (!isCrouchingEqual)
+                message += $"prevCrouch: {isCrouching} != {other.isCrouching}\n";
+            if (!prevStepUpEqual)
+                message += $"prevStepUp: {prevStepUp} != {other.prevStepUp}\n";
+            if (!isGroundedEqual)
                 message += $"prevGrounded: {isGrounded} != {other.isGrounded}\n";
-            if (state != other.state) message += $"state: {state} != {other.state}\n";
-            
-            var same =  this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
-                        this.velocity == other.velocity && this.currentSpeed == other.currentSpeed && this.speedModifier == other.speedModifier &&
-                        inputDisabled == other.inputDisabled
-                        && isFlying == other.isFlying && isSprinting == other.isSprinting && jumpCount == other.jumpCount &&
-                        airborneFromImpulse == other.airborneFromImpulse &&
-                        alreadyJumped == other.alreadyJumped
-                        && isCrouching == other.isCrouching && prevStepUp == other.prevStepUp &&
-                        isGrounded == other.isGrounded && state == other.state;
+            if (!stateEqual)
+                message += $"state: {state} != {other.state}\n";
+
+            var same =
+                lastProcessedCommandEqual &&
+                positionEqual &&
+                velocityEqual &&
+                currentSpeedEqual &&
+                speedModifierEqual &&
+                inputDisabledEqual &&
+                isFlyingEqual &&
+                isSprintingEqual &&
+                jumpCountEqual &&
+                airborneFromImpulseEqual &&
+                alreadyJumpedEqual &&
+                isCrouchingEqual &&
+                prevStepUpEqual &&
+                isGroundedEqual &&
+                stateEqual;
 
             if (same)
             {
@@ -91,21 +131,18 @@ namespace Code.Player.Character.MovementSystems.Character
             }
             
             if (message.Length != 0) Debug.Log(message.TrimEnd());
-
             return same;
         }
 
-        public void CopyFrom(CharacterSnapshotData copySnapshot)
-        {
+        public void CopyFrom(CharacterSnapshotData copySnapshot) {
             this.time = copySnapshot.time;
+            this.tick = copySnapshot.tick;
             this.lastProcessedCommand = copySnapshot.lastProcessedCommand;
             this.position = copySnapshot.position;
             this.velocity = copySnapshot.velocity;
             this.currentSpeed = copySnapshot.currentSpeed;
             this.speedModifier = copySnapshot.speedModifier;
-            this.timeSinceJump = copySnapshot.timeSinceJump;
-            this.timeSinceWasGrounded = copySnapshot.timeSinceWasGrounded;
-            this.timeSinceBecameGrounded = copySnapshot.timeSinceBecameGrounded;
+            this.canJump = copySnapshot.canJump;
             this.state = copySnapshot.state;
             this.isGrounded = copySnapshot.isGrounded;
             this.prevStepUp = copySnapshot.prevStepUp;
@@ -128,7 +165,27 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public override string ToString()
         {
-            return "Last cmd#" + this.lastProcessedCommand + " time: " + this.time + "Pos: " + this.position + " Vel: " + velocity;
+            return
+                $"Time: {time}\n" +
+                $"Tick: {tick}\n" +
+                $"LastProcessedCommand: {lastProcessedCommand}\n" +
+                $"Position: {position}\n" +
+                $"Velocity: {velocity}\n" +
+                $"CurrentSpeed: {currentSpeed}\n" +
+                $"SpeedModifier: {speedModifier} ({NetworkSerializationUtil.CompressToUshort(speedModifier)})\n" +
+                $"CanJump: {canJump}\n" +
+                $"State: {state}\n" +
+                $"IsGrounded: {isGrounded}\n" +
+                $"PrevStepUp: {prevStepUp}\n" +
+                $"IsCrouching: {isCrouching}\n" +
+                $"IsSprinting: {isSprinting}\n" +
+                $"AlreadyJumped: {alreadyJumped}\n" +
+                $"AirborneFromImpulse: {airborneFromImpulse}\n" +
+                $"JumpCount: {jumpCount}\n" +
+                $"IsFlying: {isFlying}\n" +
+                $"InputDisabled: {inputDisabled}\n" +
+                $"LookVector: {lookVector} ({NetworkSerializationUtil.CompressToShort(lookVector.x)}, {NetworkSerializationUtil.CompressToShort(lookVector.y)}, {NetworkSerializationUtil.CompressToShort(lookVector.z)})\n" +
+                $"CustomData: {(customData != null ? $"Size: {customData.dataSize}" : "null")}";
         }
 
         public override object Clone()
@@ -136,14 +193,13 @@ namespace Code.Player.Character.MovementSystems.Character
             return new CharacterSnapshotData()
             {
                 time = time,
+                tick = tick,
                 lastProcessedCommand = lastProcessedCommand,
                 position = position,
                 velocity = velocity,
                 currentSpeed = currentSpeed,
                 speedModifier = speedModifier,
-                timeSinceJump = timeSinceJump,
-                timeSinceWasGrounded = timeSinceWasGrounded,
-                timeSinceBecameGrounded = timeSinceBecameGrounded,
+                canJump = canJump,
                 state = state, 
                 isGrounded = isGrounded,
                 prevStepUp = prevStepUp,
@@ -162,37 +218,226 @@ namespace Code.Player.Character.MovementSystems.Character
                 } : default,
             };
         }
+        
+        public override StateDiff CreateDiff<TState>(TState snapshot) {
+            if (snapshot is not CharacterSnapshotData other) {
+                throw new Exception("Invalid snapshot for diff generation.");
+            }
+
+            // Determine which fields changed
+            byte oldBools = 0;
+            byte newBools = 0;
+            CharacterSnapshotDataSerializer.EncodeBools(ref oldBools, this);
+            CharacterSnapshotDataSerializer.EncodeBools(ref newBools, other);
+            bool boolsChanged = oldBools != newBools;
+            bool positionChanged = this.position != other.position;
+            bool velocityChanged = this.velocity != other.velocity;
+            bool lookVectorChanged = this.lookVector != other.lookVector;
+            bool speedChanged = this.currentSpeed != other.currentSpeed;
+            bool modifierChanged = this.speedModifier != other.speedModifier;
+            bool jumpCountChanged = this.jumpCount != other.jumpCount;
+            bool stateChanged = this.state != other.state;
+            bool canJumpChanged = this.canJump != other.canJump;
+            
+            // Set the changed mask to reflect changed fields
+            short changedMask = 0;
+            if (boolsChanged) BitUtil.SetBit(ref changedMask, 0, true);
+            if (positionChanged) BitUtil.SetBit(ref changedMask, 1, true);
+            if (velocityChanged) BitUtil.SetBit(ref changedMask, 2, true);
+            if (lookVectorChanged) BitUtil.SetBit(ref changedMask, 3, true);
+            if (speedChanged) BitUtil.SetBit(ref changedMask, 4, true);
+            if (modifierChanged) BitUtil.SetBit(ref changedMask, 5, true);
+            if (jumpCountChanged) BitUtil.SetBit(ref changedMask, 6, true);
+            if (stateChanged) BitUtil.SetBit(ref changedMask, 7, true);
+            if (canJumpChanged) BitUtil.SetBit(ref changedMask, 8, true);
+
+            // Write only changed fields
+            var writer = new NetworkWriter();
+            writer.Write(NetworkSerializationUtil.CompressToUshort(other.time - time));
+            writer.Write((ushort)(other.tick - tick)); // We should send diffs far before 65,535 ticks have passed. 255 is a little too low if messing with time scale (ticks will skip in slow timescales)
+            writer.Write((byte)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
+            writer.Write(changedMask);
+            if (boolsChanged) writer.Write(newBools);
+            if (positionChanged) writer.Write(other.position);
+            if (velocityChanged) writer.Write(other.velocity);
+            if (lookVectorChanged) {
+                writer.Write(NetworkSerializationUtil.CompressToShort(other.lookVector.x));
+                writer.Write(NetworkSerializationUtil.CompressToShort(other.lookVector.y));
+                writer.Write(NetworkSerializationUtil.CompressToShort(other.lookVector.z));
+            }
+            if (speedChanged) writer.Write(other.currentSpeed);
+            if (modifierChanged) writer.Write(NetworkSerializationUtil.CompressToUshort(other.speedModifier));
+            if (jumpCountChanged) writer.Write(other.jumpCount);
+            if (stateChanged) writer.Write((byte)other.state);
+            if (canJumpChanged) writer.Write(other.canJump);
+
+            // We are cheating here by only writing bytes at the end if we have custom data. We can do this because we know the expected size
+            // of the above bytes and we know that a diff packet will only contain one diff. If we were to pass multiple diffs in a single packet,
+            // we could not do this optimization since there would be no way to know where the next packet starts.
+            if (customData != null) {
+                var customDataDiff = customData.CreateDiff(other.customData);
+                writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
+            }
+
+            return new CharacterStateDiff {
+                baseTick = tick, // The base is the instance CreateDiff is being called on, so use our instance time value as the base time.
+                crc32 = other.ComputeCrc32(),
+                data = writer.ToArray()
+            };
+        }
+
+        /// <summary>
+        /// Attempts to apply a diff to this snapshot to generate a new snapshot. Returns null if
+        /// the diff cannot be correctly applied to this snapshot
+        /// </summary>
+        /// <param name="diff"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public override StateSnapshot ApplyDiff(StateDiff diff) {
+            if (diff is not CharacterStateDiff stateDiff) {
+                throw new Exception("Invalid snapshot for applying diff.");
+            }
+
+            if (tick != diff.baseTick) {
+                // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
+                // using this snapshot as the base.
+                Debug.LogWarning($"Snapshot diff was applied to the wrong base snapshot. Report this. Diff base {diff.baseTick} was applied to {tick}");
+                return null;
+            }
+
+            var reader = new NetworkReader(stateDiff.data);
+            var snapshot = (CharacterSnapshotData) this.Clone();
+
+            snapshot.time = time + NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
+            snapshot.tick = tick + reader.Read<ushort>();
+            snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<byte>();
+            var changedMask = reader.Read<short>();
+
+            if (BitUtil.GetBit(changedMask, 0)) {
+                byte bools = reader.Read<byte>();
+                snapshot.inputDisabled = BitUtil.GetBit(bools, 0);
+                snapshot.isFlying = BitUtil.GetBit(bools, 1);
+                snapshot.isSprinting = BitUtil.GetBit(bools, 2);
+                snapshot.airborneFromImpulse = BitUtil.GetBit(bools, 3);
+                snapshot.alreadyJumped = BitUtil.GetBit(bools, 4);
+                snapshot.isCrouching = BitUtil.GetBit(bools, 5);
+                snapshot.prevStepUp = BitUtil.GetBit(bools, 6);
+                snapshot.isGrounded = BitUtil.GetBit(bools, 7);
+            }
+            if (BitUtil.GetBit(changedMask, 1)) snapshot.position = reader.Read<Vector3>();
+            if (BitUtil.GetBit(changedMask, 2)) snapshot.velocity = reader.Read<Vector3>();
+            if (BitUtil.GetBit(changedMask, 3)) {
+                snapshot.lookVector = new Vector3(
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>())
+                );
+            }
+            if (BitUtil.GetBit(changedMask, 4)) snapshot.currentSpeed = reader.Read<float>();
+            if (BitUtil.GetBit(changedMask, 5)) snapshot.speedModifier = NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
+            if (BitUtil.GetBit(changedMask, 6)) snapshot.jumpCount = reader.Read<byte>();
+            if (BitUtil.GetBit(changedMask, 7)) snapshot.state = (CharacterState)reader.Read<byte>();
+            if (BitUtil.GetBit(changedMask, 8)) snapshot.canJump = reader.Read<byte>();
+            
+            if (reader.Remaining != 0) {
+                var cDataDiff = reader.ReadBytes(reader.Remaining);
+                snapshot.customData = customData.ApplyDiff(cDataDiff);
+            }
+            else {
+                snapshot.customData = null;
+            }
+
+            var crc32 = snapshot.ComputeCrc32();
+            if (crc32 != diff.crc32) {
+                // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
+                // using this snapshot as the base.
+                Debug.LogWarning($"Applying diff failed CRC check. This may happen due to poor network connection. Base tick: {diff.baseTick}");
+                Debug.Log(this);
+                Debug.Log(snapshot);
+                return null;
+            }
+
+            return snapshot;
+        }
+
+        public uint ComputeCrc32() {
+            if (_crc32 != 0) return _crc32;
+            
+            // We serialize to a byte array for calculating the CRC32. We use slightly more lenient compression
+            // on things like the vectors so that floating point errors don't cause the crc checks to fail.
+            var writer = new NetworkWriter();
+            byte bools = 0;
+            CharacterSnapshotDataSerializer.EncodeBools(ref bools, this);
+            writer.Write(bools);
+            if (this.customData != null) {
+                writer.WriteInt(this.customData.dataSize);
+                writer.WriteBytes(this.customData.data, 0, this.customData.data.Length);
+            }
+            else {
+                writer.WriteInt(0);
+            }
+            writer.Write(this.tick);
+            writer.Write(this.lastProcessedCommand);
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.z));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.z));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.z));
+            writer.Write(this.currentSpeed);
+            // This makes our max speed modifier 65.535 with a 0.001 precision.
+            writer.Write(NetworkSerializationUtil.CompressToUshort(this.speedModifier));
+            writer.Write(this.canJump);
+            writer.Write((byte) this.state);
+            writer.Write(this.jumpCount);
+            if (this.customData != null) writer.Write(this.customData.data);
+            var bytes = writer.ToArray();
+            
+            _crc32 = Crc32Algorithm.Compute(bytes);
+            return _crc32;
+        }
     }
 
     public static class CharacterSnapshotDataSerializer {
+        public static void EncodeBools(ref byte bools, CharacterSnapshotData value) {
+            BitUtil.SetBit(ref bools, 0, value.inputDisabled);
+            BitUtil.SetBit(ref bools, 1, value.isFlying);
+            BitUtil.SetBit(ref bools, 2, value.isSprinting);
+            BitUtil.SetBit(ref bools, 3, value.airborneFromImpulse);
+            BitUtil.SetBit(ref bools, 4, value.alreadyJumped);
+            BitUtil.SetBit(ref bools, 5, value.isCrouching);
+            BitUtil.SetBit(ref bools, 6, value.prevStepUp);
+            BitUtil.SetBit(ref bools, 7, value.isGrounded);
+        }
+        
         public static void WriteCharacterSnapshotData(this NetworkWriter writer, CharacterSnapshotData value) {
             byte bools = 0;
-            SetBit(ref bools, 0, value.inputDisabled);
-            SetBit(ref bools, 1, value.isFlying);
-            SetBit(ref bools, 2, value.isSprinting);
-            SetBit(ref bools, 3, value.airborneFromImpulse);
-            SetBit(ref bools, 4, value.alreadyJumped);
-            SetBit(ref bools, 5, value.isCrouching);
-            SetBit(ref bools, 6, value.prevStepUp);
-            SetBit(ref bools, 7, value.isGrounded);
+            EncodeBools(ref bools, value);
             writer.Write(bools);
-            
-            writer.WriteInt(value.customData.dataSize);
-            writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+
+            if (value.customData != null) {
+                writer.WriteInt(value.customData.dataSize);
+                writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+            }
+            else {
+                writer.WriteInt(0);
+            }
             
             writer.Write(value.time);
+            writer.Write(value.tick);
             writer.Write(value.lastProcessedCommand);
             writer.Write(value.position);
             writer.Write(value.velocity);
-            writer.Write((short)(value.lookVector.x * 1000f));
-            writer.Write((short)(value.lookVector.y * 1000f));
-            writer.Write((short)(value.lookVector.z * 1000f));
+            writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.z));
             writer.Write(value.currentSpeed);
             // This makes our max speed modifier 65.535 with a 0.001 precision.
-            writer.Write((ushort) Math.Clamp(value.speedModifier * 1000f, 0, ushort.MaxValue));
-            writer.Write((byte) Math.Min(Math.Floor(value.timeSinceJump / Time.fixedDeltaTime), 255));
-            writer.Write((byte) Math.Min(Math.Floor(value.timeSinceWasGrounded / Time.fixedDeltaTime), 255));
-            writer.Write((byte) Math.Min(Math.Floor(value.timeSinceBecameGrounded / Time.fixedDeltaTime), 255));
+            writer.Write(NetworkSerializationUtil.CompressToUshort(value.speedModifier));
+            writer.Write(value.canJump);
             writer.Write((byte) value.state);
             writer.Write(value.jumpCount);
         }
@@ -200,42 +445,37 @@ namespace Code.Player.Character.MovementSystems.Character
         public static CharacterSnapshotData ReadCharacterSnapshotData(this NetworkReader reader) {
             var bools = reader.Read<byte>();
             var customDataSize = reader.ReadInt();
-            var customDataArray = reader.ReadBytes(customDataSize);
-            var customData = new BinaryBlob(customDataArray);
+            BinaryBlob customData = default;
+            if (customDataSize != 0) {
+                var customDataArray = reader.ReadBytes(customDataSize);
+                customData = new BinaryBlob(customDataArray);
+            }
             return new CharacterSnapshotData() {
-                inputDisabled = GetBit(bools, 0),
-                isFlying = GetBit(bools, 1),
-                isSprinting = GetBit(bools, 2),
-                airborneFromImpulse = GetBit(bools, 3),
-                alreadyJumped = GetBit(bools, 4),
-                isCrouching = GetBit(bools, 5),
-                prevStepUp = GetBit(bools, 6),
-                isGrounded = GetBit(bools, 7),
+                inputDisabled = BitUtil.GetBit(bools, 0),
+                isFlying = BitUtil.GetBit(bools, 1),
+                isSprinting = BitUtil.GetBit(bools, 2),
+                airborneFromImpulse = BitUtil.GetBit(bools, 3),
+                alreadyJumped = BitUtil.GetBit(bools, 4),
+                isCrouching = BitUtil.GetBit(bools, 5),
+                prevStepUp = BitUtil.GetBit(bools, 6),
+                isGrounded = BitUtil.GetBit(bools, 7),
                 
                 time = reader.Read<double>(),
+                tick = reader.Read<uint>(),
                 lastProcessedCommand = reader.Read<int>(),
                 position = reader.Read<Vector3>(),
                 velocity = reader.Read<Vector3>(),
-                lookVector = new Vector3(reader.Read<short>() / 1000f, reader.Read<short>() / 1000f, reader.Read<short>() / 1000f),
+                lookVector = new Vector3(
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>())),
                 currentSpeed = reader.Read<float>(),
-                speedModifier = reader.Read<ushort>() / 1000f,
-                timeSinceJump = reader.Read<byte>() * Time.fixedDeltaTime,
-                timeSinceWasGrounded = reader.Read<byte>() * Time.fixedDeltaTime,
-                timeSinceBecameGrounded = reader.Read<byte>() * Time.fixedDeltaTime,
+                speedModifier = NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>()),
+                canJump = reader.Read<byte>(),
                 state = (CharacterState) reader.Read<byte>(),
                 jumpCount = reader.Read<byte>(),
                 customData = customData,
             };
-        }
-        
-        private static bool GetBit(byte bools, int bit) => (bools & (1 << bit)) != 0;
-
-        private static void SetBit(ref byte bools, int bit, bool value)
-        {
-            if (value)
-                bools |= (byte)(1 << bit);
-            else
-                bools &= (byte)~(1 << bit);
         }
     }
 }

@@ -18,4 +18,5 @@ public class User {
 [Serializable]
 public class TransferData {
     public User user;
+    public string orgRoleName;
 }
