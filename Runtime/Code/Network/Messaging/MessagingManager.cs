@@ -12,7 +12,7 @@ using System.Linq;
 using Code.Util;
 using Code.Platform.Shared;
 
-class PubSubMessage
+struct PubSubMessage
 {
     public TopicDescription topic { get; set; }
     public string payload { get; set; }
@@ -24,14 +24,14 @@ public enum Scope
     Server = 1,
 }
 
-public class TopicDescription
+public struct TopicDescription
 {
     public Scope scope { get; set; }
     public string topicNamespace { get; set; }
     public string topicName { get; set; }
 }
 
-public class ParseTopicResponse
+public struct ParseTopicResponse
 {
     public TopicDescription topic { get; set; }
     public bool isValid { get; set; }
@@ -339,7 +339,7 @@ public class MessagingManager : Singleton<MessagingManager>
             return true;
         }
 
-        Debug.LogError($"Failed to subscribe to {fullTopic}: {res0.ResultCode}");
+        Debug.LogError($"Failed to unsubscribe to {fullTopic}: {res0.ResultCode}");
         return false;
     }
 
