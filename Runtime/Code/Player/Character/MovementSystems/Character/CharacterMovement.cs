@@ -1578,12 +1578,13 @@ namespace Code.Player.Character.MovementSystems.Character {
         /// <param name="lookVector"></param>
         [HideFromTS]
         public void SetLookVectorAndNotifyLuau(Vector3 lookVector) {
+            // Debug.Log("Firing OnNewLookVector\n" + Environment.StackTrace);
             OnNewLookVector?.Invoke(lookVector);
             SetLookVector(lookVector);
         }
 
         /// <summary>
-        /// Manually force the look direction of the character without triggering the OnNewLookVector event. 
+        /// Manually force the look direction of the character without triggering the OnNewLookVector event.
         /// Useful for something that is updating the lookVector frequently and needs to listen for other scripts modifying the lookVector. 
         /// </summary>
         /// <param name="lookVector"></param>
@@ -1656,8 +1657,9 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
-            TeleportAndLook(position,
-                isClient && mode != NetworkedStateSystemMode.Observer ? lookVector : currentMoveSnapshot.lookVector);
+            // TODO: why? Copied from old movement
+            currentMoveSnapshot.airborneFromImpulse = true;
+            rb.MovePosition(position);
         }
 
         public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
