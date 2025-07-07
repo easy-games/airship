@@ -481,13 +481,10 @@ namespace Code.Network.StateSystem
             // ensures that we are rolling back to the time the user actually saw on their
             // client when they issued the command.
             
-            // This buffer covers the command buffer time.
+            // This buffer covers the command buffer time. We queue commands locally on the server before processing them
             // TODO: We could get lag comp a little more accurate if we tracked the actual time the command was buffered. It's good enough
             // to use the ideal commands in one interval for now though.
-            // var tickGenerationTime = Time.fixedDeltaTime / Time.timeScale; // how long it takes to generate a single tick in real time.
-            var commandsInOneInterval = NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime;
-            // This basically just calculates out to sendInterval...
-            var commandBufferTime = Time.fixedUnscaledDeltaTime * commandsInOneInterval * 2; // how long will it take for us to process a command added to the end of the buffer
+            var commandBufferTime = (NetworkServer.sendInterval * (NetworkClient.bufferTimeMultiplier / 2f));
             
             var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
             var lagCompensatedTime = currentTime - totalBuffer;
@@ -498,8 +495,10 @@ namespace Code.Network.StateSystem
             // 16.074496323404 - (16.296857560941 - ((0.0142610969939435 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00469036659
             // 19.2368007725462 - (19.4586250708617 - ((0.0123929982200843 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00149110826
             // 22.5390862366273 - (22.7674515306122 - ((0.0122401664944862 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + .025)) = -0.00535555085
-            // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {NetworkServer.sendInterval} + ({tickGenerationTime} * {commandsInOneInterval})))");
+            // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {NetworkServer.sendInterval} + ({Time.fixedUnscaledDeltaTime} * {commandsInOneInterval})))");
             // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {commandBufferTime}))");
+            // print($"CLIENTTIME - {lagCompensatedTime}");
+            // print($"Rolling back to {lagCompensatedTick} using total rollback of {totalBuffer}");
             // print(
             //     $"{currentTime} - (({latency} * 2) + {bufferTime} + ({tickGenerationTime} * {commandsInOneInterval} * 2)) = {lagCompensatedTime} ({lagCompensatedTick})");
             this.OnSetSnapshot(lagCompensatedTick);
@@ -943,8 +942,8 @@ namespace Code.Network.StateSystem
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
                 // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
                 //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                //                  this.observerHistory.Keys[^1] + " Target " + clientTime + " Buffer is: " +  NetworkClient.bufferTime + " tick gen time is: " + tickGenerationTime + " Estimated Latency (1 way): " +
-                //                  (NetworkTime.rtt / 2) + " Network Time: " + NetworkTime.time + " TScale: " + Time.timeScale);
+                //                  this.observerHistory.Keys[^1] + " Target " + NetworkTime.time + " Buffer is: " +  NetworkClient.bufferTime + " Estimated Latency (1 way): " +
+                //                  (NetworkTime.rtt / 2) + " TScale: " + Time.timeScale);
                 return;
             }
             

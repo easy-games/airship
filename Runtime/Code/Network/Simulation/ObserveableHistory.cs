@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Mirror;
 using UnityEngine;
 
 namespace Code.Network.Simulation
@@ -40,8 +41,8 @@ namespace Code.Network.Simulation
             }
 
             if (maxSizeSec != 0) {
-                int max = (int)Math.Ceiling((Time.timeScale * maxSizeSec) / Time.fixedDeltaTime);
-                while (this.history.Count > max)
+                // Don't keep observed history for longer than maxSizeSec after the current observed time.
+                while (this.history.Count > 0 && NetworkTime.time - this.history.Keys[0] > maxSizeSec)
                 {
                     this.history.RemoveAt(0);
                 }

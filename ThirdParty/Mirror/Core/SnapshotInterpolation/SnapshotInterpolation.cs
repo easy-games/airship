@@ -267,7 +267,10 @@ namespace Mirror
                     localTimescale = 1;
                     return;
                 }
-                localTimescale = Math.Max(1 + (drift / bufferTime), 0);
+                
+                // We allow much faster slowdowns because it's much worse to be ahead than behind. Being ahead will cause lots of
+                // glitchy looking stuff since we won't have snapshots to render yet.
+                localTimescale = Math.Clamp(Math.Max(1 + 0.5 * (drift / bufferTime), 0), 0.05f, 1.05f);
 
                 // debug logging
                 // UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3} timeDiff={timeDiff}");
