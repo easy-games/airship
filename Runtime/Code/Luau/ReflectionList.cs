@@ -231,8 +231,12 @@ namespace Luau {
             ["ElRaccoone.Tweens.NativeTween+LocalRotationDriver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
             ["TubeRendererCS"] = LuauContextAll,
+            // In editor the type of AudioMixerSnapshot is UnityEditor.Audio.AudioMixerSnapshotController, so this is
+            // needed. In built player it seems to work fine (I assume using a UnityEngine.Audio version?)
+            #if UNITY_EDITOR
             ["AudioMixerSnapshotController"] = LuauContextAll,
             ["AudioMixerController"] = LuauContextAll,
+            #endif
             ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
         };
 
