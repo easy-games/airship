@@ -77,6 +77,7 @@ public class TexturePacker : IDisposable
 
     public void PackTextures(Dictionary<int, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize)
     {
+        Debug.Log($"Packing texture atlas of size {width}x{height}");
         Profiler.BeginSample("PackTextures");
         //grab the time
         float startTime = Time.realtimeSinceStartup;
