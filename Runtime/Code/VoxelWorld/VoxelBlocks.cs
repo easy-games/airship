@@ -682,38 +682,6 @@ public class VoxelBlocks : MonoBehaviour {
 #if !UNITY_SERVER
         SetupAtlas();
 #endif
-        
-
-        //Finalize uvs etc
-        foreach (var blockRec in loadedBlocks) {
-
-            if (blockRec.definition.topTexture.diffuse != null) {
-                blockRec.topUvs = atlas.GetUVs(blockRec.definition.topTexture.diffuse);
-            }
-            else {
-                blockRec.topUvs = new Rect(0, 0, 0, 0);
-            }
-
-            if (blockRec.definition.sideTexture.diffuse != null) {
-                blockRec.sideUvs = atlas.GetUVs(blockRec.definition.sideTexture.diffuse);
-            }
-            else {
-                blockRec.sideUvs = blockRec.topUvs; //Use other Uvs if none available
-            }
-
-            if (blockRec.definition.bottomTexture.diffuse != null) {
-                blockRec.bottomUvs = atlas.GetUVs(blockRec.definition.bottomTexture.diffuse);
-            }
-            else {
-                blockRec.bottomUvs = blockRec.topUvs; //use top uvs if bottom uvs not available
-            }
-
-            /*
-            if (blockRec.Value.meshTexturePath != "") {
-                blockRec.Value.mesh.AdjustUVs(atlas.GetUVs(blockRec.Value.meshTexturePath));
-
-            }*/
-        }
         // Profiler.EndSample();
         loadedTask.TrySetResult(true);
     }
@@ -763,6 +731,30 @@ public class VoxelBlocks : MonoBehaviour {
 
         }
         Profiler.EndSample();
+        
+        //Finalize uvs etc
+        foreach (var blockRec in loadedBlocks) {
+            if (blockRec.definition.topTexture.diffuse != null) {
+                blockRec.topUvs = atlas.GetUVs(blockRec.definition.topTexture.diffuse);
+            }
+            else {
+                blockRec.topUvs = new Rect(0, 0, 0, 0);
+            }
+
+            if (blockRec.definition.sideTexture.diffuse != null) {
+                blockRec.sideUvs = atlas.GetUVs(blockRec.definition.sideTexture.diffuse);
+            }
+            else {
+                blockRec.sideUvs = blockRec.topUvs; //Use other Uvs if none available
+            }
+
+            if (blockRec.definition.bottomTexture.diffuse != null) {
+                blockRec.bottomUvs = atlas.GetUVs(blockRec.definition.bottomTexture.diffuse);
+            }
+            else {
+                blockRec.bottomUvs = blockRec.topUvs; //use top uvs if bottom uvs not available
+            }
+        }
     }
 
     //Fix a voxel value up with its solid mask bit
