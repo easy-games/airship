@@ -294,7 +294,9 @@ public class TexturePacker : IDisposable
         
         Object.DestroyImmediate(tempTexture);
         
+#if UNITY_EDITOR
         UnityEditor.AssetDatabase.Refresh();
+#endif
     }
  
     public static void CustomBlit(RenderTexture renderTarget, Texture sourceTexture, Material material, int destX, int destY, int destWidth, int destHeight, int srcX = 0, int srcY = 0, int srcWidth = -1, int srcHeight = -1)
