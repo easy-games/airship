@@ -1721,6 +1721,9 @@ namespace VoxelWorldStuff {
         /// <param name="triplanarScale"></param>
         /// <returns></returns>
         public static GameObject ProduceSingleBlock(int blockIndex, VoxelWorld world, float triplanerMode = 2, float triplanarScale = 1) {
+#if UNITY_SERVER
+            throw new NotSupportedException("Cannot call ProduceSingleBlock on server (atlas is not defined)");
+#endif
             MeshProcessor.InitVertexData();
 
             VoxelBlocks.BlockDefinition block = world.voxelBlocks.GetBlock((ushort)blockIndex);

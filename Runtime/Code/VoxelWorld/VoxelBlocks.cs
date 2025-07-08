@@ -870,9 +870,11 @@ public class VoxelBlocks : MonoBehaviour {
         loadedBlocks.Add(blockDef);
         blockIdLookup.Add(name, blockDef.blockId);
 
+#if !UNITY_SERVER
         for (int i = 0; i < 6; i++) {
-            blockDef.SetMaterial(i, atlasMaterial);
+            if (atlasMaterial) blockDef.SetMaterial(i, atlasMaterial);
         }
+#endif
 
         return blockDef;
     }
