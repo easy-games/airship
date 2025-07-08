@@ -279,6 +279,9 @@ public class TypeGenerator : MonoBehaviour
             
             // Steam
             typeof(AirshipSteamFriendInfo),
+            
+            // Editor stuff
+            typeof(EditorPrefs),
         };
 
         // TwoBoneIKConstraint ik;
