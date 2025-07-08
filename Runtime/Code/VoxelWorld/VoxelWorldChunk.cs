@@ -239,6 +239,44 @@ namespace VoxelWorldStuff {
                 return;
             }
 
+            var prefabsToClear = new List<Vector3Int>();
+            
+            // Loop to destroy any prefabs that no longer exist
+            foreach (var (localPos, existingPrefab) in prefabObjects) {
+                var voxelData = GetLocalVoxelAt(localPos.x, localPos.y, localPos.z);
+                var blockId = VoxelWorld.VoxelDataToBlockId(voxelData);
+                var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
+                var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
+                
+                // Prefab unchanged
+                if (blockId == existingPrefab.Item2
+                    && existingPrefab.Item1.transform.rotation == rot) {
+                    continue;
+                }
+                
+                prefabsToClear.Add(localPos);
+
+                var (prefabGameObject, _) = existingPrefab;
+                if (Application.isPlaying && prefabGameObject.GetComponent<NetworkIdentity>()) {
+                    // If it's a NetworkIdentity & is server we do NetworkServer. Destroy to ensure it's destroyed properly.
+                    if (RunCore.IsServer()) {
+                        NetworkServer.Destroy(prefabGameObject);
+                    } else {
+                        prefabGameObject.SetActive(false);
+                    }
+                } else {
+                    if (Application.isPlaying) {
+                        Object.Destroy(prefabGameObject);
+                    } else {
+                        Object.DestroyImmediate(prefabGameObject);
+                    }
+                }
+            }
+            foreach (var pos in prefabsToClear) {
+                prefabObjects.Remove(pos);
+            }
+            
+            // Loop over the chunk to look for potential prefabs to spawn
             var origin = chunkKey * chunkSize + new Vector3(0.5f, 0.5f, 0.5f);
             for (var x = 0; x < chunkSize; x++) {
                 for (var y = 0; y < chunkSize; y++) {
@@ -254,39 +292,13 @@ namespace VoxelWorldStuff {
                         if (blockDefinition.definition.contextStyle != VoxelBlocks.ContextStyle.Prefab) {
                             continue;
                         }
-                        
+
                         var rotationBits = VoxelWorld.GetVoxelFlippedBits(voxelData);
                         var rot = VoxelWorld.FlipBitsToQuaternion(rotationBits);
-
-                        // If this is a new block type destroy the existing prefab
                         var localChunkPos = new Vector3Int(x, y, z);
-                        if (prefabObjects.TryGetValue(localChunkPos, out var existingPrefab)) {
-                            // Prefab unchanged
-                            if (blockId == existingPrefab.Item2
-                                && existingPrefab.Item1.transform.rotation == rot) {
-                                existingPrefab.Item1.transform.parent = obj.transform;
-                                continue;
-                            }
-
-                            prefabObjects.Remove(localChunkPos);
-
-                            var (prefabGameObject, _) = existingPrefab;
-                            if (Application.isPlaying && prefabGameObject.GetComponent<NetworkIdentity>()) {
-                                // If it's a NetworkIdentity & is server we do NetworkServer. Destroy to ensure it's destroyed properly.
-                                if (RunCore.IsServer()) {
-                                    NetworkServer.Destroy(prefabGameObject);
-                                } else {
-                                    prefabGameObject.SetActive(false);
-                                }
-                            } else {
-                                if (Application.isPlaying) {
-                                    Object.Destroy(prefabGameObject);
-                                } else {
-                                    Object.DestroyImmediate(prefabGameObject);
-                                }
-                            }
-                        }
-
+                        // We clear missing prefabs before this, so if it exists it is unchanged (and doesn't need spawning)
+                        if (prefabObjects.ContainsKey(localChunkPos)) continue;
+                        
                         var isNetworked = false;
                         var prefabDef = blockDefinition.definition.prefab;
                         if (prefabDef.GetComponent<NetworkIdentity>()) {
