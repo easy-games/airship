@@ -1195,7 +1195,7 @@ namespace VoxelWorldStuff {
 
                         //Read the damage number
                         ushort internalVoxelKey = (ushort)(x + y * chunkSize + z * chunkSize * chunkSize);
-                        readOnlyDamageMap.TryGetValue(internalVoxelKey, out float damage);
+                        if (!readOnlyDamageMap.TryGetValue(internalVoxelKey, out float damage)) damage = 0.0f;
                         damageUv.Set(damage, 0);
 
                         BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
@@ -1357,10 +1357,16 @@ namespace VoxelWorldStuff {
                             var zScale = 1;
                             // Only expand face in planes perpendicular to normal
                             var flooredNorm = Vector3Int.FloorToInt(faceNormal);
-                            if (Vector3.Dot(faceNormal, Vector3.right) == 0) while (ExpandFaceX(localVoxel, flooredNorm, faceIndex, blockIndex, handledBlockFaces, xScale)) xScale++;
-                            if (Vector3.Dot(faceNormal, Vector3.forward) == 0) while (ExpandFaceZ(localVoxel, flooredNorm, faceIndex, blockIndex, handledBlockFaces, new Vector3(xScale, yScale, zScale), zScale)) zScale++;
-                            if (Vector3.Dot(faceNormal, Vector3.up) == 0) while (ExpandFaceY(localVoxel, flooredNorm, faceIndex, blockIndex, handledBlockFaces, new Vector3(xScale, yScale, zScale), yScale)) yScale++;
-                            
+                            if (Vector3.Dot(faceNormal, Vector3.right) == 0)
+                                while (ExpandFaceX(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
+                                           handledBlockFaces, xScale)) xScale++;
+                            if (Vector3.Dot(faceNormal, Vector3.forward) == 0)
+                                while (ExpandFaceZ(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
+                                           handledBlockFaces, new Vector3(xScale, yScale, zScale), zScale)) zScale++;
+                            if (Vector3.Dot(faceNormal, Vector3.up) == 0)
+                                while (ExpandFaceY(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
+                                           handledBlockFaces, new Vector3(xScale, yScale, zScale), yScale)) yScale++;
+
                             Rect uvRect = block.GetUvsForFace(faceIndex);
 
                             int faceMatId = placeBlockWithPerFaceMaterial ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
@@ -1507,9 +1513,9 @@ namespace VoxelWorldStuff {
             geometryReady = true;
         }
 
-        private bool ExpandFaceX(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, HashSet<int>[] handledBlockFaces, int x) {
+        private bool ExpandFaceX(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, int x) {
             if (x + localVoxel.x >= chunkSize) return false;
-            var expandCheck = (localVoxel.x + x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize;
+            ushort expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
             var expandOther = readOnlyVoxel[expandCheck];
             if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
             
@@ -1517,18 +1523,25 @@ namespace VoxelWorldStuff {
                              normal.z * paddedChunkSize * paddedChunkSize;
             if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
 
+
+            var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y - 1) * chunkSize + (localVoxel.z - 1) * chunkSize * chunkSize);
+            if (!readOnlyDamageMap.TryGetValue(damageMapExpandKey, out float otherDamage)) {
+                otherDamage = 0.0f;
+            }
+            if (!Mathf.Approximately(damage, otherDamage)) return false;
+
             handledBlockFaces[faceIndex].Add(expandCheck);
             return true;
         }
         
-        private bool ExpandFaceY(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, HashSet<int>[] handledBlockFaces, Vector3 size, int y) {
+        private bool ExpandFaceY(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, Vector3 size, int y) {
             if (y + localVoxel.y >= chunkSize) return false;
 
             var expandChecks = new List<int>();
             for (var x = 0; x < size.x; x++) {
                 for (var z = 0; z < size.z; z++) {
-                    var expandCheck = (localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
-                                      (localVoxel.z + z) * paddedChunkSize * paddedChunkSize;
+                    var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
+                                      (localVoxel.z + z) * paddedChunkSize * paddedChunkSize);
                     var expandOther = readOnlyVoxel[expandCheck];
                     if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
                     if (handledBlockFaces[faceIndex].Contains(expandCheck)) return false;
@@ -1536,6 +1549,13 @@ namespace VoxelWorldStuff {
                     var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
                                      normal.z * paddedChunkSize * paddedChunkSize;
                     if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+                    
+                    var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y + y - 1) * chunkSize +
+                                                (localVoxel.z + z - 1) * chunkSize * chunkSize);
+                    if (!readOnlyDamageMap.TryGetValue(damageMapExpandKey, out float otherDamage)) {
+                        otherDamage = 0.0f;
+                    }
+                    if (!Mathf.Approximately(damage, otherDamage)) return false;
 
                     expandChecks.Add(expandCheck);
                 }
@@ -1548,14 +1568,14 @@ namespace VoxelWorldStuff {
             return true;
         }
         
-        private bool ExpandFaceZ(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, HashSet<int>[] handledBlockFaces, Vector3 size, int z) {
+        private bool ExpandFaceZ(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, Vector3 size, int z) {
             if (z + localVoxel.z >= chunkSize) return false;
 
             var expandChecks = new List<int>();
             for (var x = 0; x < size.x; x++) {
                 for (var y = 0; y < size.y; y++) {
-                    var expandCheck = (localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
-                                      (localVoxel.z + z) * paddedChunkSize * paddedChunkSize;
+                    var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
+                                      (localVoxel.z + z) * paddedChunkSize * paddedChunkSize);
                     var expandOther = readOnlyVoxel[expandCheck];
                     if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
                     if (handledBlockFaces[faceIndex].Contains(expandCheck)) return false;
@@ -1563,6 +1583,13 @@ namespace VoxelWorldStuff {
                     var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
                                      normal.z * paddedChunkSize * paddedChunkSize;
                     if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+                    
+                    var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y + y - 1) * chunkSize +
+                                                (localVoxel.z + z - 1) * chunkSize * chunkSize);
+                    if (!readOnlyDamageMap.TryGetValue(damageMapExpandKey, out float otherDamage)) {
+                        otherDamage = 0.0f;
+                    }
+                    if (!Mathf.Approximately(damage, otherDamage)) return false;
 
                     expandChecks.Add(expandCheck);
                 }
