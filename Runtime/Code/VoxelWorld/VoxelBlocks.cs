@@ -615,7 +615,6 @@ public class VoxelBlocks : MonoBehaviour {
                 
         //Profiler.BeginSample("VoxelBlocks.Load");
         temporaryTextures.Clear();
-        atlas = new TexturePacker();
         
         //Add air
         BlockDefinition airBlock = new BlockDefinition();
@@ -687,6 +686,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     private void SetupAtlas() {
+        atlas = new TexturePacker();
         atlasMaterial = Resources.Load<Material>("VoxelWorldMatURP");
 
         //Create atlas
