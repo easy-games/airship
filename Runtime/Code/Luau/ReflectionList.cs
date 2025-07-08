@@ -21,6 +21,7 @@ using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
 using UnityEngine.Tilemaps;
 using UnityEngine.VFX;
+using Slider = UnityEngine.UI.Slider;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -323,6 +324,10 @@ namespace Luau {
 
         public static Type AttemptGetTypeFromString(string typeStr) {
             if (string.IsNullOrEmpty(typeStr)) return null;
+
+            if (TypeReflection._shortTypeNames.TryGetValue(typeStr, out var result)) {
+                return result;
+            }
             
             var t = Type.GetType(typeStr);
             if (t != null) {

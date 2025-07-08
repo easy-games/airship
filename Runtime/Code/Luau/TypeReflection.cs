@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class TypeReflection {
     // Initialized to have short term solution for most likely desired APIs by name
-    private static readonly Dictionary<string, Type> _shortTypeNames = new() {
+    public static readonly Dictionary<string, Type> _shortTypeNames = new() {
         { "Image", typeof(Image) },
         { "Transform", typeof(Transform) },
         { "RectTransform", typeof(RectTransform) },
