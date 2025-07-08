@@ -238,7 +238,7 @@ namespace Code.Network.StateSystem
                     // it has them already.
                     var commands =
                         this.inputHistory.GetAllAfter((uint)Math.Max(0,
-                            (clientLastSentLocalTick - (NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime))));
+                            (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime))));
                     if (commands.Length > 0) {
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
@@ -259,7 +259,7 @@ namespace Code.Network.StateSystem
                 if (isClient && isOwned && !serverAuth) {
                     if (this.stateHistory.Keys.Count == 0) return;
                     var states = this.stateHistory.GetAllAfter((uint)(this.clientLastSentLocalTick -
-                                                                      (NetworkClient.bufferTime /
+                                                                      (NetworkClient.sendInterval /
                                                                        Time.fixedUnscaledDeltaTime)));
                     if (states.Length > 0) {
                         this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
