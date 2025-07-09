@@ -547,7 +547,16 @@ namespace Code.Network.StateSystem
                 }
                 print("Dropped " + dropCount + " command(s) from " + this.gameObject.name + " due to exceeding command buffer size.");
             }
-           
+
+            // Delay processing until we have at least one send interval worth of commands to process.
+            if (this.serverCommandBuffer.Count == 0 ||
+                this.serverCommandBuffer.Keys[^1] - (this.serverLastProcessedCommandNumber + 1) <
+                (int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
+                // Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
+                this.stateSystem.Tick(null, tick, time, false);
+                return;
+            }
+            
             var commandsProcessed = 0;
             do
             {
@@ -602,6 +611,10 @@ namespace Code.Network.StateSystem
                     // Ensure that we always tick the system even if there's no command to process.
                     Debug.LogWarning($"No commands left for {this.name}. Last command processed: " + this.lastProcessedCommand);
                     this.stateSystem.Tick(null, tick, time, false);
+                    // we processed a command that never reached the server, advance so the associated
+                    // command's tick result will be used to match up with state. The command that should have been used
+                    // here will be ignored when it arrives (if it ever does)
+                    this.serverLastProcessedCommandNumber += 1; 
                 }
             } while (this.serverCommandBuffer.Count >
                      serverCommandBufferTargetSize &&
@@ -730,6 +743,15 @@ namespace Code.Network.StateSystem
                     (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
             // print($"{this.name} {serverRecievedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
+            // Delay processing until we have at least one send interval worth of commands to process.
+            if (this.serverRecievedStateBuffer.Count == 0 ||
+                this.serverRecievedStateBuffer.Keys[^1] - (this.serverLastProcessedCommandNumber + 1) <
+                (int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
+                // Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
+                this.stateSystem.Tick(null, tick, time, false);
+                return;
+            }
+            
             // Process the buffer of states that we've gotten from the authoritative client
             State latestState = null;
             var statesProcessed = 0;
@@ -747,12 +769,14 @@ namespace Code.Network.StateSystem
                     : null;
 
                 // If we have a new state to process, update our last processed command and then remove it.
-                if (latestState != null)
-                {
+                if (latestState != null) {
                     // mark this as our latest state and remove it. We will do the real processing on the final
                     // state retrieved during this loop later.
                     this.serverLastProcessedCommandNumber = latestState.lastProcessedCommand;
                     this.serverRecievedStateBuffer.RemoveAt(0);
+                }
+                else {
+                    this.serverLastProcessedCommandNumber += 1;
                 }
 
                 // If we don't have a new state to process, that's ok. It just means that the client hasn't sent us
