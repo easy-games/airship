@@ -110,6 +110,10 @@ namespace Luau {
 
         public static AnimationCurve DeserializeAnimationCurve(string serializedCurve) {
             var curve = new AnimationCurve();
+            if (serializedCurve.Length == 0) {
+                curve = AnimationCurve.EaseInOut(0, 0, 1, 1);    
+            }
+            
             string[] keyframeStrings = serializedCurve.Split(';');
         
             foreach (string keyframeString in keyframeStrings)
