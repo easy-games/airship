@@ -74,7 +74,7 @@ namespace Code.Network.StateSystem
 
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
-        private SortedList<int, State> serverRecievedStateBuffer = new SortedList<int, State>();
+        private SortedList<int, State> serverReceivedStateBuffer = new SortedList<int, State>();
 
         // Client processing for input prediction
         private State clientLastConfirmedState;
@@ -741,14 +741,15 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
                     (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
-            // print($"{this.name} {serverRecievedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
+            // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
-            if (this.serverRecievedStateBuffer.Count == 0 ||
-                this.serverRecievedStateBuffer.Keys[^1] - (this.serverLastProcessedCommandNumber + 1) <
+            if (this.serverReceivedStateBuffer.Count == 0 ||
+                this.serverReceivedStateBuffer.Keys[^1] - (this.serverLastProcessedCommandNumber + 1) <
                 (int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
-                // Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
-                this.stateSystem.Tick(null, tick, time, false);
+                // Debug.Log($"Waiting for additional states for {this.name}. There are {this.serverReceivedStateBuffer.Count} states in the buffer.");
+                // no operation since there is no new state for us to use. Client authority means we use whatever the client sends us, even if that means
+                // seeing irregular physics movement.
                 return;
             }
             
@@ -764,8 +765,8 @@ namespace Code.Network.StateSystem
                 }
 
                 // Attempt to get a new state out of the buffer.
-                latestState = this.serverRecievedStateBuffer.Count > 0
-                    ? this.serverRecievedStateBuffer.Values[0]
+                latestState = this.serverReceivedStateBuffer.Count > 0
+                    ? this.serverReceivedStateBuffer.Values[0]
                     : null;
 
                 // If we have a new state to process, update our last processed command and then remove it.
@@ -773,7 +774,7 @@ namespace Code.Network.StateSystem
                     // mark this as our latest state and remove it. We will do the real processing on the final
                     // state retrieved during this loop later.
                     this.serverLastProcessedCommandNumber = latestState.lastProcessedCommand;
-                    this.serverRecievedStateBuffer.RemoveAt(0);
+                    this.serverReceivedStateBuffer.RemoveAt(0);
                 }
                 else {
                     this.serverLastProcessedCommandNumber += 1;
@@ -781,7 +782,7 @@ namespace Code.Network.StateSystem
 
                 // If we don't have a new state to process, that's ok. It just means that the client hasn't sent us
                 // their updated state yet.
-            } while (this.serverRecievedStateBuffer.Count >
+            } while (this.serverReceivedStateBuffer.Count >
                      serverCommandBufferTargetSize &&
                      statesProcessed < 1 + this.maxServerCommandCatchup);
             // ^ we process up to maxServerCommandCatchup states per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
@@ -1038,6 +1039,14 @@ namespace Code.Network.StateSystem
                 return;
             }
 
+            // Check if we have already resimulated from this tick. If we have, we will skip resimulation. This avoids the situation
+            // where the client commands aren't reaching the server and we are resimulating constantly because every
+            // received snapshot uses the same last processed command, but also has a different result. Side effect of this
+            // is that if the commands aren't reaching the server, we won't resim until one actually does.
+            if (this.stateHistory.IsAuthoritativeEntry(clientPredictedState.tick)) {
+                return;
+            }
+
             // Check if our predicted state matches up with our new authoritative state.
             if (clientPredictedState.Compare(this.stateSystem, state))
             {
@@ -1205,7 +1214,7 @@ namespace Code.Network.StateSystem
 
             if (snapshot == null) return;
                 
-            if (this.serverRecievedStateBuffer.TryGetValue(snapshot.lastProcessedCommand, out State existingInput))
+            if (this.serverReceivedStateBuffer.TryGetValue(snapshot.lastProcessedCommand, out State existingInput))
             {
                 // Debug.Log("Received duplicate state from client. Ignoring. " + snapshot.lastProcessedCommand);
                 return;
@@ -1219,7 +1228,7 @@ namespace Code.Network.StateSystem
             }
 
             // Reject new states if our buffer is full
-            if (serverRecievedStateBuffer.Count > this.serverCommandBufferMaxSize)
+            if (serverReceivedStateBuffer.Count > this.serverCommandBufferMaxSize)
             {
                 Debug.LogWarning("Dropping state " + snapshot.lastProcessedCommand +
                                  " due to exceeding state buffer size.");
@@ -1228,7 +1237,7 @@ namespace Code.Network.StateSystem
 
             // We order by clients last processed command. This is effectively the same as ordering
             // by time, but avoids the confusion around client vs server timelines.
-            this.serverRecievedStateBuffer.Add(snapshot.lastProcessedCommand, snapshot);
+            this.serverReceivedStateBuffer.Add(snapshot.lastProcessedCommand, snapshot);
         }
 
         private void ServerReceiveFullSnapshotRequest(int connectionId) {

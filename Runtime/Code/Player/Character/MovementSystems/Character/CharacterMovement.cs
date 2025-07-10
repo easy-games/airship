@@ -59,8 +59,8 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [Header("Visual Variables")] public bool autoCalibrateSkiddingSpeed = true;
 
-        [Tooltip("Controls the speed in which local character rotates to face look direction.")]
-        public float ownerRotationLerpMod = 6;
+        [Tooltip("Controls the speed in which characters in orbit camera rotate to face look direction. Degrees per second.")]
+        public float smoothedRotationSpeed = 360f;
 
         [Tooltip(
             "If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
@@ -1469,26 +1469,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
-            if (!_smoothLookVector) {
-                var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
-                if (lookTarget == Vector3.zero) {
-                    lookTarget = new Vector3(0, 0, .01f);
-                }
-
-                //Instantly rotate for owner
-                airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
-            } else {
-                //Tween to rotation
-                var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
-                if (lookTarget == Vector3.zero) {
-                    lookTarget = new Vector3(0, 0, .01f);
-                }
-
-                airshipTransform.rotation = Quaternion.Lerp(
-                    airshipTransform.rotation,
-                    Quaternion.LookRotation(lookTarget),
-                    ownerRotationLerpMod * Time.deltaTime);
+            var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
+            if (lookTarget == Vector3.zero) {
+                lookTarget = new Vector3(0, 0, .01f);
             }
+            
+            airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
         }
 
         public void Update() {
@@ -1637,7 +1623,17 @@ namespace Code.Player.Character.MovementSystems.Character {
             // If we are the client creating input, we want to set the actual local look vector.
             // It will be moved into the state and sent to the server in the next snapshot.
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
-                lookVector = moveDirInput.normalized;
+                if (_smoothLookVector && moveDirInput != Vector3.zero) {
+                    lookVector = Vector3.RotateTowards(
+                        graphicTransform.forward,
+                        moveDirInput.normalized,
+                         smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime,
+                        0f
+                    );
+                }
+                else {
+                    lookVector = moveDirInput.normalized;
+                }
                 return;
             }
 

@@ -255,7 +255,7 @@ namespace Code.Player.Character.MovementSystems.Character
             var writer = new NetworkWriter();
             writer.Write(NetworkSerializationUtil.CompressToUshort(other.time - time));
             writer.Write((ushort)(other.tick - tick)); // We should send diffs far before 65,535 ticks have passed. 255 is a little too low if messing with time scale (ticks will skip in slow timescales)
-            writer.Write((byte)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
+            writer.Write((ushort)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
             writer.Write(changedMask);
             if (boolsChanged) writer.Write(newBools);
             if (positionChanged) writer.Write(other.position);
@@ -310,7 +310,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             snapshot.time = time + NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
             snapshot.tick = tick + reader.Read<ushort>();
-            snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<byte>();
+            snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<ushort>();
             var changedMask = reader.Read<short>();
 
             if (BitUtil.GetBit(changedMask, 0)) {
