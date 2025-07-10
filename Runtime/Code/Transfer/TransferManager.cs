@@ -79,6 +79,15 @@ public class TransferManager : Singleton<TransferManager> {
         this.Disconnect(false, "");
     }
 
+    public bool IsExpectingDisconnect() {
+        var clientNetworkConnector = FindAnyObjectByType<ClientNetworkConnector>();
+        if (clientNetworkConnector) {
+            return clientNetworkConnector.expectingDisconnect;
+        }
+        
+        return false;
+    }
+
     private IEnumerator StartDisconnect(bool kicked = false, string kickMessage = "") {
         yield return null;
         LuauCore.ResetContext(LuauContext.Game);
