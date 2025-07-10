@@ -1039,6 +1039,14 @@ namespace Code.Network.StateSystem
                 return;
             }
 
+            // Check if we have already resimulated from this tick. If we have, we will skip resimulation. This avoids the situation
+            // where the client commands aren't reaching the server and we are resimulating constantly because every
+            // received snapshot uses the same last processed command, but also has a different result. Side effect of this
+            // is that if the commands aren't reaching the server, we won't resim until one actually does.
+            if (this.stateHistory.IsAuthoritativeEntry(clientPredictedState.tick)) {
+                return;
+            }
+
             // Check if our predicted state matches up with our new authoritative state.
             if (clientPredictedState.Compare(this.stateSystem, state))
             {
