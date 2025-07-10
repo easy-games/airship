@@ -850,6 +850,22 @@ public partial class LuauCore : MonoBehaviour
 
                 return true;
             }
+            case PODTYPE.POD_OBJECT: {
+                LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_OBJECT, size, idx, out var arr, false);
+
+                IList objects = Array.CreateInstance(elementType, size);
+                for (var i = 0; i < size; i++) {
+                    var item = ThreadDataManager.GetObjectReference(thread, arr[i]);
+                    objects[i] = item;
+                }
+
+                if (arrayAsList) {
+                    objects = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(sourceParamType), objects);
+                }
+                value = objects;
+                
+                return true;
+            }
         }
 
         value = null;

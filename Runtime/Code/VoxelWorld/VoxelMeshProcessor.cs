@@ -1176,6 +1176,12 @@ namespace VoxelWorldStuff {
             Vector3Int origin = Vector3Int.zero;
             Vector2 damageUv = Vector2.zero;
 
+            // Skip block faces if they have already been handled by face expander
+            var handledBlockFaces = new HashSet<int>[6];
+            for (var i = 0; i < handledBlockFaces.Length; i++) {
+                handledBlockFaces[i] = new HashSet<int>();
+            }
+
             for (int x = 0; x < VoxelWorld.chunkSize; x++) {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++) {
                     for (int z = 0; z < VoxelWorld.chunkSize; z++) {
@@ -1189,7 +1195,7 @@ namespace VoxelWorldStuff {
 
                         //Read the damage number
                         ushort internalVoxelKey = (ushort)(x + y * chunkSize + z * chunkSize * chunkSize);
-                        readOnlyDamageMap.TryGetValue(internalVoxelKey, out float damage);
+                        if (!readOnlyDamageMap.TryGetValue(internalVoxelKey, out float damage)) damage = 0.0f;
                         damageUv.Set(damage, 0);
 
                         BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
@@ -1330,107 +1336,120 @@ namespace VoxelWorldStuff {
                         var faceMeshData = lodOffset > 0 ? detailMeshData[lodOffset] : temporaryMeshData; 
                         var isColored = voxelColor.r != 0 || voxelColor.g != 0 || voxelColor.b != 0 || voxelColor.a != 0;
                         for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
-                            //Vector3Int check = origin + faceChecks[faceIndex];
-                            //VoxelData other = world.ReadVoxelAtInternal(check);
-
+                            if (handledBlockFaces[faceIndex].Contains(localVoxelKey)) continue;
+                            
                             Vector3Int check = faceChecks[faceIndex];
 
-                            //Todo: faceChecks could just be offsets and save some math here
                             int voxelKeyCheck = (localVoxel.x + check.x) + (localVoxel.y + check.y) * paddedChunkSize + (localVoxel.z + check.z) * paddedChunkSize * paddedChunkSize;
                             VoxelData other = readOnlyVoxel[voxelKeyCheck];
 
                             BlockId otherBlockIndex = VoxelWorld.VoxelDataToBlockId(other);
 
                             bool solid = VoxelWorld.VoxelIsSolid(other);
+                            if (solid) continue; // Don't create if facing solid block
+                            if (otherBlockIndex == blockIndex) continue; // For non-solid neighbors like glass we shouldn't build internal faces
 
-                            //Figure out if we're meant to generate a face. 
-                            //If we're facing something nonsolid that isn't the same as us (eg: glass faces dont build internally)
-                            if (solid == false && otherBlockIndex != blockIndex) {
-                                Rect uvRect = block.GetUvsForFace(faceIndex);
+                            var faceNormal = normalForFace[faceIndex];
+                            
+                            // "Greedy mesh" this face
+                            var xScale = 1;
+                            var yScale = 1;
+                            var zScale = 1;
+                            // Only expand face in planes perpendicular to normal
+                            var flooredNorm = Vector3Int.FloorToInt(faceNormal);
+                            if (Vector3.Dot(faceNormal, Vector3.right) == 0)
+                                while (ExpandFaceX(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
+                                           handledBlockFaces, xScale)) xScale++;
+                            if (Vector3.Dot(faceNormal, Vector3.forward) == 0)
+                                while (ExpandFaceZ(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
+                                           handledBlockFaces, new Vector3(xScale, yScale, zScale), zScale)) zScale++;
+                            if (Vector3.Dot(faceNormal, Vector3.up) == 0)
+                                while (ExpandFaceY(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
+                                           handledBlockFaces, new Vector3(xScale, yScale, zScale), yScale)) yScale++;
 
-                                int faceMatId = placeBlockWithPerFaceMaterial ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
-                                faceMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
-                                if (subMesh == null) {
-                                    subMesh = SubMeshPool.Rent(faceMatId);
-                                    faceMeshData.subMeshes[faceMatId] = subMesh;
+                            Rect uvRect = block.GetUvsForFace(faceIndex);
+
+                            int faceMatId = placeBlockWithPerFaceMaterial ? block.materialInstanceIds[faceIndex] : block.meshMaterialInstanceId;
+                            faceMeshData.subMeshes.TryGetValue(faceMatId, out SubMesh subMesh);
+                            if (subMesh == null) {
+                                subMesh = SubMeshPool.Rent(faceMatId);
+                                faceMeshData.subMeshes[faceMatId] = subMesh;
+                            }
+                            
+
+                            int vertexCount = faceMeshData.verticesCount;
+                            for (int j = 0; j < 4; j++) {
+                                var srcVert = srcVertices[(faceIndex * 4) + j];
+                                srcVert.Scale(scale);
+                                srcVert.Scale(new Vector3(xScale, yScale, zScale));
+                                faceMeshData.vertices[faceMeshData.verticesCount++] = srcVert + origin;
+                                faceMeshData.normals[faceMeshData.normalsCount++] = srcNormals[faceIndex];
+                                
+                                // Mark as colored
+                                var isColoredIndex = (faceMeshData.verticesCount - 1) / 8;
+                                if (isColored) {
+                                    // One bit represents whether this is a colored vertex (hence the bit shifting)
+                                    faceMeshData.isColored[isColoredIndex] |= (byte) (1 << ((faceMeshData.verticesCount - 1) % 8));
+                                } else {
+                                    faceMeshData.isColored[isColoredIndex] &= (byte) ~(1 << ((faceMeshData.verticesCount - 1) % 8));
                                 }
+                            }
 
-                                int faceAxis = faceAxisForFace[faceIndex];
-                                Vector3 normal = normalForFace[faceIndex];
+                            //UV gen
+                            for (int j = 0; j < 4; j++) {
+                                Vector2 uv = srcUvs[(faceIndex * 4) + j];
 
-                                int vertexCount = faceMeshData.verticesCount;
+                                uv.x = uv.x * (uvRect.width - 0.04f) + uvRect.xMin + 0.02f;
+                                uv.y = uv.y * (uvRect.height - 0.04f) + uvRect.yMin + 0.02f;
+
+                                faceMeshData.uvs[faceMeshData.uvsCount++] = uv;
+                            }
+
+                            //Damage gen
+                            for (int j = 0; j < 4; j++) {
+                                faceMeshData.damageUvs[faceMeshData.damageUvsCount++] = damageUv;
+                            }                             
+
+                            //Do occlusions
+                            if (block.doOcclusion == true) //If this mesh wants occlusions, calculate the occlusions for this face
+                            {
                                 for (int j = 0; j < 4; j++) {
-                                    var srcVert = srcVertices[(faceIndex * 4) + j];
-                                    srcVert.Scale(scale);
-                                    faceMeshData.vertices[faceMeshData.verticesCount++] = srcVert + origin;
-                                    faceMeshData.normals[faceMeshData.normalsCount++] = srcNormals[faceIndex];
-                                    
-                                    // Mark as colored
-                                    var isColoredIndex = (faceMeshData.verticesCount - 1) / 8;
-                                    if (isColored) {
-                                        // One bit represents whether this is a colored vertex (hence the bit shifting)
-                                        faceMeshData.isColored[isColoredIndex] |= (byte) (1 << ((faceMeshData.verticesCount - 1) % 8));
-                                    } else {
-                                        faceMeshData.isColored[isColoredIndex] &= (byte) ~(1 << ((faceMeshData.verticesCount - 1) % 8));
-                                    }
-                                }
 
-                                //UV gen
-                                for (int j = 0; j < 4; j++) {
-                                    Vector2 uv = srcUvs[(faceIndex * 4) + j];
+                                    Vector3 samplePoint;
+                                    byte g = 0;
 
-                                    uv.x = uv.x * uvRect.width + uvRect.xMin;
-                                    uv.y = uv.y * uvRect.height + uvRect.yMin;
-
-                                    faceMeshData.uvs[faceMeshData.uvsCount++] = uv;
-                                }
-
-                                //Damage gen
-                                for (int j = 0; j < 4; j++) {
-                                    faceMeshData.damageUvs[faceMeshData.damageUvsCount++] = damageUv;
-                                }                             
-
-                                //Do occlusions
-                                if (block.doOcclusion == true) //If this mesh wants occlusions, calculate the occlusions for this face
-                                {
-                                    for (int j = 0; j < 4; j++) {
-
-                                        Vector3 samplePoint;
-                                        byte g = 0;
-
-                                        if (IsAnyVoxelOccluded(faceIndex, j, localVoxel) == false) {
-                                            g = 255; //No ambient occlusion
-                                            //we're not in a corner
-                                            samplePoint = srcRegularSamplePoints[(faceIndex * 4) + j] + origin;
-                                        }
-                                        else {
-                                            //we're in a corner!
-                                            shade[j] = true;
-                                            g = 0; //ambient occluded
-                                            samplePoint = srcCornerSamplePoints[(faceIndex * 4) + j] + origin;
-                                        }
-
-                                        Color32 col = Color.white;// DoDirectLighting(world, samplePoint, faceAxis, normal, lightingCache);
-
-                                        col.g = g;
-                                        //shade[j] = col.r < 255;
-
-                                        faceMeshData.colors[faceMeshData.colorsCount++] = col;
-                                    }
-                                    
-                                    //See if opposite corners are shaded      0--1        0--1
-                                    //see if single 1 corner is shaded     alt|\ |    norm| /|
-                                    //see if single 2 corner is shaded        2--3        2--3
-                                    if ((shade[0] && shade[3]) || (shade[1] && !shade[0] && !shade[2] && !shade[3]) || (shade[2] && !shade[0] && !shade[1] && !shade[3])) {
-                                        //Turn the triangulation
-                                        for (int j = 0; j < altSrcFaces[faceIndex].Length; j++) {
-                                            subMesh.triangles.Add(altSrcFaces[faceIndex][j] + vertexCount);
-                                        }
+                                    if (IsAnyVoxelOccluded(faceIndex, j, localVoxel) == false) {
+                                        g = 255; //No ambient occlusion
+                                        //we're not in a corner
+                                        samplePoint = srcRegularSamplePoints[(faceIndex * 4) + j] + origin;
                                     }
                                     else {
-                                        for (int j = 0; j < srcFaces[faceIndex].Length; j++) {
-                                            subMesh.triangles.Add(srcFaces[faceIndex][j] + vertexCount);
-                                        }
+                                        //we're in a corner!
+                                        shade[j] = true;
+                                        g = 0; //ambient occluded
+                                        samplePoint = srcCornerSamplePoints[(faceIndex * 4) + j] + origin;
+                                    }
+
+                                    Color32 col = Color.white;// DoDirectLighting(world, samplePoint, faceAxis, normal, lightingCache);
+
+                                    col.g = g;
+                                    //shade[j] = col.r < 255;
+
+                                    faceMeshData.colors[faceMeshData.colorsCount++] = col;
+                                }
+                                
+                                //See if opposite corners are shaded      0--1        0--1
+                                //see if single 1 corner is shaded     alt|\ |    norm| /|
+                                //see if single 2 corner is shaded        2--3        2--3
+                                if ((shade[0] && shade[3]) || (shade[1] && !shade[0] && !shade[2] && !shade[3]) || (shade[2] && !shade[0] && !shade[1] && !shade[3])) {
+                                    //Turn the triangulation
+                                    for (int j = 0; j < altSrcFaces[faceIndex].Length; j++) {
+                                        subMesh.triangles.Add(altSrcFaces[faceIndex][j] + vertexCount);
+                                    }
+                                }
+                                else {
+                                    for (int j = 0; j < srcFaces[faceIndex].Length; j++) {
+                                        subMesh.triangles.Add(srcFaces[faceIndex][j] + vertexCount);
                                     }
                                 }
                             }
@@ -1492,6 +1511,94 @@ namespace VoxelWorldStuff {
 
             //Flag this meshprocessor as having finished geometry 
             geometryReady = true;
+        }
+
+        private bool ExpandFaceX(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, int x) {
+            if (x + localVoxel.x >= chunkSize) return false;
+            ushort expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
+            var expandOther = readOnlyVoxel[expandCheck];
+            if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
+            
+            var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
+                             normal.z * paddedChunkSize * paddedChunkSize;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+
+
+            var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y - 1) * chunkSize + (localVoxel.z - 1) * chunkSize * chunkSize);
+            if (!readOnlyDamageMap.TryGetValue(damageMapExpandKey, out float otherDamage)) {
+                otherDamage = 0.0f;
+            }
+            if (!Mathf.Approximately(damage, otherDamage)) return false;
+
+            handledBlockFaces[faceIndex].Add(expandCheck);
+            return true;
+        }
+        
+        private bool ExpandFaceY(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, Vector3 size, int y) {
+            if (y + localVoxel.y >= chunkSize) return false;
+
+            var expandChecks = new List<int>();
+            for (var x = 0; x < size.x; x++) {
+                for (var z = 0; z < size.z; z++) {
+                    var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
+                                      (localVoxel.z + z) * paddedChunkSize * paddedChunkSize);
+                    var expandOther = readOnlyVoxel[expandCheck];
+                    if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
+                    if (handledBlockFaces[faceIndex].Contains(expandCheck)) return false;
+                    
+                    var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
+                                     normal.z * paddedChunkSize * paddedChunkSize;
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+                    
+                    var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y + y - 1) * chunkSize +
+                                                (localVoxel.z + z - 1) * chunkSize * chunkSize);
+                    if (!readOnlyDamageMap.TryGetValue(damageMapExpandKey, out float otherDamage)) {
+                        otherDamage = 0.0f;
+                    }
+                    if (!Mathf.Approximately(damage, otherDamage)) return false;
+
+                    expandChecks.Add(expandCheck);
+                }
+            }
+
+            foreach (var expandCheck in expandChecks) {
+                handledBlockFaces[faceIndex].Add(expandCheck);
+            }
+
+            return true;
+        }
+        
+        private bool ExpandFaceZ(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, Vector3 size, int z) {
+            if (z + localVoxel.z >= chunkSize) return false;
+
+            var expandChecks = new List<int>();
+            for (var x = 0; x < size.x; x++) {
+                for (var y = 0; y < size.y; y++) {
+                    var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
+                                      (localVoxel.z + z) * paddedChunkSize * paddedChunkSize);
+                    var expandOther = readOnlyVoxel[expandCheck];
+                    if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
+                    if (handledBlockFaces[faceIndex].Contains(expandCheck)) return false;
+
+                    var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
+                                     normal.z * paddedChunkSize * paddedChunkSize;
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+                    
+                    var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y + y - 1) * chunkSize +
+                                                (localVoxel.z + z - 1) * chunkSize * chunkSize);
+                    if (!readOnlyDamageMap.TryGetValue(damageMapExpandKey, out float otherDamage)) {
+                        otherDamage = 0.0f;
+                    }
+                    if (!Mathf.Approximately(damage, otherDamage)) return false;
+
+                    expandChecks.Add(expandCheck);
+                }
+            }
+
+            foreach (var expandCheck in expandChecks) {
+                handledBlockFaces[faceIndex].Add(expandCheck);
+            }
+            return true;
         }
 
 
@@ -1641,6 +1748,9 @@ namespace VoxelWorldStuff {
         /// <param name="triplanarScale"></param>
         /// <returns></returns>
         public static GameObject ProduceSingleBlock(int blockIndex, VoxelWorld world, float triplanerMode = 2, float triplanarScale = 1) {
+#if UNITY_SERVER
+            throw new NotSupportedException("Cannot call ProduceSingleBlock on server (atlas is not defined)");
+#endif
             MeshProcessor.InitVertexData();
 
             VoxelBlocks.BlockDefinition block = world.voxelBlocks.GetBlock((ushort)blockIndex);

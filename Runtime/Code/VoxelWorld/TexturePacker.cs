@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Profiling;
+using Object = UnityEngine.Object;
 
 public class TexturePacker : IDisposable
 {
@@ -76,6 +77,7 @@ public class TexturePacker : IDisposable
 
     public void PackTextures(Dictionary<int, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize)
     {
+        Debug.Log($"Packing texture atlas of size {width}x{height}");
         Profiler.BeginSample("PackTextures");
         //grab the time
         float startTime = Time.realtimeSinceStartup;
@@ -258,12 +260,44 @@ public class TexturePacker : IDisposable
         //print the total time elapsed
         // Debug.Log("Atlas generation took " + (Time.realtimeSinceStartup - startTime) + " seconds");
         
+        // SaveAtlasToPng();
+        
         RenderTexture.active = activeRt;
         
         // diffuse.Release();
         // normals.Release();
         
         Profiler.EndSample();
+    }
+    
+
+    /// <summary>
+    /// For debugging (call in editor only!)
+    /// </summary>
+    private void SaveAtlasToPng() {
+        if (Application.isPlaying) return; // We prob only want this in edit time
+        
+        var tempTexture = new Texture2D(diffuse.width, diffuse.height, TextureFormat.RGBA32, false);
+        
+        var currentActiveRT = RenderTexture.active;
+        RenderTexture.active = diffuse;
+        tempTexture.ReadPixels(new Rect(0, 0, diffuse.width, diffuse.height), 0, 0);
+        tempTexture.Apply();
+        
+        RenderTexture.active = currentActiveRT;
+        
+        var data = tempTexture.EncodeToPNG();
+        var savePath = Application.dataPath + "/TextureAtlas.png"; 
+        
+        File.WriteAllBytes(savePath, data);
+        
+        Debug.Log($"Saved tex atlas to: {savePath}");
+        
+        Object.DestroyImmediate(tempTexture);
+        
+#if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh();
+#endif
     }
  
     public static void CustomBlit(RenderTexture renderTarget, Texture sourceTexture, Material material, int destX, int destY, int destWidth, int destHeight, int srcX = 0, int srcY = 0, int srcWidth = -1, int srcHeight = -1)

@@ -11,6 +11,11 @@ namespace VoxelWorldStuff {
     }
     
     public static class VoxelWorldCollision {
+        private struct CollisionDescriptor {
+            public Vector3 position;
+            public Vector3Int size;
+        }
+        
         // Pre-allocated array to check for overlap results
         private static Collider[] chunkOverlapResults = new Collider[1];
         
@@ -54,12 +59,12 @@ namespace VoxelWorldStuff {
 
             //allocate new bytes
             bool[] used = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
+
+            List<CollisionDescriptor> collisions = new List<CollisionDescriptor>();
             
             //greedily convert collision into box colliders
-            for (int x = 0; x < VoxelWorld.chunkSize; x++)
-            {
-                for (int y = 0; y < VoxelWorld.chunkSize; y++)
-                {
+            for (int x = 0; x < VoxelWorld.chunkSize; x++) {
+                for (int y = 0; y < VoxelWorld.chunkSize; y++) {
                     for (int z = 0; z < VoxelWorld.chunkSize; z++) {
                         var voxelAtPos = src.GetLocalVoxelAt(x, y, z);
                         if (!IsVoxelUsed(x, y, z, used) && voxelAtPos > 0) {
@@ -76,11 +81,41 @@ namespace VoxelWorldStuff {
                             MarkAllVoxelsUsed(origin, size, used);
 
                             //Output a collider
-                            MakeCollider(src, src.bottomLeftInt + new Vector3(origin.x + size.x * 0.5f, origin.y + size.y * 0.5f, origin.z + size.z * 0.5f), size);
+                            collisions.Add(new CollisionDescriptor() {
+                                position = src.bottomLeftInt + new Vector3(origin.x + size.x * 0.5f, origin.y + size.y * 0.5f, origin.z + size.z * 0.5f),
+                                size = size,
+                            });
                         }
                     }
                 }
             }
+
+            // Update existing collider properties and spawn new colliders if necessary
+            int i = 0;
+            for (; i < collisions.Count; i++) {
+                var collisionDescriptor = collisions[i];
+                if (i < src.colliders.Count) {
+                    var collider = src.colliders[i];
+                    collider.center = collisionDescriptor.position;
+                    collider.size = collisionDescriptor.size;
+                } else {
+                    MakeCollider(src, collisionDescriptor.position, collisionDescriptor.size);
+                }
+            }
+
+            // Destroy any excess colliders
+            var removeStart = i;
+            var removeLength = src.colliders.Count - i;
+            for (; i < src.colliders.Count; i++) {
+#if UNITY_EDITOR
+                if (!Application.isPlaying) {
+                    Object.DestroyImmediate(src.colliders[i]);
+                    continue;
+                }
+#endif
+                Object.Destroy(src.colliders[i]);
+            }
+            if (removeLength > 0) src.colliders.RemoveRange(removeStart, removeLength);
         }
 
         public static List<GreedyMeshRegion> GreedyMesh(Chunk src) {

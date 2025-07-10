@@ -65,7 +65,7 @@ public static class VoxelEditManager {
         }
 
         foreach (var pos in positionSet) {
-            world.WriteVoxelAtInternal(pos, num);
+            world.WriteVoxelAtInternal(pos, num, out _);
         }
 
         return positionSet;
@@ -104,7 +104,7 @@ public static class VoxelEditManager {
         Undo.RegisterCompleteObjectUndo(undoObject, name);
 
         foreach (var affectedPos in WriteVoxel(world, position, newValue)) {
-            world.DirtyNeighborMeshes(affectedPos);
+            world.DirtyNeighborMeshes(affectedPos, true);
         }
 
         world.hasUnsavedChanges = true;
@@ -130,7 +130,7 @@ public static class VoxelEditManager {
         foreach (var editInfo in editInfos) {
             var affected = WriteVoxel(world, editInfo.position, editInfo.newValue);
             foreach (var pos in affected) {
-                world.DirtyNeighborMeshes(pos);
+                world.DirtyNeighborMeshes(pos, true);
             }
         }
 
@@ -148,7 +148,7 @@ public static class VoxelEditManager {
                     foreach (var editInfo in edit.edits) {
                         var affectedPositions = WriteVoxel(currentWorld, editInfo.position, editInfo.oldValue);
                         foreach (var editPos in affectedPositions) {
-                            currentWorld.DirtyNeighborMeshes(editPos);
+                            currentWorld.DirtyNeighborMeshes(editPos, true);
                         }
                     }
 
@@ -166,7 +166,7 @@ public static class VoxelEditManager {
                     foreach (var editInfo in edit.edits) {
                         var affectedPositions = WriteVoxel(currentWorld, editInfo.position, editInfo.newValue);
                         foreach (var editPos in affectedPositions) {
-                            currentWorld.DirtyNeighborMeshes(editPos);
+                            currentWorld.DirtyNeighborMeshes(editPos, true);
                         }
                     }
 
@@ -874,7 +874,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         var localKey = (ushort)Chunk.WorldPosToVoxelIndex(lastPos);
 
                         chunk.damageMap[localKey] = 1;
-                        world.DirtyNeighborMeshes(lastPos, true);
+                        world.DirtyNeighborMeshes(lastPos, true, true);
                     }
                 }
 
