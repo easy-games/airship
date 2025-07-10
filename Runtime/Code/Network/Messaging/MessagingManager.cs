@@ -91,39 +91,110 @@ public class MessagingManager : Singleton<MessagingManager>
             // Certificate validation handler for our custom CA
             CertificateValidationHandler = (certContext) =>
             {
-                // Create a new chain policy
-                var chain = new X509Chain();
-                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
-
-                // Add our custom CA to the chain's trust store.
-                // This is the crucial step that tells the validator to trust our CA.
-                chain.ChainPolicy.ExtraStore.Add(caCert);
-
-                // `certContext.Certificate` is the certificate provided by the server
-                var serverCert = new X509Certificate2(certContext.Certificate);
-                bool isChainValid = chain.Build(serverCert);
-                if (!isChainValid)
-                {
-                    // You can inspect chain.ChainStatus here to see why it failed.
-                    // A common status is `UntrustedRoot`, which is expected if the public CA
-                    // is not in the system's root store. We can ignore that specific error
-                    // as long as the chain is otherwise valid.
-                    foreach (var status in chain.ChainStatus)
-                    {
-                        if (status.Status == X509ChainStatusFlags.UntrustedRoot)
-                        {
-                            // If the only error is that the root is untrusted, but the chain
-                            // was built up to our CA, then we can consider it valid.
-                            continue;
-                        }
-                        // If there are other errors (e.g., expired, wrong name), validation fails.
-                        return false;
-                    }
-                }
+                Debug.Log("[TLS] Starting certificate validation");
                 
-                // If the chain is valid or the only error is an untrusted root, we are good.
-                return true;
+                try
+                {
+                    // Log basic certificate information
+                    var serverCert = new X509Certificate2(certContext.Certificate);
+                    Debug.Log($"[TLS] Server certificate subject: {serverCert.Subject}");
+                    Debug.Log($"[TLS] Server certificate issuer: {serverCert.Issuer}");
+                    Debug.Log($"[TLS] Server certificate valid from: {serverCert.NotBefore} to: {serverCert.NotAfter}");
+                    Debug.Log($"[TLS] Server certificate thumbprint: {serverCert.Thumbprint}");
+                    
+                    // Log CA certificate information
+                    var caCert2 = new X509Certificate2(caCert);
+                    Debug.Log($"[TLS] CA certificate subject: {caCert2.Subject}");
+                    Debug.Log($"[TLS] CA certificate issuer: {caCert2.Issuer}");
+                    Debug.Log($"[TLS] CA certificate valid from: {caCert2.NotBefore} to: {caCert2.NotAfter}");
+                    Debug.Log($"[TLS] CA certificate thumbprint: {caCert2.Thumbprint}");
+
+                    // Create a new chain policy
+                    var chain = new X509Chain();
+                    chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                    chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+
+                    // Add our custom CA to the chain's trust store.
+                    // This is the crucial step that tells the validator to trust our CA.
+                    chain.ChainPolicy.ExtraStore.Add(caCert);
+                    Debug.Log($"[TLS] Added CA certificate to chain trust store");
+
+                    // Build and validate the certificate chain
+                    bool isChainValid = chain.Build(serverCert);
+                    Debug.Log($"[TLS] Chain build result: {isChainValid}");
+                    
+                    // Log detailed chain information
+                    Debug.Log($"[TLS] Chain elements count: {chain.ChainElements.Count}");
+                    for (int i = 0; i < chain.ChainElements.Count; i++)
+                    {
+                        var element = chain.ChainElements[i];
+                        Debug.Log($"[TLS] Chain element {i}: {element.Certificate.Subject}");
+                        Debug.Log($"[TLS] Chain element {i} issuer: {element.Certificate.Issuer}");
+                        Debug.Log($"[TLS] Chain element {i} thumbprint: {element.Certificate.Thumbprint}");
+                        
+                        if (element.ChainElementStatus.Length > 0)
+                        {
+                            Debug.Log($"[TLS] Chain element {i} has {element.ChainElementStatus.Length} status issues:");
+                            foreach (var status in element.ChainElementStatus)
+                            {
+                                Debug.Log($"[TLS] Chain element {i} status: {status.Status} - {status.StatusInformation}");
+                            }
+                        }
+                        else
+                        {
+                            Debug.Log($"[TLS] Chain element {i} has no status issues");
+                        }
+                    }
+
+                    if (!isChainValid)
+                    {
+                        Debug.Log($"[TLS] Chain validation failed. Checking chain status (count: {chain.ChainStatus.Length})");
+                        
+                        bool hasOnlyUntrustedRootError = true;
+                        bool hasUntrustedRootError = false;
+                        
+                        foreach (var status in chain.ChainStatus)
+                        {
+                            Debug.Log($"[TLS] Chain status: {status.Status} - {status.StatusInformation}");
+                            
+                            if (status.Status == X509ChainStatusFlags.UntrustedRoot)
+                            {
+                                hasUntrustedRootError = true;
+                                Debug.Log("[TLS] Found UntrustedRoot error - this is expected for custom CA");
+                                continue;
+                            }
+                            else
+                            {
+                                hasOnlyUntrustedRootError = false;
+                                Debug.LogError($"[TLS] Found non-UntrustedRoot error: {status.Status} - {status.StatusInformation}");
+                            }
+                        }
+                        
+                        if (!hasOnlyUntrustedRootError)
+                        {
+                            Debug.LogError("[TLS] Certificate validation failed due to errors other than UntrustedRoot");
+                            return false;
+                        }
+                        
+                        if (hasUntrustedRootError)
+                        {
+                            Debug.Log("[TLS] Only UntrustedRoot error found, which is acceptable for custom CA");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("[TLS] Chain validation succeeded");
+                    }
+                    
+                    Debug.Log("[TLS] Certificate validation completed successfully");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[TLS] Exception during certificate validation: {ex.Message}");
+                    Debug.LogError($"[TLS] Exception stack trace: {ex.StackTrace}");
+                    return false;
+                }
             },
 
             // Specify allowed TLS protocols
@@ -182,10 +253,39 @@ public class MessagingManager : Singleton<MessagingManager>
             MessagingManager.mqttClient = null;
         };
 
-
-        await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
-
-        return true;
+        try
+        {
+            Debug.Log("[MQTT] Attempting to connect to MQTT broker...");
+            Debug.Log($"[MQTT] Host: {AirshipPlatformUrl.messaging}, Port: 1883");
+            Debug.Log($"[MQTT] Using TLS: {tlsOptions.UseTls}");
+            Debug.Log($"[MQTT] SSL Protocol: {tlsOptions.SslProtocol}");
+            Debug.Log($"[MQTT] Certificate path: {certPath}");
+            
+            await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
+            
+            Debug.Log("[MQTT] Successfully connected to MQTT broker");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[MQTT] Failed to connect to MQTT broker: {ex.Message}");
+            Debug.LogError($"[MQTT] Exception type: {ex.GetType().Name}");
+            Debug.LogError($"[MQTT] Stack trace: {ex.StackTrace}");
+            
+            // Log inner exceptions recursively
+            var innerEx = ex.InnerException;
+            int innerLevel = 1;
+            while (innerEx != null)
+            {
+                Debug.LogError($"[MQTT] Inner exception {innerLevel}: {innerEx.Message}");
+                Debug.LogError($"[MQTT] Inner exception {innerLevel} type: {innerEx.GetType().Name}");
+                Debug.LogError($"[MQTT] Inner exception {innerLevel} stack trace: {innerEx.StackTrace}");
+                innerEx = innerEx.InnerException;
+                innerLevel++;
+            }
+            
+            return false;
+        }
     }
 
     public static async Task Disconnect()
