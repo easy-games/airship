@@ -4,6 +4,7 @@ namespace Code.Platform.Shared {
 #if AIRSHIP_STAGING
         public static string messaging = "nats-internal-staging.airship.gg";
         public static string certificatePath = "Staging/messaging-ca.crt";
+        public static string serverCertificatePath = "Staging/messaging-cert.crt";
 
     #if UNITY_SERVER
         public static string gameCoordinatorSocket = "https://gc-edge-staging.easy.gg";
@@ -34,6 +35,7 @@ namespace Code.Platform.Shared {
 
         public static string messaging = "nats-internal.airship.gg";
         public static string certificatePath = "Production/messaging-ca.crt";
+        public static string serverCertificatePath = "Production/messaging-cert.crt";
 
     #if UNITY_SERVER
         public static string gameCoordinatorSocket = "https://gc-edge.airship.gg";
