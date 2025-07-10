@@ -285,8 +285,6 @@ namespace VoxelWorldStuff {
             var minCorner = (bcCenter - bcSize / 2);
             var posRelativeToSize = Vector3Int.FloorToInt(pos - minCorner);
             
-            // Debug.Log($"Splitting! posRelativeToSize={posRelativeToSize} bcSize={bcSize} minCorner={minCorner} bcCenter={bcCenter}");
-            
             var bcComp = new GameObject("ComponentTrue");
             bcComp.transform.localScale = bcSize;
             bcComp.transform.position = bcCenter;
@@ -322,6 +320,7 @@ namespace VoxelWorldStuff {
                 var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + posRelativeToSize.y + 0.5f, minCorner.z + (posRelativeToSize.z + 1) + (bcSize.z - (posRelativeToSize.z + 1)) / 2);
                 MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
             }
+            chunk.colliders.Remove(bc);
             Object.Destroy(bc);
         } 
 
