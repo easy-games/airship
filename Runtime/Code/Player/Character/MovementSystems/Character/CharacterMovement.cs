@@ -24,7 +24,8 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     [LuauAPI]
     public class
-        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData> {
+        CharacterMovement : NetworkedStateSystem<CharacterMovement, CharacterSnapshotData, CharacterStateDiff,
+            CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
         public Transform airshipTransform; //The visual transform controlled by this script
@@ -221,7 +222,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void SetMode(NetworkedStateSystemMode mode) {
-            Debug.Log("Running movement in " + mode + " mode for " + this.name + ".");
+            Debug.Log("Running movement in " + mode + " mode for " + name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
                 // We move the transform per-frame, so no interpolation is needed
@@ -314,7 +315,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 crouch = crouchInput,
                 sprint = sprintInput,
                 lookVector = lookVector,
-                customData = customInputData,
+                customData = customInputData
             };
             // Reset the custom data again
             customInputData = null;
@@ -336,6 +337,11 @@ namespace Code.Player.Character.MovementSystems.Character {
                     lookVector = currentMoveSnapshot.lookVector
                 };
             }
+
+            GizmoUtils.DrawBox(transform.position + new Vector3(0, characterHalfExtents.y, 0), Quaternion.identity,
+                characterHalfExtents, Color.blue, 5);
+            Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
+                Color.green, 5);
 
             // If input is disabled, we use default inputs, but we keep customData since we don't know how TS will want to handle that data.
             // TODO: in the future we might not want to actually overwrite the data passed in by the client. It might be nice for TS to be able
@@ -384,10 +390,13 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // currentMoveSnapshot.lastGroundedMoveDir = command.moveDir;
 
                 //Snap to the ground if you are falling into the ground
-                if (newVelocity.y < 1 && !isImpulsing && !currentMoveSnapshot.airborneFromImpulse &&
-                    ((!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0) ||
-                     //Snap if we always snap to ground
-                     (movementSettings.alwaysSnapToGround && !currentMoveSnapshot.prevStepUp))) {
+                if (!currentMoveSnapshot.prevStepUp && !isImpulsing &&
+                    !currentMoveSnapshot.airborneFromImpulse //Don't snap when we are moving from something else
+                    && newVelocity.y < 1 && //Only snap when moving downward
+                    (movementSettings.alwaysSnapToGround || //Snap if we always snap to ground
+                     (!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0))) {
+                    //OR snap if we just hit the ground
+                    //Snap if we just became became grounded
                     SnapToY(groundHit.point.y);
                     newVelocity.y = 0;
                 }
@@ -1073,7 +1082,8 @@ namespace Code.Player.Character.MovementSystems.Character {
                                 //With this new velocity are we going to fall off a different ledge? 
                                 if (!Physics.Raycast(
                                         new Vector3(0, 1.25f, 0) + transform.position +
-                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f, movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                                        newVelocity.normalized * distanceCheck, Vector3.down, 1.5f,
+                                        movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                     //Nothing in the direction of the new velocity
                                     newVelocity = Vector3.zero;
                                 }
@@ -1398,26 +1408,27 @@ namespace Code.Player.Character.MovementSystems.Character {
             CharacterSnapshotData snapshotOld,
             CharacterSnapshotData snapshotNew) {
             var position = Vector3.Lerp(snapshotOld.position, snapshotNew.position, (float)delta);
-            
+
             // Rigidbody position will not update until the next physics tick.
             rb.position = position;
-            this.transform.position = position;
+            transform.position = position;
             var oldLook = new Vector3(snapshotOld.lookVector.x, 0, snapshotOld.lookVector.z);
             var newLook = new Vector3(snapshotNew.lookVector.x, 0, snapshotNew.lookVector.z);
             if (oldLook == Vector3.zero) {
                 oldLook.z = 0.01f;
             }
+
             if (newLook == Vector3.zero) {
                 newLook.z = 0.01f;
             }
-            
+
             airshipTransform.rotation = Quaternion.Lerp(
                 Quaternion.LookRotation(oldLook),
                 Quaternion.LookRotation(newLook),
                 (float)delta);
 
-            this.lookVector = Vector3.Lerp(snapshotOld.lookVector, snapshotNew.lookVector, (float)delta);
-            
+            lookVector = Vector3.Lerp(snapshotOld.lookVector, snapshotNew.lookVector, (float)delta);
+
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
 
@@ -1432,18 +1443,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                 jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount
             };
             var changed = newState.state != currentAnimState.state;
-            
+
             if (animationHelper) {
                 animationHelper.SetState(newState);
             }
-            
+
             currentMoveSnapshot = snapshot;
             currentAnimState = newState;
-            
+
             if (changed) {
                 stateChanged?.Invoke((int)newState.state);
             }
-            
+
             OnInterpolateReachedState?.Invoke(snapshot);
         }
 
@@ -1503,7 +1514,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
             CharacterSnapshotData localState = null;
-            
+
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
                     localState = state;
