@@ -353,7 +353,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk.GetVoxelAt(voxelPos) == 0) return;
         
         chunk.WriteVoxelColor(voxelPos, color);
-        DirtyNeighborMeshes(voxelPos, priority);
+        DirtyNeighborMeshes(voxelPos, false, priority);
     }
     
     public void DamageVoxelAt(Vector3 pos, float damage, bool priority) {
@@ -367,16 +367,16 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk.GetVoxelAt(voxelPos) == 0) return;
         
         chunk.WriteVoxelDamage(voxelPos, damage);
-        DirtyMesh(voxelPos, priority);
+        DirtyMesh(voxelPos, false, priority);
     }
 
     private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
-        Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel);
+        Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel, out var collisionUpdated);
         DamageVoxelAt(posInt, 0.0f, false);
         if (affectedChunk != null) {
             //Adding voxels to history stack for playback
             BeforeVoxelPlaced?.Invoke(voxel, posInt);
-            DirtyNeighborMeshes(posInt, priority);
+            DirtyNeighborMeshes(posInt, collisionUpdated, priority);
             VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
         }
         return affectedChunk;
@@ -504,8 +504,7 @@ public partial class VoxelWorld : MonoBehaviour {
      * Will return false if the voxel is 
      */
     [HideFromTS]
-    public Chunk WriteVoxelAtInternal(Vector3Int pos, VoxelData num) {
-        // Debug.Log("Writing voxel pos=" + pos + ", voxel=" + num);
+    public Chunk WriteVoxelAtInternal(Vector3Int pos, VoxelData num, out bool collisionUpdated) {
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out Chunk chunk);
         if (chunk == null) {
@@ -520,13 +519,20 @@ public partial class VoxelWorld : MonoBehaviour {
         num = voxelBlocks.AddSolidMaskToVoxelValue(num);
 
         // Ignore if this changes nothing.
-        if (num == chunk.GetVoxelAt(pos)) {
+        var existingVoxel = chunk.GetVoxelAt(pos);
+        if (num == existingVoxel) {
+            collisionUpdated = false;
             return null;
+        }
+
+        // Check if we have the same collision type
+        collisionUpdated = true;
+        if (num != 0 || existingVoxel != 0) {
+            collisionUpdated = GetCollisionType(num) != GetCollisionType(existingVoxel);
         }
 
         //Write a new voxel
         chunk.WriteVoxel(pos, num);
-
         return chunk;
     }
 
@@ -636,12 +642,14 @@ public partial class VoxelWorld : MonoBehaviour {
         return value.GetVoxelColorAt(posi);
     }
 
-    public void DirtyMesh(Vector3Int voxel, bool priority = false) {
+    public void DirtyMesh(Vector3Int voxel, bool dirtyCollisions, bool priority = false) {
         Chunk chunk = GetChunkByVoxel(voxel);
         if (chunk != null) {
 
             chunk.SetGeometryDirty(true, priority);
-            if (priority) {
+            if (dirtyCollisions) chunk.SetCollisionDirty(true);
+            
+            if (priority && dirtyCollisions) {
                 BeforeVoxelChunkUpdated?.Invoke(chunk);
                 chunk.MainthreadForceCollisionRebuild();
                 VoxelChunkUpdated?.Invoke(chunk);
@@ -649,34 +657,34 @@ public partial class VoxelWorld : MonoBehaviour {
         }
         else {
             //if it is null, create it
-            WriteVoxelAtInternal(voxel, 0);
+            WriteVoxelAtInternal(voxel, 0, out var collisionUpdated);
         }
     }
 
-    public void DirtyNeighborMeshes(Vector3Int voxel, bool priority = false) {
+    public void DirtyNeighborMeshes(Vector3Int voxel, bool dirtyCollision, bool priority = false) {
 
         //DateTime startTime = DateTime.Now;
 
-        DirtyMesh(voxel, priority);
+        DirtyMesh(voxel, dirtyCollision, priority);
         Vector3Int localPosition = Chunk.WorldPosToLocalPos(voxel);
 
         if (localPosition.x == 0) {
-            DirtyMesh(voxel + new Vector3Int(-1, 0, 0), false);
+            DirtyMesh(voxel + new Vector3Int(-1, 0, 0), false, false);
         }
         if (localPosition.y == 0) {
-            DirtyMesh(voxel + new Vector3Int(0, -1, 0), false);
+            DirtyMesh(voxel + new Vector3Int(0, -1, 0), false, false);
         }
         if (localPosition.z == 0) {
-            DirtyMesh(voxel + new Vector3Int(0, 0, -1), false);
+            DirtyMesh(voxel + new Vector3Int(0, 0, -1), false, false);
         }
         if (localPosition.x == chunkSize - 1) {
-            DirtyMesh(voxel + new Vector3Int(+1, 0, 0), false);
+            DirtyMesh(voxel + new Vector3Int(+1, 0, 0), false, false);
         }
         if (localPosition.y == chunkSize - 1) {
-            DirtyMesh(voxel + new Vector3Int(0, +1, 0), false);
+            DirtyMesh(voxel + new Vector3Int(0, +1, 0), false, false);
         }
         if (localPosition.z == chunkSize - 1) {
-            DirtyMesh(voxel + new Vector3Int(0, 0, +1), false);
+            DirtyMesh(voxel + new Vector3Int(0, 0, +1), false, false);
         }
     }
 
@@ -757,7 +765,7 @@ public partial class VoxelWorld : MonoBehaviour {
         
         foreach (var def in voxelBlocks.loadedBlocks) {
             if (def.definition.solid == true) {
-                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.blockId);
+                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.blockId, out _);
                 return;
             }
         }
@@ -777,10 +785,10 @@ public partial class VoxelWorld : MonoBehaviour {
             for (int z = -64; z < 64; z++) {
                 int height = (int)(Mathf.PerlinNoise((float)x / 256.0f * scale, (float)z / 256.0f * scale) * 32.0f);
                 for (int y = 0; y < height; y++) {
-                    WriteVoxelAtInternal(new Vector3Int(x, y, z), dirt);
+                    WriteVoxelAtInternal(new Vector3Int(x, y, z), dirt, out _);
                 }
 
-                WriteVoxelAtInternal(new Vector3Int(x, height, z), grass);
+                WriteVoxelAtInternal(new Vector3Int(x, height, z), grass, out _);
 
             }
         }
@@ -794,7 +802,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         for (int x = -64; x < 64; x++) {
             for (int z = -64; z < 64; z++) {
-                WriteVoxelAtInternal(new Vector3Int(x, 0, z), grass);
+                WriteVoxelAtInternal(new Vector3Int(x, 0, z), grass, out _);
             }
         }
         RegenerateAllMeshes();
@@ -806,7 +814,7 @@ public partial class VoxelWorld : MonoBehaviour {
         
         VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
 
-        WriteVoxelAtInternal(new Vector3Int(0, 0, 0), dirt);
+        WriteVoxelAtInternal(new Vector3Int(0, 0, 0), dirt, out _);
 
         RegenerateAllMeshes();
     }
@@ -815,8 +823,9 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.BeginSample("RegenerateAllMeshes");
 
         //Force a mesh update
-        foreach (var chunk in chunks) {
-            chunk.Value.SetGeometryDirty(true);
+        foreach (var (_, chunk) in chunks) {
+            chunk.SetGeometryDirty(true);
+            chunk.SetCollisionDirty(true);
         }
         Profiler.EndSample();
     }
@@ -1314,14 +1323,15 @@ public partial class VoxelWorld : MonoBehaviour {
         voxelBlocks.Reload(useTexturesDirectlyFromDisk); // this.GetBlockDefinesContents(), useTexturesDirectlyFromDisk);
          
         //refresh the geometry
-        foreach (var chunk in chunks) {
-            chunk.Value.SetGeometryDirty(true, false);
+        foreach (var (_, chunk) in chunks) {
+            chunk.SetGeometryDirty(true, false);
         } 
     }
     
     public void AddChunk(Vector3Int key, Chunk chunk) {
         chunks.Add(key, chunk);
         chunk.SetGeometryDirty(true);
+        chunk.SetCollisionDirty(true);
     }
 
     //Todo: How do we want to handle having multiple voxelworlds?

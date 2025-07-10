@@ -103,6 +103,10 @@ namespace VoxelWorldStuff {
         public int numUpdates = 0;
 
         private bool geometryDirty = true;
+        /// <summary>
+        /// We are a bit more strict with marking collision as dirty to not rebuild them unnecessarily
+        /// </summary>
+        private bool collisionDirty = true;
         private bool geometryDirtyPriorityUpdate = false;
 
         /// <summary>
@@ -165,11 +169,13 @@ namespace VoxelWorldStuff {
 
         public void SetGeometryDirty(bool dirty, bool priority = false) {
             geometryDirty = dirty;
-            if (dirty) {
-                if (priority) {
-                    geometryDirtyPriorityUpdate = true;
-                }
+            if (dirty && priority) {
+                geometryDirtyPriorityUpdate = true;
             }
+        }
+
+        public void SetCollisionDirty(bool dirty) {
+            collisionDirty = dirty;
         }
 
         private int CountAirVoxelsAround(VoxelWorld world, Vector3Int checkPos) {
@@ -606,8 +612,8 @@ namespace VoxelWorldStuff {
 
         public void Clear() {
             if (obj != null) {
-                colliders.Clear();
-                Object.DestroyImmediate(obj);
+                // colliders.Clear();
+                // Object.DestroyImmediate(obj);
                 if (detailGameObjects != null && detailGameObjects[0] != null) {
                     for (var i = 0; i < 2; i++) {
                         Object.DestroyImmediate(detailGameObjects[i]);
@@ -621,7 +627,7 @@ namespace VoxelWorldStuff {
                     }
                 }
 
-                obj = null;
+                // obj = null;
             }
         }
 
@@ -714,18 +720,8 @@ namespace VoxelWorldStuff {
                 if (meshProcessor.GetGeometryReady() == true) {
                     Profiler.BeginSample("ChunkMainThread");
 
-                    var newChunk = new GameObject();
-                    if (obj != null) {
-                        // Copy prefabs to new chunk (so we don't destroy them)
-                        foreach (var (pos, prefab) in prefabObjects) {
-                            prefab.Item1.transform.parent = newChunk.transform;
-                        }
-
-                        Clear();
-                    }
-
                     if (obj == null) {
-                        obj = newChunk;
+                        obj = new GameObject();
                         obj.layer = world.gameObject.layer;
                         obj.transform.parent = parent.transform;
                         obj.transform.localRotation = Quaternion.identity;
@@ -733,108 +729,116 @@ namespace VoxelWorldStuff {
                         obj.transform.localPosition = Vector3.zero;
                         obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
+                    }
+                    
+                    // Copy prefabs to new chunk (so we don't destroy them)
+                    // foreach (var (pos, prefab) in prefabObjects) {
+                    //     prefab.Item1.transform.parent = obj.transform;
+                    // }
+                    Clear();
 
-                        if (mesh != null) {
-                            if (Application.isPlaying) {
-                                Object.Destroy(mesh);
-                            } else {
-                                Object.DestroyImmediate(mesh);
-                            }
+                    if (mesh != null) {
+                        if (Application.isPlaying) {
+                            Object.Destroy(mesh);
+                        } else {
+                            Object.DestroyImmediate(mesh);
+                        }
+                    }
+
+                    mesh = new Mesh();
+                    mesh.name = "VoxelWorldChunk";
+                    // mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
+
+                    filter = obj.GetComponent<MeshFilter>();
+                    if (!filter) filter = obj.AddComponent<MeshFilter>();
+                    filter.mesh = mesh;
+
+                    renderer = obj.GetComponent<MeshRenderer>();
+                    if (!renderer) renderer = obj.AddComponent<MeshRenderer>();
+                    renderer.lightProbeUsage = LightProbeUsage.Off;
+
+                    //See if this mesh has detail meshes
+                    if (meshProcessor.GetHasDetailMeshes() == true) {
+                        //@@ This code has bugs when you delete all the meshes
+
+                        if (detailGameObjects == null) {
+                            detailGameObjects = new GameObject[3];
+
+
+                            detailMeshes = new Mesh[3];
+                            detailFilters = new MeshFilter[3];
+                            detailRenderers = new MeshRenderer[3];
                         }
 
-                        mesh = new Mesh();
-                        mesh.name = "VoxelWorldChunk";
-                        // mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
+                        for (var i = 0; i < 3; i++) {
+                            detailGameObjects[i] = new GameObject();
+                            detailGameObjects[i].layer = world.gameObject.layer;
+                            detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+                            detailGameObjects[i].transform.parent = obj.transform;
 
-                        filter = obj.AddComponent<MeshFilter>();
-                        filter.mesh = mesh;
+                            detailGameObjects[i].transform.localRotation = Quaternion.identity;
+                            detailGameObjects[i].transform.localScale = Vector3.one;
+                            detailGameObjects[i].transform.localPosition = Vector3.zero;
 
-                        renderer = obj.AddComponent<MeshRenderer>();
-                        renderer.lightProbeUsage = LightProbeUsage.Off;
-
-                        //See if this mesh has detail meshes
-                        if (meshProcessor.GetHasDetailMeshes() == true) {
-                            //@@ This code has bugs when you delete all the meshes
-
-                            if (detailGameObjects == null) {
-                                detailGameObjects = new GameObject[3];
-
-
-                                detailMeshes = new Mesh[3];
-                                detailFilters = new MeshFilter[3];
-                                detailRenderers = new MeshRenderer[3];
+                            string name = "DetailMeshNear";
+                            if (i == 0) {
+                                name = "DetailMeshNear";
+                            } else if (i == 1) {
+                                name = "DetailMeshFar";
+                            } else  {
+                                name = "DetailMeshVeryFar";
                             }
 
-                            for (var i = 0; i < 3; i++) {
-                                detailGameObjects[i] = new GameObject();
-                                detailGameObjects[i].layer = world.gameObject.layer;
-                                detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-                                detailGameObjects[i].transform.parent = obj.transform;
+                            detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
+                            detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
+                            detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
 
-                                detailGameObjects[i].transform.localRotation = Quaternion.identity;
-                                detailGameObjects[i].transform.localScale = Vector3.one;
-                                detailGameObjects[i].transform.localPosition = Vector3.zero;
+                            detailMeshes[i] = new Mesh();
+                            detailGameObjects[i].name = detailMeshes[i].name = name;
+                            // detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 
-                                string name = "DetailMeshNear";
-                                if (i == 0) {
-                                    name = "DetailMeshNear";
-                                } else if (i == 1) {
-                                    name = "DetailMeshFar";
-                                } else  {
-                                    name = "DetailMeshVeryFar";
-                                }
+                            detailFilters[i].mesh = detailMeshes[i];
+                        }
 
-                                detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
-                                detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
-                                detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
-
-                                detailMeshes[i] = new Mesh();
-                                detailGameObjects[i].name = detailMeshes[i].name = name;
-                                // detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
-
-                                detailFilters[i].mesh = detailMeshes[i];
-                            }
-
-                            // Setup lod'd shadows
-                            var shadowGo = new GameObject("ShadowCaster", typeof(MeshFilter), typeof(MeshRenderer));
-                            var shadowFilter = shadowGo.GetComponent<MeshFilter>();
-                            shadowFilter.mesh
-                                = detailMeshes[1]; // DetailMeshFar is our shadow mesh -- should make this configurable
-                            shadowRenderer = shadowGo.GetComponent<MeshRenderer>();
+                        // Setup lod'd shadows
+                        var shadowGo = new GameObject("ShadowCaster", typeof(MeshFilter), typeof(MeshRenderer));
+                        var shadowFilter = shadowGo.GetComponent<MeshFilter>();
+                        shadowFilter.mesh
+                            = detailMeshes[1]; // DetailMeshFar is our shadow mesh -- should make this configurable
+                        shadowRenderer = shadowGo.GetComponent<MeshRenderer>();
 #if !UNITY_SERVER
-                            shadowRenderer.sharedMaterial = simpleLitMaterial;
+                        shadowRenderer.sharedMaterial = simpleLitMaterial;
 #endif
-                            shadowRenderer.shadowCastingMode
-                                = ShadowCastingMode.ShadowsOnly; // Only cast shadows (invisible)
-                            shadowRenderer.staticShadowCaster = true;
-                            shadowGo.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-                            shadowGo.transform.parent = obj.transform;
+                        shadowRenderer.shadowCastingMode
+                            = ShadowCastingMode.ShadowsOnly; // Only cast shadows (invisible)
+                        shadowRenderer.staticShadowCaster = true;
+                        shadowGo.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+                        shadowGo.transform.parent = obj.transform;
 
 
-                            lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
+                        lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
 
-                            // Enable crossfade
-                            lodSystem.fadeMode = LODFadeMode.None;
-                            lodSystem.animateCrossFading = false;
+                        // Enable crossfade
+                        lodSystem.fadeMode = LODFadeMode.None;
+                        lodSystem.animateCrossFading = false;
 
-                            // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
-                            var lods = new LOD[3] {
-                                new(0.4f,
-                                    new Renderer[] {
-                                        detailRenderers[0]
-                                    }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
-                                new(0.01f, new Renderer[] { detailRenderers[1] }),
-                                new(0.0f, new Renderer[] { detailRenderers[2] })
-                            };
+                        // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
+                        var lods = new LOD[3] {
+                            new(0.4f,
+                                new Renderer[] {
+                                    detailRenderers[0]
+                                }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                            new(0.01f, new Renderer[] { detailRenderers[1] }),
+                            new(0.0f, new Renderer[] { detailRenderers[2] })
+                        };
 
-                            lodSystem.SetLODs(lods);
-                        } else {
-                            if (detailGameObjects != null) {
-                                for (var i = 0; i < 3; i++) {
-                                    if (detailGameObjects[i] != null) {
-                                        Object.DestroyImmediate(detailGameObjects[i]);
-                                        detailGameObjects[i] = null;
-                                    }
+                        lodSystem.SetLODs(lods);
+                    } else {
+                        if (detailGameObjects != null) {
+                            for (var i = 0; i < 3; i++) {
+                                if (detailGameObjects[i] != null) {
+                                    Object.DestroyImmediate(detailGameObjects[i]);
+                                    detailGameObjects[i] = null;
                                 }
                             }
                         }
@@ -849,7 +853,11 @@ namespace VoxelWorldStuff {
                     Profiler.BeginSample("RebuildCollision");
                     //Fill the collision out
                     //Greedy mesh time!
-                    VoxelWorldCollision.MakeCollision(this);
+                    if (collisionDirty) {
+                        VoxelWorldCollision.MakeCollision(this);
+                        collisionDirty = false;
+                    }
+
                     Profiler.EndSample();
 
 #pragma warning disable CS0162
