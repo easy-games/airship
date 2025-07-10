@@ -90,6 +90,8 @@ namespace VoxelWorldStuff {
                 }
             }
 
+            src.colliders.RemoveAll(collider => collider == null);
+
             // Update existing collider properties and spawn new colliders if necessary
             int i = 0;
             for (; i < collisions.Count; i++) {
