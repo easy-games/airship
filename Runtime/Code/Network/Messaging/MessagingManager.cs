@@ -81,7 +81,27 @@ public class MessagingManager : Singleton<MessagingManager>
         MessagingManager.mqttClient = mqttClient;
 
         var certPath = Path.Combine(Application.streamingAssetsPath, "Certs", AirshipPlatformUrl.certificatePath);
-        var caCert = X509Certificate2.CreateFromCertFile(certPath);
+        Debug.Log($"[CERT] Loading CA certificate from: {certPath}");
+        Debug.Log($"[CERT] File exists: {File.Exists(certPath)}");
+        
+        X509Certificate2 caCert;
+        try
+        {
+            var caCertBase = X509Certificate2.CreateFromCertFile(certPath);
+            caCert = new X509Certificate2(caCertBase);
+            Debug.Log($"[CERT] Successfully loaded CA certificate");
+            Debug.Log($"[CERT] CA certificate subject: {caCert.Subject}");
+            Debug.Log($"[CERT] CA certificate issuer: {caCert.Issuer}");
+            Debug.Log($"[CERT] CA certificate has private key: {caCert.HasPrivateKey}");
+            Debug.Log($"[CERT] CA certificate thumbprint: {caCert.Thumbprint}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[CERT] Failed to load CA certificate: {ex.Message}");
+            Debug.LogError($"[CERT] Exception type: {ex.GetType().Name}");
+            Debug.LogError($"[CERT] Stack trace: {ex.StackTrace}");
+            return false;
+        }
 
         // Create the secure TLS options with proper certificate validation
         var tlsOptions = new MqttClientTlsOptions
@@ -103,11 +123,10 @@ public class MessagingManager : Singleton<MessagingManager>
                     Debug.Log($"[TLS] Server certificate thumbprint: {serverCert.Thumbprint}");
                     
                     // Log CA certificate information
-                    var caCert2 = new X509Certificate2(caCert);
-                    Debug.Log($"[TLS] CA certificate subject: {caCert2.Subject}");
-                    Debug.Log($"[TLS] CA certificate issuer: {caCert2.Issuer}");
-                    Debug.Log($"[TLS] CA certificate valid from: {caCert2.NotBefore} to: {caCert2.NotAfter}");
-                    Debug.Log($"[TLS] CA certificate thumbprint: {caCert2.Thumbprint}");
+                    Debug.Log($"[TLS] CA certificate subject: {caCert.Subject}");
+                    Debug.Log($"[TLS] CA certificate issuer: {caCert.Issuer}");
+                    Debug.Log($"[TLS] CA certificate valid from: {caCert.NotBefore} to: {caCert.NotAfter}");
+                    Debug.Log($"[TLS] CA certificate thumbprint: {caCert.Thumbprint}");
 
                     // Create a new chain policy
                     var chain = new X509Chain();
@@ -116,12 +135,45 @@ public class MessagingManager : Singleton<MessagingManager>
 
                     // Add our custom CA to the chain's trust store.
                     // This is the crucial step that tells the validator to trust our CA.
-                    chain.ChainPolicy.ExtraStore.Add(caCert);
-                    Debug.Log($"[TLS] Added CA certificate to chain trust store");
+                    try
+                    {
+                        chain.ChainPolicy.ExtraStore.Add(caCert);
+                        Debug.Log($"[TLS] Added CA certificate to chain trust store (count: {chain.ChainPolicy.ExtraStore.Count})");
+                    }
+                    catch (Exception addEx)
+                    {
+                        Debug.LogError($"[TLS] Failed to add CA to chain trust store: {addEx.Message}");
+                        Debug.LogError($"[TLS] Add exception type: {addEx.GetType().Name}");
+                        return false;
+                    }
 
                     // Build and validate the certificate chain
-                    bool isChainValid = chain.Build(serverCert);
-                    Debug.Log($"[TLS] Chain build result: {isChainValid}");
+                    bool isChainValid;
+                    try
+                    {
+                        Debug.Log($"[TLS] Attempting to build certificate chain...");
+                        isChainValid = chain.Build(serverCert);
+                        Debug.Log($"[TLS] Chain build result: {isChainValid}");
+                    }
+                    catch (Exception buildEx)
+                    {
+                        Debug.LogError($"[TLS] Exception during chain build: {buildEx.Message}");
+                        Debug.LogError($"[TLS] Build exception type: {buildEx.GetType().Name}");
+                        Debug.LogError($"[TLS] Build exception stack trace: {buildEx.StackTrace}");
+                        
+                        // Log inner exceptions for chain build
+                        var innerBuildEx = buildEx.InnerException;
+                        int innerBuildLevel = 1;
+                        while (innerBuildEx != null)
+                        {
+                            Debug.LogError($"[TLS] Chain build inner exception {innerBuildLevel}: {innerBuildEx.Message}");
+                            Debug.LogError($"[TLS] Chain build inner exception {innerBuildLevel} type: {innerBuildEx.GetType().Name}");
+                            innerBuildEx = innerBuildEx.InnerException;
+                            innerBuildLevel++;
+                        }
+                        
+                        return false;
+                    }
                     
                     // Log detailed chain information
                     Debug.Log($"[TLS] Chain elements count: {chain.ChainElements.Count}");
