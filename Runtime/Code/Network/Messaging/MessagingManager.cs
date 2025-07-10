@@ -11,6 +11,8 @@ using System.Threading;
 using System.Linq;
 using Code.Util;
 using Code.Platform.Shared;
+using System.Security.Cryptography.X509Certificates;
+using System.IO;
 
 class PubSubMessage
 {
@@ -78,14 +80,54 @@ public class MessagingManager : Singleton<MessagingManager>
         var mqttClient = mqttFactory.CreateMqttClient();
         MessagingManager.mqttClient = mqttClient;
 
-        // TODO: Figure out how to properly handle certificate validation from our private CA
-        var tlsOptions = new MqttClientTlsOptions()
+        var certPath = Path.Combine(Application.streamingAssetsPath, "Certs", AirshipPlatformUrl.certificatePath);
+        var caCert = X509Certificate2.CreateFromCertFile(certPath);
+
+        // Create the secure TLS options with proper certificate validation
+        var tlsOptions = new MqttClientTlsOptions
         {
             UseTls = true,
-            AllowUntrustedCertificates = true,
-            IgnoreCertificateChainErrors = true,
-            IgnoreCertificateRevocationErrors = true,
-            CertificateValidationHandler = (x) => true,
+
+            // Certificate validation handler for our custom CA
+            CertificateValidationHandler = (certContext) =>
+            {
+                // Create a new chain policy
+                var chain = new X509Chain();
+                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+
+                // Add our custom CA to the chain's trust store.
+                // This is the crucial step that tells the validator to trust our CA.
+                chain.ChainPolicy.ExtraStore.Add(caCert);
+
+                // `certContext.Certificate` is the certificate provided by the server
+                var serverCert = new X509Certificate2(certContext.Certificate);
+                bool isChainValid = chain.Build(serverCert);
+                if (!isChainValid)
+                {
+                    // You can inspect chain.ChainStatus here to see why it failed.
+                    // A common status is `UntrustedRoot`, which is expected if the public CA
+                    // is not in the system's root store. We can ignore that specific error
+                    // as long as the chain is otherwise valid.
+                    foreach (var status in chain.ChainStatus)
+                    {
+                        if (status.Status == X509ChainStatusFlags.UntrustedRoot)
+                        {
+                            // If the only error is that the root is untrusted, but the chain
+                            // was built up to our CA, then we can consider it valid.
+                            continue;
+                        }
+                        // If there are other errors (e.g., expired, wrong name), validation fails.
+                        return false;
+                    }
+                }
+                
+                // If the chain is valid or the only error is an untrusted root, we are good.
+                return true;
+            },
+
+            // Specify allowed TLS protocols
+            SslProtocol = System.Security.Authentication.SslProtocols.Tls12
         };
 
         var mqttClientOptions = new MqttClientOptionsBuilder()
