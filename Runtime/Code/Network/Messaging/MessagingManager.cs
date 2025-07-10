@@ -80,14 +80,9 @@ public class MessagingManager : Singleton<MessagingManager>
         var mqttClient = mqttFactory.CreateMqttClient();
         MessagingManager.mqttClient = mqttClient;
 
+        // Cert files are located in airship-player/Assets/StreamingAssets/Certs/
         var certPath = Path.Combine(Application.streamingAssetsPath, "Certs", AirshipPlatformUrl.certificatePath);
         var serverCertPath = Path.Combine(Application.streamingAssetsPath, "Certs", AirshipPlatformUrl.serverCertificatePath);
-        
-        Debug.Log($"[CERT] Loading CA certificate from: {certPath}");
-        Debug.Log($"[CERT] CA file exists: {File.Exists(certPath)}");
-        Debug.Log($"[CERT] Loading server certificate from: {serverCertPath}");
-        Debug.Log($"[CERT] Server cert file exists: {File.Exists(serverCertPath)}");
-        
         X509Certificate2 caCert;
         X509Certificate2 serverCert;
         
@@ -95,17 +90,10 @@ public class MessagingManager : Singleton<MessagingManager>
         {
             var caCertBase = X509Certificate2.CreateFromCertFile(certPath);
             caCert = new X509Certificate2(caCertBase);
-            Debug.Log($"[CERT] Successfully loaded CA certificate");
-            Debug.Log($"[CERT] CA certificate subject: {caCert.Subject}");
-            Debug.Log($"[CERT] CA certificate issuer: {caCert.Issuer}");
-            Debug.Log($"[CERT] CA certificate has private key: {caCert.HasPrivateKey}");
-            Debug.Log($"[CERT] CA certificate thumbprint: {caCert.Thumbprint}");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[CERT] Failed to load CA certificate: {ex.Message}");
-            Debug.LogError($"[CERT] Exception type: {ex.GetType().Name}");
-            Debug.LogError($"[CERT] Stack trace: {ex.StackTrace}");
+            Debug.LogError($"Failed to load CA certificate from {certPath}: {ex.Message}");
             return false;
         }
         
@@ -113,163 +101,79 @@ public class MessagingManager : Singleton<MessagingManager>
         {
             var serverCertBase = X509Certificate2.CreateFromCertFile(serverCertPath);
             serverCert = new X509Certificate2(serverCertBase);
-            Debug.Log($"[CERT] Successfully loaded server certificate");
-            Debug.Log($"[CERT] Server certificate subject: {serverCert.Subject}");
-            Debug.Log($"[CERT] Server certificate issuer: {serverCert.Issuer}");
-            Debug.Log($"[CERT] Server certificate has private key: {serverCert.HasPrivateKey}");
-            Debug.Log($"[CERT] Server certificate thumbprint: {serverCert.Thumbprint}");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[CERT] Failed to load server certificate: {ex.Message}");
-            Debug.LogError($"[CERT] Exception type: {ex.GetType().Name}");
-            Debug.LogError($"[CERT] Stack trace: {ex.StackTrace}");
+            Debug.LogError($"Failed to load server certificate from {serverCertPath}: {ex.Message}");
             return false;
         }
 
-        // Create the secure TLS options with proper certificate validation
         var tlsOptions = new MqttClientTlsOptions
         {
             UseTls = true,
-
-            // Certificate validation handler for our custom CA
             CertificateValidationHandler = (certContext) =>
             {
-                Debug.Log("[TLS] Starting certificate validation");
-                
                 try
                 {
-                    // Log basic certificate information
                     var presentedCert = new X509Certificate2(certContext.Certificate);
-                    Debug.Log($"[TLS] Presented certificate subject: {presentedCert.Subject}");
-                    Debug.Log($"[TLS] Presented certificate issuer: {presentedCert.Issuer}");
-                    Debug.Log($"[TLS] Presented certificate valid from: {presentedCert.NotBefore} to: {presentedCert.NotAfter}");
-                    Debug.Log($"[TLS] Presented certificate thumbprint: {presentedCert.Thumbprint}");
-                    
-                    // Log our known certificates
-                    Debug.Log($"[TLS] CA certificate subject: {caCert.Subject}");
-                    Debug.Log($"[TLS] CA certificate thumbprint: {caCert.Thumbprint}");
-                    Debug.Log($"[TLS] Expected server certificate subject: {serverCert.Subject}");
-                    Debug.Log($"[TLS] Expected server certificate thumbprint: {serverCert.Thumbprint}");
 
-                    // Method 1: Direct certificate comparison
+                    // Direct certificate comparison
                     if (presentedCert.Thumbprint.Equals(serverCert.Thumbprint, StringComparison.OrdinalIgnoreCase))
                     {
-                        Debug.Log("[TLS] Certificate validation SUCCESS: Presented certificate matches expected server certificate");
                         return true;
                     }
-                    
-                    Debug.Log("[TLS] Presented certificate does not match expected server certificate, trying chain validation...");
 
-                    // Method 2: Chain validation with both CA and intermediate certificates
+                    // Chain validation with custom CA
                     var chain = new X509Chain();
                     chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                     chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
 
-                    // Add both CA and server certificates to the trust store
                     try
                     {
                         chain.ChainPolicy.ExtraStore.Add(caCert);
                         chain.ChainPolicy.ExtraStore.Add(serverCert);
-                        Debug.Log($"[TLS] Added certificates to chain trust store (count: {chain.ChainPolicy.ExtraStore.Count})");
                     }
                     catch (Exception addEx)
                     {
-                        Debug.LogError($"[TLS] Failed to add certificates to chain trust store: {addEx.Message}");
-                        // Continue with validation anyway
+                        Debug.LogError($"TLS certificate validation failed to add certificates to trust store: {addEx.Message}");
                     }
 
-                    // Build and validate the certificate chain
                     bool isChainValid;
                     try
                     {
-                        Debug.Log($"[TLS] Attempting to build certificate chain...");
                         isChainValid = chain.Build(presentedCert);
-                        Debug.Log($"[TLS] Chain build result: {isChainValid}");
                     }
                     catch (Exception buildEx)
                     {
-                        Debug.LogError($"[TLS] Exception during chain build: {buildEx.Message}");
-                        Debug.LogError($"[TLS] Build exception type: {buildEx.GetType().Name}");
-                        
-                        // Try Method 3: Manual validation
-                        Debug.Log("[TLS] Chain build failed, trying manual validation...");
+                        Debug.LogError($"TLS chain build failed: {buildEx.Message}");
                         return ValidateManually(presentedCert, serverCert, caCert);
-                    }
-                    
-                    // Log detailed chain information
-                    Debug.Log($"[TLS] Chain elements count: {chain.ChainElements.Count}");
-                    for (int i = 0; i < chain.ChainElements.Count; i++)
-                    {
-                        var element = chain.ChainElements[i];
-                        Debug.Log($"[TLS] Chain element {i}: {element.Certificate.Subject}");
-                        Debug.Log($"[TLS] Chain element {i} issuer: {element.Certificate.Issuer}");
-                        Debug.Log($"[TLS] Chain element {i} thumbprint: {element.Certificate.Thumbprint}");
-                        
-                        if (element.ChainElementStatus.Length > 0)
-                        {
-                            Debug.Log($"[TLS] Chain element {i} has {element.ChainElementStatus.Length} status issues:");
-                            foreach (var status in element.ChainElementStatus)
-                            {
-                                Debug.Log($"[TLS] Chain element {i} status: {status.Status} - {status.StatusInformation}");
-                            }
-                        }
-                        else
-                        {
-                            Debug.Log($"[TLS] Chain element {i} has no status issues");
-                        }
                     }
 
                     if (!isChainValid)
                     {
-                        Debug.Log($"[TLS] Chain validation failed. Checking chain status (count: {chain.ChainStatus.Length})");
-                        
                         bool hasOnlyAcceptableErrors = true;
                         
                         foreach (var status in chain.ChainStatus)
                         {
-                            Debug.Log($"[TLS] Chain status: {status.Status} - {status.StatusInformation}");
-                            
-                            // Accept UntrustedRoot and PartialChain errors for custom CA
-                            if (status.Status == X509ChainStatusFlags.UntrustedRoot ||
-                                status.Status == X509ChainStatusFlags.PartialChain)
-                            {
-                                Debug.Log($"[TLS] Acceptable error for custom CA: {status.Status}");
-                                continue;
-                            }
-                            else
+                            if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                                status.Status != X509ChainStatusFlags.PartialChain)
                             {
                                 hasOnlyAcceptableErrors = false;
-                                Debug.LogError($"[TLS] Unacceptable error: {status.Status} - {status.StatusInformation}");
+                                Debug.LogError($"TLS validation failed with unacceptable error: {status.Status} - {status.StatusInformation}");
                             }
                         }
                         
-                        if (hasOnlyAcceptableErrors)
-                        {
-                            Debug.Log("[TLS] Chain validation SUCCESS: Only acceptable errors found for custom CA");
-                            return true;
-                        }
-                        else
-                        {
-                            Debug.LogError("[TLS] Chain validation FAILED: Unacceptable errors found");
-                            return false;
-                        }
+                        return hasOnlyAcceptableErrors;
                     }
-                    else
-                    {
-                        Debug.Log("[TLS] Chain validation SUCCESS: Chain built successfully");
-                        return true;
-                    }
+
+                    return true;
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[TLS] Exception during certificate validation: {ex.Message}");
-                    Debug.LogError($"[TLS] Exception stack trace: {ex.StackTrace}");
+                    Debug.LogError($"TLS certificate validation exception: {ex.Message}");
                     return false;
                 }
             },
-
-            // Specify allowed TLS protocols
             SslProtocol = System.Security.Authentication.SslProtocols.Tls12
         };
 
@@ -327,31 +231,19 @@ public class MessagingManager : Singleton<MessagingManager>
 
         try
         {
-            Debug.Log("[MQTT] Attempting to connect to MQTT broker...");
-            Debug.Log($"[MQTT] Host: {AirshipPlatformUrl.messaging}, Port: 1883");
-            Debug.Log($"[MQTT] Using TLS: {tlsOptions.UseTls}");
-            Debug.Log($"[MQTT] SSL Protocol: {tlsOptions.SslProtocol}");
-            Debug.Log($"[MQTT] Certificate path: {certPath}");
-            
             await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
-            
-            Debug.Log("[MQTT] Successfully connected to MQTT broker");
             return true;
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[MQTT] Failed to connect to MQTT broker: {ex.Message}");
-            Debug.LogError($"[MQTT] Exception type: {ex.GetType().Name}");
-            Debug.LogError($"[MQTT] Stack trace: {ex.StackTrace}");
+            Debug.LogError($"MQTT connection failed: {ex.Message}");
             
-            // Log inner exceptions recursively
+            // Log inner exceptions for debugging
             var innerEx = ex.InnerException;
             int innerLevel = 1;
             while (innerEx != null)
             {
-                Debug.LogError($"[MQTT] Inner exception {innerLevel}: {innerEx.Message}");
-                Debug.LogError($"[MQTT] Inner exception {innerLevel} type: {innerEx.GetType().Name}");
-                Debug.LogError($"[MQTT] Inner exception {innerLevel} stack trace: {innerEx.StackTrace}");
+                Debug.LogError($"MQTT inner exception {innerLevel}: {innerEx.Message}");
                 innerEx = innerEx.InnerException;
                 innerLevel++;
             }
@@ -362,14 +254,11 @@ public class MessagingManager : Singleton<MessagingManager>
 
     private static bool ValidateManually(X509Certificate2 presentedCert, X509Certificate2 expectedServerCert, X509Certificate2 caCert)
     {
-        Debug.Log("[TLS] Starting manual certificate validation");
-        
         try
         {
             // Check if the presented certificate is directly signed by our CA
             if (presentedCert.Issuer.Equals(caCert.Subject, StringComparison.OrdinalIgnoreCase))
             {
-                Debug.Log("[TLS] Manual validation SUCCESS: Presented certificate is directly signed by our CA");
                 return true;
             }
             
@@ -377,7 +266,6 @@ public class MessagingManager : Singleton<MessagingManager>
             if (presentedCert.Subject.Equals(expectedServerCert.Subject, StringComparison.OrdinalIgnoreCase) &&
                 presentedCert.Issuer.Equals(expectedServerCert.Issuer, StringComparison.OrdinalIgnoreCase))
             {
-                Debug.Log("[TLS] Manual validation SUCCESS: Presented certificate matches expected server certificate properties");
                 return true;
             }
             
@@ -385,20 +273,15 @@ public class MessagingManager : Singleton<MessagingManager>
             if (expectedServerCert.Issuer.Equals(caCert.Subject, StringComparison.OrdinalIgnoreCase) &&
                 presentedCert.Subject.Equals(expectedServerCert.Subject, StringComparison.OrdinalIgnoreCase))
             {
-                Debug.Log("[TLS] Manual validation SUCCESS: Expected server cert is signed by CA and subjects match");
                 return true;
             }
             
-            Debug.LogError("[TLS] Manual validation FAILED: No valid certificate chain found");
-            Debug.LogError($"[TLS] Presented cert issuer: {presentedCert.Issuer}");
-            Debug.LogError($"[TLS] Expected cert issuer: {expectedServerCert.Issuer}");
-            Debug.LogError($"[TLS] CA subject: {caCert.Subject}");
-            
+            Debug.LogError($"TLS manual validation failed: No valid certificate chain found. Presented issuer: {presentedCert.Issuer}, Expected issuer: {expectedServerCert.Issuer}, CA subject: {caCert.Subject}");
             return false;
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[TLS] Exception during manual validation: {ex.Message}");
+            Debug.LogError($"TLS manual validation exception: {ex.Message}");
             return false;
         }
     }
