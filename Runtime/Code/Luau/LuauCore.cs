@@ -8,6 +8,7 @@ using System.Threading;
 using UnityEngine.Profiling;
 using System.Collections;
 using System.Linq;
+using System.Text;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -125,8 +126,8 @@ public partial class LuauCore : MonoBehaviour {
         return LuauState.FromContext(context);
     }
 
-    public bool CheckSetup() {
-        if (initialized) return false;
+    private void CheckSetup() {
+        if (initialized) return;
 
         initialized = true;
 
@@ -134,33 +135,19 @@ public partial class LuauCore : MonoBehaviour {
         SetupReflection();
         CreateCallbacks();
 
-        //start it
-        // m_currentBuffer = m_pendingCoroutineResumesA;
-
-        //Passing strings across the C# barrier to a DLL is a massive buttpain
-        int stringCount = unityAPIClasses.Count;
-        IntPtr[] stringList = new IntPtr[stringCount];
-        GCHandle[] stringAllocations = new GCHandle[stringCount];
-        System.Text.Encoding utf8 = System.Text.Encoding.UTF8;
+        var stringCount = unityAPIClasses.Count;
+        var stringList = new IntPtr[stringCount];
         eventConnections.Clear();
         
-        int counter = 0;
+        var counter = 0;
         foreach (var api in unityAPIClasses) {
-            string apiName = api.Value.GetAPIType().Name;
-            byte[] str = utf8.GetBytes(apiName);
-            byte[] nullTerminatedBytes = new byte[str.Length + 1];
-            for (int j = 0; j < str.Length; j++) {
-                nullTerminatedBytes[j] = str[j];
-            }
-
-            stringAllocations[counter] = GCHandle.Alloc(nullTerminatedBytes, GCHandleType.Pinned); //Ok
-            stringList[counter] = stringAllocations[counter].AddrOfPinnedObject();
+            var apiName = api.Value.GetAPIType().Name;
+            var strPtr = Marshal.StringToCoTaskMemUTF8(apiName);
+            stringList[counter] = strPtr;
             counter += 1;
         }
-        var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned); //Ok
-
-
-        //Debug.Log("Starting Luau DLL");
+        var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
+        
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
         LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
         LuauPlugin.LuauStartup(
@@ -191,14 +178,13 @@ public partial class LuauCore : MonoBehaviour {
         LuauState.FromContext(LuauContext.Game);
 
         stringAddresses.Free();
-        //Free up the stringAllocations
-        foreach (var alloc in stringAllocations) {
-            alloc.Free();
+        
+        // Free up the strings:
+        foreach (var ptr in stringList) {
+            Marshal.FreeCoTaskMem(ptr);
         }
 
         SetupNamespaceStrings();
-        
-        return true;
     }
 
     private void SetupProtectedSceneHandleListener() {
