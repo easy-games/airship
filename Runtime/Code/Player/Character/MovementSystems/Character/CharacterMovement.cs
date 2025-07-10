@@ -59,7 +59,8 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [Header("Visual Variables")] public bool autoCalibrateSkiddingSpeed = true;
 
-        [Tooltip("Controls the speed in which characters in orbit camera rotate to face look direction. Degrees per second.")]
+        [Tooltip(
+            "Controls the speed in which characters in orbit camera rotate to face look direction. Degrees per second.")]
         public float smoothedRotationSpeed = 360f;
 
         [Tooltip(
@@ -338,10 +339,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                 };
             }
 
-            GizmoUtils.DrawBox(transform.position + new Vector3(0, characterHalfExtents.y, 0), Quaternion.identity,
-                characterHalfExtents, Color.blue, 5);
-            Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
-                Color.green, 5);
+            if (drawDebugGizmos_GROUND) {
+                GizmoUtils.DrawBox(transform.position + new Vector3(0, characterHalfExtents.y, 0), Quaternion.identity,
+                    characterHalfExtents, Color.blue, 5);
+                Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
+                    Color.green, 5);
+            }
 
             // If input is disabled, we use default inputs, but we keep customData since we don't know how TS will want to handle that data.
             // TODO: in the future we might not want to actually overwrite the data passed in by the client. It might be nice for TS to be able
@@ -1473,7 +1476,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (lookTarget == Vector3.zero) {
                 lookTarget = new Vector3(0, 0, .01f);
             }
-            
+
             airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
         }
 
@@ -1627,13 +1630,13 @@ namespace Code.Player.Character.MovementSystems.Character {
                     lookVector = Vector3.RotateTowards(
                         graphicTransform.forward,
                         moveDirInput.normalized,
-                         smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime,
+                        smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime,
                         0f
                     );
-                }
-                else {
+                } else {
                     lookVector = moveDirInput.normalized;
                 }
+
                 return;
             }
 
