@@ -82,9 +82,7 @@ public class MessagingManager : Singleton<MessagingManager>
 
         // Cert files are located in airship-player/Assets/StreamingAssets/Certs/
         var certPath = Path.Combine(Application.streamingAssetsPath, "Certs", AirshipPlatformUrl.certificatePath);
-        var serverCertPath = Path.Combine(Application.streamingAssetsPath, "Certs", AirshipPlatformUrl.serverCertificatePath);
         X509Certificate2 caCert;
-        X509Certificate2 serverCert;
         
         try
         {
@@ -94,17 +92,6 @@ public class MessagingManager : Singleton<MessagingManager>
         catch (Exception ex)
         {
             Debug.LogError($"Failed to load CA certificate from {certPath}: {ex.Message}");
-            return false;
-        }
-        
-        try
-        {
-            var serverCertBase = X509Certificate2.CreateFromCertFile(serverCertPath);
-            serverCert = new X509Certificate2(serverCertBase);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Failed to load server certificate from {serverCertPath}: {ex.Message}");
             return false;
         }
 
@@ -117,12 +104,6 @@ public class MessagingManager : Singleton<MessagingManager>
                 {
                     var presentedCert = new X509Certificate2(certContext.Certificate);
 
-                    // Direct certificate comparison
-                    if (presentedCert.Thumbprint.Equals(serverCert.Thumbprint, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-
                     // Chain validation with custom CA
                     var chain = new X509Chain();
                     chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
@@ -131,11 +112,10 @@ public class MessagingManager : Singleton<MessagingManager>
                     try
                     {
                         chain.ChainPolicy.ExtraStore.Add(caCert);
-                        chain.ChainPolicy.ExtraStore.Add(serverCert);
                     }
                     catch (Exception addEx)
                     {
-                        Debug.LogError($"TLS certificate validation failed to add certificates to trust store: {addEx.Message}");
+                        Debug.LogError($"TLS certificate validation failed to add CA certificate to trust store: {addEx.Message}");
                     }
 
                     bool isChainValid;
@@ -146,7 +126,7 @@ public class MessagingManager : Singleton<MessagingManager>
                     catch (Exception buildEx)
                     {
                         Debug.LogError($"TLS chain build failed: {buildEx.Message}");
-                        return ValidateManually(presentedCert, serverCert, caCert);
+                        return false;
                     }
 
                     if (!isChainValid)
@@ -252,39 +232,6 @@ public class MessagingManager : Singleton<MessagingManager>
         }
     }
 
-    private static bool ValidateManually(X509Certificate2 presentedCert, X509Certificate2 expectedServerCert, X509Certificate2 caCert)
-    {
-        try
-        {
-            // Check if the presented certificate is directly signed by our CA
-            if (presentedCert.Issuer.Equals(caCert.Subject, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-            
-            // Check if the presented certificate matches our expected server certificate
-            if (presentedCert.Subject.Equals(expectedServerCert.Subject, StringComparison.OrdinalIgnoreCase) &&
-                presentedCert.Issuer.Equals(expectedServerCert.Issuer, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-            
-            // Check if the expected server certificate is signed by our CA and matches the presented cert
-            if (expectedServerCert.Issuer.Equals(caCert.Subject, StringComparison.OrdinalIgnoreCase) &&
-                presentedCert.Subject.Equals(expectedServerCert.Subject, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-            
-            Debug.LogError($"TLS manual validation failed: No valid certificate chain found. Presented issuer: {presentedCert.Issuer}, Expected issuer: {expectedServerCert.Issuer}, CA subject: {caCert.Subject}");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"TLS manual validation exception: {ex.Message}");
-            return false;
-        }
-    }
 
     public static async Task Disconnect()
     {
