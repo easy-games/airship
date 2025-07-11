@@ -322,13 +322,15 @@ namespace Code.Network.StateSystem
 
         private void LateUpdate()
         {
+            SendNetworkMessages();
+        }
+
+        public void Update() {
             // Unowned clients should interpolate the observed character
             if (isClient && !isOwned)
             {
                 this.Interpolate();
             }
-
-            SendNetworkMessages();
         }
 
         #endregion
