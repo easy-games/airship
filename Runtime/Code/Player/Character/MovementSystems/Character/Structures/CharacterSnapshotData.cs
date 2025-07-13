@@ -252,7 +252,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (canJumpChanged) BitUtil.SetBit(ref changedMask, 8, true);
 
             // Write only changed fields
-            var writer = new NetworkWriter();
+            var writer = NetworkWriterPool.Get();
             writer.Write(NetworkSerializationUtil.CompressToUshort(other.time - time));
             writer.Write((ushort)(other.tick - tick)); // We should send diffs far before 65,535 ticks have passed. 255 is a little too low if messing with time scale (ticks will skip in slow timescales)
             writer.Write((ushort)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
@@ -279,10 +279,13 @@ namespace Code.Player.Character.MovementSystems.Character
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
 
+            var dataArray = writer.ToArray();
+            NetworkWriterPool.Return(writer);
+
             return new CharacterStateDiff {
                 baseTick = tick, // The base is the instance CreateDiff is being called on, so use our instance time value as the base time.
                 crc32 = other.ComputeCrc32(),
-                data = writer.ToArray()
+                data = dataArray
             };
         }
 
@@ -305,7 +308,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 return null;
             }
 
-            var reader = new NetworkReader(stateDiff.data);
+            var reader = NetworkReaderPool.Get(stateDiff.data);
             var snapshot = (CharacterSnapshotData) this.Clone();
 
             snapshot.time = time + NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
@@ -346,6 +349,8 @@ namespace Code.Player.Character.MovementSystems.Character
             else {
                 snapshot.customData = null;
             }
+            
+            NetworkReaderPool.Return(reader);
 
             var crc32 = snapshot.ComputeCrc32();
             if (crc32 != diff.crc32) {
@@ -365,17 +370,10 @@ namespace Code.Player.Character.MovementSystems.Character
             
             // We serialize to a byte array for calculating the CRC32. We use slightly more lenient compression
             // on things like the vectors so that floating point errors don't cause the crc checks to fail.
-            var writer = new NetworkWriter();
+            var writer = NetworkWriterPool.Get();
             byte bools = 0;
             CharacterSnapshotDataSerializer.EncodeBools(ref bools, this);
             writer.Write(bools);
-            if (this.customData != null) {
-                writer.WriteInt(this.customData.dataSize);
-                writer.WriteBytes(this.customData.data, 0, this.customData.data.Length);
-            }
-            else {
-                writer.WriteInt(0);
-            }
             writer.Write(this.tick);
             writer.Write(this.lastProcessedCommand);
             writer.Write(NetworkSerializationUtil.CompressToShort(this.position.x));
@@ -395,6 +393,8 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(this.jumpCount);
             if (this.customData != null) writer.Write(this.customData.data);
             var bytes = writer.ToArray();
+            
+            NetworkWriterPool.Return(writer);
             
             _crc32 = Crc32Algorithm.Compute(bytes);
             return _crc32;
