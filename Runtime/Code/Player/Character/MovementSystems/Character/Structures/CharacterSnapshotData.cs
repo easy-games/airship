@@ -60,8 +60,8 @@ namespace Code.Player.Character.MovementSystems.Character
             var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
             var positionEqual = (this.position - other.position).sqrMagnitude < vectorTolerance;
             var velocityEqual =  (this.velocity - other.velocity).sqrMagnitude < vectorTolerance;
-            var currentSpeedEqual = NetworkSerializationUtil.CompressToShort(this.currentSpeed) == NetworkSerializationUtil.CompressToShort(other.currentSpeed);
-            var speedModifierEqual = NetworkSerializationUtil.CompressToShort(this.speedModifier) == NetworkSerializationUtil.CompressToShort(other.speedModifier);
+            var currentSpeedEqual = Math.Round(this.currentSpeed, 2) == Math.Round(other.currentSpeed, 2);
+            var speedModifierEqual = NetworkSerializationUtil.CompressToUshort(this.speedModifier) == NetworkSerializationUtil.CompressToUshort(other.speedModifier);
             var inputDisabledEqual = inputDisabled == other.inputDisabled;
             var isFlyingEqual = isFlying == other.isFlying;
             var isSprintingEqual = isSprinting == other.isSprinting;
@@ -376,16 +376,16 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(bools);
             writer.Write(this.tick);
             writer.Write(this.lastProcessedCommand);
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.x));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.y));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.z));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.x));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.y));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.z));
+            writer.Write(Math.Round(this.position.x, 2));
+            writer.Write(Math.Round(this.position.y, 2));
+            writer.Write(Math.Round(this.position.z, 2));
+            writer.Write(Math.Round(this.velocity.x, 2));
+            writer.Write(Math.Round(this.velocity.y, 2));
+            writer.Write(Math.Round(this.velocity.z, 2));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.y));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.z));
-            writer.Write(this.currentSpeed);
+            writer.Write(Math.Round(this.currentSpeed, 2));
             // This makes our max speed modifier 65.535 with a 0.001 precision.
             writer.Write(NetworkSerializationUtil.CompressToUshort(this.speedModifier));
             writer.Write(this.canJump);
