@@ -281,7 +281,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             var dataArray = writer.ToArray();
             NetworkWriterPool.Return(writer);
-
+            
             return new CharacterStateDiff {
                 baseTick = tick, // The base is the instance CreateDiff is being called on, so use our instance time value as the base time.
                 crc32 = other.ComputeCrc32(),
@@ -376,12 +376,18 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(bools);
             writer.Write(this.tick);
             writer.Write(this.lastProcessedCommand);
-            writer.Write(Math.Round(this.position.x, 2));
-            writer.Write(Math.Round(this.position.y, 2));
-            writer.Write(Math.Round(this.position.z, 2));
-            writer.Write(Math.Round(this.velocity.x, 2));
-            writer.Write(Math.Round(this.velocity.y, 2));
-            writer.Write(Math.Round(this.velocity.z, 2));
+            
+            // Floating point issue make it difficult to use these values directly. We normalize them
+            // and compress to short. We need to normalize since these values can be larger than a short.
+            var normalPos = this.position.normalized;
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.z));
+            var normalVel = this.velocity.normalized;
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.z));
+            
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.y));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.z));
