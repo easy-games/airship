@@ -180,14 +180,13 @@ namespace Airship.Editor
             ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
 
             if (EditorAuthManager.localUser != null || !string.IsNullOrEmpty(InternalHttpManager.editorUserId)) {
-                FetchAndUpdateSignedInIcon();
+                // This is delayed because we're running in InitializeOnLoad but FetchAndUpdateSignedInIcon
+                // requires AssetDatabase to be loaded.
+                EditorApplication.delayCall += FetchAndUpdateSignedInIcon;
             }
             EditorAuthManager.localUserChanged += (user) => {
                 if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
                     signedInIconBytes = new byte[]{};
-                    // EditorIcons.Instance.signedInIcon = new byte[] {};
-                    // EditorUtility.SetDirty(EditorIcons.Instance);
-                    // AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                     RepaintToolbar();
                     return;
                 }
@@ -248,7 +247,7 @@ namespace Airship.Editor
             
             if (profilePicRounded == null)
                 profilePicRounded = AssetDatabase.LoadAssetAtPath<Material>("Packages/gg.easy.airship/Editor/Hidden_EditorProfilePicRounded.mat");
-
+            
             RenderTexture.active = rt;
             Graphics.Blit(source, rt, profilePicRounded);
 
