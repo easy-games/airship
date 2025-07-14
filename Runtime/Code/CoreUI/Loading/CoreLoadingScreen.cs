@@ -190,6 +190,10 @@ public class CoreLoadingScreen : BundleLoadingScreen
     }
 
     private void DisconnectButton_OnClicked() {
+        if (TransferManager.Instance.IsExpectingDisconnect()) {
+            return;
+        }
+        
         TransferManager.Instance.Disconnect();
     }
 

@@ -1595,13 +1595,14 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static void TryResumeAsyncTasks() {
-        for (var i = _awaitingTasks.Count - 1; i >= 0; i--) {
+        for (var i = 0; i < _awaitingTasks.Count; i++) {
             var awaitingTask = _awaitingTasks[i];
             if (!awaitingTask.Task.IsCompleted) continue;
 
             // Task has completed. Remove from list and resume lua thread:
             _awaitingTasks.RemoveAt(i);
             ResumeAsyncTask(awaitingTask);
+            i--;
         }
     }
 
