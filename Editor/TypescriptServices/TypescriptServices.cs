@@ -87,10 +87,18 @@ namespace Airship.Editor {
             Debug.LogWarning("[TypescriptServices] Skipped, in Airship Player mode");
             return;
 #endif
+            TypescriptLogService.StartLogging();
+            
             // On project load we'll force a full compile to try and get all the refs up to date
             if (!SessionState.GetBool("TypescriptInitialBoot", false) && IsValidEditorContext) {
                 SessionState.SetBool("TypescriptInitialBoot", true);
-                TypescriptCompilationService.BuildTypescript(TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
+                
+                if (HasAllPackagesDownloaded()) {
+                    TypescriptCompilationService.BuildTypescript(TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
+                }
+                else {
+                    TypescriptLogService.LogWarning("Skipped precompile due to not having packages downloaded yet");
+                }
             }
             
             // If a server or clone - ignore
@@ -147,18 +155,17 @@ namespace Airship.Editor {
 
         private static bool HasAllPackagesDownloaded() {
             var gameConfig = GameConfig.Load();
-            foreach (var project in gameConfig.packages) {
-                if (!project.localSource && !project.IsDownloaded()) return false;
-            }
-
-            return true;
+            return gameConfig != null && gameConfig.packages.All(project => project.localSource || project.IsDownloaded());
         }
         
         private static IEnumerator InitializeProject() {
             TypescriptProjectsService.ReloadProjects();
             TypescriptCompilationService.ClearIncrementalCache(); // clear incremental cache
+            TypescriptLogService.LogInfo("Checking and waiting for packages to download...");
             yield return new WaitUntil(HasAllPackagesDownloaded);
+            TypescriptLogService.LogInfo("Packages are OK, will now initialize TypeScript");
             yield return InitializeTypeScript();
+            TypescriptLogService.LogInfo("TypeScript initialized, now starting the TypeScript runtime");
             yield return StartTypescriptRuntime();
         }
         
@@ -193,12 +200,13 @@ namespace Airship.Editor {
         
         private  static IEnumerator StartTypescriptRuntime() {
             TypescriptProjectsService.ReloadProject();
+           
             
             // Wait for updates
-            if (AirshipUpdateService.IsUpdatingAirship || AirshipPackagesWindow.IsModifyingPackages) {
+            if (AirshipUpdateService.IsUpdatingAirship || AirshipPackagesWindow.IsModifyingPackages || !HasAllPackagesDownloaded()) {
                 IsAwaitingRestart = true;
                 yield return new WaitUntil(() =>
-                    !AirshipPackagesWindow.IsModifyingPackages && !AirshipUpdateService.IsUpdatingAirship);
+                    !AirshipPackagesWindow.IsModifyingPackages && !AirshipUpdateService.IsUpdatingAirship && HasAllPackagesDownloaded());
                 IsAwaitingRestart = false;
             }
 
@@ -228,6 +236,7 @@ namespace Airship.Editor {
                 return;
             }
 
+            TypescriptLogService.LogInfo("Enforcing default config settings");
             project.EnforceDefaultConfigurationSettings();
             CompilerCrash += OnCrash;
 
@@ -243,6 +252,7 @@ namespace Airship.Editor {
             }
             
             if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
+                TypescriptLogService.LogInfo("Running initial setup for TypeScript services");
                 SessionState.SetBool("InitializedTypescriptServices", true);
                 TypescriptCompilationService.StopCompilerServices();
                 
@@ -259,6 +269,7 @@ namespace Airship.Editor {
                 }
             }
             else {
+                TypescriptLogService.LogInfo("Attempting to resume TypeScript compilation services...");
                 TypescriptCompilationService.StopCompilerServices(shouldRestart: TypescriptCompilationService.IsWatchModeRunning);
             }
             
@@ -324,12 +335,12 @@ namespace Airship.Editor {
                 invokedCrashEvent = false;
             }
 
-            var shouldAutostart = !IsCompilerActive && !TypescriptCompilationService.Crashed &&
-                                  ShouldCompilerBeRunning && !IsAwaitingRestart && !IsCompilerStoppedByUser;
-
-            if (!shouldAutostart) return;
-            TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
-            EditorCoroutines.Execute(StartTypescriptRuntime());
+            // var shouldAutostart = !IsCompilerActive && !TypescriptCompilationService.Crashed &&
+            //                       ShouldCompilerBeRunning && !IsAwaitingRestart && !IsCompilerStoppedByUser && HasAllPackagesDownloaded();
+            //
+            // if (!shouldAutostart) return;
+            // TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
+            // EditorCoroutines.Execute(StartTypescriptRuntime());
         }
     }
 }
