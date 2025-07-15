@@ -180,6 +180,11 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				if (i >= bundleFilesToDownload.Count) break; // code.zip requests
 				var remoteBundleFile = bundleFilesToDownload[i];
 				bool success = false;
+				
+				// Test error
+				// Debug.LogError("Forcing download fail.");
+				// onComplete?.Invoke(false);
+				// return false;
 
 				if (request.webRequest.result != UnityWebRequest.Result.Success) {
 					var statusCode = request.webRequest.responseCode;

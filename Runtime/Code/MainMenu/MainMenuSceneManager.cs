@@ -187,8 +187,6 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private async Task StartPackageDownload(List<AirshipPackage> packages) {
         BundleDownloader.Instance.downloadAccepted = false;
-        var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
-
         var downloadSuccess = await BundleDownloader.Instance.DownloadBundles(
             AirshipPlatformUrl.gameCdn,
             packages.ToArray(),
@@ -198,7 +196,7 @@ public class MainMenuSceneManager : MonoBehaviour {
             true,
             (success) => {
                 if (!success) {
-                    loadingScreen.SetError("Failed to download game content. An error has occurred.");
+                    this.loadingScreen.SetError("Failed to download game content. An error has occurred.");
                     return;
                 }
                 StartCoroutine(StartPackageLoad(packages, true));
