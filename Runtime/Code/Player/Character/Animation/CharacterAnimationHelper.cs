@@ -204,18 +204,26 @@ namespace Code.Player.Character.NetworkedMovement
 
         public void SetVelocity(Vector3 localVel)
         {
+            currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
             //The target speed is the movement speed the animations were built for
             var targetSpeed = animWalkSpeed;
             if (currentState == CharacterState.Sprinting)
             {
-                targetSpeed = animRunSpeed;
+                if (currentSpeed < animWalkSpeed) {
+                    //We will walk instead of run even though we are trying to run
+                } else {
+                    targetSpeed = animRunSpeed;
+                }
             }
             else if (currentState == CharacterState.Crouching)
             {
                 targetSpeed = animCrouchSpeed;
             }
+            
+            //Have to update sprinting state dynamically because low speeds can disable it
+            animator.SetBool("Sprinting",
+                currentState == CharacterState.Sprinting && currentSpeed >= animWalkSpeed);
 
-            currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
             this.targetPlaybackSpeed = currentSpeed / targetSpeed;
             targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10, 10);
@@ -233,8 +241,6 @@ namespace Code.Player.Character.NetworkedMovement
             this.grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
             animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
-            animator.SetBool("Sprinting",
-                !syncedState.crouching && (syncedState.sprinting || syncedState.state == CharacterState.Sprinting));
 
             if (syncedState.jumping) {
                 SetTrigger("Jump");
