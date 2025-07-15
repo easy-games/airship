@@ -48,7 +48,7 @@ namespace Airship.Editor {
     /// <summary>
     /// Main static class for handling the TypeScript services
     /// </summary>
-    public static class TypescriptServices {
+    public class TypescriptServices : AssetPostprocessor {
         internal static event CompilerCrashEvent CompilerCrash;
         
         /// <summary>
@@ -153,7 +153,19 @@ namespace Airship.Editor {
             }
         }
 
+#if !AIRSHIP_PLAYER
+        private static bool assetDbReady = false;
+        // ReSharper disable once Unity.IncorrectMethodSignature
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
+            string[] movedFromAssetPaths, bool didDomainReload) {
+            if (!IsValidEditorContext || !didDomainReload) return;
+            if (!assetDbReady) assetDbReady = true;
+        }
+#endif
+        
         private static bool HasAllPackagesDownloaded() {
+            if (!assetDbReady) return false;
+            
             var gameConfig = GameConfig.Load();
             return gameConfig != null && gameConfig.packages.All(project => project.localSource || project.IsDownloaded());
         }
