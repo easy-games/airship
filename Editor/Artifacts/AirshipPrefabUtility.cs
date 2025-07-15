@@ -17,7 +17,7 @@ namespace Airship.Editor {
                 return false;
             }
 
-            var meshFilter = component.GetComponentsInChildren<MeshFilter>(); // because of 'SendMessage' we can't force reconcile these
+            var meshFilter = component.GetComponentsInChildren<MeshFilter>(true); // because of 'SendMessage' we can't force reconcile these
             if (meshFilter.Length > 0) {
                 prefabComponent = null;
                 return false;
