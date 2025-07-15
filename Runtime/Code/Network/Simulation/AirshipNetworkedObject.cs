@@ -46,7 +46,7 @@ namespace Code.Network.Simulation
             AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.LagCompensationCheck;
         }
 
-        private void CaptureSnapshot(uint tick, double time, bool replay)
+        private void CaptureSnapshot(int tick, double time, bool replay)
         {
             if (replay)
             {
@@ -65,17 +65,17 @@ namespace Code.Network.Simulation
 
         private void SetSnapshot(object objTick)
         {
-            if (objTick is uint tick) {
+            if (objTick is int tick) {
                 var snapshot = this.history.Get(tick);
                 this.transform.position = snapshot.position;
                 this.transform.rotation = snapshot.rotation;
             }
         }
 
-        private void LagCompensationCheck(int clientId, uint tick, double time, double latency, double buffer)
+        private void LagCompensationCheck(int clientId, int tick, double time, double latency, double buffer)
         {
             var bufferedTicks = Math.Round((latency - NetworkClient.bufferTime - Time.fixedDeltaTime) / Time.fixedDeltaTime);
-            this.SetSnapshot((uint) tick - bufferedTicks);
+            this.SetSnapshot(tick - bufferedTicks);
         }
     }
 }

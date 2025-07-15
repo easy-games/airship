@@ -34,7 +34,7 @@ namespace Code.Network.Simulation
      *
      * When this call completes, the world will be at the last completed tick.
      */
-    public delegate void PerformResimulate(uint baseTick);
+    public delegate void PerformResimulate(int baseTick);
 
     /**
      * Function that will be run when the simulation manager is ready to perform a resimulation. Remember that
@@ -102,7 +102,7 @@ namespace Code.Network.Simulation
          * latency - The estimated time it takes for a message to reach the server from this client. (rtt / 2 = latency)
          * bufferTime - The estimated buffer on the client
          */
-        public event Action<int, uint, double, double, double> OnLagCompensationCheck;
+        public event Action<int, int, double, double, double> OnLagCompensationCheck;
 
         /// <summary>
         /// This action tells all watching components that they need to perform a tick.
@@ -119,7 +119,7 @@ namespace Code.Network.Simulation
          * and that a new snapshot of the resulting Physics.Simulate() should be captured.
          * This snapshot should be the state for the provided tick number in history.
          */
-        public event Action<uint, double, bool> OnCaptureSnapshot;
+        public event Action<int, double, bool> OnCaptureSnapshot;
 
         /**
          * Fired when a tick leaves local history and will never be referenced again. You can use this
@@ -137,11 +137,11 @@ namespace Code.Network.Simulation
         public event Action<object> OnLagCompensationRequestComplete;
 
         [NonSerialized] public bool replaying = false;
-        [NonSerialized] public uint tick = 0;
+        [NonSerialized] public int tick = 0;
         [NonSerialized] public double time = 0;
         
         private bool isActive = false;
-        private List<uint> previousTicks = new List<uint>();
+        private List<int> previousTicks = new List<int>();
         private List<double> previousTimes = new();
         private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
@@ -169,7 +169,7 @@ namespace Code.Network.Simulation
             // display a smooth observed player using NetworkTime.time which uses unscaled time.
             
             // ---
-            tick = (uint)Mathf.RoundToInt(Time.fixedTime / Time.fixedDeltaTime);
+            tick = (int)Mathf.RoundToInt(Time.fixedTime / Time.fixedDeltaTime);
             time = Time.fixedUnscaledTimeAsDouble; // TODO: pass this time to the callback functions so they can always use the same time values during replays. Will need to be tracked
             
             // Update debug overlay
@@ -330,7 +330,7 @@ namespace Code.Network.Simulation
         /**
          * Allows typescript to request a resimulation from the provided time.
          */
-        public void RequestResimulation(uint tick)
+        public void RequestResimulation(int tick)
         {
             this.ScheduleResimulation((resim => resim(tick)));
         }
@@ -343,7 +343,7 @@ namespace Code.Network.Simulation
         /// </summary>
         /// <param name="time"></param>
         /// <returns></returns>
-        public uint GetNearestTickForUnscaledTime(double time) {
+        public int GetNearestTickForUnscaledTime(double time) {
             if (previousTimes.Count == 0) return 0;
             if (time > previousTimes[^1]) {
                 return previousTicks[^1];
@@ -381,7 +381,7 @@ namespace Code.Network.Simulation
         /// 
         /// This function is used internally to implement the scheduled resimulations.
         /// </summary>
-        private void PerformResimulation(uint baseTick)
+        private void PerformResimulation(int baseTick)
         {
             // Debug.Log($"T:{Time.unscaledTimeAsDouble} Resimulating from {baseTick} to {this.previousTicks[^1]}");
             G_ResimMonitor.FrameResimValue = 100;
@@ -401,7 +401,7 @@ namespace Code.Network.Simulation
             }
 
             // If the base time further in the past that our history goes, we reset to the oldest history we have (0) instead.
-            uint targetTick = baseTick;
+            int targetTick = baseTick;
             if (baseTick < previousTicks[0]) {
                 targetTick = previousTicks[0];
             }

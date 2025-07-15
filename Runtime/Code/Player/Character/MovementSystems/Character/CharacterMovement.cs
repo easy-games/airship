@@ -285,7 +285,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             OnSetSnapshot?.Invoke(snapshot);
         }
 
-        public override CharacterSnapshotData GetCurrentState(int commandNumber, uint tick, double time) {
+        public override CharacterSnapshotData GetCurrentState(int commandNumber, int tick, double time) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific state capture function don't find their way into our state record.
             customSnapshotData = null;
@@ -303,7 +303,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             return snapshot;
         }
 
-        public override CharacterInputData GetCommand(int commandNumber, uint tick) {
+        public override CharacterInputData GetCommand(int commandNumber, int tick) {
             // We reset the custom data to make sure earlier calls outside of our
             // specific command generation function don't find their way into our command.
             customInputData = null;
@@ -323,7 +323,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             return data;
         }
 
-        public override void Tick(CharacterInputData command, uint tick, double time, bool replay) {
+        public override void Tick(CharacterInputData command, int tick, double time, bool replay) {
             if (command == null) {
                 // If there is no command, we use a "no input" command. This command uses the same command number as our lastProcessedCommand state data
                 // so that we treat this input essentially as a ghost input that doesn't effect our stored command information, but allows us to
