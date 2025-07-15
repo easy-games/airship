@@ -345,7 +345,16 @@ namespace Code.Network.StateSystem
                 }
             }
             
-            // todo: we probably need to do the same as above for client auth snapshots
+            // Same as above, but for client authoritative systems
+            if (isServer && !serverAuth) {
+                if (serverReceivedStateBuffer.Count > serverCommandBufferTargetSize) {
+                    serverCommandCatchUpRequired = serverReceivedStateBuffer.Count - serverCommandBufferTargetSize;
+                    print($"State catchup required for {this.name}: {serverCommandCatchUpRequired}");
+                }
+                else {
+                    serverCommandCatchUpRequired = 0;
+                }
+            }
         }
 
         #endregion
@@ -557,7 +566,7 @@ namespace Code.Network.StateSystem
             {
                 var dropCount = 0;
                 
-                while (this.serverCommandBuffer.Count > serverCommandBufferTargetSize && dropCount < this.serverCommandBufferTargetSize)
+                while (serverCommandCatchUpRequired > 0 && dropCount < this.serverCommandBufferTargetSize)
                 {
                     this.serverCommandBuffer.RemoveAt(0);
                     dropCount++;
@@ -759,9 +768,7 @@ namespace Code.Network.StateSystem
             // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
-            if (this.serverReceivedStateBuffer.Count == 0 ||
-                this.serverReceivedStateBuffer.Keys[^1] - (this.serverLastProcessedCommandNumber + 1) <
-                (int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
+            if (this.serverReceivedStateBuffer.Count == 0 || this.serverReceivedStateBuffer.Count < (int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
                 // Debug.Log($"Waiting for additional states for {this.name}. There are {this.serverReceivedStateBuffer.Count} states in the buffer.");
                 // no operation since there is no new state for us to use. Client authority means we use whatever the client sends us, even if that means
                 // seeing irregular physics movement.
@@ -794,15 +801,14 @@ namespace Code.Network.StateSystem
                 else {
                     this.serverLastProcessedCommandNumber += 1;
                 }
+                
+                if (statesProcessed > 1) {
+                    serverCommandCatchUpRequired--;
+                }
 
                 // If we don't have a new state to process, that's ok. It just means that the client hasn't sent us
                 // their updated state yet.
-            } while (this.serverReceivedStateBuffer.Count >
-                     serverCommandBufferTargetSize &&
-                     statesProcessed < 1 + this.maxServerCommandCatchup);
-            // ^ we process up to maxServerCommandCatchup states per tick if our buffer has more than serverCommandBufferTargetSize worth of additional commands.
-            // We re-use the command buffer settings since they are calculated to smooth out command processing in the same
-            // way we are attempting to smooth out state processing.
+            } while (statesProcessed < 1 + this.maxServerCommandCatchup && serverCommandCatchUpRequired > 0);
 
             // Commit the last processed snapshot to our state history
             if (latestState != null)
