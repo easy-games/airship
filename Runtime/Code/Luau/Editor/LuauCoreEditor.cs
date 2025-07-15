@@ -20,7 +20,7 @@ namespace Code.Luau.Editor {
 			AddLuauCoreIfMissing();
 		}
 	
-		private static void AddLuauCoreIfMissing() {
+		private static void AddLuauCoreIfMissing(bool alertIfMissing = false) {
 			var existingLuauCore = Object.FindAnyObjectByType<LuauCore>();
 			if (existingLuauCore != null) {
 				if (!existingLuauCore.gameObject.hideFlags.HasFlag(HideFlags.HideInHierarchy)) {
@@ -30,6 +30,19 @@ namespace Code.Luau.Editor {
 			}
 
 			var luauCorePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LuauCorePrefabPath);
+			// Handle AssetDatabase potentially not being loaded by retrying once
+			// and then logging an error if still missing
+			if (!luauCorePrefab) {
+				if (alertIfMissing) {
+					Debug.LogError("[Airship] Could not find LuauCore prefab to instantiate.");
+					return;
+				}
+				EditorApplication.delayCall += () => {
+					AddLuauCoreIfMissing(true);
+				};
+				return;
+			}
+			
 			var core = (GameObject)PrefabUtility.InstantiatePrefab(luauCorePrefab, SceneManager.GetActiveScene());
 			core.hideFlags |= HideFlags.HideInHierarchy;
 		}
