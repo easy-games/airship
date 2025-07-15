@@ -395,13 +395,16 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //Snap to the ground if you are falling into the ground
                 if (!currentMoveSnapshot.prevStepUp && !isImpulsing &&
                     !currentMoveSnapshot.airborneFromImpulse //Don't snap when we are moving from something else
-                    && newVelocity.y < 1 && //Only snap when moving downward
-                    (movementSettings.alwaysSnapToGround || //Snap if we always snap to ground
-                     (!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0))) {
-                    //OR snap if we just hit the ground
-                    //Snap if we just became became grounded
-                    SnapToY(groundHit.point.y);
-                    newVelocity.y = 0;
+                    && newVelocity.y < 1) { //Only snap when moving downward
+                    if (!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0) {
+                        //Snap because we just hit the ground
+                        SnapToY(groundHit.point.y, true); //Force so we don't interpenetrate the ground
+                        newVelocity.y = 0;
+                    } else if (movementSettings.alwaysSnapToGround) {
+                        //Snap if we always snap to ground
+                        SnapToY(groundHit.point.y, false);
+                        newVelocity.y = 0;
+                    }
                 }
 
                 //Reset airborne impulse
@@ -1002,7 +1005,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     didStepUp = hitStepUp;
                     var oldPos = rootPosition;
                     if (pointOnRamp.y > oldPos.y) {
-                        SnapToY(pointOnRamp.y);
+                        SnapToY(pointOnRamp.y, false);
                         //airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
                     }
 
@@ -1494,11 +1497,17 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region Helpers
 
-        private void SnapToY(float newY) {
+        private void SnapToY(float newY, bool force) {
             //print("Snapping to Y: " + newY);
             var newPos = rb.position;
             newPos.y = newY;
-            rb.position = newPos;
+            if (force) {
+                //Force snap to exact position
+                rootTransform.position = newPos;
+            } else {
+                //Interpolate and preserve physics
+                rb.position = newPos;
+            }
         }
 
 #endregion
