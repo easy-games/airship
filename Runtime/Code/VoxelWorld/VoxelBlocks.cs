@@ -296,7 +296,12 @@ public class VoxelBlocks : MonoBehaviour {
     [SerializeField]
     public int maxResolution = 256;
     [SerializeField]
-    public int atlasSize = 4096;
+    public int atlasWidthTextures = 15;
+    private int atlasPaddingPx = 15;
+
+    public int atlasSize {
+        get => atlasWidthTextures * (maxResolution + atlasPaddingPx * 2);
+    }
     [SerializeField]
     public bool pointFiltering = false;
 
@@ -310,7 +315,7 @@ public class VoxelBlocks : MonoBehaviour {
     [NonSerialized] private Dictionary<int, TexturePacker.TextureSet> temporaryTextures = new();
 
     [NonSerialized] private Dictionary<string, BlockId> blockIdLookup = new();
-    [NonSerialized] public Dictionary<BlockId, BlockDefinition> loadedBlocks = new();
+    [NonSerialized] public List<BlockDefinition> loadedBlocks = new();
 
     [NonSerialized] public string rootAssetPath;
     [NonSerialized] public List<string> m_bundlePaths = null;
@@ -320,22 +325,24 @@ public class VoxelBlocks : MonoBehaviour {
     private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
-        
         var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
-        loadedBlocks.TryGetValue(ix, out BlockDefinition value);
-        return value;
+        return loadedBlocks[ix];
     }
 
     [HideFromTS]
     public bool TryGetBlock(BlockId index, out BlockDefinition blockDefinition) {
-        var hasBlock = loadedBlocks.TryGetValue(index, out blockDefinition);
-        return hasBlock;
+        if (index >= loadedBlocks.Count) {
+            blockDefinition = null;
+            return false;
+        }
+        blockDefinition = loadedBlocks[index];
+        return true;
     }
     
     public BlockDefinition GetBlockDefinitionByStringId(string blockTypeId) {
         foreach (var block in this.loadedBlocks) {
-            if (block.Value.blockTypeId == blockTypeId)
-                return block.Value;
+            if (block.blockTypeId == blockTypeId)
+                return block;
         }
 
         return null;
@@ -372,8 +379,8 @@ public class VoxelBlocks : MonoBehaviour {
         SearchForBlockIdByString(string stringId) {
 
         foreach (var block in this.loadedBlocks) {
-            if (block.Value.blockTypeId.Contains(stringId, StringComparison.OrdinalIgnoreCase)) {
-                return block.Value.blockId;
+            if (block.blockTypeId.Contains(stringId, StringComparison.OrdinalIgnoreCase)) {
+                return block.blockId;
             }
         }
 
@@ -608,7 +615,6 @@ public class VoxelBlocks : MonoBehaviour {
                 
         //Profiler.BeginSample("VoxelBlocks.Load");
         temporaryTextures.Clear();
-        atlas = new TexturePacker();
         
         //Add air
         BlockDefinition airBlock = new BlockDefinition();
@@ -620,7 +626,7 @@ public class VoxelBlocks : MonoBehaviour {
         airBlock.blockTypeId = "air";
         airBlock.blockId = blockIdCounter++;
 
-        loadedBlocks.Add(airBlock.blockId, airBlock);
+        loadedBlocks.Add(airBlock);
         blockIdLookup.Add("air", airBlock.blockId);
 
         foreach (VoxelBlockDefinitionList voxelDefinitionList in blockDefinitionLists) {
@@ -668,447 +674,87 @@ public class VoxelBlocks : MonoBehaviour {
 
                 ParseGreedyTilingMeshBlock(block);
 
-                loadedBlocks.Add(block.blockId, block);
+                loadedBlocks.Add(block);
             }
         }
         
+#if !UNITY_SERVER
+        SetupAtlas();
+#endif
+        // Profiler.EndSample();
+        loadedTask.TrySetResult(true);
+    }
+
+    private void SetupAtlas() {
+        atlas = new TexturePacker();
         atlasMaterial = Resources.Load<Material>("VoxelWorldMatURP");
-        
-        /*foreach (var stringContent in contentsOfBlockDefines) {
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.LoadXml(stringContent);
-
-            XmlElement xmlBlocks = xmlDoc["Blocks"];
-
-            rootAssetPath = xmlBlocks?["RootAssetPath"]?.InnerText;
-            if (rootAssetPath == null) {
-                rootAssetPath = "Shared/Resources/VoxelWorld";
-            }
-            else {
-                // Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
-            }
-
-            var scope = xmlBlocks?["Scope"];
-            if (scope == null) {
-                Debug.LogError($"Cannot load BlockDefines in a document due to missing a <Scope/> tag in the root");
-                continue;
-            }
-
-            XmlNodeList blockList = xmlDoc.GetElementsByTagName("Block");
-
-            Profiler.BeginSample("XmlParsing");
-            foreach (XmlNode blockNode in blockList) {
-                var id = blockNode["Id"]?.InnerText;
-                if (id == null)
-                    throw new MissingFieldException($"Missing field 'Id' for '{blockNode.InnerXml}'");
-
-                var scopedId = $"{scope.InnerText}:{blockNode["Id"].InnerText}"; // e.g. @Easy/Core:OAK_LOG
-
-                BlockDefinition block = new BlockDefinition();
-                block.blockId = blockIdCounter++;
-                block.name = blockNode["Name"].InnerText;
-                block.blockTypeId = scopedId;
-
-                if (blockIdLookup.ContainsKey(scopedId)) {
-                    Debug.LogWarning($"Duplicate Block Id: {scopedId} at index {blockIdCounter}");
-                    continue;
-                }
-                blockIdLookup.Add(scopedId, block.blockId);
-
-                block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
-                block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
-                block.topMaterial = blockNode["TopMaterial"] != null ? blockNode["TopMaterial"].InnerText : "";
-                block.sideMaterial = blockNode["SideMaterial"] != null ? blockNode["SideMaterial"].InnerText : "";
-                block.bottomMaterial = blockNode["BottomMaterial"] != null ? blockNode["BottomMaterial"].InnerText : "";
-                block.material = blockNode["Material"] != null ? blockNode["Material"].InnerText : "";
-
-                block.bottomTexture = blockNode["BottomTexture"] != null ? blockNode["BottomTexture"].InnerText : "";
-
-                block.sideTexture = blockNode["SideTexture"] != null ? blockNode["SideTexture"].InnerText : "";
-
-                block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText, CultureInfo.InvariantCulture) : 0;
-                block.smoothness = blockNode["Smoothness"] != null ? float.Parse(blockNode["Smoothness"].InnerText, CultureInfo.InvariantCulture) : 0;
-
-                block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText, CultureInfo.InvariantCulture) : 0;
-
-                block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText, CultureInfo.InvariantCulture) : 1;
-
-                block.solid = blockNode["Solid"] != null ? bool.Parse(blockNode["Solid"].InnerText) : true;
-
-                block.meshPath = blockNode["Mesh"] != null ? blockNode["Mesh"].InnerText : null;
-                block.meshPathLod = blockNode["MeshLod"] != null ? blockNode["MeshLod"].InnerText : null;
-                block.normalScale = blockNode["NormalScale"] != null ? float.Parse(blockNode["NormalScale"].InnerText, CultureInfo.InvariantCulture) : 1;
-
-                block.randomRotation = blockNode["RandomRotation"] != null ? bool.Parse(blockNode["RandomRotation"].InnerText) : true;
-
-                block.detail = blockNode["Detail"] != null ? bool.Parse(blockNode["Detail"].InnerText) : true;
-
-                string collisionString = "Solid";
-                if (blockNode["Collision"] == null) {
-                    if (block.solid == false) {
-                        collisionString = "None";
-                    }
-                }
-                else {
-                    collisionString = blockNode["Collision"].InnerText;
-                }
-
-                //Parse collisionString into the matching enum
-                switch (collisionString) {
-                    case "Solid":
-                    block.collisionType = CollisionType.Solid;
-                    break;
-                    case "Slope":
-                    block.collisionType = CollisionType.Slope;
-                    break;
-                    case "None":
-                    block.collisionType = CollisionType.None;
-                    break;
-                    default:
-                    Debug.LogWarning($"Unknown collision type: {collisionString}");
-                    break;
-                }
-
-                if (blockNode["Minecraft"] != null) {
-                    string text = blockNode["Minecraft"].InnerText;
-                    string[] split = text.Split(",");
-                    block.minecraftConversions = split;
-                }
-                else {
-                    block.minecraftConversions = null;
-                }
-
-                if (blockNode["Prefab"] != null && bool.Parse(blockNode["Prefab"].InnerText)) {
-                    block.prefab = true;
-                    block.solid = false;
-                    block.collisionType = CollisionType.Solid;
-                }
-
-                string tileBase = blockNode["TileSet"] != null ? blockNode["TileSet"].InnerText : "";
-
-                if (tileBase != "") {
-                    //Do the Greedymeshing Tiles
-                    for (int i = 0; i < (int)TileSizes.Max; i++) {
-                        string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
-                        string meshPathLod1 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_1";
-                        string meshPathLod2 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_2";
-
-                        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.surfaces == null) {
-                            if (i == 0) {
-                                //Debug.LogWarning("Could not find tile mesh at " + meshPath);
-                                //Dont look for any more if the 1x1 is missing
-                                break;
-                            }
-                        }
-                        else {
-                            LodSet set = new LodSet();
-                            set.lod0 = meshCopy;
-                            block.meshTiles.Add(i, set);
-
-                            VoxelMeshCopy meshCopyLod1 = new VoxelMeshCopy(meshPathLod1);
-                            if (meshCopyLod1.surfaces != null) {
-                                set.lod1 = meshCopyLod1;
-                            }
-
-                            VoxelMeshCopy meshCopyLod2 = new VoxelMeshCopy(meshPathLod2);
-                            if (meshCopyLod2.surfaces != null) {
-                                set.lod2 = meshCopyLod2;
-                            }
-
-                            block.contextStyle = ContextStyle.GreedyMeshingTiles;
-                        }
-                    }
-
-
-                    //see if its context based
-                    for (int i = 0; i < (int)ContextBlockTypes.MAX; i++) {
-                        string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + ContextBlockNames[i];
-
-                        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.surfaces == null) {
-                            if (i == 0) {
-                                //Dont look for any more if the A is missing
-                                break;
-                            }
-                        }
-                        else {
-                            block.meshContexts.Add(i, meshCopy);
-                            block.contextStyle = ContextStyle.ContextBlocks;
-                        }
-                    }
-
-                    //see if its quarterBlock based
-                    for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
-                        string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + QuarterBlockNames[i];
-
-                        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.surfaces == null) {
-                            if (i == 0) {
-                                //Dont look for any more if the A is missing
-                                break;
-                            }
-                            else {
-                                //Can we flip an existing one
-                                if (i < (int)QuarterBlockTypes.DA && QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
-                                    block.meshContexts.TryGetValue((int)QuarterBlockSubstitutions[i], out VoxelMeshCopy meshSrc);
-                                    if (meshSrc != null && meshSrc.surfaces != null) {
-                                        VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
-                                        meshCopySub.FlipHorizontally();
-                                        block.meshContexts.Add(i, meshCopySub);
-                                        continue;
-                                    }
-                                    else {
-                                        //Add a blank
-                                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
-                                        continue;
-                                    }
-                                }
-
-                                //Can we flip the upwards one?
-                                if (i >= (int)QuarterBlockTypes.DA) {
-                                    block.meshContexts.TryGetValue(i - (int)QuarterBlockTypes.DA, out VoxelMeshCopy meshSrc);
-
-                                    if (meshSrc != null && meshSrc.surfaces != null) {
-                                        VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
-                                        meshCopySub.FlipVertically();
-                                        block.meshContexts.Add(i, meshCopySub);
-                                        continue;
-                                    }
-                                    else {
-                                        //Add a blank
-                                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
-                                        continue;
-                                    }
-
-                                }
-                                else {
-
-                                    //Add a blank
-                                    block.meshContexts.Add(i, new VoxelMeshCopy("", false));
-                                }
-                            }
-                        }
-                        else {
-                            block.meshContexts.Add(i, meshCopy);
-                            block.contextStyle = ContextStyle.QuarterTiles;
-                        }
-                    }
-                    //Overwrite the materials
-                    if (block.material != null) {
-                        //Force load the material here for this purpose
-                        string matName = block.material;
-
-                        if (!string.IsNullOrEmpty(matName)) {
-                            Material sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
-                            if (sourceMat) {
-                                foreach (KeyValuePair<int, VoxelMeshCopy> kvp in block.meshContexts) {
-                                    if (kvp.Value.surfaces != null) {
-                                        foreach (VoxelMeshCopy.Surface surf in kvp.Value.surfaces) {
-                                            surf.meshMaterial = sourceMat;
-                                            surf.meshMaterialName = block.material;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                //iterate through the Tilesizes backwards
-                for (int i = (int)TileSizes.Max - 1; i > 0; i--) {
-                    bool found = block.meshTiles.TryGetValue(i, out LodSet val);
-                    if (found && i > 0) {
-                        block.meshTileProcessingOrder.Add(i);
-                    }
-                }
-
-                ////Check for duplicate
-                //if (blocks.ContainsKey(block.index))
-                //{
-                //    Debug.LogError("Duplicate block index: " + block.index + " for block: " + block.name + " Existing block name is" + blocks[block.index].name);
-                //    continue;
-                //}
-
-                blocks.Add(block.blockId, block);
-
-                if (block.meshPath != null) {
-                    block.meshPath = rootAssetPath + "/Meshes/" + block.meshPath;
-                    block.mesh = new VoxelMeshCopy(block.meshPath);
-
-                    //Texture should be adjacent to the mesh
-                    if (block.meshTexture != "") {
-                        string pathWithoutFilename = block.meshPath.Substring(0, block.meshPath.LastIndexOf('/'));
-                        block.meshTexturePath = Path.Combine(pathWithoutFilename, block.meshTexture);
-                        if (temporaryTextures.ContainsKey(block.meshTexturePath) == false) {
-                            var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.meshTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
-#if UNITY_EDITOR
-                            //prefer the mesh texture..
-                            if (tex != null) {
-                                block.editorTexture = tex.diffuse;
-                            }
-#endif
-                        }
-                    }
-                }
-
-                if (block.meshPathLod != null) {
-                    block.meshPathLod = $"{rootAssetPath}/Meshes/" + block.meshPathLod;
-                    block.meshLod = new VoxelMeshCopy(block.meshPathLod);
-                }
-
-                if (block.sideTexture != "") {
-                    block.sideTexturePath = $"{rootAssetPath}/Textures/" + block.sideTexture;
-                    if (temporaryTextures.ContainsKey(block.sideTexturePath) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.sideTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
-#if UNITY_EDITOR
-                        //prefer the side texture..
-                        if (tex != null) {
-                            block.editorTexture = tex.diffuse;
-                        }
-#endif
-                    }
-                }
-
-                if (block.topTexture != "") {
-                    block.topTexturePath = $"{rootAssetPath}/Textures/" + block.topTexture;
-                    if (temporaryTextures.ContainsKey(block.topTexturePath) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.topTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
-#if UNITY_EDITOR
-                        if (block.editorTexture == null && tex != null) {
-                            block.editorTexture = tex.diffuse;
-                        }
-#endif
-                    }
-                }
-
-                if (block.bottomTexture != "") {
-                    block.bottomTexturePath = $"{rootAssetPath}/Textures/" + block.bottomTexture;
-                    if (temporaryTextures.ContainsKey(block.bottomTexturePath) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.bottomTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
-#if UNITY_EDITOR
-                        if (block.editorTexture == null && tex != null) {
-                            block.editorTexture = tex.diffuse;
-                        }
-#endif
-                    }
-                }
-
-                loadedBlocks[block.blockId] = block;
-            }
-        } */
-
-        //Profiler.EndSample();
-        // Debug.Log("Loaded " + blocks.Count + " blocks");
 
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
         int defaultTextureSize = maxResolution;
-        int padding = defaultTextureSize / 2;
-        atlas.PackTextures(temporaryTextures, padding, atlasSize, atlasSize, numMips, defaultTextureSize);
+        atlas.PackTextures(temporaryTextures, atlasPaddingPx, atlasSize, atlasSize, numMips, defaultTextureSize);
         temporaryTextures.Clear();
 
         atlasMaterial.SetTexture("_MainTex", atlas.diffuse);
-        atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
+        // atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
+        atlasMaterial.SetFloat("_AtlasWidthTextures", atlasWidthTextures);
+        atlasMaterial.SetFloat("_PaddingOverWidth", atlasPaddingPx / (float) atlasSize);
+        atlasMaterial.SetFloat("_TexWidthOverWidth", maxResolution / (float) atlasSize);
 
         //create the materials
         Profiler.BeginSample("CreateMaterials");
         foreach (var blockRec in loadedBlocks) {
             for (int i = 0; i < 6; i++) {
-                blockRec.Value.SetMaterial(i, atlasMaterial);
+                blockRec.SetMaterial(i, atlasMaterial);
             }
 
-            Material fullMaterial = blockRec.Value.definition.topTexture.material;
+            Material fullMaterial = blockRec.definition.topTexture.material;
             if (fullMaterial != null) {
                 for (var i = 0; i < 6; i++) {
-                    blockRec.Value.SetMaterial(i, fullMaterial);
+                    blockRec.SetMaterial(i, fullMaterial);
                 }
             }
 
-            if (blockRec.Value.definition.topTexture.material != null) {
-                blockRec.Value.SetMaterial(4, blockRec.Value.definition.topTexture.material);
+            if (blockRec.definition.topTexture.material != null) {
+                blockRec.SetMaterial(4, blockRec.definition.topTexture.material);
             }
             
-            if (blockRec.Value.definition.sideTexture.material != null) {
+            if (blockRec.definition.sideTexture.material != null) {
                 for (var i = 0; i < 4; i++) {
-                    blockRec.Value.SetMaterial(i, blockRec.Value.definition.sideTexture.material);
+                    blockRec.SetMaterial(i, blockRec.definition.sideTexture.material);
                 }
             }
 
-            if (blockRec.Value.definition.bottomTexture.material != null) {
-                blockRec.Value.SetMaterial(5, blockRec.Value.definition.bottomTexture.material);
+            if (blockRec.definition.bottomTexture.material != null) {
+                blockRec.SetMaterial(5, blockRec.definition.bottomTexture.material);
             }
-
-            /*
-            if (blockRec.Value.meshTexture != "") {
-                blockRec.Value.meshMaterialName = "atlas";
-
-            }
-            else {
-                //MeshCopy has already loaded its material
-            }*/
 
         }
         Profiler.EndSample();
-
-        //fullPBR, needs two materials, one for opaque and one for transparencies
-
-
-        //Set appropriate settings for the atlas  (vertex light will get selected if its part of the voxel system)
-        //Set the properties too so they dont come undone on reload
-        /*
-        atlasMaterial.DisableKeyword("EXPLICIT_MAPS_ON");
-        atlasMaterial.SetFloat("EXPLICIT_MAPS", 0);
-
-        atlasMaterial.DisableKeyword("SLIDER_OVERRIDE_ON");
-        atlasMaterial.SetFloat("SLIDER_OVERRIDE", 0);
-
-        if (pointFiltering == true) {
-            atlasMaterial.EnableKeyword("POINT_FILTER_ON");
-            atlasMaterial.SetFloat("POINT_FILTER", 1);
-        }
-        else {
-            atlasMaterial.DisableKeyword("POINT_FILTER_ON");
-            atlasMaterial.SetFloat("POINT_FILTER", 0);
-        }
-
-        atlasMaterial.EnableKeyword("EXTRA_FEATURES_ON");
-        atlasMaterial.SetFloat("EXTRA_FEATURES", 1);
-        */
-        //materials["atlas"] = atlasMaterial;
-
+        
         //Finalize uvs etc
         foreach (var blockRec in loadedBlocks) {
-
-            if (blockRec.Value.definition.topTexture.diffuse != null) {
-                blockRec.Value.topUvs = atlas.GetUVs(blockRec.Value.definition.topTexture.diffuse);
+            if (blockRec.definition.topTexture.diffuse != null) {
+                blockRec.topUvs = atlas.GetUVs(blockRec.definition.topTexture.diffuse);
             }
             else {
-                blockRec.Value.topUvs = new Rect(0, 0, 0, 0);
+                blockRec.topUvs = new Rect(0, 0, 0, 0);
             }
 
-            if (blockRec.Value.definition.sideTexture.diffuse != null) {
-                blockRec.Value.sideUvs = atlas.GetUVs(blockRec.Value.definition.sideTexture.diffuse);
+            if (blockRec.definition.sideTexture.diffuse != null) {
+                blockRec.sideUvs = atlas.GetUVs(blockRec.definition.sideTexture.diffuse);
             }
             else {
-                blockRec.Value.sideUvs = blockRec.Value.topUvs; //Use other Uvs if none available
+                blockRec.sideUvs = blockRec.topUvs; //Use other Uvs if none available
             }
 
-            if (blockRec.Value.definition.bottomTexture.diffuse != null) {
-                blockRec.Value.bottomUvs = atlas.GetUVs(blockRec.Value.definition.bottomTexture.diffuse);
+            if (blockRec.definition.bottomTexture.diffuse != null) {
+                blockRec.bottomUvs = atlas.GetUVs(blockRec.definition.bottomTexture.diffuse);
             }
             else {
-                blockRec.Value.bottomUvs = blockRec.Value.topUvs; //use top uvs if bottom uvs not available
+                blockRec.bottomUvs = blockRec.topUvs; //use top uvs if bottom uvs not available
             }
-
-            /*
-            if (blockRec.Value.meshTexturePath != "") {
-                blockRec.Value.mesh.AdjustUVs(atlas.GetUVs(blockRec.Value.meshTexturePath));
-
-            }*/
         }
-        // Profiler.EndSample();
-        loadedTask.TrySetResult(true);
     }
 
     //Fix a voxel value up with its solid mask bit
@@ -1221,12 +867,14 @@ public class VoxelBlocks : MonoBehaviour {
         blockDef.blockTypeId = name;
         blockDef.blockId = blockIdCounter++;
 
-        loadedBlocks.Add(blockDef.blockId, blockDef);
+        loadedBlocks.Add(blockDef);
         blockIdLookup.Add(name, blockDef.blockId);
 
+#if !UNITY_SERVER
         for (int i = 0; i < 6; i++) {
-            blockDef.SetMaterial(i, atlasMaterial);
+            if (atlasMaterial) blockDef.SetMaterial(i, atlasMaterial);
         }
+#endif
 
         return blockDef;
     }

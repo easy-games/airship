@@ -39,6 +39,10 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public bool debugReloadOnScriptReloadMode = false;   //Used when iterating on Airship Rendering, not for production
     
     [HideInInspector] public const int chunkSize = 16;            //fixed size
+    [NonSerialized] internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
+    
+    [NonSerialized] internal const bool chunkSizeIsPowerOfTwo = (chunkSize & (chunkSize - 1)) == 0;
+     
  
     [HideInInspector]
     public Vector3 focusPosition {
@@ -61,6 +65,23 @@ public partial class VoxelWorld : MonoBehaviour {
     [Tooltip("If enabled we use the main camera position as the VoxelWorld focus position (prioritizing updates to nearby chunks)")]
     public bool useCameraAsFocusPosition = true;
     private Transform _focusCameraTransform;
+
+    internal Camera focusCamera {
+        get {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView) {
+                    var sceneCamera = sceneView.camera;
+                    if (sceneCamera) return sceneCamera;
+                }
+            }
+#endif
+            return _focusCamera;
+        }
+        set => _focusCamera = value;
+    }
+    private Camera _focusCamera;
 
     [SerializeField] public bool autoLoad = true;
     
@@ -332,7 +353,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk.GetVoxelAt(voxelPos) == 0) return;
         
         chunk.WriteVoxelColor(voxelPos, color);
-        DirtyNeighborMeshes(voxelPos, priority);
+        DirtyNeighborMeshes(voxelPos, false, priority);
     }
     
     public void DamageVoxelAt(Vector3 pos, float damage, bool priority) {
@@ -346,16 +367,16 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk.GetVoxelAt(voxelPos) == 0) return;
         
         chunk.WriteVoxelDamage(voxelPos, damage);
-        DirtyMesh(voxelPos, priority);
+        DirtyMesh(voxelPos, false, priority);
     }
 
     private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
-        Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel);
+        Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel, out var collisionUpdated);
         DamageVoxelAt(posInt, 0.0f, false);
         if (affectedChunk != null) {
             //Adding voxels to history stack for playback
             BeforeVoxelPlaced?.Invoke(voxel, posInt);
-            DirtyNeighborMeshes(posInt, priority);
+            DirtyNeighborMeshes(posInt, collisionUpdated, priority);
             VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
         }
         return affectedChunk;
@@ -483,8 +504,7 @@ public partial class VoxelWorld : MonoBehaviour {
      * Will return false if the voxel is 
      */
     [HideFromTS]
-    public Chunk WriteVoxelAtInternal(Vector3Int pos, VoxelData num) {
-        // Debug.Log("Writing voxel pos=" + pos + ", voxel=" + num);
+    public Chunk WriteVoxelAtInternal(Vector3Int pos, VoxelData num, out bool collisionUpdated) {
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out Chunk chunk);
         if (chunk == null) {
@@ -499,13 +519,20 @@ public partial class VoxelWorld : MonoBehaviour {
         num = voxelBlocks.AddSolidMaskToVoxelValue(num);
 
         // Ignore if this changes nothing.
-        if (num == chunk.GetVoxelAt(pos)) {
+        var existingVoxel = chunk.GetVoxelAt(pos);
+        if (num == existingVoxel) {
+            collisionUpdated = false;
             return null;
+        }
+
+        // Check if we have the same collision type
+        collisionUpdated = true;
+        if (num != 0 || existingVoxel != 0) {
+            collisionUpdated = GetCollisionType(num) != GetCollisionType(existingVoxel);
         }
 
         //Write a new voxel
         chunk.WriteVoxel(pos, num);
-
         return chunk;
     }
 
@@ -542,11 +569,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(Vector3Int globalCoordinate) {
-        int x = globalCoordinate.x >= 0 ? globalCoordinate.x / chunkSize : (globalCoordinate.x + 1) / chunkSize - 1;
-        int y = globalCoordinate.y >= 0 ? globalCoordinate.y / chunkSize : (globalCoordinate.y + 1) / chunkSize - 1;
-        int z = globalCoordinate.z >= 0 ? globalCoordinate.z / chunkSize : (globalCoordinate.z + 1) / chunkSize - 1;
-
-        return new Vector3Int(x, y, z);
+        return WorldPosToChunkKey(globalCoordinate.x, globalCoordinate.y, globalCoordinate.z);
     }
 
     [HideFromTS]
@@ -556,9 +579,9 @@ public partial class VoxelWorld : MonoBehaviour {
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(int globalCoordinateX, int globalCoordinateY, int globalCoordinateZ) {
-        int x = globalCoordinateX >= 0 ? globalCoordinateX / chunkSize : (globalCoordinateX + 1) / chunkSize - 1;
-        int y = globalCoordinateY >= 0 ? globalCoordinateY / chunkSize : (globalCoordinateY + 1) / chunkSize - 1;
-        int z = globalCoordinateZ >= 0 ? globalCoordinateZ / chunkSize : (globalCoordinateZ + 1) / chunkSize - 1;
+        int x = globalCoordinateX >= 0 ? globalCoordinateX >> logChunkSize : -(-(globalCoordinateX + 1) >> logChunkSize) - 1;
+        int y = globalCoordinateY >= 0 ? globalCoordinateY >> logChunkSize : -(-(globalCoordinateY + 1) >> logChunkSize) - 1;
+        int z = globalCoordinateZ >= 0 ? globalCoordinateZ >> logChunkSize : -(-(globalCoordinateZ + 1) >> logChunkSize) - 1;
 
         return new Vector3Int(x, y, z);
     }
@@ -619,12 +642,14 @@ public partial class VoxelWorld : MonoBehaviour {
         return value.GetVoxelColorAt(posi);
     }
 
-    public void DirtyMesh(Vector3Int voxel, bool priority = false) {
+    public void DirtyMesh(Vector3Int voxel, bool dirtyCollisions, bool priority = false) {
         Chunk chunk = GetChunkByVoxel(voxel);
         if (chunk != null) {
 
             chunk.SetGeometryDirty(true, priority);
-            if (priority) {
+            if (dirtyCollisions) chunk.SetCollisionDirty(true);
+            
+            if (priority && dirtyCollisions) {
                 BeforeVoxelChunkUpdated?.Invoke(chunk);
                 chunk.MainthreadForceCollisionRebuild();
                 VoxelChunkUpdated?.Invoke(chunk);
@@ -632,34 +657,34 @@ public partial class VoxelWorld : MonoBehaviour {
         }
         else {
             //if it is null, create it
-            WriteVoxelAtInternal(voxel, 0);
+            WriteVoxelAtInternal(voxel, 0, out var collisionUpdated);
         }
     }
 
-    public void DirtyNeighborMeshes(Vector3Int voxel, bool priority = false) {
+    public void DirtyNeighborMeshes(Vector3Int voxel, bool dirtyCollision, bool priority = false) {
 
         //DateTime startTime = DateTime.Now;
 
-        DirtyMesh(voxel, priority);
+        DirtyMesh(voxel, dirtyCollision, priority);
         Vector3Int localPosition = Chunk.WorldPosToLocalPos(voxel);
 
         if (localPosition.x == 0) {
-            DirtyMesh(voxel + new Vector3Int(-1, 0, 0), false);
+            DirtyMesh(voxel + new Vector3Int(-1, 0, 0), false, false);
         }
         if (localPosition.y == 0) {
-            DirtyMesh(voxel + new Vector3Int(0, -1, 0), false);
+            DirtyMesh(voxel + new Vector3Int(0, -1, 0), false, false);
         }
         if (localPosition.z == 0) {
-            DirtyMesh(voxel + new Vector3Int(0, 0, -1), false);
+            DirtyMesh(voxel + new Vector3Int(0, 0, -1), false, false);
         }
         if (localPosition.x == chunkSize - 1) {
-            DirtyMesh(voxel + new Vector3Int(+1, 0, 0), false);
+            DirtyMesh(voxel + new Vector3Int(+1, 0, 0), false, false);
         }
         if (localPosition.y == chunkSize - 1) {
-            DirtyMesh(voxel + new Vector3Int(0, +1, 0), false);
+            DirtyMesh(voxel + new Vector3Int(0, +1, 0), false, false);
         }
         if (localPosition.z == chunkSize - 1) {
-            DirtyMesh(voxel + new Vector3Int(0, 0, +1), false);
+            DirtyMesh(voxel + new Vector3Int(0, 0, +1), false, false);
         }
     }
 
@@ -739,8 +764,8 @@ public partial class VoxelWorld : MonoBehaviour {
         }
         
         foreach (var def in voxelBlocks.loadedBlocks) {
-            if (def.Value.definition.solid == true) {
-                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.Value.blockId);
+            if (def.definition.solid == true) {
+                WriteVoxelAtInternal(new Vector3Int(0, 0, 0), def.blockId, out _);
                 return;
             }
         }
@@ -760,10 +785,10 @@ public partial class VoxelWorld : MonoBehaviour {
             for (int z = -64; z < 64; z++) {
                 int height = (int)(Mathf.PerlinNoise((float)x / 256.0f * scale, (float)z / 256.0f * scale) * 32.0f);
                 for (int y = 0; y < height; y++) {
-                    WriteVoxelAtInternal(new Vector3Int(x, y, z), dirt);
+                    WriteVoxelAtInternal(new Vector3Int(x, y, z), dirt, out _);
                 }
 
-                WriteVoxelAtInternal(new Vector3Int(x, height, z), grass);
+                WriteVoxelAtInternal(new Vector3Int(x, height, z), grass, out _);
 
             }
         }
@@ -777,7 +802,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         for (int x = -64; x < 64; x++) {
             for (int z = -64; z < 64; z++) {
-                WriteVoxelAtInternal(new Vector3Int(x, 0, z), grass);
+                WriteVoxelAtInternal(new Vector3Int(x, 0, z), grass, out _);
             }
         }
         RegenerateAllMeshes();
@@ -789,7 +814,7 @@ public partial class VoxelWorld : MonoBehaviour {
         
         VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
 
-        WriteVoxelAtInternal(new Vector3Int(0, 0, 0), dirt);
+        WriteVoxelAtInternal(new Vector3Int(0, 0, 0), dirt, out _);
 
         RegenerateAllMeshes();
     }
@@ -798,8 +823,9 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.BeginSample("RegenerateAllMeshes");
 
         //Force a mesh update
-        foreach (var chunk in chunks) {
-            chunk.Value.SetGeometryDirty(true);
+        foreach (var (_, chunk) in chunks) {
+            chunk.SetGeometryDirty(true);
+            chunk.SetCollisionDirty(true);
         }
         Profiler.EndSample();
     }
@@ -967,7 +993,10 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private void Awake() {
         var mainCam = Camera.main;
-        if (mainCam) _focusCameraTransform = mainCam.transform;
+        if (mainCam) {
+            _focusCameraTransform = mainCam.transform;
+            _focusCamera = mainCam;
+        }
         doVisuals = RunCore.IsClient() || Application.isEditor;
         PrepareVoxelWorldGameObject();
     }
@@ -992,6 +1021,7 @@ public partial class VoxelWorld : MonoBehaviour {
             Debug.LogWarning("Updated VoxelWorld focus camera won't be used (UseCameraAsFocusPosition is false).");
         }
         _focusCameraTransform = focusCamera.transform;
+        _focusCamera = focusCamera;
     }
 
     private void OnEnable() {
@@ -1075,10 +1105,33 @@ public partial class VoxelWorld : MonoBehaviour {
         maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
         int updateCounter = 0;
 
+        Camera relevantFocusCamera = null;
+        if (useCameraAsFocusPosition) relevantFocusCamera = focusCamera;
+        Vector3 forward = Vector3.zero;
+        Vector3 camPos = Vector3.zero;
+        if (relevantFocusCamera) {
+            var camTransform = relevantFocusCamera.transform;
+            forward = camTransform.rotation * Vector3.forward;
+            camPos = camTransform.position - forward * (chunkSize >> 1);
+        }
+
+        var cos50Deg = 0.6427;
+        
         if (maxChunksToUpdateVar > 0 && chunksThatNeedThreadKickoff.Count > 0) {
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
 
-            chunksThatNeedThreadKickoff.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
+            chunksThatNeedThreadKickoff.Sort((a, b) => {
+                var aDist = (a.chunkKey - focusPositionChunkKey).magnitude;
+                var bDist = (b.chunkKey - focusPositionChunkKey).magnitude;
+                // If chunk is beyond 55 degrees of view from camera then treat it as much (250 blocks) further
+                // in terms of priority
+                if (forward != Vector3.zero) {
+                    if (Vector3.Dot(forward, (((a.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) aDist += (250f / chunkSize);
+                    if (Vector3.Dot(forward, (((b.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) bDist += (250f / chunkSize);
+                }
+                
+                return aDist.CompareTo(bDist);
+            });
 
             float startTime = Time.realtimeSinceStartup;
 
@@ -1270,14 +1323,15 @@ public partial class VoxelWorld : MonoBehaviour {
         voxelBlocks.Reload(useTexturesDirectlyFromDisk); // this.GetBlockDefinesContents(), useTexturesDirectlyFromDisk);
          
         //refresh the geometry
-        foreach (var chunk in chunks) {
-            chunk.Value.SetGeometryDirty(true, false);
+        foreach (var (_, chunk) in chunks) {
+            chunk.SetGeometryDirty(true, false);
         } 
     }
     
     public void AddChunk(Vector3Int key, Chunk chunk) {
         chunks.Add(key, chunk);
         chunk.SetGeometryDirty(true);
+        chunk.SetCollisionDirty(true);
     }
 
     //Todo: How do we want to handle having multiple voxelworlds?

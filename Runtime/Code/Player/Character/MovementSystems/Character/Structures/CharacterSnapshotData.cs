@@ -60,8 +60,8 @@ namespace Code.Player.Character.MovementSystems.Character
             var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
             var positionEqual = (this.position - other.position).sqrMagnitude < vectorTolerance;
             var velocityEqual =  (this.velocity - other.velocity).sqrMagnitude < vectorTolerance;
-            var currentSpeedEqual = NetworkSerializationUtil.CompressToShort(this.currentSpeed) == NetworkSerializationUtil.CompressToShort(other.currentSpeed);
-            var speedModifierEqual = NetworkSerializationUtil.CompressToShort(this.speedModifier) == NetworkSerializationUtil.CompressToShort(other.speedModifier);
+            var currentSpeedEqual = Math.Round(this.currentSpeed, 2) == Math.Round(other.currentSpeed, 2);
+            var speedModifierEqual = NetworkSerializationUtil.CompressToUshort(this.speedModifier) == NetworkSerializationUtil.CompressToUshort(other.speedModifier);
             var inputDisabledEqual = inputDisabled == other.inputDisabled;
             var isFlyingEqual = isFlying == other.isFlying;
             var isSprintingEqual = isSprinting == other.isSprinting;
@@ -252,10 +252,10 @@ namespace Code.Player.Character.MovementSystems.Character
             if (canJumpChanged) BitUtil.SetBit(ref changedMask, 8, true);
 
             // Write only changed fields
-            var writer = new NetworkWriter();
+            var writer = NetworkWriterPool.Get();
             writer.Write(NetworkSerializationUtil.CompressToUshort(other.time - time));
             writer.Write((ushort)(other.tick - tick)); // We should send diffs far before 65,535 ticks have passed. 255 is a little too low if messing with time scale (ticks will skip in slow timescales)
-            writer.Write((byte)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
+            writer.Write((ushort)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
             writer.Write(changedMask);
             if (boolsChanged) writer.Write(newBools);
             if (positionChanged) writer.Write(other.position);
@@ -279,10 +279,13 @@ namespace Code.Player.Character.MovementSystems.Character
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
 
+            var dataArray = writer.ToArray();
+            NetworkWriterPool.Return(writer);
+            
             return new CharacterStateDiff {
                 baseTick = tick, // The base is the instance CreateDiff is being called on, so use our instance time value as the base time.
                 crc32 = other.ComputeCrc32(),
-                data = writer.ToArray()
+                data = dataArray
             };
         }
 
@@ -305,12 +308,12 @@ namespace Code.Player.Character.MovementSystems.Character
                 return null;
             }
 
-            var reader = new NetworkReader(stateDiff.data);
+            var reader = NetworkReaderPool.Get(stateDiff.data);
             var snapshot = (CharacterSnapshotData) this.Clone();
 
             snapshot.time = time + NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
             snapshot.tick = tick + reader.Read<ushort>();
-            snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<byte>();
+            snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<ushort>();
             var changedMask = reader.Read<short>();
 
             if (BitUtil.GetBit(changedMask, 0)) {
@@ -346,6 +349,8 @@ namespace Code.Player.Character.MovementSystems.Character
             else {
                 snapshot.customData = null;
             }
+            
+            NetworkReaderPool.Return(reader);
 
             var crc32 = snapshot.ComputeCrc32();
             if (crc32 != diff.crc32) {
@@ -365,29 +370,28 @@ namespace Code.Player.Character.MovementSystems.Character
             
             // We serialize to a byte array for calculating the CRC32. We use slightly more lenient compression
             // on things like the vectors so that floating point errors don't cause the crc checks to fail.
-            var writer = new NetworkWriter();
+            var writer = NetworkWriterPool.Get();
             byte bools = 0;
             CharacterSnapshotDataSerializer.EncodeBools(ref bools, this);
             writer.Write(bools);
-            if (this.customData != null) {
-                writer.WriteInt(this.customData.dataSize);
-                writer.WriteBytes(this.customData.data, 0, this.customData.data.Length);
-            }
-            else {
-                writer.WriteInt(0);
-            }
             writer.Write(this.tick);
             writer.Write(this.lastProcessedCommand);
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.x));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.y));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.position.z));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.x));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.y));
-            writer.Write(NetworkSerializationUtil.CompressToShort(this.velocity.z));
+            
+            // Floating point issue make it difficult to use these values directly. We normalize them
+            // and compress to short. We need to normalize since these values can be larger than a short.
+            var normalPos = this.position.normalized;
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.z));
+            var normalVel = this.velocity.normalized;
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.x));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.y));
+            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.z));
+            
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.y));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.z));
-            writer.Write(this.currentSpeed);
+            writer.Write(Math.Round(this.currentSpeed, 2));
             // This makes our max speed modifier 65.535 with a 0.001 precision.
             writer.Write(NetworkSerializationUtil.CompressToUshort(this.speedModifier));
             writer.Write(this.canJump);
@@ -395,6 +399,8 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(this.jumpCount);
             if (this.customData != null) writer.Write(this.customData.data);
             var bytes = writer.ToArray();
+            
+            NetworkWriterPool.Return(writer);
             
             _crc32 = Crc32Algorithm.Compute(bytes);
             return _crc32;

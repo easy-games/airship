@@ -49,6 +49,7 @@ using Object = UnityEngine.Object;
             /// The compiler has crashed
             /// </summary>
             Crashed,
+            Starting
         }
         
         /// <summary>
@@ -75,9 +76,11 @@ using Object = UnityEngine.Object;
             /// </summary>
             internal static bool IsCompilingFiles { get; private set; }
             internal static bool IsImportingFiles { get; private set; }
+            internal static bool IsStartingUp { get; private set; }
             
             public static TypescriptCompilerState CompilerState {
                 get {
+                    if (IsStartingUp) return TypescriptCompilerState.Starting;
                     if (Crashed) return TypescriptCompilerState.Crashed;
                     if (IsCompilingFiles) return TypescriptCompilerState.Compiling;
                     if (IsImportingFiles) return TypescriptCompilerState.PostCompile;
@@ -287,7 +290,6 @@ using Object = UnityEngine.Object;
             
             public static int ErrorCount => TypescriptProjectsService.Projects.Sum(project => project.ErrorCount);
 
-            [MenuItem("Airship/TypeScript/Build")]
             internal static void FullRebuild() {
                 var flags = TypeScriptCompileFlags.FullClean;
                 if (EditorIntegrationsConfig.instance.typescriptIncremental) {
@@ -297,7 +299,6 @@ using Object = UnityEngine.Object;
                 BuildTypescript(flags);
             }
             
-            [MenuItem("Airship/TypeScript/Start Watch Mode")]
             internal static void StartCompilerServices() {
                 TypescriptLogService.StartLogging();
                 StopCompilers();
@@ -325,10 +326,10 @@ using Object = UnityEngine.Object;
                 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs, nodeJsArgs));
                 TypescriptLogService.Log(TypescriptLogLevel.Information, "Started compiler services.");
-                TypescriptServices.IsManuallyStopped = false;
+                
+                TypescriptServices.IsCompilerStoppedByUser = false;
             }
-
-            [MenuItem("Airship/TypeScript/Stop Watch Mode")]
+            
             internal static void StopCompilers() {
                 StopCompilerServices();
             }
@@ -474,12 +475,6 @@ using Object = UnityEngine.Object;
                 BuildTypescript(new []{ TypescriptProjectsService.Project }, flags);
             }
             internal static void BuildTypescript(TypescriptProject[] projects, TypeScriptCompileFlags compileFlags = 0) {
-                var gameConfig = GameConfig.Load();
-                if (!gameConfig) {
-                    Debug.LogError("Failed to load gameConfig for compilation step");
-                    return;
-                }
-                
                 var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
                 if (isRunningServices) StopCompilerServices();
 

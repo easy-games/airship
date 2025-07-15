@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Numerics;
+using Code.Bootstrap;
 using Code.CoreUI.Components;
 using ElRaccoone.Tweens;
 using TMPro;
@@ -27,6 +28,8 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public RawImage gameImage;
     public Color editorGameImageColor;
     public RectTransform bottomCard;
+    public GameObject errorWrapper;
+    public TMP_Text errorText;
 
     [NonSerialized] private float startTime = 0f;
     [NonSerialized] private bool showedVoiceChatCard = false;
@@ -82,8 +85,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
         this.spinner.SetActive(true);
         
         SetProgress("Connecting to Server", 5);
-
-        disconnectButton.onClick.AddListener(DisconnectButton_OnClicked);
+        
         this.voiceChatToggle.onValueChanged += VoiceChatToggle_OnValueChanged;
 
         if (Application.isMobilePlatform) {
@@ -150,6 +152,25 @@ public class CoreLoadingScreen : BundleLoadingScreen
         NativeTween.CanvasGroupAlpha(canvasGroup, 1f, 1f).SetEaseQuadOut();;
         NativeTween.AnchoredPositionY(voiceChatCard, -37, 1f).SetEaseQuadOut();
     }
+    
+    public override void SetError(string msg) {
+        this.spinner.SetActive(false);
+        this.progressText.gameObject.SetActive(false);
+        this.bottomCard.gameObject.SetActive(false);
+        this.errorText.text = msg;
+        this.errorWrapper.gameObject.SetActive(true);
+    }
+    
+    public void RetryBtn_OnClick() {
+        this.spinner.SetActive(true);
+        this.continueButton.gameObject.SetActive(false);
+        this.progressText.gameObject.SetActive(true);
+        this.errorWrapper.SetActive(false);
+        this.bottomCard.gameObject.SetActive(true);
+        
+        FindAnyObjectByType<ClientBundleLoader>().RetryDownload();
+    }
+
 
     public override void SetTotalDownloadSize(long sizeBytes) {
         var sizeMb = sizeBytes / 1_000_000;
@@ -177,19 +198,17 @@ public class CoreLoadingScreen : BundleLoadingScreen
         Cursor.lockState = CursorLockMode.None;
     }
 
-    private void OnDisable() {
-        if (RunCore.IsClient()) {
-            disconnectButton.onClick.RemoveListener(DisconnectButton_OnClicked);
-        }
-    }
-
     private void OnDestroy() {
         if (this.voiceChatToggle) {
             this.voiceChatToggle.onValueChanged -= VoiceChatToggle_OnValueChanged;
         }
     }
 
-    private void DisconnectButton_OnClicked() {
+    public void DisconnectBtn_OnClick() {
+        if (TransferManager.Instance.IsExpectingDisconnect()) {
+            return;
+        }
+        
         TransferManager.Instance.Disconnect();
     }
 

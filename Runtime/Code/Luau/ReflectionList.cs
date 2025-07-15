@@ -21,6 +21,7 @@ using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
 using UnityEngine.Tilemaps;
 using UnityEngine.VFX;
+using Slider = UnityEngine.UI.Slider;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -230,8 +231,12 @@ namespace Luau {
             ["ElRaccoone.Tweens.NativeTween+LocalRotationDriver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
             ["TubeRendererCS"] = LuauContextAll,
+            // In editor the type of AudioMixerSnapshot is UnityEditor.Audio.AudioMixerSnapshotController, so this is
+            // needed. In built player it seems to work fine (I assume using a UnityEngine.Audio version?)
+            #if UNITY_EDITOR
             ["AudioMixerSnapshotController"] = LuauContextAll,
             ["AudioMixerController"] = LuauContextAll,
+            #endif
             ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
         };
 
@@ -323,6 +328,10 @@ namespace Luau {
 
         public static Type AttemptGetTypeFromString(string typeStr) {
             if (string.IsNullOrEmpty(typeStr)) return null;
+
+            if (TypeReflection._shortTypeNames.TryGetValue(typeStr, out var result)) {
+                return result;
+            }
             
             var t = Type.GetType(typeStr);
             if (t != null) {

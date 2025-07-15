@@ -170,7 +170,7 @@ namespace Mirror
 
                         // send to transport
                         SendToTransport(segment, kvp.Key);
-                        //UnityEngine.Debug.Log($"sending batch of {writer.Position} bytes for channel={kvp.Key} connId={connectionId}");
+                        // UnityEngine.Debug.Log($"sending batch of {writer.Position} bytes for channel={kvp.Key} connId={connectionId}");
 
                         // reset writer for each new batch
                         writer.Position = 0;

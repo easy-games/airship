@@ -208,17 +208,19 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             selectedStyle.normal.textColor = Color.green;
             selectedStyle.hover.textColor = Color.green;
 
-            foreach (var pair in world.voxelBlocks.loadedBlocks) {
-                var name = pair.Value.definition.name;
+            var loadedBlocks = world.voxelBlocks.loadedBlocks;
+            for (ushort id = 0; id < loadedBlocks.Count; id++) {
+                var block = loadedBlocks[id];
+                var name = block.definition.name;
                 if (name == "") {
                     name = "Air";
                 }
 
-                if (pair.Key == world.selectedBlockIndex) {
+                if (id == world.selectedBlockIndex) {
                     GUILayout.Button(name, selectedStyle);
                 } else {
                     if (GUILayout.Button(name)) {
-                        world.selectedBlockIndex = pair.Key;
+                        world.selectedBlockIndex = id;
                     }
                 }
             }

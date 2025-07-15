@@ -159,6 +159,7 @@ namespace Airship.Editor
         private static Material profilePicRounded;
         private static Texture signedOutIcon;
         private static Texture2D signedInIcon;
+        private static Texture2D signedInIconRaw;
         public static byte[] signedInIconBytes = new byte[]{};
         /** True when fetching game info for publish (publish shouldn't be clickable during this) */
         private static bool fetchingPublishInfo;
@@ -185,9 +186,6 @@ namespace Airship.Editor
             EditorAuthManager.localUserChanged += (user) => {
                 if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
                     signedInIconBytes = new byte[]{};
-                    // EditorIcons.Instance.signedInIcon = new byte[] {};
-                    // EditorUtility.SetDirty(EditorIcons.Instance);
-                    // AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                     RepaintToolbar();
                     return;
                 }
@@ -204,12 +202,7 @@ namespace Airship.Editor
             EditorAuthManager.DownloadProfilePicture().ContinueWith((t) => {
                 if (t.Result == null) return;
 
-                signedInIcon = ResizeTexture(t.Result, 128, 128);
-                AirshipToolbar.signedInIconBytes = signedInIcon.EncodeToPNG();
-                // EditorIcons.Instance.signedInIcon = signedInIcon.EncodeToPNG();
-                // EditorUtility.SetDirty(EditorIcons.Instance);
-                // AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
-                RepaintToolbar();
+                signedInIconRaw = t.Result;
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
@@ -242,13 +235,27 @@ namespace Airship.Editor
             }
         }
         
-        private static Texture2D ResizeTexture(Texture2D source, int targetWidth, int targetHeight) {
+        private static Texture2D ResizeAndRoundTexture(Texture2D source, int targetWidth, int targetHeight) {
+            if (source == null) {
+                Debug.LogError("[ResizeTexture] Source texture is null.");
+                return null;
+            }
+            
             RenderTexture rt = RenderTexture.GetTemporary(targetWidth, targetHeight);
             rt.filterMode = FilterMode.Bilinear;
+            if (rt == null) {
+                Debug.LogError("[ResizeTexture] Render texture is null.");
+                return null;
+            }
             
             if (profilePicRounded == null)
                 profilePicRounded = AssetDatabase.LoadAssetAtPath<Material>("Packages/gg.easy.airship/Editor/Hidden_EditorProfilePicRounded.mat");
-
+            if (profilePicRounded == null) {
+                Debug.LogError("[ResizeTexture] Rounded material is null.");
+                RenderTexture.ReleaseTemporary(rt);
+                return null;
+            }
+            
             RenderTexture.active = rt;
             Graphics.Blit(source, rt, profilePicRounded);
 
@@ -280,14 +287,7 @@ namespace Airship.Editor
             if (gameSettings == null)
                 gameSettings = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSettings);
             if (signedOutIcon == null)
-                signedOutIcon = ResizeTexture(AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon), 128, 128);
-            if (signedInIcon == null && AirshipToolbar.signedInIconBytes != null && AirshipToolbar.signedInIconBytes.Length > 0) {
-                Texture2D result = new Texture2D(128, 128);
-                result.filterMode = FilterMode.Bilinear;
-                result.LoadImage(AirshipToolbar.signedInIconBytes);
-                result.Apply();
-                signedInIcon = result;
-            }
+                signedOutIcon = ResizeAndRoundTexture(AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon), 128, 128);
 
             if (coreUpdateTexture == null) {
                 coreUpdateTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(coreUpdateIcon);
@@ -327,7 +327,7 @@ namespace Airship.Editor
             GUI.enabled = true;
 
             EditorGUIUtility.SetIconSize(new Vector2(16, 16));
-            Texture profileIcon = signedInIcon;
+            Texture profileIcon = GetSignedInIcon();
             if (profileIcon == null || EditorAuthManager.signInStatus == EditorAuthSignInStatus.SIGNED_OUT) {
                 profileIcon = signedOutIcon;
             }
@@ -465,6 +465,27 @@ namespace Airship.Editor
             }
             
             GUILayout.Space(5);
+        }
+
+        private static Texture2D GetSignedInIcon() {
+            if (signedInIcon != null) return signedInIcon;
+            
+            if (AirshipToolbar.signedInIconBytes != null && AirshipToolbar.signedInIconBytes.Length > 0) {
+                Texture2D result = new Texture2D(128, 128);
+                result.filterMode = FilterMode.Bilinear;
+                result.LoadImage(AirshipToolbar.signedInIconBytes);
+                result.Apply();
+                signedInIcon = result;
+                return signedInIcon;
+            }
+
+            if (signedInIconRaw != null) {
+                signedInIcon = ResizeAndRoundTexture(signedInIconRaw, 128, 128);
+                AirshipToolbar.signedInIconBytes = signedInIcon.EncodeToPNG();
+                // RepaintToolbar();
+                return signedInIcon;
+            }
+            return null;
         }
     }
 }

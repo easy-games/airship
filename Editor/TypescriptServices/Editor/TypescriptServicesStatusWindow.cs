@@ -43,7 +43,8 @@ namespace Airship.Editor {
     
     [EditorWindowTitle(title = "Typescript")]
     public class TypescriptServicesStatusWindow : EditorWindow {
-        [MenuItem("Airship/TypeScript/Show Status Window")]
+        [MenuItem("Window/Airship/Typescript Console")]
+        [MenuItem("Airship/TypeScript/Typescript Console")]
         public static void Open() {
             var window = GetWindow(typeof(TypescriptServicesStatusWindow));
             window.titleContent = new GUIContent("Typescript", AirshipToolbar.typescriptIconOff);
@@ -130,7 +131,7 @@ namespace Airship.Editor {
                 tabView.Add(problemsTab);
             }
             tabView.AddToClassList("typescript-tab-view");
-            tabView.Add(problemsTab);
+            // tabView.Add(problemsTab);
             
             rootVisualElement.Add(tabView);
             rootVisualElement.AddToClassList(EditorGUIUtility.isProSkin ? "dark-mode" : "light-mode");

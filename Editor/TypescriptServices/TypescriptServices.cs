@@ -55,22 +55,29 @@ namespace Airship.Editor {
         /// True if the compiler services is currently "restarting" due to something like packages updating
         /// </summary>
         public static bool IsAwaitingRestart { get; private set; }
-        
+
         /// <summary>
         /// True if the compiler is considered active
         /// </summary>
-        public static bool IsCompilerActive => 
-            TypescriptCompilationService.CompilerState is not TypescriptCompilerState.Crashed and not TypescriptCompilerState.Inactive;
+        public static bool IsCompilerActive =>
+            TypescriptCompilationService.CompilerState is not TypescriptCompilerState.Crashed
+                and not TypescriptCompilerState.Inactive;
+
+        /// <summary>
+        /// Will return true if the compiler should be active
+        /// </summary>
+        public static bool ShouldCompilerBeRunning =>
+            !AirshipPackagesWindow.IsModifyingPackages && !AirshipUpdateService.IsUpdatingAirship;
         
         /// <summary>
         /// True if the compiler was manually stopped by the user
         /// </summary>
-        public static bool IsManuallyStopped { get; internal set; }
+        public static bool IsCompilerStoppedByUser { get; internal set; }
 
         /// <summary>
-        /// True if this is a valid editor window to run TSS in
+        /// True if this is a valid editor window to run the compiler in
         /// </summary>
-        public static bool IsValidEditor =>
+        public static bool IsValidEditorContext =>
             !ClonesManager.IsClone() &&
             !Environment.GetCommandLineArgs().Contains("--virtual-project-clone");
 
@@ -81,13 +88,13 @@ namespace Airship.Editor {
             return;
 #endif
             // On project load we'll force a full compile to try and get all the refs up to date
-            if (!SessionState.GetBool("TypescriptInitialBoot", false) && IsValidEditor) {
+            if (!SessionState.GetBool("TypescriptInitialBoot", false) && IsValidEditorContext) {
                 SessionState.SetBool("TypescriptInitialBoot", true);
                 TypescriptCompilationService.BuildTypescript(TypeScriptCompileFlags.FullClean | TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
             }
             
             // If a server or clone - ignore
-            if (!IsValidEditor) return;
+            if (!IsValidEditorContext) return;
             EditorApplication.delayCall += OnLoadDeferred;
 
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
@@ -316,11 +323,13 @@ namespace Airship.Editor {
             else if (!TypescriptCompilationService.Crashed) {
                 invokedCrashEvent = false;
             }
-            
-            if (!IsCompilerActive && !TypescriptCompilationService.Crashed && !IsAwaitingRestart && !IsManuallyStopped) {
-                TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
-                EditorCoroutines.Execute(StartTypescriptRuntime());
-            }
+
+            var shouldAutostart = !IsCompilerActive && !TypescriptCompilationService.Crashed &&
+                                  ShouldCompilerBeRunning && !IsAwaitingRestart && !IsCompilerStoppedByUser;
+
+            if (!shouldAutostart) return;
+            TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
+            EditorCoroutines.Execute(StartTypescriptRuntime());
         }
     }
 }

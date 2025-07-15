@@ -78,7 +78,7 @@ namespace Code.PoolManager {
 
 		public GameObject InternalSpawnObject(GameObject prefab)
 		{
-			return this.InternalSpawnObject(prefab, prefab.transform.localPosition, prefab.transform.localRotation);
+			return this.InternalSpawnObject(prefab, prefab.transform.position, prefab.transform.rotation);
 		}
 
 		public GameObject InternalSpawnObject(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null) {
@@ -92,7 +92,7 @@ namespace Code.PoolManager {
 
 			var clone = pool.GetItem();
 			clone.transform.SetParent(parent);
-			clone.transform.SetLocalPositionAndRotation(position, rotation);
+			clone.transform.SetPositionAndRotation(position, rotation);
 			clone.SetActive(true);
 
 			instanceLookup.Add(clone, pool);

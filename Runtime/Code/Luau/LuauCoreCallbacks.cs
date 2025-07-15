@@ -17,6 +17,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
@@ -863,28 +864,34 @@ public partial class LuauCore : MonoBehaviour {
                             return LuauSignalWrapper.HandleUnityEvent0(context, thread, objectReference, instanceId,
                                 propNameHash, unityEvent0);
                         }
-                        else if (valueType.IsGenericType) {
+                        if (valueType.IsGenericType) {
                             var genericTypeDef = valueType.GetGenericTypeDefinition();
                             if (genericTypeDef == typeof(UnityEvent<>)) {
                                 var unityEvent1 = (UnityEvent<object>)value;
                                 return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
                                     instanceId, propNameHash, unityEvent1);
                             }
-                            else if (genericTypeDef == typeof(UnityEvent<,>)) {
+                            if (genericTypeDef == typeof(UnityEvent<,>)) {
                                 var unityEvent2 = (UnityEvent<object, object>)value;
                                 return LuauSignalWrapper.HandleUnityEvent2(context, thread, objectReference,
                                     instanceId, propNameHash, unityEvent2);
                             }
-                            else if (genericTypeDef == typeof(UnityEvent<,,>)) {
+                            if (genericTypeDef == typeof(UnityEvent<,,>)) {
                                 var unityEvent3 = (UnityEvent<object, object, object>)value;
                                 return LuauSignalWrapper.HandleUnityEvent3(context, thread, objectReference,
                                     instanceId, propNameHash, unityEvent3);
                             }
-                            else if (genericTypeDef == typeof(UnityEvent<,,,>)) {
+                            if (genericTypeDef == typeof(UnityEvent<,,,>)) {
                                 var unityEvent4 = (UnityEvent<object, object, object, object>)value;
                                 return LuauSignalWrapper.HandleUnityEvent4(context, thread, objectReference,
                                     instanceId, propNameHash, unityEvent4);
                             }
+                        }
+
+                        // Handle SliderEvents:
+                        if (value is Slider.SliderEvent sliderEvent) {
+                            return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
+                                instanceId, propNameHash, sliderEvent);
                         }
 
                         WritePropertyToThread(thread, value, t);
@@ -1588,13 +1595,14 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static void TryResumeAsyncTasks() {
-        for (var i = _awaitingTasks.Count - 1; i >= 0; i--) {
+        for (var i = 0; i < _awaitingTasks.Count; i++) {
             var awaitingTask = _awaitingTasks[i];
             if (!awaitingTask.Task.IsCompleted) continue;
 
             // Task has completed. Remove from list and resume lua thread:
             _awaitingTasks.RemoveAt(i);
             ResumeAsyncTask(awaitingTask);
+            i--;
         }
     }
 
