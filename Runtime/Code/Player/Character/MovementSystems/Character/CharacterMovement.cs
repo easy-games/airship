@@ -553,7 +553,7 @@ namespace Code.Player.Character.MovementSystems.Character {
              */
             var isMoving = currentVelocity.sqrMagnitude > .1f;
             var inAir = didJump || (!detectedGround && !currentMoveSnapshot.prevStepUp);
-            var tryingToSprint = movementSettings.onlySprintForward
+            var tryingToSprint =  movementSettings.onlySprintForward
                 ? command.sprint && graphicTransform.InverseTransformVector(command.moveDir).z > 0.1f
                 : //Only sprint if you are moving forward
                 command.sprint && command.moveDir.magnitude > 0.1f; //Only sprint if you are moving
@@ -577,6 +577,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                 }
             } else {
                 groundedState = CharacterState.Idle;
+            }
+
+            if (groundedState == CharacterState.Crouching) {
+                tryingToSprint = false;
             }
 
             //If you are in the air override the state
