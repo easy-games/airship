@@ -223,7 +223,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void SetMode(NetworkedStateSystemMode mode) {
-            Debug.Log("Running movement in " + mode + " mode for " + name + ".");
+            // Debug.Log("Running movement in " + mode + " mode for " + name + ".");
             if (mode == NetworkedStateSystemMode.Observer) {
                 rb.isKinematic = true;
                 // We move the transform per-frame, so no interpolation is needed
