@@ -55,6 +55,7 @@ namespace Code.Bootstrap {
         [SerializeField]
         public ServerBootstrap serverBootstrap;
         private List<NetworkConnectionToClient> connectionsReadyToLoadGameScene = new();
+        private InitializeGameMessage initMessage;
 
         public bool scriptsReady = false;
         public bool packagesReady = false;
@@ -144,6 +145,10 @@ namespace Code.Bootstrap {
             }
         }
 
+        public void RetryDownload() {
+            StartCoroutine(this.LoadPackages(this.initMessage.startupConfig));
+        }
+
         /// <summary>
         /// Called when client starts but before it's ready.
         /// </summary>
@@ -163,6 +168,7 @@ namespace Code.Bootstrap {
             this.isFinishedPreparing = false;
 
             NetworkClient.RegisterHandler<InitializeGameMessage>(async data => {
+                this.initMessage = data;
                 NetworkManager.networkSceneName = data.startupConfig.StartingSceneName;
 
                 StartCoroutine(this.LoadPackages(data.startupConfig));
@@ -361,16 +367,16 @@ namespace Code.Bootstrap {
             } else {
                 BundleDownloader.Instance.downloadAccepted = false;
                 bool finishedDownload = false;
-                BundleDownloader.Instance.DownloadBundles(
+                var downloadResult = BundleDownloader.Instance.DownloadBundles(
                     startupConfig.CdnUrl,
                     packages.ToArray(),
                     null,
                     loadingScreen,
                     null,
                     false,
-                    result => {
+                    (success) => {
                         finishedDownload = true;
-                        if (!result) {
+                        if (!success) {
                             loadingScreen.SetError("Failed to download game content. An error has occurred.");
                         }
                     }
@@ -378,6 +384,12 @@ namespace Code.Bootstrap {
 
                 while (!finishedDownload) {
                     yield return null;
+                }
+
+                // Something failed in the bundle downloader.
+                // So we stop and wait for player to press retry (which calls this function again)
+                if (!downloadResult.Result) {
+                    yield break;
                 }
                 
                 yield return new WaitUntil(() => this.scriptsReady);
