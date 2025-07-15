@@ -179,7 +179,7 @@ namespace Airship.Editor
             RunCore.launchInDedicatedServerMode = EditorPrefs.GetBool("AirshipDedicatedServerMode", false);
             ToolbarExtender.RightToolbarGUI.Add(OnRightToolbarGUI);
             ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
-
+            
             if (EditorAuthManager.localUser != null || !string.IsNullOrEmpty(InternalHttpManager.editorUserId)) {
                 FetchAndUpdateSignedInIcon();
             }
@@ -203,6 +203,7 @@ namespace Airship.Editor
                 if (t.Result == null) return;
 
                 signedInIconRaw = t.Result;
+                GetSignedInIcon();
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
@@ -236,37 +237,33 @@ namespace Airship.Editor
         }
         
         private static Texture2D ResizeAndRoundTexture(Texture2D source, int targetWidth, int targetHeight) {
-            if (source == null) {
-                Debug.LogError("[ResizeTexture] Source texture is null.");
+            if (source == null || !source.isReadable) {
+                Debug.LogError("Unable to set signed in icon: Source texture is null or unreadable.");
                 return null;
             }
-            
-            RenderTexture rt = RenderTexture.GetTemporary(targetWidth, targetHeight);
-            rt.filterMode = FilterMode.Bilinear;
-            if (rt == null) {
-                Debug.LogError("[ResizeTexture] Render texture is null.");
-                return null;
-            }
-            
-            if (profilePicRounded == null)
-                profilePicRounded = AssetDatabase.LoadAssetAtPath<Material>("Packages/gg.easy.airship/Editor/Hidden_EditorProfilePicRounded.mat");
-            if (profilePicRounded == null) {
-                Debug.LogError("[ResizeTexture] Rounded material is null.");
-                RenderTexture.ReleaseTemporary(rt);
-                return null;
-            }
-            
-            RenderTexture.active = rt;
-            Graphics.Blit(source, rt, profilePicRounded);
 
-            Texture2D result = new Texture2D(targetWidth, targetHeight);
+            // Downsize texture and round on CPU. There are problems when using Graphics.Blit to
+            // create this texture (it may not be ready on startup and will cause crashes when not
+            // ready).
+            var result = new Texture2D(targetWidth, targetHeight);
+            var newPixels = new Color[targetHeight * targetWidth];
+            var srcPixels = source.GetPixels();
+            for (var x = 0; x < targetWidth; x++) {
+                for (var y = 0; y < targetHeight; y++) {
+                    var u = x / (float)targetWidth;
+                    var v = y / (float)targetHeight;
+                    // Cut out pixels outside of a circle
+                    if ((u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5) > 0.25) continue;
+                    
+                    var i = x + y * targetWidth;
+                    var srcX = Mathf.Clamp(Mathf.RoundToInt(u * source.width), 0, source.width - 1);
+                    var srcY = Mathf.Clamp(Mathf.RoundToInt(v * source.height), 0, source.height - 1);
+                    newPixels[i] = srcPixels[srcX + srcY * source.width];
+                }
+            }
+            result.SetPixels(newPixels);
             result.filterMode = FilterMode.Bilinear;
-            result.ReadPixels(new Rect(0, 0, targetWidth, targetHeight), 0, 0);
             result.Apply();
-
-            RenderTexture.active = null;
-            RenderTexture.ReleaseTemporary(rt);
-
             return result;
         }
 
@@ -287,7 +284,7 @@ namespace Airship.Editor
             if (gameSettings == null)
                 gameSettings = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSettings);
             if (signedOutIcon == null)
-                signedOutIcon = ResizeAndRoundTexture(AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon), 128, 128);
+                signedOutIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon);
 
             if (coreUpdateTexture == null) {
                 coreUpdateTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(coreUpdateIcon);
@@ -481,8 +478,7 @@ namespace Airship.Editor
 
             if (signedInIconRaw != null) {
                 signedInIcon = ResizeAndRoundTexture(signedInIconRaw, 128, 128);
-                AirshipToolbar.signedInIconBytes = signedInIcon.EncodeToPNG();
-                // RepaintToolbar();
+                signedInIconBytes = signedInIcon.EncodeToPNG();
                 return signedInIcon;
             }
             return null;
