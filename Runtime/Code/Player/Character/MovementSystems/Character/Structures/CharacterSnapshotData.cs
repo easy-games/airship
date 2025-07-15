@@ -467,7 +467,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 isGrounded = BitUtil.GetBit(bools, 7),
                 
                 time = reader.Read<double>(),
-                tick = reader.Read<uint>(),
+                tick = reader.Read<int>(),
                 lastProcessedCommand = reader.Read<int>(),
                 position = reader.Read<Vector3>(),
                 velocity = reader.Read<Vector3>(),

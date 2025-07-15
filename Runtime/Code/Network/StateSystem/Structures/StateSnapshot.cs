@@ -17,7 +17,7 @@ namespace Code.Network.StateSystem.Structures
          * to ticks! Ticks use scaled time and will not always map 1 to 1 with a unscaled time value.
          */
         public double time;
-        public uint tick;
+        public int tick;
 
         /**
          * Compares two snapshots.

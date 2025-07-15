@@ -17,7 +17,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
         
         public static CharacterStateDiff ReadCharacterStateDiff(this NetworkReader reader) {
-            var baseTick = reader.Read<uint>();
+            var baseTick = reader.Read<int>();
             var crc32 = reader.Read<uint>();
             var data = new byte[reader.Remaining];
             data = reader.ReadBytes(data, reader.Remaining);

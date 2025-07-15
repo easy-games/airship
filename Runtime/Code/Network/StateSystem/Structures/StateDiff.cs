@@ -14,7 +14,7 @@ namespace Code.Network.StateSystem.Structures
         /// <summary>
         /// The time of the base snapshot
         /// </summary>
-        public uint baseTick;
+        public int baseTick;
         
         /// <summary>
         /// The CRC32 of the resulting snapshot when applied to the correct base.
