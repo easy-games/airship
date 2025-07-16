@@ -80,7 +80,7 @@ using Object = UnityEngine.Object;
             
             public static TypescriptCompilerState CompilerState {
                 get {
-                    if (IsStartingUp) return TypescriptCompilerState.Starting;
+                    if (IsStartingUp || IsCompilerStarting) return TypescriptCompilerState.Starting;
                     if (Crashed) return TypescriptCompilerState.Crashed;
                     if (IsCompilingFiles) return TypescriptCompilerState.Compiling;
                     if (IsImportingFiles) return TypescriptCompilerState.PostCompile;
@@ -303,6 +303,8 @@ using Object = UnityEngine.Object;
             internal static NodeJsArguments NodeJsArguments { get; private set; }
             
             internal static void StartCompilerServices() {
+                if (IsStartingUp) return;
+                IsStartingUp = true;
                 TypescriptLogService.StartLogging();
                 StopCompilers();
                 
@@ -335,6 +337,7 @@ using Object = UnityEngine.Object;
                 TypescriptLogService.Log(TypescriptLogLevel.Information, "Started compiler services.");
                 
                 TypescriptServices.IsCompilerStoppedByUser = false;
+                IsStartingUp = false;
             }
             
             internal static void StopCompilers() {
@@ -366,6 +369,7 @@ using Object = UnityEngine.Object;
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
                 if (!IsWatchModeRunning) return;
+                IsStartingUp = false;
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
                 foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
