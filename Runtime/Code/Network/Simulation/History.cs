@@ -13,11 +13,11 @@ namespace Code.Network.Simulation
     public class History<T>
     {
         private float maxSizeSec;
-        private SortedList<uint, T> history = new SortedList<uint, T>();
-        private List<uint> authoritativeEntries = new List<uint>();
+        private SortedList<int, T> history = new SortedList<int, T>();
+        private List<int> authoritativeEntries = new List<int>();
 
         public IList<T> Values => history.Values;
-        public IList<uint> Keys => history.Keys;
+        public IList<int> Keys => history.Keys;
         
         /**
          * Creates a history with the provided maximum entry size. You can set the max size to 0 for no maximum size.
@@ -31,7 +31,7 @@ namespace Code.Network.Simulation
          * Adds an entry at the provided time. Additionally makes room for the entry
          * by removing the oldest entry if the list has reached its maximum capacity.
          */
-        public T Add(uint tick, T entry)
+        public T Add(int tick, T entry)
         {
             var added = this.history.TryAdd(tick, entry);
             if (!added)
@@ -57,13 +57,13 @@ namespace Code.Network.Simulation
         /**
          * Sets the entry at the provided time. Will always set the value of the entry.
          */
-        public T Set(uint tick, T entry) {
+        public T Set(int tick, T entry) {
             this.history.Remove(tick);
             this.Add(tick, entry);
             return entry;
         }
 
-        public void SetAuthoritativeEntry(uint tick, bool authority)
+        public void SetAuthoritativeEntry(int tick, bool authority)
         {
             var hasEntry = this.authoritativeEntries.Contains(tick);
             if (authority && hasEntry) return;
@@ -82,7 +82,7 @@ namespace Code.Network.Simulation
             }
         }
 
-        public bool IsAuthoritativeEntry(uint tick)
+        public bool IsAuthoritativeEntry(int tick)
         {
             return this.authoritativeEntries.Contains(tick);
         }
@@ -91,7 +91,7 @@ namespace Code.Network.Simulation
          * Overwrites an exact entry. If an existing entry can't be found, it will
          * not create a new entry.
          */
-        public void Overwrite(uint tick, T entry)
+        public void Overwrite(int tick, T entry)
         {
             var removed = this.history.Remove(tick);
             if (removed) {
@@ -102,7 +102,7 @@ namespace Code.Network.Simulation
         /**
          * Gets the entry nearest entry before or at the provided tick.
          */
-        public T Get(uint tick)
+        public T Get(int tick)
         {
             if (history.Count == 0) return default;
             
@@ -144,7 +144,7 @@ namespace Code.Network.Simulation
             return prev;
         }
 
-        public bool Has(uint tick) {
+        public bool Has(int tick) {
            return this.history.ContainsKey(tick);
         }
         
@@ -167,7 +167,7 @@ namespace Code.Network.Simulation
             }
             
             int index = 0; // manually count when iterating. easier than for-int loop.
-            KeyValuePair<uint, T> prev = new KeyValuePair<uint, T>();
+            KeyValuePair<int, T> prev = new KeyValuePair<int, T>();
             
             for (int i = 0; i < history.Count; ++i)
             {
@@ -191,14 +191,14 @@ namespace Code.Network.Simulation
                 }
 
                 // remember the last
-                prev = new KeyValuePair<uint, T>(key, value);
+                prev = new KeyValuePair<int, T>(key, value);
                 index += 1;
             }
 
             return false;
         }
 
-        public T GetExact(uint tick)
+        public T GetExact(int tick)
         {
             this.history.TryGetValue(tick, out T value);
             return value;
@@ -208,7 +208,7 @@ namespace Code.Network.Simulation
          * Gets all entries after the provided tick. Does _not_ get the
          * entry at that tick.
          */
-        public T[] GetAllAfter(uint tick)
+        public T[] GetAllAfter(int tick)
         {
             if (this.history.Keys.Count == 0 || tick > this.history.Keys[^1])
             {
@@ -242,7 +242,7 @@ namespace Code.Network.Simulation
         /**
          * Removes the entry directly at the given tick.
          */
-        public bool Remove(uint tick)
+        public bool Remove(int tick)
         {
             this.authoritativeEntries.Remove(tick);
             return this.history.Remove(tick);
@@ -261,7 +261,7 @@ namespace Code.Network.Simulation
          * Clears all history entries before the provided tick. Does _not_ clear
          * the entry at that tick.
          */
-        public void ClearAllBefore(uint tick)
+        public void ClearAllBefore(int tick)
         {
             while (this.history.Count > 0 && this.history.Keys[0] < tick)
             {

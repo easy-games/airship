@@ -1166,9 +1166,13 @@ namespace Mirror
                 clientReadyConnection = null;
             }
 
-            if (NetworkClient.isConnected)
+            if (NetworkClient.isConnected) {
                 OnClientSceneChanged();
-            else Debug.LogWarning("Not sending client ready: not connected");
+            } else {
+#if AIRSHIP_PLAYER
+                Debug.LogWarning("Not sending client ready: not connected");
+#endif
+            }
         }
 
         /// <summary>

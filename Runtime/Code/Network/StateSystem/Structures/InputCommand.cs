@@ -15,7 +15,7 @@ namespace Code.Player.Character.Net
         /**
          * The tick the input was created. This time is local to the client/server that created it.
          */
-        public uint tick;
+        public int tick;
         
         public virtual object Clone()
         {

@@ -140,11 +140,11 @@ namespace Airship.Editor {
         }
 
         internal static void StartLogging() {
+            if (started) return;
+            
             if (!Directory.Exists(LogFolder)) {
                 Directory.CreateDirectory(LogFolder);
             }
-            
-            if (started) return;
             
             string logDir = Path.GetDirectoryName(Application.consoleLogPath);
             logPath = LogFilePath;
