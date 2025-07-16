@@ -153,8 +153,8 @@ namespace Airship.Editor {
             }
         }
 
-#if !AIRSHIP_PLAYER
         private static bool assetDbReady = false;
+#if !AIRSHIP_PLAYER
         // ReSharper disable once Unity.IncorrectMethodSignature
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths, bool didDomainReload) {
