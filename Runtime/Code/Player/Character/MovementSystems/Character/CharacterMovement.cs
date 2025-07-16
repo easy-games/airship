@@ -1505,7 +1505,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //Force snap to exact position
                 rootTransform.position = newPos;
             } else {
-                //Interpolate and preserve physics
+                //Preserve physics and apply position on next physics tick
                 rb.position = newPos;
             }
         }
