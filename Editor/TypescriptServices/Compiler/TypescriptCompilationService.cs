@@ -80,7 +80,7 @@ using Object = UnityEngine.Object;
             
             public static TypescriptCompilerState CompilerState {
                 get {
-                    if (IsStartingUp) return TypescriptCompilerState.Starting;
+                    if (IsStartingUp || IsCompilerStarting) return TypescriptCompilerState.Starting;
                     if (Crashed) return TypescriptCompilerState.Crashed;
                     if (IsCompilingFiles) return TypescriptCompilerState.Compiling;
                     if (IsImportingFiles) return TypescriptCompilerState.PostCompile;
