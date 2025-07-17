@@ -225,46 +225,41 @@ using Object = UnityEngine.Object;
                 // No point importing files if there's errors, or it's empty
                 if (ErrorCount > 0 || CompiledFileQueue.Count == 0) {
                     EditorApplication.update -= ReimportCompiledFiles;
+                    queueActive = false;
                     return;
                 }
 
                 var artifacts = AirshipLocalArtifactDatabase.instance;
                 var modifiedDatabase = false;
-                
+
+                var assetDatabaseEditStopped = false;
                 try {
                     AssetDatabase.StartAssetEditing();
                     var compileFileList = CompiledFileQueue.ToArray();
                     
                     foreach (var file in compileFileList) {
-                        // var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
-                        //
-                        // if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
-                        //     if (string.IsNullOrEmpty(outFileHash) || string.IsNullOrEmpty(data.metadata.compiledHash) || outFileHash != data.metadata.compiledHash) {
-                        //         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                        //         data.metadata.compiledHash = outFileHash;
-                        //         modifiedDatabase = true;
-                        //     }
-                        // }
-                        // else {
-                        //     var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
-                        //     scriptData.metadata = new TypescriptCompilerMetadata() {
-                        //         compiledHash = outFileHash
-                        //     };
-                            
-                            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                        //     modifiedDatabase = true;
-                        // }
+                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                     }
                     
+                    AssetDatabase.StopAssetEditing();
+                    assetDatabaseEditStopped = true;
                     AssetDatabase.Refresh();
+
+                    foreach (var file in compileFileList) {
+                        var airshipScript = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                        AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
+                    }
+                    
                 } catch (Exception ex) {
                     Debug.LogException(ex);
                 } finally {
-                    AssetDatabase.StopAssetEditing();
+                    if (!assetDatabaseEditStopped) AssetDatabase.StopAssetEditing();
                     if (modifiedDatabase) {
                         artifacts.Modify();
                     }
                 }
+                
+                
                 
                 EditorApplication.update -= ReimportCompiledFiles;
                 queueActive = false;
@@ -693,9 +688,11 @@ using Object = UnityEngine.Object;
                         }
                     } else if (jsonData.Event == CompilerEventType.CompiledFileWrite) {
                         var arguments = jsonData.Arguments.ToObject<CompiledFileWriteEvent>();
-                        
-                        if (arguments.changed && (project.CompilationState.CompileFlags & TypeScriptCompileFlags.SkipReimportQueue) == 0)
+
+                        if (arguments.changed &&
+                            (project.CompilationState.CompileFlags & TypeScriptCompileFlags.SkipReimportQueue) == 0) {
                             QueueCompiledFileForImport(arguments.fileName);
+                        }
                     }
                 }
                 else {
