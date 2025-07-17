@@ -34,7 +34,7 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 					go.name = typeof(T).ToString();
 					
 					var coreScene = SceneManager.GetSceneByName("CoreScene");
-					if (!coreScene.isLoaded) return null;
+					// if (!coreScene.isLoaded) return null;
 					if (coreScene.IsValid()) {
 						SceneManager.MoveGameObjectToScene(go, coreScene);
 					}
