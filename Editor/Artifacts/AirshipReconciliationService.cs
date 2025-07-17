@@ -117,31 +117,33 @@ namespace Airship.Editor {
             }
             
             // Add missing properties
-            foreach (var scriptProperty in scriptMetadata.properties) {
-                var componentProperty = componentMetadata.FindProperty(scriptProperty.name);
-                if (componentProperty == null) {
-                    var element = scriptProperty.Clone();
-                    componentMetadata.properties.Add(element);
-                    if (reconcileSource != ReconcileSource.ComponentValidate) EditorUtility.SetDirty(component);
-                    componentProperty = element;
+            if (reconcileSource == ReconcileSource.ForceReconcile) {
+                foreach (var scriptProperty in scriptMetadata.properties) {
+                    var componentProperty = componentMetadata.FindProperty(scriptProperty.name);
+                    if (componentProperty == null) {
+                        var element = scriptProperty.Clone();
+                        componentMetadata.properties.Add(element);
+                        EditorUtility.SetDirty(component);
+                        componentProperty = element;
 #if AIRSHIP_DEBUG
                     additions.Add(element.name); // ??
 #endif
-                }
-                else {
-                    if (!componentProperty.HasSameTypesAs(scriptProperty)) {
-                        componentProperty.ReconcileTypesWith(scriptProperty);
-                        componentProperty.ReconcileItemsWith(scriptProperty);
+                    }
+                    else {
+                        if (!componentProperty.HasSameTypesAs(scriptProperty)) {
+                            componentProperty.ReconcileTypesWith(scriptProperty);
+                            componentProperty.ReconcileItemsWith(scriptProperty);
 #if AIRSHIP_DEBUG
                         modifications.Add(componentProperty.name);
 #endif
+                        }
                     }
+
+                    componentProperty.fileRef = scriptProperty.fileRef;
+                    componentProperty.refPath = scriptProperty.refPath;
                 }
-                
-                componentProperty.fileRef = scriptProperty.fileRef;
-                componentProperty.refPath = scriptProperty.refPath;
             }
-            
+
             List<LuauMetadataProperty> propertiesToRemove = null;
             var seenProperties = new HashSet<string>();
             foreach (var componentProperty in componentMetadata.properties) {
