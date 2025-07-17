@@ -30,9 +30,7 @@ namespace Editor {
         }
     }
     
-    // Queue offset set low to occur before prefabs. It can be changed freely, although should ideally
-    // remain before prefab imports.
-    [ScriptedImporter(1, "ts", -10000000)]
+    [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
         private const string IconDeclaration = "Packages/gg.easy.airship/Editor/TypescriptAssetDeclaration.png";
