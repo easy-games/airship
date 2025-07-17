@@ -101,24 +101,11 @@ namespace Airship.Editor {
         /// </summary>
         /// <param name="component"></param>
         internal static bool ReconcileComponent(AirshipComponent component, ReconcileSource reconcileSource) {
-            // if (string.IsNullOrEmpty(component.guid)) {
-            //     component.guid = Guid.NewGuid().ToString();
-            // }
-            
 #if AIRSHIP_DEBUG
             var additions = new HashSet<string>();
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
-            // if (component.script == null) {
-            //     Debug.LogWarning("no script");
-            //     return false;
-            // }
-            // if (component.script.m_metadata == null) {
-            //     Debug.LogWarning("no metadata");
-            //     return false;
-            // }
-            
             
             var scriptMetadata = component.script.m_metadata;
             var componentMetadata = component.metadata;
