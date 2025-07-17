@@ -121,7 +121,6 @@ namespace Airship.Editor {
                 var componentProperty = componentMetadata.FindProperty(scriptProperty.name);
                 if (componentProperty == null) {
                     var element = scriptProperty.Clone();
-                    Debug.Log("Adding property!: " + element.name);
                     componentMetadata.properties.Add(element);
                     if (reconcileSource != ReconcileSource.ComponentValidate) EditorUtility.SetDirty(component);
                     componentProperty = element;
@@ -152,14 +151,12 @@ namespace Airship.Editor {
                     if (propertiesToRemove == null) {
                         propertiesToRemove = new List<LuauMetadataProperty>();
                     }
-                    Debug.Log("Removing property(1): " + componentProperty.name);
                     propertiesToRemove.Add(componentProperty);
                 }
                 if (seenProperties.Contains(componentProperty.name) || string.IsNullOrEmpty(componentProperty.name)) {
                     if (propertiesToRemove == null) {
                         propertiesToRemove = new List<LuauMetadataProperty>();
                     }
-                    Debug.Log("Removing property(2): " + componentProperty.name);
                     propertiesToRemove.Add(componentProperty);   
                 }
                 
