@@ -209,22 +209,16 @@ using Object = UnityEngine.Object;
             }
             
 #pragma warning restore CS0612 // Type or member is obsolete
-
-            private static double lastChecked = 0;
-            private const double checkInterval = 5;
+            
             private static bool queueActive = false;
             
             private static List<string> CompiledFileQueue = new();
             private static void ReimportCompiledFiles() {
                 IsImportingFiles = true;
                 AirshipReconciliationService.StartScriptUpdates();
-                
-                if (!(EditorApplication.timeSinceStartup > lastChecked + checkInterval)) return;
-                lastChecked = EditorApplication.timeSinceStartup;
                     
                 // No point importing files if there's errors, or it's empty
                 if (ErrorCount > 0 || CompiledFileQueue.Count == 0) {
-                    EditorApplication.update -= ReimportCompiledFiles;
                     queueActive = false;
                     return;
                 }
@@ -247,6 +241,7 @@ using Object = UnityEngine.Object;
 
                     foreach (var file in compileFileList) {
                         var airshipScript = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                        airshipScript.typescriptCompiled = true;
                         AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
                     }
                     
@@ -259,9 +254,6 @@ using Object = UnityEngine.Object;
                     }
                 }
                 
-                
-                
-                EditorApplication.update -= ReimportCompiledFiles;
                 queueActive = false;
                 
                 IsImportingFiles = false;
@@ -280,7 +272,7 @@ using Object = UnityEngine.Object;
             public static void QueueReimportFiles() {
                 if (queueActive) return;
                 queueActive = true;
-                EditorApplication.update += ReimportCompiledFiles;
+                EditorApplication.delayCall += ReimportCompiledFiles;
             }
             
             public static int ErrorCount => TypescriptProjectsService.Projects.Sum(project => project.ErrorCount);
@@ -645,7 +637,6 @@ using Object = UnityEngine.Object;
                         LastCompiled = DateTime.Now;
                     }
                     else if (jsonData.Event == CompilerEventType.FinishedCompile) {
-                        // AssetDatabase.StopAssetEditing();
                         Progress.Finish(project.ProgressId);
 
                         if (project.CompilationState.CompiledFileCount > 0) {

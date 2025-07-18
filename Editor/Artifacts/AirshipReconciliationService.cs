@@ -9,6 +9,7 @@ using Mirror;
 using Mirror.SimpleWeb;
 using Newtonsoft.Json;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Airship.Editor {
@@ -106,6 +107,8 @@ namespace Airship.Editor {
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
+            var fullReconcile =
+                component.script.typescriptCompiled || reconcileSource == ReconcileSource.ForceReconcile;
             
             var scriptMetadata = component.script.m_metadata;
             var componentMetadata = component.metadata;
@@ -117,7 +120,7 @@ namespace Airship.Editor {
             }
             
             // Add missing properties
-            if (reconcileSource == ReconcileSource.ForceReconcile) {
+            if (fullReconcile) {
                 foreach (var scriptProperty in scriptMetadata.properties) {
                     var componentProperty = componentMetadata.FindProperty(scriptProperty.name);
                     if (componentProperty == null) {
@@ -149,7 +152,7 @@ namespace Airship.Editor {
             foreach (var componentProperty in componentMetadata.properties) {
                 var scriptProperty = scriptMetadata.FindProperty(componentProperty.name);
                 
-                if (scriptProperty == null && reconcileSource == ReconcileSource.ForceReconcile) {
+                if (scriptProperty == null && fullReconcile) {
                     if (propertiesToRemove == null) {
                         propertiesToRemove = new List<LuauMetadataProperty>();
                     }
@@ -174,7 +177,19 @@ namespace Airship.Editor {
                     EditorUtility.SetDirty(component);
                 }
             }
-            if (reconcileSource != ReconcileSource.ComponentValidate) AssetDatabase.SaveAssetIfDirty(component);
+
+            if (fullReconcile) {
+                var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+                
+                // Save prefab modifications before saving asset & load them after save.
+                // This way we don't get any disk updated notification.
+                PropertyModification[] mods = null;
+                if (prefabStage != null) mods = PrefabUtility.GetPropertyModifications(prefabStage.prefabContentsRoot);
+                
+                AssetDatabase.SaveAssetIfDirty(component);
+                
+                if (mods != null) PrefabUtility.SetPropertyModifications(prefabStage.prefabContentsRoot, mods);
+            }
 
 
 #if AIRSHIP_DEBUG
