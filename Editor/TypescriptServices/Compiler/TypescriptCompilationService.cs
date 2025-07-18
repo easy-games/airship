@@ -299,7 +299,12 @@ using Object = UnityEngine.Object;
                 BuildTypescript(flags);
             }
             
+            internal static TypescriptCompilerBuildArguments WatchArgs { get; private set; }
+            internal static NodeJsArguments NodeJsArguments { get; private set; }
+            
             internal static void StartCompilerServices() {
+                if (IsStartingUp) return;
+                IsStartingUp = true;
                 TypescriptLogService.StartLogging();
                 StopCompilers();
                 
@@ -311,6 +316,7 @@ using Object = UnityEngine.Object;
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
+                    WriteOnlyChanged = true,
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                     Incremental = EditorIntegrationsConfig.instance.typescriptIncremental,
                 };
@@ -323,11 +329,15 @@ using Object = UnityEngine.Object;
                 if (TypescriptServicesLocalConfig.instance.useNodeInspect && TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
                     nodeJsArgs.Inspect = true;
                 }
+
+                WatchArgs = watchArgs;
+                NodeJsArguments = nodeJsArgs;
                 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs, nodeJsArgs));
                 TypescriptLogService.Log(TypescriptLogLevel.Information, "Started compiler services.");
                 
                 TypescriptServices.IsCompilerStoppedByUser = false;
+                IsStartingUp = false;
             }
             
             internal static void StopCompilers() {
@@ -359,6 +369,7 @@ using Object = UnityEngine.Object;
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
                 if (!IsWatchModeRunning) return;
+                IsStartingUp = false;
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
                 foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
@@ -547,6 +558,7 @@ using Object = UnityEngine.Object;
                 WatchReport,
                 FileDiagnostic,
                 CompiledFile,
+                CompiledFileWrite,
                 TransformFile,
                 StartingCompile,
                 FinishedCompile,
@@ -676,7 +688,13 @@ using Object = UnityEngine.Object;
                                 @$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.CompilationState.FilesToCompileCount}] Compiled {friendlyName}");
                         }
 
-                        if ((project.CompilationState.CompileFlags & TypeScriptCompileFlags.SkipReimportQueue) == 0)
+                        if (!WatchArgs.WriteOnlyChanged && ((project.CompilationState.CompileFlags & TypeScriptCompileFlags.SkipReimportQueue) == 0)) {
+                            QueueCompiledFileForImport(arguments.fileName);
+                        }
+                    } else if (jsonData.Event == CompilerEventType.CompiledFileWrite) {
+                        var arguments = jsonData.Arguments.ToObject<CompiledFileWriteEvent>();
+                        
+                        if (arguments.changed && (project.CompilationState.CompileFlags & TypeScriptCompileFlags.SkipReimportQueue) == 0)
                             QueueCompiledFileForImport(arguments.fileName);
                     }
                 }
