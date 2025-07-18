@@ -228,7 +228,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 rb.isKinematic = true;
                 // We move the transform per-frame, so no interpolation is needed
                 rb.interpolation = RigidbodyInterpolation.None;
-                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
             }
 
             if (mode == NetworkedStateSystemMode.Authority || mode == NetworkedStateSystemMode.Input) {
