@@ -144,7 +144,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public float additionalNoInputDrag = 3f;
 
         [Tooltip("How fast your player will accelerate in the air from player input at a per second rate")]
-        public float airInputAcceleration = 60f;
+        public float airInputAcceleration = 100f;
 
         [Header("Step Ups")] [Tooltip("Push the character up when they stop over a set threshold")]
         public bool detectStepUps = true;
