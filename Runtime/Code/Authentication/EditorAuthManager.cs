@@ -117,11 +117,33 @@ namespace Code.Authentication {
         } 
         
         private static void GetSelf() {
-            var self = InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users/self").ContinueWith((t) => {
-                if (t.Result.data == null) return;
+            var self = InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users/self");
+            self.ContinueWith((t) => {
+                if (t.IsFaulted) {
+                    Debug.LogError("Failed to fetch Airship profile information: " + t.Exception);
+                    return;
+                }
+                if (t.Result.data == null) {
+                    return;
+                }
                 
                 localUser = JsonUtility.FromJson<TransferUserResponse>(t.Result.data).user;
-                if (localUser == null) return;
+                if (localUser == null) {
+                    Debug.LogError("Failed to fetch Airship profile: user doesn't exist.");
+                    return;
+                }
+                // If the user does not have an account send them to our website to finish creating it
+                if (string.IsNullOrEmpty(localUser.uid)) {
+                    var acceptsRestart = EditorUtility.DisplayDialog("Finish Creating Account",
+                        "Head to our website to finish creating your Airship account", "Go", "Sign out");
+                    if (acceptsRestart) {
+                        Application.OpenURL("https://create.airship.gg/welcome");
+                    } else {
+                        // Sign out in case we are already signed in
+                        EditorAuthManager.Logout();
+                    }
+                    return;
+                }
                 SessionState.SetString("Airship:EditorLocalUser", t.Result.data);
 
                 signInStatus = EditorAuthSignInStatus.SIGNED_IN;

@@ -184,8 +184,11 @@ namespace Airship.Editor
                 FetchAndUpdateSignedInIcon();
             }
             EditorAuthManager.localUserChanged += (user) => {
+                signedInIcon = null;
+                signedInIconRaw = null;
+                signedInIconBytes = new byte[]{};
+                
                 if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
-                    signedInIconBytes = new byte[]{};
                     RepaintToolbar();
                     return;
                 }
@@ -199,8 +202,15 @@ namespace Airship.Editor
         }
         
         private static void FetchAndUpdateSignedInIcon() {
-            EditorAuthManager.DownloadProfilePicture().ContinueWith((t) => {
-                if (t.Result == null) return;
+            var task = EditorAuthManager.DownloadProfilePicture();
+            task.ContinueWith((t) => {
+                if (t.IsFaulted) {
+                    Debug.LogError("Failed to download profile picture: " + t.Exception);
+                    return;
+                }
+                if (t.Result == null) {
+                    return;
+                }
 
                 signedInIconRaw = t.Result;
                 GetSignedInIcon();
