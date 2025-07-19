@@ -149,7 +149,7 @@ public class AuthManager {
 			var returnApp = "Airship";
 		#endif
         standaloneBrowser.closePageResponse =
-            $"<html><body><b>Success!</b><br>Please close this window and return to {returnApp}.</body></html>";
+	        $"<html><head><meta http-equiv=\"refresh\" content=\"0;url=https://create.airship.gg/welcome\"></head><body><b>Success!</b><br>Redirecting to Airship...</body></html>";
 
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, standaloneBrowser);
