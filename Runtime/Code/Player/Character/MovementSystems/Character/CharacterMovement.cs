@@ -906,13 +906,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //         characterHalfExtents + new Vector3(forwardMargin, forwardMargin, forwardMargin),
                 //         Quaternion.identity);
                 // }
-
-                if (!grounded && detectedGround) {
-                    //Hit ground but its not valid ground, push away from it
-                    print("PUSHING AWAY FROM: " + groundHit.normal);
-                    newVelocity += groundHit.normal * physics.GetFlatDistance(rootPosition, groundHit.point) * .25f /
-                                   deltaTime;
-                }
             }
 
             //Instantly move at the desired speed
