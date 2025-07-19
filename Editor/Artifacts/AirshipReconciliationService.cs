@@ -184,8 +184,12 @@ namespace Airship.Editor {
                 // Save prefab modifications before saving asset & load them after save.
                 // This way we don't get any disk updated notification.
                 PropertyModification[] mods = null;
-                if (prefabStage != null) mods = PrefabUtility.GetPropertyModifications(prefabStage.prefabContentsRoot);
+                if (prefabStage != null) {
+                    mods = PrefabUtility.GetPropertyModifications(prefabStage.prefabContentsRoot);
+                    PrefabUtility.SetPropertyModifications(prefabStage.prefabContentsRoot, new PropertyModification[] {});
+                }
                 
+
                 AssetDatabase.SaveAssetIfDirty(component);
                 
                 if (mods != null) PrefabUtility.SetPropertyModifications(prefabStage.prefabContentsRoot, mods);
