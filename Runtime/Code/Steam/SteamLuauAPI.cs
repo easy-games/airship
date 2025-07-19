@@ -10,6 +10,7 @@ using UnityEngine.Assertions;
 
 public struct AirshipSteamFriendInfo {
     public bool playingAirship;
+    public bool playingOtherGame;
     public ulong steamId;
     public string steamName;
 }
@@ -189,11 +190,16 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
                 var friendName = SteamFriends.GetFriendPersonaName(friendId);
                 SteamFriends.GetFriendGamePlayed(friendId, out var friendGameInfo);
 
-                var friendInfoStruct = new AirshipSteamFriendInfo { steamId = friendId.m_SteamID, steamName = friendName };
+                var friendInfoStruct = new AirshipSteamFriendInfo {
+                    steamId = friendId.m_SteamID, 
+                    steamName = friendName
+                };
                 
                 // Is friend playing Airship?
                 if (friendGameInfo.m_gameID.m_GameID == 2381730) {
                     friendInfoStruct.playingAirship = true;
+                } else if (friendGameInfo.m_gameID.IsValid()) {
+                    friendInfoStruct.playingOtherGame = true;
                 }
                 friendInfos[i] = friendInfoStruct;
             }
