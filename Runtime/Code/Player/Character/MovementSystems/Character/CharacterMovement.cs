@@ -228,7 +228,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 rb.isKinematic = true;
                 // We move the transform per-frame, so no interpolation is needed
                 rb.interpolation = RigidbodyInterpolation.None;
-                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
             }
 
             if (mode == NetworkedStateSystemMode.Authority || mode == NetworkedStateSystemMode.Input) {
@@ -906,13 +906,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //         characterHalfExtents + new Vector3(forwardMargin, forwardMargin, forwardMargin),
                 //         Quaternion.identity);
                 // }
-
-                if (!grounded && detectedGround) {
-                    //Hit ground but its not valid ground, push away from it
-                    print("PUSHING AWAY FROM: " + groundHit.normal);
-                    newVelocity += groundHit.normal * physics.GetFlatDistance(rootPosition, groundHit.point) * .25f /
-                                   deltaTime;
-                }
             }
 
             //Instantly move at the desired speed

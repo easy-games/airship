@@ -217,10 +217,13 @@ namespace Code.Network.StateSystem
         }
 
         public void OnDestroy() {
-            AirshipSimulationManager.Instance.OnTick -= this.OnTick;
-            AirshipSimulationManager.Instance.OnSetSnapshot -= this.OnSetSnapshot;
-            AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.OnCaptureSnapshot;
-            AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.OnLagCompensationCheck;
+            var simManager = AirshipSimulationManager.Instance;
+            if (!simManager) return;
+            
+            simManager.OnTick -= this.OnTick;
+            simManager.OnSetSnapshot -= this.OnSetSnapshot;
+            simManager.OnCaptureSnapshot -= this.OnCaptureSnapshot;
+            simManager.OnLagCompensationCheck -= this.OnLagCompensationCheck;
         }
 
         private void SendNetworkMessages() {
