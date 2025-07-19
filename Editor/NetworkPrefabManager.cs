@@ -12,6 +12,7 @@ using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 
 internal class AssetData {
     /** The asset's _full_ path. */
@@ -186,6 +187,10 @@ public class NetworkPrefabManager : AssetPostprocessor {
             var assetData = GetAssetDataFromPath(assetPath);
             WriteToCollection(nob, assetData, modifiedCollections);
         }
+        
+        // Automatically clean up the _game-specific_ collection.
+        var gameCollection = GetGameCollection();
+        RemoveInvalidEntries(gameCollection);
 
         // Save ALL collections.
         foreach (var collection in modifiedCollections) {
@@ -277,6 +282,31 @@ public class NetworkPrefabManager : AssetPostprocessor {
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         return newCollection;
+    }
+
+    private static void RemoveInvalidEntries(NetworkPrefabCollection collection) {
+        var entriesToRemove = new List<Object>();
+        foreach (var prefab in collection.networkPrefabs) {
+            // This is checking for "Missing (Object)" and "None (Object)" references
+            // inside the collection.
+            if (prefab == null && !ReferenceEquals(prefab, null)) {
+                entriesToRemove.Add(prefab);
+                continue;
+            }
+            // This is checking for entries that do _not_ have a NetworkIdentity component
+            // attached to them.
+            GameObject pf = prefab as GameObject;
+            if (pf == null) continue;
+            NetworkIdentity ni = pf.GetComponent<NetworkIdentity>();
+            if (ni == null) {
+                entriesToRemove.Add(prefab);
+            }
+        }
+        foreach (var entry in entriesToRemove) {
+            collection.networkPrefabs.Remove(entry);
+        }
+        EditorUtility.SetDirty(collection);
+        AssetDatabase.SaveAssetIfDirty(collection);
     }
 }
 #endif
