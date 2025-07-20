@@ -56,12 +56,13 @@ namespace Code.Player {
         }
 
         // Called from TS/Lua side
-        // Returns the ending distance from the character
-        public float BumpForOcclusion(Vector3 targetPosition, Vector3 characterPosition, int mask)
+        // Returns the ending distance from the LOS position
+        public float BumpForOcclusion(Vector3 targetPosition, Vector3 lineOfSightCheckPos, int mask)
         {
             var t = transform;
             var camPos = t.position;
             var mainDir = camPos - targetPosition;
+            var los = camPos - lineOfSightCheckPos;
 
             // If cam is too far above attach pos snap up
             if (this.adjustToHead)
@@ -74,28 +75,29 @@ namespace Code.Player {
                 if (pitch <= -45f)
                 {
                     float alpha = Mathf.Clamp01(1 - (pitch + 45f) / -40f);
-                    targetPosition = Vector3.Lerp(characterPosition, targetPosition, alpha);
+                    targetPosition = Vector3.Lerp(lineOfSightCheckPos, targetPosition, alpha);
                 }
             }
 
             Vector3 newCamPos;
             float distance;
 
-            // Step 1: Raycast from character to the ideal non-occluded position
-            // If nothing hits, then we skip all other checks and immediately update camera position.
-            bool step1Hit = Physics.Raycast(characterPosition, mainDir.normalized, out RaycastHit step1HitInfo,
-                mainDir.magnitude, mask, QueryTriggerInteraction.Ignore);
+            // Step 1: Raycast from line of sight position to the ideal non-occluded position
+            bool step1Hit = Physics.Raycast(lineOfSightCheckPos, los.normalized, out RaycastHit step1HitInfo,
+                los.magnitude, mask, QueryTriggerInteraction.Ignore);
+            // if we didn't hit anything (no occlusion), no need to adjust, return ideal camera position
             if (!step1Hit)
             {
                 newCamPos = targetPosition + mainDir;
                 t.position = newCamPos;
-                distance = Vector3.Distance(newCamPos, characterPosition);
+                distance = Vector3.Distance(newCamPos, lineOfSightCheckPos);
             }
+            // if we did hit something, move the camera to that hit point
             else
             {
                 newCamPos = step1HitInfo.point - mainDir.normalized * 0.1f;
                 t.position = newCamPos;
-                distance = Vector3.Distance(newCamPos, characterPosition);
+                distance = Vector3.Distance(newCamPos, lineOfSightCheckPos);
             }
 
             return distance;
