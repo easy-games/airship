@@ -13,6 +13,7 @@ public struct AirshipSteamFriendInfo {
     public bool playingOtherGame;
     public ulong steamId;
     public string steamName;
+    public bool online;
 }
 
 
@@ -188,6 +189,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
             for (var i = 0; i < friendCount; i++) {
                 var friendId = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagImmediate);
                 var friendName = SteamFriends.GetFriendPersonaName(friendId);
+                var personaState = SteamFriends.GetFriendPersonaState(friendId);
                 SteamFriends.GetFriendGamePlayed(friendId, out var friendGameInfo);
 
                 var friendInfoStruct = new AirshipSteamFriendInfo {
@@ -201,6 +203,12 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
                 } else if (friendGameInfo.m_gameID.IsValid()) {
                     friendInfoStruct.playingOtherGame = true;
                 }
+
+                // Check if online
+                if (personaState != EPersonaState.k_EPersonaStateOffline) {
+                    friendInfoStruct.online = true;
+                }
+                
                 friendInfos[i] = friendInfoStruct;
             }
             return friendInfos;
