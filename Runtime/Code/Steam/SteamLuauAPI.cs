@@ -266,4 +266,10 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         texture.SetPixels(pixels);
         texture.Apply();
     }
+
+    public static bool InviteUserToGame(string steamId, string connectString) {
+        CSteamID friendSteamID = new CSteamID(ulong.Parse(steamId));
+        bool success = SteamFriends.InviteUserToGame(friendSteamID, connectString);
+        return success;
+    }
 }
