@@ -169,18 +169,17 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         this.steamToken = hexTicket;
         this.steamTokenLoaded = true;
     }
-#endif
 
-    public async Task<string> GetSteamTokenAsync() {
-        while (!this.steamTokenLoaded) {
-            await Awaitable.NextFrameAsync();
-        }
-        return this.steamToken;
+
+    public static bool InviteUserToGame(string steamId, string connectString) {
+        CSteamID friendSteamID = new CSteamID(ulong.Parse(steamId));
+        bool success = SteamFriends.InviteUserToGame(friendSteamID, connectString);
+        return success;
     }
 
-    public static AirshipSteamFriendInfo[] GetSteamFriends() {
+        public static AirshipSteamFriendInfo[] GetSteamFriends() {
         Assert.IsTrue(SteamManager.Initialized, "Can't fetch friends: steam is not initialized.");
-        
+
         #if !STEAMWORKS_NET
             return Array.Empty<AirshipSteamFriendInfo>();
         #else
@@ -193,10 +192,10 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
                 SteamFriends.GetFriendGamePlayed(friendId, out var friendGameInfo);
 
                 var friendInfoStruct = new AirshipSteamFriendInfo {
-                    steamId = friendId.m_SteamID, 
+                    steamId = friendId.m_SteamID,
                     steamName = friendName
                 };
-                
+
                 // Is friend playing Airship?
                 if (friendGameInfo.m_gameID.m_GameID == 2381730) {
                     friendInfoStruct.playingAirship = true;
@@ -208,7 +207,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
                 if (personaState != EPersonaState.k_EPersonaStateOffline) {
                     friendInfoStruct.online = true;
                 }
-                
+
                 friendInfos[i] = friendInfoStruct;
             }
             return friendInfos;
@@ -245,7 +244,15 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 
         return null;
     }
-    
+#endif
+
+    public async Task<string> GetSteamTokenAsync() {
+        while (!this.steamTokenLoaded) {
+            await Awaitable.NextFrameAsync();
+        }
+        return this.steamToken;
+    }
+
     private static void FlipTextureVertically(Texture2D texture) {
         int width = texture.width;
         int height = texture.height;
@@ -265,11 +272,5 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 
         texture.SetPixels(pixels);
         texture.Apply();
-    }
-
-    public static bool InviteUserToGame(string steamId, string connectString) {
-        CSteamID friendSteamID = new CSteamID(ulong.Parse(steamId));
-        bool success = SteamFriends.InviteUserToGame(friendSteamID, connectString);
-        return success;
     }
 }
