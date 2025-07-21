@@ -38,6 +38,10 @@ public class MainMenuSceneManager : MonoBehaviour {
     private bool successfulTSLoad = false;
 
     private void Start() {
+#if AIRSHIP_STAGING
+        print("Airship running in STAGING mode.");
+#endif
+        
         InternalAirshipUtil.HandleWindowSize();
         
         var savedAccount = AuthManager.GetSavedAccount();
