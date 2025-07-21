@@ -291,12 +291,14 @@ namespace Editor {
         public static void BuildIOSClientStagingMenuItem() {
             Debug.Log("Building iOS staging client..");
             PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var defines);
+            var list = new List<string>(defines);
             if (!defines.Contains("AIRSHIP_STAGING")) {
-                var list = new List<string>(defines);
                 list.Add("AIRSHIP_STAGING");
-                defines = list.ToArray();
             }
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, defines);
+            if (!defines.Contains("AIRSHIP_INTERNAL")) {
+                list.Add("AIRSHIP_INTERNAL");
+            }
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, list.ToArray());
             BuildIOSClient(false);
         }
 
