@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Profile;
@@ -270,12 +271,33 @@ namespace Editor {
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/iOS", priority = 80)]
         public static void BuildIOSClientMenuItem() {
+            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var defines);
+            if (defines.Contains("AIRSHIP_STAGING")) {
+                var list = new List<string>(defines);
+                list.Remove("AIRSHIP_STAGING");
+                defines = list.ToArray();
+            }
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, defines);
+
             BuildIOSClient(false);
         }
 
         [MenuItem("Airship/Create Binary/Client/iOS (Development)", priority = 80)]
         public static void BuildIOSDevelopmentClientMenuItem() {
             BuildIOSClient(true);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/iOS (Staging)", priority = 80)]
+        public static void BuildIOSClientStagingMenuItem() {
+            Debug.Log("Building iOS staging client..");
+            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var defines);
+            if (!defines.Contains("AIRSHIP_STAGING")) {
+                var list = new List<string>(defines);
+                list.Add("AIRSHIP_STAGING");
+                defines = list.ToArray();
+            }
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, defines);
+            BuildIOSClient(false);
         }
 
         [MenuItem("Airship/Create Binary/Client/Android", priority = 80)]
