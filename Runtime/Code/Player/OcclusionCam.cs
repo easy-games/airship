@@ -95,7 +95,7 @@ namespace Code.Player {
             // if we did hit something, move the camera to that hit point
             else
             {
-                newCamPos = step1HitInfo.point - mainDir.normalized * 0.1f;
+                newCamPos = step1HitInfo.point + step1HitInfo.normal * 0.1f;
                 t.position = newCamPos;
                 distance = Vector3.Distance(newCamPos, lineOfSightCheckPos);
             }
