@@ -178,7 +178,7 @@ namespace Airship.Editor {
                 }
             }
 
-            if (fullReconcile) {
+            if (fullReconcile && reconcileSource != ReconcileSource.ComponentValidate) { // Unfortunately OnValidate() happens to have conflicts
                 var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
                 
                 // Save prefab modifications before saving asset & load them after save.
