@@ -22,9 +22,11 @@ namespace Code.Network.Simulation
             AirshipSimulationManager.Instance.OnSetPaused += OnPause;
         }
 
-        private void OnDestroy()
-        {
-            AirshipSimulationManager.Instance.OnSetPaused -= OnPause;
+        private void OnDestroy() {
+            var simManager = AirshipSimulationManager.Instance;
+            if (!simManager) return;
+            
+            simManager.OnSetPaused -= OnPause;
         }
 
         private void OnPause(bool paused)
