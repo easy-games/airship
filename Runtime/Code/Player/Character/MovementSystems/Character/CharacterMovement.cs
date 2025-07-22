@@ -233,7 +233,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (mode == NetworkedStateSystemMode.Authority || mode == NetworkedStateSystemMode.Input) {
                 rb.isKinematic = false;
-                rb.maxDepenetrationVelocity = 10;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
