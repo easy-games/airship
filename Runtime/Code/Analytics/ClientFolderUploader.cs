@@ -1,11 +1,11 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
 using Code.Http.Internal;
 using Code.Http.Public;
 using Code.Platform.Shared;
 using Proyecto26;
-using Unity.VisualScripting.IonicZip;
 using UnityEngine;
 
 namespace Code.Analytics
@@ -41,33 +41,8 @@ namespace Code.Analytics
                 Debug.Log($"[ClientFolderUploader] - Player.log: {playerLogFile} (exists: {File.Exists(playerLogFile)})");
                 Debug.Log($"[ClientFolderUploader] - Player-prev.log: {playerPrevLogFile} (exists: {File.Exists(playerPrevLogFile)})");
 
-                var zipFile = new ZipFile();
-                bool fileAdded = false;
-
-                if (File.Exists(playerLogFile))
-                {
-                    var fileInfo = new FileInfo(playerLogFile);
-                    Debug.Log($"[ClientFolderUploader] Adding Player.log to zip (size: {fileInfo.Length} bytes)");
-                    fileAdded = true;
-                    zipFile.AddFile(playerLogFile);
-                }
-
-                if (File.Exists(playerPrevLogFile))
-                {
-                    var fileInfo = new FileInfo(playerPrevLogFile);
-                    Debug.Log($"[ClientFolderUploader] Adding Player-prev.log to zip (size: {fileInfo.Length} bytes)");
-                    fileAdded = true;
-                    zipFile.AddFile(playerPrevLogFile);
-                }
-
-                if (!fileAdded)
-                {
-                    Debug.LogWarning("[ClientFolderUploader] No log files found to upload.");
-                    return;
-                }
-
-                Debug.Log("[ClientFolderUploader] Saving zip file...");
-                zipFile.Save(zipPath);
+                Debug.Log("[ClientFolderUploader] Creating zip archive of log files...");
+                ZipFile.CreateFromDirectory(path, zipPath);
 
                 var contentType = "application/zip";
                 var contentLength = new FileInfo(zipPath).Length;
