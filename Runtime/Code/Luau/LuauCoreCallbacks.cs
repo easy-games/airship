@@ -1640,7 +1640,7 @@ public partial class LuauCore : MonoBehaviour {
         }
         
         var key = new PropertyCacheKey(objectType, propName);
-        var l1Key = Mathf.Abs(key.GetHashCode()) % propGetFastCacheSize;
+        var l1Key = key.GetHashCode() % propGetFastCacheSize;
         if (l1Key < 0) l1Key += propGetFastCacheSize;
         
         var fastEntry = fastPropGetCacheKeys[l1Key];
