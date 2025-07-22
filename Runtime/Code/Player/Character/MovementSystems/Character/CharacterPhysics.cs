@@ -87,11 +87,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             Vector3 currentPos,
             Vector3 vel,
             Vector3 moveDir) {
-            //start the cast slightly off to account for clipping into colliders when falling very fast 
-            var velOffset = Mathf.Max(-vel.y, 0);
-            var verticalOffset = 1 + velOffset;
-            var intersectionMargin = .075f;
-            var castDistance = .1f + verticalOffset + velOffset;
+            //start the cast in the characters torso
+            var verticalOffset = _movement.currentCharacterHeight / 2f;
+            var castDistance = .1f + verticalOffset + Mathf.Max(-vel.y, 0);
             var castStartPos = currentPos;
             //Move the start position up
             castStartPos.y += castDistance;
