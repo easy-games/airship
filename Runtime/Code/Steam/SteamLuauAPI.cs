@@ -197,7 +197,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
                 };
 
                 // Is friend playing Airship?
-                if (friendGameInfo.m_gameID.m_GameID == 2381730) {
+                if (friendGameInfo.m_gameID.m_GameID == SteamUtils.GetAppID().m_AppId) {
                     friendInfoStruct.playingAirship = true;
                 } else if (friendGameInfo.m_gameID.IsValid()) {
                     friendInfoStruct.playingOtherGame = true;
