@@ -1,3 +1,4 @@
+using Assets.Luau;
 using UnityEngine;
 
 [LuauAPI(LuauContext.Protected)]
@@ -7,6 +8,7 @@ public class ServerTransferData
     public ushort port;
     public string gameId;
     public string loadingImageUrl;
+    public BinaryBlob lastTransferData;
 }
 
 [LuauAPI(LuauContext.Protected)]
