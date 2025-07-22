@@ -233,6 +233,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (mode == NetworkedStateSystemMode.Authority || mode == NetworkedStateSystemMode.Input) {
                 rb.isKinematic = false;
+                rb.maxDepenetrationVelocity = 10;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
@@ -556,7 +557,7 @@ namespace Code.Player.Character.MovementSystems.Character {
              */
             var isMoving = currentVelocity.sqrMagnitude > .1f;
             var inAir = didJump || (!detectedGround && !currentMoveSnapshot.prevStepUp);
-            var tryingToSprint =  movementSettings.onlySprintForward
+            var tryingToSprint = movementSettings.onlySprintForward
                 ? command.sprint && graphicTransform.InverseTransformVector(command.moveDir).z > 0.1f
                 : //Only sprint if you are moving forward
                 command.sprint && command.moveDir.magnitude > 0.1f; //Only sprint if you are moving
