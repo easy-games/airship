@@ -143,8 +143,13 @@ public class AuthManager {
 #else
         var crossPlatformBrowser = new CrossPlatformBrowser();
         var standaloneBrowser = new StandaloneBrowser();
+        #if UNITY_EDITOR
+			var returnApp = "Unity";
+		#else
+			var returnApp = "Airship";
+		#endif
         standaloneBrowser.closePageResponse =
-            "<html><body><b>Success!</b><br>Please close this window and return to Airship.</body></html>";
+	        $"<html><head><meta http-equiv=\"refresh\" content=\"0;url=https://create.airship.gg/welcome\"></head><body><b>Success!</b><br>Redirecting to Airship...</body></html>";
 
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, standaloneBrowser);

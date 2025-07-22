@@ -184,8 +184,11 @@ namespace Airship.Editor
                 FetchAndUpdateSignedInIcon();
             }
             EditorAuthManager.localUserChanged += (user) => {
+                signedInIcon = null;
+                signedInIconRaw = null;
+                signedInIconBytes = new byte[]{};
+                
                 if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
-                    signedInIconBytes = new byte[]{};
                     RepaintToolbar();
                     return;
                 }
@@ -199,8 +202,15 @@ namespace Airship.Editor
         }
         
         private static void FetchAndUpdateSignedInIcon() {
-            EditorAuthManager.DownloadProfilePicture().ContinueWith((t) => {
-                if (t.Result == null) return;
+            var task = EditorAuthManager.DownloadProfilePicture();
+            task.ContinueWith((t) => {
+                if (t.IsFaulted) {
+                    Debug.LogError("Failed to download profile picture: " + t.Exception);
+                    return;
+                }
+                if (t.Result == null) {
+                    return;
+                }
 
                 signedInIconRaw = t.Result;
                 GetSignedInIcon();
@@ -237,9 +247,13 @@ namespace Airship.Editor
         }
         
         private static Texture2D ResizeAndRoundTexture(Texture2D source, int targetWidth, int targetHeight) {
-            if (source == null || !source.isReadable) {
+            if (source == null) {
                 Debug.LogError("Unable to set signed in icon: Source texture is null or unreadable.");
                 return null;
+            }
+
+            if (!source.isReadable) {
+                return source;
             }
 
             // Downsize texture and round on CPU. There are problems when using Graphics.Blit to

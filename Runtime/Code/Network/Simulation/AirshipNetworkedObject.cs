@@ -39,11 +39,13 @@ namespace Code.Network.Simulation
             }
         }
 
-        private void OnDestroy()
-        {
-            AirshipSimulationManager.Instance.OnCaptureSnapshot -= this.CaptureSnapshot;
-            AirshipSimulationManager.Instance.OnSetSnapshot -= this.SetSnapshot;
-            AirshipSimulationManager.Instance.OnLagCompensationCheck -= this.LagCompensationCheck;
+        private void OnDestroy() {
+            var simManager = AirshipSimulationManager.Instance;
+            if (!simManager) return;
+                
+            simManager.OnCaptureSnapshot -= this.CaptureSnapshot;
+            simManager.OnSetSnapshot -= this.SetSnapshot;
+            simManager.OnLagCompensationCheck -= this.LagCompensationCheck;
         }
 
         private void CaptureSnapshot(int tick, double time, bool replay)

@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using UnityEditor;
 using UnityEngine;
-#if UNITY_IOS
+#if UNITY_IOS || UNITY_EDITOR_OSX
 using UnityEditor.Callbacks;
 using UnityEditor.iOS.Xcode;
 #endif
@@ -88,7 +88,7 @@ namespace NativeGalleryNamespace
 
 	public class NGPostProcessBuild
 	{
-#if UNITY_IOS
+#if UNITY_IOS || UNITY_EDITOR_OSX
 		[PostProcessBuild( 1 )]
 		public static void OnPostprocessBuild( BuildTarget target, string buildPath )
 		{

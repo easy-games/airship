@@ -57,6 +57,12 @@ public static class AirshipBehaviourHelper {
             return false;
         }
 
+        if (!airshipComponent.script) {
+            Debug.LogWarning($"Airship Component is missing script at path: {airshipComponent.scriptPath}.");
+            Profiler.EndSample();
+            return false;
+        }
+
         // Check inheritance if possible
         var result = targetTypeScriptPath != null && buildInfo.Inherits(airshipComponent.script, targetTypeScriptPath);
         Profiler.EndSample();

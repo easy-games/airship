@@ -56,72 +56,51 @@ namespace Code.Player {
         }
 
         // Called from TS/Lua side
-        // Returns the ending distance from the target
-        public void BumpForOcclusion(Vector3 targetPosition, Vector3 characterPosition, int mask) {
-            GizmoUtils.DrawSphere(targetPosition, 0.03f, Color.white);
+        // Returns the ending distance from the LOS position
+        public float BumpForOcclusion(Vector3 targetPosition, Vector3 lineOfSightCheckPos, int mask)
+        {
             var t = transform;
             var camPos = t.position;
             var mainDir = camPos - targetPosition;
-
-            // Vector3 boxHalfExtents = this.GetCameraBoxExtents(this.targetCamera);
-            // var boxHalfExtents = new Vector3(_projectionX * 0.02f, _projectionY * 0.02f, 0.01f);
-            // var boxHalfExtents = new Vector3(0.25f, 0.15f, 0f);
-
-            var preDir = (targetPosition - characterPosition).normalized;
-            var preDirDistance = Vector3.Distance(targetPosition, characterPosition);
-            var mainDistanceMod = 1f;
+            var los = camPos - lineOfSightCheckPos;
 
             // If cam is too far above attach pos snap up
-            if (this.adjustToHead) {
+            if (this.adjustToHead)
+            {
                 float pitch = t.eulerAngles.x;
-                if (pitch > 90f) {
+                if (pitch > 90f)
+                {
                     pitch -= 360;
                 }
-                if (pitch <= -45f) {
+                if (pitch <= -45f)
+                {
                     float alpha = Mathf.Clamp01(1 - (pitch + 45f) / -40f);
-                    // print($"alpha: {alpha}");
-                    targetPosition = Vector3.Lerp(characterPosition, targetPosition, alpha);
-                    mainDistanceMod = alpha;
+                    targetPosition = Vector3.Lerp(lineOfSightCheckPos, targetPosition, alpha);
                 }
             }
-            
-            Vector3 newCamPos;
 
-            // Step 1: Raycast from character to the ideal non-occluded position
-            // If nothing hits, then we skip all other checks and immediately update camera position.
-            bool step1Hit = Physics.Raycast(characterPosition, mainDir.normalized, out RaycastHit step1HitInfo,
-                mainDir.magnitude, mask, QueryTriggerInteraction.Ignore);
-            if (!step1Hit) {
+            Vector3 newCamPos;
+            float distance;
+
+            // Step 1: Raycast from line of sight position to the ideal non-occluded position
+            bool step1Hit = Physics.Raycast(lineOfSightCheckPos, los.normalized, out RaycastHit step1HitInfo,
+                los.magnitude, mask, QueryTriggerInteraction.Ignore);
+            // if we didn't hit anything (no occlusion), no need to adjust, return ideal camera position
+            if (!step1Hit)
+            {
                 newCamPos = targetPosition + mainDir;
                 t.position = newCamPos;
-                return;
+                distance = Vector3.Distance(newCamPos, lineOfSightCheckPos);
+            }
+            // if we did hit something, move the camera to that hit point
+            else
+            {
+                newCamPos = step1HitInfo.point + step1HitInfo.normal * 0.1f;
+                t.position = newCamPos;
+                distance = Vector3.Distance(newCamPos, lineOfSightCheckPos);
             }
 
-            // Step 2: Raycast from character to target position to prevent target being in a wall
-            Debug.DrawLine(characterPosition, characterPosition + preDir * preDirDistance, Color.yellow);
-            // bool preHit = Physics.BoxCast(characterPosition, boxHalfExtents, preDir.normalized, out RaycastHit preHitInfo, t.rotation, preDir.magnitude, mask,
-            //     QueryTriggerInteraction.Ignore);
-            bool step2Hit = Physics.Raycast(characterPosition, preDir.normalized, out RaycastHit preHitInfo, preDirDistance, mask,
-                QueryTriggerInteraction.Ignore);
-            if (step2Hit) {
-                GizmoUtils.DrawSphere(preHitInfo.point, 0.03f, Color.yellow);
-                targetPosition = preHitInfo.point - preDir.normalized * 0.1f;
-            }
-
-            // Main: Raycast from target position backwards (away from character).
-            Debug.DrawLine(targetPosition, targetPosition + mainDir, Color.blue);
-            // bool mainHit = Physics.BoxCast(targetPosition - mainDir.normalized * 0.1f, boxHalfExtents, mainDir.normalized, out RaycastHit mainHitInfo,
-            //     t.rotation, mainDir.magnitude + 0.05f, mask, QueryTriggerInteraction.Ignore);
-            bool mainHit = Physics.Raycast(targetPosition, mainDir.normalized, out RaycastHit mainHitInfo, mainDir.magnitude * mainDistanceMod, mask, QueryTriggerInteraction.Ignore);
-            if (mainHit) {
-                GizmoUtils.DrawSphere(mainHitInfo.point, 0.03f, Color.blue);
-                newCamPos = mainHitInfo.point - mainDir.normalized * 0.1f;
-            } else {
-                newCamPos = targetPosition + mainDir.normalized * mainDir.magnitude * mainDistanceMod;
-                GizmoUtils.DrawSphere(targetPosition + mainDir.normalized * mainDir.magnitude * mainDistanceMod, 0.03f, Color.blue);
-            }
-
-            t.position = newCamPos;
+            return distance;
         }
     }
 }

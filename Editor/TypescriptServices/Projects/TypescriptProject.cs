@@ -43,6 +43,11 @@ namespace Airship.Editor {
     internal struct CompiledFileEvent {
         public string fileName;
     }
+    
+    internal struct CompiledFileWriteEvent {
+        public string fileName;
+        public bool changed;
+    }
 
     internal struct CompilerStartCompilationEvent {
         public bool Initial;

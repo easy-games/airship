@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Profile;
@@ -186,7 +187,7 @@ namespace Editor {
 #endif
         }
 
-        public static void BuildIOSClient(bool development) {
+        public static void BuildIOSClient(bool development, bool staging) {
 #if UNITY_EDITOR_OSX
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -198,6 +199,14 @@ namespace Editor {
             options.scenes = scenes;
             options.locationPathName = "build/client_ios";
             options.target = BuildTarget.iOS;
+
+            var extraDefines = new List<string>();
+            if (staging) {
+                extraDefines.Add("AIRSHIP_STAGING");
+                extraDefines.Add("AIRSHIP_INTERNAL");
+            }
+            options.extraScriptingDefines = extraDefines.ToArray();
+
             if (development == true) {
                 options.options = BuildOptions.Development;
             }
@@ -270,12 +279,26 @@ namespace Editor {
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/iOS", priority = 80)]
         public static void BuildIOSClientMenuItem() {
-            BuildIOSClient(false);
+            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var defines);
+            if (defines.Contains("AIRSHIP_STAGING")) {
+                var list = new List<string>(defines);
+                list.Remove("AIRSHIP_STAGING");
+                defines = list.ToArray();
+            }
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, defines);
+
+            BuildIOSClient(false, false);
         }
 
         [MenuItem("Airship/Create Binary/Client/iOS (Development)", priority = 80)]
         public static void BuildIOSDevelopmentClientMenuItem() {
-            BuildIOSClient(true);
+            BuildIOSClient(true, false);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/iOS (Staging)", priority = 80)]
+        public static void BuildIOSClientStagingMenuItem() {
+            Debug.Log("Building iOS staging client..");
+            BuildIOSClient(false, true);
         }
 
         [MenuItem("Airship/Create Binary/Client/Android", priority = 80)]

@@ -16,8 +16,6 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 using Newtonsoft.Json;
-using Sentry;
-
 
 [Serializable]
 class PlatformVersionsResponse {
@@ -39,13 +37,15 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private bool successfulTSLoad = false;
 
-    private void Start()
-    {
+    private void Start() {
+#if AIRSHIP_STAGING
+        print("Airship running in STAGING mode.");
+#endif
+        
         InternalAirshipUtil.HandleWindowSize();
-
+        
         var savedAccount = AuthManager.GetSavedAccount();
-        if (savedAccount == null)
-        {
+        if (savedAccount == null) {
             SceneManager.LoadScene("Login");
             return;
         }
@@ -54,10 +54,6 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         Application.focusChanged += OnApplicationFocus;
         OnApplicationFocus(Application.isFocused);
-
-        SentrySdk.CaptureMessage("Test event1");
-
-        Debug.LogError("This is an error message");
     }
 
     /**
