@@ -1542,6 +1542,13 @@ namespace Mirror
                 Debug.LogWarning("Not sending client ready: not authenticated");
 #endif
             }
+
+            if (NetworkClient.ready) {
+#if AIRSHIP_PLAYER
+                Debug.LogWarning("Not sending client ready: already ready");
+#endif
+            }
+
             if (NetworkClient.connection.isAuthenticated && !NetworkClient.ready) NetworkClient.Ready();
 
             // Only call AddPlayer for normal scene changes, not additive load/unload
