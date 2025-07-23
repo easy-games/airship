@@ -1538,7 +1538,6 @@ namespace Mirror
         {
             // always become ready.
             if (!NetworkClient.connection.isAuthenticated) Debug.LogWarning("Not sending client ready: not authenticated");
-            if (NetworkClient.ready) Debug.LogWarning("Not sending client ready: already ready");
             if (NetworkClient.connection.isAuthenticated && !NetworkClient.ready) NetworkClient.Ready();
 
             // Only call AddPlayer for normal scene changes, not additive load/unload
