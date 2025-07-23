@@ -20,6 +20,8 @@ namespace Code.Authentication {
         public string editorUserId;
         public string editorUsername;
         public string editorProfileImageId;
+
+        public string passkey;
     }
     public struct LoginResponseMessage : NetworkMessage
     {
@@ -33,9 +35,18 @@ namespace Code.Authentication {
     }
 
     public class EasyAuthenticator : NetworkAuthenticator {
+        private string passkey = "empty";
+        
         readonly HashSet<NetworkConnection> connectionsPendingDisconnect = new HashSet<NetworkConnection>();
 
         public int connectionCounter = 0;
+
+        private void Awake() {
+            TextAsset passkeyTextFile = Resources.Load<TextAsset>("ConnectPassKey");
+            if (passkeyTextFile) {
+                this.passkey = passkeyTextFile.text
+            }
+        }
 
         public override void OnStartServer() {
             this.connectionCounter = 0;
@@ -72,6 +83,7 @@ namespace Code.Authentication {
                         editorUserId = EditorAuthManager.localUser.uid,
                         editorUsername = EditorAuthManager.localUser.username,
                         editorProfileImageId = EditorAuthManager.localUser.profileImageId,
+                        passkey = this.passkey,
                     });
                     return;
                 }
@@ -91,6 +103,7 @@ namespace Code.Authentication {
                         NetworkClient.Send(new LoginMessage {
                             authToken = authToken,
                             playerVersion = AirshipConst.playerVersion,
+                            passkey = this.passkey,
                         });
                         return;
                     }
@@ -100,6 +113,7 @@ namespace Code.Authentication {
             NetworkClient.Send(new LoginMessage {
                 authToken = authToken,
                 playerVersion = AirshipConst.playerVersion,
+                passkey = this.passkey,
             });
         }
 
@@ -114,6 +128,11 @@ namespace Code.Authentication {
         /// <param name="loginData"></param>
         private async void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData) {
             if (connectionsPendingDisconnect.Contains(conn)) return;
+
+            if (loginData.passkey != this.passkey) {
+                this.RejectConnection(conn, "Invalid passkey.",  true);
+                return;
+            }
 
 #if UNITY_SERVER
             Debug.Log("Authenticating " + conn);
