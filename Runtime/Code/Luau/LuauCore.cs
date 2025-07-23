@@ -83,7 +83,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type actionType = typeof(Action);
 
     private static readonly string[] protectedScenesNames = {
-        "corescene", "mainmenu", "login", "disconnected", "airshipupdateapp"
+        "corescene", "mainmenu", "login", "disconnected", "airshipupdateapp", "dontdestroyonload",
     };
     private static HashSet<int> protectedSceneHandles = new HashSet<int>();
 
