@@ -1537,7 +1537,11 @@ namespace Mirror
         public virtual void OnClientSceneChanged()
         {
             // always become ready.
-            if (!NetworkClient.connection.isAuthenticated) Debug.LogWarning("Not sending client ready: not authenticated");
+            if (!NetworkClient.connection.isAuthenticated) {
+#if AIRSHIP_PLAYER
+                Debug.LogWarning("Not sending client ready: not authenticated");
+#endif
+            }
             if (NetworkClient.connection.isAuthenticated && !NetworkClient.ready) NetworkClient.Ready();
 
             // Only call AddPlayer for normal scene changes, not additive load/unload
