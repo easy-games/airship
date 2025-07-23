@@ -44,7 +44,7 @@ namespace Code.Authentication {
         private void Awake() {
             TextAsset passkeyTextFile = Resources.Load<TextAsset>("ConnectPassKey");
             if (passkeyTextFile) {
-                this.passkey = passkeyTextFile.text
+                this.passkey = passkeyTextFile.text;
             }
         }
 
