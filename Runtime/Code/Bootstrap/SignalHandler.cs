@@ -28,8 +28,14 @@ namespace Code.Bootstrap {
 
                 if (index >= 0 && signals[index].IsSet) {
                     Debug.Log("Sigterm.1");
-                    this.unityMainThread.Enqueue(HandleSigterm());
-                    signals[index].Reset();
+                    if (serverBootstrap.isServerReady) {
+                        this.unityMainThread.Enqueue(HandleSigterm());
+                        signals[index].Reset();
+                    } else {
+                        Debug.Log("Server bootstrap not ready, skipping SIGTERM handling. Shutting down immediately.");
+                        Application.Quit();
+                        return;
+                    }
                 }
             }
         }
