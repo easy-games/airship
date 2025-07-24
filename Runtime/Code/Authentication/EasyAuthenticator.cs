@@ -193,7 +193,7 @@ namespace Code.Authentication {
                     tcs.SetResult(new UserData() {
                         uid = InternalHttpManager.editorUserId,
                         username = loginMessage.editorUsername,
-                        orgRoleName = "Dev",
+                        orgRoleName = "Owner",
                         profileImageId = loginMessage.editorProfileImageId,
                     });
                     return await tcs.Task;
@@ -201,7 +201,7 @@ namespace Code.Authentication {
                 tcs.SetResult(new UserData() {
                     uid = this.connectionCounter + "",
                     username = "Player" + this.connectionCounter,
-                    orgRoleName = "Dev",
+                    orgRoleName = "Owner",
                     profileImageId = string.Empty,
                     fullTransferPacket = "{}"
                 });
