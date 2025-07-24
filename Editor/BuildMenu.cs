@@ -194,7 +194,7 @@ namespace Editor {
 
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = "build/client_ios";
