@@ -220,11 +220,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				}
 
 				if (!success && RunCore.IsServer()) {
-					var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
-					if (serverBootstrap.IsAgonesEnvironment()) {
-						Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
-						serverBootstrap.agones.Shutdown().Wait();
-					}
+					throw new Exception("[SEVERE] Server failed to download code.zip. Shutting down!");
 				}
 
 				if (!success && RunCore.IsClient()) {
@@ -268,12 +264,9 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					if (loadingScreen) {
 						loadingScreen.SetError("Failed to download Main Menu scripts.");
 					}
-					if (RunCore.IsServer()) {
-						var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
-						if (serverBootstrap.IsAgonesEnvironment()) {
-							Debug.LogError("[SEVERE] Server failed to download code.zip. Shutting down!");
-							serverBootstrap.agones.Shutdown().Wait();
-						}
+					if (RunCore.IsServer())
+					{
+						throw new Exception("[SEVERE] Server failed to download code.zip. Shutting down!");
 					}
 				} else {
 					File.WriteAllText(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"), "success");

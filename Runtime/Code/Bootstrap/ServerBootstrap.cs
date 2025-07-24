@@ -428,7 +428,15 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsEditor()) {
 			BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl, false,
 				(res) => {
-					downloadComplete = true;
+					if (!res)
+					{
+						Debug.LogError("[Airship]: Failed to download packages. Shutting down server.");
+						Shutdown();
+					}
+					else
+					{
+						downloadComplete = true;
+					}
 				});
 		} else {
 			downloadComplete = true;
