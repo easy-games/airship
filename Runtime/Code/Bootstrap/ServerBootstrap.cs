@@ -431,7 +431,7 @@ public class ServerBootstrap : MonoBehaviour
 					if (!res)
 					{
 						Debug.LogError("[Airship]: Failed to download packages. Shutting down server.");
-						Shutdown(1);
+						ShutdownInternal(1);
 					}
 					else
 					{
@@ -484,13 +484,18 @@ public class ServerBootstrap : MonoBehaviour
         isServerReady = true;
         OnServerReady?.Invoke();
 	}
-
-	public void Shutdown(int exitCode = 0) {
+	
+	private void ShutdownInternal(int exitCode = 0) {
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
 			agones.Shutdown();
 			Application.Quit(exitCode);
 		}
+	}
+
+	public void Shutdown()
+	{
+		ShutdownInternal(0);
 	}
 
 	/**
