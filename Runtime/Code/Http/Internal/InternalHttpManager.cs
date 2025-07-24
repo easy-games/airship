@@ -21,13 +21,20 @@ namespace Code.Http.Internal {
             }
         }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void OnLoad() {
+            if (RunCore.IsServer()) {
+                authTokenSetTaskCompletionSource.TrySetResult(true);
+            }
+        }
+
         public static Task<HttpResponse> GetAsync(string url) {
 #if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode) {
                 return HttpManager.GetAsync(url, GetHeaders());
             }
 #endif
-            
+
             return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
                 return HttpManager.GetAsync(url, GetHeaders());
             }, TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
