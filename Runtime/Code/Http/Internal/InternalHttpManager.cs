@@ -13,17 +13,13 @@ namespace Code.Http.Internal {
         public static string editorUserId;
         public static string editorAuthToken = "";
         public static string authToken = "";
-        private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new();
+        public static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new();
 
-        static InternalHttpManager() {
-            if (RunCore.IsServer()) {
-                authTokenSetTaskCompletionSource.TrySetResult(true);
-            }
-        }
-
+        // This handles the case when we are a server in editor dedicated mode.
+        // In this case, we immediately resolve the task because we will not have any auth token.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void OnLoad() {
-            if (RunCore.IsServer()) {
+            if (RunCore.IsServer() && !RunCore.IsClient() && RunCore.IsEditor()) {
                 authTokenSetTaskCompletionSource.TrySetResult(true);
             }
         }
