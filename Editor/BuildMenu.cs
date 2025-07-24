@@ -67,7 +67,7 @@ namespace Editor {
 
             FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
 
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Server, ScriptingImplementation.IL2CPP);
             PlayerSettings.dedicatedServerOptimizations = true;
             PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
 
