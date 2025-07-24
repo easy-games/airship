@@ -9,6 +9,7 @@ using Mirror;
 using Mirror.SimpleWeb;
 using Newtonsoft.Json;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Airship.Editor {
@@ -46,7 +47,7 @@ namespace Airship.Editor {
             }
         }
         
-        private static Dictionary<string, HashSet<AirshipComponent>> reconcileList = new();
+        private static Dictionary<string, Dictionary<int, AirshipComponent>> reconcileList = new();
         private static IEnumerable<AirshipComponent> _airshipComponentCache;
         
         [InitializeOnLoadMethod]
@@ -68,11 +69,11 @@ namespace Airship.Editor {
             // Then later, we'll reconcile for all components based on script target
             
             if (!reconcileList.TryGetValue(component.script.assetPath, out var componentSet)) {
-                componentSet = new HashSet<AirshipComponent>();
+                componentSet = new Dictionary<int, AirshipComponent>();
                 reconcileList.Add(component.script.assetPath, componentSet);
             }
 
-            componentSet.Add(component);
+            componentSet.TryAdd(component.GetInstanceID(), component);
         }
 
         /// <summary>
@@ -100,67 +101,68 @@ namespace Airship.Editor {
         /// Reconcile the component
         /// </summary>
         /// <param name="component"></param>
-        internal static bool ReconcileComponent(AirshipComponent component) {
-            // if (string.IsNullOrEmpty(component.guid)) {
-            //     component.guid = Guid.NewGuid().ToString();
-            // }
-            
+        internal static bool ReconcileComponent(AirshipComponent component, ReconcileSource reconcileSource) {
 #if AIRSHIP_DEBUG
             var additions = new HashSet<string>();
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
-            if (component.script == null) {
-                Debug.LogWarning("no script");
-                return false;
-            }
-            if (component.script.m_metadata == null) {
-                Debug.LogWarning("no metadata");
-                return false;
-            }
-            
+            var fullReconcile =
+                component.script.typescriptCompiled || reconcileSource == ReconcileSource.ForceReconcile;
             
             var scriptMetadata = component.script.m_metadata;
             var componentMetadata = component.metadata;
 
             if (scriptMetadata == null) return false;
-            componentMetadata.name = scriptMetadata.name;
+            if (componentMetadata.name != scriptMetadata.name) {
+                componentMetadata.name = scriptMetadata.name;
+                if (reconcileSource != ReconcileSource.ComponentValidate) EditorUtility.SetDirty(component);
+            }
             
             // Add missing properties
-            foreach (var scriptProperty in scriptMetadata.properties) {
-                var componentProperty = componentMetadata.FindProperty(scriptProperty.name);
-                if (componentProperty == null) {
-                    var element = scriptProperty.Clone();
-                    componentMetadata.properties.Add(element);
-                    componentProperty = element;
+            if (fullReconcile) {
+                foreach (var scriptProperty in scriptMetadata.properties) {
+                    var componentProperty = componentMetadata.FindProperty(scriptProperty.name);
+                    if (componentProperty == null) {
+                        var element = scriptProperty.Clone();
+                        componentMetadata.properties.Add(element);
+                        EditorUtility.SetDirty(component);
+                        componentProperty = element;
 #if AIRSHIP_DEBUG
                     additions.Add(element.name); // ??
 #endif
-                }
-                else {
-                    if (!componentProperty.HasSameTypesAs(scriptProperty)) {
-                        componentProperty.ReconcileTypesWith(scriptProperty);
-                        componentProperty.ReconcileItemsWith(scriptProperty);
+                    }
+                    else {
+                        if (!componentProperty.HasSameTypesAs(scriptProperty)) {
+                            componentProperty.ReconcileTypesWith(scriptProperty);
+                            componentProperty.ReconcileItemsWith(scriptProperty);
 #if AIRSHIP_DEBUG
                         modifications.Add(componentProperty.name);
 #endif
+                        }
                     }
+
+                    componentProperty.fileRef = scriptProperty.fileRef;
+                    componentProperty.refPath = scriptProperty.refPath;
                 }
-                
-                componentProperty.fileRef = scriptProperty.fileRef;
-                componentProperty.refPath = scriptProperty.refPath;
             }
-            
+
             List<LuauMetadataProperty> propertiesToRemove = null;
             var seenProperties = new HashSet<string>();
             foreach (var componentProperty in componentMetadata.properties) {
                 var scriptProperty = scriptMetadata.FindProperty(componentProperty.name);
                 
-                if (scriptProperty == null || seenProperties.Contains(componentProperty.name)) {
+                if (scriptProperty == null && fullReconcile) {
                     if (propertiesToRemove == null) {
                         propertiesToRemove = new List<LuauMetadataProperty>();
                     }
                     propertiesToRemove.Add(componentProperty);
+                }
+                if (seenProperties.Contains(componentProperty.name) || string.IsNullOrEmpty(componentProperty.name)) {
+                    if (propertiesToRemove == null) {
+                        propertiesToRemove = new List<LuauMetadataProperty>();
+                    }
+                    propertiesToRemove.Add(componentProperty);   
                 }
                 
                 seenProperties.Add(componentProperty.name);
@@ -172,7 +174,25 @@ namespace Airship.Editor {
                     deletions.Add(componentProperty.name);
 #endif
                     componentMetadata.properties.Remove(componentProperty);
+                    EditorUtility.SetDirty(component);
                 }
+            }
+
+            if (fullReconcile && reconcileSource != ReconcileSource.ComponentValidate) { // Unfortunately OnValidate() happens to have conflicts
+                var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+                
+                // Save prefab modifications before saving asset & load them after save.
+                // This way we don't get any disk updated notification.
+                PropertyModification[] mods = null;
+                if (prefabStage != null) {
+                    mods = PrefabUtility.GetPropertyModifications(prefabStage.prefabContentsRoot);
+                    PrefabUtility.SetPropertyModifications(prefabStage.prefabContentsRoot, new PropertyModification[] {});
+                }
+                
+
+                AssetDatabase.SaveAssetIfDirty(component);
+                
+                if (mods != null) PrefabUtility.SetPropertyModifications(prefabStage.prefabContentsRoot, mods);
             }
 
 
@@ -203,18 +223,28 @@ namespace Airship.Editor {
         /// <param name="script">The script of the queued components to reconcile</param>
         /// <returns>True if there were components that were reconciled</returns>
         internal static bool ReconcileQueuedComponents(AirshipScript script) {
-            // So the idea of this is to reconcile the components AFTER scripts are in the artifact db
-            // ... then we can force a reconciliation at that point to ensure the data is up-to-date.
+            AssetDatabase.StartAssetEditing();
+            try {
+                if (!reconcileList.TryGetValue(script.assetPath, out var componentSet)) {
+                    return false;
+                }
 
-            if (script == null) return false;
-            
-            if (!reconcileList.TryGetValue(script.assetPath, out var componentSet)) return false;
-            foreach (var component in componentSet) {
-                if (!component) continue;
-                component.ReconcileMetadata(ReconcileSource.ForceReconcile, script.m_metadata);
+                var components = componentSet.Values.ToList();
+                foreach (var component in components) {
+                    if (!component) continue;
+                    
+                    // component.ReconcileMetadata(ReconcileSource.ForceReconcile, script.m_metadata);
+                    ReconcileComponent(component, ReconcileSource.ForceReconcile);
+                }
+
+                reconcileList.Remove(script.assetPath);
             }
-            
-            reconcileList.Remove(script.assetPath);
+            catch (Exception ex) {
+                Debug.LogError("Failed to reconcile components:" + ex);
+            } finally {
+                AssetDatabase.StopAssetEditing();
+            }
+
             return true;
         }
 
@@ -244,7 +274,7 @@ namespace Airship.Editor {
         /// <param name="component">The component to reconcile</param>
         /// <param name="status">The status of the reconcile</param>
         /// <returns>True if a reconcile is possible</returns>
-        internal static bool ReconcileComponentUsingArtifacts(AirshipComponent component, out ReconcileStatus status) {
+        internal static bool ReconcileComponentUsingArtifacts(AirshipComponent component, ReconcileSource reconcileSource, out ReconcileStatus status) {
             if (component.script == null || component.script.m_metadata == null) {
 #if AIRSHIP_DEBUG
                 Debug.LogWarning($"[Reconcile] script or metadata missing for {component}", component);
@@ -287,8 +317,8 @@ namespace Airship.Editor {
             //     status = ReconcileStatus.ReconcileWasQueued;
             //     return true;
             // }
-
-            var reconciled = ReconcileComponent(component);
+            
+            var reconciled = ReconcileComponent(component, reconcileSource);
             // Version mismatch
             if (scriptData.IsNewerThan(componentData) || scriptData.HasSameHashAs(componentData)) {
                 if (reconciled) {
@@ -321,63 +351,8 @@ namespace Airship.Editor {
         /// Callback for when a component is requesting reconciliation
         /// </summary>
         private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
-            // Components must have guids
-            if (string.IsNullOrEmpty(eventData.Component.guid)) eventData.Component.guid = Guid.NewGuid().ToString();
-
-            // If an initial setup (e.g. first pull, or new template project)
-            if (AirshipLocalArtifactDatabase.isEmpty) {
-                // We can run a default reconcile, it wont matter tbh.
-                var component = eventData.Component;
-                ReconcileComponent(component);
-                //component.componentHash = component.scriptHash;
-                return;
-            }
-            
-            if (ReconcilerVersion == ReconcilerVersion.Version2) {
-                var component = eventData.Component;
-                if (AirshipPrefabUtility.FindReconcilablePrefabComponent(component, out var prefabOriginalComponent)) {
-                    // If it's a instance component:
-                    // - We need to reconcile the source component first:
-                    //      - If successful: We can then reconcile the instance
-                    //      - Else: well, no point doing a reconcile here... it would just be desync
-                    
-                    if (prefabOriginalComponent.script == null) {
-                        Debug.LogWarning("[Reconcile] Attempted reconcile on instance prefab original without script attached?");
-                        return;
-                    }
-                    
-                    if (ReconcileComponentUsingArtifacts(prefabOriginalComponent, out var result)) {
-                        // if successful, we can determine whether or not we'll reconcile the instance component
-                        
-                        switch (result) {
-                            // Once we're aware the original is updated, reconcile the instance copy!
-                            case ReconcileStatus.Reconciled: {
-                                ReconcileComponent(component);
-                                break;
-                            }
-                            case ReconcileStatus.ReconcileWasQueued:
-                            case ReconcileStatus.Unchanged:
-                                break;
-                            default:
-                                Debug.Log($"Failed to reconcile {component.guid}, got {result}");
-                                break;
-                        }
-                    }
-                    
-                    
-                    
-                }
-                else {
-                    // It's just an orphaned instance, or we're reconciling the original component, we can just reconcile it outright. No silly business required.
-                    ReconcileComponentUsingArtifacts(component, out _);
-                }
-            }
-            else {
-               
-                var component = eventData.Component;
-                ReconcileComponent(component);
-                //component.componentHash = component.scriptHash;
-            }
+            OnComponentQueueReconcile(eventData.Component);
+            ReconcileComponent(eventData.Component, ReconcileSource.ComponentValidate);
         }
     }
 }

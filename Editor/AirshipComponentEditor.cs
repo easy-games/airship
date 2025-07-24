@@ -366,7 +366,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             
             var bindingProperty = bindingProperties[bindingPropertyIndex];
             propertyList.Add(property);
-            indexDictionary.Add(bindingProperty.name, bindingPropertyIndex);
+            if (!indexDictionary.TryAdd(bindingProperty.name, bindingPropertyIndex)) {
+                Debug.LogError("Found duplicate property when inspecting Airship component: " + bindingProperty.name);
+            }
         }
         
         // Sort properties by order in non-serialized object

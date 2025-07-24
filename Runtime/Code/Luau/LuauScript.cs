@@ -120,7 +120,7 @@ public class LuauScript : MonoBehaviour {
 		}
 
 		if (!script.m_compiled) {
-			throw new Exception($"[LuauScript]: Script reference cannot run due to compilation error: {script.m_compilationError}");
+			throw new Exception($"[LuauScript]: Script reference ({script.name}) cannot run due to compilation error: {script.m_compilationError}");
 		}
 		
 		var cleanPath = CleanupFilePath(script.m_path);
