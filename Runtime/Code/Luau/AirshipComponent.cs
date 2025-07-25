@@ -180,7 +180,14 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 			script = runtimeScript;
 		}
 		else {
-			Debug.LogError($"Failed to find code.zip compiled script. Path: {script.m_path.ToLower()}, GameObject: {gameObject.name}", gameObject);
+			var isPackage = scriptPath.StartsWith("Assets/AirshipPackage");
+			if (script == null) {
+				var message = isPackage ? "- have you published this package?" : "- have you done a full publish of this game?";
+				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) {message}", gameObject);
+			}
+			else {
+				Debug.LogError($"Could not find compiled script in code archive '{script.m_path.ToLower()}' for GameObject {gameObject.name} (Missing Runtime Script Code)", gameObject);
+			}
 			return;
 		}
 #endif
