@@ -498,7 +498,7 @@ public class ServerBootstrap : MonoBehaviour
 	private void ShutdownDueToAssetFailure(int exitCode = 1) {
 		if (NetworkServer.connections != null && NetworkServer.connections.Count > 0) {
 			var message = new ServerStartupFailureMessage {
-				reason = "Server failed to download required game assets.\n\nIf you are the game developer, ensure your game / packages have all been properly deployed.\n\nCheck the error console in the Airship Create portal for more details.",
+				reason = "Server failed to download required game assets.\n\nIf you are the game developer, ensure your game / packages have all been properly published.\n\nCheck the error console in the Airship Create portal for more details.",
 			};
 			
 			foreach (var connection in NetworkServer.connections.Values) {
