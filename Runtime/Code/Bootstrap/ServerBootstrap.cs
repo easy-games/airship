@@ -507,14 +507,28 @@ public class ServerBootstrap : MonoBehaviour
 				reason = "Server failed to download required game assets and must shut down. Please try connecting again in a few moments."
 			};
 			
+			int messagesSent = 0;
 			foreach (var connection in NetworkServer.connections.Values) {
 				if (connection != null && connection.isReady) {
+					Debug.LogWarning($"[Server] Sending ServerStartupFailureMessage to connection {connection.connectionId}");
 					connection.Send(message);
+					messagesSent++;
+				} else {
+					Debug.LogWarning($"[Server] Skipping connection {connection?.connectionId} - not ready or null");
 				}
 			}
+			Debug.LogWarning($"[Server] Sent {messagesSent} ServerStartupFailureMessages");
+			
+			// Give a tiny moment for the message to be queued before shutdown
+			StartCoroutine(DelayedShutdown(exitCode));
+		} else {
+			// No players connected, shutdown immediately
+			ShutdownInternal(exitCode);
 		}
-
-		// Proceed with immediate shutdown
+	}
+	
+	private IEnumerator DelayedShutdown(int exitCode) {
+		yield return new WaitForSeconds(0.05f); // Very brief delay just to ensure message queuing
 		ShutdownInternal(exitCode);
 	}
 
