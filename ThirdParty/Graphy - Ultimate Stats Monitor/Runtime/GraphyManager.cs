@@ -140,6 +140,9 @@ namespace Tayx.Graphy {
         
         // Resim ---------------------------------------------------------------------------
         [SerializeField] private ModuleState m_resimModuleState = ModuleState.FULL;
+        
+        // Timings ---------------------------------------------------------------------------
+        [SerializeField] private ModuleState m_timingsModuleState = ModuleState.FULL;
 
         // Ram ---------------------------------------------------------------------------
 
@@ -192,6 +195,7 @@ namespace Tayx.Graphy {
         private G_AudioManager m_audioManager = null;
         private G_AdvancedData m_advancedData = null;
         private G_ResimManager m_resimManager = null;
+        private G_TimingsManager m_timingsManager = null;
 
         private G_FpsMonitor m_fpsMonitor = null;
         private G_RamMonitor m_ramMonitor = null;
@@ -246,6 +250,7 @@ namespace Tayx.Graphy {
                 m_ramManager.SetPosition(m_graphModulePosition);
                 m_audioManager.SetPosition(m_graphModulePosition);
                 m_resimManager.SetPosition(m_graphModulePosition);
+                m_timingsManager.SetPosition(m_graphModulePosition);
             }
         }
 
@@ -266,6 +271,14 @@ namespace Tayx.Graphy {
             set {
                 m_resimModuleState = value;
                 m_resimManager.SetState(m_resimModuleState);
+            }
+        }
+        
+        public ModuleState TimingsModuleState {
+            get { return m_timingsModuleState; }
+            set {
+                m_timingsModuleState = value;
+                m_timingsManager.SetState(m_timingsModuleState);
             }
         }
 
@@ -704,6 +717,7 @@ namespace Tayx.Graphy {
                     m_audioManager.RestorePreviousState();
                     m_advancedData.RestorePreviousState();
                     m_resimManager.RestorePreviousState();
+                    m_timingsManager.RestorePreviousState();
 
                     m_active = true;
                 }
@@ -720,6 +734,7 @@ namespace Tayx.Graphy {
                 m_audioManager.SetState(ModuleState.OFF);
                 m_advancedData.SetState(ModuleState.OFF);
                 m_resimManager.SetState(ModuleState.OFF);
+                m_timingsManager.SetState(ModuleState.OFF);
 
                 m_active = false;
             }
@@ -744,6 +759,7 @@ namespace Tayx.Graphy {
             m_audioManager = GetComponentInChildren(typeof(G_AudioManager), true) as G_AudioManager;
             m_advancedData = GetComponentInChildren(typeof(G_AdvancedData), true) as G_AdvancedData;
             m_resimManager = GetComponentInChildren(typeof(G_ResimManager), true) as G_ResimManager;
+            m_timingsManager = GetComponentInChildren(typeof(G_TimingsManager), true) as G_TimingsManager;
 
             m_fpsManager.SetPosition(m_graphModulePosition);
             m_ramManager.SetPosition(m_graphModulePosition);
