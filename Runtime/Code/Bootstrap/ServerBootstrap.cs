@@ -286,6 +286,7 @@ public class ServerBootstrap : MonoBehaviour
 			}
 			this.airshipJWT = annotations["JWT"];
 			UnityWebRequestProxyHelper.ProxyAuthCredentials = this.airshipJWT;
+			InternalHttpManager.authTokenSetTaskCompletionSource.SetResult(true);
 			// Debug.Log("Airship JWT:");
 			// Debug.Log(airshipJWT);
 

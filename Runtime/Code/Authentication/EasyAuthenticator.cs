@@ -190,8 +190,9 @@ namespace Code.Authentication {
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
                 this.connectionCounter++;
                 if (this.connectionCounter == 1 && loginMessage.editorUserId != null) {
+                    string userId = InternalHttpManager.editorUserId ?? (this.connectionCounter + "");
                     tcs.SetResult(new UserData() {
-                        uid = InternalHttpManager.editorUserId,
+                        uid = userId,
                         username = loginMessage.editorUsername,
                         orgRoleName = "Owner",
                         profileImageId = loginMessage.editorProfileImageId,
