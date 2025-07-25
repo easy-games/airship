@@ -128,7 +128,6 @@ namespace Code.Authentication {
         }
 
         private void Client_OnServerStartupFailure(ServerStartupFailureMessage message) {
-            Debug.LogWarning($"[Client] Received ServerStartupFailureMessage: {message.reason}");
             TransferManager.Instance.Disconnect(true, message.reason);
         }
 

@@ -496,42 +496,19 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void ShutdownDueToAssetFailure(int exitCode = 1) {
-		// Immediately send Agones shutdown to prevent new players from joining
-		if (agones && !this.isAgonesShutdownTriggered) {
-			this.isAgonesShutdownTriggered = true;
-			agones.Shutdown();
-			Debug.LogWarning("[Airship]: Sent Agones shutdown command to prevent new connections.");
-		}
-		
-		// Always do 10-second notification period in case users are still connecting
-		int currentConnections = NetworkServer.connections?.Count ?? 0;
-		Debug.LogWarning($"[Airship]: Asset download failed. Currently {currentConnections} players connected. Starting 10-second notification period for any connecting users.");
-		StartCoroutine(NotifyPlayersAndShutdown(exitCode));
-	}
-	
-	private IEnumerator NotifyPlayersAndShutdown(int exitCode) {
-		var message = new ServerStartupFailureMessage {
-			reason = "Server failed to download required game assets. Please try connecting again in a few moments.\n\nIf you are the game developer, ensure your game / packages have all been properly deployed.\n\nCheck the error console in the Airship Create portal for more details.",
-		};
-		
-		// Send messages every second for 10 seconds
-		for (int i = 0; i < 10; i++) {
-			if (NetworkServer.connections != null && NetworkServer.connections.Count > 0) {
-				int messagesSent = 0;
-				foreach (var connection in NetworkServer.connections.Values) {
-					if (connection != null) {
-						connection.Send(message);
-						messagesSent++;
-					}
-				}
-				Debug.LogWarning($"[Server] Notification round {i + 1}/10: Sent {messagesSent} ServerStartupFailureMessages");
-			}
+		if (NetworkServer.connections != null && NetworkServer.connections.Count > 0) {
+			var message = new ServerStartupFailureMessage {
+				reason = "Server failed to download required game assets.\n\nIf you are the game developer, ensure your game / packages have all been properly deployed.\n\nCheck the error console in the Airship Create portal for more details.",
+			};
 			
-			yield return new WaitForSeconds(1.0f);
+			foreach (var connection in NetworkServer.connections.Values) {
+				if (connection != null) {
+					connection.Send(message);
+				}
+			}
 		}
-		
-		Debug.LogWarning("[Airship]: 10-second notification period complete. Shutting down now.");
-		Application.Quit(exitCode);
+
+		ShutdownInternal(exitCode);
 	}
 
 	public void Shutdown()
