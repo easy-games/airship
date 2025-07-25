@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using Agones;
 using Agones.Model;
 using Code.Analytics;
+using Code.Authentication;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
@@ -429,7 +430,15 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsEditor()) {
 			BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl, false,
 				(res) => {
-					downloadComplete = true;
+					if (!res)
+					{
+						Debug.LogWarning("[Airship]: Failed to download required files. See above logs for details. Shutting down server.");
+						ShutdownDueToAssetFailure(1);
+					}
+					else
+					{
+						downloadComplete = true;
+					}
 				});
 		} else {
 			downloadComplete = true;
@@ -477,13 +486,34 @@ public class ServerBootstrap : MonoBehaviour
         isServerReady = true;
         OnServerReady?.Invoke();
 	}
-
-	public void Shutdown() {
+	
+	private void ShutdownInternal(int exitCode = 0) {
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
 			agones.Shutdown();
-			Application.Quit();
+			Application.Quit(exitCode);
 		}
+	}
+
+	private void ShutdownDueToAssetFailure(int exitCode = 1) {
+		if (NetworkServer.connections != null && NetworkServer.connections.Count > 0) {
+			var message = new ServerStartupFailureMessage {
+				reason = "Server failed to download required game assets.\n\nIf you are the game developer, ensure your game / packages have all been properly published.\n\nCheck the error console in the Airship Create portal for more details.",
+			};
+			
+			foreach (var connection in NetworkServer.connections.Values) {
+				if (connection != null) {
+					connection.Send(message);
+				}
+			}
+		}
+
+		ShutdownInternal(exitCode);
+	}
+
+	public void Shutdown()
+	{
+		ShutdownInternal(0);
 	}
 
 	/**
