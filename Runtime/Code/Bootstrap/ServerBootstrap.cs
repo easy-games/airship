@@ -509,12 +509,11 @@ public class ServerBootstrap : MonoBehaviour
 			
 			int messagesSent = 0;
 			foreach (var connection in NetworkServer.connections.Values) {
-				if (connection != null && connection.isReady) {
+				if (connection != null)
+				{
 					Debug.LogWarning($"[Server] Sending ServerStartupFailureMessage to connection {connection.connectionId}");
 					connection.Send(message);
 					messagesSent++;
-				} else {
-					Debug.LogWarning($"[Server] Skipping connection {connection?.connectionId} - not ready or null");
 				}
 			}
 			Debug.LogWarning($"[Server] Sent {messagesSent} ServerStartupFailureMessages");
