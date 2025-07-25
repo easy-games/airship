@@ -20,6 +20,8 @@ namespace Code.Authentication {
         public string editorUserId;
         public string editorUsername;
         public string editorProfileImageId;
+
+        public string passkey;
     }
     public struct LoginResponseMessage : NetworkMessage
     {
@@ -32,10 +34,23 @@ namespace Code.Authentication {
         public string reason;
     }
 
+    public struct ServerStartupFailureMessage : NetworkMessage {
+        public string reason;
+    }
+
     public class EasyAuthenticator : NetworkAuthenticator {
+        private string passkey = "empty";
+        
         readonly HashSet<NetworkConnection> connectionsPendingDisconnect = new HashSet<NetworkConnection>();
 
         public int connectionCounter = 0;
+
+        private void Awake() {
+            TextAsset passkeyTextFile = Resources.Load<TextAsset>("ConnectPassKey");
+            if (passkeyTextFile) {
+                this.passkey = passkeyTextFile.text;
+            }
+        }
 
         public override void OnStartServer() {
             this.connectionCounter = 0;
@@ -46,6 +61,7 @@ namespace Code.Authentication {
 
         public override async void OnStartClient() {
             NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
+            NetworkClient.RegisterHandler<ServerStartupFailureMessage>(Client_OnServerStartupFailure, false);
 
             //Listen to response from server.
             NetworkClient.RegisterHandler<LoginResponseMessage>(Client_OnLoginResponseMessage, false);
@@ -53,6 +69,7 @@ namespace Code.Authentication {
 
         public override void OnStopClient() {
             NetworkClient.UnregisterHandler<KickMessage>();
+            NetworkClient.UnregisterHandler<ServerStartupFailureMessage>();
             NetworkClient.UnregisterHandler<LoginResponseMessage>();
         }
 
@@ -72,6 +89,7 @@ namespace Code.Authentication {
                         editorUserId = EditorAuthManager.localUser.uid,
                         editorUsername = EditorAuthManager.localUser.username,
                         editorProfileImageId = EditorAuthManager.localUser.profileImageId,
+                        passkey = this.passkey,
                     });
                     return;
                 }
@@ -91,6 +109,7 @@ namespace Code.Authentication {
                         NetworkClient.Send(new LoginMessage {
                             authToken = authToken,
                             playerVersion = AirshipConst.playerVersion,
+                            passkey = this.passkey,
                         });
                         return;
                     }
@@ -100,11 +119,16 @@ namespace Code.Authentication {
             NetworkClient.Send(new LoginMessage {
                 authToken = authToken,
                 playerVersion = AirshipConst.playerVersion,
+                passkey = this.passkey,
             });
         }
 
         private void Client_OnKickBroadcast(KickMessage kickMessage) {
             TransferManager.Instance.Disconnect(true, kickMessage.reason);
+        }
+
+        private void Client_OnServerStartupFailure(ServerStartupFailureMessage message) {
+            TransferManager.Instance.Disconnect(true, message.reason);
         }
 
         /// <summary>
@@ -114,6 +138,11 @@ namespace Code.Authentication {
         /// <param name="loginData"></param>
         private async void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData) {
             if (connectionsPendingDisconnect.Contains(conn)) return;
+
+            if (loginData.passkey != this.passkey) {
+                this.RejectConnection(conn, "Invalid passkey.",  true);
+                return;
+            }
 
 #if UNITY_SERVER
             Debug.Log("Authenticating " + conn);
@@ -171,10 +200,11 @@ namespace Code.Authentication {
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
                 this.connectionCounter++;
                 if (this.connectionCounter == 1 && loginMessage.editorUserId != null) {
+                    string userId = InternalHttpManager.editorUserId ?? (this.connectionCounter + "");
                     tcs.SetResult(new UserData() {
-                        uid = InternalHttpManager.editorUserId,
+                        uid = userId,
                         username = loginMessage.editorUsername,
-                        orgRoleName = "Dev",
+                        orgRoleName = "Owner",
                         profileImageId = loginMessage.editorProfileImageId,
                     });
                     return await tcs.Task;
@@ -182,7 +212,7 @@ namespace Code.Authentication {
                 tcs.SetResult(new UserData() {
                     uid = this.connectionCounter + "",
                     username = "Player" + this.connectionCounter,
-                    orgRoleName = "Dev",
+                    orgRoleName = "Owner",
                     profileImageId = string.Empty,
                     fullTransferPacket = "{}"
                 });

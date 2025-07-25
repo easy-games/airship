@@ -25,7 +25,7 @@ public class LuauScript : MonoBehaviour {
 	public AirshipScript script;
 
 	public IntPtr thread;
-	public LuauContext context = LuauContext.Game;
+	[NonSerialized] public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
 	
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

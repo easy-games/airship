@@ -272,9 +272,16 @@ public class LoginApp : MonoBehaviour {
             this.steamLoginButton.SetLoading(false);
             return;
         }
-
+        
+        // Different login route is required for the playtest app.
+        var prodApp = true;
+#if STEAMWORKS_NET
+        prodApp = SteamUtils.GetAppID().m_AppId == 2381730;
+#else
+        print("Pressed login with steam but STEAMWORKS_NET is not enabled.");
+#endif
         RestClient.Get(new RequestHelper() {
-            Uri = AirshipPlatformUrl.gameCoordinator + "/auth/steam/in-game",
+            Uri = AirshipPlatformUrl.gameCoordinator + (prodApp ? "/auth/steam/in-game" : "/auth/steam/in-game-playtest"),
             Headers = new Dictionary<string, string>() {
                 { "Authorization", steamToken }
             },

@@ -356,9 +356,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (crc32 != diff.crc32) {
                 // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
                 // using this snapshot as the base.
-                Debug.LogWarning($"Applying diff failed CRC check. This may happen due to poor network connection. Base tick: {diff.baseTick}");
-                Debug.Log(this);
-                Debug.Log(snapshot);
+                Debug.LogWarning($"Applying diff failed CRC check. This may happen due to poor network conditions.");
                 return null;
             }
 
@@ -377,17 +375,9 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(this.tick);
             writer.Write(this.lastProcessedCommand);
             
-            // Floating point issue make it difficult to use these values directly. We normalize them
-            // and compress to short. We need to normalize since these values can be larger than a short.
-            var normalPos = this.position.normalized;
-            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.x));
-            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.y));
-            writer.Write(NetworkSerializationUtil.CompressToShort(normalPos.z));
-            var normalVel = this.velocity.normalized;
-            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.x));
-            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.y));
-            writer.Write(NetworkSerializationUtil.CompressToShort(normalVel.z));
-            
+            // We don't include position and velocity because we send the full value for those instead of a diff. The 
+            // floating point representation of those numbers also makes it challenging to get a consistent CRC.
+
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.y));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.z));

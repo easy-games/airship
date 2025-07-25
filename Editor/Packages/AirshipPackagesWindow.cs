@@ -238,7 +238,7 @@ namespace Editor.Packages {
                 var style = new GUIStyle(EditorStyles.textField);
                 
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
-                EditorGUILayout.LabelField("Example: @Easy/Survival");
+                EditorGUILayout.LabelField("Example: @Easy/VoxelWorld");
                 EditorGUILayout.Space(4);
 
                 var addPackagePressed = GUILayout.Button("Add Package", GUILayout.Width(150));
@@ -288,7 +288,7 @@ namespace Editor.Packages {
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
                 this.createPackageId = EditorGUILayout.TextField("Package ID", this.createPackageId);
-                EditorGUILayout.LabelField("Example: @Easy/Survival");
+                EditorGUILayout.LabelField("Example: @Easy/VoxelWorld");
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Create Package", GUILayout.Width(150))) {
                     EditorCoroutineUtility.StartCoroutineOwnerless(CreateNewLocalSourcePackage(this.createPackageId));

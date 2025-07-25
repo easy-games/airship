@@ -316,7 +316,7 @@ using Object = UnityEngine.Object;
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
-                    WriteOnlyChanged = true,
+                    // WriteOnlyChanged = true,
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                     Incremental = EditorIntegrationsConfig.instance.typescriptIncremental,
                 };

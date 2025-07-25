@@ -176,7 +176,7 @@ namespace Code.Player {
 			var go = Instantiate(this.playerPrefab, Instance.transform.parent);
 
 			var playerInfo = go.GetComponent<PlayerInfo>();
-			playerInfo.Init(connectionId, userId, username, profilePictureId, string.Empty);
+			playerInfo.Init(connectionId, userId, username, profilePictureId, string.Empty, string.Empty);
 
 			// var identity = go.GetComponent<NetworkIdentity>();
 			NetworkServer.Spawn(go);
@@ -217,7 +217,7 @@ namespace Code.Player {
 // #if UNITY_SERVER || true
 // 				Debug.Log($"Initializing Player as {userData.username} owned by " + conn);
 // #endif
-				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId, userData.orgRoleName);
+				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId, userData.orgRoleName, userData.fullTransferPacket);
 			} else {
 #if UNITY_SERVER || true
 				Debug.Log("Missing UserData for " + conn);
