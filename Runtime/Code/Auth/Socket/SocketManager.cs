@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Airship.DevConsole;
 using Code.Auth;
 using Code.Http.Internal;
 using Code.Platform.Shared;
@@ -46,6 +47,21 @@ public class SocketManager : Singleton<SocketManager> {
 
     private void Awake() {
         DontDestroyOnLoad(this);
+    }
+
+    private void Start() {
+        DevConsole.AddCommand(Command.Create<string>("join", "", "Join a game from given gameId",
+            Parameter.Create("gameId", "Game ID of the target game."), async (gameId) => {
+                Debug.Log("Requesting transfer to game " + gameId + " ...");
+                var packet = $"{{\"gameId\": \"{gameId}\"}}";
+                var res = await InternalHttpManager.PostAsync(AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/self", packet);
+                if (res.success) {
+                    Debug.Log("<color=green>Joining...</color>");
+                }
+                else {
+                    Debug.LogError("Failed to join game: " + res.error);
+                }
+            }));
     }
 
     public static async Task<bool> ConnectAsyncInternal() {

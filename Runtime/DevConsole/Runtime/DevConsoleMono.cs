@@ -27,6 +27,7 @@ using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
 using System.IO;
+using UnityEngine.Networking;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 #if INPUT_SYSTEM_INSTALLED
@@ -1790,96 +1791,6 @@ namespace Airship.DevConsole
                 this.loggingEnabled = false;
                 this.Log("<color=red>Console logging has been disabled.</color>");
             }));
-
-            AddCommand(Command.Create<string>(
-                "enum",
-                "",
-                "Display information about a specified enum",
-                Parameter.Create("enumName", "Name of the enum to get information about (case-sensitive)"),
-                s =>
-                {
-                    // Check if the enum type was cached
-                    Type enumType = _cacheEnumTypes.FirstOrDefault(t => t.Name.Equals(s));
-
-#if INPUT_SYSTEM_INSTALLED
-                    // Special case for Key
-                    if (s.Equals("Key"))
-                    {
-                        enumType = typeof(Key);
-                    }
-#endif
-
-                    if (enumType == null)
-                    {
-                        List<Type> options = new List<Type>();
-
-                        // Search all loaded assemblies for the enum
-                        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-                        {
-                            enumType = assembly.GetTypes()
-                                .SelectMany(t => t.GetMembers())
-                                .Union(assembly.GetTypes())
-                                .FirstOrDefault(t => t.ReflectedType != null && t.ReflectedType.IsEnum && (t.ReflectedType.Name.Equals(s) || s.Equals($"{t.ReflectedType.Namespace}.{t.ReflectedType.Name}")))
-                                ?.ReflectedType;
-
-                            if (enumType != null)
-                            {
-                                if (s.Equals($"{enumType.Namespace}.{enumType.Name}"))
-                                {
-                                    options = new List<Type>() { enumType };
-                                    break;
-                                }
-
-                                options.Add(enumType);
-                            }
-                        }
-
-                        if (options.Count > 1)
-                        {
-                            LogError($"Multiple results found: {string.Join(", ", options.Select(x => $"{x.Namespace}.{x.Name}"))}.");
-                            return;
-                        }
-
-                        else if (options.Count == 1)
-                        {
-                            // Select the first type
-                            enumType = options.FirstOrDefault();
-
-                            // Cache the type
-                            _cacheEnumTypes.Add(enumType);
-                            if (_cacheEnumTypes.Count > MaxCachedEnumTypes)
-                            {
-                                _cacheEnumTypes.RemoveAt(0);
-                            }
-                        }
-
-                        else
-                        {
-                            LogError($"Could not find enum type with the specified name: \"{s}\"");
-                            return;
-                        }
-                    }
-
-                    LogSeperator($"{enumType.Namespace}.{enumType.Name} ({enumType.GetEnumUnderlyingType().Name}){(enumType.GetCustomAttribute(typeof(FlagsAttribute)) == null ? "" : " [Flags]")}");
-
-                    FieldInfo[] values = enumType.GetFields();
-                    string formattedValues = string.Empty;
-                    bool first = true;
-                    for (int i = 0; i < values.Length; i++)
-                    {
-                        if (values[i].Name.Equals("value__"))
-                        {
-                            continue;
-                        }
-
-                        formattedValues += $"{(first ? "" : "\n")}{values[i].Name} = {values[i].GetRawConstantValue()}";
-                        first = false;
-                    }
-                    Log(formattedValues);
-
-                    LogSeperator();
-                }
-            ));
 
             AddCommand(Command.Create(
                 "commands",
