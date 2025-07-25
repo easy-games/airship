@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Airship.DevConsole;
 using Code.Auth;
 using Code.Http.Internal;
+using Code.Network;
 using Code.Platform.Shared;
 using Code.Util;
 using Luau;
@@ -61,6 +62,13 @@ public class SocketManager : Singleton<SocketManager> {
                 else {
                     Debug.LogError("Failed to join game: " + res.error);
                 }
+            }));
+        
+        DevConsole.AddCommand(Command.Create<string>("ping", "", "Measure ping to an airship server cluster",
+            Parameter.Create("Ping Server IP", "IP of the Airship cluster ping server."), (serverIp) => {
+               UdpPingTool.GetPing(serverIp, 1000).ContinueWith((result) => {
+                   Debug.Log($"Latency to {serverIp.Trim()} is {result.Result}ms");
+               });
             }));
     }
 
