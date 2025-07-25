@@ -220,7 +220,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				}
 
 				if (!success && RunCore.IsServer()) {
-					throw new Exception("[SEVERE] Server failed to download code.zip. Shutting down!");
+					onComplete?.Invoke(false);
+					return false;
 				}
 
 				if (!success && RunCore.IsClient()) {

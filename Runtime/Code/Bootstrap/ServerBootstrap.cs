@@ -430,7 +430,7 @@ public class ServerBootstrap : MonoBehaviour
 				(res) => {
 					if (!res)
 					{
-						Debug.LogError("[Airship]: Failed to download packages. Shutting down server.");
+						Debug.LogWarning("[Airship]: Failed to download required files. See above logs for details. Shutting down server.");
 						ShutdownInternal(1);
 					}
 					else
