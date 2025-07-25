@@ -182,8 +182,8 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		else {
 			var isPackage = scriptPath.StartsWith("Assets/AirshipPackage");
 			if (script == null) {
-				var message = isPackage ? "- have you published this package?" : "- have you done a full publish of this game?";
-				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) {message}", gameObject);
+				var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
+				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) - {suggestion}", gameObject);
 			}
 			else {
 				Debug.LogError($"Could not find compiled script in code archive '{script.m_path.ToLower()}' for GameObject {gameObject.name} (Missing Runtime Script Code)", gameObject);
