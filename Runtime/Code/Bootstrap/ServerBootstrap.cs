@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using Agones;
 using Agones.Model;
 using Code.Analytics;
+using Code.Authentication;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
@@ -432,7 +433,7 @@ public class ServerBootstrap : MonoBehaviour
 					if (!res)
 					{
 						Debug.LogWarning("[Airship]: Failed to download required files. See above logs for details. Shutting down server.");
-						ShutdownInternal(1);
+						ShutdownDueToAssetFailure(1);
 					}
 					else
 					{
@@ -492,6 +493,29 @@ public class ServerBootstrap : MonoBehaviour
 			agones.Shutdown();
 			Application.Quit(exitCode);
 		}
+	}
+
+	private void ShutdownDueToAssetFailure(int exitCode = 1) {
+		// Check if there are any connected players
+		bool hasConnectedPlayers = NetworkServer.connections != null && NetworkServer.connections.Count > 0;
+		
+		if (hasConnectedPlayers) {
+			Debug.LogWarning($"[Airship]: Asset download failed but {NetworkServer.connections.Count} players are connected. Notifying players before shutdown.");
+			
+			// Send notification to all connected players
+			var message = new ServerStartupFailureMessage {
+				reason = "Server failed to download required game assets and must shut down. Please try connecting again in a few moments."
+			};
+			
+			foreach (var connection in NetworkServer.connections.Values) {
+				if (connection != null && connection.isReady) {
+					connection.Send(message);
+				}
+			}
+		}
+
+		// Proceed with immediate shutdown
+		ShutdownInternal(exitCode);
 	}
 
 	public void Shutdown()

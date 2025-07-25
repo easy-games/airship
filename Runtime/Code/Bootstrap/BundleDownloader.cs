@@ -267,7 +267,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					}
 					if (RunCore.IsServer())
 					{
-						throw new Exception("[SEVERE] Server failed to download code.zip. Shutting down!");
+						onComplete?.Invoke(false);
+						return false;
 					}
 				} else {
 					File.WriteAllText(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"), "success");

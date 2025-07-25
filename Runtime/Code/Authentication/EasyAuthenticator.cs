@@ -34,6 +34,10 @@ namespace Code.Authentication {
         public string reason;
     }
 
+    public struct ServerStartupFailureMessage : NetworkMessage {
+        public string reason;
+    }
+
     public class EasyAuthenticator : NetworkAuthenticator {
         private string passkey = "empty";
         
@@ -57,6 +61,7 @@ namespace Code.Authentication {
 
         public override async void OnStartClient() {
             NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
+            NetworkClient.RegisterHandler<ServerStartupFailureMessage>(Client_OnServerStartupFailure, false);
 
             //Listen to response from server.
             NetworkClient.RegisterHandler<LoginResponseMessage>(Client_OnLoginResponseMessage, false);
@@ -64,6 +69,7 @@ namespace Code.Authentication {
 
         public override void OnStopClient() {
             NetworkClient.UnregisterHandler<KickMessage>();
+            NetworkClient.UnregisterHandler<ServerStartupFailureMessage>();
             NetworkClient.UnregisterHandler<LoginResponseMessage>();
         }
 
@@ -119,6 +125,10 @@ namespace Code.Authentication {
 
         private void Client_OnKickBroadcast(KickMessage kickMessage) {
             TransferManager.Instance.Disconnect(true, kickMessage.reason);
+        }
+
+        private void Client_OnServerStartupFailure(ServerStartupFailureMessage message) {
+            TransferManager.Instance.Disconnect(true, message.reason);
         }
 
         /// <summary>
