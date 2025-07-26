@@ -283,7 +283,7 @@ public class LoginApp : MonoBehaviour {
         RestClient.Get(new RequestHelper() {
             Uri = AirshipPlatformUrl.gameCoordinator + (prodApp ? "/auth/steam/in-game" : "/auth/steam/in-game-playtest"),
             Headers = new Dictionary<string, string>() {
-                { "Authorization", steamToken }
+                { "steam-token", steamToken }
             },
         }).Then((gcRes) => {
             print("gc response: " + gcRes.Text);
