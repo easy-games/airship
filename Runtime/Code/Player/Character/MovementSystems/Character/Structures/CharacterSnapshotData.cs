@@ -73,36 +73,36 @@ namespace Code.Player.Character.MovementSystems.Character
             var isGroundedEqual = isGrounded == other.isGrounded;
             var stateEqual = state == other.state;
 
-            if (!lastProcessedCommandEqual)
-                message += $"lastProcessedCommand: {this.lastProcessedCommand} != {other.lastProcessedCommand}\n";
-            if (!positionEqual)
-                message += $"position: {this.position} != {other.position}\n";
-            if (!velocityEqual)
-                message += $"velocity: {this.velocity} != {other.velocity}\n";
-            if (!currentSpeedEqual)
-                message += $"currentSpeed: {this.currentSpeed} != {other.currentSpeed}\n";
-            if (!speedModifierEqual)
-                message += $"speedModifier: {this.speedModifier} != {other.speedModifier}\n";
-            if (!inputDisabledEqual)
-                message += $"inputDisabled: {inputDisabled} != {other.inputDisabled}\n";
-            if (!isFlyingEqual)
-                message += $"isFlying: {isFlying} != {other.isFlying}\n";
-            if (!isSprintingEqual)
-                message += $"isSprinting: {isSprinting} != {other.isSprinting}\n";
-            if (!jumpCountEqual)
-                message += $"jumpCount: {jumpCount} != {other.jumpCount}\n";
-            if (!airborneFromImpulseEqual)
-                message += $"airborneFromImpulse: {airborneFromImpulse} != {other.airborneFromImpulse}\n";
-            if (!alreadyJumpedEqual)
-                message += $"alreadyJumped: {alreadyJumped} != {other.alreadyJumped}\n";
-            if (!isCrouchingEqual)
-                message += $"prevCrouch: {isCrouching} != {other.isCrouching}\n";
-            if (!prevStepUpEqual)
-                message += $"prevStepUp: {prevStepUp} != {other.prevStepUp}\n";
-            if (!isGroundedEqual)
-                message += $"prevGrounded: {isGrounded} != {other.isGrounded}\n";
-            if (!stateEqual)
-                message += $"state: {state} != {other.state}\n";
+            // if (!lastProcessedCommandEqual)
+            //     message += $"lastProcessedCommand: {this.lastProcessedCommand} != {other.lastProcessedCommand}\n";
+            // if (!positionEqual)
+            //     message += $"position: {this.position} != {other.position}\n";
+            // if (!velocityEqual)
+            //     message += $"velocity: {this.velocity} != {other.velocity}\n";
+            // if (!currentSpeedEqual)
+            //     message += $"currentSpeed: {this.currentSpeed} != {other.currentSpeed}\n";
+            // if (!speedModifierEqual)
+            //     message += $"speedModifier: {this.speedModifier} != {other.speedModifier}\n";
+            // if (!inputDisabledEqual)
+            //     message += $"inputDisabled: {inputDisabled} != {other.inputDisabled}\n";
+            // if (!isFlyingEqual)
+            //     message += $"isFlying: {isFlying} != {other.isFlying}\n";
+            // if (!isSprintingEqual)
+            //     message += $"isSprinting: {isSprinting} != {other.isSprinting}\n";
+            // if (!jumpCountEqual)
+            //     message += $"jumpCount: {jumpCount} != {other.jumpCount}\n";
+            // if (!airborneFromImpulseEqual)
+            //     message += $"airborneFromImpulse: {airborneFromImpulse} != {other.airborneFromImpulse}\n";
+            // if (!alreadyJumpedEqual)
+            //     message += $"alreadyJumped: {alreadyJumped} != {other.alreadyJumped}\n";
+            // if (!isCrouchingEqual)
+            //     message += $"prevCrouch: {isCrouching} != {other.isCrouching}\n";
+            // if (!prevStepUpEqual)
+            //     message += $"prevStepUp: {prevStepUp} != {other.prevStepUp}\n";
+            // if (!isGroundedEqual)
+            //     message += $"prevGrounded: {isGrounded} != {other.isGrounded}\n";
+            // if (!stateEqual)
+            //     message += $"state: {state} != {other.state}\n";
 
             var same =
                 lastProcessedCommandEqual &&
@@ -127,10 +127,10 @@ namespace Code.Player.Character.MovementSystems.Character
                 movement.compareResult = true;
                 movement.FireTsCompare(this, other);
                 same = movement.compareResult;
-                if (same == false) message += $"customData: a != b";
+                // if (same == false) message += $"customData: a != b";
             }
             
-            if (message.Length != 0) Debug.Log(message.TrimEnd());
+            // if (message.Length != 0) Debug.Log(message.TrimEnd());
             return same;
         }
 
@@ -356,7 +356,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (crc32 != diff.crc32) {
                 // We return null here since we are essentially unable to construct a correct snapshot from the provided diff
                 // using this snapshot as the base.
-                Debug.LogWarning($"Applying diff failed CRC check. This may happen due to poor network conditions.");
+                // Debug.LogWarning($"Applying diff failed CRC check. This may happen due to poor network conditions.");
                 return null;
             }
 
