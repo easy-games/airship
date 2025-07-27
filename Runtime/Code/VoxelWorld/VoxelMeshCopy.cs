@@ -399,6 +399,12 @@ namespace Assets.Airship.VoxelRenderer {
                     }
 
                     var srcMat = filter.gameObject.GetComponent<MeshRenderer>().sharedMaterials[subMeshIndex];
+                    if (!srcMat) {
+                        Debug.LogError("Unable to find material index: " + subMeshIndex + " on submesh: " +
+                                       subMeshIndex + " on object: " + filter.gameObject.name);
+                        continue;
+                    }
+
                     surf.meshMaterial = srcMat;
                     surf.meshMaterialName = srcMat.name;
                     surf.meshMaterialId = srcMat.GetInstanceID();
