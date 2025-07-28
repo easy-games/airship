@@ -10,7 +10,8 @@ using UnityEngine;
 
 namespace Code.Analytics
 {
-    record PostArtifactResponse
+    [Serializable]
+    public class PostArtifactResponse
     {
         public string id { get; set; }
         public string url { get; set; }
@@ -30,18 +31,22 @@ namespace Code.Analytics
         public void ButtonClick()
         {
             Debug.Log("[ClientFolderUploader] Button clicked, starting upload...");
-            Upload().ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                {
-                    Debug.LogError($"[ClientFolderUploader] Upload failed: {task.Exception?.Message}");
-                }
-                else
-                {
-                    Debug.Log("[ClientFolderUploader] Upload completed successfully!");
-                }
-            });
+            _ = UploadAsync();
         }
+
+        private async Task UploadAsync()
+        {
+            try
+            {
+                await Upload();
+                Debug.Log("[ClientFolderUploader] Upload completed successfully!");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ClientFolderUploader] Upload failed: {ex.Message}");
+            }
+        }
+
         public async Task Upload()
         {
             Debug.Log("[ClientFolderUploader] Starting log upload process...");
@@ -65,8 +70,40 @@ namespace Code.Analytics
                 Debug.Log($"[ClientFolderUploader] - Player.log: {playerLogFile} (exists: {File.Exists(playerLogFile)})");
                 Debug.Log($"[ClientFolderUploader] - Player-prev.log: {playerPrevLogFile} (exists: {File.Exists(playerPrevLogFile)})");
 
-                Debug.Log("[ClientFolderUploader] Creating zip archive of log files...");
-                ZipFile.CreateFromDirectory(path, zipPath);
+                Debug.Log("[ClientFolderUploader] Creating zip archive of specific log files...");
+
+                try
+                {
+                    using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                    {
+                        var fileExists = false;
+                        if (File.Exists(playerLogFile))
+                        {
+                            fileExists = true;
+                            Debug.Log("[ClientFolderUploader] Adding Player.log to archive...");
+                            archive.CreateEntryFromFile(playerLogFile, "Player.log");
+                        }
+
+                        if (File.Exists(playerPrevLogFile))
+                        {
+                            fileExists = true;
+                            Debug.Log("[ClientFolderUploader] Adding Player-prev.log to archive...");
+                            archive.CreateEntryFromFile(playerPrevLogFile, "Player-prev.log");
+                        }
+
+                        if (!fileExists)
+                        {
+                            Debug.Log("[ClientFolderUploader] No log files found to send. Exiting.");
+                            return;
+                        }
+                    }
+                    Debug.Log("[ClientFolderUploader] Zip creation completed successfully");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[ClientFolderUploader] Zip creation failed: {ex.Message}");
+                    throw;
+                }
 
                 var contentType = "application/zip";
                 var contentLength = new FileInfo(zipPath).Length;
@@ -83,24 +120,29 @@ namespace Code.Analytics
                 Debug.Log($"[ClientFolderUploader] Request body: {JsonUtility.ToJson(body)}");
                 Debug.Log($"[ClientFolderUploader] Auth token present: {!String.IsNullOrEmpty(InternalHttpManager.authToken)}");
 
-
                 var url = $"{AirshipPlatformUrl.contentService}/artifacts/platform/signed-url";
 
-                PostArtifactResponse response;
+                Http.HttpResponse res;
                 if (!String.IsNullOrEmpty(InternalHttpManager.authToken))
                 {
                     Debug.Log($"[ClientFolderUploader] Making authenticated request to: {url}");
-                    var res = await HttpManager.PostAsync(url, JsonUtility.ToJson(body));
-                    Debug.Log($"[ClientFolderUploader] Signed URL response received (length: {res.data?.Length ?? 0})");
-                    response = JsonUtility.FromJson<PostArtifactResponse>(res.data);
+                    res = await HttpManager.PostAsync(url, JsonUtility.ToJson(body));
+
                 }
                 else
                 {
                     Debug.Log($"[ClientFolderUploader] Making internal request to: {url}");
-                    var res = await InternalHttpManager.PostAsync(url, JsonUtility.ToJson(body));
-                    Debug.Log($"[ClientFolderUploader] Signed URL response received (length: {res.data?.Length ?? 0})");
-                    response = JsonUtility.FromJson<PostArtifactResponse>(res.data);
+                    res = await InternalHttpManager.PostAsync(url, JsonUtility.ToJson(body));
                 }
+
+                if (res.statusCode < 200 || res.statusCode >= 300)
+                {
+                    Debug.LogError($"[ClientFolderUploader] Error response from server: {res.statusCode} - {res.error}");
+                    throw new Exception($"Failed to get signed URL: {res.error}");
+                }
+
+                Debug.Log($"[ClientFolderUploader] Signed URL response received (length: {res.data?.Length ?? 0})");
+                var response = JsonUtility.FromJson<PostArtifactResponse>(res.data);
 
                 Debug.Log($"[ClientFolderUploader] Upload URL received: {(response?.url?.Length > 100 ? response.url.Substring(0, 100) + "..." : response?.url ?? "null")}");
                 Debug.Log($"[ClientFolderUploader] Artifact ID: {response?.id}");
@@ -129,6 +171,5 @@ namespace Code.Analytics
                 throw;
             }
         }
-
     }
 }
