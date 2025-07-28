@@ -59,10 +59,12 @@ namespace Code.Analytics
                 Debug.Log($"[ClientFolderUploader] Request body: {JsonUtility.ToJson(body)}");
                 Debug.Log($"[ClientFolderUploader] Auth token present: {!String.IsNullOrEmpty(InternalHttpManager.authToken)}");
 
+
+                var url = $"{AirshipPlatformUrl.contentService}/artifacts/platform/signed-url";
+
                 PostArtifactResponse response;
                 if (!String.IsNullOrEmpty(InternalHttpManager.authToken))
                 {
-                    var url = $"{AirshipPlatformUrl.contentService}/artifacts/easy/signed-url/anonymous";
                     Debug.Log($"[ClientFolderUploader] Making authenticated request to: {url}");
                     var res = await HttpManager.PostAsync(url, JsonUtility.ToJson(body));
                     Debug.Log($"[ClientFolderUploader] Signed URL response received (length: {res.data?.Length ?? 0})");
@@ -70,7 +72,6 @@ namespace Code.Analytics
                 }
                 else
                 {
-                    var url = $"{AirshipPlatformUrl.contentService}/artifacts/easy/signed-url";
                     Debug.Log($"[ClientFolderUploader] Making internal request to: {url}");
                     var res = await InternalHttpManager.PostAsync(url, JsonUtility.ToJson(body));
                     Debug.Log($"[ClientFolderUploader] Signed URL response received (length: {res.data?.Length ?? 0})");
