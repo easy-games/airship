@@ -42,7 +42,7 @@ namespace Code.Analytics
                 var path = Path.GetDirectoryName(Application.consoleLogPath);
                 Debug.Log($"[ClientFolderUploader] Log directory path: {path}");
 
-                var zipPath = Path.Combine(path, "logs.zip");
+                var zipPath = Path.Combine(Application.temporaryCachePath, "logs.zip");
                 if (File.Exists(zipPath))
                 {
                     Debug.Log("[ClientFolderUploader] Existing logs.zip found, deleting...");
@@ -109,6 +109,9 @@ namespace Code.Analytics
                 }, null);
 
                 Debug.Log("[ClientFolderUploader] Upload completed successfully!");
+
+                Debug.Log("[ClientFolderUploader] Deleting zip file after upload...");
+                File.Delete(zipPath);
             }
             catch (Exception ex)
             {
