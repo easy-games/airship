@@ -134,17 +134,18 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             }
 
             if (VoxelWorldEditorToolBase.buttonActive) {
-                //If we're not in selection mode, disable the selection zone
+                // If we're not in selection mode, disable the selection zone
                 selection = world.GetComponentInChildren<SelectionZone>();
 
                 if (selection) {
-                    //Select the world
+                    // Select the world
                     Selection.activeGameObject = world.gameObject;
-                    //disable it
+
+                    // disable it
                     selection.gameObject.SetActive(false);
 
-                    //we used to destroy it
-                    //DestroyImmediate(selection.gameObject);
+                    // we used to destroy it
+                    // DestroyImmediate(selection.gameObject);
                 }
             }
 
@@ -158,7 +159,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             //gap
             EditorGUILayout.Space();
 
-            //Prefab
+            // Prefab
 
             var prefab = world.GetPrefabAt(world.highlightedBlockPos);
 
@@ -243,4 +244,5 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
         }
     }
 }
+
 #endif
