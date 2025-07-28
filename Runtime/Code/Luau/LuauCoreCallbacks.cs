@@ -1157,10 +1157,8 @@ public partial class LuauCore : MonoBehaviour {
     static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
         CurrentContext = context;
         
-        // if (s_shutdown) return 0;
         Marshal.WriteInt32(shouldYield, 0);
         if (!IsReady) {
-            Profiler.EndSample();
             return 0;
         }
 
@@ -1428,7 +1426,6 @@ public partial class LuauCore : MonoBehaviour {
             return returnCount;
         }
 
-        Profiler.BeginSample("LuauCore.InvokeMethod");
         try {
             returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
         }
@@ -1439,8 +1436,6 @@ public partial class LuauCore : MonoBehaviour {
         catch (Exception e) {
             return LuauError(thread,
                 "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
-        } finally {
-            Profiler.EndSample();
         }
 
         WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData.Array);
