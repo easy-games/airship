@@ -246,10 +246,6 @@ namespace Code.Network.StateSystem
                     if (commands.Length > 0) {
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                     }
-                    else {
-                        Debug.LogWarning(
-                            $"Sending no commands on interval. Last local tick: {clientLastSentLocalTick}. Local command history size: {this.inputHistory.Keys.Count}");
-                    }
                     
                     // print($"Sending {commands.Length} cmds to the server");
 
@@ -341,7 +337,7 @@ namespace Code.Network.StateSystem
             if (isServer && serverAuth) {
                 if (serverCommandBuffer.Count > serverCommandBufferTargetSize) {
                     serverCommandCatchUpRequired = serverCommandBuffer.Count - serverCommandBufferTargetSize;
-                    print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}");
+                    // print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}");
                 }
                 else {
                     serverCommandCatchUpRequired = 0;
@@ -352,7 +348,7 @@ namespace Code.Network.StateSystem
             if (isServer && !serverAuth) {
                 if (serverReceivedStateBuffer.Count > serverCommandBufferTargetSize) {
                     serverCommandCatchUpRequired = serverReceivedStateBuffer.Count - serverCommandBufferTargetSize;
-                    print($"State catchup required for {this.name}: {serverCommandCatchUpRequired}");
+                    // print($"State catchup required for {this.name}: {serverCommandCatchUpRequired}");
                 }
                 else {
                     serverCommandCatchUpRequired = 0;
@@ -518,18 +514,10 @@ namespace Code.Network.StateSystem
             var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
             var lagCompensatedTime = currentTime - totalBuffer;
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
-            // It seems like we can get better results by doing a combination of adding 1 send rate and/or 1 tick time
-            // This test was with .34 timescale and 1/40 send rate
-            // 12.9068027064583 - (13.1350901077098 - ((0.0275639141664629 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * .34) + 0.07352941)) = 0.00036983722
-            // 16.074496323404 - (16.296857560941 - ((0.0142610969939435 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00469036659
-            // 19.2368007725462 - (19.4586250708617 - ((0.0123929982200843 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + 0.025)) = 0.00149110826
-            // 22.5390862366273 - (22.7674515306122 - ((0.0122401664944862 * 2) + 0.0500000007450581 + 0.025 + (0.07352941 * 0.34) + 0.07352941 + .025)) = -0.00535555085
-            // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {NetworkServer.sendInterval} + ({Time.fixedUnscaledDeltaTime} * {commandsInOneInterval})))");
+            
             // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {commandBufferTime}))");
             // print($"CLIENTTIME - {lagCompensatedTime}");
             // print($"Rolling back to {lagCompensatedTick} using total rollback of {totalBuffer}");
-            // print(
-            //     $"{currentTime} - (({latency} * 2) + {bufferTime} + ({tickGenerationTime} * {commandsInOneInterval} * 2)) = {lagCompensatedTime} ({lagCompensatedTick})");
             this.OnSetSnapshot(lagCompensatedTick);
         }
 
@@ -574,12 +562,12 @@ namespace Code.Network.StateSystem
                     this.serverCommandBuffer.RemoveAt(0);
                     dropCount++;
                 }
-                print("Dropped " + dropCount + " command(s) from " + this.gameObject.name + " due to exceeding command buffer size.");
+                // print("Dropped " + dropCount + " command(s) from " + this.gameObject.name + " due to exceeding command buffer size.");
             }
 
             // Delay processing until we have at least one send interval worth of commands to process.
             if (this.serverCommandBuffer.Count == 0 || this.serverCommandBuffer.Count < Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
-                Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
+                // Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
                 this.stateSystem.Tick(null, tick, time, false);
                 return;
             }
@@ -606,11 +594,11 @@ namespace Code.Network.StateSystem
                         this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction *
                                                                         (NetworkServer.sendInterval /
                                                                          Time.fixedUnscaledDeltaTime))) {
-                        Debug.LogWarning("Missing command " + expectedNextCommandNumber +
-                                         " in the command buffer for " + this.name + ". Next command was: " +
-                                         command.commandNumber +
-                                         ". Predicted " +
-                                         (this.serverPredictedCommandCount + 1) + " command(s) so far.");
+                        // Debug.LogWarning("Missing command " + expectedNextCommandNumber +
+                        //                  " in the command buffer for " + this.name + ". Next command was: " +
+                        //                  command.commandNumber +
+                        //                  ". Predicted " +
+                        //                  (this.serverPredictedCommandCount + 1) + " command(s) so far.");
                         this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
                         command = this.lastProcessedCommand;
                         command.commandNumber = expectedNextCommandNumber;
@@ -632,8 +620,8 @@ namespace Code.Network.StateSystem
                 }
                 else {
                     // Ensure that we always tick the system even if there's no command to process.
-                    Debug.LogWarning($"No commands left for {this.name}. Last command processed: " +
-                                     this.lastProcessedCommand);
+                    // Debug.LogWarning($"No commands left for {this.name}. Last command processed: " +
+                    //                  this.lastProcessedCommand);
                     this.stateSystem.Tick(null, tick, time, false);
                     // we processed a command that never reached the server, advance so the associated
                     // command's tick result will be used to match up with state. The command that should have been used
@@ -648,10 +636,10 @@ namespace Code.Network.StateSystem
             } while (commandsProcessed < 1 + this.maxServerCommandCatchup && serverCommandCatchUpRequired > 0);
             // We add 1 to maxServerCommandCatchup because we always want to process at least 1 command per fixed update.
 
-            if (commandsProcessed > 1)
-            {
-                print("Processed " + commandsProcessed + " commands for " + this.gameObject.name + $". There are now {this.serverCommandBuffer.Count} commands in the buffer.");
-            }
+            // if (commandsProcessed > 1)
+            // {
+            //     print("Processed " + commandsProcessed + " commands for " + this.gameObject.name + $". There are now {this.serverCommandBuffer.Count} commands in the buffer.");
+            // }
         }
 
         public void AuthServerCaptureSnapshot(int tick, double time, bool replay)
@@ -676,7 +664,7 @@ namespace Code.Network.StateSystem
             {
                 // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
                 // that freshly spawned players will exist in rollback when they shouldn't but we won't handle that edge case for now.
-                Debug.LogWarning($"Set snapshot to {tick} resulted in null state for {this.name}. State history size is {this.stateHistory.Keys.Count}");
+                // Debug.LogWarning($"Set snapshot to {tick} resulted in null state for {this.name}. State history size is {this.stateHistory.Keys.Count}");
                 return;
             }
             this.stateSystem.SetCurrentState(state);
@@ -784,10 +772,10 @@ namespace Code.Network.StateSystem
             do
             {
                 statesProcessed++;
-                if (statesProcessed > 1)
-                {
-                    Debug.Log($"Processing additional client auth state for {this.name}. The server needs to catch up.");
-                }
+                // if (statesProcessed > 1)
+                // {
+                //     Debug.Log($"Processing additional client auth state for {this.name}. The server needs to catch up.");
+                // }
 
                 // Attempt to get a new state out of the buffer.
                 latestState = this.serverReceivedStateBuffer.Count > 0
@@ -1032,8 +1020,8 @@ namespace Code.Network.StateSystem
                 // On extremely high ping, this will mean that the local player will freeze in place while we wait for
                 // confirmation from the server.
                 // this.clientPausePrediction = true; // disabled for now
-                Debug.LogWarning(
-                    "We have a large number of unconfirmed commands to the server. Is there something wrong with the network or is the server lagging?");
+                // Debug.LogWarning(
+                //     "We have a large number of unconfirmed commands to the server. Is there something wrong with the network or is the server lagging?");
                 return;
             }
 
@@ -1059,7 +1047,7 @@ namespace Code.Network.StateSystem
                 // This may happen from time to time if the client clock gets out of sync with the server for a moment.
                 // Generally a situation like this is recoverable by processing an additional state snapshot from the
                 // server.
-                Debug.LogWarning("Couldn't find client predicted state for command " + state.lastProcessedCommand);
+                // Debug.LogWarning("Couldn't find client predicted state for command " + state.lastProcessedCommand);
                 return;
             }
 
@@ -1079,7 +1067,7 @@ namespace Code.Network.StateSystem
                 return;
             }
 
-            Debug.LogWarning("Misprediction for " + this.name + " on cmd#" + state.lastProcessedCommand + ". Requesting resimulation.");
+            // Debug.LogWarning("Misprediction for " + this.name + " on cmd#" + state.lastProcessedCommand + ". Requesting resimulation.");
             
             // We use the client prediction time so we can act like we got this right in our history. Server gives us
             // a time value in its local timeline so the provided time is not useful to us.

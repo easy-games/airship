@@ -52,25 +52,20 @@ public class MessagingManager : Singleton<MessagingManager>
 
     private static ServerBootstrap serverBootstrap;
 
-    private void Awake()
-    {
+    private void Awake() {
         DontDestroyOnLoad(this);
     }
 
-    private void Start()
-    {
+    private void Start() {
         MessagingManager.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
     }
 
-    public static async Task<bool> ConnectAsyncInternal()
-    {
-        if (RunCore.IsEditor())
-        {
+    public static async Task<bool> ConnectAsyncInternal() {
+        if (RunCore.IsEditor()) {
             return false;
         }
 
-        if (!MessagingManager.serverBootstrap)
-        {
+        if (!MessagingManager.serverBootstrap) {
             Debug.LogError("MessagingManager: ServerBootstrap not found in scene. Please ensure it is present.");
             return false;
         }
