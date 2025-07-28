@@ -176,6 +176,8 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             var def = GUI.backgroundColor;
 
+            GUILayout.Label("ID: " + world.GetVoxelIDAt(world.highlightedBlockPos));
+
             GUILayout.BeginHorizontal();
             if (blockDef != null) {
                 GUILayout.Label("Type: " + blockDef.definition.blockName);
@@ -213,6 +215,8 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 if (name == "") {
                     name = "Air";
                 }
+
+                name = "[" + id + "] " + name;
 
                 if (id == world.selectedBlockIndex) {
                     GUILayout.Button(name, selectedStyle);
