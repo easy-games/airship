@@ -16,6 +16,15 @@ namespace Code.Analytics
         public string url { get; set; }
     }
 
+    [Serializable]
+    public class RequestBody
+    {
+        public string type;
+        public string name;
+        public string contentType;
+        public long contentLength;
+    }
+
     public class ClientFolderUploader : MonoBehaviour
     {
         public void ButtonClick()
@@ -63,12 +72,12 @@ namespace Code.Analytics
                 var contentLength = new FileInfo(zipPath).Length;
                 Debug.Log($"[ClientFolderUploader] Zip file created successfully (size: {contentLength} bytes)");
 
-                var body = new
+                var body = new RequestBody
                 {
                     type = "CLIENT_DEBUG_ARCHIVE",
                     name = "PlayerLogs.zip",
-                    contentType,
-                    contentLength,
+                    contentType = contentType,
+                    contentLength = contentLength,
                 };
 
                 Debug.Log($"[ClientFolderUploader] Request body: {JsonUtility.ToJson(body)}");
