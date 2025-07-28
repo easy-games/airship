@@ -18,7 +18,22 @@ namespace Code.Analytics
 
     public class ClientFolderUploader : MonoBehaviour
     {
-        public async Task ButtonClick()
+        public void ButtonClick()
+        {
+            Debug.Log("[ClientFolderUploader] Button clicked, starting upload...");
+            Upload().ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    Debug.LogError($"[ClientFolderUploader] Upload failed: {task.Exception?.Message}");
+                }
+                else
+                {
+                    Debug.Log("[ClientFolderUploader] Upload completed successfully!");
+                }
+            });
+        }
+        public async Task Upload()
         {
             Debug.Log("[ClientFolderUploader] Starting log upload process...");
 
@@ -102,5 +117,6 @@ namespace Code.Analytics
                 throw;
             }
         }
+
     }
 }
