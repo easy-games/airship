@@ -178,6 +178,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipLongPress),
             typeof(DecalProjector),
             typeof(Time),
+            typeof(FrameTimingManager),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),
