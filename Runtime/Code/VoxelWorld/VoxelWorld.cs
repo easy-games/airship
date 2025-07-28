@@ -669,18 +669,32 @@ public partial class VoxelWorld : MonoBehaviour {
         return (value.GetVoxelAt(pos), value);
     }
 
-    public VoxelData 
+    /// <summary>
+    /// Get the byte packed voxel data at a 3D position
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <returns>byte data for voxel. 0 if empty</returns>
+    public ushort
         GetVoxelAt(Vector3 pos) {
-        Vector3Int posi = FloorInt(pos);
-        Vector3Int chunkKey = WorldPosToChunkKey(posi);
-        chunks.TryGetValue(chunkKey, out Chunk value);
+        var posi = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posi);
+        chunks.TryGetValue(chunkKey, out var value);
         if (value == null) {
             return 0;
-        } 
+        }
 
         return value.GetVoxelAt(posi);
     }
-    
+
+    /// <summary>
+    /// Get the block ID of a voxel at a 3D position
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <returns>returns the ID of the block. 0 if air or empty</returns>
+    public int GetVoxelIDAt(Vector3 pos) {
+        return VoxelDataToBlockId(GetVoxelAt(pos));
+    }
+
     public Color32 GetVoxelColorAt(Vector3 pos) {
         var posi = FloorInt(pos);
         var chunkKey = WorldPosToChunkKey(posi);
