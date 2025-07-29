@@ -65,10 +65,14 @@ namespace Code.Analytics
 
                 var playerLogFile = Path.Combine(path, "Player.log");
                 var playerPrevLogFile = Path.Combine(path, "Player-prev.log");
+                var editorLogFile = Path.Combine(path, "Editor.log");
+                var editorPrevLogFile = Path.Combine(path, "Editor-prev.log");
 
                 Debug.Log($"[ClientFolderUploader] Checking for log files:");
                 Debug.Log($"[ClientFolderUploader] - Player.log: {playerLogFile} (exists: {File.Exists(playerLogFile)})");
                 Debug.Log($"[ClientFolderUploader] - Player-prev.log: {playerPrevLogFile} (exists: {File.Exists(playerPrevLogFile)})");
+                Debug.Log($"[ClientFolderUploader] - Editor.log: {editorLogFile} (exists: {File.Exists(editorLogFile)})");
+                Debug.Log($"[ClientFolderUploader] - Editor-prev.log: {editorPrevLogFile} (exists: {File.Exists(editorPrevLogFile)})");
 
                 Debug.Log("[ClientFolderUploader] Creating zip archive of specific log files...");
 
@@ -89,6 +93,20 @@ namespace Code.Analytics
                             fileExists = true;
                             Debug.Log("[ClientFolderUploader] Adding Player-prev.log to archive...");
                             archive.CreateEntryFromFile(playerPrevLogFile, "Player-prev.log");
+                        }
+
+                        if (File.Exists(editorLogFile))
+                        {
+                            fileExists = true;
+                            Debug.Log("[ClientFolderUploader] Adding Editor.log to archive...");
+                            archive.CreateEntryFromFile(editorLogFile, "Editor.log");
+                        }
+
+                        if (File.Exists(editorPrevLogFile))
+                        {
+                            fileExists = true;
+                            Debug.Log("[ClientFolderUploader] Adding Editor-prev.log to archive...");
+                            archive.CreateEntryFromFile(editorPrevLogFile, "Editor-prev.log");
                         }
 
                         if (!fileExists)
@@ -159,7 +177,7 @@ namespace Code.Analytics
                         { "Content-Type", contentType },
                         { "Content-Length", contentLength.ToString() },
                     },
-                }, null);
+                }, "");
 
                 Debug.Log("[ClientFolderUploader] Upload completed successfully!");
 
