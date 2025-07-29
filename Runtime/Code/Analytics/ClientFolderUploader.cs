@@ -13,8 +13,8 @@ namespace Code.Analytics
     [Serializable]
     public class PostArtifactResponse
     {
-        public string id { get; set; }
-        public string url { get; set; }
+        public string id;
+        public string url;
     }
 
     [Serializable]
