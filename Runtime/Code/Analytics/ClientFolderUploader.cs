@@ -30,7 +30,6 @@ namespace Code.Analytics
     {
         public void ButtonClick()
         {
-            Debug.Log("[ClientFolderUploader] Button clicked, starting upload...");
             _ = UploadAsync();
         }
 
@@ -39,7 +38,7 @@ namespace Code.Analytics
             try
             {
                 await Upload();
-                Debug.Log("[ClientFolderUploader] Upload completed successfully!");
+                Debug.Log("[ClientFolderUploader] Upload completed successfully");
             }
             catch (Exception ex)
             {
@@ -49,17 +48,13 @@ namespace Code.Analytics
 
         public async Task Upload()
         {
-            Debug.Log("[ClientFolderUploader] Starting log upload process...");
-
             try
             {
                 var path = Path.GetDirectoryName(Application.consoleLogPath);
-                Debug.Log($"[ClientFolderUploader] Log directory path: {path}");
 
                 var zipPath = Path.Combine(Application.temporaryCachePath, "logs.zip");
                 if (File.Exists(zipPath))
                 {
-                    Debug.Log("[ClientFolderUploader] Existing logs.zip found, deleting...");
                     File.Delete(zipPath);
                 }
 
@@ -68,14 +63,7 @@ namespace Code.Analytics
                 var editorLogFile = Path.Combine(path, "Editor.log");
                 var editorPrevLogFile = Path.Combine(path, "Editor-prev.log");
 
-                Debug.Log($"[ClientFolderUploader] Checking for log files:");
-                Debug.Log($"[ClientFolderUploader] - Player.log: {playerLogFile} (exists: {File.Exists(playerLogFile)})");
-                Debug.Log($"[ClientFolderUploader] - Player-prev.log: {playerPrevLogFile} (exists: {File.Exists(playerPrevLogFile)})");
-                Debug.Log($"[ClientFolderUploader] - Editor.log: {editorLogFile} (exists: {File.Exists(editorLogFile)})");
-                Debug.Log($"[ClientFolderUploader] - Editor-prev.log: {editorPrevLogFile} (exists: {File.Exists(editorPrevLogFile)})");
-
-                Debug.Log("[ClientFolderUploader] Creating zip archive of specific log files...");
-
+                Debug.Log("[ClientFolderUploader] Creating zip archive");
                 try
                 {
                     using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
@@ -84,38 +72,36 @@ namespace Code.Analytics
                         if (File.Exists(playerLogFile))
                         {
                             fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Player.log to archive...");
+                            Debug.Log("[ClientFolderUploader] Adding Player.log");
                             archive.CreateEntryFromFile(playerLogFile, "Player.log");
                         }
 
                         if (File.Exists(playerPrevLogFile))
                         {
                             fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Player-prev.log to archive...");
+                            Debug.Log("[ClientFolderUploader] Adding Player-prev.log");
                             archive.CreateEntryFromFile(playerPrevLogFile, "Player-prev.log");
                         }
 
                         if (File.Exists(editorLogFile))
                         {
                             fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Editor.log to archive...");
+                            Debug.Log("[ClientFolderUploader] Adding Editor.log");
                             archive.CreateEntryFromFile(editorLogFile, "Editor.log");
                         }
 
                         if (File.Exists(editorPrevLogFile))
                         {
                             fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Editor-prev.log to archive...");
+                            Debug.Log("[ClientFolderUploader] Adding Editor-prev.log");
                             archive.CreateEntryFromFile(editorPrevLogFile, "Editor-prev.log");
                         }
 
                         if (!fileExists)
                         {
-                            Debug.Log("[ClientFolderUploader] No log files found to send. Exiting.");
                             return;
                         }
                     }
-                    Debug.Log("[ClientFolderUploader] Zip creation completed successfully");
                 }
                 catch (Exception ex)
                 {
@@ -125,7 +111,6 @@ namespace Code.Analytics
 
                 var contentType = "application/zip";
                 var contentLength = new FileInfo(zipPath).Length;
-                Debug.Log($"[ClientFolderUploader] Zip file created successfully (size: {contentLength} bytes)");
 
                 var body = new RequestBody
                 {
@@ -135,21 +120,16 @@ namespace Code.Analytics
                     contentLength = contentLength,
                 };
 
-                Debug.Log($"[ClientFolderUploader] Request body: {JsonUtility.ToJson(body)}");
-                Debug.Log($"[ClientFolderUploader] Auth token present: {!String.IsNullOrEmpty(InternalHttpManager.authToken)}");
-
+                Debug.Log("[ClientFolderUploader] Creating artifact");
                 var url = $"{AirshipPlatformUrl.contentService}/artifacts/platform/signed-url";
 
                 Http.HttpResponse res;
-                if (!String.IsNullOrEmpty(InternalHttpManager.authToken))
+                if (String.IsNullOrEmpty(InternalHttpManager.authToken))
                 {
-                    Debug.Log($"[ClientFolderUploader] Making authenticated request to: {url}");
                     res = await HttpManager.PostAsync(url, JsonUtility.ToJson(body));
-
                 }
                 else
                 {
-                    Debug.Log($"[ClientFolderUploader] Making internal request to: {url}");
                     res = await InternalHttpManager.PostAsync(url, JsonUtility.ToJson(body));
                 }
 
@@ -159,15 +139,9 @@ namespace Code.Analytics
                     throw new Exception($"Failed to get signed URL: {res.error}");
                 }
 
-                Debug.Log($"[ClientFolderUploader] Signed URL response received (length: {res.data?.Length ?? 0})");
-                Debug.Log($"[ClientFolderUploader] Signed URL response: {(res.data?.Length > 1000 ? res.data.Substring(0, 1000) + "..." : (res.data ?? "null"))}");
-
                 var response = JsonUtility.FromJson<PostArtifactResponse>(res.data);
 
-                Debug.Log($"[ClientFolderUploader] Upload URL received: {(response?.url?.Length > 100 ? response.url.Substring(0, 100) + "..." : response?.url ?? "null")}");
-                Debug.Log($"[ClientFolderUploader] Artifact ID: {response?.id}");
-
-                Debug.Log("[ClientFolderUploader] Starting file upload...");
+                Debug.Log("[ClientFolderUploader] Uploading file");
                 await HttpManager.PutAsync(new RequestHelper()
                 {
                     Uri = response.url,
@@ -175,19 +149,14 @@ namespace Code.Analytics
                     Headers = new System.Collections.Generic.Dictionary<string, string>
                     {
                         { "Content-Type", contentType },
-                        { "Content-Length", contentLength.ToString() },
                     },
                 }, "");
 
-                Debug.Log("[ClientFolderUploader] Upload completed successfully!");
-
-                Debug.Log("[ClientFolderUploader] Deleting zip file after upload...");
                 File.Delete(zipPath);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[ClientFolderUploader] Error during upload process: {ex.Message}");
-                Debug.LogError($"[ClientFolderUploader] Stack trace: {ex.StackTrace}");
                 throw;
             }
         }
