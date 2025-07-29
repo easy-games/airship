@@ -49,54 +49,13 @@ namespace Editor {
         }
 
         public static void BuildLinuxServerStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
-            BuildLinuxServer();
+            BuildLinuxServer(new []{"AIRSHIP_STAGING"});
         }
 
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Server/Linux", priority = 80)]
 #endif
-        public static void BuildLinuxServer() {
-            // OnBuild();
-            // EditorBuildSettingsScene[] scenes = {
-            //     new("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
-            //     new("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
-            //     new("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true)
-            // };
-            // EditorBuildSettings.scenes = scenes;
-            //
-            // FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
-            //
-            // // This should probably be NamedBuildTarget.Server (rather than Standalone), but that does cause some issues.
-            // // We will want to review this again in the future as a possible optimization.
-            // PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            // PlayerSettings.dedicatedServerOptimizations = true;
-            // PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
-            //
-            // EditorUserBuildSettings.managedDebuggerFixedPort = 55000;
-            // var options = new BuildPlayerOptions();
-            // options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
-            // options.locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}";
-            // options.target = BuildTarget.StandaloneLinux64;
-            // options.extraScriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" };
-            // options.subtarget = (int)StandaloneBuildSubtarget.Server;
-            // options.options |= BuildOptions.Development; //Enable the profiler
-            // var report = BuildPipeline.BuildPlayer(options);
-            // var summary = report.summary;
-            // switch (summary.result) {
-            //     case BuildResult.Succeeded:
-            //         Debug.Log($"Build Linux succeeded with size: {FormatBytes(summary)}");
-            //         break;
-            //     case BuildResult.Failed:
-            //         Debug.Log("Build Linux failed");
-            //         break;
-            //     default:
-            //         Debug.Log("Build Linux unexpected result:" + summary.result);
-            //         break;
-            // }
-            //
-            // CreateAssetBundles.AddAllGameBundleScenes();
-            
+        public static void BuildLinuxServer(string[] extraDefines) {
             OnBuild();
             FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
 
@@ -106,7 +65,7 @@ namespace Editor {
             buildProfile.scenes = new[] {
                 new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true)
             };
-            buildProfile.scriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" };
+            buildProfile.scriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" }.Concat(extraDefines).ToArray();
             BuildProfile.SetActiveBuildProfile(buildProfile);
             
             Debug.Log("Building with " + buildProfile.scenes.Length + " scenes");
