@@ -51,10 +51,15 @@ namespace Editor {
         public static void BuildLinuxServerStaging() {
             BuildLinuxServer(new []{"AIRSHIP_STAGING"});
         }
-
+        
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Server/Linux", priority = 80)]
 #endif
+        public static void BuildLinuxServerProduction() {
+            BuildLinuxServer(new string[]{});
+        }
+
+
         public static void BuildLinuxServer(string[] extraDefines) {
             OnBuild();
             FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
