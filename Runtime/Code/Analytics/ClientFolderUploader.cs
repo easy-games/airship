@@ -142,7 +142,7 @@ namespace Code.Analytics
                 }
 
                 Debug.Log($"[ClientFolderUploader] Signed URL response received (length: {res.data?.Length ?? 0})");
-                Debug.Log($"[ClientFolderUploader] Signed URL response: {(res.data?.Length > 100 ? res.data.Substring(0, 1000) + "..." : (res.data ?? "null"))}");
+                Debug.Log($"[ClientFolderUploader] Signed URL response: {(res.data?.Length > 1000 ? res.data.Substring(0, 1000) + "..." : (res.data ?? "null"))}");
 
                 var response = JsonUtility.FromJson<PostArtifactResponse>(res.data);
 
