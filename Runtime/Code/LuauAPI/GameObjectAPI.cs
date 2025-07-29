@@ -1,8 +1,10 @@
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using UnityEngine;
 using Luau;
+using UnityEngine.Profiling;
 using Object = UnityEngine.Object;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -176,6 +178,42 @@ public class GameObjectAPI : BaseLuaAPIClass {
             }
             LuauCore.WritePropertyToThread(thread, objects, typeof(Object[]));
             return 1;
+        }
+
+        if (methodName == "BatchMove") {
+            if (numParameters < 2) return -1;
+            
+            Profiler.BeginSample("GameObject.BatchMove");
+            
+            Profiler.BeginSample("CopyObjects");
+            var unityInstanceIdsSize = parameterDataSizes[0];
+            var unityInstanceIds = ArrayPool<int>.Shared.Rent(unityInstanceIdsSize);
+            LuauPlugin.LuauCopyTableToArray(thread, LuauCore.PODTYPE.POD_OBJECT, unityInstanceIdsSize, 2, unityInstanceIds);
+            Profiler.EndSample();
+            
+            Profiler.BeginSample("CopyVectors");
+            var positionsSize = parameterDataSizes[1] * 3;
+            var positions = ArrayPool<float>.Shared.Rent(positionsSize);
+            LuauPlugin.LuauCopyTableToArray(thread, LuauCore.PODTYPE.POD_VECTOR3, positionsSize, 3, positions);
+            Profiler.EndSample();
+            
+            Profiler.BeginSample("Move");
+            for (var i = 0; i < unityInstanceIdsSize; i++) {
+                var t = (Transform)ThreadDataManager.GetObjectReference(thread, unityInstanceIds[i], true, true);
+
+                var x = positions[i * 3 + 0];
+                var y = positions[i * 3 + 1];
+                var z = positions[i * 3 + 2];
+                t.position = new Vector3(x, y, z);
+            }
+            Profiler.EndSample();
+            
+            ArrayPool<int>.Shared.Return(unityInstanceIds);
+            ArrayPool<float>.Shared.Return(positions);
+            
+            Profiler.EndSample();
+            
+            return 0;
         }
 
         return -1;

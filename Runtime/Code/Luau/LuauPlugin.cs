@@ -798,6 +798,13 @@ public static class LuauPlugin {
 			array = new List<T>(array);
 		}
 	}
+	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, T[] array) where T : unmanaged {
+		IntPtr res;
+		fixed (T* arrayPtr = array) {
+			res = CopyTableToArray(thread, new IntPtr(arrayPtr), (int)type, size, idx);
+		}
+		ThrowIfNotNullPtr(res);
+	}
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
