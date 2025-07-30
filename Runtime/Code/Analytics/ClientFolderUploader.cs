@@ -29,11 +29,11 @@ namespace Code.Analytics {
         private float timeOfLastUpload = -10;
 
         public void ButtonClick() {
-            if (Time.time - timeOfLastUpload < 10) {
+            if (Time.unscaledTime - timeOfLastUpload < 10) {
                 Debug.LogWarning("[ClientFolderUploader] Upload already in progress or too soon after last upload");
                 return;
             }
-            timeOfLastUpload = Time.time;
+            timeOfLastUpload = Time.unscaledTime;
 
             _ = UploadAsync();
         }
