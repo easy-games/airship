@@ -88,31 +88,47 @@ namespace Code.Health
                 NetworkClient.RegisterHandler<ClientProfileUploadResponse>(OnClientUploadResponse);
             }
 
-            DevConsole.AddCommand(Command.Create<string, int, bool>(
-                "profile", 
+            // Profile without callstacks
+            DevConsole.AddCommand(Command.Create<string, int>(
+                "profile",
                 "",
-                "Starts and uploads a profile. Once complete the download link will be printed.", 
+                "Starts and uploads a profile. Once complete the download link will be printed.",
+                Parameter.Create("Context", "Options: Server | Client"),
+                Parameter.Create("Duration", "Duration of profile in seconds (max 5s)"),
+                (context, d) => {
+                    OnProfileCommand(context, d, false);
+                }
+            ));
+
+            // Deep profile with callstacks
+            DevConsole.AddCommand(Command.Create<string, int>(
+                "deepprofile", 
+                "",
+                "Starts and uploads a profile with callstacks. Once complete the download link will be printed.",
                     Parameter.Create("Context", "Options: Server | Client"),
                 Parameter.Create("Duration", "Duration of profile in seconds (max 5s)"),
-                Parameter.Create("Callstacks", "Enable callstacks for profile (this is laggy)"), 
-                (context, d, callstacks) => {
-                    if (d is < 0 or > 5) {
-                        Debug.LogError("You can only profile for a max of 5s.");
-                        return;
-                    }
-
-                    if (context.Equals("client", StringComparison.OrdinalIgnoreCase)) {
-                        if (!Debug.isDebugBuild) {
-                            Debug.Log(
-                                "Unable to capture profile log because debug mode is not enabled. Use the development build branch on Steam to enable debug mode.");
-                            return;
-                        }
-                        StartProfiling(d, null, callstacks);
-                    } else if (context.Equals("server", StringComparison.OrdinalIgnoreCase)) {
-                        Debug.Log("Starting a server profile, view server console to monitor progress.");
-                        NetworkClient.Send(new StartServerProfileMessage { DurationSecs = d, CallstacksEnabled = callstacks });
-                    }
+                (context, d) => {
+                    OnProfileCommand(context, d, true);
                 }));
+        }
+
+        private void OnProfileCommand(string context, int dur, bool callstacks) {
+            if (dur is < 0 or > 5) {
+                Debug.LogError("You can only profile for a max of 5s.");
+                return;
+            }
+
+            if (context.Equals("client", StringComparison.OrdinalIgnoreCase)) {
+                if (!Debug.isDebugBuild) {
+                    Debug.Log(
+                        "Unable to capture profile log because debug mode is not enabled. Use the development build branch on Steam to enable debug mode.");
+                    return;
+                }
+                StartProfiling(dur, null, callstacks);
+            } else if (context.Equals("server", StringComparison.OrdinalIgnoreCase)) {
+                Debug.Log("Starting a server profile, view server console to monitor progress.");
+                NetworkClient.Send(new StartServerProfileMessage { DurationSecs = dur, CallstacksEnabled = callstacks });
+            }
         }
 
         private void Update() {
@@ -167,12 +183,6 @@ namespace Code.Health
         }
 
         public void StartProfiling(int durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator, bool enableCallstacks) {
-            // TODO check that sender is game dev
-            // if (Profiler.enabled) {
-            //     Debug.LogWarning("Profiler is already running.");
-            //     return;
-            // }
-
             var date = DateTime.Now.ToString("MM-dd-yyyy h.mm.ss");
             var fileName = RunCore.IsClient() ?  $"Client-Profile-{date}.raw" :  $"Server-Profile-{date}.raw";
             if (!Directory.Exists(Path.Combine(Application.persistentDataPath, "ClientProfiles"))) {
@@ -193,6 +203,7 @@ namespace Code.Health
         private async void StopProfilingAfterDelay(string logPath, string fileName, float durationSecs, [CanBeNull] NetworkConnectionToClient profileInitiator) {
             await Task.Delay((int)(durationSecs * 1000));
             Profiler.enabled = false;
+            Profiler.enableBinaryLog = false;
             Profiler.enableAllocationCallstacks = false;
             var info = new FileInfo(logPath);
 
