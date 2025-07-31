@@ -11,7 +11,7 @@ public class ClientBootstrap : MonoBehaviour
 #if UNITY_STANDALONE_OSX
             Application.targetFrameRate = -1;
 #else
-            Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);\
+            Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);
 #endif
             Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
         }
