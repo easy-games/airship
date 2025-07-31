@@ -8,7 +8,11 @@ public class ClientBootstrap : MonoBehaviour
     private void Start()
     {
         if (RunCore.IsClient()) {
-            Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);
+#if UNITY_STANDALONE_OSX || true
+            Application.targetFrameRate = -1;
+#else
+            Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);\
+#endif
             Application.logMessageReceived += AnalyticsRecorder.RecordLogMessageToAnalytics;
         }
     }
