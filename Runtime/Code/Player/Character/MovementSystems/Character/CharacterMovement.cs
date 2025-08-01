@@ -1569,7 +1569,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
             
             var characterUp = _rig.spine ? _rig.spine.up : Vector3.up;
-            var lerpedLookRotation = Vector3.Slerp(Quaternion.Inverse(initialHeadRotation) * _rig.head.rotation * Vector3.forward, direction, lookVectorInfluence);
+            var lerpedLookRotation = Vector3.Lerp(Quaternion.Inverse(initialHeadRotation) * _rig.head.rotation * Vector3.forward, direction, lookVectorInfluence);
             _rig.head.rotation = initialHeadRotation * Quaternion.LookRotation(lerpedLookRotation, characterUp);
         }
 
