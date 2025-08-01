@@ -228,7 +228,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             
             // Verify rig is setup correctly for rotateHeadToLookVector
             if (rotateHeadToLookVector) {
-                if (_rig == null || _rig.head == null) {
+                if (_rig == null || _rig.head == null || _rig.spine == null) {
                     rotateHeadToLookVector = false;
                     Debug.LogWarning(
                         "[CharacterMovement] Disabling rotateHeadToLookVector, cannot find rig's head transform.");
@@ -1481,10 +1481,29 @@ namespace Code.Player.Character.MovementSystems.Character {
             HandleCharacterRotation(this.lookVector);
         }
 
+        /**
+         * Internal character rotation handling. Used in a few places to kick off updating the character's
+         * transform and visual rotation based on the configuration of the character.
+         */
         private void HandleCharacterRotation(Vector3 lookVector) {
             if (!rotateAutomatically) return;
+            UpdateCharacterRotation(lookVector);
+        }
 
-            var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
+        /**
+         * This function allows you to set the rotation of the character body and head when "rotateAutomatically" is turned off.
+         * It will use the specified look direction and respect configured visual settings. This function should be called
+         * in LateUpdate every frame with an updated look direction.
+         *
+         * Calling this only once will update the head and body rotation just enough to look in the specified direction.
+         * It will not align the rotation exactly. If you want to align the rotation exactly. First set the airshipTransform
+         * and graphicsHolder transforms to the desired look direction before calling this function. You can also use
+         * UpdateHeadRotation to set a look direction for the head directly.
+         *
+         * This function is not networked.
+         */
+        public void UpdateCharacterRotation(Vector3 lookDirection) {
+            var lookTarget = new Vector3(lookDirection.x, 0, lookDirection.z);
             if (lookTarget == Vector3.zero) {
                 lookTarget = new Vector3(0, 0, .01f);
             }
@@ -1496,10 +1515,12 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
             
             UpdateBodyRotation(lookTarget);
-            if (rotateHeadToLookVector) UpdateHeadRotation(lookVector);
+            UpdateHeadRotation(lookDirection);
         }
-
-        public void UpdateBodyRotation(Vector3 direction) {
+        
+        private void UpdateBodyRotation(Vector3 direction) {
+            direction.y = 0; // Don't rotate the character off the ground
+            
             // If we are moving, start rotating towards the correct direction immediately. Don't negate any additional rotation
             if (this.currentMoveSnapshot.velocity.magnitude > 0) {
                 airshipTransform.rotation = Quaternion.LookRotation(direction).normalized;
@@ -1518,7 +1539,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             // rotation will be enough.
             Vector3 currentForward = graphicTransform.rotation * Vector3.forward;
             currentForward.y = 0;
-            direction.y = 0;
             
             currentForward.Normalize();
             direction.Normalize();
@@ -1536,6 +1556,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
         }
         
+        /**
+         * Sets the head look direction independently of the body using "Look Vector Influence". Does _NOT_ limit the
+         * amount of rotation from the body forward direction. Use UpdateCharacterRotation for rotation that take the configured
+         * limits into account.
+         *
+         * This function is not networked.
+         */
         public void UpdateHeadRotation(Vector3 direction) {
             if (direction.magnitude == 0) {
                 direction = new Vector3(0, 0, 0.01f);
