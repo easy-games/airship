@@ -71,7 +71,10 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [Tooltip("How much influence the look vector has on the look rotation.")]
         [Range(0, 1)]
-        public float lookVectorInfluence = 0.9f;
+        public float lookVectorInfluence = 0.4f;
+
+        [Tooltip("How far the head can rotate before the body rotates in degrees.")] [Range(0, 90)]
+        public int headRotationThreshold = 40;
         
         [Tooltip(
             "If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
@@ -1438,7 +1441,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             lookVector = Vector3.Lerp(snapshotOld.lookVector, snapshotNew.lookVector, (float)delta);
-            HandleCharacterRotation(lookVector);
 
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
@@ -1470,13 +1472,8 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public void LateUpdate() {
-            // We only update rotation in late update if we are running on a client that is controlling
-            // this system
+            // We only update rotation in late update if we are running on a client
             if (isServer && !isClient) {
-                return;
-            }
-
-            if (mode == NetworkedStateSystemMode.Observer) {
                 return;
             }
 
@@ -1525,11 +1522,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             direction.Normalize();
 
             float angle = Vector3.SignedAngle(currentForward, direction, Vector3.up);
-            var thresholdAngle = 30;
-            
-            if (Mathf.Abs(angle) > thresholdAngle)
+            if (Mathf.Abs(angle) > headRotationThreshold)
             {
-                float rotateAmount = Mathf.Abs(angle) - thresholdAngle;
+                float rotateAmount = Mathf.Abs(angle) - headRotationThreshold;
                 float sign = Mathf.Sign(angle);
 
                 // We only rotate just enough to allow us to not snap our neck, but don't rotate the body
