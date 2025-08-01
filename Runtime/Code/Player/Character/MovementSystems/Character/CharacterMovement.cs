@@ -28,8 +28,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
-        public Transform airshipTransform; //The visual transform controlled by this script
-        public Transform graphicTransform; //A transform that games can animate
+        public Transform airshipTransform; // The visual transform controlled by this script. This always has the exact rotations used for movement
+        public Transform graphicTransform; // A transform that games can animate. This may have slightly altered rotation for visuals
         public CharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
 
@@ -287,13 +287,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                 rb.linearVelocity = snapshot.velocity;
             }
             
-            var lookTarget = new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z);
-            if (lookTarget == Vector3.zero) {
-                lookTarget = new Vector3(0, 0, .01f);
-            }
+            // var lookTarget = new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z);
+            // if (lookTarget == Vector3.zero) {
+            //     lookTarget = new Vector3(0, 0, .01f);
+            // }
             
-            airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
-
+            // airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
+            HandleCharacterRotation(snapshot.lookVector);
+            
             OnSetSnapshot?.Invoke(snapshot);
         }
 
@@ -384,14 +385,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
             // and for observers in Interpolate()
             if (isServer && !isClient) {
-                var lookTarget = new Vector3(command.lookVector.x, 0, command.lookVector.z);
-                if (lookTarget == Vector3.zero) {
-                    lookTarget = new Vector3(0, 0, .01f);
-                }
+                // var lookTarget = new Vector3(command.lookVector.x, 0, command.lookVector.z);
+                // if (lookTarget == Vector3.zero) {
+                //     lookTarget = new Vector3(0, 0, .01f);
+                // }
                 
-                airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
-                
-                // HandleCharacterRotation(command.lookVector);
+                // airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
+                HandleCharacterRotation(command.lookVector);
             }
 
             //Ground checks
@@ -569,7 +569,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             var isMoving = currentVelocity.sqrMagnitude > .1f;
             var inAir = didJump || (!detectedGround && !currentMoveSnapshot.prevStepUp);
             var tryingToSprint =  movementSettings.onlySprintForward
-                ? command.sprint && graphicTransform.InverseTransformVector(command.moveDir).z > 0.1f
+                ? command.sprint && airshipTransform.InverseTransformVector(command.moveDir).z > 0.1f
                 : //Only sprint if you are moving forward
                 command.sprint && command.moveDir.magnitude > 0.1f; //Only sprint if you are moving
 
@@ -1496,32 +1496,46 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
             
-            // UpdateBodyRotation(lookTarget);
-            airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
+            UpdateBodyRotation(lookTarget);
             UpdateHeadRotation(lookVector);
         }
 
         public void UpdateBodyRotation(Vector3 direction) {
-            Vector3 currentForward = airshipTransform.rotation * Vector3.forward;
+            // If we are moving, start rotating towards the correct direction immediately. Don't negate any additional rotation
+            if (this.currentMoveSnapshot.velocity.magnitude > 0) {
+                airshipTransform.rotation = Quaternion.LookRotation(direction).normalized;
+                graphicTransform.rotation = Quaternion.Slerp(graphicTransform.rotation, airshipTransform.rotation, smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime);
+                return;
+            }
+            
+            // Since graphicTransform is a child of the airship transform, we "undo" the
+            // change we are going to apply so that we can rotate the graphicTransform independently
+            Quaternion previousParentRotation = airshipTransform.rotation;
+            airshipTransform.rotation = Quaternion.LookRotation(direction).normalized;
+            Quaternion deltaRotation = airshipTransform.rotation * Quaternion.Inverse(previousParentRotation);
+            graphicTransform.rotation = Quaternion.Inverse(deltaRotation) * graphicTransform.rotation;
+            
+            // Now calculate if we need to rotate the graphicTransform (body) or if the head
+            // rotation will be enough.
+            Vector3 currentForward = graphicTransform.rotation * Vector3.forward;
             currentForward.y = 0;
             direction.y = 0;
-    
-            // Step 2: Normalize directions
+            
             currentForward.Normalize();
             direction.Normalize();
 
-            // Step 3: Get signed angle between them
             float angle = Vector3.SignedAngle(currentForward, direction, Vector3.up);
-
-            // Step 4: If angle exceeds threshold, rotate only by (angle - threshold) in the correct direction
             var thresholdAngle = 30;
+            
             if (Mathf.Abs(angle) > thresholdAngle)
             {
                 float rotateAmount = Mathf.Abs(angle) - thresholdAngle;
-                float sign = Mathf.Sign(angle); // +1 = right turn, -1 = left turn
+                float sign = Mathf.Sign(angle);
 
+                // We only rotate just enough to allow us to not snap our neck, but don't rotate the body
+                // any more than that.
                 Quaternion partialRotation = Quaternion.AngleAxis(rotateAmount * sign, Vector3.up);
-                airshipTransform.rotation = partialRotation * airshipTransform.rotation; // Apply the partial rotation
+                graphicTransform.rotation = partialRotation * graphicTransform.rotation;
             }
         }
         
@@ -1608,7 +1622,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     moveDirInput = moveDir;
                     break;
                 case MoveDirectionMode.Character:
-                    moveDirInput = graphicTransform.TransformDirection(moveDir);
+                    moveDirInput = airshipTransform.TransformDirection(moveDir);
                     break;
                 case MoveDirectionMode.Camera:
                     var forwardZeroY = _cameraTransform.forward;
@@ -1685,7 +1699,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
                 if (_smoothLookVector && moveDirInput != Vector3.zero) {
                     lookVector = Vector3.RotateTowards(
-                        graphicTransform.forward,
+                        airshipTransform.forward,
                         moveDirInput.normalized,
                         smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime,
                         0f
