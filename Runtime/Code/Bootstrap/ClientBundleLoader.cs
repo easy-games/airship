@@ -221,6 +221,16 @@ namespace Code.Bootstrap {
                     } catch (Exception e) {
                         Debug.LogException(e);
                     }
+
+                    using var md5 = System.Security.Cryptography.MD5.Create();
+                    var bytecodeHashes = new List<byte[]>();
+                    foreach (var (hash, files) in clientLuauScriptsDto.files) {
+                        foreach (var file in files) {
+                            bytecodeHashes.Add(md5.ComputeHash(file.bytes));
+                        }
+                    }
+                    LuauPlugin.LuauPushScripts(bytecodeHashes);
+                    
                     this.scriptsReady = true;
                 }
             }, false);

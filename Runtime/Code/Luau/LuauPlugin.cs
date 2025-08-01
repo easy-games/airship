@@ -932,4 +932,33 @@ public static class LuauPlugin {
 		}
 		return list;
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int PushScripts(IntPtr bytes, int len);
+	public static unsafe bool LuauPushScripts(List<byte[]> bytesList) {
+		var alloc = bytesList.Count > 1024;
+		var ptrs = alloc ? new IntPtr[bytesList.Count] : stackalloc IntPtr[bytesList.Count];
+		var handles = alloc ? new GCHandle[bytesList.Count] : stackalloc GCHandle[bytesList.Count];
+		for (var i = 0; i < bytesList.Count; i++) {
+			var b = bytesList[i];
+			var handle = GCHandle.Alloc(b, GCHandleType.Pinned);
+			ptrs[i] = handle.AddrOfPinnedObject();
+			handles[i] = handle;
+		}
+
+		int ret;
+		fixed (IntPtr* bytesPtr = ptrs) {
+			ret = PushScripts((IntPtr)bytesPtr, ptrs.Length);
+		}
+
+		foreach (var handle in handles) {
+			handle.Free();
+		}
+		
+		return ret != 0;
+	}
 }
