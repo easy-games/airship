@@ -938,25 +938,39 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern int PushScripts(IntPtr bytes, int len);
-	public static unsafe bool LuauPushScripts(List<byte[]> bytesList) {
+	private static extern int PushScripts(IntPtr filenames, IntPtr bytes, int len);
+	public static unsafe bool LuauPushScripts(List<string> filenames, List<byte[]> bytesList) {
+		if (filenames.Count != bytesList.Count) {
+			throw new ArgumentException("both lists must have the same length");
+		}
+		
 		var alloc = bytesList.Count > 1024;
-		var ptrs = alloc ? new IntPtr[bytesList.Count] : stackalloc IntPtr[bytesList.Count];
-		var handles = alloc ? new GCHandle[bytesList.Count] : stackalloc GCHandle[bytesList.Count];
+		
+		var bytesListPtrs = alloc ? new IntPtr[bytesList.Count] : stackalloc IntPtr[bytesList.Count];
+		var byteListHandles = alloc ? new GCHandle[bytesList.Count] : stackalloc GCHandle[bytesList.Count];
+		var stringsListPtrs = alloc ? new IntPtr[filenames.Count] : stackalloc IntPtr[filenames.Count];
+		
 		for (var i = 0; i < bytesList.Count; i++) {
 			var b = bytesList[i];
-			var handle = GCHandle.Alloc(b, GCHandleType.Pinned);
-			ptrs[i] = handle.AddrOfPinnedObject();
-			handles[i] = handle;
+			var bytesHandle = GCHandle.Alloc(b, GCHandleType.Pinned);
+			var stringHandle = Marshal.StringToCoTaskMemUTF8(filenames[i]);
+			bytesListPtrs[i] = bytesHandle.AddrOfPinnedObject();
+			byteListHandles[i] = bytesHandle;
+			stringsListPtrs[i] = stringHandle;
 		}
 
 		int ret;
-		fixed (IntPtr* bytesPtr = ptrs) {
-			ret = PushScripts((IntPtr)bytesPtr, ptrs.Length);
+		fixed (IntPtr* bytesPtr = bytesListPtrs) {
+			fixed (IntPtr* stringsPtr = stringsListPtrs) {
+				ret = PushScripts((IntPtr)stringsPtr, (IntPtr)bytesPtr, bytesListPtrs.Length);
+			}
 		}
 
-		foreach (var handle in handles) {
+		foreach (var handle in byteListHandles) {
 			handle.Free();
+		}
+		foreach (var strPtr in stringsListPtrs) {
+			Marshal.FreeCoTaskMem(strPtr);
 		}
 		
 		return ret != 0;
