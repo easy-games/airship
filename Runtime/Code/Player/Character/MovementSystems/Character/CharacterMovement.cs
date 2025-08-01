@@ -290,12 +290,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 rb.linearVelocity = snapshot.velocity;
             }
             
-            // var lookTarget = new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z);
-            // if (lookTarget == Vector3.zero) {
-            //     lookTarget = new Vector3(0, 0, .01f);
-            // }
-            
-            // airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
             HandleCharacterRotation(snapshot.lookVector);
             
             OnSetSnapshot?.Invoke(snapshot);
@@ -388,12 +382,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
             // and for observers in Interpolate()
             if (isServer && !isClient) {
-                // var lookTarget = new Vector3(command.lookVector.x, 0, command.lookVector.z);
-                // if (lookTarget == Vector3.zero) {
-                //     lookTarget = new Vector3(0, 0, .01f);
-                // }
-                
-                // airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
                 HandleCharacterRotation(command.lookVector);
             }
 
