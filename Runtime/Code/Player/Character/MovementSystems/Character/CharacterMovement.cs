@@ -63,6 +63,16 @@ namespace Code.Player.Character.MovementSystems.Character {
             "Controls the speed in which characters in orbit camera rotate to face look direction. Degrees per second.")]
         public float smoothedRotationSpeed = 360f;
 
+        [Tooltip("If true, the character body will automatically rotate in the direction of the look vector.")]
+        public bool rotateAutomatically = true;
+
+        [Tooltip("If enabled, the head will be rotated to look in the same direction as the look vector. The body will rotate only when needed. \"Rotate Automatically\" must also be checked.")]
+        public bool rotateHeadToLookVector = true;
+
+        [Tooltip("How much influence the look vector has on the look rotation.")]
+        [Range(0, 1)]
+        public float lookVectorInfluence = 0.9f;
+        
         [Tooltip(
             "If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
         public bool playAnimationOnServer = true;
@@ -71,6 +81,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         private CharacterPhysics physics;
         private Transform _cameraTransform;
+        private CharacterRig _rig;
         private bool _smoothLookVector = false;
 
         /**
@@ -209,6 +220,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 physics = new CharacterPhysics(this);
             }
 
+            _rig = GetComponentInChildren<CharacterRig>();
             _cameraTransform = Camera.main.transform;
         }
 
@@ -274,12 +286,12 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
             }
-
+            
             var lookTarget = new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z);
             if (lookTarget == Vector3.zero) {
                 lookTarget = new Vector3(0, 0, .01f);
             }
-
+            
             airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
 
             OnSetSnapshot?.Invoke(snapshot);
@@ -370,13 +382,16 @@ namespace Code.Player.Character.MovementSystems.Character {
             var rootPosition = rb.position;
 
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
+            // and for observers in Interpolate()
             if (isServer && !isClient) {
                 var lookTarget = new Vector3(command.lookVector.x, 0, command.lookVector.z);
                 if (lookTarget == Vector3.zero) {
                     lookTarget = new Vector3(0, 0, .01f);
                 }
-
+                
                 airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
+                
+                // HandleCharacterRotation(command.lookVector);
             }
 
             //Ground checks
@@ -1422,12 +1437,8 @@ namespace Code.Player.Character.MovementSystems.Character {
                 newLook.z = 0.01f;
             }
 
-            airshipTransform.rotation = Quaternion.Lerp(
-                Quaternion.LookRotation(oldLook),
-                Quaternion.LookRotation(newLook),
-                (float)delta);
-
             lookVector = Vector3.Lerp(snapshotOld.lookVector, snapshotNew.lookVector, (float)delta);
+            HandleCharacterRotation(lookVector);
 
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
         }
@@ -1469,12 +1480,61 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
+            HandleCharacterRotation(this.lookVector);
+        }
+
+        private void HandleCharacterRotation(Vector3 lookVector) {
+            if (!rotateAutomatically) return;
+
             var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
             if (lookTarget == Vector3.zero) {
                 lookTarget = new Vector3(0, 0, .01f);
             }
 
+            if (!rotateHeadToLookVector) {
+                airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
+                return;
+            }
+            
+            // UpdateBodyRotation(lookTarget);
             airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
+            UpdateHeadRotation(lookVector);
+        }
+
+        public void UpdateBodyRotation(Vector3 direction) {
+            Vector3 currentForward = airshipTransform.rotation * Vector3.forward;
+            currentForward.y = 0;
+            direction.y = 0;
+    
+            // Step 2: Normalize directions
+            currentForward.Normalize();
+            direction.Normalize();
+
+            // Step 3: Get signed angle between them
+            float angle = Vector3.SignedAngle(currentForward, direction, Vector3.up);
+
+            // Step 4: If angle exceeds threshold, rotate only by (angle - threshold) in the correct direction
+            var thresholdAngle = 30;
+            if (Mathf.Abs(angle) > thresholdAngle)
+            {
+                float rotateAmount = Mathf.Abs(angle) - thresholdAngle;
+                float sign = Mathf.Sign(angle); // +1 = right turn, -1 = left turn
+
+                Quaternion partialRotation = Quaternion.AngleAxis(rotateAmount * sign, Vector3.up);
+                airshipTransform.rotation = partialRotation * airshipTransform.rotation; // Apply the partial rotation
+            }
+        }
+        
+        public void UpdateHeadRotation(Vector3 direction) {
+            if (_rig == null) return;
+            
+            if (direction.magnitude == 0) {
+                direction = new Vector3(0, 0, 0.01f);
+            }
+            
+            Vector3 headPos = _rig.head.position;
+            Quaternion targetRotation = Quaternion.LookRotation(direction, Vector3.up);
+            _rig.head.rotation = Quaternion.Slerp(_rig.head.rotation, targetRotation, lookVectorInfluence);
         }
 
         public void Update() {
