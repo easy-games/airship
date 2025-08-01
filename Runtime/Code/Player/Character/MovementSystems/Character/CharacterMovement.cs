@@ -73,8 +73,8 @@ namespace Code.Player.Character.MovementSystems.Character {
         [Range(0, 1)]
         public float lookVectorInfluence = 0.4f;
 
-        [Tooltip("How far the head can rotate before the body rotates in degrees.")] [Range(0, 90)]
-        public int headRotationThreshold = 40;
+        [Tooltip("How far the head can rotate before the body rotates in degrees.")] [Range(0, 180)]
+        public int headRotationThreshold = 60;
         
         [Tooltip(
             "If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
@@ -1536,6 +1536,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         
         public void UpdateHeadRotation(Vector3 direction) {
             if (_rig == null) return;
+            if (_rig.head == null) return;
             
             if (direction.magnitude == 0) {
                 direction = new Vector3(0, 0, 0.01f);
