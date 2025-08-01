@@ -28,8 +28,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
-        public Transform airshipTransform; //The visual transform controlled by this script
-        public Transform graphicTransform; //A transform that games can animate
+        public Transform airshipTransform; // The visual transform controlled by this script. This always has the exact rotations used for movement
+        public Transform graphicTransform; // A transform that games can animate. This may have slightly altered rotation for visuals
         public CharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
 
@@ -63,6 +63,19 @@ namespace Code.Player.Character.MovementSystems.Character {
             "Controls the speed in which characters in orbit camera rotate to face look direction. Degrees per second.")]
         public float smoothedRotationSpeed = 360f;
 
+        [Tooltip("If true, the character body will automatically rotate in the direction of the look vector.")]
+        public bool rotateAutomatically = true;
+
+        [Tooltip("If enabled, the head will be rotated to look in the same direction as the look vector. The body will rotate only when needed. \"Rotate Automatically\" must also be checked.")]
+        public bool rotateHeadToLookVector = true;
+
+        [Tooltip("How much influence the look vector has on the look rotation.")]
+        [Range(0, 1)]
+        public float lookVectorInfluence = 0.4f;
+
+        [Tooltip("How far the head can rotate before the body rotates in degrees.")] [Range(0, 180)]
+        public int headRotationThreshold = 60;
+        
         [Tooltip(
             "If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
         public bool playAnimationOnServer = true;
@@ -71,6 +84,8 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         private CharacterPhysics physics;
         private Transform _cameraTransform;
+        private CharacterRig _rig;
+        private Quaternion initialHeadRotation;
         private bool _smoothLookVector = false;
 
         /**
@@ -209,6 +224,19 @@ namespace Code.Player.Character.MovementSystems.Character {
                 physics = new CharacterPhysics(this);
             }
 
+            _rig = GetComponentInChildren<CharacterRig>();
+            
+            // Verify rig is setup correctly for rotateHeadToLookVector
+            if (rotateHeadToLookVector) {
+                if (_rig == null || _rig.head == null || _rig.spine == null) {
+                    rotateHeadToLookVector = false;
+                    Debug.LogWarning(
+                        "[CharacterMovement] Disabling rotateHeadToLookVector, cannot find rig's head transform.");
+                } else {
+                    initialHeadRotation = _rig.head.rotation;
+                }
+            }
+            
             _cameraTransform = Camera.main.transform;
         }
 
@@ -274,14 +302,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
             }
-
-            var lookTarget = new Vector3(snapshot.lookVector.x, 0, snapshot.lookVector.z);
-            if (lookTarget == Vector3.zero) {
-                lookTarget = new Vector3(0, 0, .01f);
-            }
-
-            airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
-
+            
+            HandleCharacterRotation(snapshot.lookVector);
+            
             OnSetSnapshot?.Invoke(snapshot);
         }
 
@@ -370,13 +393,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             var rootPosition = rb.position;
 
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
+            // and for observers in Interpolate()
             if (isServer && !isClient) {
-                var lookTarget = new Vector3(command.lookVector.x, 0, command.lookVector.z);
-                if (lookTarget == Vector3.zero) {
-                    lookTarget = new Vector3(0, 0, .01f);
-                }
-
-                airshipTransform.rotation = Quaternion.LookRotation(lookTarget);
+                HandleCharacterRotation(command.lookVector);
             }
 
             //Ground checks
@@ -554,7 +573,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             var isMoving = currentVelocity.sqrMagnitude > .1f;
             var inAir = didJump || (!detectedGround && !currentMoveSnapshot.prevStepUp);
             var tryingToSprint =  movementSettings.onlySprintForward
-                ? command.sprint && graphicTransform.InverseTransformVector(command.moveDir).z > 0.1f
+                ? command.sprint && airshipTransform.InverseTransformVector(command.moveDir).z > 0.1f
                 : //Only sprint if you are moving forward
                 command.sprint && command.moveDir.magnitude > 0.1f; //Only sprint if you are moving
 
@@ -1422,11 +1441,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 newLook.z = 0.01f;
             }
 
-            airshipTransform.rotation = Quaternion.Lerp(
-                Quaternion.LookRotation(oldLook),
-                Quaternion.LookRotation(newLook),
-                (float)delta);
-
             lookVector = Vector3.Lerp(snapshotOld.lookVector, snapshotNew.lookVector, (float)delta);
 
             OnInterpolateState?.Invoke(snapshotOld, snapshotNew, delta);
@@ -1459,22 +1473,104 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public void LateUpdate() {
-            // We only update rotation in late update if we are running on a client that is controlling
-            // this system
+            // We only update rotation in late update if we are running on a client
             if (isServer && !isClient) {
                 return;
             }
 
-            if (mode == NetworkedStateSystemMode.Observer) {
-                return;
-            }
+            HandleCharacterRotation(this.lookVector);
+        }
 
-            var lookTarget = new Vector3(lookVector.x, 0, lookVector.z);
+        /**
+         * Internal character rotation handling. Used in a few places to kick off updating the character's
+         * transform and visual rotation based on the configuration of the character.
+         */
+        private void HandleCharacterRotation(Vector3 lookVector) {
+            if (!rotateAutomatically) return;
+            UpdateCharacterRotation(lookVector);
+        }
+
+        /**
+         * This function allows you to set the rotation of the character body and head when "rotateAutomatically" is turned off.
+         * It will use the specified look direction and respect configured visual settings. This function should be called
+         * in LateUpdate every frame with an updated look direction.
+         *
+         * Calling this only once will update the head and body rotation just enough to look in the specified direction.
+         * It will not align the rotation exactly. If you want to align the rotation exactly. First set the airshipTransform
+         * and graphicsHolder transforms to the desired look direction before calling this function. You can also use
+         * UpdateHeadRotation to set a look direction for the head directly.
+         *
+         * This function is not networked.
+         */
+        public void UpdateCharacterRotation(Vector3 lookDirection) {
+            var lookTarget = new Vector3(lookDirection.x, 0, lookDirection.z);
             if (lookTarget == Vector3.zero) {
                 lookTarget = new Vector3(0, 0, .01f);
             }
 
-            airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
+            // Debug.Log("Handle rotation: " + rotateHeadToLookVector);
+            if (!rotateHeadToLookVector) {
+                airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
+                return;
+            }
+            
+            UpdateBodyRotation(lookTarget);
+            UpdateHeadRotation(lookDirection);
+        }
+        
+        private void UpdateBodyRotation(Vector3 direction) {
+            direction.y = 0; // Don't rotate the character off the ground
+            
+            // If we are moving, start rotating towards the correct direction immediately. Don't negate any additional rotation
+            if (this.currentMoveSnapshot.velocity.magnitude > 0) {
+                airshipTransform.rotation = Quaternion.LookRotation(direction).normalized;
+                graphicTransform.rotation = Quaternion.Slerp(graphicTransform.rotation, airshipTransform.rotation, smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime);
+                return;
+            }
+            
+            // Since graphicTransform is a child of the airship transform, we "undo" the
+            // change we are going to apply so that we can rotate the graphicTransform independently
+            Quaternion previousParentRotation = airshipTransform.rotation;
+            airshipTransform.rotation = Quaternion.LookRotation(direction).normalized;
+            Quaternion deltaRotation = airshipTransform.rotation * Quaternion.Inverse(previousParentRotation);
+            graphicTransform.rotation = Quaternion.Inverse(deltaRotation) * graphicTransform.rotation;
+            
+            // Now calculate if we need to rotate the graphicTransform (body) or if the head
+            // rotation will be enough.
+            Vector3 currentForward = graphicTransform.rotation * Vector3.forward;
+            currentForward.y = 0;
+            
+            currentForward.Normalize();
+            direction.Normalize();
+
+            float angle = Vector3.SignedAngle(currentForward, direction, Vector3.up);
+            if (Mathf.Abs(angle) > headRotationThreshold)
+            {
+                float rotateAmount = Mathf.Abs(angle) - headRotationThreshold;
+                float sign = Mathf.Sign(angle);
+
+                // We only rotate just enough to allow us to not snap our neck, but don't rotate the body
+                // any more than that.
+                Quaternion partialRotation = Quaternion.AngleAxis(rotateAmount * sign, Vector3.up);
+                graphicTransform.rotation = partialRotation * graphicTransform.rotation;
+            }
+        }
+        
+        /**
+         * Sets the head look direction independently of the body using "Look Vector Influence". Does _NOT_ limit the
+         * amount of rotation from the body forward direction. Use UpdateCharacterRotation for rotation that take the configured
+         * limits into account.
+         *
+         * This function is not networked.
+         */
+        public void UpdateHeadRotation(Vector3 direction) {
+            if (direction.magnitude == 0) {
+                direction = new Vector3(0, 0, 0.01f);
+            }
+            
+            var characterUp = _rig.spine ? _rig.spine.up : Vector3.up;
+            var lerpedLookRotation = Vector3.Lerp(Quaternion.Inverse(initialHeadRotation) * _rig.head.rotation * Vector3.forward, direction, lookVectorInfluence);
+            _rig.head.rotation = initialHeadRotation * Quaternion.LookRotation(lerpedLookRotation, characterUp);
         }
 
         public void Update() {
@@ -1548,7 +1644,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     moveDirInput = moveDir;
                     break;
                 case MoveDirectionMode.Character:
-                    moveDirInput = graphicTransform.TransformDirection(moveDir);
+                    moveDirInput = airshipTransform.TransformDirection(moveDir);
                     break;
                 case MoveDirectionMode.Camera:
                     var forwardZeroY = _cameraTransform.forward;
@@ -1625,7 +1721,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
                 if (_smoothLookVector && moveDirInput != Vector3.zero) {
                     lookVector = Vector3.RotateTowards(
-                        graphicTransform.forward,
+                        airshipTransform.forward,
                         moveDirInput.normalized,
                         smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime,
                         0f
