@@ -85,6 +85,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         private CharacterPhysics physics;
         private Transform _cameraTransform;
         private CharacterRig _rig;
+        private Quaternion initialHeadRotation;
         private bool _smoothLookVector = false;
 
         /**
@@ -224,6 +225,18 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             _rig = GetComponentInChildren<CharacterRig>();
+            
+            // Verify rig is setup correctly for rotateHeadToLookVector
+            if (rotateHeadToLookVector) {
+                if (_rig == null || _rig.head == null) {
+                    rotateHeadToLookVector = false;
+                    Debug.LogWarning(
+                        "[CharacterMovement] Disabling rotateHeadToLookVector, cannot find rig's head transform.");
+                } else {
+                    initialHeadRotation = _rig.head.rotation;
+                }
+            }
+            
             _cameraTransform = Camera.main.transform;
         }
 
@@ -1476,13 +1489,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                 lookTarget = new Vector3(0, 0, .01f);
             }
 
+            // Debug.Log("Handle rotation: " + rotateHeadToLookVector);
             if (!rotateHeadToLookVector) {
                 airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
                 return;
             }
             
             UpdateBodyRotation(lookTarget);
-            UpdateHeadRotation(lookVector);
+            if (rotateHeadToLookVector) UpdateHeadRotation(lookVector);
         }
 
         public void UpdateBodyRotation(Vector3 direction) {
@@ -1523,16 +1537,13 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
         
         public void UpdateHeadRotation(Vector3 direction) {
-            if (_rig == null) return;
-            if (_rig.head == null) return;
-            
             if (direction.magnitude == 0) {
                 direction = new Vector3(0, 0, 0.01f);
             }
             
-            Vector3 headPos = _rig.head.position;
-            Quaternion targetRotation = Quaternion.LookRotation(direction, Vector3.up);
-            _rig.head.rotation = Quaternion.Slerp(_rig.head.rotation, targetRotation, lookVectorInfluence);
+            var characterUp = _rig.spine ? _rig.spine.up : Vector3.up;
+            var lerpedLookRotation = Vector3.Slerp(Quaternion.Inverse(initialHeadRotation) * _rig.head.rotation * Vector3.forward, direction, lookVectorInfluence);
+            _rig.head.rotation = initialHeadRotation * Quaternion.LookRotation(lerpedLookRotation, characterUp);
         }
 
         public void Update() {
