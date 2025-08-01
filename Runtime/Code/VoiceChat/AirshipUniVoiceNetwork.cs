@@ -54,6 +54,7 @@ namespace Code.VoiceChat {
         public ChatroomAgent agent;
 
         private uint audioNonce = 0;
+        private bool deafened = false;
         
         
         private void OnDisable() {
@@ -327,6 +328,8 @@ namespace Code.VoiceChat {
         }
 
         private void EmitAudioInScene(short senderPeerId, byte[] bytes) {
+            if (this.deafened) return;
+            
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             
             this.PreProcessAudio(segment);
@@ -382,6 +385,10 @@ namespace Code.VoiceChat {
             } else {
                 this.mutedConnectionIds.Remove(connectionId);
             }
+        }
+
+        public void SetDeafened(bool deafened) {
+            this.deafened = deafened;
         }
 
         /// <summary>
