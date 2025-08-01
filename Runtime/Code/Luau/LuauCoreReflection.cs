@@ -420,7 +420,7 @@ public partial class LuauCore : MonoBehaviour
         LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value), 0);
     }
 
-    private static bool WriteArrayToThread(IntPtr thread, IEnumerable array, Type t, int knownSize = 0) {
+    public static bool WriteArrayToThread(IntPtr thread, IEnumerable array, Type t, int knownSize = 0) {
         LuauPluginRaw.NewTable(thread, knownSize);
 
         var i = 0;
