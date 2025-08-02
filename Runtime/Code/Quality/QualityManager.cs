@@ -8,10 +8,31 @@ namespace Code.Quality {
         public double cpuMain;
         public double cpuRender;
     }
+
+    // We should redo this to be a single core number for quality
+    // NOTE: must match FrameHealth in Airship.d.ts
+    public enum FrameHealth {
+        Ok = 0,
+        Unhealthy = 1,
+    }
+
+    public struct QualityReport {
+        public double gpuAvg;
+        public double cpuMainAvg;
+        public double cpuRenderAvg;
+    }
     
+    [LuauAPI(LuauContext.Game)]
     public class QualityManager : Singleton<QualityManager> {
+        public static event Action<object, object> OnQualityCheck;
+        
         private const int SampleCount = 500;
-        private const float QualityCheckCooldownSec = 15;
+        /// <summary>
+        /// Time after starting that we'll run a quality check on the client. This
+        /// will be sent to game clients to allow them to configure quality based on
+        /// performance.
+        /// </summary>
+        private const float QualityCheckTimeSec = 15;
         /// <summary>
         /// We use this to determine GPU/CPU bound.
         /// </summary>
@@ -30,11 +51,18 @@ namespace Code.Quality {
         private bool _fpsSamplesLoaded;
         private float _nextQualityCheck;
 
+        /// <summary>
+        /// For now we only run the quality check once after 15 seconds.
+        /// </summary>
+        private bool _hasRunQualityCheck;
+
         private void Awake() {
-            _nextQualityCheck = Time.unscaledTime + QualityCheckCooldownSec;
+            _nextQualityCheck = Time.unscaledTime + QualityCheckTimeSec;
         }
 
         private void Update() {
+            if (_hasRunQualityCheck) return;
+            
             FrameTimingManager.CaptureFrameTimings();
             
             if (!_fpsSamplesLoaded && _fpsFront == SampleCount - 1) _fpsSamplesLoaded = true;
@@ -42,8 +70,9 @@ namespace Code.Quality {
             
             // Should we do a quality check?
             if (Time.time > _nextQualityCheck) {
+                _hasRunQualityCheck = true;
                 DoQualityCheck();
-                _nextQualityCheck = Time.time + QualityCheckCooldownSec;
+                _nextQualityCheck = Time.time + QualityCheckTimeSec;
             }
         }
 
@@ -53,14 +82,21 @@ namespace Code.Quality {
                 targetFrameRate = (int) (1.0 / Screen.currentResolution.refreshRateRatio.value);
             
             var currentFivePercent = GetPercentFps(0.05f);
-            // If our 5% is lower than 90% of target we should drop quality
-            if (currentFivePercent < 0.90 * targetFrameRate) {
-                var avgFrameTimings = GetRecentAverageFrameTimings();
-                Debug.Log("Warning: too laggy!: " + avgFrameTimings.gpu);
-                // if (!avgFrameTimings.Equals(default)) {
-                //     if (avgFrameTimings.gpu)
-                // }
+
+            var frameHealth = FrameHealth.Ok;
+            var avgFrameTimings = GetRecentAverageFrameTimings();
+            
+            // If our 5% is lower than 80% of target we should drop quality
+            if (currentFivePercent < 0.80 * targetFrameRate) {
+                frameHealth = FrameHealth.Unhealthy;
             }
+            
+            Debug.Log("Invoke quality check");
+            OnQualityCheck?.Invoke(frameHealth, new QualityReport {
+                gpuAvg = avgFrameTimings.gpu,
+                cpuMainAvg = avgFrameTimings.cpuMain,
+                cpuRenderAvg = avgFrameTimings.cpuRender,
+            });
         }
 
         private AverageFrameTimings GetRecentAverageFrameTimings() {
@@ -95,6 +131,7 @@ namespace Code.Quality {
                 var sample = _fps[i];
                 if (sample < largestFpsSample) {
                     var index = samples.BinarySearch(sample);
+                    Debug.Log("indx = " + index + " samplesize=" + samples.Count);
                     samples.Insert(index, sample);
                     samples.RemoveAt(samples.Count - 1);
                 }
