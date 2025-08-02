@@ -3,12 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace Code.Quality {
-    internal struct AverageFrameTimings {
-        public double gpu;
-        public double cpuMain;
-        public double cpuRender;
-    }
-
     // We should redo this to be a single core number for quality
     // NOTE: must match FrameHealth in Airship.d.ts
     public enum FrameHealth {
@@ -20,6 +14,8 @@ namespace Code.Quality {
         public double gpuAvg;
         public double cpuMainAvg;
         public double cpuRenderAvg;
+
+        public int numFrames;
     }
     
     [LuauAPI(LuauContext.Game)]
@@ -91,28 +87,25 @@ namespace Code.Quality {
                 frameHealth = FrameHealth.Unhealthy;
             }
             
-            OnQualityCheck?.Invoke(frameHealth, new QualityReport {
-                gpuAvg = avgFrameTimings.gpu,
-                cpuMainAvg = avgFrameTimings.cpuMain,
-                cpuRenderAvg = avgFrameTimings.cpuRender,
-            });
+            OnQualityCheck?.Invoke(frameHealth, avgFrameTimings);
         }
 
-        private AverageFrameTimings GetRecentAverageFrameTimings() {
+        private QualityReport GetRecentAverageFrameTimings() {
             if (!FrameTimingManager.IsFeatureEnabled()) return default;
             
-            var latestTimings = FrameTimingManager.GetLatestTimings(FrameTimingCount, _frameTimings);
-            if (latestTimings <= 0) return default;
+            var numLatestTimings = FrameTimingManager.GetLatestTimings(FrameTimingCount, _frameTimings);
+            if (numLatestTimings <= 0) return default;
 
-            var result = new AverageFrameTimings();
-            for (var i = 0; i < latestTimings; i++) {
-                result.cpuMain += _frameTimings[i].cpuMainThreadFrameTime;
-                result.cpuRender += _frameTimings[i].cpuRenderThreadFrameTime;
-                result.gpu += _frameTimings[i].gpuFrameTime;
+            var result = new QualityReport();
+            for (var i = 0; i < numLatestTimings; i++) {
+                result.cpuMainAvg += _frameTimings[i].cpuMainThreadFrameTime;
+                result.cpuRenderAvg += _frameTimings[i].cpuRenderThreadFrameTime;
+                result.gpuAvg += _frameTimings[i].gpuFrameTime;
             }
-            result.cpuMain /= latestTimings;
-            result.cpuRender /= latestTimings;
-            result.gpu /= latestTimings;
+            result.cpuMainAvg /= numLatestTimings;
+            result.cpuRenderAvg /= numLatestTimings;
+            result.gpuAvg /= numLatestTimings;
+            result.numFrames = (int) numLatestTimings;
             return result;
         }
         
