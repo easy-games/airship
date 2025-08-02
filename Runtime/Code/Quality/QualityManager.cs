@@ -91,7 +91,6 @@ namespace Code.Quality {
                 frameHealth = FrameHealth.Unhealthy;
             }
             
-            Debug.Log("Invoke quality check");
             OnQualityCheck?.Invoke(frameHealth, new QualityReport {
                 gpuAvg = avgFrameTimings.gpu,
                 cpuMainAvg = avgFrameTimings.cpuMain,
@@ -100,6 +99,8 @@ namespace Code.Quality {
         }
 
         private AverageFrameTimings GetRecentAverageFrameTimings() {
+            if (!FrameTimingManager.IsFeatureEnabled()) return default;
+            
             var latestTimings = FrameTimingManager.GetLatestTimings(FrameTimingCount, _frameTimings);
             if (latestTimings <= 0) return default;
 
@@ -131,7 +132,9 @@ namespace Code.Quality {
                 var sample = _fps[i];
                 if (sample < largestFpsSample) {
                     var index = samples.BinarySearch(sample);
-                    Debug.Log("indx = " + index + " samplesize=" + samples.Count);
+                    // Will return bitwise compliment if larger than list
+                    if (index < 0) index = ~index;
+                    
                     samples.Insert(index, sample);
                     samples.RemoveAt(samples.Count - 1);
                 }
