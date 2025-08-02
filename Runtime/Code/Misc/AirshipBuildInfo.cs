@@ -70,9 +70,7 @@ namespace Luau {
 
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
             foreach (var pair in metaTop.extends) {
-                var matching = metaTop.behaviours[pair.Key];
-
-                if (matching == null) continue;
+                if (!metaTop.behaviours.TryGetValue(pair.Key, out var matching)) continue;
                 
                 var extendsPaths = new List<string>();
                 foreach (var extendsPath in pair.Value) {
