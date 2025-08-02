@@ -125,7 +125,7 @@ Material:
     - _GlossyReflections: 0
     - _Metallic: 0
     - _OcclusionStrength: 1
-    - _PaddingOverWidth: 0.006555944
+    - _PaddingOverWidth: 0.0024414062
     - _Parallax: 0.005
     - _QueueControl: 0
     - _QueueOffset: 0
@@ -136,7 +136,7 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _TexWidthOverWidth: 0.11188811
+    - _TexWidthOverWidth: 0.12011719
     - _TexturePadding: 10
     - _TextureWidth: 256
     - _WorkflowMode: 1
