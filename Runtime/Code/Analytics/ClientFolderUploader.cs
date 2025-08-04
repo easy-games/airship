@@ -59,8 +59,10 @@ namespace Code.Analytics {
                 }
 
                 var playerLogFile = Path.Combine(path, "Player.log");
+                var tempCurPlayerLogFile = Path.Combine(path, "Player-cur.log");
                 var playerPrevLogFile = Path.Combine(path, "Player-prev.log");
                 var editorLogFile = Path.Combine(path, "Editor.log");
+                var tempCurEditorLogFile = Path.Combine(path, "Editor-cur.log");
                 var editorPrevLogFile = Path.Combine(path, "Editor-prev.log");
 
                 var logMessages = new List<string>();
@@ -72,16 +74,24 @@ namespace Code.Analytics {
                     logMessages.Clear();
                 };
 
+                var cleanupFiles = new List<string>() {
+                    zipPath,
+                };
 
                 for (int i = 0; i < 3; i++) {
                     logMessages.Add("[ClientFolderUploader] Creating zip archive");
                     try {
+                        if (File.Exists(zipPath)) {
+                            File.Delete(zipPath);
+                        }
                         using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create)) {
                             var fileExists = false;
                             if (File.Exists(playerLogFile)) {
                                 fileExists = true;
+                                File.Copy(playerLogFile, tempCurPlayerLogFile, true);
                                 logMessages.Add("[ClientFolderUploader] Adding Player.log");
-                                archive.CreateEntryFromFile(playerLogFile, "Player.log");
+                                archive.CreateEntryFromFile(tempCurPlayerLogFile, "Player.log");
+                                cleanupFiles.Add(tempCurPlayerLogFile);
                             }
 
                             if (File.Exists(playerPrevLogFile)) {
@@ -92,8 +102,10 @@ namespace Code.Analytics {
 
                             if (File.Exists(editorLogFile)) {
                                 fileExists = true;
+                                File.Copy(editorLogFile, tempCurEditorLogFile, true);
                                 logMessages.Add("[ClientFolderUploader] Adding Editor.log");
-                                archive.CreateEntryFromFile(editorLogFile, "Editor.log");
+                                archive.CreateEntryFromFile(tempCurEditorLogFile, "Editor.log");
+                                cleanupFiles.Add(tempCurEditorLogFile);
                             }
 
                             if (File.Exists(editorPrevLogFile)) {
@@ -157,7 +169,12 @@ namespace Code.Analytics {
                     },
                 }, "");
 
-                File.Delete(zipPath);
+                Debug.Log("[ClientFolderUploader] Deleting temporary files");
+                foreach (var file in cleanupFiles) {
+                    if (File.Exists(file)) {
+                        File.Delete(file);
+                    }
+                }
             } catch (Exception ex) {
                 Debug.LogError($"[ClientFolderUploader] Error during upload process: {ex.Message}");
                 throw;
