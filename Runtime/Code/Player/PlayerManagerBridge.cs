@@ -189,7 +189,7 @@ namespace Code.Player {
 		}
 
 		/**
-		 * Client side logic for when a new client joins.
+		 * Server side logic for when a new client joins.
 		 */
 		private async void NetworkServer_OnConnected(NetworkConnectionToClient conn) {
 			if (playerPrefab == null) {

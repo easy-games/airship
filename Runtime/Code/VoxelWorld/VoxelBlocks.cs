@@ -297,10 +297,10 @@ public class VoxelBlocks : MonoBehaviour {
     public int maxResolution = 256;
     [SerializeField]
     public int atlasWidthTextures = 15;
-    private int atlasPaddingPx = 15;
+    private int atlasPaddingPx = 32;
 
     public int atlasSize {
-        get => atlasWidthTextures * (maxResolution + atlasPaddingPx * 2);
+        get => atlasWidthTextures * (maxResolution);
     }
     [SerializeField]
     public bool pointFiltering = false;
@@ -691,7 +691,7 @@ public class VoxelBlocks : MonoBehaviour {
 
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
-        int defaultTextureSize = maxResolution;
+        int defaultTextureSize = maxResolution - atlasPaddingPx * 2;
         atlas.PackTextures(temporaryTextures, atlasPaddingPx, atlasSize, atlasSize, numMips, defaultTextureSize);
         temporaryTextures.Clear();
 
@@ -699,7 +699,7 @@ public class VoxelBlocks : MonoBehaviour {
         // atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
         atlasMaterial.SetFloat("_AtlasWidthTextures", atlasWidthTextures);
         atlasMaterial.SetFloat("_PaddingOverWidth", atlasPaddingPx / (float) atlasSize);
-        atlasMaterial.SetFloat("_TexWidthOverWidth", maxResolution / (float) atlasSize);
+        atlasMaterial.SetFloat("_TexWidthOverWidth", (maxResolution - atlasPaddingPx * 2) / (float) atlasSize);
 
         //create the materials
         Profiler.BeginSample("CreateMaterials");
