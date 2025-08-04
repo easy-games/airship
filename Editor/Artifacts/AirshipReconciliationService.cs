@@ -125,6 +125,7 @@ namespace Airship.Editor {
 
             if (scriptMetadata == null) return false;
             componentMetadata.name = scriptMetadata.name;
+            componentMetadata.decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
             
             // Add missing properties
             foreach (var scriptProperty in scriptMetadata.properties) {

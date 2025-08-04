@@ -218,6 +218,30 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         var metadata = serializedObject.FindProperty("metadata");
         
+        var originalMetadata = binding.script.m_metadata;
+        
+        var originalDecorators = originalMetadata.decorators;
+        var serializedDecorators = binding.metadata.decorators;
+        
+        if (serializedDecorators.Count != originalDecorators.Count) {
+            return true;
+        }
+        
+        foreach (var serializedDecorator in serializedDecorators)
+        {
+            var decoratorName = serializedDecorator.name;
+            var originalDecorator = originalDecorators.Find(d => d.name == decoratorName);
+            
+            if (originalDecorator == null) {
+                return true;
+            }
+
+            var serializedParameters = serializedDecorator.parameters;
+            if (serializedParameters.Count != originalDecorator.parameters.Count) {
+                return true;
+            }
+        }
+        
         var metadataProperties = metadata.FindPropertyRelative("properties");
         var originalMetadataProperties = binding.script.m_metadata?.properties;
 
