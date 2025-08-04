@@ -78,9 +78,8 @@ namespace Code.Analytics {
                     zipPath,
                 };
 
-                for (int i = 0; i < 3; i++) {
-                    logMessages.Add("[ClientFolderUploader] Creating zip archive");
-                    try {
+                Debug.Log("[ClientFolderUploader] Creating zip archive");
+                try {
                         if (File.Exists(zipPath)) {
                             File.Delete(zipPath);
                         }
@@ -118,17 +117,11 @@ namespace Code.Analytics {
                                 return;
                             }
                         }
-                        break;
                     } catch (Exception ex) {
-                        logMessages.Add($"[ClientFolderUploader] Zip creation failed: {ex.Message}");
-                        await Task.Delay(1000 * (i + 1)); // Wait longer on retries
-                        if (i == 2) {
-                            printDebugLines();
-                            Debug.LogError("[ClientFolderUploader] Failed to create zip after 3 attempts");
-                            throw;
-                        }
+                        printDebugLines();
+                        Debug.LogError($"[ClientFolderUploader] Zip creation failed: {ex.Message}");
+                        throw;
                     }
-                }
 
                 printDebugLines();
 
