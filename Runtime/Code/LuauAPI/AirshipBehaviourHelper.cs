@@ -304,7 +304,7 @@ public static class AirshipBehaviourHelper {
             return 0;
         }
         
-        componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+        componentType = LuauCore.GetTypeFromString(typeName);
         if (componentType == null) {
             ThreadDataManager.Error(thread);
             Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");

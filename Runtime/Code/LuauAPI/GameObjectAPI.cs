@@ -167,7 +167,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
 
             if (AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread) == 0) return 0;
 
-            var objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            var objectType = LuauCore.GetTypeFromString(typeName);
             Object[] objects;
             if (useFindObjectsInactive) {
                 objects = Object.FindObjectsByType(objectType, findObjectsInactive, sortMode);
@@ -318,7 +318,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
-            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -348,7 +348,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             
             var gameObject = (GameObject)targetObject;
             
-            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -372,7 +372,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             
             var gameObject = (GameObject)targetObject;
             
-            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -398,7 +398,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
             
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
-            Type objectType = LuauCore.CoreInstance.GetTypeFromString(param0);
+            Type objectType = LuauCore.GetTypeFromString(param0);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);

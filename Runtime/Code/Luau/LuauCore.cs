@@ -89,10 +89,7 @@ public partial class LuauCore : MonoBehaviour {
 
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;
-
-    private Dictionary<string, Type> shortTypeNames = new Dictionary<string, Type>();
-
-    private List<string> namespaces = new List<string>();
+    
     private Dictionary<string, BaseLuaAPIClass> unityAPIClasses = new Dictionary<string, BaseLuaAPIClass>();
     private Dictionary<Type, BaseLuaAPIClass> unityAPIClassesByType = new Dictionary<Type, BaseLuaAPIClass>();
 

@@ -689,6 +689,10 @@ namespace Luau {
 
             return null;
         }
+        
+        public List<LuauMetadataDecoratorElement> FindClassDecorators(string decoratorName) {
+            return decorators.Where(property => property.name == decoratorName).ToList();
+        }
 
         public LuauMetadataProperty FindProperty(string propertyName) {
             foreach (var property in properties) {
