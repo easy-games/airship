@@ -57,6 +57,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             "Controls the maximum magnitude of the correction interp. Mis-predictions larger that this magnitude will instantly teleport the character to the correct location.")]
         public float correctionMaxMagnitude = 10;
 
+        [Header("Character Parenting")]
+        [Tooltip("Enable moving the player with a tracked parent.")]
+        public bool parentFollowingEnabled = false;
+
+        [Tooltip("The current object to adjust player position with.")]
+        public GameObject? trackedParent = null;
+
         [Header("Visual Variables")] public bool autoCalibrateSkiddingSpeed = true;
 
         [Tooltip(
@@ -804,10 +811,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                                        (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
             }
 
-#endregion
+            #endregion
 
 
-#region MOVE_FORCE
+            #region MOVE_FORCE
 
             //Clamp directional movement to not add forces if you are already moving in that direction
             var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
@@ -1189,12 +1196,13 @@ namespace Code.Player.Character.MovementSystems.Character {
                 }
             }
 
-#endregion
+            #endregion
 
-#region APPLY FORCES
+            #region APPLY FORCES
 
             //Stop character from moveing into colliders (Helps prevent axis aligned box colliders from colliding when they shouldn't like jumping in a voxel world)
-            if (movementSettings.preventWallClipping && !currentMoveSnapshot.prevStepUp) {
+            if (movementSettings.preventWallClipping && !currentMoveSnapshot.prevStepUp)
+            {
                 var velY = newVelocity.y;
                 flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
                 var minDistance = characterRadius + forwardMargin;
@@ -1211,20 +1219,23 @@ namespace Code.Player.Character.MovementSystems.Character {
                 float i = 0;
                 var label = "ForwardHitCounts: " + forwardHits.Length + "\n";
                 var forcedCount = 0;
-                foreach (var forwardHitResult in forwardHits) {
+                foreach (var forwardHitResult in forwardHits)
+                {
                     label += "Hit " + i + " Point: " + forwardHitResult.point + " Normal: " + forwardHitResult.normal;
                     //Check if this is a valid wall and not something behind a surface
                     var forwardHit = forwardHitResult;
                     var checkPoint = transform.position + new Vector3(0, characterHalfExtents.y, 0);
 
-                    if (drawDebugGizmos_WALLCLIPPING) {
+                    if (drawDebugGizmos_WALLCLIPPING)
+                    {
                         var color = Color.Lerp(Color.green, Color.cyan, i / (forwardHits.Length - 1f));
                         GizmoUtils.DrawSphere(forwardHit.point, .05f, color, 4, .2f);
                         Debug.DrawLine(forwardHit.point, forwardHit.point + forwardHit.normal, color, .2f);
                     }
 
                     //Valid result from BoxCastAll but not a hit we want to use (happens on corners of voxels sometimes)
-                    if (forwardHitResult.distance == 0) {
+                    if (forwardHitResult.distance == 0)
+                    {
                         forwardHit.point = checkPoint + forwardVector;
                         label += " ZEROED HIT POINT";
                     }
@@ -1234,21 +1245,26 @@ namespace Code.Player.Character.MovementSystems.Character {
                                         Mathf.Max(forwardHit.distance, movementSettings.characterRadius * 2);
                     if (Physics.Raycast(checkPoint, checkDir,
                             out var rayTestHit, checkDistance,
-                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+                            movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore))
+                    {
                         //This is more accurate and may be a complete different wall than the box cast found
                         forwardHit = rayTestHit;
-                        if (drawDebugGizmos_WALLCLIPPING) {
+                        if (drawDebugGizmos_WALLCLIPPING)
+                        {
                             Debug.DrawLine(checkPoint, checkPoint + checkDir * checkDistance, Color.magenta, .2f);
                             GizmoUtils.DrawSphere(rayTestHit.point, .04f, Color.magenta, 4, .2f);
                             Debug.DrawLine(rayTestHit.point, rayTestHit.point + rayTestHit.normal, Color.magenta, .2f);
                         }
-                    } else if (drawDebugGizmos_WALLCLIPPING) {
+                    }
+                    else if (drawDebugGizmos_WALLCLIPPING)
+                    {
                         GizmoUtils.DrawSphere(checkPoint, .03f, Color.white, 4, .2f);
                         Debug.DrawLine(checkPoint, checkPoint + checkDir * checkDistance, Color.white, .2f);
                     }
 
                     i++;
-                    if (forwardHit.distance == 0) {
+                    if (forwardHit.distance == 0)
+                    {
                         //still invalid so skip
                         continue;
                     }
@@ -1260,12 +1276,14 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                     //print("Avoiding wall: " + forwardHit.collider.gameObject.name + " distance: " + forwardHit.distance + " isVerticalWall: " + isVerticalWall + " isKinematic: " + isKinematic);
                     //Stop character from walking into walls but Let character push into rigidbodies	
-                    if (isVerticalWall && isKinematic) {
+                    if (isVerticalWall && isKinematic)
+                    {
                         //Stop movement into this surface
                         var colliderDot = 1 - Mathf.Max(0,
                             -Vector3.Dot(forwardHit.normal, forwardVector));
                         //var colliderDot = 1 - -Vector3.Dot(forwardHit.normal, forwardVector);
-                        if (Mathf.Abs(colliderDot) < .01) {
+                        if (Mathf.Abs(colliderDot) < .01)
+                        {
                             //|| forwardHit.distance < bumpSize) {
                             colliderDot = 0;
                         }
@@ -1277,12 +1295,16 @@ namespace Code.Player.Character.MovementSystems.Character {
                         // newVelocity.z -= flatVelocity.z;
 
                         var flatPoint = new Vector3(forwardHit.point.x, transform.position.y, forwardHit.point.z);
-                        if (Vector3.Distance(flatPoint, transform.position) < minDistance) {
+                        if (Vector3.Distance(flatPoint, transform.position) < minDistance)
+                        {
                             //Snap back to the bump distance so you never inch your way to the edge 
                             var newPos = forwardHit.point + forwardHit.normal * (bumpSize + forwardMargin);
-                            if (forcedCount == 0) {
+                            if (forcedCount == 0)
+                            {
                                 transform.position = new Vector3(newPos.x, transform.position.y, newPos.z);
-                            } else {
+                            }
+                            else
+                            {
                                 transform.position = new Vector3(
                                     (transform.position.x + newPos.x) / 2f,
                                     transform.position.y,
@@ -1294,7 +1316,8 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                             // var normalVel = forwardHit.normal * (Math.Abs(newVelocity.x) + Math.Abs(newVelocity.z)); 
                             // newVelocity = new Vector3(normalVel.x, velY , normalVel.z);
-                        } else { }
+                        }
+                        else { }
 
                         newVelocity = Vector3.ProjectOnPlane(flatVelocity, forwardHit.normal);
                         //newVelocity.y = 0;
@@ -1324,7 +1347,8 @@ namespace Code.Player.Character.MovementSystems.Character {
                     label += "\n";
                 }
 
-                if (forwardHits.Length > 0) {
+                if (forwardHits.Length > 0)
+                {
                     //Debug.Log(label);
                 }
 
@@ -1335,7 +1359,8 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //         Quaternion.identity);
                 // }
 
-                if (!grounded && detectedGround) {
+                if (!grounded && detectedGround)
+                {
                     //Hit ground but its not valid ground, push away from it
                     //print("PUSHING AWAY FROM: " + groundHit.normal);
                     newVelocity += groundHit.normal * physics.GetFlatDistance(rootPosition, groundHit.point) * .25f /
@@ -1365,17 +1390,20 @@ namespace Code.Player.Character.MovementSystems.Character {
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
             rb.linearVelocity = newVelocity;
 
-#endregion
+            #endregion
 
-#region SAVE STATE
+            #region SAVE STATE
+
 
             // if(currentMoveState.timeSinceBecameGrounded < .1){
             // 	print("LANDED! prevVel: " + currentVelocity + " newVel: " + newVelocity);
             // }
 
             // only update animations if we are not in a replay
-            if (!replay) {
-                var newState = new CharacterAnimationSyncData() {
+            if (!replay)
+            {
+                var newState = new CharacterAnimationSyncData()
+                {
                     state = currentMoveSnapshot.state,
                     grounded = !inAir || didStepUp,
                     sprinting = currentMoveSnapshot.isSprinting,
@@ -1384,13 +1412,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                     lookVector = lookVector,
                     jumping = didJump
                 };
-                if (newState.state != currentAnimState.state) {
+                if (newState.state != currentAnimState.state)
+                {
                     stateChanged?.Invoke((int)newState.state);
-                    if (animationHelper) {
+                    if (animationHelper)
+                    {
                         animationHelper.SetState(newState);
                     }
-                } else {
-                    if (animationHelper) {
+                }
+                else
+                {
+                    if (animationHelper)
+                    {
                         animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
                     }
                 }
@@ -1412,10 +1445,48 @@ namespace Code.Player.Character.MovementSystems.Character {
             currentMoveSnapshot.isGrounded = grounded;
             currentMoveSnapshot.prevStepUp = didStepUp;
 
-#endregion
+            #endregion
+
+            #region Adjust for parent
+
+            if (this.parentFollowingEnabled && this.trackedParent != null)
+            {
+                Vector3 oldPlayerPosition = this.rb.position;
+                Quaternion oldPlayerRotation = this.rb.rotation;
+    
+                Vector3 oldParentPosition = currentMoveSnapshot.parentPosition ?? this.trackedParent.transform.position;
+                Quaternion oldParentRotation = Quaternion.Euler(currentMoveSnapshot.parentRotation ?? this.trackedParent.transform.rotation.eulerAngles);
+
+                Vector3 newParentPosition = this.trackedParent.transform.position;
+                Quaternion newParentRotation = this.trackedParent.transform.rotation;
+
+
+                Vector3 localPosition = Quaternion.Inverse(oldParentRotation) * (oldPlayerPosition - oldParentPosition);
+                Quaternion localRotation = Quaternion.Inverse(oldParentRotation) * oldPlayerRotation;
+
+                // 3. Apply local position/rotation to new green transform
+                Vector3 newPlayerPosition = newParentRotation * localPosition + newParentPosition;
+                Vector3 newPlayerRotation = (newParentRotation * localRotation).eulerAngles;
+
+                this.rb.position = newPlayerPosition;
+                this.rb.rotation = Quaternion.Euler(newPlayerRotation);
+
+                
+
+                currentMoveSnapshot.parentPosition = this.trackedParent.transform.position;
+                currentMoveSnapshot.parentRotation = this.trackedParent.transform.rotation.eulerAngles;
+            }
+            else
+            {
+                currentMoveSnapshot.parentPosition = null;
+                currentMoveSnapshot.parentRotation = null;
+            }
+
+            #endregion
 
             //Track speed based on position
-            if (useExtraLogging) {
+            if (useExtraLogging)
+            {
                 //print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
             }
 
@@ -1748,8 +1819,17 @@ namespace Code.Player.Character.MovementSystems.Character {
             customInputData = data;
             // print("Custom input bytes: " + data.dataSize);
         }
+        
+        public void SetTrackedParent(GameObject parent) {
+            this.trackedParent = parent;
+        }
+        
+        public void RemoveTrackedParent() {
+            this.trackedParent = null;
+        }
 
-        public void SetCustomSnapshotData(BinaryBlob data) {
+        public void SetCustomSnapshotData(BinaryBlob data)
+        {
             customSnapshotData = data;
             // print("Custom snapshot bytes: " + data.dataSize);
         }
@@ -1903,6 +1983,10 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public Vector3 GetPosition() {
             return rb.position;
+        }
+        
+        public GameObject? GetTrackedParent() {
+            return this.trackedParent;
         }
 
         // This is used by typescript to allow custom data to be compared in TS and the result used

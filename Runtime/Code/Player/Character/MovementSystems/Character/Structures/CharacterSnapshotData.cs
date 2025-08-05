@@ -24,6 +24,9 @@ namespace Code.Player.Character.MovementSystems.Character
         public Vector3 position;
         public Vector3 velocity;
         public Vector3 lookVector;
+
+        public Vector3? parentPosition;
+        public Vector3? parentRotation;
         
         public float currentSpeed;
         public float speedModifier = 1; // Not used yet
@@ -154,6 +157,8 @@ namespace Code.Player.Character.MovementSystems.Character
             this.isFlying = copySnapshot.isFlying;
             this.inputDisabled = copySnapshot.inputDisabled;
             this.lookVector = copySnapshot.lookVector;
+            this.parentPosition = copySnapshot.parentPosition;
+            this.parentRotation = copySnapshot.parentRotation;
             this.customData = copySnapshot.customData != null
                 ? new BinaryBlob()
                 {
@@ -185,6 +190,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 $"IsFlying: {isFlying}\n" +
                 $"InputDisabled: {inputDisabled}\n" +
                 $"LookVector: {lookVector} ({NetworkSerializationUtil.CompressToShort(lookVector.x)}, {NetworkSerializationUtil.CompressToShort(lookVector.y)}, {NetworkSerializationUtil.CompressToShort(lookVector.z)})\n" +
+                $"ParentPosition: {parentPosition}\n" +
+                $"ParentRotation: {parentRotation}\n" +
                 $"CustomData: {(customData != null ? $"Size: {customData.dataSize}" : "null")}";
         }
 
@@ -211,6 +218,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 isFlying = isFlying,
                 inputDisabled = inputDisabled,
                 lookVector = lookVector,
+                parentPosition = parentPosition,
+                parentRotation = parentRotation,
                 customData = customData != null ? new BinaryBlob()
                 {
                     dataSize = customData.dataSize,
@@ -233,6 +242,8 @@ namespace Code.Player.Character.MovementSystems.Character
             bool positionChanged = this.position != other.position;
             bool velocityChanged = this.velocity != other.velocity;
             bool lookVectorChanged = this.lookVector != other.lookVector;
+            bool parentPositionChanged = this.parentPosition != other.parentPosition;
+            bool parentRotationChanged = this.parentRotation != other.parentRotation;
             bool speedChanged = this.currentSpeed != other.currentSpeed;
             bool modifierChanged = this.speedModifier != other.speedModifier;
             bool jumpCountChanged = this.jumpCount != other.jumpCount;
@@ -250,6 +261,8 @@ namespace Code.Player.Character.MovementSystems.Character
             if (jumpCountChanged) BitUtil.SetBit(ref changedMask, 6, true);
             if (stateChanged) BitUtil.SetBit(ref changedMask, 7, true);
             if (canJumpChanged) BitUtil.SetBit(ref changedMask, 8, true);
+            if (parentPositionChanged) BitUtil.SetBit(ref changedMask, 9, true);
+            if (parentRotationChanged) BitUtil.SetBit(ref changedMask, 10, true);
 
             // Write only changed fields
             var writer = NetworkWriterPool.Get();
@@ -270,11 +283,14 @@ namespace Code.Player.Character.MovementSystems.Character
             if (jumpCountChanged) writer.Write(other.jumpCount);
             if (stateChanged) writer.Write((byte)other.state);
             if (canJumpChanged) writer.Write(other.canJump);
+            if (parentPositionChanged) writer.Write(other.parentPosition);
+            if (parentRotationChanged) writer.Write(other.parentRotation);
 
             // We are cheating here by only writing bytes at the end if we have custom data. We can do this because we know the expected size
             // of the above bytes and we know that a diff packet will only contain one diff. If we were to pass multiple diffs in a single packet,
             // we could not do this optimization since there would be no way to know where the next packet starts.
-            if (customData != null) {
+            if (customData != null)
+            {
                 var customDataDiff = customData.CreateDiff(other.customData);
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
@@ -341,12 +357,16 @@ namespace Code.Player.Character.MovementSystems.Character
             if (BitUtil.GetBit(changedMask, 6)) snapshot.jumpCount = reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 7)) snapshot.state = (CharacterState)reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 8)) snapshot.canJump = reader.Read<byte>();
+            if (BitUtil.GetBit(changedMask, 9)) snapshot.parentPosition = reader.Read<Vector3>();
+            if (BitUtil.GetBit(changedMask, 10)) snapshot.parentRotation = reader.Read<Vector3>();
             
-            if (reader.Remaining != 0) {
+            if (reader.Remaining != 0)
+            {
                 var cDataDiff = reader.ReadBytes(reader.Remaining);
                 snapshot.customData = customData.ApplyDiff(cDataDiff);
             }
-            else {
+            else
+            {
                 snapshot.customData = null;
             }
             
@@ -398,7 +418,8 @@ namespace Code.Player.Character.MovementSystems.Character
     }
 
     public static class CharacterSnapshotDataSerializer {
-        public static void EncodeBools(ref byte bools, CharacterSnapshotData value) {
+        public static void EncodeBools(ref byte bools, CharacterSnapshotData value)
+        {
             BitUtil.SetBit(ref bools, 0, value.inputDisabled);
             BitUtil.SetBit(ref bools, 1, value.isFlying);
             BitUtil.SetBit(ref bools, 2, value.isSprinting);
@@ -436,6 +457,8 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(value.canJump);
             writer.Write((byte) value.state);
             writer.Write(value.jumpCount);
+            writer.Write(value.parentPosition);
+            writer.Write(value.parentRotation);
         }
 
         public static CharacterSnapshotData ReadCharacterSnapshotData(this NetworkReader reader) {
@@ -446,7 +469,8 @@ namespace Code.Player.Character.MovementSystems.Character
                 var customDataArray = reader.ReadBytes(customDataSize);
                 customData = new BinaryBlob(customDataArray);
             }
-            return new CharacterSnapshotData() {
+            return new CharacterSnapshotData()
+            {
                 inputDisabled = BitUtil.GetBit(bools, 0),
                 isFlying = BitUtil.GetBit(bools, 1),
                 isSprinting = BitUtil.GetBit(bools, 2),
@@ -455,22 +479,24 @@ namespace Code.Player.Character.MovementSystems.Character
                 isCrouching = BitUtil.GetBit(bools, 5),
                 prevStepUp = BitUtil.GetBit(bools, 6),
                 isGrounded = BitUtil.GetBit(bools, 7),
-                
+
                 time = reader.Read<double>(),
                 tick = reader.Read<int>(),
                 lastProcessedCommand = reader.Read<int>(),
                 position = reader.Read<Vector3>(),
                 velocity = reader.Read<Vector3>(),
                 lookVector = new Vector3(
-                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
-                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>())),
                 currentSpeed = reader.Read<float>(),
                 speedModifier = NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>()),
                 canJump = reader.Read<byte>(),
-                state = (CharacterState) reader.Read<byte>(),
+                state = (CharacterState)reader.Read<byte>(),
                 jumpCount = reader.Read<byte>(),
                 customData = customData,
+                parentPosition = reader.Read<Vector3>(),
+                parentRotation = reader.Read<Vector3>(),
             };
         }
     }
