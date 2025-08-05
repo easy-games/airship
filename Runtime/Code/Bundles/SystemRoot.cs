@@ -35,6 +35,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	public List<AssetBundleCreateRequest> extraBundleLoadRequests = new();
 	public static bool startedLoadingExtraBundle = false;
 	public static bool preWarmedCoreShaders = false;
+	private static bool disableCoreMaterialsBundle = false;
 	public AssetBundle coreMaterialsAssetBundle;
 	private bool loadInProgress = false;
 
@@ -105,16 +106,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 				Debug.Log($"Loaded CoreMaterials bundle in {st.ElapsedMilliseconds} ms.");
 			}
 #else
-			if (File.Exists(path)) {
-				Debug.Log($"Loading CoreMaterials... ({path})");
-				var st = Stopwatch.StartNew();
-				var ao = AssetBundle.LoadFromFileAsync(path);
-				this.extraBundleLoadRequests.Add(ao);
-				await ao;
-				this.coreMaterialsAssetBundle = ao.assetBundle;
-				Debug.Log($"Loaded CoreMaterials bundle in {st.ElapsedMilliseconds} ms.");
-			} else {
-				Debug.LogWarning($"CoreMaterials path not found ({path})");
+			if (!disableCoreMaterialsBundle) {
+				if (File.Exists(path)) {
+					Debug.Log($"Loading CoreMaterials... ({path})");
+					var st = Stopwatch.StartNew();
+					var ao = AssetBundle.LoadFromFileAsync(path);
+					this.extraBundleLoadRequests.Add(ao);
+					await ao;
+					this.coreMaterialsAssetBundle = ao.assetBundle;
+					Debug.Log($"Loaded CoreMaterials bundle in {st.ElapsedMilliseconds} ms.");
+				} else {
+					Debug.LogWarning($"CoreMaterials path not found ({path})");
+				}
 			}
 #endif
 		}
@@ -342,11 +345,13 @@ public class SystemRoot : Singleton<SystemRoot> {
 			yield return this.WaitAll(loadLists[0].ToArray());
 			Debug.Log("Loading game...");
 			yield return this.WaitAll(loadLists[1].ToArray());
-			
-			foreach (var ao in this.extraBundleLoadRequests) {
-				if (!ao.isDone) {
-					Debug.Log("Waiting for shipped asset bundles to load...");
-					yield return ao;
+
+			if (!disableCoreMaterialsBundle) {
+				foreach (var ao in this.extraBundleLoadRequests) {
+					if (!ao.isDone) {
+						Debug.Log("Waiting for shipped asset bundles to load...");
+						yield return ao;
+					}
 				}
 			}
 
