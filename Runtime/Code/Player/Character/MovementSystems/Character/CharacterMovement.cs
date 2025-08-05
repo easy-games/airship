@@ -1451,28 +1451,12 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (this.parentFollowingEnabled && this.trackedParent != null)
             {
-                Vector3 oldPlayerPosition = this.rb.position;
-                Quaternion oldPlayerRotation = this.rb.rotation;
-    
                 Vector3 oldParentPosition = currentMoveSnapshot.parentPosition ?? this.trackedParent.transform.position;
                 Quaternion oldParentRotation = Quaternion.Euler(currentMoveSnapshot.parentRotation ?? this.trackedParent.transform.rotation.eulerAngles);
 
-                Vector3 newParentPosition = this.trackedParent.transform.position;
-                Quaternion newParentRotation = this.trackedParent.transform.rotation;
-
-
-                Vector3 localPosition = Quaternion.Inverse(oldParentRotation) * (oldPlayerPosition - oldParentPosition);
-                Quaternion localRotation = Quaternion.Inverse(oldParentRotation) * oldPlayerRotation;
-
-                // 3. Apply local position/rotation to new green transform
-                Vector3 newPlayerPosition = newParentRotation * localPosition + newParentPosition;
-                Vector3 newPlayerRotation = (newParentRotation * localRotation).eulerAngles;
-
-                this.rb.position = newPlayerPosition;
-                this.rb.rotation = Quaternion.Euler(newPlayerRotation);
-
+                this.rb.position = this.trackedParent.transform.rotation * Quaternion.Inverse(oldParentRotation) * (this.rb.position - oldParentPosition) + this.trackedParent.transform.position;
+                this.rb.rotation = Quaternion.Euler((this.trackedParent.transform.rotation * Quaternion.Inverse(oldParentRotation) * this.rb.rotation).eulerAngles);
                 
-
                 currentMoveSnapshot.parentPosition = this.trackedParent.transform.position;
                 currentMoveSnapshot.parentRotation = this.trackedParent.transform.rotation.eulerAngles;
             }
