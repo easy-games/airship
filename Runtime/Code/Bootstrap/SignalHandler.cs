@@ -1,10 +1,6 @@
 using System.Collections;
-using System.Threading;
+using System.Runtime.InteropServices;
 using Code.Util;
-#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
-using Mono.Unix;
-using Mono.Unix.Native;
-#endif
 using UnityEngine;
 
 namespace Code.Bootstrap {
@@ -12,34 +8,51 @@ namespace Code.Bootstrap {
         public ServerBootstrap serverBootstrap;
         public UnityMainThreadDispatcher unityMainThread;
 
-
 #if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
-        void Start() {
-            var thread = new Thread(CheckForSignals);
-            thread.Start();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate void SignalDelegate();
+
+        [DllImport("signalhandler", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void RegisterSigTermHandler(SignalDelegate callback);
+
+        private static SignalDelegate cachedDelegate;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Init()
+        {
+            cachedDelegate = OnSigTerm;
+            RegisterSigTermHandler(cachedDelegate);
+            Debug.Log("Unix SIGTERM handler registered");
         }
 
-        private void CheckForSignals() {
-            while (true) {
-                var signals = new UnixSignal[] {
-                    new UnixSignal(Signum.SIGTERM)
-                };
-                int index = UnixSignal.WaitAny(signals, -1);
+        // This is called from a POSIX signal context
+        [AOT.MonoPInvokeCallback(typeof(SignalDelegate))]
+        private static void OnSigTerm()
+        {
+            Debug.Log("SIGTERM signal received from native");
 
-                if (index >= 0 && signals[index].IsSet) {
-                    Debug.Log("Sigterm.1");
-                    this.unityMainThread.Enqueue(HandleSigterm());
-                    signals[index].Reset();
-                }
+            // We can't call Unity APIs directly from signal thread,
+            // So we need to dispatch back to main thread
+            _hasSigterm = true;
+        }
+
+        private static bool _hasSigterm;
+
+        private void Update()
+        {
+            if (_hasSigterm)
+            {
+                _hasSigterm = false;
+                unityMainThread.Enqueue(HandleSigterm());
             }
         }
 
-        private IEnumerator HandleSigterm() {
+        private IEnumerator HandleSigterm()
+        {
             Debug.Log("SIGTERM received. Performing cleanup.");
-            // Perform your cleanup here
             serverBootstrap.InvokeOnProcessExit();
             yield return null;
-            // Application.Quit();
+            Application.Quit();
         }
 #endif
     }

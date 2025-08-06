@@ -75,8 +75,7 @@ public class TexturePacker : IDisposable
 
     
 
-    public void PackTextures(Dictionary<int, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize)
-    {
+    public void PackTextures(Dictionary<int, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize) {
         Debug.Log($"Packing texture atlas of size {width}x{height}");
         Profiler.BeginSample("PackTextures");
         //grab the time
@@ -87,7 +86,6 @@ public class TexturePacker : IDisposable
         uvs = new();
         
         int pad = (int)desiredPadding;
-        int doublePadding = pad * 2;
  
         //Create a renderTargetDesc
         RenderTextureDescriptor textureDesc = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32);
@@ -150,18 +148,26 @@ public class TexturePacker : IDisposable
                 fixedSizeY = (int)((float)normalizedSize * ratio);
             }
         }
-
-        for (int i = 0; i < numMips; i++)
-        {
+        
+        // Only iterating once to generate mip level 0. Our auto-generated mips currently don't
+        // provide benefit over Unity's GenerateMips
+        for (int i = 0; i < 1; i++) {
             renderTargetSetup.mipLevel = i;
             Graphics.SetRenderTarget(renderTargetSetup);
-            GL.Clear(true, true, Color.black);
-        
-            Rect rect = new Rect(pad, pad, fixedSizeX, fixedSizeY);
+            GL.Clear(true, true, new Color(i / 10.0f, 0, 0, 1));
+
+            // At lower mips more padding is required to avoid bleeding when linearly sampled.
+            // Unfortunately point sampling seems to only use mip level 0 in testing.
+            var scaledPad = pad;
+            var scaledFixedSizeX = fixedSizeX;
+            var scaledFixedSizeY = fixedSizeY;
+            
+            var scaledWidth = width;
+            var scaledHeight = height;
+            
+            Rect rect = new Rect(scaledPad, scaledPad, scaledFixedSizeX, scaledFixedSizeY);
             int fattestHeight = 0;
-            foreach (var textureItem in textures)
-            { 
-                //string name = textureItem.Key;
+            foreach (var textureItem in textures) { 
                 Texture2D diffuseMap = textureItem.Value.diffuse;
                 Texture2D normalMap = textureItem.Value.normals;
                 Texture2D smoothMap = textureItem.Value.smoothTexture;
@@ -210,25 +216,24 @@ public class TexturePacker : IDisposable
                     diffuseMat.SetFloat("_Brightness", textureItem.Value.brightness);   
                 }
             
-                rect.width = fixedSizeX;
+                rect.width = scaledFixedSizeX;
                 //does it fit on the X axis?
-                if (rect.x + rect.width + pad > width)
+                if (rect.x + rect.width + scaledPad > scaledWidth)
                 {
-                    rect.x = pad;
-                    rect.y += rect.height + doublePadding;
+                    rect.x = scaledPad;
+                    rect.y += rect.height + scaledPad * 2;
                     fattestHeight = 0;
                 }
 
                 if (fixedSizeY > fattestHeight)
                 {
-                    //Fatten the height of the row out if we have missized textures
-                    fattestHeight = fixedSizeY;
+                    // Fatten the height of the row out if we have missized textures
+                    fattestHeight = scaledFixedSizeY;
                 }
-                rect.height = fixedSizeY;
+                rect.height = scaledFixedSizeX;
 
-                if (rect.y + fattestHeight + pad > height)
-                {
-                    Debug.LogError("Atlas is full!");
+                if (rect.y + fattestHeight + scaledPad > scaledHeight) {
+                    Debug.LogError("Atlas is full! (Mip level = " + i + ")");
                     break;
                 }
                 // Calculate the UVs for the packed texture
@@ -254,9 +259,12 @@ public class TexturePacker : IDisposable
                 //colors[name] = averageColor;
 
                 //Step it along
-                rect.x += rect.width + doublePadding;
+                rect.x += rect.width + scaledPad * 2;
             }
+            diffuse.GenerateMips();
+            normals.GenerateMips();
         }
+        
         //print the total time elapsed
         // Debug.Log("Atlas generation took " + (Time.realtimeSinceStartup - startTime) + " seconds");
         
@@ -323,7 +331,6 @@ public class TexturePacker : IDisposable
         
         // If a material is provided, use Graphics.DrawTexture with the material
         Graphics.DrawTexture(destRect, sourceTexture, srcRect, 0, 0, 0, 0, material);
-        
       
         GL.PopMatrix();
     }
