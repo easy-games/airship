@@ -294,6 +294,9 @@ public static class CreateAssetBundles {
 		Debug.Log($"[Editor]: Building {platform} asset bundles...");
 		Debug.Log("[Editor]: Build path: " + buildPath);
 
+		// Act as if we are building all asset bundles (including CoreMaterials).
+		// This is so our current build target will have references to those asset bundles.
+		// This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
 		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds();
 
 		// Make a fake asset bundle with all package content. This makes the build have the correct dependency data.
