@@ -17,26 +17,20 @@ namespace Code.Network.Simulation
      * When this component is placed on a object being networked with Mirror, the server can include it
      * in lag compensation and clients can resimulate their predictions more accurately.
      */
-    public class AirshipNetworkedObject : NetworkBehaviour
-    {
+    public class AirshipNetworkedObject : MonoBehaviour {
+        
+        [Tooltip("Adjusts the lag compensation timing by this amount in seconds. Useful to add or remove additional delay on the lag compensation request. Ex. Removing observer buffer delay for non-buffered entities.")]
+        [Range(-1, 1)]
+        public float bufferAdjustment = 0;
+        
         private History<TransformSnapshot> history;
 
         private void Start()
         {
-            if (isServer && authority)
-            {
-                history = new History<TransformSnapshot>(NetworkServer.sendRate);
-                AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
-                AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
-                AirshipSimulationManager.Instance.OnLagCompensationCheck += this.LagCompensationCheck;
-            }
-
-            if (isClient && !authority)
-            {
-                history = new History<TransformSnapshot>(NetworkClient.sendRate);
-                AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
-                AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
-            }
+            history = new History<TransformSnapshot>(1);
+            AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
+            AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
+            AirshipSimulationManager.Instance.OnLagCompensationCheck += this.LagCompensationCheck;
         }
 
         private void OnDestroy() {
@@ -74,10 +68,14 @@ namespace Code.Network.Simulation
             }
         }
 
-        private void LagCompensationCheck(int clientId, int tick, double time, double latency, double buffer)
+        private void LagCompensationCheck(int clientId, int tick, double time, double latency, double bufferTime)
         {
-            var bufferedTicks = Math.Round((latency - NetworkClient.bufferTime - Time.fixedDeltaTime) / Time.fixedDeltaTime);
-            this.SetSnapshot(tick - bufferedTicks);
+            var commandBufferTime = (NetworkServer.sendInterval * (NetworkClient.bufferTimeMultiplier / 2f));
+            
+            var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
+            var lagCompensatedTime = time - (totalBuffer + bufferAdjustment);
+            var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
+            this.SetSnapshot(lagCompensatedTick);
         }
     }
 }
