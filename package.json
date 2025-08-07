@@ -38,7 +38,6 @@
     "com.unity.ugui": "3.0.0",
     "com.unity.visualscripting": "1.9.5",
     "com.unity.inputsystem": "1.13.0",
-    "com.unity.visualeffectgraph": "17.0.3",
     "com.unity.splines": "2.8.1"
   },
   "type": "library",
