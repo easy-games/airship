@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
@@ -57,46 +58,71 @@ namespace Code.Analytics {
                 }
 
                 var playerLogFile = Path.Combine(path, "Player.log");
+                var tempCurPlayerLogFile = Path.Combine(path, "Player-cur.log");
                 var playerPrevLogFile = Path.Combine(path, "Player-prev.log");
                 var editorLogFile = Path.Combine(path, "Editor.log");
+                var tempCurEditorLogFile = Path.Combine(path, "Editor-cur.log");
                 var editorPrevLogFile = Path.Combine(path, "Editor-prev.log");
+
+                var logMessages = new List<string>();
+
+                Action printDebugLines = () => {
+                    foreach (var message in logMessages) {
+                        Debug.Log(message);
+                    }
+                    logMessages.Clear();
+                };
+
+                var cleanupFiles = new List<string>() {
+                    zipPath,
+                };
 
                 Debug.Log("[ClientFolderUploader] Creating zip archive");
                 try {
-                    using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create)) {
-                        var fileExists = false;
-                        if (File.Exists(playerLogFile)) {
-                            fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Player.log");
-                            archive.CreateEntryFromFile(playerLogFile, "Player.log");
+                        if (File.Exists(zipPath)) {
+                            File.Delete(zipPath);
                         }
+                        using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create)) {
+                            var fileExists = false;
+                            if (File.Exists(playerLogFile)) {
+                                fileExists = true;
+                                File.Copy(playerLogFile, tempCurPlayerLogFile, true);
+                                logMessages.Add("[ClientFolderUploader] Adding Player.log");
+                                archive.CreateEntryFromFile(tempCurPlayerLogFile, "Player.log");
+                                cleanupFiles.Add(tempCurPlayerLogFile);
+                            }
 
-                        if (File.Exists(playerPrevLogFile)) {
-                            fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Player-prev.log");
-                            archive.CreateEntryFromFile(playerPrevLogFile, "Player-prev.log");
-                        }
+                            if (File.Exists(playerPrevLogFile)) {
+                                fileExists = true;
+                                logMessages.Add("[ClientFolderUploader] Adding Player-prev.log");
+                                archive.CreateEntryFromFile(playerPrevLogFile, "Player-prev.log");
+                            }
 
-                        if (File.Exists(editorLogFile)) {
-                            fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Editor.log");
-                            archive.CreateEntryFromFile(editorLogFile, "Editor.log");
-                        }
+                            if (File.Exists(editorLogFile)) {
+                                fileExists = true;
+                                File.Copy(editorLogFile, tempCurEditorLogFile, true);
+                                logMessages.Add("[ClientFolderUploader] Adding Editor.log");
+                                archive.CreateEntryFromFile(tempCurEditorLogFile, "Editor.log");
+                                cleanupFiles.Add(tempCurEditorLogFile);
+                            }
 
-                        if (File.Exists(editorPrevLogFile)) {
-                            fileExists = true;
-                            Debug.Log("[ClientFolderUploader] Adding Editor-prev.log");
-                            archive.CreateEntryFromFile(editorPrevLogFile, "Editor-prev.log");
-                        }
+                            if (File.Exists(editorPrevLogFile)) {
+                                fileExists = true;
+                                logMessages.Add("[ClientFolderUploader] Adding Editor-prev.log");
+                                archive.CreateEntryFromFile(editorPrevLogFile, "Editor-prev.log");
+                            }
 
-                        if (!fileExists) {
-                            return;
+                            if (!fileExists) {
+                                return;
+                            }
                         }
+                    } catch (Exception ex) {
+                        printDebugLines();
+                        Debug.LogError($"[ClientFolderUploader] Zip creation failed: {ex.Message}");
+                        throw;
                     }
-                } catch (Exception ex) {
-                    Debug.LogError($"[ClientFolderUploader] Zip creation failed: {ex.Message}");
-                    throw;
-                }
+
+                printDebugLines();
 
                 var contentType = "application/zip";
                 var contentLength = new FileInfo(zipPath).Length;
@@ -135,7 +161,12 @@ namespace Code.Analytics {
                     },
                 }, "");
 
-                File.Delete(zipPath);
+                Debug.Log("[ClientFolderUploader] Deleting temporary files");
+                foreach (var file in cleanupFiles) {
+                    if (File.Exists(file)) {
+                        File.Delete(file);
+                    }
+                }
             } catch (Exception ex) {
                 Debug.LogError($"[ClientFolderUploader] Error during upload process: {ex.Message}");
                 throw;
