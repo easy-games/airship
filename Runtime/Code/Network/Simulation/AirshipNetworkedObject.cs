@@ -14,7 +14,7 @@ namespace Code.Network.Simulation
      * This component is used to allow lag compensation, prediction, and other networked state systems to
      * work with a networked object controlled by the server.
      *
-     * When this component is placed on a object being networked with Mirror, the server can include it
+     * When this component is placed on a object, the server can include it
      * in lag compensation and clients can resimulate their predictions more accurately.
      */
     public class AirshipNetworkedObject : MonoBehaviour {
