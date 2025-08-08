@@ -396,8 +396,8 @@ namespace Editor.Packages {
             // Uncomment to just build iOS
             if (isCoreMaterials) {
                 platforms.Clear();
-                // platforms.Add(AirshipPlatform.iOS);
-                platforms.Add(AirshipPlatform.Android);
+                platforms.Add(AirshipPlatform.iOS);
+                // platforms.Add(AirshipPlatform.Android);
                 // platforms.Add(AirshipPlatform.Windows);
                 // platforms.Add(AirshipPlatform.Mac);
             }
@@ -413,6 +413,9 @@ namespace Editor.Packages {
                 Repaint();
                 yield return null; // give time to repaint
 
+                // Act as if we are building all asset bundles (including CoreMaterials).
+                // This is so our current build target will have references to those asset bundles.
+                // This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
                 List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds();
 
                 foreach (var platform in platforms) {

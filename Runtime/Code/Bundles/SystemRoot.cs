@@ -200,6 +200,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 			enums.Add(this.UnloadBundleAsync(loadedBundle, keepCodeZip));
 		}
 		yield return this.WaitAll(enums.ToArray());
+		var unloadSW = Stopwatch.StartNew();
+		yield return Resources.UnloadUnusedAssets();
+		print("Unloaded unused assets in " + unloadSW.ElapsedMilliseconds + " ms.");
 
 		// code.zip
 		bool openCodeZips = RunCore.IsServer() || compileLuaOnClient;
