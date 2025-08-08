@@ -297,6 +297,15 @@ public class VoxelBlocks : MonoBehaviour {
     public int maxResolution = 256;
     [SerializeField]
     public int atlasWidthTextures = 15;
+    
+    /// <summary>
+    /// TODO: Currently not serialized as this setting likely will not work without supporting _SpecialTex in our
+    /// atlas shader. If this is a requested feature we can support it easily (probably best to make a new atlas
+    /// shader that takes in normals).
+    /// </summary>
+    [Tooltip("If true we will pack texture normals into the texture atlas. This will double the RenderTexture memory cost. " +
+             "If you don't have custom normals leave this off.")]
+    [NonSerialized] private bool packNormalsIntoAtlas = false;
     private int atlasPaddingPx = 32;
 
     public int atlasSize {
@@ -322,6 +331,15 @@ public class VoxelBlocks : MonoBehaviour {
 
     [FormerlySerializedAs("blockDefinionLists")]
     [SerializeField] public List<VoxelBlockDefinitionList> blockDefinitionLists = new();
+
+    /// <summary>
+    /// When application is playing we only want to load VoxelBlocks once. This prevents multiple VoxelWorlds
+    /// from loading the same VoxelBlocks and regenerating the same atlas.
+    ///
+    /// Note: If we do have a reason to want reloading VoxelBlocks during play in the future we could
+    /// change this to only run the texture packing process once.
+    /// </summary>
+    private bool hasBegunLoading = false;
     private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
@@ -410,6 +428,8 @@ public class VoxelBlocks : MonoBehaviour {
     private void Clear() {
         blockIdCounter = 0;
         atlasMaterial = null;
+        
+        atlas.Dispose();
         atlas = new TexturePacker();
  
         temporaryTextures = new();
@@ -692,11 +712,12 @@ public class VoxelBlocks : MonoBehaviour {
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
         int defaultTextureSize = maxResolution - atlasPaddingPx * 2;
-        atlas.PackTextures(temporaryTextures, atlasPaddingPx, atlasSize, atlasSize, numMips, defaultTextureSize);
+        
+        atlas.PackTextures(temporaryTextures, atlasPaddingPx, atlasSize, atlasSize, numMips, defaultTextureSize, packNormalsIntoAtlas);
         temporaryTextures.Clear();
 
         atlasMaterial.SetTexture("_MainTex", atlas.diffuse);
-        // atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
+        if (packNormalsIntoAtlas) atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
         atlasMaterial.SetFloat("_AtlasWidthTextures", atlasWidthTextures);
         atlasMaterial.SetFloat("_PaddingOverWidth", atlasPaddingPx / (float) atlasSize);
         atlasMaterial.SetFloat("_TexWidthOverWidth", (maxResolution - atlasPaddingPx * 2) / (float) atlasSize);
@@ -848,11 +869,11 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     public void Reload(bool useTexturesDirectlyFromDisk = false) {
+        // Only load VoxelBlocks once while application is running
+        if (Application.isPlaying && hasBegunLoading) return;
+        hasBegunLoading = true;
 
         Load(useTexturesDirectlyFromDisk);
-        //Todo!
-        //this.blocks = new VoxelBlocks();
-        //this.blocks.Load(this.GetBlockDefinesContents());
     }
 
     //When the game doesnt have this block definiton, we want to create a temporary one just so we dont wreck their data just for loading this file

@@ -75,7 +75,7 @@ public class TexturePacker : IDisposable
 
     
 
-    public void PackTextures(Dictionary<int, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize) {
+    public void PackTextures(Dictionary<int, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize, bool packNormals) {
         Debug.Log($"Packing texture atlas of size {width}x{height}");
         Profiler.BeginSample("PackTextures");
         //grab the time
@@ -97,16 +97,20 @@ public class TexturePacker : IDisposable
 
         var activeRt = RenderTexture.active;
         diffuse = new RenderTexture(textureDesc);
+        diffuse.name = "VWAtlasDiffuse";
         diffuse.anisoLevel = anisoLevel;
         diffuse.filterMode = FilterMode.Trilinear;
 
-        normals = new RenderTexture(textureDesc);
-        normals.anisoLevel = anisoLevel;
-        normals.filterMode = FilterMode.Trilinear;
+        if (packNormals) {
+            normals = new RenderTexture(textureDesc);
+            normals.name = "VWAtlasNormals";
+            normals.anisoLevel = anisoLevel;
+            normals.filterMode = FilterMode.Trilinear;
+        }
 
-        RenderBuffer[] renderTargets = new RenderBuffer[2];
-        renderTargets[0] = diffuse.colorBuffer;
-        renderTargets[1] = normals.colorBuffer;
+        RenderBuffer[] renderTargets;
+        if (packNormals) renderTargets = new [] { diffuse.colorBuffer, normals.colorBuffer };
+        else renderTargets = new [] { diffuse.colorBuffer };
 
         RenderTargetSetup renderTargetSetup = new RenderTargetSetup(renderTargets, diffuse.depthBuffer);
 
@@ -262,7 +266,7 @@ public class TexturePacker : IDisposable
                 rect.x += rect.width + scaledPad * 2;
             }
             diffuse.GenerateMips();
-            normals.GenerateMips();
+            if (packNormals) normals.GenerateMips();
         }
         
         //print the total time elapsed
