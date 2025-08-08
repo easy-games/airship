@@ -170,9 +170,6 @@ namespace Code.Player.Character.MovementSystems.Character {
         [Tooltip("The maximum force that pushes against the character when on a slope")] [Min(0f)]
         public float slopeForce = 45;
 
-        [Tooltip("Slopes below this threshold will be ignored. O is flat ground, 1 is a vertical wall")] [Range(0, 1)]
-        public float minSlopeDelta = .1f;
-
         [Tooltip("Slopes above this threshold will be treated as walls")] [Range(0, 1)]
         public float maxSlopeDelta = .3f;
     }

@@ -461,17 +461,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                 currentMoveSnapshot.canJump = (byte)Math.Max(currentMoveSnapshot.canJump - 1, 0);
             }
 
-            var groundSlopeDir = detectedGround
-                ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized
-                : transform.forward;
-            var slopeDot = 1 - Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 
             var canStand = physics.CanStand();
-
-            var normalizedMoveDir = Vector3.ClampMagnitude(command.moveDir, 1);
+            var originalMoveDir = Vector3.ClampMagnitude(command.moveDir, 1);
+            var normalizedMoveDir = originalMoveDir;
             var characterMoveVelocity = normalizedMoveDir;
             //Save the crouching var
             currentMoveSnapshot.isCrouching = command.crouch;
+
 
 #region GRAVITY
 
@@ -712,6 +709,67 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #endregion
 
+            
+#region SLOPE
+
+            if (drawDebugGizmos_GROUND) {
+                GizmoUtils.DrawSphere(transform.position + new Vector3(0, 1, 0), .1f, inAir ? Color.cyan : Color.white,
+                4, 5);
+            }
+            if (movementSettings.detectSlopes && grounded) {
+                var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal)
+                    .normalized;
+                var slopeDot = 1 - Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
+
+                if (drawDebugGizmos_GROUND) {
+                    Debug.DrawLine(rootPosition, rootPosition + groundSlopeDir, Color.black, 5);
+                }
+
+                //Push the character based on the slope amount
+                if (slopeDot < 1 && movementSettings.slopeForce > 0) {
+                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
+                    if (slopeDot > movementSettings.maxSlopeDelta) {
+                        slopeVel.y = 0;
+                    }
+
+                    newVelocity += slopeVel;
+                }
+
+                //Project movement onto the slope
+                if (characterMoveVelocity.sqrMagnitude > .1 && groundHit.normal.y > 0) {
+                    //Adjust movement based on the slope of the ground you are on
+                    var newMoveDir = Vector3.ProjectOnPlane(normalizedMoveDir, groundHit.normal);
+                    //Only adjust for downward slopes
+                    //newMoveVector.y = Mathf.Min(0, newMoveVector.y);
+                    
+                    //Ignore tiny float imprecision's
+                    if (Mathf.Abs(newMoveDir.y) > .1f) {
+                        //Take the new direction and make it as fast as the intended move velocity
+                        normalizedMoveDir = newMoveDir;
+                        characterMoveVelocity = newMoveDir;
+                        grounded = true;
+                        if (drawDebugGizmos_GROUND) {
+                            Debug.DrawLine(rootPosition, rootPosition + normalizedMoveDir * .5f, Color.magenta,
+                                5);
+                            Debug.DrawLine(groundHit.point, groundHit.point + groundHit.normal * .5f, Color.red,
+                                5);
+                        }
+                        //}
+                    }
+                }
+
+                if (useExtraLogging && characterMoveVelocity.y < 0) {
+                    //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+                }
+
+                if (slopeVisualizer) {
+                    slopeVisualizer.LookAt(slopeVisualizer.position +
+                                           (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
+                }
+            }
+
+#endregion
+            
 #region MOVEMENT
 
             // Find speed
@@ -750,7 +808,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             currentMoveSnapshot.velocity.z);
                         var draggedHorizontal = horizontalVelocity * additionalDragMultiplier;
 
-                        characterMoveVelocity = new Vector3(draggedHorizontal.x, currentMoveSnapshot.velocity.y,
+                        characterMoveVelocity = new Vector3(draggedHorizontal.x, 0,
                             draggedHorizontal.z);
                     } else {
                         var targetVelocity = normalizedMoveDir * currentMoveSnapshot.currentSpeed;
@@ -768,57 +826,20 @@ namespace Code.Player.Character.MovementSystems.Character {
                         var velocityChange = Vector3.ClampMagnitude(velocityDiff, maxDelta * reverseScale);
 
                         characterMoveVelocity = currentMoveSnapshot.velocity + velocityChange;
+                        characterMoveVelocity.y = 0;
                     }
                 } else {
                     characterMoveVelocity *= currentMoveSnapshot.currentSpeed;
                 }
             }
 
-#region SLOPE
-
-            if (movementSettings.detectSlopes && detectedGround) {
-                //On Ground and detecting slopes
-                if (slopeDot < 1 && slopeDot > movementSettings.minSlopeDelta) {
-                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
-                    if (slopeDot > movementSettings.maxSlopeDelta) {
-                        slopeVel.y = 0;
-                    }
-
-                    newVelocity += slopeVel;
-                }
-
-
-                //Project movement onto the slope
-                if (characterMoveVelocity.sqrMagnitude > 0 && groundHit.normal.y > 0) {
-                    //Adjust movement based on the slope of the ground you are on
-                    var newMoveVector = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal);
-                    newMoveVector.y = Mathf.Min(0, newMoveVector.y);
-                    characterMoveVelocity = newMoveVector;
-                    if (drawDebugGizmos_STEPUP) {
-                        Debug.DrawLine(rootPosition, rootPosition + characterMoveVelocity * 2, Color.red);
-                    }
-                    //characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
-                }
-
-                if (useExtraLogging && characterMoveVelocity.y < 0) {
-                    //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
-                }
-            }
-
-            if (slopeVisualizer) {
-                slopeVisualizer.LookAt(slopeVisualizer.position +
-                                       (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
-            }
-
-#endregion
-
 
 #region MOVE_FORCE
 
             //Clamp directional movement to not add forces if you are already moving in that direction
             var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
-            var tryingToMove = normalizedMoveDir.sqrMagnitude > .1f;
-            var rawMoveDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
+            var tryingToMove = originalMoveDir.sqrMagnitude > .1f;
+            var rawMoveDot = Vector3.Dot(flatVelocity.normalized, originalMoveDir.normalized);
             //print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
             var bumpSize = characterRadius + .15f;
 
@@ -964,9 +985,16 @@ namespace Code.Player.Character.MovementSystems.Character {
                     // if(Mathf.Abs(characterMoveVelocity.z) > Mathf.Abs(newVelocity.z)){
                     // 	newVelocity.z = characterMoveVelocity.z;
                     // }
+
+                    //If our current flat velocity is less then our intended velocity we can use our move velocity
                     if (moveMagnitude + .5f >= flatVelMagnitude) {
+                        //Snap velocity to our target move velocity
                         newVelocity.x = characterMoveVelocity.x;
                         newVelocity.z = characterMoveVelocity.z;
+                        if (grounded && !didJump && !currentMoveSnapshot.airborneFromImpulse &&
+                            !currentMoveSnapshot.prevStepUp) {
+                            newVelocity.y = characterMoveVelocity.y;
+                        } 
                     }
                 }
             } else {
@@ -985,10 +1013,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                     if (flatVelMagnitude + addedForce < currentMoveSnapshot.currentSpeed) {
                         forwardMod = 1;
                     }
-
+                
                     //Apply the force
                     newVelocity += normalizedMoveDir * forwardMod * addedForce;
-
+                
                     //Never get faster than you've been impulsed
                     var flatVel = Vector3.ClampMagnitude(new Vector3(newVelocity.x, 0, newVelocity.z),
                         Mathf.Max(addedForce, flatVelMagnitude));
@@ -1023,18 +1051,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                         SnapToY(pointOnRamp.y);
                         //airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
                     }
-
+                
                     //print("STEPPED UP. Vel before: " + newVelocity);
                     newVelocity = Vector3.ClampMagnitude(
                         new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z),
                         newVelocity.magnitude);
                     //print("PointOnRamp: " + pointOnRamp + " position: " + rootPosition + " vel: " + newVelocity);
-
+                
                     if (drawDebugGizmos_STEPUP) {
                         GizmoUtils.DrawSphere(oldPos, .01f, Color.red, 4, 4);
                         GizmoUtils.DrawSphere(rootPosition + newVelocity, .03f, new Color(1, .5f, .5f), 4, 4);
                     }
-
+                
                     currentMoveSnapshot.state =
                         groundedState; //Force grounded state since we are in the air for the step up
                     grounded = true;
@@ -1208,7 +1236,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 var forwardVector = flatVelocity.normalized * Mathf.Max(forwardDistance, bumpSize);
                 //print("Forward vec: " + forwardVector);
 
-                //Do raycasting after we have claculated our move direction
+                //Do raycasting after we have calculated our move direction
                 var forwardHits =
                     physics.CheckAllForwardHits(rootPosition - flatVelocity.normalized * -forwardMargin, forwardVector,
                         true,
@@ -1370,6 +1398,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
             rb.linearVelocity = newVelocity;
+            // Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
+            //     Color.green, 5);
 
 #endregion
 
