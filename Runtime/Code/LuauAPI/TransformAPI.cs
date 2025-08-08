@@ -79,7 +79,7 @@ public class TransformAPI : BaseLuaAPIClass {
 
             var t = (Transform)targetObject;
             
-            var componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            var componentType = LuauCore.GetTypeFromString(typeName);
             if (componentType == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
@@ -99,7 +99,7 @@ public class TransformAPI : BaseLuaAPIClass {
             }
             Transform gameObject = (Transform)targetObject;
 
-            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -126,7 +126,7 @@ public class TransformAPI : BaseLuaAPIClass {
                 return 0;
             }
             
-            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -147,7 +147,7 @@ public class TransformAPI : BaseLuaAPIClass {
                 return 0;
             }
             
-            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);

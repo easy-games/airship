@@ -125,6 +125,7 @@ namespace Airship.Editor {
 
             if (scriptMetadata == null) return false;
             componentMetadata.name = scriptMetadata.name;
+            componentMetadata.decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
             
             // Add missing properties
             foreach (var scriptProperty in scriptMetadata.properties) {
@@ -193,10 +194,111 @@ namespace Airship.Editor {
                 }
             }
 #endif
+            
+            // Add required components
+            var requireComponents = scriptMetadata.FindClassDecorators("RequireComponent");
+            foreach (var requireComponent in requireComponents) {
+               var parameter = requireComponent.parameters.FirstOrDefault();
+               if (parameter == null) continue;
+               
+               var requiredComponentTypeName = parameter.value?.ToString();
+               if (string.IsNullOrEmpty(requiredComponentTypeName)) continue;
+               
+               var gameObject = component.gameObject;
+               if (gameObject == null) continue;
+               
+               var parameterType = parameter.type;
+               
+               switch (parameterType)
+               {
+                   case "object":
+                   {
+                       EnsureUnityComponent(gameObject, requiredComponentTypeName);
+                       break;
+                   }
+                   case "AirshipBehaviour":
+                   {
+                       EnsureAirshipComponent(gameObject, requiredComponentTypeName, component.context);
+                       break;
+                   }
+               }
+            }
+            
             // component.componentHash = component.script.sourceFileHash;
             return true;
         }
-        
+
+        /// <summary>
+        /// Ensures that a Unity component is present on the GameObject, adding it if necessary
+        /// </summary>
+        /// <param name="gameObject">The GameObject to check</param>
+        /// <param name="componentTypeName">The name of the Unity component type</param>
+        private static void EnsureUnityComponent(GameObject gameObject, string componentTypeName) {
+            try {
+                var componentType = LuauCore.GetTypeFromString(componentTypeName);
+                if (componentType == null) {
+#if AIRSHIP_DEBUG
+                    Debug.LogWarning($"[RequireComponent] Could not find Unity component type: {componentTypeName}. Make sure it's registered in LuauCoreSystemNamespaces.cs", gameObject);
+#endif
+                    return;
+                }
+                
+                var existingComponent = gameObject.GetComponent(componentType);
+                if (existingComponent != null) {
+                    return;
+                }
+                
+                gameObject.AddComponent(componentType);
+#if AIRSHIP_DEBUG
+                Debug.Log($"[RequireComponent] Added Unity component '{componentTypeName}' to GameObject '{gameObject.name}'", gameObject);
+#endif
+            }
+            catch (Exception ex) {
+#if AIRSHIP_DEBUG
+                Debug.LogError($"[RequireComponent] Failed to add Unity component '{componentTypeName}' to GameObject '{gameObject.name}': {ex.Message}", gameObject);
+#endif
+            }
+        }
+
+        /// <summary>
+        /// Ensures that an AirshipComponent is present on the GameObject, adding it if necessary
+        /// </summary>
+        /// <param name="gameObject">The GameObject to check</param>
+        /// <param name="componentTypeName">The name of the AirshipComponent type</param>
+        /// <param name="context">The Luau context to use when creating the component</param>
+        private static void EnsureAirshipComponent(GameObject gameObject, string componentTypeName, LuauContext context) {
+            try {
+                var existingComponents = gameObject.GetComponents<AirshipComponent>();
+                foreach (var existingComponent in existingComponents) {
+                    if (existingComponent.script == null || existingComponent.script.m_metadata == null) continue;
+
+                    if (existingComponent.script.m_metadata.name != componentTypeName) continue;
+
+                    return;
+                }
+                
+                var buildInfo = AirshipBuildInfo.Instance;
+                if (buildInfo == null || !buildInfo.HasAirshipBehaviourClass(componentTypeName)) {
+#if AIRSHIP_DEBUG
+                    Debug.LogWarning($"[RequireComponent] AirshipComponent '{componentTypeName}' not found in build info", gameObject);
+#endif
+                    return;
+                }
+                
+                var scriptPath = buildInfo.GetScriptPath(componentTypeName);
+                AirshipComponent.Create(gameObject, $"Assets/{scriptPath}", context);
+                
+#if AIRSHIP_DEBUG
+                Debug.Log($"[RequireComponent] Added AirshipComponent '{componentTypeName}' to GameObject '{gameObject.name}'", gameObject);
+#endif
+            }
+            catch (Exception ex) {
+#if AIRSHIP_DEBUG
+                Debug.LogError($"[RequireComponent] Failed to add AirshipComponent '{componentTypeName}' to GameObject '{gameObject.name}': {ex.Message}", gameObject);
+#endif
+            }
+        }
+
         /// <summary>
         /// Reconciles all queued components for the given script
         /// </summary>

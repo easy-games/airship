@@ -1,10 +1,21 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public partial class LuauCore
 {
+    private static List<string> namespaces = new();
+    private static Dictionary<string, Type> shortTypeNames = new();
+    
+    static LuauCore()
+    {
+#if UNITY_EDITOR
+        SetupNamespaceStrings();
+#endif
+    }
+    
     //List of all the namespace strings to include for "AddComponent( singleName )" checks
-    private void SetupNamespaceStrings()
+    private static void SetupNamespaceStrings()
     {
         namespaces.Add("UnityEngine");
         namespaces.Add("UnityEngine.PhysicsModule");
@@ -54,7 +65,7 @@ public partial class LuauCore
         // Debug.Log($"Registered component \"{t.Name}\" with Namespace=\"{t.Namespace}\". You can add the namespace to LuauCoreSystemNamespaces.cs to remove this message.");
     }
 
-    public Type GetTypeFromString(string name)
+    public static Type GetTypeFromString(string name)
     {
 
         bool res = shortTypeNames.TryGetValue(name, out Type result);
