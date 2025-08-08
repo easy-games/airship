@@ -444,13 +444,6 @@ public partial class LuauCore : MonoBehaviour
         
         // Handle arrays/lists/IEnumerables:
         if (t.IsSZArray) {
-            if (t == luauBufferType) {
-                var buf = (LuauBuffer)value;
-                fixed (byte* bytesPtr = buf.Data) {
-                    LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), buf.Data.Length);
-                }
-                return true;
-            }
             return WriteArrayToThread(thread, (IEnumerable)value, t.GetElementType(), ((IList)value).Count);
         }
         if (t.IsGenericType && typeof(IEnumerable).IsAssignableFrom(t)) {
@@ -476,6 +469,14 @@ public partial class LuauCore : MonoBehaviour
 
         if (t == intType) {
             WritePropertyToThreadInt32(thread, (int) value);
+            return true;
+        }
+        
+        if (t == luauBufferType) {
+            var buf = (LuauBuffer)value;
+            fixed (byte* bytesPtr = buf.Data) {
+                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), buf.Data.Length);
+            }
             return true;
         }
 
