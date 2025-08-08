@@ -285,7 +285,7 @@ namespace Editor.Accessories.Clothing {
             var buildOutputFile = $"bundles/gear/{airId}_{AirshipPlatformUtil.GetStringName(platform)}.bundle";
             var sourceFolderPath = Path.GetRelativePath(".", Directory.GetParent(AssetDatabase.GetAssetPath(manifest))!.FullName);
 
-            List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds();
+            List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds(false);
 
             var assetGuids = AssetDatabase.FindAssets("*", new string[] {sourceFolderPath}).ToList();
             var assetPaths = assetGuids
