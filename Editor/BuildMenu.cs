@@ -304,7 +304,7 @@ namespace Editor {
         }
 
         [MenuItem("Airship/Create Binary/Client/iOS (Staging Development)", priority = 80)]
-        public static void BuildIOSClientStagingMenuItem() {
+        public static void BuildIOSClientStagingDevelopmentMenuItem() {
             Debug.Log("Building iOS staging development client..");
             BuildIOSClient(true, true);
         }
