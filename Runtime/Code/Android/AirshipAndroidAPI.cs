@@ -1,67 +1,74 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
-internal static class AirshipAndroidAPI {
+public static class AirshipAndroidAPI {
     private const string WINDOW_METHOD_ADD_FLAGS = "addFlags";
     private const string WINDOW_METHOD_CLEAR_FLAGS = "clearFlags";
 
-    /// <summary>
-    /// Sets the fullscreen state of the android app
-    /// </summary>
-    /// <param name="fullscreen">Fullscreen</param>
-    public static void SetFullscreen(bool fullscreen) {
-        Screen.fullScreen = fullscreen;
-        
-#if UNITY_ANDROID
-        var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
-        activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
-        {
-            var layoutParamsClass = new AndroidJavaClass("android.view.WindowManager$LayoutParams");
-            var windowObject = activity.Call<AndroidJavaObject>("getWindow");
-            
-            var flagFullscreen = layoutParamsClass.GetStatic<int>("FLAG_FULLSCREEN");
-            var flagNotFullscreen = layoutParamsClass.GetStatic<int>("FLAG_FORCE_NOT_FULLSCREEN");
-            
-            if (fullscreen) {
-                windowObject.Call(WINDOW_METHOD_CLEAR_FLAGS, flagNotFullscreen);
-                windowObject.Call(WINDOW_METHOD_ADD_FLAGS, flagFullscreen);
-            }
-            else {
-                windowObject.Call(WINDOW_METHOD_ADD_FLAGS, flagNotFullscreen);
-                windowObject.Call(WINDOW_METHOD_CLEAR_FLAGS, flagFullscreen);
-            }
-        }));
-#endif
-    }
+    private const string UNITY_PLAYER_CLASS = "com.unity3d.player.UnityPlayer";
+    private const string AIRSHIP_ANDROID_PLAYER_CLASS = "gg.easy.airship.AirshipAndroidPlayer";
 
-    public static int ToARGB(Color color)
-    {
-        Color32 c = (Color32)color;
-        byte[] b = new byte[] { c.b, c.g, c.r, c.a };
-        return System.BitConverter.ToInt32(b, 0);
+    public enum AndroidPlayerContext {
+        [Obsolete]
+        Startup,
+        Menu,
+        Game,
     }
     
-    public static void SetAndroidTheme(Color32 primaryColor, Color32 darkColor, string label = null) {
-#if UNITY_ANDROID // && !UNITY_EDITOR
-    label = label ?? Application.productName;
-    var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
-    activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
-    {
-        var layoutParamsClass = new AndroidJavaClass("android.view.WindowManager$LayoutParams");
-        var flagDrawsSystemBarBackgrounds = layoutParamsClass.GetStatic<int>("FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS");
-        var windowObject = activity.Call<AndroidJavaObject>("getWindow");
-        windowObject.Call(WINDOW_METHOD_ADD_FLAGS, flagDrawsSystemBarBackgrounds);
+    internal class AndroidPluginContext {
+        private AndroidJavaObject _androidPlayer;
+
+        internal AndroidPluginContext() {
+            _androidPlayer = new AndroidJavaClass(AIRSHIP_ANDROID_PLAYER_CLASS);
+        }
+
+        private AndroidJavaObject androidPlayer {
+            get {
+                if (_androidPlayer == null) _androidPlayer = new AndroidJavaClass(AIRSHIP_ANDROID_PLAYER_CLASS);
+                return _androidPlayer;
+            }
+        }
         
-        var sdkInt = new AndroidJavaClass("android.os.Build$VERSION").GetStatic<int>("SDK_INT");
-        const int lollipop = 21;
-        if (sdkInt <= lollipop) return;
-        
-        windowObject.Call("setStatusBarColor", ToARGB(darkColor));
-        var myName = activity.Call<string>("getPackageName");
-        var packageManager = activity.Call<AndroidJavaObject>("getPackageManager");
-        var drawable = packageManager.Call<AndroidJavaObject>("getApplicationIcon", myName);
-        var taskDescription = new AndroidJavaObject("android.app.ActivityManager$TaskDescription", label, drawable.Call<AndroidJavaObject>("getBitmap"), ToARGB(primaryColor));
-        activity.Call("setTaskDescription", taskDescription);
-    }));
+        public void SetContext(AndroidPlayerContext context) {
+            switch (context) {
+                case AndroidPlayerContext.Game: {
+                    Screen.fullScreen = true;
+                    break;
+                }
+                case AndroidPlayerContext.Menu: {
+                    Screen.fullScreen = false;
+                    break;
+                }
+            }
+        }
+
+        public void ShowToast(string message) {
+            androidPlayer.Call("showToast", message);
+        }
+
+        private static uint ToARGB(Color color) {
+            Color32 c = color;
+            byte[] b = { c.b, c.g, c.r, c.a };
+            return BitConverter.ToUInt32(b, 0);
+        }
+
+        public void SetThemeColor(Color navigationColor, Color statusbarColor) {
+            SetThemeColor(ToARGB(navigationColor), ToARGB(statusbarColor));
+        }
+
+        private void SetThemeColor(uint navigationColorARGB, uint statusbarColorARGB) {
+            androidPlayer.Call("setThemeColor", navigationColorARGB, statusbarColorARGB);
+        }
+    }
+
+    private static AndroidPluginContext _pluginPluginContext;
+
+    internal static AndroidPluginContext Plugin {
+        get {
+#if UNITY_ANDROID
+            if (_pluginPluginContext == null) _pluginPluginContext = new AndroidPluginContext();
 #endif
+            return _pluginPluginContext;
+        }
     }
 }

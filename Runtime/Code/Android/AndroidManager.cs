@@ -1,18 +1,13 @@
-﻿
-    using System;
-    using UnityEngine;
+﻿using System;
+using UnityEngine;
+using UnityEngine.Serialization;
 
-    public class AndroidManager : MonoBehaviour {
-        public bool fullscreen;
-        public Color32 primaryColor;
-        public Color32 darkColor;
-        
-        private void Start() {
+public class AndroidManager : MonoBehaviour {
+    public AirshipAndroidAPI.AndroidPlayerContext context;
+
 #if UNITY_ANDROID
-            AirshipAndroidAPI.SetFullscreen(fullscreen);
-            if (!fullscreen) {
-                AirshipAndroidAPI.SetAndroidTheme(primaryColor, darkColor);
-            }
-#endif
-        }
+    private void Start() {
+        AirshipAndroidAPI.Plugin.SetContext(context);
     }
+#endif
+}
