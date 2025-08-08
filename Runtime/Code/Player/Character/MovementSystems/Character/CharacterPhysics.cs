@@ -88,6 +88,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             Vector3 vel,
             Vector3 moveDir) {
             //start the cast slightly off to account for clipping into colliders when falling very fast 
+            var gravityDir = -_movement.transform.up;
+            var gravityDirOffset = gravityDir.normalized * .1f;
             var verticalOffset = 1 + Mathf.Max(-vel.y, 0);
             var intersectionMargin = .075f;
             var castDistance = .2f + verticalOffset;
@@ -99,8 +101,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 Mathf.Max(0, -vel.y) +
                 offsetMargin; // Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
 
-            var gravityDir = -_movement.transform.up;
-            var gravityDirOffset = gravityDir.normalized * .1f;
 
             //Check directly below character as an early out and for comparison information
             if (Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, castDistance,
@@ -150,7 +150,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 if (!ignoredColliders.ContainsKey(hitInfo.collider.GetInstanceID())) {
                     //Physics Casts give you interpolated normals. This uses a ray to find an exact normal
                     hitInfo.normal = CalculateRealNormal(hitInfo.normal,
-                        hitInfo.point + gravityDirOffset + moveDir.normalized * .01f, gravityDir, .11f,
+                        currentPos, hitInfo.point - currentPos, .11f,
                         _movement.movementSettings.groundCollisionLayerMask);
 
                     if (_movement.drawDebugGizmos_GROUND) {

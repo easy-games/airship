@@ -28,8 +28,13 @@ namespace Code.Player.Character.MovementSystems.Character {
             CharacterInputData> {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
-        public Transform airshipTransform; // The visual transform controlled by this script. This always has the exact rotations used for movement
-        public Transform graphicTransform; // A transform that games can animate. This may have slightly altered rotation for visuals
+
+        public Transform
+            airshipTransform; // The visual transform controlled by this script. This always has the exact rotations used for movement
+
+        public Transform
+            graphicTransform; // A transform that games can animate. This may have slightly altered rotation for visuals
+
         public CharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
 
@@ -66,7 +71,8 @@ namespace Code.Player.Character.MovementSystems.Character {
         [Tooltip("If true, the character body will automatically rotate in the direction of the look vector.")]
         public bool rotateAutomatically = true;
 
-        [Tooltip("If enabled, the head will be rotated to look in the same direction as the look vector. The body will rotate only when needed. \"Rotate Automatically\" must also be checked.")]
+        [Tooltip(
+            "If enabled, the head will be rotated to look in the same direction as the look vector. The body will rotate only when needed. \"Rotate Automatically\" must also be checked.")]
         public bool rotateHeadToLookVector = true;
 
         [Tooltip("How much influence the look vector has on the look rotation.")]
@@ -75,7 +81,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [Tooltip("How far the head can rotate before the body rotates in degrees.")] [Range(0, 180)]
         public int headRotationThreshold = 60;
-        
+
         [Tooltip(
             "If true animations will be played on the server. This should be true if you care about character movement animations server-side (like for hit boxes).")]
         public bool playAnimationOnServer = true;
@@ -225,7 +231,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             _rig = GetComponentInChildren<CharacterRig>();
-            
+
             // Verify rig is setup correctly for rotateHeadToLookVector
             if (rotateHeadToLookVector) {
                 if (_rig == null || _rig.head == null || _rig.spine == null) {
@@ -236,7 +242,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     initialHeadRotation = _rig.head.rotation;
                 }
             }
-            
+
             _cameraTransform = Camera.main.transform;
         }
 
@@ -302,9 +308,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (!rb.isKinematic) {
                 rb.linearVelocity = snapshot.velocity;
             }
-            
+
             HandleCharacterRotation(snapshot.lookVector);
-            
+
             OnSetSnapshot?.Invoke(snapshot);
         }
 
@@ -455,17 +461,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                 currentMoveSnapshot.canJump = (byte)Math.Max(currentMoveSnapshot.canJump - 1, 0);
             }
 
-            var groundSlopeDir = detectedGround
-                ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized
-                : transform.forward;
-            var slopeDot = 1 - Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 
             var canStand = physics.CanStand();
-
-            var normalizedMoveDir = Vector3.ClampMagnitude(command.moveDir, 1);
+            var originalMoveDir = Vector3.ClampMagnitude(command.moveDir, 1);
+            var normalizedMoveDir = originalMoveDir;
             var characterMoveVelocity = normalizedMoveDir;
             //Save the crouching var
             currentMoveSnapshot.isCrouching = command.crouch;
+
 
 #region GRAVITY
 
@@ -572,7 +575,7 @@ namespace Code.Player.Character.MovementSystems.Character {
              */
             var isMoving = currentVelocity.sqrMagnitude > .1f;
             var inAir = didJump || (!detectedGround && !currentMoveSnapshot.prevStepUp);
-            var tryingToSprint =  movementSettings.onlySprintForward
+            var tryingToSprint = movementSettings.onlySprintForward
                 ? command.sprint && airshipTransform.InverseTransformVector(command.moveDir).z > 0.1f
                 : //Only sprint if you are moving forward
                 command.sprint && command.moveDir.magnitude > 0.1f; //Only sprint if you are moving
@@ -706,6 +709,67 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #endregion
 
+            
+#region SLOPE
+
+            if (drawDebugGizmos_GROUND) {
+                GizmoUtils.DrawSphere(transform.position + new Vector3(0, 1, 0), .1f, inAir ? Color.cyan : Color.white,
+                4, 5);
+            }
+            if (movementSettings.detectSlopes && grounded) {
+                var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal)
+                    .normalized;
+                var slopeDot = 1 - Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
+
+                if (drawDebugGizmos_GROUND) {
+                    Debug.DrawLine(rootPosition, rootPosition + groundSlopeDir, Color.black, 5);
+                }
+
+                //Push the character based on the slope amount
+                if (slopeDot < 1 && movementSettings.slopeForce > 0) {
+                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
+                    if (slopeDot > movementSettings.maxSlopeDelta) {
+                        slopeVel.y = 0;
+                    }
+
+                    newVelocity += slopeVel;
+                }
+
+                //Project movement onto the slope
+                if (characterMoveVelocity.sqrMagnitude > .1 && groundHit.normal.y > 0) {
+                    //Adjust movement based on the slope of the ground you are on
+                    var newMoveDir = Vector3.ProjectOnPlane(normalizedMoveDir, groundHit.normal);
+                    //Only adjust for downward slopes
+                    //newMoveVector.y = Mathf.Min(0, newMoveVector.y);
+                    
+                    //Ignore tiny float imprecision's
+                    if (Mathf.Abs(newMoveDir.y) > .1f) {
+                        //Take the new direction and make it as fast as the intended move velocity
+                        normalizedMoveDir = newMoveDir;
+                        characterMoveVelocity = newMoveDir;
+                        grounded = true;
+                        if (drawDebugGizmos_GROUND) {
+                            Debug.DrawLine(rootPosition, rootPosition + normalizedMoveDir * .5f, Color.magenta,
+                                5);
+                            Debug.DrawLine(groundHit.point, groundHit.point + groundHit.normal * .5f, Color.red,
+                                5);
+                        }
+                        //}
+                    }
+                }
+
+                if (useExtraLogging && characterMoveVelocity.y < 0) {
+                    //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+                }
+
+                if (slopeVisualizer) {
+                    slopeVisualizer.LookAt(slopeVisualizer.position +
+                                           (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
+                }
+            }
+
+#endregion
+            
 #region MOVEMENT
 
             // Find speed
@@ -744,7 +808,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             currentMoveSnapshot.velocity.z);
                         var draggedHorizontal = horizontalVelocity * additionalDragMultiplier;
 
-                        characterMoveVelocity = new Vector3(draggedHorizontal.x, currentMoveSnapshot.velocity.y,
+                        characterMoveVelocity = new Vector3(draggedHorizontal.x, 0,
                             draggedHorizontal.z);
                     } else {
                         var targetVelocity = normalizedMoveDir * currentMoveSnapshot.currentSpeed;
@@ -762,57 +826,20 @@ namespace Code.Player.Character.MovementSystems.Character {
                         var velocityChange = Vector3.ClampMagnitude(velocityDiff, maxDelta * reverseScale);
 
                         characterMoveVelocity = currentMoveSnapshot.velocity + velocityChange;
+                        characterMoveVelocity.y = 0;
                     }
                 } else {
                     characterMoveVelocity *= currentMoveSnapshot.currentSpeed;
                 }
             }
 
-#region SLOPE
-
-            if (movementSettings.detectSlopes && detectedGround) {
-                //On Ground and detecting slopes
-                if (slopeDot < 1 && slopeDot > movementSettings.minSlopeDelta) {
-                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
-                    if (slopeDot > movementSettings.maxSlopeDelta) {
-                        slopeVel.y = 0;
-                    }
-
-                    newVelocity += slopeVel;
-                }
-
-
-                //Project movement onto the slope
-                if (characterMoveVelocity.sqrMagnitude > 0 && groundHit.normal.y > 0) {
-                    //Adjust movement based on the slope of the ground you are on
-                    var newMoveVector = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal);
-                    newMoveVector.y = Mathf.Min(0, newMoveVector.y);
-                    characterMoveVelocity = newMoveVector;
-                    if (drawDebugGizmos_STEPUP) {
-                        Debug.DrawLine(rootPosition, rootPosition + characterMoveVelocity * 2, Color.red);
-                    }
-                    //characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
-                }
-
-                if (useExtraLogging && characterMoveVelocity.y < 0) {
-                    //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
-                }
-            }
-
-            if (slopeVisualizer) {
-                slopeVisualizer.LookAt(slopeVisualizer.position +
-                                       (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
-            }
-
-#endregion
-
 
 #region MOVE_FORCE
 
             //Clamp directional movement to not add forces if you are already moving in that direction
             var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
-            var tryingToMove = normalizedMoveDir.sqrMagnitude > .1f;
-            var rawMoveDot = Vector3.Dot(flatVelocity.normalized, normalizedMoveDir);
+            var tryingToMove = originalMoveDir.sqrMagnitude > .1f;
+            var rawMoveDot = Vector3.Dot(flatVelocity.normalized, originalMoveDir.normalized);
             //print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
             var bumpSize = characterRadius + .15f;
 
@@ -958,9 +985,16 @@ namespace Code.Player.Character.MovementSystems.Character {
                     // if(Mathf.Abs(characterMoveVelocity.z) > Mathf.Abs(newVelocity.z)){
                     // 	newVelocity.z = characterMoveVelocity.z;
                     // }
+
+                    //If our current flat velocity is less then our intended velocity we can use our move velocity
                     if (moveMagnitude + .5f >= flatVelMagnitude) {
+                        //Snap velocity to our target move velocity
                         newVelocity.x = characterMoveVelocity.x;
                         newVelocity.z = characterMoveVelocity.z;
+                        if (grounded && !didJump && !currentMoveSnapshot.airborneFromImpulse &&
+                            !currentMoveSnapshot.prevStepUp) {
+                            newVelocity.y = characterMoveVelocity.y;
+                        } 
                     }
                 }
             } else {
@@ -979,10 +1013,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                     if (flatVelMagnitude + addedForce < currentMoveSnapshot.currentSpeed) {
                         forwardMod = 1;
                     }
-
+                
                     //Apply the force
                     newVelocity += normalizedMoveDir * forwardMod * addedForce;
-
+                
                     //Never get faster than you've been impulsed
                     var flatVel = Vector3.ClampMagnitude(new Vector3(newVelocity.x, 0, newVelocity.z),
                         Mathf.Max(addedForce, flatVelMagnitude));
@@ -1017,18 +1051,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                         SnapToY(pointOnRamp.y);
                         //airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
                     }
-
+                
                     //print("STEPPED UP. Vel before: " + newVelocity);
                     newVelocity = Vector3.ClampMagnitude(
                         new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z),
                         newVelocity.magnitude);
                     //print("PointOnRamp: " + pointOnRamp + " position: " + rootPosition + " vel: " + newVelocity);
-
+                
                     if (drawDebugGizmos_STEPUP) {
                         GizmoUtils.DrawSphere(oldPos, .01f, Color.red, 4, 4);
                         GizmoUtils.DrawSphere(rootPosition + newVelocity, .03f, new Color(1, .5f, .5f), 4, 4);
                     }
-
+                
                     currentMoveSnapshot.state =
                         groundedState; //Force grounded state since we are in the air for the step up
                     grounded = true;
@@ -1202,7 +1236,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 var forwardVector = flatVelocity.normalized * Mathf.Max(forwardDistance, bumpSize);
                 //print("Forward vec: " + forwardVector);
 
-                //Do raycasting after we have claculated our move direction
+                //Do raycasting after we have calculated our move direction
                 var forwardHits =
                     physics.CheckAllForwardHits(rootPosition - flatVelocity.normalized * -forwardMargin, forwardVector,
                         true,
@@ -1364,6 +1398,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
             rb.linearVelocity = newVelocity;
+            // Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
+            //     Color.green, 5);
 
 #endregion
 
@@ -1478,7 +1514,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
-            HandleCharacterRotation(this.lookVector);
+            HandleCharacterRotation(lookVector);
         }
 
         /**
@@ -1486,7 +1522,10 @@ namespace Code.Player.Character.MovementSystems.Character {
          * transform and visual rotation based on the configuration of the character.
          */
         private void HandleCharacterRotation(Vector3 lookVector) {
-            if (!rotateAutomatically) return;
+            if (!rotateAutomatically) {
+                return;
+            }
+
             UpdateCharacterRotation(lookVector);
         }
 
@@ -1513,49 +1552,49 @@ namespace Code.Player.Character.MovementSystems.Character {
                 airshipTransform.rotation = Quaternion.LookRotation(lookTarget).normalized;
                 return;
             }
-            
+
             UpdateBodyRotation(lookTarget);
             UpdateHeadRotation(lookDirection);
         }
-        
+
         private void UpdateBodyRotation(Vector3 direction) {
             direction.y = 0; // Don't rotate the character off the ground
-            
+
             // If we are moving, start rotating towards the correct direction immediately. Don't negate any additional rotation
-            if (this.currentMoveSnapshot.velocity.magnitude > 0) {
+            if (currentMoveSnapshot.velocity.magnitude > 0) {
                 airshipTransform.rotation = Quaternion.LookRotation(direction).normalized;
-                graphicTransform.rotation = Quaternion.Slerp(graphicTransform.rotation, airshipTransform.rotation, smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime);
+                graphicTransform.rotation = Quaternion.Slerp(graphicTransform.rotation, airshipTransform.rotation,
+                    smoothedRotationSpeed * Mathf.Deg2Rad * Time.deltaTime);
                 return;
             }
-            
+
             // Since graphicTransform is a child of the airship transform, we "undo" the
             // change we are going to apply so that we can rotate the graphicTransform independently
-            Quaternion previousParentRotation = airshipTransform.rotation;
+            var previousParentRotation = airshipTransform.rotation;
             airshipTransform.rotation = Quaternion.LookRotation(direction).normalized;
-            Quaternion deltaRotation = airshipTransform.rotation * Quaternion.Inverse(previousParentRotation);
+            var deltaRotation = airshipTransform.rotation * Quaternion.Inverse(previousParentRotation);
             graphicTransform.rotation = Quaternion.Inverse(deltaRotation) * graphicTransform.rotation;
-            
+
             // Now calculate if we need to rotate the graphicTransform (body) or if the head
             // rotation will be enough.
-            Vector3 currentForward = graphicTransform.rotation * Vector3.forward;
+            var currentForward = graphicTransform.rotation * Vector3.forward;
             currentForward.y = 0;
-            
+
             currentForward.Normalize();
             direction.Normalize();
 
-            float angle = Vector3.SignedAngle(currentForward, direction, Vector3.up);
-            if (Mathf.Abs(angle) > headRotationThreshold)
-            {
-                float rotateAmount = Mathf.Abs(angle) - headRotationThreshold;
-                float sign = Mathf.Sign(angle);
+            var angle = Vector3.SignedAngle(currentForward, direction, Vector3.up);
+            if (Mathf.Abs(angle) > headRotationThreshold) {
+                var rotateAmount = Mathf.Abs(angle) - headRotationThreshold;
+                var sign = Mathf.Sign(angle);
 
                 // We only rotate just enough to allow us to not snap our neck, but don't rotate the body
                 // any more than that.
-                Quaternion partialRotation = Quaternion.AngleAxis(rotateAmount * sign, Vector3.up);
+                var partialRotation = Quaternion.AngleAxis(rotateAmount * sign, Vector3.up);
                 graphicTransform.rotation = partialRotation * graphicTransform.rotation;
             }
         }
-        
+
         /**
          * Sets the head look direction independently of the body using "Look Vector Influence". Does _NOT_ limit the
          * amount of rotation from the body forward direction. Use UpdateCharacterRotation for rotation that take the configured
@@ -1567,9 +1606,11 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (direction.magnitude == 0) {
                 direction = new Vector3(0, 0, 0.01f);
             }
-            
+
             var characterUp = _rig.spine ? _rig.spine.up : Vector3.up;
-            var lerpedLookRotation = Vector3.Lerp(Quaternion.Inverse(initialHeadRotation) * _rig.head.rotation * Vector3.forward, direction, lookVectorInfluence);
+            var lerpedLookRotation
+                = Vector3.Lerp(Quaternion.Inverse(initialHeadRotation) * _rig.head.rotation * Vector3.forward,
+                    direction, lookVectorInfluence);
             _rig.head.rotation = initialHeadRotation * Quaternion.LookRotation(lerpedLookRotation, characterUp);
         }
 
