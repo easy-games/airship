@@ -10,5 +10,8 @@
 		public LuauBuffer(byte[] data) {
 			Data = data;
 		}
+		
+		public static implicit operator byte[](LuauBuffer buffer) => buffer.Data;
+		public static implicit operator LuauBuffer(byte[] data) => new (data);
 	}
 }
