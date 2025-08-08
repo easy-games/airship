@@ -639,6 +639,19 @@ public partial class LuauCore : MonoBehaviour {
                         }
                         break;
                     }
+
+                    case PODTYPE.POD_BUFFER: {
+                        if (t.IsAssignableFrom(byteArrayType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewByteArrayFromPointer(propertyData, propertyDataSize));
+                            } else {
+                                SetValue<byte[]>(objectReference, NewByteArrayFromPointer(propertyData, propertyDataSize), property);
+                            }
+
+                            return 0;
+                        }
+                        break;
+                    }
                 }
             }
 
