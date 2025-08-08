@@ -44,6 +44,7 @@ public partial class LuauCore : MonoBehaviour {
         POD_VECTOR4 = 15,
         POD_FLOAT = 16,
         POD_AIRSHIP_COMPONENT = 17,
+        POD_BUFFER = 18,
     };
 
     private static bool s_shutdown = false;
@@ -80,6 +81,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type planeType = typeof(UnityEngine.Plane);
     private static Type colorType = typeof(UnityEngine.Color);
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
+    private static Type luauBufferType = typeof(LuauBuffer);
     private static Type actionType = typeof(Action);
 
     private static readonly string[] protectedScenesNames = {
