@@ -444,10 +444,10 @@ public partial class LuauCore : MonoBehaviour
         
         // Handle arrays/lists/IEnumerables:
         if (t.IsSZArray) {
-            if (t == byteArrayType) {
-                var bytes = (byte[])value;
-                fixed (byte* bytesPtr = bytes) {
-                    LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), bytes.Length);
+            if (t == luauBufferType) {
+                var buf = (LuauBuffer)value;
+                fixed (byte* bytesPtr = buf.Data) {
+                    LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), buf.Data.Length);
                 }
                 return true;
             }
@@ -1019,7 +1019,7 @@ public partial class LuauCore : MonoBehaviour
                     continue;
                 }
                 case PODTYPE.POD_BUFFER: {
-                    parsedData[paramIndex] = NewByteArrayFromPointer(intPtrs[i], sizes[i]);
+                    parsedData[paramIndex] = NewLuauBufferFromPointer(intPtrs[i], sizes[i]);
                     continue;
                 }
             }
@@ -1385,7 +1385,7 @@ public partial class LuauCore : MonoBehaviour
                     }
                     break;
                 case PODTYPE.POD_BUFFER:
-                    if (sourceParamType.IsAssignableFrom(byteArrayType)) {
+                    if (sourceParamType.IsAssignableFrom(luauBufferType)) {
                         continue;
                     }
                     break;
@@ -1579,10 +1579,10 @@ public partial class LuauCore : MonoBehaviour
         return 16 * sizeof(float);
     }
 
-    public static byte[] NewByteArrayFromPointer(IntPtr data, int size) {
+    public static LuauBuffer NewLuauBufferFromPointer(IntPtr data, int size) {
         var bytes = new byte[size];
         Marshal.Copy(data, bytes, 0, size);
-        return bytes;
+        return new LuauBuffer(bytes);
     }
 
     public static Plane NewPlaneFromPointer(IntPtr data) {

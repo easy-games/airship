@@ -641,11 +641,11 @@ public partial class LuauCore : MonoBehaviour {
                     }
 
                     case PODTYPE.POD_BUFFER: {
-                        if (t.IsAssignableFrom(byteArrayType)) {
+                        if (t.IsAssignableFrom(luauBufferType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewByteArrayFromPointer(propertyData, propertyDataSize));
+                                field.SetValue(objectReference, NewLuauBufferFromPointer(propertyData, propertyDataSize));
                             } else {
-                                SetValue<byte[]>(objectReference, NewByteArrayFromPointer(propertyData, propertyDataSize), property);
+                                SetValue<LuauBuffer>(objectReference, NewLuauBufferFromPointer(propertyData, propertyDataSize), property);
                             }
 
                             return 0;
