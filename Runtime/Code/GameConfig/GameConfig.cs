@@ -6,6 +6,7 @@ using Code.GameBundle;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
@@ -37,6 +38,8 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public bool queriesHitTriggers = true;
 
     [HideInInspector] public bool supportsMobile;
+
+    [HideInInspector] public bool compileURPShaders = false;
 
     private const string TagPrefix = "AirshipTag";
     public const int MaximumTags = 64;
