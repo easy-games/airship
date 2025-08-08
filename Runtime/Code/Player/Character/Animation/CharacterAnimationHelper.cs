@@ -3,19 +3,16 @@ using Code.Player.Character.MovementSystems.Character;
 using Mirror;
 using UnityEngine;
 
-namespace Code.Player.Character.NetworkedMovement
-{
+namespace Code.Player.Character.NetworkedMovement {
     [LuauAPI]
-    public class CharacterAnimationHelper : MonoBehaviour
-    {
-        public enum CharacterAnimationLayer
-        {
+    public class CharacterAnimationHelper : MonoBehaviour {
+        public enum CharacterAnimationLayer {
             OVERRIDE_1 = 1,
             OVERRIDE_2 = 2,
             OVERRIDE_3 = 3,
             OVERRIDE_4 = 4,
             UPPER_BODY_1 = 5,
-            UPPER_BODY_2 = 6,
+            UPPER_BODY_2 = 6
         }
 
         [Header("References")]
@@ -39,6 +36,7 @@ namespace Code.Player.Character.NetworkedMovement
 
         [Header("Animation Calibration")]
         public float animWalkSpeed = 4.4444445f;
+
         public float animRunSpeed = 6.6666667f;
         public float animCrouchSpeed = 2.1233335f;
 
@@ -59,27 +57,22 @@ namespace Code.Player.Character.NetworkedMovement
 
         private void Awake() {
             // Make a new instance of the animator override controller
-            if (!this.animatorOverride)
-            {
-                if (this.animator.runtimeAnimatorController is AnimatorOverrideController over)
-                {
+            if (!animatorOverride) {
+                if (animator.runtimeAnimatorController is AnimatorOverrideController over) {
                     // Copy all the overrides if we already have an override controller in use
                     var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(over.overridesCount);
                     over.GetOverrides(overrides);
-                    this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
-                    this.animator.runtimeAnimatorController = this.animatorOverride;
-                    this.animatorOverride.ApplyOverrides(overrides);
-                }
-                else if (animator.runtimeAnimatorController)
-                {
-                    this.animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
-                    this.animator.runtimeAnimatorController = this.animatorOverride;
+                    animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                    animator.runtimeAnimatorController = animatorOverride;
+                    animatorOverride.ApplyOverrides(overrides);
+                } else if (animator.runtimeAnimatorController) {
+                    animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+                    animator.runtimeAnimatorController = animatorOverride;
                 }
             }
         }
 
-        private void Start()
-        {
+        private void Start() {
             // AnimatorOverrideController animatorOverrideController =
             //     new AnimatorOverrideController(this.animator.runtimeAnimatorController);
             // this.animator.runtimeAnimatorController = animatorOverrideController;
@@ -89,63 +82,51 @@ namespace Code.Player.Character.NetworkedMovement
             animator.SetFloat("AnimationOffset", offset);
         }
 
-        public void SetFirstPerson(bool firstPerson)
-        {
+        public void SetFirstPerson(bool firstPerson) {
             this.firstPerson = firstPerson;
-            if (this.firstPerson)
-            {
+            if (this.firstPerson) {
                 animator.SetLayerWeight(0, 0);
-            }
-            else
-            {
+            } else {
                 animator.SetLayerWeight(0, 1);
-                this.SetState(new() { state = this.currentState });
+                SetState(new CharacterAnimationSyncData { state = currentState });
             }
         }
 
-        private void LateUpdate()
-        {
+        private void LateUpdate() {
             UpdateAnimationState();
         }
 
-        private void OnEnable()
-        {
-            this.animator.Rebind();
+        private void OnEnable() {
+            animator.Rebind();
             GetRandomReactionLength();
 
             //Enter default state
             SetState(new CharacterAnimationSyncData());
         }
 
-        public bool IsInParticleDistance()
-        {
+        public bool IsInParticleDistance() {
             return true;
         }
 
-        private void UpdateAnimationState()
-        {
-            if (!enabled || !this.gameObject.activeInHierarchy)
-            {
+        private void UpdateAnimationState() {
+            if (!enabled || !gameObject.activeInHierarchy) {
                 return;
             }
 
             //Don't vary animation speeds if we are in the air or not moving
-            if (currentState == CharacterState.Airborne)
-            {
+            if (currentState == CharacterState.Airborne) {
                 targetPlaybackSpeed = 1;
-            }
-            else if ((currentState == CharacterState.Crouching && targetPlaybackSpeed < .1) ||
-                     targetPlaybackSpeed < .03)
-            {
+            } else if ((currentState == CharacterState.Crouching && targetPlaybackSpeed < .1) ||
+                       targetPlaybackSpeed < .03) {
                 targetVelNormalized = Vector2.zero;
                 targetPlaybackSpeed = 1;
             }
 
-            float currentMagnitude = currentVelNormalized.magnitude;
-            float targetMagnitude = targetVelNormalized.magnitude;
-            float blendMod = targetMagnitude > currentMagnitude
-                ? this.directionalBlendLerpMod
-                : this.directionalBlendLerpMod / 2f;
+            var currentMagnitude = currentVelNormalized.magnitude;
+            var targetMagnitude = targetVelNormalized.magnitude;
+            var blendMod = targetMagnitude > currentMagnitude
+                ? directionalBlendLerpMod
+                : directionalBlendLerpMod / 2f;
 
             //RUNNING SPEED
             //Speed up animations based on actual speed vs target speed
@@ -153,31 +134,28 @@ namespace Code.Player.Character.NetworkedMovement
             animator.SetFloat("MovementPlaybackSpeed", currentPlaybackSpeed);
 
             //Blend directional influence
-            float smoothXVelocity = 0f;
-            float smoothYVelocity = 0f;
-            float smoothTime = 0.025f;
+            var smoothXVelocity = 0f;
+            var smoothYVelocity = 0f;
+            var smoothTime = 0.025f;
 
             currentVelNormalized.x = Mathf.SmoothDamp(currentVelNormalized.x, targetVelNormalized.x,
                 ref smoothXVelocity, smoothTime, Mathf.Infinity, Time.deltaTime);
             currentVelNormalized.y = Mathf.SmoothDamp(currentVelNormalized.y, targetVelNormalized.y,
                 ref smoothYVelocity, smoothTime, Mathf.Infinity, Time.deltaTime);
-            float velX = Mathf.Abs(currentVelNormalized.x) < 0.01f ? 0 : currentVelNormalized.x;
-            float velZ = Mathf.Abs(currentVelNormalized.y) < 0.01f ? 0 : currentVelNormalized.y;
+            var velX = Mathf.Abs(currentVelNormalized.x) < 0.01f ? 0 : currentVelNormalized.x;
+            var velZ = Mathf.Abs(currentVelNormalized.y) < 0.01f ? 0 : currentVelNormalized.y;
             animator.SetFloat("VelX", velX);
             animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime * 1.5f));
             animator.SetFloat("VelZ", velZ);
             animator.SetFloat("Speed", targetMagnitude);
 
 
-            if (grounded)
-            {
+            if (grounded) {
                 lastGroundedTime = Time.time;
                 isSkidding = currentSpeed >= skiddingSpeed;
                 animator.SetBool("Skidding", isSkidding);
                 animator.SetBool("Airborne", false);
-            }
-            else
-            {
+            } else {
                 animator.SetBool("Skidding", false);
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
@@ -196,65 +174,59 @@ namespace Code.Player.Character.NetworkedMovement
             // }
         }
 
-        private void GetRandomReactionLength()
-        {
-            nextIdleReactionLength = this.idleRectionLength +
-                                     Random.Range(-this.idleRectionLength / 2, this.idleRectionLength / 2);
+        private void GetRandomReactionLength() {
+            nextIdleReactionLength = idleRectionLength +
+                                     Random.Range(-idleRectionLength / 2, idleRectionLength / 2);
         }
 
-        public void SetVelocity(Vector3 localVel)
-        {
+        public void SetVelocity(Vector3 localVel) {
             currentSpeed = new Vector2(localVel.x, localVel.z).magnitude;
             //The target speed is the movement speed the animations were built for
             var targetSpeed = animWalkSpeed;
-            if (currentState == CharacterState.Sprinting)
-            {
+            if (currentState == CharacterState.Sprinting) {
                 if (currentSpeed < animWalkSpeed) {
                     //We will walk instead of run even though we are trying to run
                 } else {
                     targetSpeed = animRunSpeed;
                 }
-            }
-            else if (currentState == CharacterState.Crouching)
-            {
+            } else if (currentState == CharacterState.Crouching) {
                 targetSpeed = animCrouchSpeed;
             }
-            
+
             //Have to update sprinting state dynamically because low speeds can disable it
             animator.SetBool("Sprinting",
                 currentState == CharacterState.Sprinting && currentSpeed >= animWalkSpeed);
 
-            this.targetPlaybackSpeed = currentSpeed / targetSpeed;
+            targetPlaybackSpeed = currentSpeed / targetSpeed;
             targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10, 10);
             //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
         }
 
-        public void SetState(CharacterAnimationSyncData syncedState)
-        {
-            if (!enabled || !this.gameObject.activeInHierarchy)
-            {
+        public void SetState(CharacterAnimationSyncData syncedState) {
+            if (!enabled || !gameObject.activeInHierarchy) {
                 return;
             }
 
             var newState = syncedState.state;
-            this.grounded = syncedState.grounded;
+            grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
+            // print("New State. Grounded: " + grounded + " state: " + syncedState.state + " Jumping: " +
+            //       syncedState.jumping);
             animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
 
             if (syncedState.jumping) {
                 SetTrigger("Jump");
             }
 
-            if (this.firstPerson)
-            {
+            if (firstPerson) {
                 animator.SetLayerWeight(0, 0);
             }
 
             lastStateTime = Time.time;
             currentState = newState;
 
-            this.SetVelocity(syncedState.localVelocity);
+            SetVelocity(syncedState.localVelocity);
             //print("Set state: " + currentState);
         }
 
@@ -267,16 +239,13 @@ namespace Code.Player.Character.NetworkedMovement
             animator.SetTrigger(trigger);
         }
 
-        public void SetLayerWeight(CharacterAnimationLayer layer, float weight)
-        {
+        public void SetLayerWeight(CharacterAnimationLayer layer, float weight) {
             var layerName = "Override" + (int)layer;
             animator.SetLayerWeight(animator.GetLayerIndex(layerName), weight);
         }
 
-        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer, float fixedTransitionDuration)
-        {
-            if (!enabled || !this.gameObject.activeInHierarchy)
-            {
+        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer, float fixedTransitionDuration) {
+            if (!enabled || !gameObject.activeInHierarchy) {
                 return;
             }
 
@@ -291,10 +260,8 @@ namespace Code.Player.Character.NetworkedMovement
                 animator.GetLayerIndex(stateName));
         }
 
-        public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration)
-        {
-            if (!enabled || !this.gameObject.activeInHierarchy)
-            {
+        public void StopAnimation(CharacterAnimationLayer layer, float fixedTransitionDuration) {
+            if (!enabled || !gameObject.activeInHierarchy) {
                 return;
             }
 
@@ -302,9 +269,8 @@ namespace Code.Player.Character.NetworkedMovement
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
 
-        public float GetPlaybackSpeed()
-        {
-            return this.targetPlaybackSpeed;
+        public float GetPlaybackSpeed() {
+            return targetPlaybackSpeed;
         }
     }
 }
