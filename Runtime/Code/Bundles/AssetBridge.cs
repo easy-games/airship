@@ -259,7 +259,7 @@ public class AssetBridge : IAssetBridge
 #endif
 
 		if (printErrorOnFail) {
-			Debug.LogError("AssetBundle file not found: " + path + " (No asset bundle understood this path - is this asset bundle loaded?)");
+			Debug.LogError($"Failed to load asset at path \"{path}\". Are you sure it exists?");
 		}
 		return null;
 	}

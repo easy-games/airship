@@ -173,7 +173,7 @@ public static class CreateAssetBundles {
 	/// Creates an AssetBundleBuild for every AirshipPackage in the project.
 	/// </summary>
 	/// <returns></returns>
-	public static List<AssetBundleBuild> GetPackageAssetBundleBuilds() {
+	public static List<AssetBundleBuild> GetPackageAssetBundleBuilds(bool compileURPShaders) {
 		List<AssetBundleBuild> builds = new();
 
 		if (!Directory.Exists(Path.Join("Assets", "AirshipPackages"))) {
@@ -197,7 +197,7 @@ public static class CreateAssetBundles {
 						assetGuids.AddRange(urpGuids);
 					});
 
-					if (!EditorIntegrationsConfig.instance.selfCompileAllShaders) {
+					if (!compileURPShaders) {
 						Debug.Log("Adding URP assets to CoreMaterials bundle.");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
@@ -294,7 +294,10 @@ public static class CreateAssetBundles {
 		Debug.Log($"[Editor]: Building {platform} asset bundles...");
 		Debug.Log("[Editor]: Build path: " + buildPath);
 
-		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds();
+		// Act as if we are building all asset bundles (including CoreMaterials).
+		// This is so our current build target will have references to those asset bundles.
+		// This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
+		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds(gameConfig.compileURPShaders);
 
 		// Make a fake asset bundle with all package content. This makes the build have the correct dependency data.
 		// {
