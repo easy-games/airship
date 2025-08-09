@@ -24,7 +24,7 @@ namespace Airship.Editor {
             }
             
             prefabComponent = PrefabUtility.GetCorrespondingObjectFromOriginalSource(component);
-            if (prefabComponent.script == null) {
+            if (prefabComponent == null || prefabComponent.script == null) {
                 prefabComponent = null;
                 return false;
             }

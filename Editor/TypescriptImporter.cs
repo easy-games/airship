@@ -30,7 +30,7 @@ namespace Editor {
         }
     }
     
-    [ScriptedImporter(1, "ts")]
+    [ScriptedImporter(1, "ts", -1000)]
     public class TypescriptImporter : LuauImporter {
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
         private const string IconDeclaration = "Packages/gg.easy.airship/Editor/TypescriptAssetDeclaration.png";
@@ -102,6 +102,7 @@ namespace Editor {
             else {
                 var hasCompiled = false;
                 var airshipScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
+                airshipScript.typescriptCompiled = false;
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
                 
@@ -134,7 +135,6 @@ namespace Editor {
                     icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
                 }
 
-                airshipScript.typescriptWasCompiled = hasCompiled;
                 airshipScript.compiledFileHash = project.GetOutputFileHash(assetPath);
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
@@ -148,8 +148,6 @@ namespace Editor {
                             timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                         };
                     }
-                    
-                    AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
                 }
             }
         }

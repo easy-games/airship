@@ -248,10 +248,9 @@ namespace Airship.Editor
         
         private static Texture2D ResizeAndRoundTexture(Texture2D source, int targetWidth, int targetHeight) {
             if (source == null) {
-                Debug.LogError("Unable to set signed in icon: Source texture is null or unreadable.");
+                Debug.LogError("Unable to set signed in icon: Source texture is null.");
                 return null;
             }
-
             if (!source.isReadable) {
                 return source;
             }

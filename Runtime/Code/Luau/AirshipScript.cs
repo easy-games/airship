@@ -69,7 +69,8 @@ namespace Luau {
         public AirshipScriptLanguage scriptLanguage;
         
         #region Typescript Properties
-        [FormerlySerializedAs("tsWasCompiled")] public bool typescriptWasCompiled = false;
+
+        public bool typescriptCompiled = false;
         
         #endregion
         
