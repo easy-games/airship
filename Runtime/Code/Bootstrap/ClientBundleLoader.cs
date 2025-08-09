@@ -221,6 +221,27 @@ namespace Code.Bootstrap {
                     } catch (Exception e) {
                         Debug.LogException(e);
                     }
+
+                    using var md5 = System.Security.Cryptography.MD5.Create();
+                    var filenames = new List<string>();
+                    var bytecodeHashes = new List<byte[]>();
+                    foreach (var (hash, files) in clientLuauScriptsDto.files) {
+                        foreach (var file in files) {
+                            var path = file.path;
+                            if (path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
+                                path = path.Substring(7);
+                            }
+                            filenames.Add(path);
+                            bytecodeHashes.Add(md5.ComputeHash(file.bytes));
+                        }
+                    }
+
+                    if (LuauPlugin.LuauPushScripts(filenames, bytecodeHashes)) {
+                        Debug.Log("scripts pushed");
+                    } else {
+                        Debug.LogWarning("scripts not pushed");
+                    }
+                    
                     this.scriptsReady = true;
                 }
             }, false);

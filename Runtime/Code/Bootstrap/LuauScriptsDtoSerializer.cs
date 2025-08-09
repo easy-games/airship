@@ -46,16 +46,17 @@ namespace Code.Bootstrap {
                         // Compress the byte array
                         Profiler.BeginSample("Luau Compress");
                         var maxCompressionSize = Zstd.Zstd.GetCompressionBound(file.bytes);
-                        byte[] compressedBytes = new byte[maxCompressionSize];
+                        var compressedBytes = ArrayPool<byte>.Shared.Rent(maxCompressionSize);
                         var compressedSize = zstd.Compress(file.bytes, compressedBytes);
                         writer.WriteInt(compressedSize);
                         writer.WriteBytes(compressedBytes, 0, compressedSize);
+                        ArrayPool<byte>.Shared.Return(compressedBytes);
                         
                         compressedFileCache.Add(cacheId, new CachedCompressedFile(compressedBytes, compressedSize));
+                        Profiler.EndSample();
                     }
                     
                     writer.WriteBool(file.airshipBehaviour);
-                    Profiler.EndSample();
                 }
             }
             Profiler.EndSample();

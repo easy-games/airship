@@ -932,4 +932,47 @@ public static class LuauPlugin {
 		}
 		return list;
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int PushScripts(IntPtr filenames, IntPtr bytes, int len);
+	public static unsafe bool LuauPushScripts(List<string> filenames, List<byte[]> bytesList) {
+		if (filenames.Count != bytesList.Count) {
+			throw new ArgumentException("both lists must have the same length");
+		}
+		
+		var alloc = bytesList.Count > 1024;
+		
+		var bytesListPtrs = alloc ? new IntPtr[bytesList.Count] : stackalloc IntPtr[bytesList.Count];
+		var byteListHandles = alloc ? new GCHandle[bytesList.Count] : stackalloc GCHandle[bytesList.Count];
+		var stringsListPtrs = alloc ? new IntPtr[filenames.Count] : stackalloc IntPtr[filenames.Count];
+		
+		for (var i = 0; i < bytesList.Count; i++) {
+			var b = bytesList[i];
+			var bytesHandle = GCHandle.Alloc(b, GCHandleType.Pinned);
+			var stringHandle = Marshal.StringToCoTaskMemUTF8(filenames[i]);
+			bytesListPtrs[i] = bytesHandle.AddrOfPinnedObject();
+			byteListHandles[i] = bytesHandle;
+			stringsListPtrs[i] = stringHandle;
+		}
+
+		int ret;
+		fixed (IntPtr* bytesPtr = bytesListPtrs) {
+			fixed (IntPtr* stringsPtr = stringsListPtrs) {
+				ret = PushScripts((IntPtr)stringsPtr, (IntPtr)bytesPtr, bytesListPtrs.Length);
+			}
+		}
+
+		foreach (var handle in byteListHandles) {
+			handle.Free();
+		}
+		foreach (var strPtr in stringsListPtrs) {
+			Marshal.FreeCoTaskMem(strPtr);
+		}
+		
+		return ret != 0;
+	}
 }
