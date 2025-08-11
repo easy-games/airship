@@ -498,7 +498,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             var didJump = false;
             var canJump = false;
             if (movementSettings.numberOfJumps > 0 && requestJump && 
-                (!currentMoveSnapshot.alreadyJumped || currentMoveSnapshot.isGrounded) &&
+                (!currentMoveSnapshot.alreadyJumped || grounded) &&
                 (!currentMoveSnapshot.isCrouching || canStand)) {
                 //On the ground
                 if (grounded || currentMoveSnapshot.prevStepUp) {
