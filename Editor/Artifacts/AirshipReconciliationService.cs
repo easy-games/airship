@@ -235,11 +235,9 @@ namespace Airship.Editor {
         /// <param name="componentTypeName">The name of the Unity component type</param>
         private static void EnsureUnityComponent(GameObject gameObject, string componentTypeName) {
             try {
-                var componentType = LuauCore.GetTypeFromString(componentTypeName);
+                var componentType = GetComponentTypeByName(componentTypeName);
                 if (componentType == null) {
-#if AIRSHIP_DEBUG
-                    Debug.LogWarning($"[RequireComponent] Could not find Unity component type: {componentTypeName}. Make sure it's registered in LuauCoreSystemNamespaces.cs", gameObject);
-#endif
+                    Debug.LogWarning($"[RequireComponent] Could not find Unity component type: {componentTypeName}.", gameObject);
                     return;
                 }
                 
@@ -254,9 +252,7 @@ namespace Airship.Editor {
 #endif
             }
             catch (Exception ex) {
-#if AIRSHIP_DEBUG
-                Debug.LogError($"[RequireComponent] Failed to add Unity component '{componentTypeName}' to GameObject '{gameObject.name}': {ex.Message}", gameObject);
-#endif
+                Debug.LogException(ex);
             }
         }
 
@@ -279,9 +275,7 @@ namespace Airship.Editor {
                 
                 var buildInfo = AirshipBuildInfo.Instance;
                 if (buildInfo == null || !buildInfo.HasAirshipBehaviourClass(componentTypeName)) {
-#if AIRSHIP_DEBUG
                     Debug.LogWarning($"[RequireComponent] AirshipComponent '{componentTypeName}' not found in build info", gameObject);
-#endif
                     return;
                 }
                 
@@ -293,10 +287,13 @@ namespace Airship.Editor {
 #endif
             }
             catch (Exception ex) {
-#if AIRSHIP_DEBUG
-                Debug.LogError($"[RequireComponent] Failed to add AirshipComponent '{componentTypeName}' to GameObject '{gameObject.name}': {ex.Message}", gameObject);
-#endif
+                Debug.LogException(ex);
             }
+        }
+        
+        private static Type GetComponentTypeByName(string name) {
+            var types = TypeCache.GetTypesDerivedFrom<Component>();
+            return types.FirstOrDefault(type => type.Name == name);
         }
 
         /// <summary>
