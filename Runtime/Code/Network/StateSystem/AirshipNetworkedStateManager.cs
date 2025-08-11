@@ -76,6 +76,8 @@ namespace Code.Network.StateSystem
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
         private SortedList<int, State> serverReceivedStateBuffer = new SortedList<int, State>();
+        // Last observed state from OnTick when running as a non-auth server.
+        private State serverLastObservedState;
 
         // Client processing for input prediction
         private State clientLastConfirmedState;
@@ -224,6 +226,12 @@ namespace Code.Network.StateSystem
             simManager.OnSetSnapshot -= this.OnSetSnapshot;
             simManager.OnCaptureSnapshot -= this.OnCaptureSnapshot;
             simManager.OnLagCompensationCheck -= this.OnLagCompensationCheck;
+            
+            this.OnClientReceiveSnapshot -= ClientReceiveSnapshot;
+            this.OnClientReceiveDiff -= ClientReceiveDiff;
+            this.OnServerReceiveSnapshot -= ServerReceiveSnapshot;
+            this.OnServerReceiveInput -= ServerReceiveInputCommand;
+            this.OnServerReceiveFullSnapshotRequest -= ServerReceiveFullSnapshotRequest;
         }
 
         private void SendNetworkMessages() {
@@ -810,20 +818,30 @@ namespace Code.Network.StateSystem
                 // not a shared timeline.
                 latestState.tick = tick;
                 latestState.time = time;
+                this.serverLastObservedState = latestState;
                 // Use this as the current state for the server
                 this.stateSystem.SetCurrentState(latestState);
                 // Since it's new, update our server interpolation functions
-                this.stateSystem.InterpolateReachedState(latestState); 
-                // Add the state to our history as we would in a authoritative setup
-                this.stateHistory.Set(tick, latestState);
+                this.stateSystem.InterpolateReachedState(latestState);
             }
         }
 
-        public void NonAuthServerCaptureSnapshot(int tick, double time, bool replay)
-        {
-            // Non server auth will accept the client auth as the official possition. No need to capture
-            // the state after the physics tick as the position that was pulled from the buffer in OnTick
-            // was already added to the state timeline as the official position.
+        public void NonAuthServerCaptureSnapshot(int tick, double time, bool replay) {
+            if (this.serverLastObservedState != null) {
+                // Non server auth will accept the client auth as the official position. No need to get
+                // the state after the physics tick as the position that was pulled from the buffer in OnTick
+                // is the official position.
+                var authState = this.serverLastObservedState.Clone() as State;
+                authState.tick = tick;
+                authState.time = time;
+                this.stateHistory.Set(tick, authState);
+            }
+            else {
+                // If we haven't received any auth state from the client, just use what the server has so we have
+                // something to send to observers.
+                var currentState = this.stateSystem.GetCurrentState(this.serverLastProcessedCommandNumber, tick, time);
+                this.stateHistory.Set(tick, currentState);
+            }
         }
 
         public void NonAuthServerSetSnapshot(int tick)
@@ -977,7 +995,7 @@ namespace Code.Network.StateSystem
             if (!this.observerHistory.GetAround(NetworkTime.time, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
-                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering. " + this.observerHistory.Keys.Count +
+                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering " + this.name + ". " + this.observerHistory.Keys.Count +
                 //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
                 //                  this.observerHistory.Keys[^1] + " Target " + NetworkTime.time + " Buffer is: " +  NetworkClient.bufferTime + " Estimated Latency (1 way): " +
                 //                  (NetworkTime.rtt / 2) + " TScale: " + Time.timeScale);
@@ -1177,7 +1195,7 @@ namespace Code.Network.StateSystem
             // Debug.Log("Server received command " + command.commandNumber + " for " + this.gameObject.name);
             // This should only occur if the server is authoritative.
             if (!serverAuth) {
-                Debug.LogWarning($"Received input command from {this.name}, but the networking mode is not server authoritative. Command will be ignored.");
+                // Debug.LogWarning($"Received input command from {this.name}, but the networking mode is not server authoritative. Command will be ignored.");
                 return;
             }
 
@@ -1198,8 +1216,8 @@ namespace Code.Network.StateSystem
             // Reject commands if our buffer is full.
             if (this.serverCommandBuffer.Count > this.serverCommandBufferMaxSize)
             {
-                Debug.LogWarning("Dropping command " + command.commandNumber +
-                                 " for "+ this.name + " due to exceeding command buffer size. First command in buffer is " + this.serverCommandBuffer.Values[0]);
+                // Debug.LogWarning("Dropping command " + command.commandNumber +
+                //                  " for "+ this.name + " due to exceeding command buffer size. First command in buffer is " + this.serverCommandBuffer.Values[0]);
                 return;
             }
 

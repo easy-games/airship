@@ -187,6 +187,7 @@ namespace Luau {
             [typeof(MeshFilter)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
             [typeof(DecalProjector)] = LuauContextAll,
+            [typeof(LODGroup)] = LuauContextAll,
             //Spline
             [typeof(Spline)] = LuauContextAll,
             [typeof(BezierCurve)] = LuauContextAll,

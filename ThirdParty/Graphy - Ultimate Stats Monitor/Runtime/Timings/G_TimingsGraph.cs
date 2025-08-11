@@ -64,22 +64,23 @@ namespace Tayx.Graphy.Resim {
             UpdateGraph();
 
             FrameTimingManager.CaptureFrameTimings();
-            var ret = FrameTimingManager.GetLatestTimings((uint)m_FrameTimings.Length, m_FrameTimings);
-            if (ret == 0) return;
+            var frameTimingCount = FrameTimingManager.GetLatestTimings((uint)m_FrameTimings.Length, m_FrameTimings);
+            if (frameTimingCount == 0) return;
 
             var totalGpu = 0d;
             var mainCpu = 0d;
             var totalCpu = 0d;
-            foreach (var timing in m_FrameTimings) {
+            for (var i = 0; i < frameTimingCount; i++) {
+                var timing = m_FrameTimings[i];
                 totalGpu += timing.gpuFrameTime;
                 mainCpu += timing.cpuMainThreadFrameTime;
                 totalCpu += timing.cpuFrameTime;
             }
 
             
-            this.gpuTime.text = $"{(totalGpu / m_FrameTimings.Length):F1}ms";
-            this.cpuMainTime.text = $"{(mainCpu / m_FrameTimings.Length):F1}ms";
-            this.cpuTotalTime.text = $"{(totalCpu / m_FrameTimings.Length):F1}ms";
+            this.gpuTime.text = $"{(totalGpu / frameTimingCount):F1}ms";
+            this.cpuMainTime.text = $"{(mainCpu / frameTimingCount):F1}ms";
+            this.cpuTotalTime.text = $"{(totalCpu / frameTimingCount):F1}ms";
             var newMemorySize = GC.GetTotalMemory(false);
             memory.text = $"{Mirror.Utils.PrettyBytes(newMemorySize)}";
             memoryReduced = newMemorySize < lastMemorySize;

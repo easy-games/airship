@@ -44,7 +44,7 @@ public class PlayerInfo : NetworkBehaviour {
 
 	private void InitVoiceChat() {
 		var voiceChatGO = new GameObject(
-			$"{this.username}_VoiceChatAudioSourceOutput");
+			$"{this.username}_VoiceChatAudioSource");
 		this.voiceChatAudioSource = voiceChatGO.AddComponent<AudioSource>();
 		voiceChatGO.transform.SetParent(this.transform);
 	}
@@ -57,7 +57,7 @@ public class PlayerInfo : NetworkBehaviour {
 	public override void OnStartClient() {
 		base.OnStartClient();
 
-		if (isClient) {
+		if (isClient && !RunCore.IsServer()) {
 			this.InitVoiceChat();
 		}
 	}

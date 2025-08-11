@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Code.Luau;
 using HandlebarsDotNet;
+using Luau;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
@@ -568,6 +569,10 @@ namespace CsToTs.TypeScript {
             if (type.IsEnum) {
                 var enumDef = PopulateEnumDefinition(type, context);
                 return enumDef != null ? enumDef.Name : "unknown";
+            }
+
+            if (type == typeof(LuauBuffer)) {
+                return "buffer";
             }
 
             var typeCode = Type.GetTypeCode(type);

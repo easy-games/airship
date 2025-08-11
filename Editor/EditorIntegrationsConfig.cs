@@ -39,8 +39,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] 
     public bool safeguardBundleModification = true;
 
-    [SerializeField] public bool selfCompileAllShaders = false;
-
     [SerializeField] internal bool useProjectReconcileOption = false;
     [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;
     
