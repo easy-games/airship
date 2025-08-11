@@ -195,7 +195,6 @@ namespace Code.Player.Character.MovementSystems.Character {
         private bool crouchInput;
         private Vector3 lookVector;
         private BinaryBlob customInputData;
-        private bool wasHoldingJumpWhenLanded;
 
         [SyncVar] public Vector3 startingLookVector;
 
@@ -437,9 +436,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 currentMoveSnapshot.jumpCount = 0;
                 currentMoveSnapshot.canJump = 255;
                 
-                // Check if player is holding jump when they land on the ground
-                wasHoldingJumpWhenLanded = command.jump;
-                
                 OnImpactWithGround?.Invoke(currentVelocity, groundHit);
                 if (mode == NetworkedStateSystemMode.Authority && isServer) {
                     SAuthImpactEvent(currentVelocity, groundHit);
@@ -498,13 +494,11 @@ namespace Code.Player.Character.MovementSystems.Character {
             //Don't try to jump again until they stop requesting this jump
             if (!requestJump) {
                 currentMoveSnapshot.alreadyJumped = false;
-                wasHoldingJumpWhenLanded = false;
             }
-
             var didJump = false;
             var canJump = false;
             if (movementSettings.numberOfJumps > 0 && requestJump && 
-                (!currentMoveSnapshot.alreadyJumped || wasHoldingJumpWhenLanded) &&
+                (!currentMoveSnapshot.alreadyJumped || currentMoveSnapshot.isGrounded) &&
                 (!currentMoveSnapshot.isCrouching || canStand)) {
                 //On the ground
                 if (grounded || currentMoveSnapshot.prevStepUp) {
@@ -554,7 +548,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                     didJump = true;
                     currentMoveSnapshot.alreadyJumped = true;
                     currentMoveSnapshot.jumpCount++;
-                    wasHoldingJumpWhenLanded = false;
                     newVelocity.y = movementSettings.jumpSpeed;
                     currentMoveSnapshot.airborneFromImpulse = false;
                     OnJumped?.Invoke(newVelocity);
