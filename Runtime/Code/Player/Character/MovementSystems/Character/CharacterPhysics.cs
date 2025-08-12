@@ -375,7 +375,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (_movement.movementSettings.alwaysStepUp ||
                 (didHitExactForward && _movement.currentMoveSnapshot.isGrounded &&
                  flatDistance < velFrame.magnitude + _movement.characterRadius
-                 && (Equals(currentUpNormal, Vector3.up) || !IsWalkableSurface(forwardExactHitInfo.normal)))) {
+                 && !IsWalkableSurface(forwardExactHitInfo.normal))) {
+                //(Equals(currentUpNormal, Vector3.up) ||
                 //We hit something but don't qualify for the advanced ramp step up
                 Vector3 startPoint;
                 if (!didHitExactForward) {
