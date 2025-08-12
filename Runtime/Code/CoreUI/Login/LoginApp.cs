@@ -140,10 +140,8 @@ public class LoginApp : MonoBehaviour {
         if (this.mobileMode) {
             if (fullScreen) {
                 NativeTween.AnchorMax(this.mobileBottom, new Vector2(1f, 0.74f), instant ? 0f : 0.12f);
-                // NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.64f), instant ? 0f : 0.12f);
             } else {
                 NativeTween.AnchorMax(this.mobileBottom, new Vector2(1f, 0.46f), instant ? 0f : 0.12f);
-                // NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.4f), instant ? 0f : 0.12f);
             }
             this.mobileLoginPage.SetActive(false);
             this.mobilePickUsernamePage.SetActive(false);
