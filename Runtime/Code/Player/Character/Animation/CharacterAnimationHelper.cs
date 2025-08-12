@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Code.Player.Character.MovementSystems.Character;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Player.Character.NetworkedMovement {
     [LuauAPI]
@@ -24,7 +25,7 @@ namespace Code.Player.Character.NetworkedMovement {
 
         [Header("Variables")] public float minAirborneTime = .25f;
         public float particleMaxDistance = 25f;
-        public float directionalBlendLerpMod = 15f;
+        public float speedBlendTransitionSpeed = 4;
 
         [Tooltip("At what speed should we be considered skidding")]
         public float skiddingSpeed = 7.5f;
@@ -35,7 +36,7 @@ namespace Code.Player.Character.NetworkedMovement {
         public bool isSkidding { get; private set; } = false;
 
         [Header("Animation Calibration")]
-        public float animWalkSpeed = 4.4444445f;
+        public float animWalkSpeed = 4.6666667f;
 
         public float animRunSpeed = 6.6666667f;
         public float animCrouchSpeed = 2.1233335f;
@@ -113,25 +114,29 @@ namespace Code.Player.Character.NetworkedMovement {
                 return;
             }
 
-            //Don't vary animation speeds if we are in the air or not moving
-            if (currentState == CharacterState.Airborne) {
-                targetPlaybackSpeed = 1;
-            } else if ((currentState == CharacterState.Crouching && targetPlaybackSpeed < .1) ||
-                       targetPlaybackSpeed < .03) {
-                targetVelNormalized = Vector2.zero;
-                targetPlaybackSpeed = 1;
-            }
-
             var currentMagnitude = currentVelNormalized.magnitude;
             var targetMagnitude = targetVelNormalized.magnitude;
             var blendMod = targetMagnitude > currentMagnitude
-                ? directionalBlendLerpMod
-                : directionalBlendLerpMod / 2f;
+                ? speedBlendTransitionSpeed
+                : speedBlendTransitionSpeed / 2f;
 
             //RUNNING SPEED
             //Speed up animations based on actual speed vs target speed
-            currentPlaybackSpeed = Mathf.Lerp(currentPlaybackSpeed, targetPlaybackSpeed, Time.deltaTime * blendMod);
-            animator.SetFloat("MovementPlaybackSpeed", currentPlaybackSpeed);
+            currentPlaybackSpeed
+                = Mathf.MoveTowards(currentPlaybackSpeed, targetPlaybackSpeed, Time.deltaTime * blendMod);
+
+
+            //Don't vary animation speeds if we are in the air or not moving
+            var usedPlaybackSpeed = currentPlaybackSpeed;
+            if (!grounded && currentState == CharacterState.Airborne) {
+                usedPlaybackSpeed = 1f;
+            } else if ((currentState == CharacterState.Crouching && targetPlaybackSpeed < .1f) ||
+                       targetPlaybackSpeed < .03f) {
+                targetVelNormalized = Vector2.zero;
+                usedPlaybackSpeed = 1f;
+            }
+
+            animator.SetFloat("MovementPlaybackSpeed", usedPlaybackSpeed);
 
             //Blend directional influence
             var smoothXVelocity = 0f;
@@ -193,14 +198,15 @@ namespace Code.Player.Character.NetworkedMovement {
                 targetSpeed = animCrouchSpeed;
             }
 
-            //Have to update sprinting state dynamically because low speeds can disable it
-            animator.SetBool("Sprinting",
-                currentState == CharacterState.Sprinting && currentSpeed >= animWalkSpeed);
+            //Sprint if our speed is closer to sprint speed than walk speed
+            animator.SetBool("Sprinting", (currentSpeed - animWalkSpeed) / (animRunSpeed - animWalkSpeed) >= .5f);
 
             targetPlaybackSpeed = currentSpeed / targetSpeed;
             targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10, 10);
-            //print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " + targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
+            print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " +
+                  currentPlaybackSpeed + " targetPlayspeed: " +
+                  targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
         }
 
         public void SetState(CharacterAnimationSyncData syncedState) {
@@ -211,8 +217,9 @@ namespace Code.Player.Character.NetworkedMovement {
             var newState = syncedState.state;
             grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
+            GizmoUtils.DrawSphere(transform.position, .15f, grounded ? Color.gray : Color.cyan, 4, 5f);
             // print("New State. Grounded: " + grounded + " state: " + syncedState.state + " Jumping: " +
-            //       syncedState.jumping);
+            //       syncedState.jumping + " sprint: " + syncedState.sprinting + " crouch: " + syncedState.crouching);
             animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
 
             if (syncedState.jumping) {

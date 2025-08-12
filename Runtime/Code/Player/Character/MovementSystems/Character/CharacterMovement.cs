@@ -499,12 +499,12 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             var didJump = false;
-            var canJump = false;
+            var ableToJump = false;
             if (movementSettings.numberOfJumps > 0 && requestJump && !currentMoveSnapshot.alreadyJumped &&
                 (!currentMoveSnapshot.isCrouching || canStand)) {
                 //On the ground
                 if (grounded || currentMoveSnapshot.prevStepUp) {
-                    canJump = true;
+                    ableToJump = true;
                 } else {
                     //In the air
                     // coyote jump
@@ -513,7 +513,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                         // currentMoveSnapshot.timeSinceJump > movementSettings.jumpCoyoteTime
                         currentMoveSnapshot.canJump > 0
                        ) {
-                        canJump = true;
+                        ableToJump = true;
                     }
                     //the first jump requires grounded, so if in the air bump the currentMoveState.jumpCount up
                     else {
@@ -523,7 +523,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                         //Multi Jump
                         if (currentMoveSnapshot.jumpCount < movementSettings.numberOfJumps) {
-                            canJump = true;
+                            ableToJump = true;
                         }
                     }
                 }
@@ -532,20 +532,20 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // if (rootPosition.y - prevJumpStartPos.y > 0.01) {
                 // 	if (currentMoveState.timeSinceJump < moveData.jumpUpBlockCooldown)
                 // 	{
-                // 		canJump = false;
+                // 		ableToJump = false;
                 // 	}
                 // }
                 // dont allow jumping when travelling up
                 // if (currentVelocity.y > 0f) {
-                // 	canJump = false;
+                // 	ableToJump = false;
                 // }
 
                 // dont jump if we already processed the jump
                 // if(currentMoveState.prevState == CharacterState.Jumping){
-                // 	canJump = false;
+                // 	ableToJump = false;
                 // }
 
-                if (canJump) {
+                if (ableToJump) {
                     // Jump
                     didJump = true;
                     currentMoveSnapshot.alreadyJumped = true;
@@ -709,13 +709,14 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #endregion
 
-            
+
 #region SLOPE
 
             if (drawDebugGizmos_GROUND) {
                 GizmoUtils.DrawSphere(transform.position + new Vector3(0, 1, 0), .1f, inAir ? Color.cyan : Color.white,
-                4, 5);
+                    4, 5);
             }
+
             if (movementSettings.detectSlopes && grounded) {
                 var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal)
                     .normalized;
@@ -741,7 +742,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     var newMoveDir = Vector3.ProjectOnPlane(normalizedMoveDir, groundHit.normal);
                     //Only adjust for downward slopes
                     //newMoveVector.y = Mathf.Min(0, newMoveVector.y);
-                    
+
                     //Ignore tiny float imprecision's
                     if (Mathf.Abs(newMoveDir.y) > .1f) {
                         //Take the new direction and make it as fast as the intended move velocity
@@ -769,7 +770,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
 #endregion
-            
+
 #region MOVEMENT
 
             // Find speed
@@ -994,7 +995,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                         if (grounded && !didJump && !currentMoveSnapshot.airborneFromImpulse &&
                             !currentMoveSnapshot.prevStepUp) {
                             newVelocity.y = characterMoveVelocity.y;
-                        } 
+                        }
                     }
                 }
             } else {
@@ -1013,10 +1014,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                     if (flatVelMagnitude + addedForce < currentMoveSnapshot.currentSpeed) {
                         forwardMod = 1;
                     }
-                
+
                     //Apply the force
                     newVelocity += normalizedMoveDir * forwardMod * addedForce;
-                
+
                     //Never get faster than you've been impulsed
                     var flatVel = Vector3.ClampMagnitude(new Vector3(newVelocity.x, 0, newVelocity.z),
                         Mathf.Max(addedForce, flatVelMagnitude));
@@ -1051,18 +1052,18 @@ namespace Code.Player.Character.MovementSystems.Character {
                         SnapToY(pointOnRamp.y);
                         //airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
                     }
-                
+
                     //print("STEPPED UP. Vel before: " + newVelocity);
                     newVelocity = Vector3.ClampMagnitude(
                         new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z),
                         newVelocity.magnitude);
                     //print("PointOnRamp: " + pointOnRamp + " position: " + rootPosition + " vel: " + newVelocity);
-                
+
                     if (drawDebugGizmos_STEPUP) {
                         GizmoUtils.DrawSphere(oldPos, .01f, Color.red, 4, 4);
                         GizmoUtils.DrawSphere(rootPosition + newVelocity, .03f, new Color(1, .5f, .5f), 4, 4);
                     }
-                
+
                     currentMoveSnapshot.state =
                         groundedState; //Force grounded state since we are in the air for the step up
                     grounded = true;
@@ -1413,7 +1414,8 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (!replay) {
                 var newState = new CharacterAnimationSyncData() {
                     state = currentMoveSnapshot.state,
-                    grounded = !inAir || didStepUp,
+                    grounded = !inAir || didStepUp ||
+                               (currentMoveSnapshot.canJump > 0 && currentMoveSnapshot.canJump < byte.MaxValue),
                     sprinting = currentMoveSnapshot.isSprinting,
                     crouching = currentMoveSnapshot.isCrouching,
                     localVelocity = graphicTransform.InverseTransformDirection(newVelocity),
