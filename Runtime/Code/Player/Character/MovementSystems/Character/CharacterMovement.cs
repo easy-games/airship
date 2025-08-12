@@ -435,6 +435,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (grounded && !currentMoveSnapshot.isGrounded) {
                 currentMoveSnapshot.jumpCount = 0;
                 currentMoveSnapshot.canJump = 255;
+                
                 OnImpactWithGround?.Invoke(currentVelocity, groundHit);
                 if (mode == NetworkedStateSystemMode.Authority && isServer) {
                     SAuthImpactEvent(currentVelocity, groundHit);
@@ -494,10 +495,10 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (!requestJump) {
                 currentMoveSnapshot.alreadyJumped = false;
             }
-
             var didJump = false;
             var canJump = false;
-            if (movementSettings.numberOfJumps > 0 && requestJump && !currentMoveSnapshot.alreadyJumped &&
+            if (movementSettings.numberOfJumps > 0 && requestJump && 
+                (!currentMoveSnapshot.alreadyJumped || grounded) &&
                 (!currentMoveSnapshot.isCrouching || canStand)) {
                 //On the ground
                 if (grounded || currentMoveSnapshot.prevStepUp) {
@@ -1637,7 +1638,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
-            moveDir = moveDir.normalized;
+            moveDir = Vector3.ClampMagnitude(moveDir, 1);
             var moveDirMode = (MoveDirectionMode)moveDirModeInt;
             switch (moveDirMode) {
                 case MoveDirectionMode.World:

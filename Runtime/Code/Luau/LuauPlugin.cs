@@ -261,6 +261,31 @@ public static class LuauPlugin {
 #else
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
+	private static extern ulong GetUniqueInstanceIdCount(LuauContext context);
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern ulong GetUniqueInstanceIds(LuauContext context, IntPtr arr, ulong arrSize);
+	public static unsafe ReadOnlySpan<int> LuauGetUniqueInstanceIds(LuauContext context) {
+		var count = GetUniqueInstanceIdCount(context);
+		var ids = new int[count];
+		
+		ulong countFetched;
+		fixed (int* idsPtr = ids) {
+			countFetched =  GetUniqueInstanceIds(context, new IntPtr(idsPtr), count);
+		}
+
+		return new ReadOnlySpan<int>(ids, 0, (int)countFetched);
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
 	private static extern void RunBeginFrameLogic();
 	public static void LuauRunBeginFrameLogic() {
 		ThreadSafetyCheck();
