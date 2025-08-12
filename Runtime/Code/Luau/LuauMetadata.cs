@@ -629,7 +629,7 @@ namespace Luau {
         #if UNITY_EDITOR
         [JsonProperty][SerializeField]
         #endif
-        private List<LuauMetadataDecoratorElement> decorators = new();
+        public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
         [CanBeNull] public Texture2D displayIcon;
 
@@ -675,11 +675,7 @@ namespace Luau {
             
             return (metadata, null);
         }
-
-        public List<LuauMetadataDecoratorElement> GetDecorators() {
-            return decorators;
-        }
-
+        
         public LuauMetadataDecoratorElement FindClassDecorator(string decoratorName) {
             foreach (var property in decorators) {
                 if (property.name == decoratorName) {
@@ -688,6 +684,10 @@ namespace Luau {
             }
 
             return null;
+        }
+        
+        public List<LuauMetadataDecoratorElement> FindClassDecorators(string decoratorName) {
+            return decorators.Where(property => property.name == decoratorName).ToList();
         }
 
         public LuauMetadataProperty FindProperty(string propertyName) {
