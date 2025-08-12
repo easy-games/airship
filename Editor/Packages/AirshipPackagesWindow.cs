@@ -449,6 +449,12 @@ namespace Editor.Packages {
                         });
                     }
 
+                    if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
+                        CreateAssetBundles.SwapToQualityLevel("Mobile");
+                    } else {
+                        CreateAssetBundles.SwapToQualityLevel("Normal");
+                    }
+
                     var buildParams = new BundleBuildParameters(
                         buildTarget,
                         buildTargetGroup,
