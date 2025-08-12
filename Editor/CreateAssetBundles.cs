@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
-using Luau;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
@@ -13,6 +12,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
+using Editor.Quality;
 #endif
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
@@ -493,6 +493,14 @@ public static class CreateAssetBundles {
 	}
 
 	public static void SwapToQualityLevel(string name) {
+#if UNITY_EDITOR
+		if (name == "Mobile") {
+			QualityConfig.ConfigureMobileQualityLevel();
+		} else if (name == "Normal") {
+			QualityConfig.ConfigureNormalQualityLevel();
+		}
+#endif
+
 		int index = System.Array.IndexOf(QualitySettings.names, name);
 		if (index < 0) {
 			Debug.LogError($"Quality level '{name}' not found. Please report this issue to Airship devs.");
