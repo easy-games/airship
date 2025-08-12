@@ -168,7 +168,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public bool detectSlopes = false;
 
         [Tooltip("Increase to have slopes push the character downhill")] [Min(0f)]
-        public float slopeForce = 45;
+        public float slopeForce = 0;
 
         [Tooltip("Slopes above this threshold will be treated as walls")] [Range(0, 1)]
         public float maxSlopeDelta = .3f;

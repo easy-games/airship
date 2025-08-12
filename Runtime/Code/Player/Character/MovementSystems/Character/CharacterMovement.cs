@@ -29,11 +29,15 @@ namespace Code.Player.Character.MovementSystems.Character {
         [FormerlySerializedAs("rigidbody")] public Rigidbody rb;
         public Transform rootTransform;
 
-        public Transform
-            airshipTransform; // The visual transform controlled by this script. This always has the exact rotations used for movement
+        /**
+	    * The visual transform controlled by this script. This always has the exact rotations used for movement
+	    */
+        public Transform airshipTransform;
 
-        public Transform
-            graphicTransform; // A transform that games can animate. This may have slightly altered rotation for visuals
+        /**
+	    * A transform that games can animate. This may have slightly altered rotation for visuals
+	    */
+        public Transform graphicTransform;
 
         public CharacterMovementSettings movementSettings;
         public BoxCollider mainCollider;
@@ -244,6 +248,10 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             _cameraTransform = Camera.main.transform;
+
+            if (autoCalibrateSkiddingSpeed && animationHelper) {
+                animationHelper.skiddingSpeed = movementSettings.sprintSpeed + 1.5f;
+            }
         }
 
         public override void OnStartClient() {
@@ -799,6 +807,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (movementSettings.useAccelerationMovement) {
                 characterMoveVelocity *= currentAcc;
             } else {
+                //Using Instant Speed
                 if (inAir) {
                     // If no input carry some momentum, but apply an additional slowdown value per second
                     if (normalizedMoveDir == Vector3.zero) {
@@ -812,6 +821,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                         characterMoveVelocity = new Vector3(draggedHorizontal.x, 0,
                             draggedHorizontal.z);
                     } else {
+                        //Keep moving in the direction
                         var targetVelocity = normalizedMoveDir * currentMoveSnapshot.currentSpeed;
                         var maxDelta = movementSettings.airInputAcceleration * Time.deltaTime;
 
