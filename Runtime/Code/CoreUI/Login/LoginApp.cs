@@ -166,10 +166,11 @@ public class LoginApp : MonoBehaviour {
     }
 
     public async void PressContinueWithGoogle() {
-        if (true) {
-            RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
-            return;
-        }
+        // Uncomment to test transition
+        // if (true) {
+        //     RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+        //     return;
+        // }
 
         loading = true;
         var authResult = await AuthManager.AuthWithGoogle();
