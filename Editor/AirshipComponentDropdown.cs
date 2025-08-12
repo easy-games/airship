@@ -176,7 +176,7 @@ public class AirshipComponentDropdown : AdvancedDropdown {
         foreach (var binaryFile in binaryFiles) {
             if (binaryFile.m_metadata == null) continue;
             
-            var airshipComponentMenu = binaryFile.m_metadata.GetDecorators().Find(f => f.name == "AirshipComponentMenu");
+            var airshipComponentMenu = binaryFile.m_metadata.decorators.Find(f => f.name == "AirshipComponentMenu");
             if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out var customPath)) {
                 if (customPath == "") continue; // ignore empty names :)
                 
