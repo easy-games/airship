@@ -14,16 +14,20 @@ namespace Editor.Assets {
             importer.loadInBackground = true;
             
             var audioImporterSampleSettings = new AudioImporterSampleSettings() {
-                loadType = AudioClipLoadType.CompressedInMemory,
-                compressionFormat = AudioCompressionFormat.ADPCM,
+                compressionFormat = AudioCompressionFormat.Vorbis,
+                quality = 0.5f,
             };
+            // For clips over 30s in length we compress in memory on mobile to keep memory lower
             if (clip.length > 30) {
-                audioImporterSampleSettings = new AudioImporterSampleSettings() {
-                    loadType = AudioClipLoadType.Streaming,
-                    compressionFormat = AudioCompressionFormat.ADPCM,
+                var mobileQuality = new AudioImporterSampleSettings() {
+                    loadType = AudioClipLoadType.CompressedInMemory,
+                    compressionFormat = AudioCompressionFormat.Vorbis,
+                    quality = 0.3f,
                 };
+                importer.SetOverrideSampleSettings(BuildTargetGroup.iOS, mobileQuality);
+                importer.SetOverrideSampleSettings(BuildTargetGroup.Android, mobileQuality);
             }
-            importer.SetOverrideSampleSettings(BuildTargetGroup.iOS, audioImporterSampleSettings);
+            importer.defaultSampleSettings = audioImporterSampleSettings;
             processedClips.Add(importer.assetPath);
             importer.SaveAndReimport();
         }
