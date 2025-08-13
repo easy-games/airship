@@ -204,9 +204,9 @@ namespace Code.Player.Character.NetworkedMovement {
             targetPlaybackSpeed = currentSpeed / targetSpeed;
             targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10, 10);
-            print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " +
-                  currentPlaybackSpeed + " targetPlayspeed: " +
-                  targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
+            // print("currentSpeed: " + currentSpeed + " targetSpeed: " + targetSpeed + " playbackSpeed: " +
+            //       currentPlaybackSpeed + " targetPlayspeed: " +
+            //       targetPlaybackSpeed + " velNormalized: " + targetVelNormalized);
         }
 
         public void SetState(CharacterAnimationSyncData syncedState) {
