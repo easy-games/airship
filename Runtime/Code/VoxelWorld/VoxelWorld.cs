@@ -485,9 +485,9 @@ public partial class VoxelWorld : MonoBehaviour {
     } 
 
     public static Chunk CreateChunk(Vector3Int key) {
-        Chunk chunk = new();
-        chunk.chunkKey = key;
-        return chunk;
+        return new Chunk {
+            chunkKey = key,
+        };
     }
 
     /**
@@ -1307,7 +1307,7 @@ public partial class VoxelWorld : MonoBehaviour {
         writerFinal.Write(blockIdToScopeNamesSerialized);
         writerFinal.Write(saveFile.chunksCompressed.Length);
         writerFinal.Write(saveFile.chunksCompressed);
-
+        
         return allData;
     }
 
