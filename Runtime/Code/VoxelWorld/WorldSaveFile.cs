@@ -96,6 +96,7 @@ public class WorldSaveFile : ScriptableObject {
         return $"{gb:F2} GB [{bytes} bytes]";
     }
 
+    [HideFromTS]
     public void SerializeBlockIdToScopeNames(BinaryWriter writer) {
         writer.Write(blockIdToScopeName.Count);
         foreach (var b in blockIdToScopeName) {
@@ -104,6 +105,7 @@ public class WorldSaveFile : ScriptableObject {
         }
     }
 
+    [HideFromTS]
     public void DeserializeBlockIdToScopeNames(BinaryReader reader) {
         blockIdToScopeName.Clear();
         var len = reader.ReadInt32();
