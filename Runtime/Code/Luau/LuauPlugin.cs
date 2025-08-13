@@ -275,7 +275,7 @@ public static class LuauPlugin {
 		
 		ulong countFetched;
 		fixed (int* idsPtr = ids) {
-			countFetched =  GetUniqueInstanceIds(context, new IntPtr(idsPtr), count);
+			countFetched = GetUniqueInstanceIds(context, new IntPtr(idsPtr), count);
 		}
 
 		return new ReadOnlySpan<int>(ids, 0, (int)countFetched);

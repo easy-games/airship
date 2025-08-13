@@ -96,6 +96,27 @@ public class WorldSaveFile : ScriptableObject {
         return $"{gb:F2} GB [{bytes} bytes]";
     }
 
+    public void SerializeBlockIdToScopeNames(BinaryWriter writer) {
+        writer.Write(blockIdToScopeName.Capacity);
+        foreach (var b in blockIdToScopeName) {
+            writer.Write(b.id);
+            writer.Write(b.name);
+        }
+    }
+
+    public void DeserializeBlockIdToScopeNames(BinaryReader reader) {
+        blockIdToScopeName.Clear();
+        var len = reader.ReadInt32();
+        for (var i = 0; i < len; i++) {
+            var blockId = reader.ReadUInt16();
+            var scopeName = reader.ReadString();
+            blockIdToScopeName.Add(new BlockIdToScopedName {
+                id = blockId,
+                name = scopeName,
+            });
+        }
+    }
+
     private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world) {
         blockIdToScopeName.Clear();
         var blockMap = world.voxelBlocks.loadedBlocks;
@@ -109,7 +130,6 @@ public class WorldSaveFile : ScriptableObject {
 
     //This is unusable - for some reason it seems to be causing errors
     private void CreateScopedBlockDictionaryFromVoxelWorldTight(VoxelWorld world) {
-
         HashSet<int> UsedIds = new();
         foreach (var chunk in chunks) {
             var data = chunk.data;
@@ -221,7 +241,9 @@ public class WorldSaveFile : ScriptableObject {
         
         Profiler.EndSample();
 
+#if UNITY_EDITOR
         Debug.Log($"Saved {counter} chunks to {name} (raw: {FormatDataSize(memStream.Length)}) (compressed: {FormatDataSize(chunksCompressed.Length)})");
+#endif
     }
 
     /// <summary>
@@ -335,7 +357,9 @@ public class WorldSaveFile : ScriptableObject {
             }
         }
 
+#if UNITY_EDITOR
         Debug.Log($"[Voxel World]: Loaded {counter} chunks");
+#endif
         
         Profiler.EndSample();
     }

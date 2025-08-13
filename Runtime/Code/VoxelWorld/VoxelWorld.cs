@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -12,6 +13,7 @@ using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Assets.Luau;
+using Luau;
 using UnityEngine.Serialization;
 
 #if UNITY_EDITOR
@@ -621,8 +623,7 @@ public partial class VoxelWorld : MonoBehaviour {
         return (value.GetVoxelAt(pos), value);
     }
 
-    public VoxelData 
-        GetVoxelAt(Vector3 pos) {
+    public VoxelData GetVoxelAt(Vector3 pos) {
         Vector3Int posi = FloorInt(pos);
         Vector3Int chunkKey = WorldPosToChunkKey(posi);
         chunks.TryGetValue(chunkKey, out Chunk value);
@@ -1332,6 +1333,46 @@ public partial class VoxelWorld : MonoBehaviour {
         chunks.Add(key, chunk);
         chunk.SetGeometryDirty(true);
         chunk.SetCollisionDirty(true);
+    }
+
+    public LuauBuffer ToBuffer() {
+        var saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+        saveFile.CreateFromVoxelWorld(this);
+        
+        using var memStream = new MemoryStream();
+        using var writer = new BinaryWriter(memStream);
+        
+        // Serialize the BlockIdToScopeNames list:
+        saveFile.SerializeBlockIdToScopeNames(writer);
+
+        // Get serialized data from above:
+        var serialized = memStream.GetBuffer();
+        var blockIdToScopeNamesSerialized = new ReadOnlySpan<byte>(serialized, 0, (int)memStream.Length);
+        
+        // Combine BlockIdToScopeNames and chunksCompressed:
+        var allData = new byte[blockIdToScopeNamesSerialized.Length + saveFile.chunksCompressed.Length + sizeof(int)];
+        using var memStreamFinal = new MemoryStream(allData);
+        using var writerFinal = new BinaryWriter(memStream);
+        writerFinal.Write(blockIdToScopeNamesSerialized);
+        writerFinal.Write(saveFile.chunksCompressed.Length);
+        writerFinal.Write(saveFile.chunksCompressed);
+        
+        return allData;
+    }
+
+    public void FromBuffer(LuauBuffer buffer) {
+        var saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+        
+        using var memStream = new MemoryStream(buffer);
+        using var reader = new BinaryReader(memStream);
+        
+        saveFile.DeserializeBlockIdToScopeNames(reader);
+
+        var chunksCompressedLen = reader.ReadInt32();
+        var chunksCompressed = reader.ReadBytes(chunksCompressedLen);
+        saveFile.chunksCompressed = chunksCompressed;
+        
+        saveFile.LoadIntoVoxelWorld(this);
     }
 
     //Todo: How do we want to handle having multiple voxelworlds?
