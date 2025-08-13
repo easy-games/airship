@@ -122,6 +122,10 @@ namespace Luau {
         public void Reset() {
             Active = false;
             _currentBuffer?.Clear();
+            
+            var uniqueInstanceIds = LuauPlugin.LuauGetUniqueInstanceIds(Context);
+            ThreadDataManager.DeleteObjectReferencesList(uniqueInstanceIds);
+            
             LuauPlugin.LuauReset(Context);
             if (_luauModulesFolder != null) {
                 Object.Destroy(_luauModulesFolder);

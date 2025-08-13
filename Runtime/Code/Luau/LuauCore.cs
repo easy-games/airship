@@ -91,7 +91,7 @@ public partial class LuauCore : MonoBehaviour {
 
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;
-
+    
     private Dictionary<string, Type> shortTypeNames = new Dictionary<string, Type>();
 
     private List<string> namespaces = new List<string>();
