@@ -777,6 +777,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                 }
             }
 
+
+            //Don't allow walking on unwalkable surfaces
+            if (!grounded && detectedGround) {
+                characterMoveVelocity = new Vector3(groundHit.normal.x, 0, groundHit.normal.z).normalized *
+                                        currentMoveSnapshot.velocity.magnitude * deltaTime;
+                Debug.DrawLine(transform.position, transform.position + characterMoveVelocity, Color.magenta, 1f);
+            }
+
 #endregion
 
 #region MOVEMENT
@@ -945,11 +953,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                         //print("Collider Dot: " + colliderDot.ToString("R") + " moveVector: " + characterMoveVelocity.magnitude.ToString("R"));
                     }
 
-                    //Push the character out of any colliders
-                    // if (forwardHit.distance < characterRadius + .15f) {
-                    //     newVelocity.x = 0;
-                    //     newVelocity.z = 0;
-                    // }
                     flatVelocity = Vector3.ClampMagnitude(newVelocity,
                         forwardHit.distance - characterRadius - forwardMargin);
                     //print("FLAT VEL: " + flatVelocity);
