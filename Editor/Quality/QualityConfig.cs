@@ -5,14 +5,14 @@ using UnityEngine;
 namespace Editor.Quality {
     [InitializeOnLoad]
     public class QualityConfig {
-        private const string MOBILE_QUALITY_NAME = "Mobile";
+        private const string LOW_QUALITY_NAME = "Low";
         private const string NORMAL_QUALITY_NAME = "Normal";
 
 #if AIRSHIP_INTERNAL
         [MenuItem("Airship/Quality/Config Mobile")]
 #endif
-        public static void ConfigureMobileQualityLevel() {
-            SwapToQualityLevel(MOBILE_QUALITY_NAME);
+        public static void ConfigureLowQualityLevel() {
+            SwapToQualityLevel(LOW_QUALITY_NAME);
             ConfigureForMobile();
             SaveChangesToQualitySettings();
         }

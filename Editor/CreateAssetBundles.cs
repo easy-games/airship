@@ -295,7 +295,7 @@ public static class CreateAssetBundles {
 		Debug.Log("[Editor]: Build path: " + buildPath);
 
 		if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
-			SwapToQualityLevel("Mobile");
+			SwapToQualityLevel("Low");
 		} else {
 			SwapToQualityLevel("Normal");
 		}
@@ -494,8 +494,8 @@ public static class CreateAssetBundles {
 
 	public static void SwapToQualityLevel(string name) {
 #if UNITY_EDITOR
-		if (name == "Mobile") {
-			QualityConfig.ConfigureMobileQualityLevel();
+		if (name == "Low") {
+			QualityConfig.ConfigureLowQualityLevel();
 		} else if (name == "Normal") {
 			QualityConfig.ConfigureNormalQualityLevel();
 		}
