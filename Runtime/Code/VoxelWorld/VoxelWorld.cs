@@ -1303,11 +1303,11 @@ public partial class VoxelWorld : MonoBehaviour {
         // Combine BlockIdToScopeNames and chunksCompressed:
         var allData = new byte[blockIdToScopeNamesSerialized.Length + saveFile.chunksCompressed.Length + sizeof(int)];
         using var memStreamFinal = new MemoryStream(allData);
-        using var writerFinal = new BinaryWriter(memStream);
+        using var writerFinal = new BinaryWriter(memStreamFinal);
         writerFinal.Write(blockIdToScopeNamesSerialized);
         writerFinal.Write(saveFile.chunksCompressed.Length);
         writerFinal.Write(saveFile.chunksCompressed);
-        
+
         return allData;
     }
 
@@ -1322,6 +1322,7 @@ public partial class VoxelWorld : MonoBehaviour {
         var chunksCompressedLen = reader.ReadInt32();
         var chunksCompressed = reader.ReadBytes(chunksCompressedLen);
         saveFile.chunksCompressed = chunksCompressed;
+        saveFile.chunksCompressedV2 = true;
         
         saveFile.LoadIntoVoxelWorld(this);
     }
