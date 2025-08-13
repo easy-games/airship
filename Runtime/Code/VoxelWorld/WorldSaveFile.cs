@@ -97,7 +97,7 @@ public class WorldSaveFile : ScriptableObject {
     }
 
     public void SerializeBlockIdToScopeNames(BinaryWriter writer) {
-        writer.Write(blockIdToScopeName.Capacity);
+        writer.Write(blockIdToScopeName.Count);
         foreach (var b in blockIdToScopeName) {
             writer.Write(b.id);
             writer.Write(b.name);
@@ -242,7 +242,9 @@ public class WorldSaveFile : ScriptableObject {
         Profiler.EndSample();
 
 #if UNITY_EDITOR
-        Debug.Log($"Saved {counter} chunks to {name} (raw: {FormatDataSize(memStream.Length)}) (compressed: {FormatDataSize(chunksCompressed.Length)})");
+        if (!Application.isPlaying) {
+            Debug.Log($"Saved {counter} chunks to {name} (raw: {FormatDataSize(memStream.Length)}) (compressed: {FormatDataSize(chunksCompressed.Length)})");
+        }
 #endif
     }
 
@@ -358,7 +360,9 @@ public class WorldSaveFile : ScriptableObject {
         }
 
 #if UNITY_EDITOR
-        Debug.Log($"[Voxel World]: Loaded {counter} chunks");
+        if (!Application.isPlaying) {
+            Debug.Log($"[Voxel World]: Loaded {counter} chunks");
+        }
 #endif
         
         Profiler.EndSample();
