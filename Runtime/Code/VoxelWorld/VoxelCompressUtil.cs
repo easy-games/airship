@@ -2,6 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 using Code.Zstd;
+using UnityEngine;
 
 public static class VoxelCompressUtil {
 	private const ulong ZstdScratchBufferSize = 1024 * 128;
@@ -44,7 +45,8 @@ public static class VoxelCompressUtil {
 	/// </summary>
 	public static byte[] CompressToByteArrayV2(ReadOnlySpan<byte> data) {
 		using var zstd = new Zstd(ZstdScratchBufferSize);
-		var compressed = zstd.Compress(data, Zstd.MaxCompressionLevel);
+		var compressionLevel = Application.isPlaying ? Zstd.DefaultCompressionLevel : Zstd.MaxCompressionLevel;
+		var compressed = zstd.Compress(data, compressionLevel);
 		return compressed;
 	}
 
