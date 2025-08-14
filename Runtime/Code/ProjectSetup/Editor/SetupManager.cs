@@ -26,7 +26,7 @@ public class SetupManager : AssetPostprocessor {
     [MenuItem("Airship/Misc/Reset Physics To Airship Defaults")]
     public static void ResetPhysics() {
         var config = MiscProjectSetup.GetOrCreateGameConfig();
-        PhysicsSetup.ResetDefaults(config, PhysicsSetup.defaultGravity);
+        PhysicsSetup.ResetDefaults(config);
     }
 }
 #endif
