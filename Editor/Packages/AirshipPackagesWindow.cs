@@ -416,7 +416,11 @@ namespace Editor.Packages {
                 // Act as if we are building all asset bundles (including CoreMaterials).
                 // This is so our current build target will have references to those asset bundles.
                 // This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
-                List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds(true);
+                var compileUrpShaders = true;
+                if (packageDoc.id.ToLower() == "@easy/core") {
+                    compileUrpShaders = false;
+                }
+                List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds(compileUrpShaders);
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
