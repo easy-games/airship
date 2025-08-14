@@ -402,10 +402,6 @@ namespace VoxelWorldStuff {
             return false;
         }
 
-        ~Chunk() {
-            Free();
-        }
-
         public void Free() {
             // Destroy all meshes
             if (mesh != null) {

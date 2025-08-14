@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Editor.Quality {
     [InitializeOnLoad]
@@ -13,7 +14,7 @@ namespace Editor.Quality {
 #endif
         public static void ConfigureLowQualityLevel() {
             SwapToQualityLevel(LOW_QUALITY_NAME);
-            ConfigureForMobile();
+            ConfigureForLow();
             SaveChangesToQualitySettings();
         }
 
@@ -26,41 +27,16 @@ namespace Editor.Quality {
             SaveChangesToQualitySettings();
         }
 
-        private static void ConfigureForMobile() {
-            // Some sample quality settings from ChatGPT. Leaving in case it's useful for you Liam.
-            // - Luke
+        private static void ConfigureForLow() {
+            // At a value of 1 this reduces the max texture mipmap level to half resolution.
+            QualitySettings.globalTextureMipmapLimit = 1;
+            // Reduces max bones accounted for per vertex during skinned animation.
+            // Not super necessary, so if we notice animation issues on mobile we can increase this.
+            QualitySettings.skinWeights = SkinWeights.TwoBones;
 
-            // Core toggles
-            // QualitySettings.vSyncCount = 0; // let you drive FPS caps per-platform
-            // QualitySettings.pixelLightCount = 1;
-            // QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
-            // QualitySettings.antiAliasing = 0; // prefer TAA/FXAA in URP if needed
-            // QualitySettings.softParticles = false;
-            // QualitySettings.realtimeReflectionProbes = false;
-            // QualitySettings.billboardsFaceCameraPosition = false;
-            //
-            // // LODs & textures
-            // QualitySettings.lodBias = 0.6f;
-            // QualitySettings.maximumLODLevel = 0; // 0 = use all LODs; increase to force lower-detail LODs
-            // QualitySettings.globalTextureMipmapLimit = 1; // 0=full res, 1=half, 2=quarter (tune as needed)
-            // QualitySettings.streamingMipmapsActive = true;
-            //
-            // // Shadows (you can enable HardOnly and short distance if you really need them)
-            // QualitySettings.shadows = ShadowQuality.Disable;
-            // QualitySettings.shadowDistance = 15f;
-            // QualitySettings.shadowResolution = ShadowResolution.Low;
-            // QualitySettings.shadowCascades = 0;
-
-            // Skin weights
-#if UNITY_2020_3_OR_NEWER
-            QualitySettings.skinWeights = SkinWeights.TwoBones; // cheaper on mobile
-#else
-        QualitySettings.blendWeights = BlendWeights.TwoBones;
-#endif
-
-            // Assign mobile specific URP pipeline asset:
-            // QualitySettings.renderPipeline = yourMobileURPAsset;
-            // If using URP’s renderer features, also consider disabling costly features on your mobile RP asset (SSAO, Screen-Space Shadows, TAA, HDR).
+            QualitySettings.renderPipeline =
+                AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
+                    "Packages/gg.easy.airship/URP/AirshipMobileURPAsset.asset");
         }
 
         private static void ConfigureForNormal() {
