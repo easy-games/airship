@@ -1429,15 +1429,16 @@ namespace Code.Player.Character.MovementSystems.Character {
                     lookVector = lookVector,
                     jumping = didJump
                 };
-                if (newState.state != currentAnimState.state) {
+                
+                if (newState != currentAnimState) {
                     stateChanged?.Invoke((int)newState.state);
                     if (animationHelper) {
                         animationHelper.SetState(newState);
                     }
-                } else {
-                    if (animationHelper) {
-                        animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
-                    }
+                }
+                
+                if (animationHelper) {
+                    animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
                 }
 
                 currentAnimState = newState;

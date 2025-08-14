@@ -1,11 +1,9 @@
 using System;
 using UnityEngine;
 
-namespace Code.Player.Character.MovementSystems.Character
-{
+namespace Code.Player.Character.MovementSystems.Character {
     [LuauAPI]
-    public class CharacterAnimationSyncData
-    {
+    public class CharacterAnimationSyncData {
         public CharacterState state = CharacterState.Idle;
         public bool grounded = true;
         public bool sprinting = false;
@@ -17,23 +15,25 @@ namespace Code.Player.Character.MovementSystems.Character
 
         // override object.Equals
         public override bool Equals(object obj) {
-            CharacterAnimationSyncData data = (CharacterAnimationSyncData)obj;
-            return this.state == data.state &&
-                   this.grounded == data.grounded &&
-                   this.sprinting == data.sprinting &&
-                   this.crouching == data.crouching && 
-                   this.lookVector == data.lookVector && 
-                   this.localVelocity == data.localVelocity;
+            var data = (CharacterAnimationSyncData)obj;
+            return state == data.state &&
+                   grounded == data.grounded &&
+                   sprinting == data.sprinting &&
+                   crouching == data.crouching &&
+                   lookVector == data.lookVector &&
+                   jumping == data.jumping &&
+                   localVelocity == data.localVelocity;
         }
 
         public override int GetHashCode() {
             unchecked {
-                int hashCode = state.GetHashCode();
+                var hashCode = state.GetHashCode();
                 hashCode = (hashCode * 397) ^ grounded.GetHashCode();
                 hashCode = (hashCode * 397) ^ sprinting.GetHashCode();
                 hashCode = (hashCode * 397) ^ crouching.GetHashCode();
                 hashCode = (hashCode * 397) ^ lookVector.GetHashCode();
                 hashCode = (hashCode * 397) ^ localVelocity.GetHashCode();
+                hashCode = (hashCode * 397) ^ jumping.GetHashCode();
                 return hashCode;
             }
         }
