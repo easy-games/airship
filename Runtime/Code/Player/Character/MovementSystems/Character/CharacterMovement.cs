@@ -726,64 +726,63 @@ namespace Code.Player.Character.MovementSystems.Character {
                     4, 5);
             }
 
-            if (movementSettings.detectSlopes && grounded) {
+            if (movementSettings.detectSlopes) {
                 var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal)
                     .normalized;
                 var slopeDot = 1 - Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 
+                //Don't allow walking on unwalkable surfaces
+                if (!grounded && detectedGround && !currentMoveSnapshot.prevStepUp) {
+                    characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
+                    if (characterMoveVelocity.y > 0) {
+                        characterMoveVelocity.y = -characterMoveVelocity.y;
+                    }
+                    Debug.DrawLine(transform.position, transform.position + characterMoveVelocity, Color.magenta, 1f);
+                }
+
                 if (drawDebugGizmos_GROUND) {
                     Debug.DrawLine(rootPosition, rootPosition + groundSlopeDir, Color.black, 5);
                 }
-
+                
                 //Push the character based on the slope amount
                 if (slopeDot < 1 && movementSettings.slopeForce > 0) {
                     var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
-                    if (slopeDot > movementSettings.maxSlopeDelta) {
-                        slopeVel.y = 0;
-                    }
-
                     newVelocity += slopeVel;
                 }
+                
+                if (grounded) {
+                    //Project movement onto the slope
+                    if (characterMoveVelocity.sqrMagnitude > .1 && groundHit.normal.y > 0) {
+                        //Adjust movement based on the slope of the ground you are on
+                        var newMoveDir = Vector3.ProjectOnPlane(normalizedMoveDir, groundHit.normal);
+                        //Only adjust for downward slopes
+                        //newMoveVector.y = Mathf.Min(0, newMoveVector.y);
 
-                //Project movement onto the slope
-                if (characterMoveVelocity.sqrMagnitude > .1 && groundHit.normal.y > 0) {
-                    //Adjust movement based on the slope of the ground you are on
-                    var newMoveDir = Vector3.ProjectOnPlane(normalizedMoveDir, groundHit.normal);
-                    //Only adjust for downward slopes
-                    //newMoveVector.y = Mathf.Min(0, newMoveVector.y);
-
-                    //Ignore tiny float imprecision's
-                    if (Mathf.Abs(newMoveDir.y) > .1f) {
-                        //Take the new direction and make it as fast as the intended move velocity
-                        normalizedMoveDir = newMoveDir;
-                        characterMoveVelocity = newMoveDir;
-                        grounded = true;
-                        if (drawDebugGizmos_GROUND) {
-                            Debug.DrawLine(rootPosition, rootPosition + normalizedMoveDir * .5f, Color.magenta,
-                                5);
-                            Debug.DrawLine(groundHit.point, groundHit.point + groundHit.normal * .5f, Color.red,
-                                5);
+                        //Ignore tiny float imprecision's
+                        if (Mathf.Abs(newMoveDir.y) > .1f) {
+                            //Take the new direction and make it as fast as the intended move velocity
+                            normalizedMoveDir = newMoveDir;
+                            characterMoveVelocity = newMoveDir;
+                            grounded = true;
+                            if (drawDebugGizmos_GROUND) {
+                                Debug.DrawLine(rootPosition, rootPosition + normalizedMoveDir * .5f, Color.magenta,
+                                    5);
+                                Debug.DrawLine(groundHit.point, groundHit.point + groundHit.normal * .5f, Color.red,
+                                    5);
+                            }
+                            //}
                         }
-                        //}
+                    }
+
+                    //if (useExtraLogging && characterMoveVelocity.y < 0) {
+                        //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+                    //}
+
+                    if (slopeVisualizer) {
+                        slopeVisualizer.LookAt(slopeVisualizer.position +
+                                               (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
                     }
                 }
-
-                if (useExtraLogging && characterMoveVelocity.y < 0) {
-                    //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
-                }
-
-                if (slopeVisualizer) {
-                    slopeVisualizer.LookAt(slopeVisualizer.position +
-                                           (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
-                }
-            }
-
-
-            //Don't allow walking on unwalkable surfaces
-            if (!grounded && detectedGround) {
-                characterMoveVelocity = new Vector3(groundHit.normal.x, 0, groundHit.normal.z).normalized *
-                                        currentMoveSnapshot.velocity.magnitude * deltaTime;
-                Debug.DrawLine(transform.position, transform.position + characterMoveVelocity, Color.magenta, 1f);
             }
 
 #endregion
@@ -1002,7 +1001,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     // }
 
                     //If our current flat velocity is less then our intended velocity we can use our move velocity
-                    if (moveMagnitude + .5f >= flatVelMagnitude) {
+                    if (flatVelMagnitude  <= currentMoveSnapshot.currentSpeed) {
                         //Snap velocity to our target move velocity
                         newVelocity.x = characterMoveVelocity.x;
                         newVelocity.z = characterMoveVelocity.z;
@@ -1402,6 +1401,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 
             //print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>currentMoveState.prevState</b>: {currentMoveState.prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
+            print($"<b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}      <b>mdMove</b>: {moveDirInput}    <b>characterMoveVector</b>: {characterMoveVelocity}");
 
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
@@ -1446,7 +1446,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // Handle OnMoveDirectionChanged event
             if (moveDirInput != command.moveDir) {
-                OnMoveDirectionChanged?.Invoke(command.moveDir);
+                OnMoveDirectionChanged?.Invoke(command.moveDir);w
             }
 
             moveDirInput = command.moveDir;
