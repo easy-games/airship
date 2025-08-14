@@ -142,13 +142,9 @@ using Object = UnityEngine.Object;
 
             internal static bool ShowDeveloperOptions {
                 set => EditorPrefs.SetBool("airshipTypescriptDeveloperOptions", value);
-                get {
-                    if (EditorPrefs.HasKey("airshipTypescriptDeveloperOptions")) {
-                        return EditorPrefs.GetBool("airshipTypescriptDeveloperOptions");
-                    }
-
-                    return false;
-                }
+                get =>
+                    EditorPrefs.HasKey("airshipTypescriptDeveloperOptions") &&
+                    EditorPrefs.GetBool("airshipTypescriptDeveloperOptions");
             }
             
             internal static bool PreventPlayModeWithErrors {
@@ -373,7 +369,12 @@ using Object = UnityEngine.Object;
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
                 foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
-                    compilerState.Stop(); // test
+                    try {
+                        compilerState.Stop(); // test
+                        TypescriptLogService.LogWarning($"Stopped compiler at process id {compilerState.processId}");
+                    } catch (Exception e) {
+                        TypescriptLogService.LogException(e);
+                    }
                 }
 
                 var project = TypescriptProjectsService.Project;

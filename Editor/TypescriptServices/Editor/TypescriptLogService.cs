@@ -113,6 +113,15 @@ namespace Airship.Editor {
             Log(TypescriptLogLevel.Warning, message);
         }
 
+        internal static void LogError(string message) {
+            Log(TypescriptLogLevel.Error, message);
+        }
+
+        internal static void LogException(Exception ex) {
+            Log(TypescriptLogLevel.Error, $"Exception: {ex.Message.Replace("\0", "")}");
+            Log(TypescriptLogLevel.Error, ex.StackTrace);
+        }
+
         internal static void LogEvent(CompiledFileEvent compiledFileEvent) {
             // var project = TypescriptProjectsService.Project;
             // var relative = PosixPath.Join("Assets", Path.GetRelativePath(project.Directory, compiledFileEvent.fileName));

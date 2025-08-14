@@ -66,14 +66,18 @@ namespace Airship.Editor {
             argList.Add(arguments.GetCommandString(CompilerCommand.BuildWatch));
             var fullCommandString = string.Join(" ", argList);
             
-            TypescriptLogService.Log(TypescriptLogLevel.Information, $"Start process 'node {fullCommandString}'");
+            TypescriptLogService.Log(TypescriptLogLevel.Information, $"Starting process 'node {fullCommandString}'");
 
             try {
                 var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, fullCommandString);
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
                 processId = compilerProcess.Id;
+                TypescriptLogService.LogInfo($"Process started successfully at process id {processId}");
             }
-            catch (Win32Exception _) {
+            catch (Win32Exception exception) {
+                Debug.LogException(exception);
+                TypescriptLogService.LogException(exception);
+                
                 EditorUtility.DisplayDialog("Failed to initialize TypeScript",
                     "Ensure you have the latest LTS node.js installed, then restart the editor and Unity Hub", "Ok");
             }
@@ -87,8 +91,9 @@ namespace Airship.Editor {
                 var process = CompilerProcess ?? Process.GetProcessById(processId);
                 process.Kill();
             }
-            catch {
-                Debug.LogWarning($"Failed to kill process {processId}");
+            catch (Exception e) {
+                TypescriptLogService.LogException(e);
+                TypescriptLogService.LogWarning($"Failed to kill process {processId}");
             }
             TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(this);
         }
