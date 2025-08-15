@@ -746,12 +746,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                     Debug.DrawLine(rootPosition, rootPosition + groundSlopeDir, Color.black, 5);
                 }
 
-                //Push the character based on the slope amount
-                if (slopeDot < 1 && movementSettings.slopeForce > 0) {
-                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
-                    newVelocity += slopeVel;
-                }
-
                 if (grounded) {
                     // Project movement onto the slope
                     if (characterMoveVelocity.sqrMagnitude > .1 && groundHit.normal.y > 0) {

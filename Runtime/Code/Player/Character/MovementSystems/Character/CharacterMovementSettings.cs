@@ -167,9 +167,6 @@ namespace Code.Player.Character.MovementSystems.Character {
         [Tooltip("Detect slopes for smooth movement on ramps. Disable as an optimization to skip raycast checks")]
         public bool detectSlopes = false;
 
-        [Tooltip("Increase to have slopes push the character downhill")] [Min(0f)]
-        public float slopeForce = 0;
-
         [Tooltip("Slopes above this threshold will be treated as walls")] [Range(0, 1)]
         public float maxSlopeDelta = .3f;
     }
