@@ -732,14 +732,16 @@ namespace Code.Player.Character.MovementSystems.Character {
                     .normalized;
                 var slopeDot = 1 - Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 
-                //Don't allow walking on unwalkable surfaces
-                if (!grounded && detectedGround && !currentMoveSnapshot.prevStepUp) {
-                    characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
-                    if (characterMoveVelocity.y > 0) {
-                        characterMoveVelocity.y = -characterMoveVelocity.y;
+                // Don't allow walking up hills that are too steep to be grounded
+                if (!grounded && detectedGround) {
+                    var velocityProjectedOnSlope = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
+                    // If we're going uphill, project the velocity on the contour of the slope (to allow moving
+                    // horizontally as falling while preventing running up slope by running into slope).
+                    if (velocityProjectedOnSlope.y > 0) {
+                        // Vector in the direction of slope contour
+                        var slopeContourVector = Vector3.Cross(groundSlopeDir, groundHit.normal);
+                        characterMoveVelocity = slopeContourVector * Vector3.Dot(characterMoveVelocity, slopeContourVector);
                     }
-
-                    Debug.DrawLine(transform.position, transform.position + characterMoveVelocity, Color.magenta, 1f);
                 }
 
                 if (drawDebugGizmos_GROUND) {
