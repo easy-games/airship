@@ -729,25 +729,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (movementSettings.detectSlopes) {
                 var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal)
                     .normalized;
-                var slopeDot = 1 - Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
-
-                //Don't allow walking on unwalkable surfaces
-                if (!grounded && detectedGround && !currentMoveSnapshot.prevStepUp) {
-                    characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
-                    if (characterMoveVelocity.y > 0) {
-                        characterMoveVelocity.y = -characterMoveVelocity.y;
-                    }
-                    Debug.DrawLine(transform.position, transform.position + characterMoveVelocity, Color.magenta, 1f);
-                }
 
                 if (drawDebugGizmos_GROUND) {
                     Debug.DrawLine(rootPosition, rootPosition + groundSlopeDir, Color.black, 5);
-                }
-                
-                //Push the character based on the slope amount
-                if (slopeDot < 1 && movementSettings.slopeForce > 0) {
-                    var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
-                    newVelocity += slopeVel;
                 }
                 
                 if (grounded) {
@@ -771,7 +755,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                             }
                             characterMoveVelocity = newMoveVelocity;
                             
-                            grounded = true;
                             if (drawDebugGizmos_GROUND) {
                                 Debug.DrawLine(rootPosition, rootPosition + normalizedMoveDir * .5f, Color.magenta,
                                     5);
