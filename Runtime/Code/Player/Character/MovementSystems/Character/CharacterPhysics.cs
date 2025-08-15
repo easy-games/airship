@@ -150,7 +150,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 if (!ignoredColliders.ContainsKey(hitInfo.collider.GetInstanceID())) {
                     //Physics Casts give you interpolated normals. This uses a ray to find an exact normal
                     hitInfo.normal = CalculateRealNormal(hitInfo.normal,
-                        currentPos, hitInfo.point - currentPos, .11f,
+                        hitInfo.point + new Vector3(0, 1-offsetMargin, 0), new Vector3(0, -1, 0), 1 + offsetMargin,
                         _movement.movementSettings.groundCollisionLayerMask);
 
                     if (_movement.drawDebugGizmos_GROUND) {
