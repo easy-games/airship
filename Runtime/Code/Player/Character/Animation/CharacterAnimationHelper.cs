@@ -217,7 +217,7 @@ namespace Code.Player.Character.NetworkedMovement {
             var newState = syncedState.state;
             grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
-            GizmoUtils.DrawSphere(transform.position, .15f, grounded ? Color.gray : Color.cyan, 4, 5f);
+            //GizmoUtils.DrawSphere(transform.position, .15f, grounded ? Color.gray : Color.cyan, 4, 5f);
             // print("New State. Grounded: " + grounded + " state: " + syncedState.state + " Jumping: " +
             //       syncedState.jumping + " sprint: " + syncedState.sprinting + " crouch: " + syncedState.crouching);
             animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
