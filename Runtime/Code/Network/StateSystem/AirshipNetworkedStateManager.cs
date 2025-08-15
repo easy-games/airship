@@ -1022,7 +1022,6 @@ namespace Code.Network.StateSystem
                 // Since we now know where we should be authoritatively, set the current state. Since this isn't a prediction,
                 // we don't add it to the stateHistory.
                 this.stateSystem.SetCurrentState(state);
-                Physics.SyncTransforms();
                 return;
             }
 
