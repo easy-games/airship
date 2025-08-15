@@ -221,7 +221,6 @@ namespace Code.Network.Simulation
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
                     OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt / 2f, entry.Key.bufferTime);
-                    Physics.SyncTransforms();
                     foreach (var request in entry.Value)
                     {
                         request.check();
@@ -239,7 +238,6 @@ namespace Code.Network.Simulation
                 // Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + time + ") and finalizing.");
                 // Reset back to the server view of the world at the current time.
                 OnSetSnapshot?.Invoke(tick);
-                Physics.SyncTransforms();
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
                 foreach (var entry in this.lagCompensationRequests)
                 {
@@ -411,7 +409,6 @@ namespace Code.Network.Simulation
             {
                 OnSetPaused?.Invoke(true);
                 OnSetSnapshot?.Invoke(targetTick);
-                Physics.SyncTransforms();
                 // Advance the tick so that we are re-processing the next tick after the base time provided.
                 targetTick++;
                 // index of the tick in the previousTicks list, we use this to access the associated time.
