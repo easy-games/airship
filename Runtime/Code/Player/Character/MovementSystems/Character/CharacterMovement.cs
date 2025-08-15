@@ -1446,7 +1446,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // Handle OnMoveDirectionChanged event
             if (moveDirInput != command.moveDir) {
-                OnMoveDirectionChanged?.Invoke(command.moveDir);w
+                OnMoveDirectionChanged?.Invoke(command.moveDir);
             }
 
             moveDirInput = command.moveDir;
