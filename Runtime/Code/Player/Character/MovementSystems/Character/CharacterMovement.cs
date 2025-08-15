@@ -751,18 +751,26 @@ namespace Code.Player.Character.MovementSystems.Character {
                 }
                 
                 if (grounded) {
-                    //Project movement onto the slope
+                    // Project movement onto the slope
                     if (characterMoveVelocity.sqrMagnitude > .1 && groundHit.normal.y > 0) {
-                        //Adjust movement based on the slope of the ground you are on
+                        // Adjust movement based on the slope of the ground you are on
                         var newMoveDir = Vector3.ProjectOnPlane(normalizedMoveDir, groundHit.normal);
-                        //Only adjust for downward slopes
-                        //newMoveVector.y = Mathf.Min(0, newMoveVector.y);
-
-                        //Ignore tiny float imprecision's
+                        
+                        // Ignore tiny float imprecision's
                         if (Mathf.Abs(newMoveDir.y) > .1f) {
-                            //Take the new direction and make it as fast as the intended move velocity
-                            normalizedMoveDir = newMoveDir;
-                            characterMoveVelocity = newMoveDir;
+                            // Take the new direction and make it as fast as the intended move velocity
+                            normalizedMoveDir = newMoveDir.normalized;
+
+                            var newMoveVelocity = newMoveDir;
+                            // If we're going downhill rescale move vector as if we're on flat ground
+                            // (feels natural to be slowed going uphill, but going downhill you don't expect
+                            // any slowdown)
+                            if (newMoveDir.y < 0) {
+                                var horizontalMoveMag = new Vector3(newMoveDir.x, 0, newMoveDir.z).magnitude;
+                                if (horizontalMoveMag > 0.01f) newMoveVelocity /= horizontalMoveMag;
+                            }
+                            characterMoveVelocity = newMoveVelocity;
+                            
                             grounded = true;
                             if (drawDebugGizmos_GROUND) {
                                 Debug.DrawLine(rootPosition, rootPosition + normalizedMoveDir * .5f, Color.magenta,
@@ -770,7 +778,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                                 Debug.DrawLine(groundHit.point, groundHit.point + groundHit.normal * .5f, Color.red,
                                     5);
                             }
-                            //}
                         }
                     }
 
