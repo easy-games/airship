@@ -449,7 +449,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (grounded && !currentMoveSnapshot.isGrounded) {
                 currentMoveSnapshot.jumpCount = 0;
                 currentMoveSnapshot.canJump = 255;
-                
+
                 OnImpactWithGround?.Invoke(currentVelocity, groundHit);
                 if (mode == NetworkedStateSystemMode.Authority && isServer) {
                     SAuthImpactEvent(currentVelocity, groundHit);
@@ -506,9 +506,10 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (!requestJump) {
                 currentMoveSnapshot.alreadyJumped = false;
             }
+
             var didJump = false;
             var ableToJump = false;
-            if (movementSettings.numberOfJumps > 0 && requestJump && 
+            if (movementSettings.numberOfJumps > 0 && requestJump &&
                 (!currentMoveSnapshot.alreadyJumped || grounded) &&
                 (!currentMoveSnapshot.isCrouching || canStand)) {
                 //On the ground
@@ -737,25 +738,26 @@ namespace Code.Player.Character.MovementSystems.Character {
                     if (characterMoveVelocity.y > 0) {
                         characterMoveVelocity.y = -characterMoveVelocity.y;
                     }
+
                     Debug.DrawLine(transform.position, transform.position + characterMoveVelocity, Color.magenta, 1f);
                 }
 
                 if (drawDebugGizmos_GROUND) {
                     Debug.DrawLine(rootPosition, rootPosition + groundSlopeDir, Color.black, 5);
                 }
-                
+
                 //Push the character based on the slope amount
                 if (slopeDot < 1 && movementSettings.slopeForce > 0) {
                     var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * movementSettings.slopeForce;
                     newVelocity += slopeVel;
                 }
-                
+
                 if (grounded) {
                     // Project movement onto the slope
                     if (characterMoveVelocity.sqrMagnitude > .1 && groundHit.normal.y > 0) {
                         // Adjust movement based on the slope of the ground you are on
                         var newMoveDir = Vector3.ProjectOnPlane(normalizedMoveDir, groundHit.normal);
-                        
+
                         // Ignore tiny float imprecision's
                         if (Mathf.Abs(newMoveDir.y) > .1f) {
                             // Take the new direction and make it as fast as the intended move velocity
@@ -767,11 +769,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                             // any slowdown)
                             if (newMoveDir.y < 0) {
                                 var horizontalMoveMag = new Vector3(newMoveDir.x, 0, newMoveDir.z).magnitude;
-                                if (horizontalMoveMag > 0.01f) newMoveVelocity /= horizontalMoveMag;
+                                if (horizontalMoveMag > 0.01f) {
+                                    newMoveVelocity /= horizontalMoveMag;
+                                }
                             }
+
                             characterMoveVelocity = newMoveVelocity;
-                            
-                            grounded = true;
                             if (drawDebugGizmos_GROUND) {
                                 Debug.DrawLine(rootPosition, rootPosition + normalizedMoveDir * .5f, Color.magenta,
                                     5);
@@ -782,12 +785,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                     }
 
                     //if (useExtraLogging && characterMoveVelocity.y < 0) {
-                        //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+                    //print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
                     //}
 
                     if (slopeVisualizer) {
                         slopeVisualizer.LookAt(slopeVisualizer.position +
-                                               (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
+                                               (groundSlopeDir.sqrMagnitude < .1f
+                                                   ? transform.forward
+                                                   : groundSlopeDir));
                     }
                 }
             }
@@ -1008,7 +1013,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     // }
 
                     //If our current flat velocity is less then our intended velocity we can use our move velocity
-                    if (flatVelMagnitude  <= currentMoveSnapshot.currentSpeed) {
+                    if (flatVelMagnitude <= currentMoveSnapshot.currentSpeed) {
                         //Snap velocity to our target move velocity
                         newVelocity.x = characterMoveVelocity.x;
                         newVelocity.z = characterMoveVelocity.z;
@@ -1408,7 +1413,8 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 
             //print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>currentMoveState.prevState</b>: {currentMoveState.prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
-            print($"<b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}      <b>mdMove</b>: {moveDirInput}    <b>characterMoveVector</b>: {characterMoveVelocity}");
+            print(
+                $"<b>currentPos</b>: {rootPosition}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}      <b>mdMove</b>: {moveDirInput}    <b>characterMoveVector</b>: {characterMoveVelocity}");
 
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
@@ -1436,14 +1442,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                     lookVector = lookVector,
                     jumping = didJump
                 };
-                
+
                 if (newState != currentAnimState) {
                     stateChanged?.Invoke((int)newState.state);
                     if (animationHelper) {
                         animationHelper.SetState(newState);
                     }
                 }
-                
+
                 if (animationHelper) {
                     animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
                 }
