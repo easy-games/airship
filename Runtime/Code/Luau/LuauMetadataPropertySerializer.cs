@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -20,6 +22,8 @@ namespace Luau {
             { "LayerMask", typeof(LayerMask) },
             { "AnimationCurve", typeof(AnimationCurve) },
         };
+
+        private static readonly Type QuaternionType = typeof(Quaternion);
         
         public static string SerializeAirshipProperty(object obj, AirshipComponentPropertyType objectType) {
             switch (objectType) {
@@ -68,15 +72,19 @@ namespace Luau {
                             obj = Activator.CreateInstance(objType, args);
                         } else if (objDefaultVal.target == "method") {
                             var args = objDefaultVal.arguments.ToArray();
-                            for (var i = 0; i < args.Length; i++)
-                            {
-                                if (args[i] is double)
-                                {
+                            for (var i = 0; i < args.Length; i++) {
+                                if (args[i] is double) {
                                     args[i] = Convert.ToSingle(args[i]);
                                 }
                             }
 
-                            var expectedMethod = objType.GetMethod(objDefaultVal.method);
+                            // Pass the argument types to GetMethod to clear any ambiguity
+                            var argTypes = new Type[args.Length];
+                            for (var i = 0; i < argTypes.Length; i++) {
+                                argTypes[i] = args[i].GetType();
+                            }
+    
+                            var expectedMethod = objType.GetMethod(objDefaultVal.method, argTypes);
                             obj = expectedMethod?.Invoke(null, args);
                         }
 
