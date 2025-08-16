@@ -68,15 +68,14 @@ namespace Luau {
                             obj = Activator.CreateInstance(objType, args);
                         } else if (objDefaultVal.target == "method") {
                             var args = objDefaultVal.arguments.ToArray();
+                            
+                            var argTypes = new Type[args.Length];
                             for (var i = 0; i < args.Length; i++) {
                                 if (args[i] is double) {
                                     args[i] = Convert.ToSingle(args[i]);
                                 }
-                            }
-
-                            // Pass the argument types to GetMethod to clear any ambiguity
-                            var argTypes = new Type[args.Length];
-                            for (var i = 0; i < argTypes.Length; i++) {
+                                
+                                // Pass the argument types to GetMethod to clear any ambiguity
                                 argTypes[i] = args[i].GetType();
                             }
     
