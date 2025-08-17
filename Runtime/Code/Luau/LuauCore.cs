@@ -151,7 +151,7 @@ public partial class LuauCore : MonoBehaviour {
             counter += 1;
         }
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
-        var stringLenAddresses = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
+        var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
         LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
@@ -168,7 +168,7 @@ public partial class LuauCore : MonoBehaviour {
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
                 getUnityObjectNameCallback = getUnityObjectNameCallback_holder,
                 staticList = stringAddresses.AddrOfPinnedObject(),
-                staticListStrLen = stringLenAddresses.AddrOfPinnedObject(),
+                staticListStrLen = stringLengthsHandle.AddrOfPinnedObject(),
                 staticCount = stringCount,
                 isServer = RunCore.IsServer() ? 1 : 0,
 #if UNITY_EDITOR
@@ -184,7 +184,7 @@ public partial class LuauCore : MonoBehaviour {
         LuauState.FromContext(LuauContext.Game);
 
         stringAddresses.Free();
-        stringLenAddresses.Free();
+        stringLengthsHandle.Free();
         
         // Free up the strings:
         foreach (var ptr in stringList) {
