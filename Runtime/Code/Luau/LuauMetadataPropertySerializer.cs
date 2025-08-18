@@ -20,7 +20,7 @@ namespace Luau {
             { "LayerMask", typeof(LayerMask) },
             { "AnimationCurve", typeof(AnimationCurve) },
         };
-        
+
         public static string SerializeAirshipProperty(object obj, AirshipComponentPropertyType objectType) {
             switch (objectType) {
                 case AirshipComponentPropertyType.AirshipFloat: {
@@ -68,15 +68,18 @@ namespace Luau {
                             obj = Activator.CreateInstance(objType, args);
                         } else if (objDefaultVal.target == "method") {
                             var args = objDefaultVal.arguments.ToArray();
-                            for (var i = 0; i < args.Length; i++)
-                            {
-                                if (args[i] is double)
-                                {
+                            
+                            var argTypes = new Type[args.Length];
+                            for (var i = 0; i < args.Length; i++) {
+                                if (args[i] is double) {
                                     args[i] = Convert.ToSingle(args[i]);
                                 }
+                                
+                                // Pass the argument types to GetMethod to clear any ambiguity
+                                argTypes[i] = args[i].GetType();
                             }
-
-                            var expectedMethod = objType.GetMethod(objDefaultVal.method);
+    
+                            var expectedMethod = objType.GetMethod(objDefaultVal.method, argTypes);
                             obj = expectedMethod?.Invoke(null, args);
                         }
 
