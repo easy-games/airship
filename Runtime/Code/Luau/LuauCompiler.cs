@@ -9,9 +9,10 @@ public class LuauCompiler {
     // Any globals in Luau that have values that change need to be added to this list (e.g. "Time" because "Time.time" changes):
     public static readonly string[] MutableGlobals = {"Time", "NetworkTime", "Physics", "Screen", "Input", "AirshipSimulationManager"};
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct CompilationResult {
         public IntPtr Data;
-        public long DataSize;
+        public ulong DataSize;
         public bool Compiled;
     }
 
