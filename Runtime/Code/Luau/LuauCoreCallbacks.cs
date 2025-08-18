@@ -517,7 +517,7 @@ public partial class LuauCore : MonoBehaviour {
 
                     case PODTYPE.POD_STRING: {
                         if (t.IsAssignableFrom(stringType)) {
-                            string dataStr = LuauCore.PtrToStringUTF8NullTerminated(propertyData);
+                            var dataStr = Marshal.PtrToStringUTF8(propertyData, propertyDataSize);
                             if (field != null) {
                                 field.SetValue(objectReference, dataStr);
                             } else {

@@ -66,6 +66,7 @@ public static class LuauPlugin {
 		public GetUnityObjectName getUnityObjectNameCallback;
 		
 		public IntPtr staticList;
+		public IntPtr staticListStrLen;
 		public int staticCount;
 		public int isServer;
 		public int useUnityAllocator;
