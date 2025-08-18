@@ -281,7 +281,7 @@ public partial class LuauCore : MonoBehaviour
 
     private static readonly object[] UnrolledPodObjects = new object[MaxParameters];
     private static readonly int[] UnrolledPodTypeData = new int[1];
-    private static ArraySegment<object> UnrollPodObjects(IntPtr thread, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs) {
+    private static ArraySegment<object> UnrollPodObjects(IntPtr thread, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs) {
         // var podObjects = new object[numParameters];
         for (var j = 0; j < numParameters; j++) {
             if (parameterDataPODTypes[j] == (int)PODTYPE.POD_OBJECT) {
@@ -300,7 +300,7 @@ public partial class LuauCore : MonoBehaviour
         return new ArraySegment<object>(UnrolledPodObjects, 0, numParameters);
     }
 
-    private static int RunConstructor(IntPtr thread, Type type, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> paramaterDataSizes, ArraySegment<int> parameterIsTable) {
+    private static int RunConstructor(IntPtr thread, Type type, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, ArraySegment<int> paramaterDataSizes, ArraySegment<int> parameterIsTable) {
         ConstructorInfo[] constructors = type.GetConstructors();
 
         if (constructors.Length == 0) {
@@ -334,7 +334,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         //We have parameters
-        var returnValue = finalConstructor.Invoke(parsedData.Array);
+        var returnValue = finalConstructor.Invoke(parsedData.ToArray());
 
         //Push this onto the stack
         WritePropertyToThread(thread, returnValue, type);
@@ -881,7 +881,7 @@ public partial class LuauCore : MonoBehaviour
     }
 
     private static readonly object[] ParsedObjectsData = new object[MaxParameters];
-    private static bool ParseParameterData(IntPtr thread, int numParameters, ArraySegment<IntPtr> intPtrs, ArraySegment<int> podTypes, ParameterInfo[] methodParameters, ArraySegment<int> sizes, ArraySegment<int> isTable, ArraySegment<object> podObjects, bool usingAttachedContext, out ArraySegment<object> parsedData) {
+    private static bool ParseParameterData(IntPtr thread, int numParameters, Span<IntPtr> intPtrs, Span<int> podTypes, ParameterInfo[] methodParameters, Span<int> sizes, Span<int> isTable, Span<object> podObjects, bool usingAttachedContext, out ArraySegment<object> parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
         parsedData = new object[numParametersIncludingContext];
@@ -1142,7 +1142,7 @@ public partial class LuauCore : MonoBehaviour
         return PODTYPE.POD_OBJECT;
     }
     
-    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, ArraySegment<int> podIsTable, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext) {
+    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, Span<int> podTypes, Span<object> podObjects, Span<int> podIsTable, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext, out bool attachContext) {
         nameFound = false;
         countFound = false;
         finalParameters = null;
@@ -1235,7 +1235,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, ArraySegment<int> podIsTable, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor) {
+    static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, Span<int> podTypes, Span<object> podObjects, Span<int> podIsTable, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor) {
         countFound = false;
         finalParameters = null;
         finalConstructor = null;
@@ -1258,7 +1258,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, ArraySegment<int> podTypes, ArraySegment<object> podObjects, ArraySegment<int> podIsTable, bool contextAttached) {
+    static bool MatchParameters(int numParameters, ParameterInfo[] parameters, Span<int> podTypes, Span<object> podObjects, Span<int> podIsTable, bool contextAttached) {
         for (int i = 0; i < numParameters; i++) {
             var paramIndex = i;
             if (contextAttached) paramIndex += 1; // Because 0'th param should be context
@@ -1397,7 +1397,7 @@ public partial class LuauCore : MonoBehaviour
     }
 
     //Generalized utility version - move these!
-    public static string GetParameterAsString(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static string GetParameterAsString(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters) {
             return null;
         }
@@ -1423,7 +1423,7 @@ public partial class LuauCore : MonoBehaviour
         return dataPodType == PODTYPE.POD_STRING ? PtrToStringUTF8NullTerminated(dataPtr) : null;
     }
 
-    public static bool GetParameterAsBool(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes, out bool exists) {
+    public static bool GetParameterAsBool(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes, out bool exists) {
         if (paramIndex >= numParameters) {
             exists = false;
             return false;
@@ -1438,7 +1438,7 @@ public partial class LuauCore : MonoBehaviour
         return NewBoolFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    public static Vector3 GetParameterAsVector3(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static Vector3 GetParameterAsVector3(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters) {
             return Vector3.zero;
         }
@@ -1448,7 +1448,7 @@ public partial class LuauCore : MonoBehaviour
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
     
-    public static Ray GetParameterAsRay(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static Ray GetParameterAsRay(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters) {
             return new Ray();
         }
@@ -1458,7 +1458,7 @@ public partial class LuauCore : MonoBehaviour
         return NewRayFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    public static Color GetParameterAsColor(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static Color GetParameterAsColor(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters) {
             return Color.white;
         }
@@ -1467,7 +1467,7 @@ public partial class LuauCore : MonoBehaviour
         }
         return NewColorFromPointer(parameterDataPtrs[paramIndex]);
     }
-    public static Quaternion GetParameterAsQuaternion(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static Quaternion GetParameterAsQuaternion(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters) {
             return Quaternion.identity;
         }
@@ -1477,13 +1477,13 @@ public partial class LuauCore : MonoBehaviour
         return NewQuaternionFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    public static Vector2 GetParameterAsVector2(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static Vector2 GetParameterAsVector2(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters || parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_VECTOR2) {
             return Vector2.zero;
         }
         return NewVector2FromPointer(parameterDataPtrs[paramIndex]);
     }
-    public static float GetParameterAsFloat(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static float GetParameterAsFloat(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters) {
             return 0;
         }
@@ -1492,7 +1492,7 @@ public partial class LuauCore : MonoBehaviour
         }
         return NewFloatFromPointer(parameterDataPtrs[paramIndex]);
     }
-    public static int GetParameterAsInt(int paramIndex, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public static int GetParameterAsInt(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (paramIndex >= numParameters) {
             return 0;
         }
@@ -1506,7 +1506,7 @@ public partial class LuauCore : MonoBehaviour
     }
 
     private static readonly int[] ObjectParamIntData = new int[1];
-    public static object GetParameterAsObject(int paramIndex,  int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes, IntPtr thread) {
+    public static object GetParameterAsObject(int paramIndex,  int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes, IntPtr thread) {
         if (paramIndex >= numParameters) {
             return null;
         }

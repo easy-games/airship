@@ -8,7 +8,7 @@ public class NavMeshAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
 
         if (methodName == "SamplePosition") {
             var sourcePosition = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,

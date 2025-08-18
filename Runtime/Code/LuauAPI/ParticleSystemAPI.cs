@@ -9,7 +9,7 @@ public class ParticleSystemAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes)
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes)
     {
         if (methodName == "MakeEmitParams") {
             var emitParams = new ParticleSystem.EmitParams();
@@ -21,7 +21,7 @@ public class ParticleSystemAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes)
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes)
     {
         
         if (methodName == "EmitAtPosition")

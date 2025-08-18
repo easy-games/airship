@@ -10,7 +10,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
         return typeof(LayerMask);
     }
 
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName == "GetMask") {
             string[] layerNames = new string[numParameters];
             var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();

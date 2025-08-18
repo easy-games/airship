@@ -8,7 +8,7 @@ public class ObjectAPI : BaseLuaAPIClass {
         return typeof(UnityEngine.Object);
     }
     
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName == "DontDestroyOnLoad" && LuauCore.CurrentContext == LuauContext.Game) {
             Debug.LogError("[Airship] Access denied to method DontDestroyOnLoad(). Instead, load a new offline scene to store persistent GameObjects.");
             ThreadDataManager.Error(thread);
@@ -17,7 +17,7 @@ public class ObjectAPI : BaseLuaAPIClass {
         return -1;
     }
     
-    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         return -1;
     }
 }

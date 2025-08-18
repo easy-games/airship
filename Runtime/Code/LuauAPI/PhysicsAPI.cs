@@ -26,7 +26,7 @@ public class PhysicsAPI : BaseLuaAPIClass
         }
     }
     
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName,  int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName,  int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName is "Raycast" or "EasyRaycast") {
             //ray.origin, ray.direction, 1000, -1
             if (numParameters >= 3 && numParameters <= 5) {

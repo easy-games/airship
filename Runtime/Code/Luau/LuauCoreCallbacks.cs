@@ -1164,19 +1164,34 @@ public partial class LuauCore : MonoBehaviour {
     private static int[] _parameterDataSizes = new int[MaxParameters];
     private static int[] _parameterDataPODTypes = new int[MaxParameters];
     private static int[] _parameterIsTable = new int[MaxParameters];
+    private static Dictionary<string, int> callCount = new Dictionary<string, int>();
+    private static int numCalls = 0;
     
     // When a lua object wants to call a method
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
         CurrentContext = context;
+        // Profiler.BeginSample("Start");
+        // Profiler.EndSample();
         
         Marshal.WriteInt32(shouldYield, 0);
         if (!IsReady) {
             return 0;
         }
 
-        var methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
+        // Profiler.BeginSample("PrepareData");
+        // Profiler.BeginSample("StringStuff");
+        var methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength, out var methodNameHash);
+        // callCount[methodName] = callCount.TryGetValue(methodName, out var oldVal) ? oldVal + 1 : 1;
+        // numCalls++;
+        // if ((numCalls % 10_000) == 0) {
+        //     Debug.Log($" ---- Logging call counts ({numCalls}) ----");
+        //     foreach (var (method, count) in callCount.OrderByDescending(x => x.Value).Take(20)) {
+        //         Debug.Log($"{method}: {count}");
+        //     }
+        // }
         var staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
+        // Profiler.EndSample();
         
         var instance = LuauCore.CoreInstance;
 
@@ -1184,41 +1199,61 @@ public partial class LuauCore : MonoBehaviour {
         Type type = null;
 
         //Cast/marshal parameter data
-        Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
-        Marshal.Copy(firstParameterSize, _parameterDataSizes, 0, numParameters);
-        Marshal.Copy(firstParameterType, _parameterDataPODTypes, 0, numParameters);
-        Marshal.Copy(firstParameterIsTable, _parameterIsTable, 0, numParameters);
+        // Profiler.BeginSample("MarshalCopy");
+        // Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
+        // Marshal.Copy(firstParameterSize, _parameterDataSizes, 0, numParameters);
+        // Marshal.Copy(firstParameterType, _parameterDataPODTypes, 0, numParameters);
+        // Marshal.Copy(firstParameterIsTable, _parameterIsTable, 0, numParameters);
+        // Profiler.EndSample();
 
-        var parameterDataPtrs = new ArraySegment<IntPtr>(_parameterDataPtrs, 0, numParameters);
-        var parameterDataSizes = new ArraySegment<int>(_parameterDataSizes, 0, numParameters);
-        var parameterDataPODTypes = new ArraySegment<int>(_parameterDataPODTypes, 0, numParameters);
-        var parameterIsTable = new ArraySegment<int>(_parameterIsTable, 0, numParameters);
+        // var parameterDataPtrs = new ArraySegment<IntPtr>(_parameterDataPtrs, 0, numParameters);
+        var parameterDataPtrs = new Span<IntPtr>((void*) firstParameterData, numParameters);
+        // var parameterDataSizes = new ArraySegment<int>(_parameterDataSizes, 0, numParameters);
+        var parameterDataSizes = new Span<int>((int*) firstParameterSize, numParameters);
+        // var parameterDataPODTypes = new ArraySegment<int>(_parameterDataPODTypes, 0, numParameters);
+        var parameterDataPODTypes = new Span<int>((int*) firstParameterType, numParameters);
+        // var parameterDataPODTypes = new ArraySegment<int>(_parameterIsTable, 0, numParameters);
+        var parameterIsTable = new Span<int>((int*)firstParameterIsTable, numParameters);
+        // Profiler.EndSample();
         
         //This detects STATIC classobjects only - live objects do not report the className
+        // Profiler.BeginSample("Static" + staticClassName);
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
         if (staticClassApi != null) {
             type = staticClassApi.GetAPIType();
             //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
             int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (retValue >= 0) {
+                Profiler.EndSample();
                 return retValue;
             }
         }
-
+        // Profiler.EndSample();
+        
+        // Profiler.BeginSample("GetType");
         if (type == null) {
             reflectionObject = ThreadDataManager.GetObjectReference(thread, instanceId);
 
             if (reflectionObject == null) {
                 return LuauError(thread, $"Error: InstanceId not currently available for {instanceId} {methodName} {staticClassName} ({LuaThreadToString(thread)})");
             }
-            
             type = reflectionObject.GetType();
         }
+        // Profiler.EndSample();
+        
+        if (methodName == "GetInstanceID") {
+            var objInstId = ((Object)reflectionObject).GetInstanceID();
+            WritePropertyToThreadInt32(thread, objInstId);
+            Wrap_Object_ToString()
+            return 1;
+        }
 
+        Profiler.BeginSample("CheckCustom");
         if (reflectionObject != null) {
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
             if (valueTypeAPI != null) {
+                Profiler.BeginSample("Protection");
                 // Destroyed protection
                 if (type.IsSubclassOf(typeof(UnityEngine.Object))) {
                     if ((Object) reflectionObject == null) {
@@ -1241,14 +1276,20 @@ public partial class LuauCore : MonoBehaviour {
                         }
                     }
                 }
+                Profiler.EndSample();
 
+                Profiler.BeginSample("OverrideMember");
                 int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
                     parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                Profiler.EndSample();
                 if (retValue >= 0) {
                     return retValue;
                 }
             }
         }
+        Profiler.EndSample();
+        
+        Profiler.BeginSample("MethodStartChecks");
         
         // Check for IsA call:
         if (methodName == "IsA") {
@@ -1325,6 +1366,7 @@ public partial class LuauCore : MonoBehaviour {
                 return 1;
             }
         }
+        Profiler.EndSample();
 
         //Use reflection to try and find the method now
         bool countFound = false;
@@ -1332,7 +1374,9 @@ public partial class LuauCore : MonoBehaviour {
         ParameterInfo[] finalParameters = null;
         MethodInfo finalMethod = null;
 
+        Profiler.BeginSample("UnrollPods");
         var podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
+        Profiler.EndSample();
 
         Profiler.BeginSample("LuauCore.FindMethod");
         FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, parameterIsTable, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext, out var attachContext);
@@ -1356,7 +1400,10 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         // object[] parsedData = null;
+        Profiler.BeginSample("ParseData");
         var success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, parameterDataSizes, parameterIsTable, podObjects, attachContext, out var parsedData);
+        Profiler.EndSample();
+        
         if (attachContext) {
             parsedData[0] = context;
         }
@@ -1440,7 +1487,9 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         try {
+            Profiler.BeginSample("Invoke");
             returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
+            Profiler.EndSample();
         }
         catch (TargetInvocationException e) {
             return LuauError(thread,
