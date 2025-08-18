@@ -135,16 +135,23 @@ namespace Code.Player {
 				// 	Debug.Log("  - " + player.username);
 				// }
 				// Debug.Log("------------");
-				var toRemove = new List<string>();
-				foreach (var entry in agonesReservationMap)
-				{
-					if (entry.Key.StartsWith(AGONES_RESERVATION_FILL_PREFIX)) continue; // Fake reservations should never show up, but we check just in case.
-					double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
-					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId}" == entry.Key)) continue;
-					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, entry.Key);
-					toRemove.Add(entry.Key);
+				try {
+					var toRemove = new List<string>();
+					foreach (var entry in agonesReservationMap)
+					{
+						if (entry.Key.StartsWith(AGONES_RESERVATION_FILL_PREFIX)) continue; // Fake reservations should never show up, but we check just in case.
+						double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
+						if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId}" == entry.Key)) continue;
+						toRemove.Add(entry.Key);
+					}
+					toRemove.ForEach((userId) => {
+						this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, userId).Wait();
+						agonesReservationMap.Remove(userId);
+					});
+				} catch (Exception err) {
+					Debug.LogWarning($"Error when cleaning reservation map:\n{err}");
 				}
-				toRemove.ForEach((userId) => agonesReservationMap.Remove(userId));
+				
 				await Awaitable.WaitForSecondsAsync(30);
 			}
 		}
