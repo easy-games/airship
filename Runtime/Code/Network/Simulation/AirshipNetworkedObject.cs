@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Code.Network.Simulation
 {
-    struct TransformSnapshot
+    struct PositionSnapshot
     {
         public Vector3 position;
         public Quaternion rotation;
@@ -23,11 +23,12 @@ namespace Code.Network.Simulation
         [Range(-1, 1)]
         public float bufferAdjustment = 0;
         
-        private History<TransformSnapshot> history;
+        private History<PositionSnapshot> history;
+        private Rigidbody rb;
 
-        private void Start()
-        {
-            history = new History<TransformSnapshot>(1);
+        private void Start() {
+            rb = GetComponent<Rigidbody>();
+            history = new History<PositionSnapshot>(1);
             AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
             AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
             AirshipSimulationManager.Instance.OnLagCompensationCheck += this.LagCompensationCheck;
@@ -51,20 +52,31 @@ namespace Code.Network.Simulation
                 this.transform.rotation = state.rotation;
                 return;
             }
-            
-            this.history.Add(tick, new TransformSnapshot()
-            {
-                position = this.transform.position,
-                rotation = this.transform.rotation
-            });
+
+            var snapshot = rb != null
+                ? new PositionSnapshot() {
+                    position = this.rb.position,
+                    rotation = this.rb.rotation
+                }
+                : new PositionSnapshot() {
+                    position = this.transform.position,
+                    rotation = this.transform.rotation
+                };
+            this.history.Add(tick, snapshot);
         }
 
         private void SetSnapshot(object objTick)
         {
             if (objTick is int tick) {
                 var snapshot = this.history.Get(tick);
-                this.transform.position = snapshot.position;
-                this.transform.rotation = snapshot.rotation;
+                if (this.rb != null) {
+                    this.rb.position = snapshot.position;
+                    this.rb.rotation = snapshot.rotation;
+                } else {
+                    this.transform.position = snapshot.position;
+                    this.transform.rotation = snapshot.rotation;
+                }
+               
             }
         }
 

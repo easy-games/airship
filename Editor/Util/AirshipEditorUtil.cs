@@ -60,7 +60,7 @@ public class AirshipEditorUtil {
         int counter = 0;
         for (int i = 0; i < total; i++) {
             string path = AssetDatabase.GUIDToAssetPath(prefabGUIDs[i]);
-            if (path.Contains("Assets/Polygon Arsenal") || path.Contains("Assets/Hovl") || path.Contains("Packages/") || path.Contains("Assets/Raygeas")) {
+            if (path.Contains("Assets/Polygon Arsenal") || path.Contains("Assets/Hovl") || path.Contains("Assets/Raygeas")) {
                 continue;
             }
             EditorUtility.DisplayProgressBar("Reimporting Prefabs", path, (float)i / total);
