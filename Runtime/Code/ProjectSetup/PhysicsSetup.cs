@@ -107,11 +107,11 @@ public static class PhysicsSetup {
     }
 
     //Reset physics values that users may have changed
-    public static void ResetDefaults(GameConfig config, Vector3 gravity) {
+    public static void ResetDefaults(GameConfig config) {
         InitLayerCollection();
 
         //PHYSICS SETTINGS
-        SetPhysicsSettings(gravity);
+        SetPhysicsSettings();
 
         //PHYSICS MATRIX
         //Make Game Layers Collide With Everything
@@ -130,7 +130,7 @@ public static class PhysicsSetup {
     }
 
     private static void SetPhysicsSettings(
-        Vector3 gravity,
+        Vector3? gravity = null,
         float bouncThreshold = 2,
         float defaultMaxDepenetrationVelocity = 10,
         float sleepThreshold = 0.005f,
@@ -138,8 +138,9 @@ public static class PhysicsSetup {
         int defaultSolverIterations = 6,
         int defaultSolverVelocityIterations = 1,
         bool queriesHitBackfaces = false,
-        bool queriesHitTriggers = true) {
-        Physics.gravity = gravity;
+        bool queriesHitTriggers = true,
+        float fixedDeltaTime = 0.025f) {
+        Physics.gravity = gravity??new Vector3(0,-9.81f, 0);
         Physics.bounceThreshold = bouncThreshold;
         Physics.defaultMaxDepenetrationVelocity = defaultMaxDepenetrationVelocity;
         Physics.sleepThreshold = sleepThreshold;
@@ -148,26 +149,19 @@ public static class PhysicsSetup {
         Physics.defaultSolverVelocityIterations = defaultSolverVelocityIterations;
         Physics.queriesHitBackfaces = queriesHitBackfaces;
         Physics.queriesHitTriggers = queriesHitTriggers;
+        Time.fixedDeltaTime = fixedDeltaTime;
     }
 
     public static void SetupFromGameConfig() {
 #if AIRSHIP_PLAYER || !UNITY_EDITOR
         //Reset Unity to Airship defaults and GameConfig customizations
         var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
-        if (gameConfig && gameConfig.physicsMatrix != null && gameConfig.gravity != null) {
-            // Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
-            //           gameConfig.physicsMatrix.Length);
-            //Setup the Core Layers
-            Setup(gameConfig);
-            //Load in game specific Layers and Settings
-            gameConfig.DeserializeSettings();
-        } else {
-            //Use default Airship values if we aren't setting up game specific values
-            Debug.Log("No custom GameConfig settings found. Resetting to defaults");
-            //TODO: This gravity value is old to support games that havne't been built with the new gravity values. 
-            //Can swap to default gravity once those games have been published again
-            ResetDefaults(gameConfig, new Vector3(0, -24, 0));
-        }
+        // Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
+        //           gameConfig.physicsMatrix.Length);
+        //Setup the Core Layers
+        Setup(gameConfig);
+        //Load in game specific Layers and Settings
+        gameConfig.DeserializeSettings();
 #endif
     }
 }

@@ -139,6 +139,7 @@ public partial class LuauCore : MonoBehaviour {
 
         var stringCount = unityAPIClasses.Count;
         var stringList = new IntPtr[stringCount];
+        var stringLenList = new int[stringCount];
         eventConnections.Clear();
         
         var counter = 0;
@@ -146,9 +147,11 @@ public partial class LuauCore : MonoBehaviour {
             var apiName = api.Value.GetAPIType().Name;
             var strPtr = Marshal.StringToCoTaskMemUTF8(apiName);
             stringList[counter] = strPtr;
+            stringLenList[counter] = apiName.Length;
             counter += 1;
         }
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
+        var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
         LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
@@ -165,6 +168,7 @@ public partial class LuauCore : MonoBehaviour {
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
                 getUnityObjectNameCallback = getUnityObjectNameCallback_holder,
                 staticList = stringAddresses.AddrOfPinnedObject(),
+                staticListStrLen = stringLengthsHandle.AddrOfPinnedObject(),
                 staticCount = stringCount,
                 isServer = RunCore.IsServer() ? 1 : 0,
 #if UNITY_EDITOR
@@ -180,6 +184,7 @@ public partial class LuauCore : MonoBehaviour {
         LuauState.FromContext(LuauContext.Game);
 
         stringAddresses.Free();
+        stringLengthsHandle.Free();
         
         // Free up the strings:
         foreach (var ptr in stringList) {

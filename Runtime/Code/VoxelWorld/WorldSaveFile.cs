@@ -1,7 +1,9 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
@@ -43,15 +45,19 @@ public class WorldSaveFile : ScriptableObject {
             
             // Write colors:
             writer.Write((uint)color.Length);
-            foreach (var c in color) {
-                writer.Write(c);
-            }
+            var colorPoolLen = color.Length * sizeof(uint);
+            var colorPool = ArrayPool<byte>.Shared.Rent(colorPoolLen);
+            Buffer.BlockCopy(color, 0, colorPool, 0, colorPoolLen);
+            writer.Write(colorPool, 0, colorPoolLen);
+            ArrayPool<byte>.Shared.Return(colorPool);
             
             // Write voxel data:
             writer.Write((uint)data.Length);
-            foreach (var d in data) {
-                writer.Write(d);
-            }
+            var dataPoolLen = color.Length * sizeof(ushort);
+            var dataPool = ArrayPool<byte>.Shared.Rent(dataPoolLen);
+            Buffer.BlockCopy(data, 0, dataPool, 0, dataPoolLen);
+            writer.Write(dataPool, 0, dataPoolLen);
+            ArrayPool<byte>.Shared.Return(dataPool);
         }
 
         public static Vector3Int Deserialize(BinaryReader reader, ushort version, List<VoxelData> voxelData, List<uint> colors) {
@@ -63,17 +69,29 @@ public class WorldSaveFile : ScriptableObject {
 
             // Read colors:
             var numColors = reader.ReadUInt32();
-            for (uint j = 0; j < numColors; j++) {
-                var c = reader.ReadUInt32();
+            var numColorBytes = (int)numColors * sizeof(uint);
+            var colorsBytes = ArrayPool<byte>.Shared.Rent(numColorBytes);
+            var colorBytesRead = reader.Read(colorsBytes, 0, numColorBytes);
+            if (colorBytesRead != numColorBytes) {
+                throw new Exception("Unexpected number of bytes read");
+            }
+            foreach (var c in MemoryMarshal.Cast<byte, uint>(colorsBytes)) {
                 colors.Add(c);
             }
+            ArrayPool<byte>.Shared.Return(colorsBytes);
 
             // Read voxel data:
             var numVoxelData = reader.ReadUInt32();
-            for (uint j = 0; j < numVoxelData; j++) {
-                var d = reader.ReadUInt16();
-                voxelData.Add(d);
+            var numDataBytes = (int)numVoxelData * sizeof(ushort);
+            var dataBytes = ArrayPool<byte>.Shared.Rent(numDataBytes);
+            var dataBytesRead = reader.Read(dataBytes, 0, numDataBytes);
+            if (dataBytesRead != numDataBytes) {
+                throw new Exception("Unexpected number of bytes read");
             }
+            foreach (var c in MemoryMarshal.Cast<byte, ushort>(dataBytes)) {
+                voxelData.Add(c);
+            }
+            ArrayPool<byte>.Shared.Return(dataBytes);
 
             return key;
         }
@@ -96,6 +114,29 @@ public class WorldSaveFile : ScriptableObject {
         return $"{gb:F2} GB [{bytes} bytes]";
     }
 
+    [HideFromTS]
+    public void SerializeBlockIdToScopeNames(BinaryWriter writer) {
+        writer.Write(blockIdToScopeName.Count);
+        foreach (var b in blockIdToScopeName) {
+            writer.Write(b.id);
+            writer.Write(b.name);
+        }
+    }
+
+    [HideFromTS]
+    public void DeserializeBlockIdToScopeNames(BinaryReader reader) {
+        blockIdToScopeName.Clear();
+        var len = reader.ReadInt32();
+        for (var i = 0; i < len; i++) {
+            var blockId = reader.ReadUInt16();
+            var scopeName = reader.ReadString();
+            blockIdToScopeName.Add(new BlockIdToScopedName {
+                id = blockId,
+                name = scopeName,
+            });
+        }
+    }
+
     private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world) {
         blockIdToScopeName.Clear();
         var blockMap = world.voxelBlocks.loadedBlocks;
@@ -109,7 +150,6 @@ public class WorldSaveFile : ScriptableObject {
 
     //This is unusable - for some reason it seems to be causing errors
     private void CreateScopedBlockDictionaryFromVoxelWorldTight(VoxelWorld world) {
-
         HashSet<int> UsedIds = new();
         foreach (var chunk in chunks) {
             var data = chunk.data;
@@ -198,8 +238,6 @@ public class WorldSaveFile : ScriptableObject {
         }
         
         // Serialize:
-        Profiler.BeginSample("CompressVoxelWorldChunks");
-        
         using var memStream = new MemoryStream();
         using var writer = new BinaryWriter(memStream);
         
@@ -219,9 +257,11 @@ public class WorldSaveFile : ScriptableObject {
         chunksCompressed = VoxelCompressUtil.CompressToByteArrayV2(bufferSpan);
         chunksCompressedV2 = true;
         
-        Profiler.EndSample();
-
-        Debug.Log($"Saved {counter} chunks to {name} (raw: {FormatDataSize(memStream.Length)}) (compressed: {FormatDataSize(chunksCompressed.Length)})");
+#if UNITY_EDITOR
+        if (!Application.isPlaying) {
+            Debug.Log($"Saved {counter} chunks to {name} (raw: {FormatDataSize(memStream.Length)}) (compressed: {FormatDataSize(chunksCompressed.Length)})");
+        }
+#endif
     }
 
     /// <summary>
@@ -242,24 +282,31 @@ public class WorldSaveFile : ScriptableObject {
         VoxelWorldStuff.Chunk writeChunk = VoxelWorld.CreateChunk(key);
         writeChunk.SetWorld(world);
 
+        var writeColor = color != null && color.Count > 0;
+
         for (int i = 0; i < data.Count; i++) {
             BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
             ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
-                                
+            
             bool found = blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
             if (found) {
-
-                VoxelData vox = ((VoxelData)(updatedBlockId | extraBits));
+                VoxelData vox = (VoxelData)(updatedBlockId | extraBits);
 
 #if UNITY_EDITOR
-                //Fix the solid bit - we have to do this in case someone has already placed a bunch of blocks and then changes their solid bit, which is usually only set when the voxel is written
-                var definition = world.voxelBlocks.GetBlockDefinitionFromBlockId(updatedBlockId);
-                vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid && !definition.definition.halfBlock);
+                // Fix the solid bit - we have to do this in case someone has already placed a bunch of blocks and then changes their solid bit, which is usually only set when the voxel is written
+                if (!Application.isPlaying) {
+                    var definition = world.voxelBlocks.GetBlockDefinitionFromBlockId(updatedBlockId);
+                    vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid && !definition.definition.halfBlock);
+                }
 #endif
 
                 writeChunk.readWriteVoxel[i] = vox;
-                writeChunk.keysWithVoxels.Add(i);
-                if (color != null && color.Count > 0) {
+                
+                // Note: This is a huge GC alloc penalty, but these aren't really used (and are recomputed on first use anyway),
+                // thus, this line has been commented out for now:
+                // writeChunk.keysWithVoxels.Add(i);
+                
+                if (writeColor) {
                     writeChunk.color[i] = color[i];
                 }
             } else {
@@ -335,7 +382,11 @@ public class WorldSaveFile : ScriptableObject {
             }
         }
 
-        Debug.Log($"[Voxel World]: Loaded {counter} chunks");
+#if UNITY_EDITOR
+        if (!Application.isPlaying) {
+            Debug.Log($"[Voxel World]: Loaded {counter} chunks");
+        }
+#endif
         
         Profiler.EndSample();
     }
