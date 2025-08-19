@@ -36,6 +36,7 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public int defaultSolverVelocityIterations = 1;
     [HideInInspector] public bool queriesHitBackfaces = false;
     [HideInInspector] public bool queriesHitTriggers = true;
+    [HideInInspector] public float fixedDeltaTime = .025f;
 
     [HideInInspector] public bool supportsMobile;
 
@@ -150,6 +151,7 @@ public class GameConfig : ScriptableObject
         defaultSolverVelocityIterations = Physics.defaultSolverVelocityIterations;
         queriesHitBackfaces = Physics.queriesHitBackfaces;
         queriesHitTriggers = Physics.queriesHitTriggers;
+        fixedDeltaTime = Time.fixedDeltaTime;
     }
 
     public void DeserializeSettings(){
@@ -176,5 +178,6 @@ public class GameConfig : ScriptableObject
         Physics.defaultSolverVelocityIterations = defaultSolverVelocityIterations;
         Physics.queriesHitBackfaces = queriesHitBackfaces;
         Physics.queriesHitTriggers = queriesHitTriggers;
+        Time.fixedDeltaTime = fixedDeltaTime;
     }
 }
