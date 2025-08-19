@@ -180,6 +180,15 @@ namespace Luau {
             s_cleanUpKeys.Add(instanceId);
         }
 
+        public static void DeleteObjectReferencesList(ReadOnlySpan<int> instanceIds) {
+            foreach (var instanceId in instanceIds) {
+                if (s_objectKeys.TryGetValue(instanceId, out var obj)) {
+                    s_reverseObjectKeys.Remove(obj);
+                }
+                s_objectKeys.Remove(instanceId);
+            }
+        }
+
         public static Luau.CallbackWrapper RegisterCallback(LuauContext context, IntPtr thread, int handle, string methodName, bool validateContext) {
             ThreadData threadData = GetOrCreateThreadData(context, thread, "RegisterCallback");
 

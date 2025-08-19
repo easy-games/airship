@@ -471,6 +471,14 @@ public partial class LuauCore : MonoBehaviour
             WritePropertyToThreadInt32(thread, (int) value);
             return true;
         }
+        
+        if (t == luauBufferType) {
+            var buf = (LuauBuffer)value;
+            fixed (byte* bytesPtr = buf.Data) {
+                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), buf.Data.Length);
+            }
+            return true;
+        }
 
         if (t.IsEnum) {
             System.Int32 integer = (System.Int32)value;
@@ -1011,6 +1019,10 @@ public partial class LuauCore : MonoBehaviour
                     parsedData[paramIndex] = NewMatrixFromPointer(intPtrs[i]);
                     continue;
                 }
+                case PODTYPE.POD_BUFFER: {
+                    parsedData[paramIndex] = NewLuauBufferFromPointer(intPtrs[i], sizes[i]);
+                    continue;
+                }
             }
 
             Debug.LogError("Param " + paramIndex + " " + podTypes[i] + " not valid type for this parameter/unhandled so far.");
@@ -1373,6 +1385,11 @@ public partial class LuauCore : MonoBehaviour
                         continue;
                     }
                     break;
+                case PODTYPE.POD_BUFFER:
+                    if (sourceParamType.IsAssignableFrom(luauBufferType)) {
+                        continue;
+                    }
+                    break;
             }
             return false;
         }
@@ -1561,6 +1578,12 @@ public partial class LuauCore : MonoBehaviour
     }
     public static int MatrixSize() {
         return 16 * sizeof(float);
+    }
+
+    public static LuauBuffer NewLuauBufferFromPointer(IntPtr data, int size) {
+        var bytes = new byte[size];
+        Marshal.Copy(data, bytes, 0, size);
+        return new LuauBuffer(bytes);
     }
 
     public static Plane NewPlaneFromPointer(IntPtr data) {

@@ -114,6 +114,17 @@ public static class Bridge {
         return AudioListener.volume;
     }
 
+    public static void SetDefaultAudioSourceValues(AudioSource source) {
+        source.volume = 1.0f;
+        source.loop = false;
+        source.pitch = 1.0f;
+        source.panStereo = 0.0f;
+        source.minDistance = 1.0f;
+        source.maxDistance = 500.0f;
+        source.rolloffMode = AudioRolloffMode.Logarithmic;
+        source.dopplerLevel = 0.0f;
+    }
+
     public static void SetFullScreen(bool value) {
         Screen.fullScreen = value;
     }

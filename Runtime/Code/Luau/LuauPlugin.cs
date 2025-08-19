@@ -14,7 +14,7 @@ using Debug = UnityEngine.Debug;
 public static class LuauPlugin {
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
-	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize, int isTable);
+	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int type, IntPtr propertyData, ulong propertySize, byte isTable);
 	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield);
 	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
@@ -23,7 +23,7 @@ public static class LuauPlugin {
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
-	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len); 
+	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
@@ -66,6 +66,7 @@ public static class LuauPlugin {
 		public GetUnityObjectName getUnityObjectNameCallback;
 		
 		public IntPtr staticList;
+		public IntPtr staticListStrLen;
 		public int staticCount;
 		public int isServer;
 		public int useUnityAllocator;
@@ -254,6 +255,31 @@ public static class LuauPlugin {
 	public static void LuauReset(LuauContext context) {
         ThreadSafetyCheck();
         Reset(context);
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern ulong GetUniqueInstanceIdCount(LuauContext context);
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern ulong GetUniqueInstanceIds(LuauContext context, IntPtr arr, ulong arrSize);
+	public static unsafe ReadOnlySpan<int> LuauGetUniqueInstanceIds(LuauContext context) {
+		var count = GetUniqueInstanceIdCount(context);
+		var ids = new int[count];
+		
+		ulong countFetched;
+		fixed (int* idsPtr = ids) {
+			countFetched = GetUniqueInstanceIds(context, new IntPtr(idsPtr), count);
+		}
+
+		return new ReadOnlySpan<int>(ids, 0, (int)countFetched);
 	}
 
 #if UNITY_IPHONE

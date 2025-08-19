@@ -18,6 +18,7 @@ public class GameConfigEditor : UnityEditor.Editor {
     private Action requestRefresh;
 
     private SerializedProperty supportsMobile;
+    private SerializedProperty compileURPShaders;
 
     Rect buttonRect;
     public override void OnInspectorGUI() {
@@ -49,6 +50,12 @@ public class GameConfigEditor : UnityEditor.Editor {
         EditorGUILayout.Toggle(new GUIContent("Desktop"), true);
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.PropertyField(this.supportsMobile, new GUIContent("Mobile"));
+        GUILayout.Space(20);
+
+        EditorGUILayout.LabelField("Shaders", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(this.compileURPShaders, new GUIContent("Compile URP Shaders") {
+            tooltip = "By default, your game will use a precompiled set of URP shaders for basic usage. Checking this box will compile URP shaders specifically for your game. If you have any advanced URP materials (or notice invisible materials on published games), you should check this box."
+        });
         GUILayout.Space(20);
 
         foreach (var field in typeof(GameConfig).GetFields()) {
@@ -107,6 +114,7 @@ public class GameConfigEditor : UnityEditor.Editor {
         }
 
         this.supportsMobile = serializedObject.FindProperty("supportsMobile");
+        this.compileURPShaders = serializedObject.FindProperty("compileURPShaders");
         
         updateSelectedGame += (update) => {
             var gameId = update.gameId;

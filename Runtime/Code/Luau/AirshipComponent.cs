@@ -325,6 +325,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	
 	private void OnDestroy() {
 		ComponentIdToScriptName.Remove(_airshipComponentId);
+		LuauCore.onResetInstance -= OnLuauReset;
 		
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
@@ -336,7 +337,6 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 			LuauPlugin.LuauDestroyThread(thread);
 		}
 		thread = IntPtr.Zero;
-		LuauCore.onResetInstance -= OnLuauReset;
 	}
 
 	#region Collision Events
@@ -460,6 +460,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	private void OnLuauReset(LuauContext ctx) {
 		if (ctx == context) {
 			thread = IntPtr.Zero;
+			LuauCore.onResetInstance -= OnLuauReset;
 		}
 	}
 

@@ -44,6 +44,7 @@ public partial class LuauCore : MonoBehaviour {
         POD_VECTOR4 = 15,
         POD_FLOAT = 16,
         POD_AIRSHIP_COMPONENT = 17,
+        POD_BUFFER = 18,
     };
 
     private static bool s_shutdown = false;
@@ -80,6 +81,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type planeType = typeof(UnityEngine.Plane);
     private static Type colorType = typeof(UnityEngine.Color);
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
+    private static Type luauBufferType = typeof(LuauBuffer);
     private static Type actionType = typeof(Action);
 
     private static readonly string[] protectedScenesNames = {
@@ -89,7 +91,7 @@ public partial class LuauCore : MonoBehaviour {
 
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;
-
+    
     private Dictionary<string, Type> shortTypeNames = new Dictionary<string, Type>();
 
     private List<string> namespaces = new List<string>();
@@ -137,6 +139,7 @@ public partial class LuauCore : MonoBehaviour {
 
         var stringCount = unityAPIClasses.Count;
         var stringList = new IntPtr[stringCount];
+        var stringLenList = new int[stringCount];
         eventConnections.Clear();
         
         var counter = 0;
@@ -144,9 +147,11 @@ public partial class LuauCore : MonoBehaviour {
             var apiName = api.Value.GetAPIType().Name;
             var strPtr = Marshal.StringToCoTaskMemUTF8(apiName);
             stringList[counter] = strPtr;
+            stringLenList[counter] = apiName.Length;
             counter += 1;
         }
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
+        var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
         LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
@@ -163,6 +168,7 @@ public partial class LuauCore : MonoBehaviour {
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
                 getUnityObjectNameCallback = getUnityObjectNameCallback_holder,
                 staticList = stringAddresses.AddrOfPinnedObject(),
+                staticListStrLen = stringLengthsHandle.AddrOfPinnedObject(),
                 staticCount = stringCount,
                 isServer = RunCore.IsServer() ? 1 : 0,
 #if UNITY_EDITOR
@@ -178,6 +184,7 @@ public partial class LuauCore : MonoBehaviour {
         LuauState.FromContext(LuauContext.Game);
 
         stringAddresses.Free();
+        stringLengthsHandle.Free();
         
         // Free up the strings:
         foreach (var ptr in stringList) {

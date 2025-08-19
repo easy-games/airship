@@ -6,6 +6,7 @@ using Code.GameBundle;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
@@ -35,8 +36,11 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public int defaultSolverVelocityIterations = 1;
     [HideInInspector] public bool queriesHitBackfaces = false;
     [HideInInspector] public bool queriesHitTriggers = true;
+    [HideInInspector] public float fixedDeltaTime = .025f;
 
     [HideInInspector] public bool supportsMobile;
+
+    [HideInInspector] public bool compileURPShaders = false;
 
     private const string TagPrefix = "AirshipTag";
     public const int MaximumTags = 64;
@@ -147,6 +151,7 @@ public class GameConfig : ScriptableObject
         defaultSolverVelocityIterations = Physics.defaultSolverVelocityIterations;
         queriesHitBackfaces = Physics.queriesHitBackfaces;
         queriesHitTriggers = Physics.queriesHitTriggers;
+        fixedDeltaTime = Time.fixedDeltaTime;
     }
 
     public void DeserializeSettings(){
@@ -173,5 +178,6 @@ public class GameConfig : ScriptableObject
         Physics.defaultSolverVelocityIterations = defaultSolverVelocityIterations;
         Physics.queriesHitBackfaces = queriesHitBackfaces;
         Physics.queriesHitTriggers = queriesHitTriggers;
+        Time.fixedDeltaTime = fixedDeltaTime;
     }
 }

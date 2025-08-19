@@ -139,9 +139,9 @@ public class LoginApp : MonoBehaviour {
         this.loading = false;
         if (this.mobileMode) {
             if (fullScreen) {
-                NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.64f), instant ? 0f : 0.12f);
+                NativeTween.AnchorMax(this.mobileBottom, new Vector2(1f, 0.74f), instant ? 0f : 0.12f);
             } else {
-                NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.4f), instant ? 0f : 0.12f);
+                NativeTween.AnchorMax(this.mobileBottom, new Vector2(1f, 0.46f), instant ? 0f : 0.12f);
             }
             this.mobileLoginPage.SetActive(false);
             this.mobilePickUsernamePage.SetActive(false);
@@ -157,9 +157,19 @@ public class LoginApp : MonoBehaviour {
         } else {
             this.backButton.SetActive(pageGameObject != this.loginPage);
         }
-    }   
+    }
+
+    public void BackToLoginPage() {
+        RouteToPage(this.mobileMode ? this.mobileLoginPage : this.loginPage, false);
+    }
 
     public async void PressContinueWithGoogle() {
+        // Uncomment to test transition
+        // if (true) {
+        //     RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+        //     return;
+        // }
+
         loading = true;
         var authResult = await AuthManager.AuthWithGoogle();
         if (!authResult.success) {
