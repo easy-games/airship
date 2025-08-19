@@ -56,12 +56,11 @@ public class MaterialColorURP : MonoBehaviour {
         }
     }
 
-    private void Start() {
-        DoUpdate();
-    }
-
     // Called when the color is changed in the inspector
     private void OnValidate() {
+        if (!enabled) {
+            return;
+        }
         #if UNITY_EDITOR
                 if (Application.isPlaying) {
                     DoUpdate();
@@ -75,7 +74,11 @@ public class MaterialColorURP : MonoBehaviour {
         #endif
     }
 
-    private void OnDestroy() {
+    private void OnEnable() {
+        DoUpdate();
+    }
+    
+    private void OnDisable() {
         if (ren == null) {
             return;
         }
