@@ -86,6 +86,7 @@ namespace Code.Player {
 				}
 
 				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
+				NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
 
 				if (this.serverBootstrap && this.serverBootstrap.IsAgonesEnvironment())
 				{
@@ -179,6 +180,7 @@ namespace Code.Player {
         
 		private void OnDestroy() {
 			NetworkServer.OnConnectedEvent -= NetworkServer_OnConnected;
+			NetworkServer.OnDisconnectedEvent -= NetworkServer_OnDisconnected;
 			DevConsole.RemoveCommand("players");
 		}
 
@@ -253,6 +255,22 @@ namespace Code.Player {
 			}
 		}
 
+		// Handler for on disconnect of any connection, including connections that failed to validate
+		// or didn't get fully set up. Occurs after HandlePlayerLeave
+		private async void NetworkServer_OnDisconnected(NetworkConnectionToClient conn) {
+			var user = GetUserDataFromClientId(conn.connectionId);
+			if (user != null) {
+				Debug.Log($"Cleaning up {user.username}'s connection.");
+#if UNITY_SERVER
+				if (this.agones) {
+					await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
+					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
+				}
+#endif
+				_userData.Remove(conn.connectionId);
+			}
+		}
+
 		public void AddPlayer(PlayerInfo playerInfo) {
 			if (!this.players.Contains(playerInfo)) {
 				this.players.Add(playerInfo);
@@ -270,6 +288,8 @@ namespace Code.Player {
 			return playerInfo;
 		}
 
+		// Handler for anything related to the PlayerInfo object. This only gets fired if the PlayerInfo object
+		// actually got created for the connection.
 		public async void HandlePlayerLeave(PlayerInfo playerInfo) {
 			Debug.Log(playerInfo.username + " disconnected.");
 
@@ -279,13 +299,6 @@ namespace Code.Player {
 			playerRemoved?.Invoke(dto);
 			playerChanged?.Invoke(dto, (object)false);
 			this.connectionIdToPlayerNetId.Remove(playerInfo.connectionId);
-
-#if UNITY_SERVER
-			if (this.agones) {
-				await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
-				await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
-			}
-#endif
 		}
 
 		public PlayerInfoDto[] GetPlayers() {
