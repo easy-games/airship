@@ -152,7 +152,7 @@ namespace Code.Authentication {
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) {
                     Debug.LogError("No reserved agones slot for player " + userData.username);
-                    this.RejectConnection(conn, "Failed to authenticate.", false);
+                    this.RejectConnection(conn, "Failed to authenticate. No reservation.", false);
                     return;
                 }
 

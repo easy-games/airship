@@ -233,13 +233,22 @@ namespace Editor {
 #endif
         }
 
-        public static void BuildAndroidClient(bool development) {
+        public enum AndroidBuildType {
+            DevelopmentAPK,
+            ReleaseAPK,
+            ReleaseAAB,
+        }
+        
+        public static void BuildAndroidClient(AndroidBuildType buildType) {
+            var development = buildType == AndroidBuildType.DevelopmentAPK;
+            var buildApk = buildType != AndroidBuildType.ReleaseAAB;
+            
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
-            PlayerSettings.Android.splitApplicationBinary = !development;
+            PlayerSettings.Android.splitApplicationBinary = !buildApk;
 
             BuildProfile buildProfile;
             if (development) {
@@ -255,9 +264,9 @@ namespace Editor {
             buildProfile.overrideGlobalScenes = true;
             buildProfile.scenes = editorBuildScenes.ToArray();
             options.buildProfile = buildProfile;
-            options.locationPathName = $"build/client_android/{ClientExecutableName}.{(development ? "apk" : "aab")}";
+            options.locationPathName = $"build/client_android/{ClientExecutableName}.{(buildApk ? "apk" : "aab")}";
             if (development) {
-                options.options = BuildOptions.Development;
+                options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
 
             var report = BuildPipeline.BuildPlayer(options);
@@ -303,14 +312,19 @@ namespace Editor {
             BuildIOSClient(false, true);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Android (Google Play)", priority = 80)]
         public static void BuildAndroidClientMenuItem() {
-            BuildAndroidClient(false);
+            BuildAndroidClient(AndroidBuildType.ReleaseAAB);
+        }
+        
+        [MenuItem("Airship/Create Binary/Client/Android (APK)", priority = 80)]
+        public static void BuildAndroidProdAPK() {
+            BuildAndroidClient(AndroidBuildType.ReleaseAPK);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android (Development)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Android (Development APK)", priority = 80)]
         public static void BuildAndroidDevelopmentClientMenuItem() {
-            BuildAndroidClient(true);
+            BuildAndroidClient(AndroidBuildType.DevelopmentAPK);
         }
 #endif
 
