@@ -437,8 +437,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                     newVelocity.y = 0;
                 }
 
-                //Reset airborne impulse
-                currentMoveSnapshot.airborneFromImpulse = false;
+                if (newVelocity.y < .1f) {
+                    //Reset airborne impulse
+                    currentMoveSnapshot.airborneFromImpulse = false;
+                }
             } else {
                 //While in the air how much control do we have over our direction?
                 // TODO: was lastGroundedMoveDir
@@ -510,7 +512,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             var didJump = false;
             var ableToJump = false;
             if (movementSettings.numberOfJumps > 0 && requestJump &&
-                (!currentMoveSnapshot.alreadyJumped || grounded) &&
+                (!currentMoveSnapshot.alreadyJumped || detectedGround) &&
                 (!currentMoveSnapshot.isCrouching || canStand)) {
                 //On the ground
                 if (grounded || currentMoveSnapshot.prevStepUp) {
@@ -555,13 +557,27 @@ namespace Code.Player.Character.MovementSystems.Character {
                 // 	ableToJump = false;
                 // }
 
-                if (ableToJump) {
+                if (ableToJump || detectedGround) {
                     // Jump
                     didJump = true;
                     currentMoveSnapshot.alreadyJumped = true;
                     currentMoveSnapshot.jumpCount++;
-                    newVelocity.y = movementSettings.jumpSpeed;
-                    currentMoveSnapshot.airborneFromImpulse = false;
+
+                    if (!ableToJump && detectedGround) {
+                        //Jumping off invalid slope
+                        newVelocity += groundHit.normal * movementSettings.jumpSpeed;
+
+                        //Ignore move direction for this Tick
+                        characterMoveVelocity = Vector3.zero;
+                        normalizedMoveDir = Vector3.zero;
+
+                        currentMoveSnapshot.airborneFromImpulse = true;
+                    } else {
+                        //Standard jump
+                        newVelocity.y = movementSettings.jumpSpeed;
+                        currentMoveSnapshot.airborneFromImpulse = false;
+                    }
+
                     OnJumped?.Invoke(newVelocity);
                     if (mode == NetworkedStateSystemMode.Authority && isServer) {
                         SAuthJumpedEvent(newVelocity);
@@ -727,6 +743,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     4, 5);
             }
 
+
             if (movementSettings.detectSlopes) {
                 var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal)
                     .normalized;
@@ -734,13 +751,25 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                 // Don't allow walking up hills that are too steep to be grounded
                 if (!grounded && detectedGround) {
-                    var velocityProjectedOnSlope = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
+                    var velocityProjectedOnSlope
+                        = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
+
                     // If we're going uphill, project the velocity on the contour of the slope (to allow moving
                     // horizontally as falling while preventing running up slope by running into slope).
                     if (velocityProjectedOnSlope.y > 0) {
                         // Vector in the direction of slope contour
                         var slopeContourVector = Vector3.Cross(groundSlopeDir, groundHit.normal);
-                        characterMoveVelocity = slopeContourVector * Vector3.Dot(characterMoveVelocity, slopeContourVector);
+                        characterMoveVelocity
+                            = slopeContourVector * Vector3.Dot(characterMoveVelocity, slopeContourVector);
+                        normalizedMoveDir = characterMoveVelocity.normalized;
+                        // Debug.DrawLine(transform.position, transform.position + groundHit.normal * .25f, Color.red, 5);
+                        // Debug.DrawLine(transform.position, transform.position + slopeContourVector * .5f, Color.cyan,
+                        //     5);
+                        // Debug.DrawLine(transform.position, transform.position + characterMoveVelocity * 2f,
+                        //     Color.magenta,
+                        //     5);
+                        // print("projectedVel: " + characterMoveVelocity + " slope: " + slopeDot + "grounded: " +
+                        //       grounded + " detectedGround: " + detectedGround);
                     }
                 }
 
