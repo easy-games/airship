@@ -140,7 +140,7 @@ public static class PhysicsSetup {
         bool queriesHitBackfaces = false,
         bool queriesHitTriggers = true,
         float fixedDeltaTime = 0.025f) {
-        Physics.gravity = gravity??new Vector3(0,-9.81f, 0);
+        Physics.gravity = gravity ?? new Vector3(0, -9.81f, 0);
         Physics.bounceThreshold = bouncThreshold;
         Physics.defaultMaxDepenetrationVelocity = defaultMaxDepenetrationVelocity;
         Physics.sleepThreshold = sleepThreshold;
@@ -163,6 +163,10 @@ public static class PhysicsSetup {
             Setup(gameConfig);
             //Load in game specific Layers and Settings
             gameConfig.DeserializeSettings();
+        } else {
+            //Use default Airship values if we aren't setting up game specific values
+            //Debug.Log("No custom GameConfig settings found. Resetting to defaults");
+            ResetDefaults(gameConfig);
         }
 #endif
     }
