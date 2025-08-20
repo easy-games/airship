@@ -29,7 +29,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private static Dictionary<(string, string), bool> _openPropertyFoldouts = new();
 
     /** Maps (game object id, prop name) to ArrayDisplayInfo object (for Array properties) */
-    private Dictionary<(int, string), ArrayDisplayInfo> _reorderableLists = new();
+    private Dictionary<(int componentInstanceId, string propertyName), ArrayDisplayInfo> _reorderableLists = new();
 
     public void OnEnable() {
         var comp = (Component)serializedObject.targetObject;
@@ -99,6 +99,35 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         serializedObject.ApplyModifiedProperties();
     }
 
+
+    private Dictionary<int, HashSet<string>> _componentSeenArrayProps = new();
+    private void CleanupOrphanedArrayDisplayInfos(int componentInstanceId) {
+        // We need to make sure we clean out dead array references
+        if (!_componentSeenArrayProps.TryGetValue(componentInstanceId, out var seenArrayProps)) return;
+        var removeSet = new HashSet<(int, string)>();
+        
+        foreach (var (key, value) in _reorderableLists) {
+            if (key.componentInstanceId != componentInstanceId) continue;
+            if (seenArrayProps.Contains(key.propertyName)) continue;
+            
+            // We cannot remove from a collection while iterating it, so we'll add it to a remove set
+            removeSet.Add(key);
+        }
+        
+        // array list removal pass
+        foreach (var item in removeSet) {
+            _reorderableLists.Remove(item);
+        }
+    }
+
+    public HashSet<string> GetOrCreateSeenArraysSet(int componentInstanceId) {
+        if (_componentSeenArrayProps.TryGetValue(componentInstanceId, out var seenArrays)) return seenArrays;
+        
+        seenArrays = new HashSet<string>();
+        _componentSeenArrayProps.Add(componentInstanceId, seenArrays);
+        return seenArrays;
+    }
+    
     private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(int componentInstanceId, SerializedProperty arraySerializedProperty, string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
         var modified = arraySerializedProperty.FindPropertyRelative("modified");
         
@@ -106,6 +135,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (listType == AirshipComponentPropertyType.AirshipObject || listType == AirshipComponentPropertyType.AirshipComponent) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
         }
+
+        var seenArrayProps = GetOrCreateSeenArraysSet(componentInstanceId);
         
         if (!_reorderableLists.TryGetValue((componentInstanceId, propName), out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
@@ -139,9 +170,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
             };
+            
             _reorderableLists[(componentInstanceId, propName)] = newDisplayInfo;
+            
+            seenArrayProps.Add(propName);
             return newDisplayInfo;
         }
+
+        seenArrayProps.Add(propName);
         return displayInfo;
     }
 
@@ -397,10 +433,21 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         propertyList.Sort((p1, p2) =>
             indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
         );
+
+        var componentInstanceId = binding.GetInstanceID();
+        
+        // Keeping track of which array properties that have been seen
+        var seenArraysSet = GetOrCreateSeenArraysSet(componentInstanceId);
+        
+        // We're running a new render, so haven't seen the arrays yet
+        seenArraysSet.Clear();
         
         foreach (var prop in propertyList) {
-            DrawCustomProperty(binding.GetInstanceID(), binding.script.m_metadata, prop);   
+            DrawCustomProperty(componentInstanceId, binding.script.m_metadata, prop);   
         }
+        
+        // By the end of the render of the properties, all the arrays should have been populated
+        CleanupOrphanedArrayDisplayInfos(componentInstanceId);
         
 #if AIRSHIP_DEBUG
         AirshipEditorGUI.HorizontalLine();
