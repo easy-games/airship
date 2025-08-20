@@ -17,6 +17,7 @@ public static class PhysicsSetup {
         //UnityEditor.physicsMat??? = AssetDatabase.LoadAllAssetsAtPath("defaultphysicsmat");
 
         Physics.simulationMode = SimulationMode.FixedUpdate;
+        Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
 
 #if UNITY_EDITOR
         //Airship Core Layers
@@ -55,8 +56,7 @@ public static class PhysicsSetup {
         IgnoreAllLayers(LayerMask.NameToLayer("LocalStencilMask"), false);
         IgnoreAllLayers(LayerMask.NameToLayer("StencilMask"), false);
 
-        //Character
-        //Collides with
+        //3D Matrix
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Default"), false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VisuallyHidden"),
             false);
@@ -70,26 +70,47 @@ public static class PhysicsSetup {
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("VisuallyHidden"),
             false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("Water"), false);
+
+        //2D Matrix
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Default"), false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VisuallyHidden"),
+            false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Water"), false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("LocalStencilMask"), LayerMask.NameToLayer("Default"),
+            false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("LocalStencilMask"),
+            LayerMask.NameToLayer("VisuallyHidden"),
+            false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("LocalStencilMask"), LayerMask.NameToLayer("Water"),
+            false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("Default"), false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("VisuallyHidden"),
+            false);
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("Water"), false);
     }
 
 
     public static void IgnoreAllLayers(int layer, bool ignoreGameLayers) {
         foreach (var otherLayer in corelayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, true);
+            Physics2D.IgnoreLayerCollision(layer, otherLayer, true);
         }
 
         foreach (var otherLayer in gameLayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, ignoreGameLayers);
+            Physics2D.IgnoreLayerCollision(layer, otherLayer, ignoreGameLayers);
         }
     }
 
     public static void CollideWithAllLayers(int layer, bool collideWithGameLayers) {
         foreach (var otherLayer in corelayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, false);
+            Physics2D.IgnoreLayerCollision(layer, otherLayer, false);
         }
 
         foreach (var otherLayer in gameLayers) {
             Physics.IgnoreLayerCollision(layer, otherLayer, !collideWithGameLayers);
+            Physics2D.IgnoreLayerCollision(layer, otherLayer, !collideWithGameLayers);
         }
     }
 
@@ -112,6 +133,7 @@ public static class PhysicsSetup {
 
         //PHYSICS SETTINGS
         SetPhysicsSettings();
+        SetPhysics2DSettings();
 
         //PHYSICS MATRIX
         //Make Game Layers Collide With Everything
@@ -131,7 +153,7 @@ public static class PhysicsSetup {
 
     private static void SetPhysicsSettings(
         Vector3? gravity = null,
-        float bouncThreshold = 2,
+        float bounceThreshold = 2,
         float defaultMaxDepenetrationVelocity = 10,
         float sleepThreshold = 0.005f,
         float defaultContactOffset = 0.01f,
@@ -141,7 +163,7 @@ public static class PhysicsSetup {
         bool queriesHitTriggers = true,
         float fixedDeltaTime = 0.025f) {
         Physics.gravity = gravity ?? new Vector3(0, -9.81f, 0);
-        Physics.bounceThreshold = bouncThreshold;
+        Physics.bounceThreshold = bounceThreshold;
         Physics.defaultMaxDepenetrationVelocity = defaultMaxDepenetrationVelocity;
         Physics.sleepThreshold = sleepThreshold;
         Physics.defaultContactOffset = defaultContactOffset;
@@ -150,6 +172,49 @@ public static class PhysicsSetup {
         Physics.queriesHitBackfaces = queriesHitBackfaces;
         Physics.queriesHitTriggers = queriesHitTriggers;
         Time.fixedDeltaTime = fixedDeltaTime;
+    }
+
+    private static void SetPhysics2DSettings(
+        Vector3? gravity = null,
+        float bounceThreshold = 1,
+        int velocityIterations = 8,
+        int positionIterations = 3,
+        float maxLinearCorrection = .2f,
+        float maxAngularCorrection = 8,
+        float maxTranslationSpeed = 100,
+        float maxRotationSpeed = 360,
+        float baumgarteScale = .2f,
+        float baumgarteTOIScale = .75f,
+        float timeToSleep = .5f,
+        float linearSleepTolerance = .01f,
+        float angularSleepTolerance = 2,
+        float defaultContactOffset = 0.01f,
+        float contactThreshold = 0,
+        bool queriesHitTriggers = true,
+        bool queriesStartInColliders = true,
+        bool callbacksOnDisable = true,
+        bool reuseCollisionCallbacks = true,
+        bool autoSyncTransforms = false) {
+        Physics2D.gravity = gravity ?? new Vector3(0, -9.81f, 0);
+        Physics2D.velocityIterations = velocityIterations;
+        Physics2D.positionIterations = positionIterations;
+        Physics2D.bounceThreshold = bounceThreshold;
+        Physics2D.maxLinearCorrection = maxLinearCorrection;
+        Physics2D.maxAngularCorrection = maxAngularCorrection;
+        Physics2D.maxTranslationSpeed = maxTranslationSpeed;
+        Physics2D.maxRotationSpeed = maxRotationSpeed;
+        Physics2D.baumgarteScale = baumgarteScale;
+        Physics2D.baumgarteTOIScale = baumgarteTOIScale;
+        Physics2D.timeToSleep = timeToSleep;
+        Physics2D.linearSleepTolerance = linearSleepTolerance;
+        Physics2D.angularSleepTolerance = angularSleepTolerance;
+        Physics2D.defaultContactOffset = defaultContactOffset;
+        Physics2D.contactThreshold = contactThreshold;
+        Physics2D.queriesHitTriggers = queriesHitTriggers;
+        Physics2D.queriesStartInColliders = queriesStartInColliders;
+        Physics2D.callbacksOnDisable = callbacksOnDisable;
+        Physics2D.reuseCollisionCallbacks = reuseCollisionCallbacks;
+        Physics2D.autoSyncTransforms = autoSyncTransforms;
     }
 
     public static void SetupFromGameConfig() {
