@@ -6,16 +6,14 @@ using Code.GameBundle;
 using UnityEditor;
 #endif
 using UnityEngine;
-using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
-public class GameConfig : ScriptableObject
-{
+public class GameConfig : ScriptableObject {
     public string gameId;
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     public SceneAsset startingScene;
-    #endif
+#endif
     public Object[] gameScenes;
 
     [Obsolete]
@@ -61,18 +59,20 @@ public class GameConfig : ScriptableObject
             userTag = null;
             return false;
         }
-        
+
         var offset = int.Parse(runtimeTag[TagPrefix.Length..]);
         userTag = gameTags[offset];
         return userTag != null;
     }
-    
+
     public static GameConfig Load() {
 #if UNITY_EDITOR
         var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
         // I believe AssetDatabase might not have loaded GameConfig sometimes (like during a publish)
         // TODO if file doesn't exist we could generate GameConfig here
-        if (gameConfig == null) return null;
+        if (gameConfig == null) {
+            return null;
+        }
 
 #if !AIRSHIP_PLAYER && !AIRSHIP_INTERNAL
         if (gameConfig.packages.Find((p) => p.id == "@Easy/Core") == null) {
@@ -100,15 +100,15 @@ public class GameConfig : ScriptableObject
     private void OnValidate() {
 #if UNITY_EDITOR
 #pragma warning disable CS0612
-        if (this.startingScene == null && !string.IsNullOrEmpty(this.startingSceneName)) {
+        if (startingScene == null && !string.IsNullOrEmpty(startingSceneName)) {
             var guids = AssetDatabase.FindAssets("t:Scene").ToList();
             var paths = guids.Select((guid) => AssetDatabase.GUIDToAssetPath(guid));
             foreach (var path in paths) {
                 if (path.StartsWith("Assets/")) {
-                    if (path.EndsWith(this.startingSceneName + ".unity")) {
+                    if (path.EndsWith(startingSceneName + ".unity")) {
                         var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
-                        this.startingScene = sceneAsset;
-                        this.startingSceneName = "";
+                        startingScene = sceneAsset;
+                        startingSceneName = "";
                     }
                 }
             }
@@ -126,18 +126,18 @@ public class GameConfig : ScriptableObject
         return json;
     }
 
-    public void SerializeSettings(){
-		//Update physics matrix        
-		bool[] areLayersIgnored = new bool[15 * 32];
-		string TheMatrixLog = "SAVING GAME LAYER MATRIX: \n";
-		//15 Game Layers and how they collide with all 32 layers
-        for (int i = 0; i < 15; i++) {
-			//Check
-            for (int otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
-				int gameLayerI = 17 + i;
-				bool ignored = Physics.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
-            	areLayersIgnored[i * 32 + otherLayerI] = ignored;
-				TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
+    public void SerializeSettings() {
+        //Update physics matrix        
+        var areLayersIgnored = new bool[15 * 32];
+        var TheMatrixLog = "SAVING GAME LAYER MATRIX: \n";
+        //15 Game Layers and how they collide with all 32 layers
+        for (var i = 0; i < 15; i++) {
+            //Check
+            for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
+                var gameLayerI = 17 + i;
+                var ignored = Physics.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
+                areLayersIgnored[i * 32 + otherLayerI] = ignored;
+                TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI + " ignored: " + ignored + " \n";
             }
         }
         //Debug.Log(TheMatrixLog);
@@ -154,13 +154,13 @@ public class GameConfig : ScriptableObject
         fixedDeltaTime = Time.fixedDeltaTime;
     }
 
-    public void DeserializeSettings(){
-		//15 Game Layers and how they collide with all 32 layers
-        int gameLayerI = 17;
-		string TheMatrixLog = "LOADING GAME LAYER MATRIX: \n";
-        for (int byteI = 0; byteI < this.physicsMatrix.Length; byteI+= 32) {
-            for(int otherLayerI=0; otherLayerI < 32; otherLayerI++){
-                bool ignored = this.physicsMatrix[byteI+otherLayerI];
+    public void DeserializeSettings() {
+        //15 Game Layers and how they collide with all 32 layers
+        var gameLayerI = 17;
+        var TheMatrixLog = "LOADING GAME LAYER MATRIX: \n";
+        for (var byteI = 0; byteI < physicsMatrix.Length; byteI += 32) {
+            for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
+                var ignored = physicsMatrix[byteI + otherLayerI];
                 Physics.IgnoreLayerCollision(gameLayerI, otherLayerI, ignored);
 				TheMatrixLog += "GameLayer" + gameLayerI + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
             }
