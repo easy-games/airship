@@ -152,10 +152,10 @@ public class GameConfig : ScriptableObject {
 
     public void SerializeSettings() {
         try {
-            //Update physics matrix        
+            // Update physics matrix        
             var areLayersIgnored = new bool[15 * 32];
             var TheMatrixLog = "SAVING GAME LAYER MATRIX: \n";
-            //15 Game Layers and how they collide with all 32 layers
+            // 15 Game Layers and how they collide with all 32 layers
             for (var i = 0; i < 15; i++) {
                 //Check
                 for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
@@ -166,10 +166,10 @@ public class GameConfig : ScriptableObject {
                 }
             }
 
-            //Debug.Log(TheMatrixLog);
+            // Debug.Log(TheMatrixLog);
             physicsMatrix = areLayersIgnored;
 
-            //Physics settings
+            // Physics settings
             gravity = Physics.gravity;
             bounceThreshold = Physics.bounceThreshold;
             defaultMaxDepenetrationVelocity = Physics.defaultMaxDepenetrationVelocity;
@@ -182,10 +182,10 @@ public class GameConfig : ScriptableObject {
             fixedDeltaTime = Time.fixedDeltaTime;
 
 
-            //Update physics 2D matrix        
+            // Update physics 2D matrix        
             areLayersIgnored = new bool[15 * 32];
             TheMatrixLog = "SAVING 2D GAME LAYER MATRIX: \n";
-            //15 Game Layers and how they collide with all 32 layers
+            // 15 Game Layers and how they collide with all 32 layers
             for (var i = 0; i < 15; i++) {
                 //Check
                 for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
@@ -196,10 +196,10 @@ public class GameConfig : ScriptableObject {
                 }
             }
 
-            //Debug.Log(TheMatrixLog);
+            // Debug.Log(TheMatrixLog);
             physicsMatrix2D = areLayersIgnored;
 
-            //Physics 2D settings
+            // Physics 2D settings
             gravity2D = Physics2D.gravity;
             velocityIterations2D = Physics2D.velocityIterations;
             positionIterations2D = Physics2D.positionIterations;
@@ -227,7 +227,7 @@ public class GameConfig : ScriptableObject {
 
     public void DeserializeSettings() {
         try { 
-            //15 Game Layers and how they collide with all 32 layers
+            // 15 Game Layers and how they collide with all 32 layers
             var gameLayerI = 17;
             var TheMatrixLog = "LOADING GAME LAYER MATRIX: \n";
             for (var byteI = 0; byteI < physicsMatrix.Length; byteI += 32) {
@@ -239,9 +239,9 @@ public class GameConfig : ScriptableObject {
 
                 gameLayerI++;
             }
-            //Debug.Log(TheMatrixLog);
+            // Debug.Log(TheMatrixLog);
 
-            //Physics Settings
+            // Physics Settings
             Physics.gravity = gravity;
             Physics.bounceThreshold = bounceThreshold;
             Physics.defaultMaxDepenetrationVelocity = defaultMaxDepenetrationVelocity;
@@ -254,7 +254,7 @@ public class GameConfig : ScriptableObject {
             Time.fixedDeltaTime = fixedDeltaTime;
 
 
-            //2D Setup
+            // 2D Setup
             if (physicsMatrix2D != null && physicsMatrix2D.Length > 0) {
                 gameLayerI = 17;
                 TheMatrixLog = "LOADING 2D GAME LAYER MATRIX: \n";
@@ -268,9 +268,9 @@ public class GameConfig : ScriptableObject {
 
                     gameLayerI++;
                 }
-                //Debug.Log(TheMatrixLog);
+                // Debug.Log(TheMatrixLog);
                 
-                //Physics 2D Settings
+                // Physics 2D Settings
                 Physics2D.gravity = gravity2D;
                 Physics2D.velocityIterations = velocityIterations2D;
                 Physics2D.positionIterations = positionIterations2D;

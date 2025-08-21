@@ -8,13 +8,13 @@ public static class PhysicsSetup {
     private static List<int> corelayers;
     private static List<int> gameLayers;
 
-    //Setup required settings for Airship that all games need
+    // Setup required settings for Airship that all games need
     public static void Setup() {
         InitLayerCollection();
 
-        //Set the physics mat
-        //How the heck do I set this? 
-        //UnityEditor.physicsMat??? = AssetDatabase.LoadAllAssetsAtPath("defaultphysicsmat");
+        // Set the physics mat
+        // How the heck do I set this? 
+        // UnityEditor.physicsMat??? = AssetDatabase.LoadAllAssetsAtPath("defaultphysicsmat");
 
         Physics.simulationMode = SimulationMode.FixedUpdate;
         Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
@@ -35,14 +35,14 @@ public static class PhysicsSetup {
         PhysicsLayerEditor.SetLayer(11, "LocalStencilMask");
         PhysicsLayerEditor.SetLayer(12, "StencilMask");
 
-        //Reserved for future use
+        // Reserved for future use
         for (var i = NumberOfCoreLayers; i < GameLayerStartIndex; i++) {
             PhysicsLayerEditor.SetLayer(i, "");
         }
 #endif
 
-        //Create the Physics Matrix
-        //Non colliding layers
+        // Create the Physics Matrix
+        // Non colliding layers
         IgnoreAllLayers(LayerMask.NameToLayer("Viewmodel"), true);
         IgnoreAllLayers(LayerMask.NameToLayer("IgnoreCollision"), true);
         IgnoreAllLayers(LayerMask.NameToLayer("AvatarEditor"), true);
@@ -51,12 +51,12 @@ public static class PhysicsSetup {
         IgnoreAllLayers(LayerMask.NameToLayer("Water"), true);
         IgnoreAllLayers(LayerMask.NameToLayer("UI"), true);
         IgnoreAllLayers(LayerMask.NameToLayer("WorldUI"), true);
-        //Only collide with game layers
+        // Only collide with game layers
         IgnoreAllLayers(LayerMask.NameToLayer("Character"), false);
         IgnoreAllLayers(LayerMask.NameToLayer("LocalStencilMask"), false);
         IgnoreAllLayers(LayerMask.NameToLayer("StencilMask"), false);
 
-        //3D Matrix
+        // 3D Matrix
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Default"), false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VisuallyHidden"),
             false);
@@ -71,7 +71,7 @@ public static class PhysicsSetup {
             false);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("StencilMask"), LayerMask.NameToLayer("Water"), false);
 
-        //2D Matrix
+        // 2D Matrix
         Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Default"), false);
         Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("VisuallyHidden"),
             false);
@@ -115,7 +115,7 @@ public static class PhysicsSetup {
     }
 
     private static void InitLayerCollection() {
-        //Compile all of the layer indexes we use
+        // Compile all of the layer indexes we use
         corelayers = new List<int>();
         gameLayers = new List<int>();
         for (var i = 0; i < NumberOfCoreLayers; i++) {
@@ -127,16 +127,16 @@ public static class PhysicsSetup {
         }
     }
 
-    //Reset physics values that users may have changed
+    // Reset physics values that users may have changed
     public static void ResetDefaults() {
         InitLayerCollection();
 
-        //PHYSICS SETTINGS
+        // PHYSICS SETTINGS
         SetPhysicsSettings();
         SetPhysics2DSettings();
 
-        //PHYSICS MATRIX
-        //Make Game Layers Collide With Everything
+        // PHYSICS MATRIX
+        // Make Game Layers Collide With Everything
         var gameId = 0;
         for (var i = GameLayerStartIndex; i <= 31; i++) {
             CollideWithAllLayers(i, true);
@@ -147,7 +147,7 @@ public static class PhysicsSetup {
             gameId++;
         }
 
-        //Run setup to make the game layers collide properly with core layers
+        // Run setup to make the game layers collide properly with core layers
         Setup();
     }
 
@@ -219,18 +219,18 @@ public static class PhysicsSetup {
 
     public static void SetupFromGameConfig() {
 #if AIRSHIP_PLAYER || !UNITY_EDITOR
-        //Reset Unity to Airship defaults and GameConfig customizations
+        // Reset Unity to Airship defaults and GameConfig customizations
         var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
         if (gameConfig) {
             // Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
             //           gameConfig.physicsMatrix.Length);
-            //Setup the Core Layers
+            // Setup the Core Layers
             Setup();
-            //Load in game specific Layers and Settings
+            // Load in game specific Layers and Settings
             gameConfig.DeserializeSettings();
         } else {
-            //Use default Airship values if we aren't setting up game specific values
-            //Debug.Log("No custom GameConfig settings found. Resetting to defaults");
+            // Use default Airship values if we aren't setting up game specific values
+            // Debug.Log("No custom GameConfig settings found. Resetting to defaults");
             ResetDefaults();
         }
 #endif
