@@ -156,12 +156,14 @@ public static class PhysicsSetup {
 #if AIRSHIP_PLAYER || !UNITY_EDITOR
         //Reset Unity to Airship defaults and GameConfig customizations
         var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
-        // Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
-        //           gameConfig.physicsMatrix.Length);
-        //Setup the Core Layers
-        Setup(gameConfig);
-        //Load in game specific Layers and Settings
-        gameConfig.DeserializeSettings();
+        if (gameConfig) {
+            // Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
+            //           gameConfig.physicsMatrix.Length);
+            //Setup the Core Layers
+            Setup(gameConfig);
+            //Load in game specific Layers and Settings
+            gameConfig.DeserializeSettings();
+        }
 #endif
     }
 }

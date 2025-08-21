@@ -302,7 +302,7 @@ namespace UnityEditor.Build.Pipeline.Tasks
                     try {
                         Debug.Log("bundle " + bundleName + " resources count: " + pair.Value.resourceFiles.Count);
                     } catch (Exception e) {
-                        Debug.Log("skipping bundle " + bundleName + ". Error=" + e.Message);
+                        Debug.Log("skipping bundle " + bundleName + ". Error=" + e);
                         continue;
                     }
                     // airship end

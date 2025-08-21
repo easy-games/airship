@@ -107,7 +107,7 @@ Material:
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _AtlasWidth: 4096
-    - _AtlasWidthTextures: 8
+    - _AtlasWidthTextures: 9
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -125,7 +125,7 @@ Material:
     - _GlossyReflections: 0
     - _Metallic: 0
     - _OcclusionStrength: 1
-    - _PaddingOverWidth: 0.0024414062
+    - _PaddingOverWidth: 0.013888889
     - _Parallax: 0.005
     - _QueueControl: 0
     - _QueueOffset: 0
@@ -136,7 +136,7 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _TexWidthOverWidth: 0.12011719
+    - _TexWidthOverWidth: 0.083333336
     - _TexturePadding: 10
     - _TextureWidth: 256
     - _WorkflowMode: 1
