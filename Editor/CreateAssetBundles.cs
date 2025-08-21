@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
-using Luau;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
@@ -13,6 +12,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
+using Editor.Quality;
 #endif
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
@@ -294,6 +294,12 @@ public static class CreateAssetBundles {
 		Debug.Log($"[Editor]: Building {platform} asset bundles...");
 		Debug.Log("[Editor]: Build path: " + buildPath);
 
+		if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
+			SwapToQualityLevel("Low");
+		} else {
+			SwapToQualityLevel("Normal");
+		}
+
 		// Act as if we are building all asset bundles (including CoreMaterials).
 		// This is so our current build target will have references to those asset bundles.
 		// This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
@@ -484,6 +490,24 @@ public static class CreateAssetBundles {
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
 
 		return true;
+	}
+
+	public static void SwapToQualityLevel(string name) {
+#if UNITY_EDITOR
+		if (name == "Low") {
+			QualityConfig.ConfigureLowQualityLevel();
+		} else if (name == "Normal") {
+			QualityConfig.ConfigureNormalQualityLevel();
+		}
+#endif
+
+		int index = System.Array.IndexOf(QualitySettings.names, name);
+		if (index < 0) {
+			Debug.LogError($"Quality level '{name}' not found. Please report this issue to Airship devs.");
+			return;
+		}
+
+		QualitySettings.SetQualityLevel(index, applyExpensiveChanges: true);
 	}
 
 	static IList<IBuildTask> GetBuildTasks()
