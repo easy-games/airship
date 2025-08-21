@@ -9,7 +9,7 @@ public static class PhysicsSetup {
     private static List<int> gameLayers;
 
     //Setup required settings for Airship that all games need
-    public static void Setup(GameConfig config) {
+    public static void Setup() {
         InitLayerCollection();
 
         //Set the physics mat
@@ -128,7 +128,7 @@ public static class PhysicsSetup {
     }
 
     //Reset physics values that users may have changed
-    public static void ResetDefaults(GameConfig config) {
+    public static void ResetDefaults() {
         InitLayerCollection();
 
         //PHYSICS SETTINGS
@@ -148,7 +148,7 @@ public static class PhysicsSetup {
         }
 
         //Run setup to make the game layers collide properly with core layers
-        Setup(config);
+        Setup();
     }
 
     private static void SetPhysicsSettings(
@@ -225,13 +225,13 @@ public static class PhysicsSetup {
             // Debug.Log("Loading project settings from GameConfig. Physics: " + gameConfig.gravity + " matrix size: " +
             //           gameConfig.physicsMatrix.Length);
             //Setup the Core Layers
-            Setup(gameConfig);
+            Setup();
             //Load in game specific Layers and Settings
             gameConfig.DeserializeSettings();
         } else {
             //Use default Airship values if we aren't setting up game specific values
             //Debug.Log("No custom GameConfig settings found. Resetting to defaults");
-            ResetDefaults(gameConfig);
+            ResetDefaults();
         }
 #endif
     }
