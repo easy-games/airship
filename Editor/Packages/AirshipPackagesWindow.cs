@@ -28,6 +28,7 @@ using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
+// ReSharper disable ReplaceWithSingleAssignment.True
 
 namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
@@ -416,6 +417,7 @@ namespace Editor.Packages {
                 // Act as if we are building all asset bundles (including CoreMaterials).
                 // This is so our current build target will have references to those asset bundles.
                 // This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
+                
                 var compileUrpShaders = true;
                 if (packageDoc.id.ToLower() == "@easy/core") {
                     compileUrpShaders = false;
@@ -446,6 +448,12 @@ namespace Editor.Packages {
                         {
                             GraphicsDeviceType.Vulkan
                         });
+                    }
+
+                    if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
+                        CreateAssetBundles.SwapToQualityLevel("Mobile");
+                    } else {
+                        CreateAssetBundles.SwapToQualityLevel("Normal");
                     }
 
                     var buildParams = new BundleBuildParameters(

@@ -208,7 +208,7 @@ namespace Editor {
             options.extraScriptingDefines = extraDefines.ToArray();
 
             if (development == true) {
-                options.options = BuildOptions.Development;
+                options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
 
             var report = BuildPipeline.BuildPlayer(options);
@@ -308,6 +308,12 @@ namespace Editor {
         public static void BuildIOSClientStagingMenuItem() {
             Debug.Log("Building iOS staging client..");
             BuildIOSClient(false, true);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/iOS (Staging Development)", priority = 80)]
+        public static void BuildIOSClientStagingDevelopmentMenuItem() {
+            Debug.Log("Building iOS staging development client..");
+            BuildIOSClient(true, true);
         }
 
         [MenuItem("Airship/Create Binary/Client/Android (Google Play)", priority = 80)]
