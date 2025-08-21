@@ -239,8 +239,7 @@ public class GameConfig : ScriptableObject {
 
                 gameLayerI++;
             }
-            Debug.Log(TheMatrixLog);
-            Debug.Log("Matrix length: " + physicsMatrix.Length);
+            //Debug.Log(TheMatrixLog);
 
             //Physics Settings
             Physics.gravity = gravity;
@@ -269,7 +268,7 @@ public class GameConfig : ScriptableObject {
 
                     gameLayerI++;
                 }
-                Debug.Log(TheMatrixLog);
+                //Debug.Log(TheMatrixLog);
                 
                 //Physics 2D Settings
                 Physics2D.gravity = gravity2D;
