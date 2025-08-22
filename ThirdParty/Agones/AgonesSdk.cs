@@ -267,15 +267,16 @@ namespace Agones
             {
                 await Task.Delay(TimeSpan.FromSeconds(healthIntervalSecond));
 
-                try
-                {
+                try {
                     await SendRequestAsync("/health", "{}");
-                }
-                catch (ObjectDisposedException)
-                {
+                } catch (ObjectDisposedException) {
+                    Debug.LogWarning("Object disposed on heartbeat.");
                     break;
+                } catch (Exception ex) {
+                    Debug.LogWarning("Error sending heartbeat: " + ex);
                 }
             }
+            Debug.LogWarning("Heartbeat interval has exited. The server will be marked as unhealthy.");
         }
 
         /// <summary>
