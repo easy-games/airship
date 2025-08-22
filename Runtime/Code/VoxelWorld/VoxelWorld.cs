@@ -246,6 +246,11 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return voxel;
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int SetVoxelFlippedRotation(int voxel, Flips flip) {
+        return SetVoxelFlippedBits(voxel, (byte)flip);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int HashCoordinates(int x, int y, int z) {

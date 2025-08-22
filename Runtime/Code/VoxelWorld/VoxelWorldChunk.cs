@@ -233,7 +233,7 @@ namespace VoxelWorldStuff {
             prefabObjects = null;
         }
 
-        private void FullInstatiatePrefabsMainThread() {
+        private void FullInstantiatePrefabsMainThread() {
             // ClearPrefabsMainThread();
 
             if (prefabObjects == null) {
@@ -677,7 +677,7 @@ namespace VoxelWorldStuff {
                 }
 
                 //Fill the prefabs out
-                FullInstatiatePrefabsMainThread();
+                FullInstantiatePrefabsMainThread();
 
                 //Fill the collision out
                 VoxelWorldCollision.MakeCollision(this);
@@ -850,7 +850,7 @@ namespace VoxelWorldStuff {
                     Profiler.EndSample();
 
                     Profiler.BeginSample("SpawnPrefabs");
-                    FullInstatiatePrefabsMainThread();
+                    FullInstantiatePrefabsMainThread();
                     Profiler.EndSample();
 
                     Profiler.BeginSample("RebuildCollision");
