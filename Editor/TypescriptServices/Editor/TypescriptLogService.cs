@@ -148,7 +148,7 @@ namespace Airship.Editor {
             if (logFolder == null) return; // can't start if no log folder
 
             try {
-                if (!Directory.Exists(LogFolder)) Directory.CreateDirectory(LogFolder);
+                if (!Directory.Exists(logFolder)) Directory.CreateDirectory(logFolder);
 
                 string logDir = Path.GetDirectoryName(Application.consoleLogPath);
                 logPath = LogFilePath;
