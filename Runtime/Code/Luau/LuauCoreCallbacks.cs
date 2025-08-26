@@ -410,18 +410,13 @@ public partial class LuauCore : MonoBehaviour {
 
                     case PODTYPE.POD_VECTOR3: {
                         if (t.IsAssignableFrom(vector3Type)) {
-                            Profiler.BeginSample("AssignVec3");
                             if (field != null) {
-                                // Debug.Log(field);
                                 Vector3 v = NewVector3FromPointer(propertyData);
                                 field.SetValue(objectReference, v);
                             } else {
-                                // Debug.Log(property);
                                 Vector3 v = NewVector3FromPointer(propertyData);
                                 SetValue<Vector3>(objectReference, v, property);
-                                // property.SetValue(objectReference, v);
                             }
-                            Profiler.EndSample();
                             return 0;
                         }
                         if (t.IsAssignableFrom(vector3IntType)) {
@@ -817,9 +812,7 @@ public partial class LuauCore : MonoBehaviour {
         else {
             // Not a static class object:
             
-            // Profiler.BeginSample("GetRef");
             System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
-            // Profiler.EndSample();
             if (objectReference == null) {
                 return LuauError(thread,
                     "Error: InstanceId not currently available:" + instanceId + ". propName=" + propName);
@@ -828,7 +821,6 @@ public partial class LuauCore : MonoBehaviour {
             Type sourceType = objectReference.GetType();
 
             // Scene Protection
-            // Profiler.BeginSample("SceneProtection");
             if (context != LuauContext.Protected) {
                 if (objectReference is GameObject targetGo) {
                     // var target = (GameObject)objectReference;
@@ -845,7 +837,6 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
             }
-            // Profiler.EndSample();
 
             _coreInstance.unityAPIClassesByType.TryGetValue(sourceType, out var valueTypeAPI);
             if (valueTypeAPI != null) {
@@ -1176,9 +1167,7 @@ public partial class LuauCore : MonoBehaviour {
         if (!IsReady) {
             return 0;
         }
-
-        // Profiler.BeginSample("PrepareData");
-        // Profiler.BeginSample("StringStuff");
+        
         var methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength, out var methodNameHash);
         string staticClassName;
         ulong staticClassNameHash = 0;
@@ -1187,33 +1176,18 @@ public partial class LuauCore : MonoBehaviour {
         } else {
             staticClassName = "";
         }
-        // Profiler.EndSample();
         
         var instance = LuauCore.CoreInstance;
 
         object reflectionObject = null;
         Type type = null;
-        
-        //Cast/marshal parameter data
-        // Profiler.BeginSample("MarshalCopy");
-        // Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
-        // Marshal.Copy(firstParameterSize, _parameterDataSizes, 0, numParameters);
-        // Marshal.Copy(firstParameterType, _parameterDataPODTypes, 0, numParameters);
-        // Marshal.Copy(firstParameterIsTable, _parameterIsTable, 0, numParameters);
-        // Profiler.EndSample();
 
-        // var parameterDataPtrs = new ArraySegment<IntPtr>(_parameterDataPtrs, 0, numParameters);
         var parameterDataPtrs = new Span<IntPtr>((void*) firstParameterData, numParameters);
-        // var parameterDataSizes = new ArraySegment<int>(_parameterDataSizes, 0, numParameters);
         var parameterDataSizes = new Span<int>((int*) firstParameterSize, numParameters);
-        // var parameterDataPODTypes = new ArraySegment<int>(_parameterDataPODTypes, 0, numParameters);
         var parameterDataPODTypes = new Span<int>((int*) firstParameterType, numParameters);
-        // var parameterDataPODTypes = new ArraySegment<int>(_parameterIsTable, 0, numParameters);
-        var parameterIsTable = new Span<int>((int*)firstParameterIsTable, numParameters);
-        // Profiler.EndSample();
+        var parameterIsTable = new Span<int>((int*) firstParameterIsTable, numParameters);
         
         //This detects STATIC classobjects only - live objects do not report the className
-        // Profiler.BeginSample("Static" + staticClassName);
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
         if (staticClassApi != null) {
             type = staticClassApi.GetAPIType();
@@ -1223,9 +1197,7 @@ public partial class LuauCore : MonoBehaviour {
                 return retValue;
             }
         }
-        // Profiler.EndSample();
         
-        // Profiler.BeginSample("GetType");
         if (type == null) {
             reflectionObject = ThreadDataManager.GetObjectReference(thread, instanceId);
 
