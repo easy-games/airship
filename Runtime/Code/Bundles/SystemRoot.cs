@@ -363,7 +363,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 #if !UNITY_IOS && !UNITY_ANDROID && AIRSHIP_PLAYER
 				preWarmedCoreShaders = true;
 				string[] collections = new[] {
-					"MainMenu",
+					"ClothingShaderVariants",
+					// "MainMenu",
 					// "RacingGame",
 					// "BWShaderVariants 1 (Raven)",
 				};
