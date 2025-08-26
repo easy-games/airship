@@ -28,7 +28,7 @@ public class LagCompensatorAPI : BaseLuaAPIClass {
 
             int layerMask = -1;
             if (numParameters >= 5) {
-                layerMask = LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes,
+                layerMask = LuauCore.GetParameterAsInt32(4, numParameters, parameterDataPODTypes,
                     parameterDataPtrs, parameterDataSizes);
             }
 

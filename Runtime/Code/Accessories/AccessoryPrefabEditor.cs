@@ -1,5 +1,7 @@
 ﻿using System;
+using Airship.LuauCore.Generated;
 using UnityEngine;
+using LuauGeneratedDirectCallbacks = Easy.Airship.Generated.LuauGeneratedDirectCallbacks;
 
 #if UNITY_EDITOR
 using UnityEditor;

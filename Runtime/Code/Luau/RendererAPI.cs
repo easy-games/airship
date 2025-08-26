@@ -15,7 +15,7 @@ public class RendererAPI : BaseLuaAPIClass {
         var isSetMaterial = methodName is "SetMaterial";
         if (isSetMaterial || methodName is "SetSharedMaterial") {
             if (numParameters == 2) {
-                var indx = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                var indx = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 var materialObj = LuauCore.GetParameterAsObject(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, thread);
 
                 if (targetObject is Renderer renderer && materialObj is Material material && indx >= 0) {

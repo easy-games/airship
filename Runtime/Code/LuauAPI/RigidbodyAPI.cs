@@ -17,7 +17,7 @@ public class RigidbodyAPI : BaseLuaAPIClass {
             }
 
             var force = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-            var forceMode = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            var forceMode = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             var rb = (Rigidbody)targetObject;
 

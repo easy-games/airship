@@ -12,7 +12,7 @@ public class TerrainDataAPI : BaseLuaAPIClass {
         Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
 
         if (methodName == "RemoveTree" && numParameters == 1) {
-            int index = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int index = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             TerrainData terrainData = (TerrainData)targetObject;
             var trees = new List<TreeInstance>(terrainData.treeInstances);
             trees.RemoveAt(index);

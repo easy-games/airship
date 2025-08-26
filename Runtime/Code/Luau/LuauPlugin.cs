@@ -8,13 +8,14 @@ using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
 using System.Threading;
+using Code.Luau.LuauAssembly;
 using Luau;
 using Debug = UnityEngine.Debug;
 
 public static class LuauPlugin {
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
-	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize, int isTable);
+	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, PODTYPE type, IntPtr propertyData, int propertySize, int isTable);
 	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield);
 	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
@@ -810,7 +811,7 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CopyTableToArray(IntPtr thread, IntPtr array, int type, int size, int idx);
-	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
+	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
 		var arr = new T[size];
 		array = arr;
 		IntPtr res;

@@ -9,6 +9,7 @@ using Airship.Editor;
 using Code.Authentication;
 using Code.Bootstrap;
 using Code.Http.Internal;
+using Code.Luau.LuauAssembly.Protection;
 using Code.Platform.Shared;
 using Editor.Packages;
 using Luau;
@@ -106,7 +107,7 @@ public class Deploy {
 		}
 
 		foreach (var scene in gameConfig.gameScenes) {
-			if (LuauCore.IsProtectedSceneName(scene.name)) {
+			if (LuauProtection.IsProtectedSceneName(scene.name)) {
 				Debug.LogError($"Game scene name not allowed: {scene.name}");
 				yield break;
 			}
@@ -117,7 +118,7 @@ public class Deploy {
 			}
 		}
 
-		if (LuauCore.IsProtectedSceneName(gameConfig.startingScene.name)) {
+		if (LuauProtection.IsProtectedSceneName(gameConfig.startingScene.name)) {
 			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingScene}");
 			yield break;
 		}

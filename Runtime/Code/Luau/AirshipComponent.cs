@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
 using Code.Luau;
+using Code.Luau.LuauAssembly.Protection;
 using JetBrains.Annotations;
 using Luau;
 using UnityEngine;
@@ -206,7 +207,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
 		if (!_validatedSceneInGameConfig) {
 			var scene = gameObject.scene;
-			if (!LuauCore.IsProtectedScene(scene)) {
+			if (!LuauProtection.IsProtectedScene(scene)) {
 				var sceneName = scene.name;
 				var gameConfig = GameConfig.Load();
 				if (gameConfig.gameScenes.ToList().Find((s) => s.name == sceneName) == null) {

@@ -1,4 +1,5 @@
 using System;
+using Code.Luau.LuauAssembly.Protection;
 using Luau;
 using UnityEngine;
 
@@ -9,7 +10,7 @@ public class ObjectAPI : BaseLuaAPIClass {
     }
     
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
-        if (methodName == "DontDestroyOnLoad" && LuauCore.CurrentContext == LuauContext.Game) {
+        if (methodName == "DontDestroyOnLoad" && LuauProtection.CurrentContext == LuauContext.Game) {
             Debug.LogError("[Airship] Access denied to method DontDestroyOnLoad(). Instead, load a new offline scene to store persistent GameObjects.");
             ThreadDataManager.Error(thread);
             return 0;

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Code.Luau.LuauAssembly;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -79,7 +80,7 @@ namespace Luau {
         public int valueType;
         
         // Custom
-        public LuauCore.PODTYPE podType;
+        public PODTYPE podType;
     }
     
     // This must match up with the C++ version of the struct
@@ -267,15 +268,15 @@ namespace Luau {
         public bool modified;
         
         // List of valid types for serializable properties
-        public static Dictionary<string, LuauCore.PODTYPE> _builtInTypes = new(){
-            { "Color", LuauCore.PODTYPE.POD_COLOR },
-            { "Vector4", LuauCore.PODTYPE.POD_VECTOR4 },
-            { "Vector3", LuauCore.PODTYPE.POD_VECTOR3 },
-            { "Vector2", LuauCore.PODTYPE.POD_VECTOR2 },
-            { "Quaternion", LuauCore.PODTYPE.POD_QUATERNION },
-            { "Matrix4x4", LuauCore.PODTYPE.POD_MATRIX },
-            // { "Rect", LuauCore.PODTYPE.POD_RECT }, // POD_RECT doesn't exist
-            // { "LayerMask", LuauCore.PODTYPE.POD_LAYERMASK }, // POD_LAYERMASK doesn't exist
+        public static Dictionary<string, PODTYPE> _builtInTypes = new(){
+            { "Color", PODTYPE.POD_COLOR },
+            { "Vector4", PODTYPE.POD_VECTOR4 },
+            { "Vector3", PODTYPE.POD_VECTOR3 },
+            { "Vector2", PODTYPE.POD_VECTOR2 },
+            { "Quaternion", PODTYPE.POD_QUATERNION },
+            { "Matrix4x4", PODTYPE.POD_MATRIX },
+            // { "Rect", PODTYPE.POD_RECT }, // POD_RECT doesn't exist
+            // { "LayerMask", PODTYPE.POD_LAYERMASK }, // POD_LAYERMASK doesn't exist
         };
 
         private AirshipComponentPropertyType _componentType = AirshipComponentPropertyType.AirshipUnknown;

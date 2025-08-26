@@ -1,5 +1,4 @@
 using System;
-using Luau;
 using Mirror;
 using UnityEngine;
 
@@ -42,12 +41,12 @@ public class PhysicsAPI : BaseLuaAPIClass
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance);
                 } else if (numParameters == 4) {
                     // 4 params
-                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                    int layerMask = LuauCore.GetParameterAsInt32(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask);
                 } else {
                     // 5 params
-                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-                    QueryTriggerInteraction queryTriggerInteraction = (QueryTriggerInteraction) LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                    int layerMask = LuauCore.GetParameterAsInt32(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                    QueryTriggerInteraction queryTriggerInteraction = (QueryTriggerInteraction) LuauCore.GetParameterAsInt32(4, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         parameterDataSizes);
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask, queryTriggerInteraction);
                 }
@@ -94,7 +93,7 @@ public class PhysicsAPI : BaseLuaAPIClass
                         parameterDataPtrs, parameterDataSizes);
                     var maxDistance = LuauCore.GetParameterAsFloat(3, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
-                    var layerMask = LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes,
+                    var layerMask = LuauCore.GetParameterAsInt32(4, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
 
                     var hit = Physics.SphereCast(origin, radius, direction, out var hitInfo, maxDistance, layerMask);
@@ -111,9 +110,9 @@ public class PhysicsAPI : BaseLuaAPIClass
                         parameterDataPtrs, parameterDataSizes);
                     var maxDistance = LuauCore.GetParameterAsFloat(3, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
-                    var layerMask = LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes,
+                    var layerMask = LuauCore.GetParameterAsInt32(4, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
-                    var triggerInteraction = LuauCore.GetParameterAsInt(5, numParameters, parameterDataPODTypes,
+                    var triggerInteraction = LuauCore.GetParameterAsInt32(5, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
 
                     var hit = Physics.SphereCast(origin, radius, direction, out var hitInfo, maxDistance, layerMask, (QueryTriggerInteraction)triggerInteraction);
@@ -149,7 +148,7 @@ public class PhysicsAPI : BaseLuaAPIClass
 
             int layerMask;
             if (numParameters >= 6) {
-                layerMask = LuauCore.GetParameterAsInt(5, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                layerMask = LuauCore.GetParameterAsInt32(5, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);
             } else {
                 layerMask = Physics.DefaultRaycastLayers;
@@ -157,7 +156,7 @@ public class PhysicsAPI : BaseLuaAPIClass
 
             QueryTriggerInteraction queryTriggerInteraction;
             if (numParameters >= 7) {
-                queryTriggerInteraction = (QueryTriggerInteraction) LuauCore.GetParameterAsInt(6, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                queryTriggerInteraction = (QueryTriggerInteraction) LuauCore.GetParameterAsInt32(6, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);
             } else {
                 queryTriggerInteraction = QueryTriggerInteraction.UseGlobal;
@@ -194,7 +193,7 @@ public class PhysicsAPI : BaseLuaAPIClass
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance);
                 } else {
                     // 4 params (mask)
-                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                    int layerMask = LuauCore.GetParameterAsInt32(3, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask);
                 }
 
@@ -209,7 +208,7 @@ public class PhysicsAPI : BaseLuaAPIClass
 
         if (methodName == "InvertMask") {
             if (numParameters == 1) {
-                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                int layerMask = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
                 return 1;
             }

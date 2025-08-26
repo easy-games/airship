@@ -38,7 +38,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
         if (methodName == "InvertMask") {
             if (numParameters == 1)
             {
-                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                int layerMask = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
                 LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
                 return 1;

@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections.Generic;
+using Code.Luau.LuauAssembly;
 using UnityEngine;
 using Luau;
 using Object = UnityEngine.Object;
@@ -77,7 +78,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         return -1;
     }
 
-    public override int OverrideMemberSetter(LuauContext context, IntPtr thread, object targetObject, string setterName, LuauCore.PODTYPE dataType, IntPtr dataPtr,
+    public override int OverrideMemberSetter(LuauContext context, IntPtr thread, object targetObject, string setterName, PODTYPE dataType, IntPtr dataPtr,
         int dataPtrSize) {
 #if AIRSHIP_PLAYER
         if (setterName == "tag") {
@@ -155,10 +156,10 @@ public class GameObjectAPI : BaseLuaAPIClass {
             var findObjectsInactive = FindObjectsInactive.Exclude;
             var useFindObjectsInactive = false;
             if (numParameters == 2) {
-                sortMode = (FindObjectsSortMode)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                sortMode = (FindObjectsSortMode)LuauCore.GetParameterAsInt32(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             } else if (numParameters == 3) {
                 useFindObjectsInactive = true;
-                findObjectsInactive = (FindObjectsInactive)LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                findObjectsInactive = (FindObjectsInactive)LuauCore.GetParameterAsInt32(2, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             } else {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: FindObjectsByType expected 1 or 2 parameters");
@@ -416,14 +417,14 @@ public class GameObjectAPI : BaseLuaAPIClass {
                 Debug.LogError("Error: OnUpdate takes 1 parameter");
                 return 0;
             }
-            if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
+            if (parameterDataPODTypes[0] != (int)PODTYPE.POD_LUAFUNCTION) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: OnUpdate parameter must be a function");
                 return 0;
             }
 
            
-            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int handle = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             ThreadDataManager.SetOnUpdateHandle(context, thread, handle, gameObject);
@@ -437,14 +438,14 @@ public class GameObjectAPI : BaseLuaAPIClass {
                 Debug.LogError("Error: OnLateUpdate takes 1 parameter");
                 return 0;
             }
-            if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
+            if (parameterDataPODTypes[0] != (int)PODTYPE.POD_LUAFUNCTION) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: OnLateUpdate parameter must be a function");
                 return 0;
             }
 
             
-            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int handle = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             ThreadDataManager.SetOnLateUpdateHandle(context, thread, handle, gameObject);
@@ -457,14 +458,14 @@ public class GameObjectAPI : BaseLuaAPIClass {
                 Debug.LogError("Error: OnFixedUpdate takes 1 parameter");
                 return 0;
             }
-            if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
+            if (parameterDataPODTypes[0] != (int)PODTYPE.POD_LUAFUNCTION) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: OnFixedUpdate parameter must be a function");
                 return 0;
             }
 
             
-            int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int handle = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             ThreadDataManager.SetOnFixedUpdateHandle(context, thread, handle, gameObject);
@@ -482,14 +483,14 @@ public class GameObjectAPI : BaseLuaAPIClass {
 
         if (methodName == "SetLayerRecursive") {
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
-            int layer = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int layer = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             SetLayerRecursive(gameObject.transform, layer, ~0);
             return 0;
         }
         if (methodName == "ReplaceLayerRecursive") {
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
-            int layer = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-            int replaceMask = LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int layer = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            int replaceMask = LuauCore.GetParameterAsInt32(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             SetLayerRecursive(gameObject.transform, layer, replaceMask);
             return 0;
         }

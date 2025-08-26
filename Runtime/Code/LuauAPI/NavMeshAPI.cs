@@ -17,7 +17,7 @@ public class NavMeshAPI : BaseLuaAPIClass {
             var maxDistance = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes,
                 parameterDataPtrs, parameterDataSizes);
 
-            var areaMask = LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes,
+            var areaMask = LuauCore.GetParameterAsInt32(2, numParameters, parameterDataPODTypes,
                 parameterDataPtrs, parameterDataSizes);
 
             if (NavMesh.SamplePosition(sourcePosition, out NavMeshHit hit, maxDistance, areaMask)) {
@@ -32,7 +32,7 @@ public class NavMeshAPI : BaseLuaAPIClass {
             var sourcePosition = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,
                 parameterDataPtrs, parameterDataSizes);
 
-            var areaMask = LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+            var areaMask = LuauCore.GetParameterAsInt32(1, numParameters, parameterDataPODTypes,
                 parameterDataPtrs, parameterDataSizes);
 
             if (NavMesh.FindClosestEdge(sourcePosition, out NavMeshHit hit, areaMask)) {
@@ -50,7 +50,7 @@ public class NavMeshAPI : BaseLuaAPIClass {
             var targetPosition = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes,
                 parameterDataPtrs, parameterDataSizes);
 
-            var areaMask = LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes,
+            var areaMask = LuauCore.GetParameterAsInt32(2, numParameters, parameterDataPODTypes,
                 parameterDataPtrs, parameterDataSizes);
 
             if (NavMesh.Raycast(sourcePosition, targetPosition, out NavMeshHit hit, areaMask)) {

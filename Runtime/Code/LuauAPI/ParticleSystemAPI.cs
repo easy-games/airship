@@ -28,7 +28,7 @@ public class ParticleSystemAPI : BaseLuaAPIClass {
         {
             if (numParameters == 2)
             {
-                int amount = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                int amount = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);
                 Vector3 pos = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);

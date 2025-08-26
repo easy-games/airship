@@ -27,14 +27,14 @@ public class GradientAPI : BaseLuaAPIClass {
         
         switch (methodName) {
             case "CreateColorKeyArray": {
-                var size = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                var size = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);
                 
                 LuauCore.WritePropertyToThread(thread, new GradientColorKey[size], typeof(GradientColorKey[]));
                 return 1;
             }
             case "CreateAlphaKeyArray": {
-                var size = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                var size = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);
             
                 LuauCore.WritePropertyToThread(thread, new GradientAlphaKey[size], typeof(GradientAlphaKey[]));

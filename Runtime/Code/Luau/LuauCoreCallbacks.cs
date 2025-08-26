@@ -11,8 +11,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Airship.LuauCore.Generated;
 using Assets.Luau;
 using Code.Luau;
+using Code.Luau.LuauAssembly;
+using Code.Luau.LuauAssembly.Protection;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Profiling;
@@ -25,9 +28,6 @@ using System.Text.RegularExpressions;
 #endif
 
 public partial class LuauCore : MonoBehaviour {
-    /// The Luau context from the most recent call from the Luau plugin.
-    public static LuauContext CurrentContext = LuauContext.Game;
-
     private static LuauPlugin.PrintCallback printCallback_holder = PrintCallback;
 
     private const int MaxParameters = 20;
@@ -147,7 +147,7 @@ public partial class LuauCore : MonoBehaviour {
         getUnityObjectNameCallback_holder = GetUnityObjectNameCallback;
     }
 
-    private static int LuauError(IntPtr thread, string err) {
+    public static int LuauError(IntPtr thread, string err) {
         LuauPlugin.LuauPushCsError(err);
         ThreadDataManager.Error(thread);
         return -1;
@@ -170,7 +170,7 @@ public partial class LuauCore : MonoBehaviour {
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
     static void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
-        CurrentContext = context;
+        LuauProtection.CurrentContext = context;
         
         var res = LuauCore.PtrToStringUTF8(buffer, length);
         
@@ -248,7 +248,7 @@ public partial class LuauCore : MonoBehaviour {
 
     // When a lua object wants to set a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
-    private static int SetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
+    private static int SetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
         var ret = 0;
         try {
             ret = SetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, type, propertyData, propertyDataSize, isTable);
@@ -259,8 +259,8 @@ public partial class LuauCore : MonoBehaviour {
         return ret;
     }
     
-    private static int SetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
-        CurrentContext = context;
+    private static int SetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, PODTYPE type, IntPtr propertyData, int propertyDataSize, int isTable) {
+        LuauProtection.CurrentContext = context;
         
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         
@@ -292,14 +292,14 @@ public partial class LuauCore : MonoBehaviour {
             if (context != LuauContext.Protected) {
                 if (sourceType == typeof(GameObject)) {
                     var target = (GameObject) objectReference;
-                    if (IsAccessBlocked(context, target)) {
+                    if (LuauProtection.IsAccessBlocked(context, target)) {
                         return target != null ?
                             LuauError(thread, "[Airship] Access denied when trying to set property " + target.name + "." + propName) :
                             LuauError(thread, "[Airship] Access denied when trying to set property (unknown)." + propName);
                     }
                 } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
                     var target = (Component) objectReference;
-                    if (target != null && target.gameObject != null && IsAccessBlocked(context, target.gameObject)) {
+                    if (target != null && target.gameObject != null && LuauProtection.IsAccessBlocked(context, target.gameObject)) {
                         return LuauError(thread, "[Airship] Access denied when trying to set property " + target.name + "." + propName);
                     }
                 }
@@ -387,12 +387,12 @@ public partial class LuauCore : MonoBehaviour {
                                 && propertyObjectRef.GetType() == typeof(Transform)
                             ) {
                                 var targetTransform = (Transform)objectReference;
-                                if (IsProtectedScene(targetTransform.gameObject.scene)) {
+                                if (LuauProtection.IsProtectedScene(targetTransform.gameObject.scene)) {
                                     return LuauError(thread, "[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
                                 }
 
                                 var valueTransform = (Transform)propertyObjectRef;
-                                if (IsProtectedScene(valueTransform.gameObject.scene)) {
+                                if (LuauProtection.IsProtectedScene(valueTransform.gameObject.scene)) {
                                     return LuauError(thread, "[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
                                 }
                             }
@@ -763,7 +763,7 @@ public partial class LuauCore : MonoBehaviour {
     // private static readonly ProfilerMarker<string> getPropertyMarker = new ProfilerMarker<string>("LuauCore.GetProperty", "asd");
 
     private static int GetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
-        CurrentContext = context;
+        LuauProtection.CurrentContext = context;
 
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         LuauCore instance = LuauCore.CoreInstance;
@@ -832,14 +832,14 @@ public partial class LuauCore : MonoBehaviour {
             if (context != LuauContext.Protected) {
                 if (objectReference is GameObject targetGo) {
                     // var target = (GameObject)objectReference;
-                    if (IsAccessBlocked(context, targetGo)) {
+                    if (LuauProtection.IsAccessBlocked(context, targetGo)) {
                         return LuauError(thread,
                             "[Airship] Access denied when trying to read " + targetGo.name + ".");
                     }
                 }
                 else if (sourceType.IsAssignableFrom(typeof(Component))) {
                     var target = (Component)objectReference;
-                    if (target && IsAccessBlocked(context, target.gameObject)) {
+                    if (target && LuauProtection.IsAccessBlocked(context, target.gameObject)) {
                         return LuauError(thread,
                             "[Airship] Access denied when trying to read " + target.name + ".");
                     }
@@ -1077,7 +1077,7 @@ public partial class LuauCore : MonoBehaviour {
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
     private static void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen) {
-        CurrentContext = context;
+        LuauProtection.CurrentContext = context;
         
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameLen);
         var scriptNameStr = LuauCore.PtrToStringUTF8(scriptName, scriptNameLen);
@@ -1091,7 +1091,7 @@ public partial class LuauCore : MonoBehaviour {
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
     private static IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
-        CurrentContext = context;
+        LuauProtection.CurrentContext = context;
 
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
 
@@ -1170,9 +1170,7 @@ public partial class LuauCore : MonoBehaviour {
     // When a lua object wants to call a method
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
-        CurrentContext = context;
-        // Profiler.BeginSample("Start");
-        // Profiler.EndSample();
+        LuauProtection.CurrentContext = context;
         
         Marshal.WriteInt32(shouldYield, 0);
         if (!IsReady) {
@@ -1182,22 +1180,20 @@ public partial class LuauCore : MonoBehaviour {
         // Profiler.BeginSample("PrepareData");
         // Profiler.BeginSample("StringStuff");
         var methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength, out var methodNameHash);
-        // callCount[methodName] = callCount.TryGetValue(methodName, out var oldVal) ? oldVal + 1 : 1;
-        // numCalls++;
-        // if ((numCalls % 10_000) == 0) {
-        //     Debug.Log($" ---- Logging call counts ({numCalls}) ----");
-        //     foreach (var (method, count) in callCount.OrderByDescending(x => x.Value).Take(20)) {
-        //         Debug.Log($"{method}: {count}");
-        //     }
-        // }
-        var staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
+        string staticClassName;
+        ulong staticClassNameHash = 0;
+        if (classNameSize > 0) {
+            staticClassName = PtrToStringUTF8(classNamePtr, classNameSize, out staticClassNameHash);
+        } else {
+            staticClassName = "";
+        }
         // Profiler.EndSample();
         
         var instance = LuauCore.CoreInstance;
 
         object reflectionObject = null;
         Type type = null;
-
+        
         //Cast/marshal parameter data
         // Profiler.BeginSample("MarshalCopy");
         // Marshal.Copy(firstParameterData, _parameterDataPtrs, 0, numParameters);
@@ -1224,7 +1220,6 @@ public partial class LuauCore : MonoBehaviour {
             //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
             int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
             if (retValue >= 0) {
-                Profiler.EndSample();
                 return retValue;
             }
         }
@@ -1239,21 +1234,32 @@ public partial class LuauCore : MonoBehaviour {
             }
             type = reflectionObject.GetType();
         }
-        // Profiler.EndSample();
-        
-        if (methodName == "GetInstanceID") {
-            var objInstId = ((Object)reflectionObject).GetInstanceID();
-            WritePropertyToThreadInt32(thread, objInstId);
-            Wrap_Object_ToString()
-            return 1;
-        }
 
-        Profiler.BeginSample("CheckCustom");
+        var directCallbackHash = methodNameHash;
+        // This could be done as a multiple step process to only full method hash if we know this is a fast method
+        for (var i = 0; i < numParameters; i++) {
+            directCallbackHash = ExtendByteHash(directCallbackHash, (byte) parameterDataPODTypes[i]);
+        }
+        // We use type.FullName because, although unnecessarily longer, it avoids the allocations involved in
+        // type.Name (I think internally FullName is stored and then processed to produce Type.Name)
+        foreach (var c in type.FullName) {
+            directCallbackHash = ExtendByteHash(directCallbackHash, (byte) c);
+        }
+        
+        try {
+            if (CallMethodDirectly(directCallbackHash, context, reflectionObject, thread, firstParameterData, firstParameterSize,
+                    firstParameterType, numParameters, out var methodReturn)) {
+                return methodReturn; // (1?, we should probably return number of pushed values from CallMethodDirectly?)
+            }
+        } catch (Exception e) {
+            return LuauError(thread,
+                "Error: Exception thrown in method " + type.Name + "." + methodName + ": " + e);
+        }
+        
         if (reflectionObject != null) {
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
             if (valueTypeAPI != null) {
-                Profiler.BeginSample("Protection");
                 // Destroyed protection
                 if (type.IsSubclassOf(typeof(UnityEngine.Object))) {
                     if ((Object) reflectionObject == null) {
@@ -1266,30 +1272,25 @@ public partial class LuauCore : MonoBehaviour {
                 if (context != LuauContext.Protected) {
                     if (type == typeof(GameObject)) {
                         var target = (GameObject) reflectionObject;
-                        if (IsAccessBlocked(context, target)) {
+                        if (LuauProtection.IsAccessBlocked(context, target)) {
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
-                        if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
+                        if (target.gameObject && LuauProtection.IsAccessBlocked(context, target.gameObject)) {
                             return LuauError(thread, $"[Airship] Access denied when trying to call method {target.name}.{methodName}. Full type name: {type.FullName}");
                         }
                     }
                 }
-                Profiler.EndSample();
 
-                Profiler.BeginSample("OverrideMember");
                 int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
                     parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-                Profiler.EndSample();
                 if (retValue >= 0) {
                     return retValue;
                 }
             }
         }
-        Profiler.EndSample();
         
-        Profiler.BeginSample("MethodStartChecks");
         
         // Check for IsA call:
         if (methodName == "IsA") {
@@ -1327,11 +1328,11 @@ public partial class LuauCore : MonoBehaviour {
                 if (numParameters != 1) {
                     return LuauError(thread, $"Error: {methodName} takes 1 parameter (a function!)");
                 }
-                if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION) {
+                if (parameterDataPODTypes[0] != (int)PODTYPE.POD_LUAFUNCTION) {
                     return LuauError(thread, $"Error: {methodName} parameter must be a function");
                 }
 
-                int handle = GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                int handle = GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
                 ParameterInfo[] eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
 
                 foreach (ParameterInfo param in eventInfoParams) {
@@ -1366,7 +1367,6 @@ public partial class LuauCore : MonoBehaviour {
                 return 1;
             }
         }
-        Profiler.EndSample();
 
         //Use reflection to try and find the method now
         bool countFound = false;
@@ -1374,13 +1374,9 @@ public partial class LuauCore : MonoBehaviour {
         ParameterInfo[] finalParameters = null;
         MethodInfo finalMethod = null;
 
-        Profiler.BeginSample("UnrollPods");
         var podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
-        Profiler.EndSample();
 
-        Profiler.BeginSample("LuauCore.FindMethod");
         FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, parameterIsTable, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext, out var attachContext);
-        Profiler.EndSample();
 
         if (finalMethod == null) {
             if (insufficientContext) {
@@ -1400,9 +1396,7 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         // object[] parsedData = null;
-        Profiler.BeginSample("ParseData");
         var success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, parameterDataSizes, parameterIsTable, podObjects, attachContext, out var parsedData);
-        Profiler.EndSample();
         
         if (attachContext) {
             parsedData[0] = context;
@@ -1425,7 +1419,7 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
 
-                if (targetTransform != null && IsProtectedScene(targetTransform.gameObject.scene)) {
+                if (targetTransform != null && LuauProtection.IsProtectedScene(targetTransform.gameObject.scene)) {
                     return LuauError(thread, $"[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                 }
             } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
@@ -1433,25 +1427,25 @@ public partial class LuauCore : MonoBehaviour {
                     var paramType = parsedData[0].GetType();
                     if (paramType == typeof(GameObject)) {
                         var param = parsedData[0] as GameObject;
-                        if (param != null && IsProtectedScene(param.scene)) {
+                        if (param != null && LuauProtection.IsProtectedScene(param.scene)) {
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected GameObject \"{param.name}\"");
                         }
                     } else if (paramType == typeof(Component)) {
                         var param = parsedData[0] as Component;
-                        if (param != null && IsProtectedScene(param.gameObject.scene)) {
+                        if (param != null && LuauProtection.IsProtectedScene(param.gameObject.scene)) {
                             return LuauError(thread, $"[Airship] Access denied when trying to destroy a protected Component \"{param.gameObject.name}\"");
                         }
                     }
                 }
             } else if (methodName == "SetParent" && type == typeof(Transform)) {
                 var callingTransform = reflectionObject as Transform;
-                if (callingTransform != null && IsAccessBlocked(context, callingTransform.gameObject)) {
+                if (callingTransform != null && LuauProtection.IsAccessBlocked(context, callingTransform.gameObject)) {
                     return LuauError(thread, $"[Airship] Access denied when trying set parent of a transform inside a protected scene \"{callingTransform.gameObject.scene.name}\"");
                 }
 
                 if (parsedData[0] != null && parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
-                    if (targetTransform != null && IsAccessBlocked(context, targetTransform.gameObject)) {
+                    if (targetTransform != null && LuauProtection.IsAccessBlocked(context, targetTransform.gameObject)) {
                         return LuauError(thread, $"[Airship] Access denied when trying set parent to a transform inside a protected scene \"{targetTransform.gameObject.scene.name}\"");
                     }
                 }
@@ -1487,9 +1481,7 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         try {
-            Profiler.BeginSample("Invoke");
             returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
-            Profiler.EndSample();
         }
         catch (TargetInvocationException e) {
             return LuauError(thread,
@@ -1522,7 +1514,7 @@ public partial class LuauCore : MonoBehaviour {
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
     static unsafe int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable) {
-        CurrentContext = context;
+        LuauProtection.CurrentContext = context;
         
         if (!IsReady) return 0;
         
