@@ -2,7 +2,7 @@
 
 namespace Code {
     public static class AirshipConst {
-        public const int playerVersion = 14;
+        public const int playerVersion = 15;
 
         /// <summary>
         /// The server will kick clients that have a playerVersion lower than this value.
