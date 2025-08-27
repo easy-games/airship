@@ -485,11 +485,10 @@ using Object = UnityEngine.Object;
             internal static void BuildTypescript(TypeScriptCompileFlags flags = 0) {
                 BuildTypescript(new []{ TypescriptProjectsService.Project }, flags);
             }
+            
             internal static void BuildTypescript(TypescriptProject[] projects, TypeScriptCompileFlags compileFlags = 0) {
-                var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
-                if (isRunningServices) StopCompilerServices();
-
-
+                // var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
+                // if (isRunningServices) StopCompilerServices();
                 
                 var compiled = 0;
                 var totalCompileCount = projects.Length;
@@ -504,6 +503,7 @@ using Object = UnityEngine.Object;
                         Project = project.Directory,
                         Package = project.TsConfig.airship.PackageFolderPath,
                         Json = true,
+                        SkipPackages = (compileFlags & TypeScriptCompileFlags.SkipPackages) != 0,
                         Publishing = (compileFlags & TypeScriptCompileFlags.Publishing) != 0,
                         Incremental = (compileFlags & TypeScriptCompileFlags.Incremental) != 0,
                         Verbose = (compileFlags & TypeScriptCompileFlags.Verbose) != 0 || EditorIntegrationsConfig.instance.typescriptVerbose,

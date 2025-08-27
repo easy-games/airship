@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Airship.Editor {
@@ -29,6 +30,11 @@ namespace Airship.Editor {
         public bool Json { get; set; }
 
         /// <summary>
+        /// Tells the compiler to ignore compiling packages (will be faster, but more prone to bugs)
+        /// </summary>
+        public bool SkipPackages { get; set; }
+
+        /// <summary>
         /// Flag to enable incremental mode
         /// </summary>
         public bool Incremental { get; set; }
@@ -49,7 +55,12 @@ namespace Airship.Editor {
         /// <returns></returns>
         public string GetCommandString(CompilerCommand compilerCommand) {
             var args = new List<string>();
+            var flags = new List<char>();
 
+            if (flags.Count > 0) {
+                args.Add("-" + new string(flags.ToArray()));
+            }
+            
             if (compilerCommand == CompilerCommand.BuildWatch) {
                 args.Add("build --watch");
             } else if (compilerCommand == CompilerCommand.BuildOnly) {
@@ -66,6 +77,10 @@ namespace Airship.Editor {
 
             if (Incremental) {
                 args.Add("--incremental");
+            }
+
+            if (SkipPackages) {
+                args.Add("--skipPackages");
             }
             
             if (Package != null) {

@@ -39,7 +39,10 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public float fixedDeltaTime = .025f;
 
     [HideInInspector] public bool supportsMobile;
-
+    
+    // this is for backwards compat with games not using code splitting, eventually this will be default.
+    [HideInInspector] public bool codeSplitting = false;
+    
     [HideInInspector] public bool compileURPShaders = false;
 
     private const string TagPrefix = "AirshipTag";

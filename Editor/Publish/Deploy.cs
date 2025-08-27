@@ -138,6 +138,13 @@ public class Deploy {
 			}
 			
 			TypescriptCompilationService.BuildTypescript(compileFlags);
+		} else if (gameConfig.codeSplitting) {
+			var compileFlags = TypeScriptCompileFlags.Publishing 
+			                   | TypeScriptCompileFlags.DisplayProgressBar 
+			                   | TypeScriptCompileFlags.SkipPackages 
+			                   | TypeScriptCompileFlags.SkipReimportQueue; // skipping packages in the bg
+			
+			TypescriptCompilationService.BuildTypescript(compileFlags);
 		}
 		
 		if (TypescriptCompilationService.ErrorCount > 0) {
@@ -228,7 +235,7 @@ public class Deploy {
 					codeZip.AddEntry(path, File.ReadAllBytes(path));
 					continue;
 				}
-				
+
 				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
 				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
 				if (!File.Exists(luaOutPath)) {
@@ -238,9 +245,25 @@ public class Deploy {
 
 				// We want a .lua in the same spot the .ts would be
 				var luaFakePath = path.Replace(".ts", ".lua");
-				var bytes = File.ReadAllBytes(luaOutPath);
-				codeZip.AddEntry(luaFakePath, bytes);
-
+                
+				if (gameConfig.codeSplitting) {
+					var serverPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+						TypescriptProjectsService.DeploymentContext.Server);
+					var clientPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+						TypescriptProjectsService.DeploymentContext.Client);
+					
+					var serverBytes = File.ReadAllBytes(serverPath);
+					var serverFakePath = path.Replace(".ts", ".server.lua");
+					codeZip.AddEntry(serverFakePath, serverBytes);
+					
+					var clientBytes = File.ReadAllBytes(clientPath);
+					var clientFakePath = path.Replace(".ts", ".client.lua");
+					codeZip.AddEntry(clientFakePath, clientBytes);
+				} else {
+					var bytes = File.ReadAllBytes(luaOutPath);
+					codeZip.AddEntry(luaFakePath, bytes);
+				}
+				
 				var jsonPath = luaOutPath + ".json~";
 				if (File.Exists(jsonPath)) {
 					// var jsonBytes = File.ReadAllBytes(jsonPath);
