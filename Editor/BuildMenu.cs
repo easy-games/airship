@@ -114,6 +114,8 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Normal");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             
