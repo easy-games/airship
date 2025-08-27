@@ -99,13 +99,13 @@ namespace Airship.Editor {
             }   
         }
         
-        public enum DeploymentContext {
+        internal enum DeploymentContext {
             Server,
             Client,
             Shared,
         }
         
-        public static string GetPublishingContextPath(string inputFilePath, DeploymentContext deploymentContext) {
+        internal static string GetPublishingContextPath(string inputFilePath, DeploymentContext deploymentContext) {
             if (deploymentContext == DeploymentContext.Server) {
                 return inputFilePath.Replace(Project.TsConfig.OutDir, ServerDistDir);
             } else if (deploymentContext == DeploymentContext.Client) {

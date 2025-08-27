@@ -239,6 +239,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 					foreach (var entry in zip.Entries) {
 						var entryName = entry.Name;
+						var entryFullName = entry.FullName;
+						
 						var runContext = AirshipRuntimeHint.None; // both server and client
 						
 						if (entryName.EndsWith("json~")) {
@@ -253,12 +255,12 @@ public class SystemRoot : Singleton<SystemRoot> {
 						if (entryName.EndsWith(AirshipRuntimePath.ClientExtension)) {
 							// client script
 							runContext = AirshipRuntimeHint.Client;
-							entryName = entryName.Replace(AirshipRuntimePath.ClientExtension, AirshipRuntimePath.LuaExtension);
+							entryFullName = entryFullName.Replace(AirshipRuntimePath.ClientExtension, AirshipRuntimePath.LuaExtension);
 							
 						} else if (entryName.EndsWith(AirshipRuntimePath.ServerExtension)) {
 							// server script
 							runContext = AirshipRuntimeHint.Server;
-							entryName = entryName.Replace(AirshipRuntimePath.ServerExtension, AirshipRuntimePath.LuaExtension);
+							entryFullName = entryFullName.Replace(AirshipRuntimePath.ServerExtension, AirshipRuntimePath.LuaExtension);
 						}
 						
 						// check for metadata json
@@ -271,7 +273,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 								var bf = Object.Instantiate(binaryFileTemplate);
 								bf.m_metadata = null;
 								bf.airshipBehaviour = false;
-								LuauCompiler.RuntimeCompile(entryName, text, bf, airshipBehaviour);
+								LuauCompiler.RuntimeCompile(entryFullName, text, bf, airshipBehaviour);
 								
 								// Depending on what kind of script we have, determines if it's server-only, client-only or both
 								//		Since packages can still be both, we have to separate the game scripts themselves.
