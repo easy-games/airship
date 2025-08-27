@@ -1206,7 +1206,10 @@ public partial class LuauCore : MonoBehaviour {
             }
             type = reflectionObject.GetType();
         }
-
+        
+        // Optimization opportunity: hash extension + method name hash could be optimized to use Luau atoms. From rough
+        // profiling this hashing seems to take about 30% of the method call overhead when we successfully use CallMethodDirectly
+        
         var directCallbackHash = methodNameHash;
         // This could be done as a multiple step process to only full method hash if we know this is a fast method
         for (var i = 0; i < numParameters; i++) {
