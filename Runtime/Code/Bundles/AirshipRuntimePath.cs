@@ -1,6 +1,6 @@
 ﻿public static class AirshipRuntimePath {
-    public const string ServerExtension = ".server-lua";
-    public const string ClientExtension = ".client-lua";
+    public const string ServerExtension = ".lua.server~";
+    public const string ClientExtension = ".lua.client~";
     public const string LuaExtension = ".lua";
 }
 

@@ -252,13 +252,22 @@ public class Deploy {
 					var clientPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
 						TypescriptProjectsService.DeploymentContext.Client);
 					
-					var serverBytes = File.ReadAllBytes(serverPath);
-					var serverFakePath = path.Replace(".ts", AirshipRuntimePath.ServerExtension);
-					codeZip.AddEntry(serverFakePath, serverBytes);
-					
-					var clientBytes = File.ReadAllBytes(clientPath);
-					var clientFakePath = path.Replace(".ts", AirshipRuntimePath.ClientExtension);
-					codeZip.AddEntry(clientFakePath, clientBytes);
+					if (File.Exists(serverPath) && File.Exists(clientPath)) {
+						var serverBytes = File.ReadAllBytes(serverPath);
+						var serverFakePath = path.Replace(".ts", AirshipRuntimePath.ServerExtension);
+						codeZip.AddEntry(serverFakePath, serverBytes);
+						
+						var clientBytes = File.ReadAllBytes(clientPath);
+						var clientFakePath = path.Replace(".ts", AirshipRuntimePath.ClientExtension);
+						codeZip.AddEntry(clientFakePath, clientBytes);
+					} else {
+						var sharedPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+							TypescriptProjectsService.DeploymentContext.Shared);
+						
+						var sharedBytes = File.ReadAllBytes(sharedPath);
+						var sharedFakePath = path.Replace(".ts", AirshipRuntimePath.LuaExtension);
+						codeZip.AddEntry(sharedFakePath, sharedBytes);
+					}
 				} else {
 					var bytes = File.ReadAllBytes(luaOutPath);
 					codeZip.AddEntry(luaFakePath, bytes);

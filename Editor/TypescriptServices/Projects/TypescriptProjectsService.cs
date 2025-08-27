@@ -74,23 +74,8 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
         
-        public enum DeploymentContext {
-            Server,
-            Client,
-        }
-
-        public static string GetPublishingContextPath(string inputFilePath, DeploymentContext deploymentContext) {
-            if (deploymentContext == DeploymentContext.Server) {
-                return inputFilePath.Replace(Project.TsConfig.OutDir, ServerDistDir);
-            } else if (deploymentContext == DeploymentContext.Client) {
-                return inputFilePath.Replace(Project.TsConfig.OutDir, ClientDistDir);
-            }
-
-            return inputFilePath;
-        }
-
-        
-        public static string ServerDistDir {
+                
+        private static string ServerDistDir {
             get {
                 var outDir = Project.TsConfig.OutDir;
                 var fullPath = Path.GetFullPath(outDir + "/../dist/server");
@@ -98,12 +83,38 @@ namespace Airship.Editor {
             }   
         }
 
-        public static string ClientDistDir {
+        private static string ClientDistDir {
             get {
                 var outDir = Project.TsConfig.OutDir;
                 var fullPath = Path.GetFullPath(outDir + "/../dist/client");
                 return "Assets/" + Path.GetRelativePath(Project.TsConfig.Directory, fullPath).Replace("\\", "/");
             }   
+        }
+        
+        private static string SharedDistDir {
+            get {
+                var outDir = Project.TsConfig.OutDir;
+                var fullPath = Path.GetFullPath(outDir + "/../dist/shared");
+                return "Assets/" + Path.GetRelativePath(Project.TsConfig.Directory, fullPath).Replace("\\", "/");
+            }   
+        }
+        
+        public enum DeploymentContext {
+            Server,
+            Client,
+            Shared,
+        }
+        
+        public static string GetPublishingContextPath(string inputFilePath, DeploymentContext deploymentContext) {
+            if (deploymentContext == DeploymentContext.Server) {
+                return inputFilePath.Replace(Project.TsConfig.OutDir, ServerDistDir);
+            } else if (deploymentContext == DeploymentContext.Client) {
+                return inputFilePath.Replace(Project.TsConfig.OutDir, ClientDistDir);
+            } else if (deploymentContext == DeploymentContext.Shared) {
+                return inputFilePath.Replace(Project.TsConfig.OutDir, SharedDistDir);
+            }
+
+            return inputFilePath;
         }
         
         private static string GetFullPath(string fileName)
