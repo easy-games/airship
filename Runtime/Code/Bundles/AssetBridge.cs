@@ -105,6 +105,17 @@ public class AssetBridge : IAssetBridge
 
 	public T GetBinaryFileFromLuaPath<T>(string luaPath) where T : Object {
 		var root = SystemRoot.Instance;
+		
+#if UNITY_SERVER
+		// Include server scripts in our search on the server
+		foreach (var scope in root.serverLuauFiles.Keys) {
+			var luauFiles = root.serverLuauFiles[scope];
+			if (luauFiles.TryGetValue(luaPath, out var binaryFile)) {
+				return binaryFile as T;
+			}
+		}
+#endif
+		
 		foreach (var scope in root.luauFiles.Keys) {
 			var luauFiles = root.luauFiles[scope];
 			if (luauFiles.TryGetValue(luaPath, out var binaryFile)) {

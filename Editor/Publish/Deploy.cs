@@ -253,11 +253,11 @@ public class Deploy {
 						TypescriptProjectsService.DeploymentContext.Client);
 					
 					var serverBytes = File.ReadAllBytes(serverPath);
-					var serverFakePath = path.Replace(".ts", ".server.lua");
+					var serverFakePath = path.Replace(".ts", AirshipRuntimePath.ServerExtension);
 					codeZip.AddEntry(serverFakePath, serverBytes);
 					
 					var clientBytes = File.ReadAllBytes(clientPath);
-					var clientFakePath = path.Replace(".ts", ".client.lua");
+					var clientFakePath = path.Replace(".ts", AirshipRuntimePath.ClientExtension);
 					codeZip.AddEntry(clientFakePath, clientBytes);
 				} else {
 					var bytes = File.ReadAllBytes(luaOutPath);
