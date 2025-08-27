@@ -144,8 +144,8 @@ namespace Code.Player {
                         toRemove.Add(entry.Key);
                     }
 
-                    toRemove.ForEach(userId => {
-                        agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, userId).Wait();
+                    toRemove.ForEach(async (userId) => {
+                        await agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, userId);
                         agonesReservationMap.Remove(userId);
                     });
                 } catch (Exception err) {
