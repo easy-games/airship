@@ -26,12 +26,19 @@ namespace Airship
 
 		private void OnEnable()
 		{
+			
 #if UNITY_EDITOR
 			if (!attemptConnectInEditor) {
 				Destroy(GetComponent<AgonesBetaSdk>());
 				return;
 			}
 #endif
+			// Agones never runs on the client
+			if (RunCore.IsClient()) {
+				Destroy(GetComponent<AgonesBetaSdk>());
+				return;
+			}
+			
 			AgonesCore.SetAgonesProxy(this);
 		}
 
