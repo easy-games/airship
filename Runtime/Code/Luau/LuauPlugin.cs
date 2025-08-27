@@ -825,7 +825,6 @@ public static class LuauPlugin {
 		}
 	}
 	
-	//int RegisterStringAtom(void* cstr_ptr, size_t len)
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
