@@ -265,9 +265,8 @@ namespace Agones
         {
             while (healthEnabled)
             {
-                await Task.Delay(TimeSpan.FromSeconds(healthIntervalSecond));
-
                 try {
+                    await Task.Delay(TimeSpan.FromSeconds(healthIntervalSecond));
                     await SendRequestAsync("/health", "{}");
                 } catch (ObjectDisposedException) {
                     Debug.LogWarning("Object disposed on heartbeat.");
@@ -300,6 +299,7 @@ namespace Agones
                 downloadHandler = new DownloadHandlerBuffer()
             };
             req.SetRequestHeader("Content-Type", "application/json");
+            req.timeout = 10;
 
             await new AgonesAsyncOperationWrapper(req.SendWebRequest());
 
@@ -315,6 +315,8 @@ namespace Agones
             else
             {
                 Log($"Agones SendRequest failed: {method} {api} {json} {req.error}");
+                // Always send warning for failures. Don't include any body data though.
+                Debug.LogWarning($"Agones Request Failed: {method} {api} {req.error}");
             }
 
             req.Dispose();
