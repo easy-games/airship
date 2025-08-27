@@ -256,11 +256,16 @@ public class SystemRoot : Singleton<SystemRoot> {
 							// client script
 							runContext = AirshipRuntimeHint.Client;
 							entryFullName = entryFullName.Replace(AirshipRuntimePath.ClientExtension, AirshipRuntimePath.LuaExtension);
-							
+#if AIRSHIP_STAGING
+							Debug.Log($"[CS] Detected dist client code {entryName}");
+#endif
 						} else if (entryName.EndsWith(AirshipRuntimePath.ServerExtension)) {
 							// server script
 							runContext = AirshipRuntimeHint.Server;
 							entryFullName = entryFullName.Replace(AirshipRuntimePath.ServerExtension, AirshipRuntimePath.LuaExtension);
+#if AIRSHIP_STAGING
+							Debug.Log($"[CS] Detected dist server code {entryName}");
+#endif
 						}
 						
 						// check for metadata json
@@ -509,6 +514,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
+#if AIRSHIP_STAGING
+		Debug.Log($"[CS] Added server lua file {br.m_path}");
+#endif
 	}
 
 	private void AddClientLuauFile(string packageKey, AirshipScript br) {
@@ -521,6 +529,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
+#if AIRSHIP_STAGING
+		Debug.Log($"[CS] Added client lua file {br.m_path}");
+#endif
 	}
 	
 	public void AddLuauFile(string packageKey, AirshipScript br) {
@@ -532,7 +543,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
-		// print("added luau file: " + br.m_path + " package=" + packageKey);
+#if AIRSHIP_STAGING
+		Debug.Log($"Added shared lua file {br.m_path}");
+#endif
 	}
 
 	public static string GetLoadedAssetBundleKey(AirshipPackage package, string assetBundleFile) {

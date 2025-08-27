@@ -285,6 +285,10 @@ namespace Code.Bootstrap {
             // give us shared & client files in the dto
             var clientLuauFiles = new[] { root.luauFiles, root.clientLuauFiles };
 
+#if AIRSHIP_STAGING
+            Debug.Log($"[CS] Generating client DTO for {clientLuauFiles.Length} scripts, ({root.luauFiles.Count} shared, {root.clientLuauFiles.Count} client)");
+#endif
+            
             foreach (var luauFiles in clientLuauFiles) {
                 foreach (var packagePair in luauFiles) {
                     foreach (var filePair in packagePair.Value) {
@@ -349,7 +353,6 @@ namespace Code.Bootstrap {
 
                     var root = SystemRoot.Instance;
                     root.AddLuauFile(packageId, br);
-                    // Debug.Log("Add luau file: " + dto.path);
                 }
             }
         }

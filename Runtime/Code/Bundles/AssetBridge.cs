@@ -111,6 +111,7 @@ public class AssetBridge : IAssetBridge
 		foreach (var scope in root.serverLuauFiles.Keys) {
 			var luauFiles = root.serverLuauFiles[scope];
 			if (luauFiles.TryGetValue(luaPath, out var binaryFile)) {
+				Debug.Log($"[CS] Loaded server binary file {luaPath}");
 				return binaryFile as T;
 			}
 		}
@@ -122,7 +123,7 @@ public class AssetBridge : IAssetBridge
 				return binaryFile as T;
 			}
 		}
-
+		
 		return null;
 	}
 
