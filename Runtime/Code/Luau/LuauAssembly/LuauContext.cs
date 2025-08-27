@@ -1,6 +1,6 @@
 ﻿/// Identifiers for the various Luau states. Should match up with the Luau plugin "LuauContext.h" enum
 [System.Flags]
-public enum LuauContext {
+public enum LuauContext : int {
     /// Game context exist per-game. It is spun up and tore down between games.
     Game = 1 << 0,
     
