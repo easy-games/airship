@@ -179,6 +179,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(DecalProjector),
             typeof(Time),
             typeof(FrameTimingManager),
+            typeof(Texture2DArray),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),

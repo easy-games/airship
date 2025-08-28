@@ -8,6 +8,7 @@ using Mirror;
 using Tayx.Graphy;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
@@ -35,6 +36,20 @@ public static class Bridge {
 
     public static Texture2D MakeTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear) {
         return new Texture2D(width, height, format, mipChain, linear);
+    }
+
+    public static Texture2DArray MakeDefaultTexture2DArray(int width, int height, int depth) {
+        return new Texture2DArray(width, height, depth, GraphicsFormat.R8G8B8A8_UNorm, TextureCreationFlags.None);
+    }
+
+    public static Texture2DArray MakeTexture2DArray(
+        int width,
+        int height,
+        int depth,
+        GraphicsFormat format,
+        TextureCreationFlags flags,
+        int mipCount) {
+        return new Texture2DArray(width, height, depth, format, flags, mipCount);
     }
 
     //SPRITES
