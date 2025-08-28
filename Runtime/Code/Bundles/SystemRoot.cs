@@ -21,8 +21,7 @@ using Object = UnityEngine.Object;
 
 public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
-
-	private bool hasClientFiles;
+	
 	public Dictionary<string, Dictionary<string, AirshipScript>> luauFiles = new(); // shared scripts
 	public Dictionary<string, Dictionary<string, AirshipScript>> clientLuauFiles = new(); // client-only scripts
 	public Dictionary<string, Dictionary<string, AirshipScript>> serverLuauFiles = new(); // server-only scripts
@@ -149,8 +148,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 	/// <param name="forceUnloadAll">If false, we attempt to keep packages that are already loaded in place (instead of unloading and re-loading them)</param>
 	/// <returns></returns>
 	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true, bool compileLuaOnClient = false, Action<string> onLoadingScreenStep = null) {
-		hasClientFiles = false;
-		
 		if (this.loadInProgress) {
 			Debug.LogWarning("Tried to load packages when load was already in progress. Waiting...");
 			while (this.loadInProgress) {
@@ -285,7 +282,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 								if (runContext == AirshipRuntimeHint.Server) {
 									AddServerLuauFile(package.id, bf); // this is a server only script
 								} else if (runContext == AirshipRuntimeHint.Client) {
-									hasClientFiles = true;
 									AddClientLuauFile(package.id, bf); 
 								} else {
 									AddLuauFile(package.id, bf);
