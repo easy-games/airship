@@ -14,8 +14,6 @@ namespace Airship
 		public event AgonesAction connected;
 		public event AgonesAction ready;
 
-		public event AgonesAction test;
-
 		private AgonesBetaSdk _sdk;
 
 		[Tooltip("Attempt to connect to Agones even when running the game within the Unity editor.")] [SerializeField]
@@ -28,19 +26,18 @@ namespace Airship
 
 		private void OnEnable()
 		{
+#if UNITY_EDITOR
+			if (!attemptConnectInEditor) {
+				Destroy(GetComponent<AgonesBetaSdk>());
+				return;
+			}
+#endif
 			AgonesCore.SetAgonesProxy(this);
-		}
-
-		private IEnumerator TestEvent()
-		{
-			yield return new WaitForSecondsRealtime(3f);
-			test?.Invoke();
 		}
 
 		private void Start()
 		{
 			_sdk = GetComponent<AgonesBetaSdk>();
-			StartCoroutine(TestEvent());
 		}
 
 		public void Connect()

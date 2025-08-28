@@ -13,10 +13,10 @@ using Debug = UnityEngine.Debug;
 
 public static class LuauPlugin {
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
-	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
-	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int type, IntPtr propertyData, ulong propertySize, byte isTable);
-	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield);
-	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
+	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom);
+	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom, int type, IntPtr propertyData, ulong propertySize, byte isTable);
+	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int methodNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield);
+	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int classNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
 	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen);
@@ -823,6 +823,20 @@ public static class LuauPlugin {
 		if (asList) {
 			array = new List<T>(array);
 		}
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern int RegisterStringAtom(IntPtr strPtr, ulong strLen);
+	public static int LuauRegisterStringAtom(string str) {
+		var strPtr = Marshal.StringToCoTaskMemUTF8(str);
+		var strLen = (ulong)Encoding.UTF8.GetByteCount(str);
+		var atom = RegisterStringAtom(strPtr, strLen);
+		Marshal.FreeCoTaskMem(strPtr);
+		return atom;
 	}
 	
 #if UNITY_IPHONE

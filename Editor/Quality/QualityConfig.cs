@@ -40,7 +40,13 @@ namespace Editor.Quality {
         }
 
         private static void ConfigureForNormal() {
+            QualitySettings.globalTextureMipmapLimit = 0;
 
+            QualitySettings.skinWeights = SkinWeights.FourBones;
+
+            QualitySettings.renderPipeline =
+                AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
+                    "Packages/gg.easy.airship/URP/AirshipURPAsset.asset");
         }
 
         private static void SwapToQualityLevel(string name) {
