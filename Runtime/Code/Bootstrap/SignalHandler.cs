@@ -51,6 +51,7 @@ namespace Code.Bootstrap {
         {
             Debug.Log("SIGTERM received. Starting application shutdown.");
             Application.Quit();
+            yield return null;
         }
 #endif
     }
