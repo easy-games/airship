@@ -143,28 +143,33 @@ public class ServerBootstrap : MonoBehaviour
 
 		this.Setup();
 
-		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
+		Application.wantsToQuit += ProcessExit;
 	}
 
-	public void InvokeOnProcessExit() {
-		if (this.isShutdownEventTriggered) return;
+	public bool InvokeOnProcessExit() {
+		// Don't allow shutdown if we've already handled it. We return the same result
+		// we would have returned previously though. If we have no handlers, its ok to exit immediately
+		if (this.isShutdownEventTriggered) return (this.onProcessExit?.GetInvocationList().Length ?? 0) == 0; 
 		this.isShutdownEventTriggered = true;
 
 		if ((this.onProcessExit?.GetInvocationList().Length ?? 0) > 0) {
 			Debug.Log("Invoking OnProcessExit handlers.");
 			this.onProcessExit?.Invoke();
-		} else {
-			Debug.LogWarning("No OnProcessExit handlers were registered. Directly exiting process.");
-			this.Shutdown();
+			// We return false so that the shutdown will be cancelled and TS can manually shutdown when it's ready.
+			return false;
 		}
+
+		Debug.LogWarning("No OnProcessExit handlers were registered. Ok to exit process.");
+		return true;
 	}
 
 	private void OnDestroy() {
-		AppDomain.CurrentDomain.ProcessExit -= ProcessExit;
+		Application.wantsToQuit -= ProcessExit;
 	}
 
-	private void ProcessExit(object sender, EventArgs args) {
-		this.InvokeOnProcessExit();
+	private bool ProcessExit() {
+		Debug.Log("Application Shutdown requested.");
+		return this.InvokeOnProcessExit();
 	}
 
 	public bool IsAgonesEnvironment() {
@@ -241,7 +246,6 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called whenever we receive GameServer changes from Agones.
      */
-	private bool processedMarkedForDeletion = false;
 	public void OnGameServerChange(GameServer server) {
 		if (server == null) {
 			Debug.Log("Agones GameServer is null. Ignoring.");
@@ -249,10 +253,10 @@ public class ServerBootstrap : MonoBehaviour
 		}
 		this.gameServer = server;
 
-		if (!processedMarkedForDeletion && server.ObjectMeta != null && server.ObjectMeta.Labels != null && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
+		if (!isAgonesShutdownTriggered && server.ObjectMeta != null && server.ObjectMeta.Labels != null && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
-			this.processedMarkedForDeletion = true;
-			this.InvokeOnProcessExit();
+			this.isAgonesShutdownTriggered = true;
+			agones.Shutdown(); // This will fire a sigterm from kubernetes that actually shuts down the server.
 		}
 		
 		if (this.allocatedByAgones) return;
@@ -491,8 +495,8 @@ public class ServerBootstrap : MonoBehaviour
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
 			agones.Shutdown();
-			Application.Quit(exitCode);
 		}
+		Application.Quit(exitCode);
 	}
 
 	private void ShutdownDueToAssetFailure(int exitCode = 1) {
