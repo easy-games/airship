@@ -32,6 +32,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] public bool enableMainMenu = false;
 
     [SerializeField] public bool buildWithoutUpload = false;
+
+    [SerializeField] public bool codeSplitting = true;
     
     [SerializeField] 
     public bool manageTypescriptProject = false;

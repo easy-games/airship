@@ -40,10 +40,6 @@ public class GameConfig : ScriptableObject
 
     [HideInInspector] public bool supportsMobile;
     
-#if UNITY_EDITOR
-    [HideInInspector] public bool codeSplitting = true;
-#endif
-    
     [HideInInspector] public bool compileURPShaders = false;
 
     private const string TagPrefix = "AirshipTag";

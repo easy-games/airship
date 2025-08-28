@@ -59,16 +59,16 @@ public class GameConfigEditor : UnityEditor.Editor {
         });
         GUILayout.Space(20);
 
-#if AIRSHIP_INTERNAL
-        EditorGUILayout.LabelField("Code", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(this.codeSplitting, new GUIContent("Split Server/Client Code") {
-            tooltip = "Will split your code into two versions - one for the server, one for the client. For example, code that is in a server-only block or method will not be in client code. This will slightly increase upload size of code bundles and make code deploys take longer, but will make your server code private."
-        });
-        
-        if (!codeSplitting.boolValue) {
-            EditorGUILayout.HelpBox("Disabling this is not recommended as it will allow your server-based code to be viewable on the client.", MessageType.Warning);
-        }
-#endif
+// #if AIRSHIP_INTERNAL
+//         EditorGUILayout.LabelField("Code", EditorStyles.boldLabel);
+//         EditorGUILayout.PropertyField(this.codeSplitting, new GUIContent("Split Server/Client Code") {
+//             tooltip = "Will split your code into two versions - one for the server, one for the client. For example, code that is in a server-only block or method will not be in client code. This will slightly increase upload size of code bundles and make code deploys take longer, but will make your server code private."
+//         });
+//         
+//         if (!codeSplitting.boolValue) {
+//             EditorGUILayout.HelpBox("Disabling this is not recommended as it will allow your server-based code to be viewable on the client.", MessageType.Warning);
+//         }
+// #endif
         
         GUILayout.Space(20);
 
@@ -129,7 +129,6 @@ public class GameConfigEditor : UnityEditor.Editor {
 
         this.supportsMobile = serializedObject.FindProperty("supportsMobile");
         this.compileURPShaders = serializedObject.FindProperty("compileURPShaders");
-        this.codeSplitting = serializedObject.FindProperty(nameof(GameConfig.codeSplitting));
         
         updateSelectedGame += (update) => {
             var gameId = update.gameId;

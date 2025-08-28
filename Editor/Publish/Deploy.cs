@@ -125,7 +125,20 @@ public class Deploy {
 		// Rebuild Typescript
 		var shouldRecompile = !skipBuild;
 		var shouldResumeTypescriptWatch = shouldRecompile && TypescriptCompilationService.IsWatchModeRunning;
-		var useSplitCodeBundle = gameConfig.codeSplitting;
+		var useSplitCodeBundle = EditorIntegrationsConfig.instance.codeSplitting;
+
+		if (!useSplitCodeBundle) {
+			var result = EditorUtility.DisplayDialogComplex("Code stripping is disabled",
+				"You are about to publish with code stripping disabled, are you sure you want to continue?\n\nThis will make any server code available to the client.", "Continue",
+				"Enable", "Cancel");
+
+			if (result == 1) {
+				EditorIntegrationsConfig.instance.codeSplitting = true;
+				useSplitCodeBundle = true;
+			} else if (result == 2) {
+				yield break;
+			}
+		}
 		
 		// We want to do a full publish
 		if (shouldRecompile) {
