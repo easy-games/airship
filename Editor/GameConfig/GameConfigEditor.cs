@@ -18,7 +18,6 @@ public class GameConfigEditor : UnityEditor.Editor {
     private Action requestRefresh;
 
     private SerializedProperty supportsMobile;
-    private SerializedProperty codeSplitting;
     private SerializedProperty compileURPShaders;
 
     Rect buttonRect;
@@ -57,19 +56,7 @@ public class GameConfigEditor : UnityEditor.Editor {
         EditorGUILayout.PropertyField(this.compileURPShaders, new GUIContent("Compile URP Shaders") {
             tooltip = "By default, your game will use a precompiled set of URP shaders for basic usage. Checking this box will compile URP shaders specifically for your game. If you have any advanced URP materials (or notice invisible materials on published games), you should check this box."
         });
-        GUILayout.Space(20);
 
-// #if AIRSHIP_INTERNAL
-//         EditorGUILayout.LabelField("Code", EditorStyles.boldLabel);
-//         EditorGUILayout.PropertyField(this.codeSplitting, new GUIContent("Split Server/Client Code") {
-//             tooltip = "Will split your code into two versions - one for the server, one for the client. For example, code that is in a server-only block or method will not be in client code. This will slightly increase upload size of code bundles and make code deploys take longer, but will make your server code private."
-//         });
-//         
-//         if (!codeSplitting.boolValue) {
-//             EditorGUILayout.HelpBox("Disabling this is not recommended as it will allow your server-based code to be viewable on the client.", MessageType.Warning);
-//         }
-// #endif
-        
         GUILayout.Space(20);
 
         foreach (var field in typeof(GameConfig).GetFields()) {
