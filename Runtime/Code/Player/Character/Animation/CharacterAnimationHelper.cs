@@ -154,15 +154,18 @@ namespace Code.Player.Character.NetworkedMovement {
             animator.SetFloat("VelZ", velZ);
             animator.SetFloat("Speed", targetMagnitude);
 
-
-            if (grounded) {
+            if (grounded){
                 lastGroundedTime = Time.time;
+            }
+            if (grounded || Time.time - lastGroundedTime < minAirborneTime) {
                 isSkidding = currentSpeed >= skiddingSpeed;
                 animator.SetBool("Skidding", isSkidding);
+                animator.SetBool("Grounded", true);
                 animator.SetBool("Airborne", false);
             } else {
                 animator.SetBool("Skidding", false);
-                animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
+                animator.SetBool("Grounded", false);
+                animator.SetBool("Airborne", true);
             }
 
             // if (idleRectionLength > 0 && currentState == CharacterState.Idle &&
@@ -216,7 +219,6 @@ namespace Code.Player.Character.NetworkedMovement {
 
             var newState = syncedState.state;
             grounded = syncedState.grounded;
-            animator.SetBool("Grounded", grounded);
             //GizmoUtils.DrawSphere(transform.position, .15f, grounded ? Color.gray : Color.cyan, 4, 5f);
             // print("New State. Grounded: " + grounded + " state: " + syncedState.state + " Jumping: " +
             //       syncedState.jumping + " sprint: " + syncedState.sprinting + " crouch: " + syncedState.crouching);
