@@ -49,10 +49,8 @@ namespace Code.Bootstrap {
 
         private IEnumerator HandleSigterm()
         {
-            Debug.Log("SIGTERM received. Performing cleanup.");
-            var shutdown = serverBootstrap.InvokeOnProcessExit();
-            yield return null;
-            if (shutdown) serverBootstrap.Shutdown();
+            Debug.Log("SIGTERM received. Starting application shutdown.");
+            Application.Quit();
         }
 #endif
     }

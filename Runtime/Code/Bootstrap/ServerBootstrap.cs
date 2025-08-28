@@ -59,6 +59,7 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string organizationId = "";
 	[NonSerialized] public bool isShutdownEventTriggered = false;
 	[NonSerialized] public bool isAgonesShutdownTriggered = false;
+	[NonSerialized] public bool isShutdownComplete = false;
 
     public ServerContext serverContext;
 
@@ -146,16 +147,24 @@ public class ServerBootstrap : MonoBehaviour
 		Application.wantsToQuit += ProcessExit;
 	}
 
+	/**
+	 * Invokes the exit handlers that should run before shutdown.
+	 */
 	public bool InvokeOnProcessExit() {
-		// Don't allow shutdown if we've already handled it. We return the same result
-		// we would have returned previously though. If we have no handlers, its ok to exit immediately
+		// If shutdown is complete, we want to ignore firing events and allow the application
+		// to quit.
+		if (this.isShutdownComplete) return true;
+		// Don't allow shutdown if we have fired the event and are waiting for TS. We return the same result
+		// we would have returned previously though. If we have no handlers, its ok to exit immediately.
 		if (this.isShutdownEventTriggered) return (this.onProcessExit?.GetInvocationList().Length ?? 0) == 0; 
 		this.isShutdownEventTriggered = true;
 
+		// If we have TS handlers, fire them.
 		if ((this.onProcessExit?.GetInvocationList().Length ?? 0) > 0) {
 			Debug.Log("Invoking OnProcessExit handlers.");
 			this.onProcessExit?.Invoke();
 			// We return false so that the shutdown will be cancelled and TS can manually shutdown when it's ready.
+			// TS will call Shutdown() when it's done.
 			return false;
 		}
 
@@ -491,6 +500,10 @@ public class ServerBootstrap : MonoBehaviour
         OnServerReady?.Invoke();
 	}
 	
+	/**
+	 * Triggers shutdown with the provided exit code. Will fire Application.wantsToQuit which may be delayed for TS processing.
+	 * If you want to ignore TS processing, use Shutdown().
+	 */
 	private void ShutdownInternal(int exitCode = 0) {
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
@@ -515,8 +528,11 @@ public class ServerBootstrap : MonoBehaviour
 		ShutdownInternal(exitCode);
 	}
 
-	public void Shutdown()
-	{
+	/**
+	 * Used to immediately shutdown the server. Only call this if TS has processed the shutdown or you want to ignore TS processing.
+	 */
+	public void Shutdown() {
+		isShutdownComplete = true;
 		ShutdownInternal(0);
 	}
 
