@@ -248,10 +248,10 @@ public partial class LuauCore : MonoBehaviour {
 
     // When a lua object wants to set a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
-    private static int SetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int type, IntPtr propertyData, ulong propertyDataSize, byte isTable) {
+    private static int SetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int propertyNameAtom, int type, IntPtr propertyData, ulong propertyDataSize, byte isTable) {
         var ret = 0;
         try {
-            ret = SetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, type, propertyData, propertyDataSize, isTable);
+            ret = SetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, propertyNameAtom, type, propertyData, propertyDataSize, isTable);
         } catch (Exception e) {
             ret = LuauError(thread, e.Message);
         }
@@ -259,7 +259,7 @@ public partial class LuauCore : MonoBehaviour {
         return ret;
     }
     
-    private static int SetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int typeInt, IntPtr propertyData, ulong propertyDataSize, byte isTable) {
+    private static int SetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int propertyNameAtom, int typeInt, IntPtr propertyData, ulong propertyDataSize, byte isTable) {
         CurrentContext = context;
         
         var propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
@@ -749,11 +749,10 @@ public partial class LuauCore : MonoBehaviour {
 
     // When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
-    private static int GetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
+    private static int GetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int propertyNameAtom) {
         var ret = 0;
         try {
-            ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName,
-                propertyNameLength);
+            ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, propertyNameAtom);
         } catch (Exception e) {
             ret = LuauError(thread, e.Message);
         }
@@ -763,7 +762,7 @@ public partial class LuauCore : MonoBehaviour {
 
     // private static readonly ProfilerMarker<string> getPropertyMarker = new ProfilerMarker<string>("LuauCore.GetProperty", "asd");
 
-    private static int GetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
+    private static int GetProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int propertyNameAtom) {
         CurrentContext = context;
 
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
@@ -1168,7 +1167,7 @@ public partial class LuauCore : MonoBehaviour {
     
     // When a lua object wants to call a method
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
-    static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
+    static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int methodNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
         CurrentContext = context;
         
         Marshal.WriteInt32(shouldYield, 0);
@@ -1473,7 +1472,7 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
-    static unsafe int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable) {
+    static unsafe int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int classNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable) {
         CurrentContext = context;
         
         if (!IsReady) return 0;

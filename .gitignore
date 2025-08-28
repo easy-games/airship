@@ -4,3 +4,5 @@ Runtime/.DS_Store
 Runtime/Plugins/.DS_Store
 Runtime/Resources/Fonts/.DS_Store
 **/.DS_Store
+LuauPlugin.pdb
+LuauPlugin.pdb.meta

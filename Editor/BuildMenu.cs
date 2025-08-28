@@ -114,6 +114,8 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Normal");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             
@@ -160,6 +162,8 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Normal");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
@@ -193,6 +197,8 @@ namespace Editor {
 #if UNITY_EDITOR_OSX
             OnBuild();
             CreateAssetBundles.ResetScenes();
+
+            CreateAssetBundles.SwapToQualityLevel("Low");
 
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
@@ -242,6 +248,8 @@ namespace Editor {
         public static void BuildAndroidClient(AndroidBuildType buildType) {
             var development = buildType == AndroidBuildType.DevelopmentAPK;
             var buildApk = buildType != AndroidBuildType.ReleaseAAB;
+
+            CreateAssetBundles.SwapToQualityLevel("Low");
             
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -346,6 +354,8 @@ namespace Editor {
 #if UNITY_EDITOR
             OnBuild();
             CreateAssetBundles.ResetScenes();
+
+            CreateAssetBundles.SwapToQualityLevel("Normal");
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
