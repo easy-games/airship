@@ -40,8 +40,9 @@ public class GameConfig : ScriptableObject
 
     [HideInInspector] public bool supportsMobile;
     
-    // this is for backwards compat with games not using code splitting, eventually this will be default.
-    [HideInInspector] public bool codeSplitting = false;
+#if UNITY_EDITOR
+    [HideInInspector] public bool codeSplitting = true;
+#endif
     
     [HideInInspector] public bool compileURPShaders = false;
 

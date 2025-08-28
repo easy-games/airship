@@ -125,20 +125,26 @@ public class Deploy {
 		// Rebuild Typescript
 		var shouldRecompile = !skipBuild;
 		var shouldResumeTypescriptWatch = shouldRecompile && TypescriptCompilationService.IsWatchModeRunning;
+		var useSplitCodeBundle = gameConfig.codeSplitting;
 		
 		// We want to do a full publish
-		
 		if (shouldRecompile) {
-			TypescriptCompilationService.StopCompilers();
+			var compileFlags = TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file
 			
-			var compileFlags = TypeScriptCompileFlags.Publishing | TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file & Publishing will omit editor data
-
+			// Compiler doesn't need to be stopped if it's a split code bundle, since that's compiled to the dist folder
+			//		The publish flag here will enable all the fancy features around this
+			if (useSplitCodeBundle) {
+				compileFlags |= TypeScriptCompileFlags.Publishing;
+			} else {
+				TypescriptCompilationService.StopCompilers();
+			}
+			
 			if (skipBuild) {
 				compileFlags |= TypeScriptCompileFlags.SkipReimportQueue; // code publish does not require asset reimport
 			}
 			
 			TypescriptCompilationService.BuildTypescript(compileFlags);
-		} else if (gameConfig.codeSplitting) {
+		} else if (useSplitCodeBundle) {
 			var compileFlags = TypeScriptCompileFlags.Publishing 
 			                   | TypeScriptCompileFlags.DisplayProgressBar 
 			                   | TypeScriptCompileFlags.SkipPackages 
@@ -246,7 +252,7 @@ public class Deploy {
 				// We want a .lua in the same spot the .ts would be
 				var luaFakePath = path.Replace(".ts", ".lua");
                 
-				if (gameConfig.codeSplitting) {
+				if (useSplitCodeBundle) {
 					var serverPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
 						TypescriptProjectsService.DeploymentContext.Server);
 					var clientPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,

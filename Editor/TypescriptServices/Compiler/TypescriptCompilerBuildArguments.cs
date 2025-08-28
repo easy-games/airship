@@ -55,32 +55,23 @@ namespace Airship.Editor {
         /// <returns></returns>
         public string GetCommandString(CompilerCommand compilerCommand) {
             var args = new List<string>();
-            var flags = new List<char>();
 
-            if (flags.Count > 0) {
-                args.Add("-" + new string(flags.ToArray()));
-            }
-            
             if (compilerCommand == CompilerCommand.BuildWatch) {
                 args.Add("build --watch");
             } else if (compilerCommand == CompilerCommand.BuildOnly) {
                 args.Add("build");
             }
-
+            
             if (WriteOnlyChanged) {
                 args.Add("--writeOnlyChanged");
             }
             
             if (Project != null) {
-                args.Add($"--project {Project}");
+                args.Add($"-p {Project}");
             }
 
             if (Incremental) {
                 args.Add("--incremental");
-            }
-
-            if (SkipPackages) {
-                args.Add("--skipPackages");
             }
             
             if (Package != null) {
@@ -90,15 +81,19 @@ namespace Airship.Editor {
             if (Json) {
                 args.Add("--json");
             }
-
-            if (Publishing) {
-                args.Add("--publish");
-            }
             
             if (Verbose) {
                 args.Add("--verbose");
             }
 
+            if (Publishing) {
+                args.Add("--publish");
+            }
+
+            if (SkipPackages) {
+                args.Add("--skipPackages");
+            }
+            
             return string.Join(" ", args);
         }
     }

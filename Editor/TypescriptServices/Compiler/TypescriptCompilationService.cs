@@ -439,6 +439,7 @@ using Object = UnityEngine.Object;
                     compilationState.CompiledFileCount = 0;
        
                     var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    TypescriptLogService.LogInfo($"Executed compiler build instance '{arguments.GetCommandString(CompilerCommand.BuildOnly)}' at pid {compilerProcess.Id}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     
                     while (!compilerProcess.HasExited) {
@@ -448,15 +449,6 @@ using Object = UnityEngine.Object;
                     }
                     
                     // compilerProcess.WaitForExit();
-                    
-                    if (compilerProcess.ExitCode == 0)
-                    {
-                        Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"<color=red><b>Failed to build'{packageInfo.Name}'</b></color>");
-                    }
                 }
                 catch (Exception ex)
                 {
