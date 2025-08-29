@@ -19,7 +19,7 @@ namespace Editor.Settings {
         {
             var provider = new AirshipScriptingSettingsProvider(Path) {
                 keywords = new[] { "Github", "Airship", "Typescript", "Compiler", "Scripting", "Scripts", "Compiling" },
-                label = "TypeScript Services",
+                label = "TypeScript Settings",
             };
             return provider;
         }
