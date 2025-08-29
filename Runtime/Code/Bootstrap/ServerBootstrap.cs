@@ -177,7 +177,7 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private bool ProcessExit() {
-		Debug.Log("Application Shutdown requested.");
+		Debug.Log($"Application Shutdown requested. Shutdown complete: {this.isShutdownComplete}");
 		return this.InvokeOnProcessExit();
 	}
 
