@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using JetBrains.Annotations;
+using Mirror;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -74,7 +75,12 @@ namespace Luau {
         #endregion
         
         #region Luau Properties
+        
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
         [HideInInspector]
+#else
+        [NonSerialized]
+#endif
         public byte[] m_bytes;
         
         public bool m_compiled = false;
