@@ -43,9 +43,7 @@ namespace Editor {
         }
 
         private static void OnBuild() {
-            PhysicsSetup.Setup(null);
-
-
+            PhysicsSetup.Setup();
         }
 
         public static void BuildLinuxServerStaging() {
