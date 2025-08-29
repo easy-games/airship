@@ -59,6 +59,7 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string organizationId = "";
 	[NonSerialized] public bool isShutdownEventTriggered = false;
 	[NonSerialized] public bool isAgonesShutdownTriggered = false;
+	[NonSerialized] public bool isShutdownComplete = false;
 
     public ServerContext serverContext;
 
@@ -143,28 +144,38 @@ public class ServerBootstrap : MonoBehaviour
 
 		this.Setup();
 
-		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
+		Application.wantsToQuit += ProcessExit;
 	}
 
-	public void InvokeOnProcessExit() {
-		if (this.isShutdownEventTriggered) return;
+	public bool InvokeOnProcessExit() {
+		// If shutdown is complete, we want to ignore firing events and allow the application
+		// to quit.
+		if (this.isShutdownComplete) return true;
+		// Don't allow shutdown if we have fired the event and are waiting for TS. We return the same result
+		// we would have returned previously though. If we have no handlers, its ok to exit immediately.
+		if (this.isShutdownEventTriggered) return (this.onProcessExit?.GetInvocationList().Length ?? 0) == 0; 
 		this.isShutdownEventTriggered = true;
 
+		// If we have TS handlers, fire them.
 		if ((this.onProcessExit?.GetInvocationList().Length ?? 0) > 0) {
 			Debug.Log("Invoking OnProcessExit handlers.");
 			this.onProcessExit?.Invoke();
-		} else {
-			Debug.LogWarning("No OnProcessExit handlers were registered. Directly exiting process.");
-			this.Shutdown();
+			// We return false so that the shutdown will be cancelled and TS can manually shutdown when it's ready.
+			// TS will call Shutdown() when it's done.
+			return false;
 		}
+
+		Debug.LogWarning("No OnProcessExit handlers were registered. Ok to exit process.");
+		return true;
 	}
 
 	private void OnDestroy() {
-		AppDomain.CurrentDomain.ProcessExit -= ProcessExit;
+		Application.wantsToQuit -= ProcessExit;
 	}
 
-	private void ProcessExit(object sender, EventArgs args) {
-		this.InvokeOnProcessExit();
+	private bool ProcessExit() {
+		Debug.Log($"Application Shutdown requested. Shutdown complete: {this.isShutdownComplete}");
+		return this.InvokeOnProcessExit();
 	}
 
 	public bool IsAgonesEnvironment() {
@@ -252,7 +263,8 @@ public class ServerBootstrap : MonoBehaviour
 		if (!processedMarkedForDeletion && server.ObjectMeta != null && server.ObjectMeta.Labels != null && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
-			this.InvokeOnProcessExit();
+			Application.Quit(); // Start quitting the application. This will fire off the proper signal flow for shutdown (Application.wantsToQuit).
+			return;
 		}
 		
 		if (this.allocatedByAgones) return;
@@ -488,9 +500,14 @@ public class ServerBootstrap : MonoBehaviour
 	}
 	
 	private void ShutdownInternal(int exitCode = 0) {
-		if (agones && !this.isAgonesShutdownTriggered) {
+		// If we are in an environment controlled by agones, we only want to transition to the Shutdown state
+		// when we know that we will actually exit on the next Application.Quit() call (meaning isShutdownComplete is true)
+		// In all other cases, we want to re-trigger the shutdown application flow.
+		if (agones && !this.isAgonesShutdownTriggered && isShutdownComplete) {
 			this.isAgonesShutdownTriggered = true;
+			// This will trigger a sigterm which will actually shut down the server since isShutdownComplete is true
 			agones.Shutdown();
+		} else {
 			Application.Quit(exitCode);
 		}
 	}
@@ -511,9 +528,13 @@ public class ServerBootstrap : MonoBehaviour
 		ShutdownInternal(exitCode);
 	}
 
-	public void Shutdown()
+	/**
+	 * Used to immediately shutdown the server. Only call this if TS has processed the shutdown or you want to ignore TS processing.
+	 */
+	public void Shutdown(int exitCode = 0)
 	{
-		ShutdownInternal(0);
+		isShutdownComplete = true;
+		ShutdownInternal(exitCode);
 	}
 
 	/**
