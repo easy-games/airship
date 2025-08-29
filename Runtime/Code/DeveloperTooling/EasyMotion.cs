@@ -24,10 +24,18 @@ public class EasyMotion : MonoBehaviour {
     public float sineOffset = 0;
     public bool randomizeOffset = false;
 
+    private Vector3 initialPos = Vector3.zero;
+    private Vector3 initialScale = Vector3.zero;
+    private Vector3 initialRot = Vector3.zero;
+    
     private void Start(){
         if(randomizeOffset){
             sineOffset += Random.Range(0f, 1f);
         }
+
+        this.initialPos = transform.localPosition;
+        this.initialScale = transform.localScale;
+        this.initialRot = transform.localEulerAngles;
     }
 
     // Update is called once per frame
@@ -35,21 +43,21 @@ public class EasyMotion : MonoBehaviour {
         if (EasyTooling.IsValidRunMode(refreshMode)) {
             if (translate) {
                 if(sineMotion){
-                    transform.localPosition = translationSpeed * Mathf.Sin(Time.time * sineMod + sineOffset);
+                    transform.localPosition = translationSpeed * Mathf.Sin(Time.time * sineMod + sineOffset) + this.initialPos;
                 }else{
                     transform.Translate(translationSpeed * Time.deltaTime, transformSpace);
                 }
             }
             if (rotate) {
                 if(sineMotion){
-                    transform.localEulerAngles = angularRotationSpeed * Mathf.Sin(Time.time * sineMod + sineOffset);
+                    transform.localEulerAngles = angularRotationSpeed * Mathf.Sin(Time.time * sineMod + sineOffset)  + this.initialRot;
                 }else{
                     transform.Rotate(angularRotationSpeed * Time.deltaTime, transformSpace);
                 }
             }
             if (scale) {
                 if(sineMotion){
-                    transform.localScale = Vector3.one + scaleSpeed * ((Mathf.Sin(Time.time * sineMod + sineOffset) + 1) /2);
+                    transform.localScale = scaleSpeed * ((Mathf.Sin(Time.time * sineMod + sineOffset) + 1) /2) + this.initialScale;
                 }else{
                     Vector3 newScale = transform.localScale;
                     newScale += scaleSpeed * Time.deltaTime;

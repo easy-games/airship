@@ -39,7 +39,7 @@ public class GameConfig : ScriptableObject
     [HideInInspector] public float fixedDeltaTime = .025f;
 
     [HideInInspector] public bool supportsMobile;
-
+    
     [HideInInspector] public bool compileURPShaders = false;
 
     private const string TagPrefix = "AirshipTag";

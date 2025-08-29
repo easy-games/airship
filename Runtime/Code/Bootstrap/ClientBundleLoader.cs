@@ -265,6 +265,7 @@ namespace Code.Bootstrap {
         public void CleanupClient() {
             NetworkClient.UnregisterHandler<LuauBytesMessage>();
         }
+        
 
         public void GenerateScriptsDto() {
             // We don't need to generate script dto in editor.
@@ -280,33 +281,45 @@ namespace Code.Bootstrap {
             int maxBytesPerDto = 50_000;
             int writtenBytes = 0;
             LuauScriptsDto currentDto = null;
-            foreach (var packagePair in root.luauFiles) {
-                foreach (var filePair in packagePair.Value) {
-                    if (currentDto == null) {
-                        currentDto = new LuauScriptsDto();
-                        this.scriptsDtos.Add(currentDto);
-                    }
 
-                    var file = new LuauFileDto() {
-                        path = filePair.Value.m_path,
-                        bytes = filePair.Value.m_bytes,
-                        airshipBehaviour = filePair.Value.airshipBehaviour
-                    };
-                    if (!currentDto.files.ContainsKey(packagePair.Key)) {
-                        currentDto.files.Add(packagePair.Key, new List<LuauFileDto>());
-                    }
-                    currentDto.files[packagePair.Key].Add(file);
+            // give us shared & client files in the dto
+            var clientLuauFiles = new[] { root.luauFiles, root.clientLuauFiles };
 
-                    // totalBytes is only used for calculating hash
-                    totalBytes.AddRange(filePair.Value.m_bytes);
-                    writtenBytes += filePair.Value.m_bytes.Length;
+#if AIRSHIP_STAGING
+            Debug.Log($"[CS] Generating client DTO for {clientLuauFiles.Length} scripts, ({root.luauFiles.Count} shared, {root.clientLuauFiles.Count} client)");
+#endif
+            
+            foreach (var luauFiles in clientLuauFiles) {
+                foreach (var packagePair in luauFiles) {
+                    foreach (var filePair in packagePair.Value) {
+                        if (currentDto == null) {
+                            currentDto = new LuauScriptsDto();
+                            this.scriptsDtos.Add(currentDto);
+                        }
 
-                    if (writtenBytes >= maxBytesPerDto) {
-                        currentDto = null;
-                        writtenBytes = 0;
+                        var file = new LuauFileDto() {
+                            path = filePair.Value.m_path,
+                            bytes = filePair.Value.m_bytes,
+                            airshipBehaviour = filePair.Value.airshipBehaviour
+                        };
+                        if (!currentDto.files.ContainsKey(packagePair.Key)) {
+                            currentDto.files.Add(packagePair.Key, new List<LuauFileDto>());
+                        }
+                        currentDto.files[packagePair.Key].Add(file);
+
+                        // totalBytes is only used for calculating hash
+                        totalBytes.AddRange(filePair.Value.m_bytes);
+                        writtenBytes += filePair.Value.m_bytes.Length;
+
+                        if (writtenBytes >= maxBytesPerDto) {
+                            currentDto = null;
+                            writtenBytes = 0;
+                        }
                     }
                 }
             }
+            
+            
             var sha = new System.Security.Cryptography.SHA1CryptoServiceProvider();
             this.scriptsHash = System.BitConverter.ToString(sha.ComputeHash(totalBytes.ToArray()));
 
@@ -340,7 +353,6 @@ namespace Code.Bootstrap {
 
                     var root = SystemRoot.Instance;
                     root.AddLuauFile(packageId, br);
-                    // Debug.Log("Add luau file: " + dto.path);
                 }
             }
         }
