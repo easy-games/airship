@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using JetBrains.Annotations;
-using Mirror;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
