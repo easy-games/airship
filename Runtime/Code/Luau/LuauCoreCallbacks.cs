@@ -11,7 +11,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Airship.LuauCore.Generated;
 using Assets.Luau;
 using Code.Luau;
 using Code.Luau.LuauAssembly;
