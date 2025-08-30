@@ -76,6 +76,7 @@ namespace Agones
 
         private void OnApplicationQuit()
         {
+            Debug.Log($"[Agones] Application exit. Disposing cancellation token.");
             cancellationTokenSource.Dispose();
         }
         #endregion

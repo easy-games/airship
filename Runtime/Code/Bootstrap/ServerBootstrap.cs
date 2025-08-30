@@ -175,7 +175,9 @@ public class ServerBootstrap : MonoBehaviour
 
 	private bool ProcessExit() {
 		Debug.Log($"Application Shutdown requested. Shutdown complete: {this.isShutdownComplete}");
-		return this.InvokeOnProcessExit();
+		var result = this.InvokeOnProcessExit();
+		Debug.Log($"InvokeOnProcessExit Result: {result}");
+		return result;
 	}
 
 	public bool IsAgonesEnvironment() {
