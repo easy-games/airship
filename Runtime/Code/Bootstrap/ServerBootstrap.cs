@@ -506,10 +506,10 @@ public class ServerBootstrap : MonoBehaviour
 		if (agones && !this.isAgonesShutdownTriggered && isShutdownComplete) {
 			this.isAgonesShutdownTriggered = true;
 			// This will trigger a sigterm which will actually shut down the server since isShutdownComplete is true
+			Debug.Log("Shutdown has been marked compled from TS. Notifying Agones.");
 			agones.Shutdown();
-		} else {
-			Application.Quit(exitCode);
 		}
+		Application.Quit(exitCode);
 	}
 
 	private void ShutdownDueToAssetFailure(int exitCode = 1) {
@@ -534,6 +534,7 @@ public class ServerBootstrap : MonoBehaviour
 	public void Shutdown(int exitCode = 0)
 	{
 		isShutdownComplete = true;
+		Debug.LogWarning($"Final shutdown. Exit code: {exitCode}");
 		ShutdownInternal(exitCode);
 	}
 
