@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Code.Luau.LuauAssembly;
 using Luau;
 using UnityEditor;
 using UnityEngine;
