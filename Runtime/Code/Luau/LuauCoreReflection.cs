@@ -486,6 +486,11 @@ public partial class LuauCore : MonoBehaviour
     }
 
     public static void WritePropertyToThreadObject(IntPtr thread, object value) {
+        if (value == null) {
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+            return;
+        }
+        
         /*
          * Unity sometimes returns a dummy object instead of "null" for nice console prints.
          * We need to manually cast to a UnityEngine.Object and check for null.
