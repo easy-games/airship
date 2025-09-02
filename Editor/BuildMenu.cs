@@ -43,9 +43,7 @@ namespace Editor {
         }
 
         private static void OnBuild() {
-            PhysicsSetup.Setup(null);
-
-
+            PhysicsSetup.Setup();
         }
 
         public static void BuildLinuxServerStaging() {
@@ -114,6 +112,8 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Normal");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             
@@ -160,6 +160,8 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Normal");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
@@ -194,6 +196,8 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Low");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
@@ -210,7 +214,7 @@ namespace Editor {
             options.extraScriptingDefines = extraDefines.ToArray();
 
             if (development == true) {
-                options.options = BuildOptions.Development;
+                options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
 
             var report = BuildPipeline.BuildPlayer(options);
@@ -233,13 +237,24 @@ namespace Editor {
 #endif
         }
 
-        public static void BuildAndroidClient(bool development) {
+        public enum AndroidBuildType {
+            DevelopmentAPK,
+            ReleaseAPK,
+            ReleaseAAB,
+        }
+        
+        public static void BuildAndroidClient(AndroidBuildType buildType) {
+            var development = buildType == AndroidBuildType.DevelopmentAPK;
+            var buildApk = buildType != AndroidBuildType.ReleaseAAB;
+
+            CreateAssetBundles.SwapToQualityLevel("Low");
+            
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
-            PlayerSettings.Android.splitApplicationBinary = !development;
+            PlayerSettings.Android.splitApplicationBinary = !buildApk;
 
             BuildProfile buildProfile;
             if (development) {
@@ -255,9 +270,9 @@ namespace Editor {
             buildProfile.overrideGlobalScenes = true;
             buildProfile.scenes = editorBuildScenes.ToArray();
             options.buildProfile = buildProfile;
-            options.locationPathName = $"build/client_android/{ClientExecutableName}.{(development ? "apk" : "aab")}";
+            options.locationPathName = $"build/client_android/{ClientExecutableName}.{(buildApk ? "apk" : "aab")}";
             if (development) {
-                options.options = BuildOptions.Development;
+                options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
 
             var report = BuildPipeline.BuildPlayer(options);
@@ -303,14 +318,25 @@ namespace Editor {
             BuildIOSClient(false, true);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android", priority = 80)]
-        public static void BuildAndroidClientMenuItem() {
-            BuildAndroidClient(false);
+        [MenuItem("Airship/Create Binary/Client/iOS (Staging Development)", priority = 80)]
+        public static void BuildIOSClientStagingDevelopmentMenuItem() {
+            Debug.Log("Building iOS staging development client..");
+            BuildIOSClient(true, true);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android (Development)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Android (Google Play)", priority = 80)]
+        public static void BuildAndroidClientMenuItem() {
+            BuildAndroidClient(AndroidBuildType.ReleaseAAB);
+        }
+        
+        [MenuItem("Airship/Create Binary/Client/Android (APK)", priority = 80)]
+        public static void BuildAndroidProdAPK() {
+            BuildAndroidClient(AndroidBuildType.ReleaseAPK);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/Android (Development APK)", priority = 80)]
         public static void BuildAndroidDevelopmentClientMenuItem() {
-            BuildAndroidClient(true);
+            BuildAndroidClient(AndroidBuildType.DevelopmentAPK);
         }
 #endif
 
@@ -326,6 +352,8 @@ namespace Editor {
 #if UNITY_EDITOR
             OnBuild();
             CreateAssetBundles.ResetScenes();
+
+            CreateAssetBundles.SwapToQualityLevel("Normal");
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);

@@ -21,8 +21,10 @@ using Object = UnityEngine.Object;
 
 public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
-
-	public Dictionary<string, Dictionary<string, AirshipScript>> luauFiles = new();
+	
+	public Dictionary<string, Dictionary<string, AirshipScript>> luauFiles = new(); // shared scripts
+	public Dictionary<string, Dictionary<string, AirshipScript>> clientLuauFiles = new(); // client-only scripts
+	public Dictionary<string, Dictionary<string, AirshipScript>> serverLuauFiles = new(); // server-only scripts
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
@@ -230,15 +232,39 @@ public class SystemRoot : Singleton<SystemRoot> {
 						yield break;
 					}
 
+					var useContextualSource = package.packageType == AirshipPackageType.Game;
+
 					foreach (var entry in zip.Entries) {
-						if (entry.Name.EndsWith("json~")) {
+						var entryName = entry.Name;
+						var entryFullName = entry.FullName;
+						
+						var runContext = AirshipRuntimeHint.None; // both server and client
+						
+						if (entryName.EndsWith("json~")) {
 							continue;
 						}
 
-						if (entry.Name.EndsWith(".asbuildinfo")) {
+						if (entryName.EndsWith(".asbuildinfo")) {
 							continue;
 						}
 
+						
+						if (entryName.EndsWith(AirshipRuntimePath.ClientExtension)) {
+							// client script
+							runContext = AirshipRuntimeHint.Client;
+							entryFullName = entryFullName.Replace(AirshipRuntimePath.ClientExtension, AirshipRuntimePath.LuaExtension);
+#if AIRSHIP_STAGING
+							Debug.Log($"[CS] Detected dist client code {entryName}");
+#endif
+						} else if (entryName.EndsWith(AirshipRuntimePath.ServerExtension)) {
+							// server script
+							runContext = AirshipRuntimeHint.Server;
+							entryFullName = entryFullName.Replace(AirshipRuntimePath.ServerExtension, AirshipRuntimePath.LuaExtension);
+#if AIRSHIP_STAGING
+							Debug.Log($"[CS] Detected dist server code {entryName}");
+#endif
+						}
+						
 						// check for metadata json
 						var jsonEntry = zip.GetEntry(entry.FullName + ".json~");
 						bool airshipBehaviour = jsonEntry != null;
@@ -249,11 +275,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 								var bf = Object.Instantiate(binaryFileTemplate);
 								bf.m_metadata = null;
 								bf.airshipBehaviour = false;
-								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
-#if UNITY_SERVER
-								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-#endif
-								this.AddLuauFile(package.id, bf);
+								LuauCompiler.RuntimeCompile(entryFullName, text, bf, airshipBehaviour);
+								
+								// Depending on what kind of script we have, determines if it's server-only, client-only or both
+								//		Since packages can still be both, we have to separate the game scripts themselves.
+								if (runContext == AirshipRuntimeHint.Server) {
+									AddServerLuauFile(package.id, bf); // this is a server only script
+								} else if (runContext == AirshipRuntimeHint.Client) {
+									AddClientLuauFile(package.id, bf); 
+								} else {
+									AddLuauFile(package.id, bf);
+								}
+								
 								scriptCounter++;
 							}
 						}
@@ -363,7 +396,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 #if !UNITY_IOS && !UNITY_ANDROID && AIRSHIP_PLAYER
 				preWarmedCoreShaders = true;
 				string[] collections = new[] {
-					"MainMenu",
+					"ClothingShaderVariants",
+					// "MainMenu",
 					// "RacingGame",
 					// "BWShaderVariants 1 (Raven)",
 				};
@@ -465,7 +499,37 @@ public class SystemRoot : Singleton<SystemRoot> {
 		var key = SystemRoot.GetLoadedAssetBundleKey(loadedBundle.airshipPackage, loadedBundle.assetBundleFile);
 		loadedAssetBundles.Remove(key);
 	}
+	
+	private void AddServerLuauFile(string packageKey, AirshipScript br) {
+		// Server-based luau files are handled separately
+		Dictionary<string, AirshipScript> files;
+		if (!this.serverLuauFiles.TryGetValue(packageKey, out files)) {
+			files = new Dictionary<string, AirshipScript>();
+			this.serverLuauFiles.Add(packageKey, files);
+		}
 
+		files.Remove(br.m_path);
+		files.Add(br.m_path, br);
+#if AIRSHIP_STAGING
+		Debug.Log($"[CS] Added server lua file {br.m_path}");
+#endif
+	}
+
+	private void AddClientLuauFile(string packageKey, AirshipScript br) {
+		// Client-based luau files are handled separately
+		Dictionary<string, AirshipScript> files;
+		if (!this.clientLuauFiles.TryGetValue(packageKey, out files)) {
+			files = new Dictionary<string, AirshipScript>();
+			this.clientLuauFiles.Add(packageKey, files);
+		}
+
+		files.Remove(br.m_path);
+		files.Add(br.m_path, br);
+#if AIRSHIP_STAGING
+		Debug.Log($"[CS] Added client lua file {br.m_path}");
+#endif
+	}
+	
 	public void AddLuauFile(string packageKey, AirshipScript br) {
 		Dictionary<string, AirshipScript> files;
 		if (!this.luauFiles.TryGetValue(packageKey, out files)) {
@@ -475,7 +539,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
-		// print("added luau file: " + br.m_path + " package=" + packageKey);
+#if AIRSHIP_STAGING
+		Debug.Log($"Added shared lua file {br.m_path}");
+#endif
 	}
 
 	public static string GetLoadedAssetBundleKey(AirshipPackage package, string assetBundleFile) {

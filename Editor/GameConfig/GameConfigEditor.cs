@@ -56,6 +56,7 @@ public class GameConfigEditor : UnityEditor.Editor {
         EditorGUILayout.PropertyField(this.compileURPShaders, new GUIContent("Compile URP Shaders") {
             tooltip = "By default, your game will use a precompiled set of URP shaders for basic usage. Checking this box will compile URP shaders specifically for your game. If you have any advanced URP materials (or notice invisible materials on published games), you should check this box."
         });
+
         GUILayout.Space(20);
 
         foreach (var field in typeof(GameConfig).GetFields()) {

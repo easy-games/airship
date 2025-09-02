@@ -126,17 +126,43 @@ public class Deploy {
 		// Rebuild Typescript
 		var shouldRecompile = !skipBuild;
 		var shouldResumeTypescriptWatch = shouldRecompile && TypescriptCompilationService.IsWatchModeRunning;
+		var useSplitCodeBundle = EditorIntegrationsConfig.instance.codeSplitting;
+
+		if (!useSplitCodeBundle) {
+			var result = EditorUtility.DisplayDialogComplex("Code stripping is disabled",
+				"You are about to publish with code stripping disabled, are you sure you want to continue?\n\nThis will make any server code available to the client.", "Continue",
+				"Enable", "Cancel");
+
+			if (result == 1) {
+				EditorIntegrationsConfig.instance.codeSplitting = true;
+				useSplitCodeBundle = true;
+			} else if (result == 2) {
+				yield break;
+			}
+		}
 		
 		// We want to do a full publish
-		
 		if (shouldRecompile) {
-			TypescriptCompilationService.StopCompilers();
+			var compileFlags = TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file
 			
-			var compileFlags = TypeScriptCompileFlags.Publishing | TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file & Publishing will omit editor data
-
+			// Compiler doesn't need to be stopped if it's a split code bundle, since that's compiled to the dist folder
+			//		The publish flag here will enable all the fancy features around this
+			if (useSplitCodeBundle) {
+				compileFlags |= TypeScriptCompileFlags.Publishing;
+			} else {
+				TypescriptCompilationService.StopCompilers();
+			}
+			
 			if (skipBuild) {
 				compileFlags |= TypeScriptCompileFlags.SkipReimportQueue; // code publish does not require asset reimport
 			}
+			
+			TypescriptCompilationService.BuildTypescript(compileFlags);
+		} else if (useSplitCodeBundle) {
+			var compileFlags = TypeScriptCompileFlags.Publishing 
+			                   | TypeScriptCompileFlags.DisplayProgressBar 
+			                   | TypeScriptCompileFlags.SkipPackages 
+			                   | TypeScriptCompileFlags.SkipReimportQueue; // skipping packages in the bg
 			
 			TypescriptCompilationService.BuildTypescript(compileFlags);
 		}
@@ -229,7 +255,7 @@ public class Deploy {
 					codeZip.AddEntry(path, File.ReadAllBytes(path));
 					continue;
 				}
-				
+
 				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
 				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
 				if (!File.Exists(luaOutPath)) {
@@ -239,9 +265,34 @@ public class Deploy {
 
 				// We want a .lua in the same spot the .ts would be
 				var luaFakePath = path.Replace(".ts", ".lua");
-				var bytes = File.ReadAllBytes(luaOutPath);
-				codeZip.AddEntry(luaFakePath, bytes);
-
+                
+				if (useSplitCodeBundle) {
+					var serverPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+						TypescriptProjectsService.DeploymentContext.Server);
+					var clientPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+						TypescriptProjectsService.DeploymentContext.Client);
+					
+					if (File.Exists(serverPath) && File.Exists(clientPath)) {
+						var serverBytes = File.ReadAllBytes(serverPath);
+						var serverFakePath = path.Replace(".ts", AirshipRuntimePath.ServerExtension);
+						codeZip.AddEntry(serverFakePath, serverBytes);
+						
+						var clientBytes = File.ReadAllBytes(clientPath);
+						var clientFakePath = path.Replace(".ts", AirshipRuntimePath.ClientExtension);
+						codeZip.AddEntry(clientFakePath, clientBytes);
+					} else {
+						var sharedPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+							TypescriptProjectsService.DeploymentContext.Shared);
+						
+						var sharedBytes = File.ReadAllBytes(sharedPath);
+						var sharedFakePath = path.Replace(".ts", AirshipRuntimePath.LuaExtension);
+						codeZip.AddEntry(sharedFakePath, sharedBytes);
+					}
+				} else {
+					var bytes = File.ReadAllBytes(luaOutPath);
+					codeZip.AddEntry(luaFakePath, bytes);
+				}
+				
 				var jsonPath = luaOutPath + ".json~";
 				if (File.Exists(jsonPath)) {
 					// var jsonBytes = File.ReadAllBytes(jsonPath);

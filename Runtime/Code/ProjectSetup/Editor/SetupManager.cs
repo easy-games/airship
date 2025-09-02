@@ -19,14 +19,12 @@ public class SetupManager : AssetPostprocessor {
 
     [MenuItem("Airship/Misc/Repair Project")]
     public static void FixProject() {
-        var config = MiscProjectSetup.Setup();
-        PhysicsSetup.Setup(config);
+        PhysicsSetup.Setup();
     }
 
     [MenuItem("Airship/Misc/Reset Physics To Airship Defaults")]
     public static void ResetPhysics() {
-        var config = MiscProjectSetup.GetOrCreateGameConfig();
-        PhysicsSetup.ResetDefaults(config, PhysicsSetup.defaultGravity);
+        PhysicsSetup.ResetDefaults();
     }
 }
 #endif

@@ -7,6 +7,13 @@ public enum EngineRunMode {
     BOTH,
 }
 
+public enum EasyAxis {
+    None = -1,
+    X = 0, 
+    Y,
+    Z,
+}
+
 public static class EasyTooling{
     public static bool IsValidRunMode(EngineRunMode runMode){
         return !(runMode == EngineRunMode.NONE ||
