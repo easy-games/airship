@@ -23,12 +23,16 @@ namespace Code.Luau.LuauAssembly.Protection {
                 RegisterPossiblyProtectedScene(scene);
             }
 
-            SceneManager.sceneLoaded += (scene, mode) => {
-                RegisterPossiblyProtectedScene(scene);
-            };
-            SceneManager.sceneUnloaded += scene => {
-                protectedSceneHandles.Remove(scene.handle);
-            };
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
+            RegisterPossiblyProtectedScene(scene);
+        }
+
+        private static void OnSceneUnloaded(Scene scene) {
+            protectedSceneHandles.Remove(scene.handle);
         }
 
         /// <summary>
@@ -80,7 +84,11 @@ namespace Code.Luau.LuauAssembly.Protection {
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnReload() {
+            CurrentContext = LuauContext.Game; // Reset context back to default (shouldn't matter)
             protectedSceneHandles.Clear();
+
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
         }
     }
 }
