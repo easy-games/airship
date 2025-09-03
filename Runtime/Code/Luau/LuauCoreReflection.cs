@@ -336,7 +336,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         //We have parameters
-        var returnValue = finalConstructor.Invoke(parsedData.ToArray());
+        var returnValue = finalConstructor.Invoke(parsedData);
 
         //Push this onto the stack
         WritePropertyToThread(thread, returnValue, type);
@@ -903,7 +903,7 @@ public partial class LuauCore : MonoBehaviour
     }
 
     private static readonly object[] ParsedObjectsData = new object[MaxParameters];
-    private static bool ParseParameterData(IntPtr thread, int numParameters, Span<IntPtr> intPtrs, Span<int> podTypes, ParameterInfo[] methodParameters, Span<int> sizes, Span<int> isTable, Span<object> podObjects, bool usingAttachedContext, out ArraySegment<object> parsedData) {
+    private static bool ParseParameterData(IntPtr thread, int numParameters, Span<IntPtr> intPtrs, Span<int> podTypes, ParameterInfo[] methodParameters, Span<int> sizes, Span<int> isTable, Span<object> podObjects, bool usingAttachedContext, out object[] parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
         parsedData = new object[numParametersIncludingContext];

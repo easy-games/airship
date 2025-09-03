@@ -1452,7 +1452,7 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         try {
-            returnValue = finalMethod.Invoke(invokeObj, parsedData.Array);
+            returnValue = finalMethod.Invoke(invokeObj, parsedData);
         }
         catch (TargetInvocationException e) {
             return LuauError(thread,
@@ -1463,7 +1463,7 @@ public partial class LuauCore : MonoBehaviour {
                 "Error: Exception thrown in method " + type.Name + "." + finalMethod.Name + ": " + e);
         }
 
-        WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData.Array);
+        WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData);
         return returnCount;
     }
 
