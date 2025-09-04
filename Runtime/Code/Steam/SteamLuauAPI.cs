@@ -7,6 +7,7 @@ using Steamworks;
 #endif
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Scripting;
 
 public struct AirshipSteamFriendInfo {
     public bool playingAirship;
@@ -17,6 +18,7 @@ public struct AirshipSteamFriendInfo {
 }
 
 
+[Preserve]
 [LuauAPI(LuauContext.Protected)]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private static List<(object, object)> commandLineQueue = new();
@@ -177,6 +179,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         return success;
     }
 
+    [Preserve]
         public static async Task<AirshipSteamFriendInfo[]> GetSteamFriends() {
             Assert.IsTrue(SteamManager.Initialized, "Can't fetch friends: steam is not initialized.");
 

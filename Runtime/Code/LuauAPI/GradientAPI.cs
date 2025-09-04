@@ -23,18 +23,18 @@ public class GradientAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         
         switch (methodName) {
             case "CreateColorKeyArray": {
-                var size = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                var size = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);
                 
                 LuauCore.WritePropertyToThread(thread, new GradientColorKey[size], typeof(GradientColorKey[]));
                 return 1;
             }
             case "CreateAlphaKeyArray": {
-                var size = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                var size = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     parameterDataSizes);
             
                 LuauCore.WritePropertyToThread(thread, new GradientAlphaKey[size], typeof(GradientAlphaKey[]));

@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
 using System.Threading;
+using Code.Luau.LuauAssembly;
 using Luau;
 using Debug = UnityEngine.Debug;
 
@@ -811,7 +812,7 @@ public static class LuauPlugin {
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CopyTableToArray(IntPtr thread, IntPtr array, int type, int size, int idx);
-	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, LuauCore.PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
+	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
 		var arr = new T[size];
 		array = arr;
 		IntPtr res;
