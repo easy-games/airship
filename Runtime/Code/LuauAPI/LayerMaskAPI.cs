@@ -7,7 +7,7 @@ using UnityEngine;
 [LuauAPI]
 public class LayerMaskAPI : BaseLuaAPIClass
 {
-    private static Dictionary<int, string[]> layerArrays = new();
+    private static Dictionary<ulong, int> hashToMask = new();
     
     public override Type GetAPIType()
     {
@@ -16,27 +16,27 @@ public class LayerMaskAPI : BaseLuaAPIClass
 
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName == "GetMask") {
-            var layerNames = GetMaskArray(numParameters);
             var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+            var layerMask = 0;
             for (int i = 0; i < numParameters; i++) {
-                string name = LuauCore.GetParameterAsString(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    parameterDataSizes);
-
+                string name = LuauCore.GetParameterAsStringWithHash(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                    parameterDataSizes, out var paramHash);
+                
                 // Map game layer name to normalized airship-player layer name.
-#if AIRSHIP_PLAYER
-                if (gameConfig) {
-                    int index = Array.IndexOf(gameConfig.gameLayers, name);
-                    if (index > -1) {
-                        name = LayerMask.LayerToName(index);
+                if (!hashToMask.TryGetValue(paramHash, out var paramMask)) {
+                    if (gameConfig) {
+                        int index = Array.IndexOf(gameConfig.gameLayers, name);
+                        if (index > -1) {
+                            paramMask = (1 << index);
+                            hashToMask[paramHash] = paramMask;
+                        }
                     }
                 }
-#endif
 
-                layerNames[i] = name;
+                layerMask |= paramMask;
             }
 
-            var val = LayerMask.GetMask(layerNames);
-            LuauCore.WritePropertyToThreadInt32(thread, val);
+            LuauCore.WritePropertyToThreadInt32(thread, layerMask);
             return 1;
         }
         if (methodName == "InvertMask") {
@@ -71,13 +71,5 @@ public class LayerMaskAPI : BaseLuaAPIClass
         }
 
         return -1;
-    }
-
-    private string[] GetMaskArray(int numElements) {
-        if (!layerArrays.TryGetValue(numElements, out var arr)) {
-            arr = new string[numElements];
-            layerArrays[numElements] = arr;
-        }
-        return arr;
     }
 }
