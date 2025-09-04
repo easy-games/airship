@@ -1,10 +1,14 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using Luau;
 using UnityEngine;
 
 [LuauAPI]
 public class LayerMaskAPI : BaseLuaAPIClass
 {
+    private static Dictionary<int, string[]> layerArrays = new();
+    
     public override Type GetAPIType()
     {
         return typeof(LayerMask);
@@ -12,7 +16,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
 
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName == "GetMask") {
-            string[] layerNames = new string[numParameters];
+            var layerNames = GetMaskArray(numParameters);
             var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
             for (int i = 0; i < numParameters; i++) {
                 string name = LuauCore.GetParameterAsString(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
@@ -67,5 +71,13 @@ public class LayerMaskAPI : BaseLuaAPIClass
         }
 
         return -1;
+    }
+
+    private string[] GetMaskArray(int numElements) {
+        if (!layerArrays.TryGetValue(numElements, out var arr)) {
+            arr = new string[numElements];
+            layerArrays[numElements] = arr;
+        }
+        return arr;
     }
 }
