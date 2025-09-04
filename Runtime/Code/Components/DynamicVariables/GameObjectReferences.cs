@@ -50,7 +50,7 @@ public class GameObjectReferences : MonoBehaviour {
     private void Awake() {
         if (isStaticInstance) {
             if (!AllReferences.TryAdd(staticBundleId, this)) {
-                Debug.LogWarning($"Duplicate instance of static GameObjectReferences for key {staticBundleId}", this.gameObject);
+                Debug.LogError($"Duplicate instance of static GameObjectReferences for key {staticBundleId}", this.gameObject);
             }
         }
 
