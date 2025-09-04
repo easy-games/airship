@@ -32,7 +32,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
             }
 
             var val = LayerMask.GetMask(layerNames);
-            LuauCore.WritePropertyToThread(thread, val, val.GetType());
+            LuauCore.WritePropertyToThreadInt32(thread, val);
             return 1;
         }
         if (methodName == "InvertMask") {
@@ -40,7 +40,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
             {
                 int layerMask = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
-                LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
+                LuauCore.WritePropertyToThreadInt32(thread, ~layerMask);
                 return 1;
             }
         }
@@ -61,7 +61,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
                 }
 #endif
 
-                LuauCore.WritePropertyToThread(thread, LayerMask.NameToLayer(name), typeof(int));
+                LuauCore.WritePropertyToThreadInt32(thread, LayerMask.NameToLayer(name));
                 return 1;
             }
         }
