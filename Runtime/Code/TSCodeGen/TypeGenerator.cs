@@ -3,6 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
+using System.Linq;
 using Agones.Model;
 using Airship;
 using Assets.Code.Misc;
@@ -375,10 +377,20 @@ public class TypeGenerator : MonoBehaviour
                     return "Vector3";
                 }
                 type = type.Replace("*", "");
+
                 if (type.Contains("$1"))
                 {
                     print(type);
                     type = type.Substring(0, type.IndexOf("$1"));
+                }
+
+                if (type.Contains("[,")) {
+                    type = Regex.Replace(typeString, @"\[(,+)\]", match =>
+                    {
+                        int commaCount = match.Groups[1].Value.Length;
+                        int dimensions = commaCount + 1;
+                        return string.Concat(Enumerable.Repeat("[]", dimensions));
+                    });
                 }
 
                 return type;
