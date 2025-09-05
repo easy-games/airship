@@ -463,6 +463,16 @@ public partial class LuauCore : MonoBehaviour
         LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, strLen);
         Marshal.FreeCoTaskMem(strPtr);
     }
+
+    public static unsafe void WritePropertyToThreadRect(IntPtr thread, Rect rect) {
+        var rectData = stackalloc float[4];
+        rectData[0] = rect.x;
+        rectData[1] = rect.y;
+        rectData[2] = rect.width;
+        rectData[3] = rect.height;
+
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RECT, new IntPtr(rectData), 0); // 0, because we know how big an intPtr is
+    }
     
     // Called from WriteProperty
     public static unsafe void WritePropertyToThreadDouble(IntPtr thread, double value) {
@@ -670,15 +680,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         if (t == rectType) {
-            var rect = (Rect)value;
-            var rectData = stackalloc float[4];
-            rectData[0] = rect.x;
-            rectData[1] = rect.y;
-            rectData[2] = rect.width;
-            rectData[3] = rect.height;
-
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RECT, new IntPtr(rectData), 0); // 0, because we know how big an intPtr is
-
+            WritePropertyToThreadRect(thread, (Rect) value);
             return true;
         }
 
