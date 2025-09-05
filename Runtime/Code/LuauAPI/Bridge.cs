@@ -42,6 +42,14 @@ public static class Bridge {
     public static Texture2D MakeTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear) {
         return new Texture2D(width, height, format, mipChain, linear);
     }
+    
+    public static Texture2DArray MakeDefaultTexture2DArray(int width, int height, int depth) {
+        return new Texture2DArray(width, height, depth, DefaultFormat.LDR, TextureCreationFlags.None);
+    }
+    
+    public static Texture2DArray MakeTextureFormatTexture2DArray(int width, int height, int depth, TextureFormat format, bool mipChain) {
+        return new Texture2DArray(width, height, depth, format, mipChain);
+    }
 
     //SPRITES
     public static Sprite MakeDefaultSprite(Texture2D texture) {
