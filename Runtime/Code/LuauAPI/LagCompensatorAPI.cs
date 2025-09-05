@@ -9,7 +9,7 @@ public class LagCompensatorAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
 
         LagCompensator target = (LagCompensator)targetObject;
         if (methodName == "RaycastCheck") {
@@ -28,7 +28,7 @@ public class LagCompensatorAPI : BaseLuaAPIClass {
 
             int layerMask = -1;
             if (numParameters >= 5) {
-                layerMask = LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes,
+                layerMask = LuauCore.GetParameterAsInt32(4, numParameters, parameterDataPODTypes,
                     parameterDataPtrs, parameterDataSizes);
             }
 

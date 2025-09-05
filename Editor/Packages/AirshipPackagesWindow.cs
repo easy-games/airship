@@ -451,7 +451,7 @@ namespace Editor.Packages {
                     }
 
                     if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
-                        CreateAssetBundles.SwapToQualityLevel("Mobile");
+                        CreateAssetBundles.SwapToQualityLevel("Low");
                     } else {
                         CreateAssetBundles.SwapToQualityLevel("Normal");
                     }
@@ -487,6 +487,7 @@ namespace Editor.Packages {
                         yield break;
                     }
 
+
                     // var manifest = BuildPipeline.BuildAssetBundles(
                     //     buildPath,
                     //     builds.ToArray(),
@@ -500,6 +501,8 @@ namespace Editor.Packages {
             }
 
             if (isCoreMaterials) {
+                packageUploadProgress.Remove(packageDoc.id);
+                Repaint();
                 yield break;
             }
 

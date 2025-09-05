@@ -1,46 +1,50 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using Luau;
 using UnityEngine;
 
 [LuauAPI]
 public class LayerMaskAPI : BaseLuaAPIClass
 {
+    private static Dictionary<ulong, int> hashToMask = new();
+    
     public override Type GetAPIType()
     {
         return typeof(LayerMask);
     }
 
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName == "GetMask") {
-            string[] layerNames = new string[numParameters];
             var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+            var layerMask = 0;
             for (int i = 0; i < numParameters; i++) {
-                string name = LuauCore.GetParameterAsString(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
-                    parameterDataSizes);
-
+                string name = LuauCore.GetParameterAsStringWithHash(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                    parameterDataSizes, out var paramHash);
+                
                 // Map game layer name to normalized airship-player layer name.
-#if AIRSHIP_PLAYER
-                if (gameConfig) {
-                    int index = Array.IndexOf(gameConfig.gameLayers, name);
-                    if (index > -1) {
-                        name = LayerMask.LayerToName(index);
+                if (!hashToMask.TryGetValue(paramHash, out var paramMask)) {
+                    if (gameConfig) {
+                        int index = Array.IndexOf(gameConfig.gameLayers, name);
+                        if (index > -1) {
+                            paramMask = (1 << index);
+                            hashToMask[paramHash] = paramMask;
+                        }
                     }
                 }
-#endif
 
-                layerNames[i] = name;
+                layerMask |= paramMask;
             }
 
-            var val = LayerMask.GetMask(layerNames);
-            LuauCore.WritePropertyToThread(thread, val, val.GetType());
+            LuauCore.WritePropertyToThreadInt32(thread, layerMask);
             return 1;
         }
         if (methodName == "InvertMask") {
             if (numParameters == 1)
             {
-                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                int layerMask = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
-                LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
+                LuauCore.WritePropertyToThreadInt32(thread, ~layerMask);
                 return 1;
             }
         }
@@ -61,7 +65,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
                 }
 #endif
 
-                LuauCore.WritePropertyToThread(thread, LayerMask.NameToLayer(name), typeof(int));
+                LuauCore.WritePropertyToThreadInt32(thread, LayerMask.NameToLayer(name));
                 return 1;
             }
         }

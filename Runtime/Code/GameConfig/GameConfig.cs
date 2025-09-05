@@ -149,81 +149,98 @@ public class GameConfig : ScriptableObject {
         var json = JsonUtility.ToJson(gameConfigDto);
         return json;
     }
-
+    
+#if UNITY_EDITOR
+    /// <summary>
+    /// Copies Unity properties (such as tag, layer, physics and time settings) into the GameConfig.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when GameConfig tag list is longer than MaximumTags</exception>
     public void SerializeSettings() {
-        try {
-            // Update physics matrix        
-            var areLayersIgnored = new bool[15 * 32];
-            var TheMatrixLog = "SAVING GAME LAYER MATRIX: \n";
-            // 15 Game Layers and how they collide with all 32 layers
-            for (var i = 0; i < 15; i++) {
-                //Check
-                for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
-                    var gameLayerI = 17 + i;
-                    var ignored = Physics.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
-                    areLayersIgnored[i * 32 + otherLayerI] = ignored;
-                    TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI + " ignored: " + ignored + " \n";
-                }
-            }
-
-            // Debug.Log(TheMatrixLog);
-            physicsMatrix = areLayersIgnored;
-
-            // Physics settings
-            gravity = Physics.gravity;
-            bounceThreshold = Physics.bounceThreshold;
-            defaultMaxDepenetrationVelocity = Physics.defaultMaxDepenetrationVelocity;
-            sleepThreshold = Physics.sleepThreshold;
-            defaultContactOffset = Physics.defaultContactOffset;
-            defaultSolverIterations = Physics.defaultSolverIterations;
-            defaultSolverVelocityIterations = Physics.defaultSolverVelocityIterations;
-            queriesHitBackfaces = Physics.queriesHitBackfaces;
-            queriesHitTriggers = Physics.queriesHitTriggers;
-            fixedDeltaTime = Time.fixedDeltaTime;
-
-
-            // Update physics 2D matrix        
-            areLayersIgnored = new bool[15 * 32];
-            TheMatrixLog = "SAVING 2D GAME LAYER MATRIX: \n";
-            // 15 Game Layers and how they collide with all 32 layers
-            for (var i = 0; i < 15; i++) {
-                //Check
-                for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
-                    var gameLayerI = 17 + i;
-                    var ignored = Physics2D.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
-                    areLayersIgnored[i * 32 + otherLayerI] = ignored;
-                    TheMatrixLog += "2D GameLayer" + i + " and Layer: " + otherLayerI + " ignored: " + ignored + " \n";
-                }
-            }
-
-            // Debug.Log(TheMatrixLog);
-            physicsMatrix2D = areLayersIgnored;
-
-            // Physics 2D settings
-            gravity2D = Physics2D.gravity;
-            velocityIterations2D = Physics2D.velocityIterations;
-            positionIterations2D = Physics2D.positionIterations;
-            bounceThreshold2D = Physics2D.bounceThreshold;
-            maxLinearCorrection2D = Physics2D.maxLinearCorrection;
-            maxAngularCorrection2D = Physics2D.maxAngularCorrection;
-            maxTranslationSpeed2D = Physics2D.maxTranslationSpeed;
-            maxRotationSpeed2D = Physics2D.maxRotationSpeed;
-            baumgarteScale2D = Physics2D.baumgarteScale;
-            baumgarteTOIScale2D = Physics2D.baumgarteTOIScale;
-            timeToSleep2D = Physics2D.timeToSleep;
-            linearSleepTolerance2D = Physics2D.linearSleepTolerance;
-            angularSleepTolerance2D = Physics2D.angularSleepTolerance;
-            defaultContactOffset2D = Physics2D.defaultContactOffset;
-            contactThreshold2D = Physics2D.contactThreshold;
-            queriesHitTriggers2D = Physics2D.queriesHitTriggers;
-            queriesStartInColliders2D = Physics2D.queriesStartInColliders;
-            callbacksOnDisable2D = Physics2D.callbacksOnDisable;
-            reuseCollisionCallbacks2D = Physics2D.reuseCollisionCallbacks;
-            autoSyncTransforms2D = Physics2D.autoSyncTransforms;
-        } catch (Exception e) {
-            Debug.LogError("Error in Serialize Game Config: " + e);
+        // Update tags
+        var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
+        if (tagList.Length > GameConfig.MaximumTags) {
+            throw new ArgumentException($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
         }
+        gameTags = tagList.ToArray();
+
+        // Update layers
+        var layers = new List<string>();
+        for (int i = 0; i < 31; i++) {
+            var layerName = LayerMask.LayerToName(i);
+            layers.Add(layerName);
+        }
+        gameLayers = layers.ToArray();
+        
+        // Update physics matrix        
+        var areLayersIgnored = new bool[15 * 32];
+        var TheMatrixLog = "SAVING GAME LAYER MATRIX: \n";
+        // 15 Game Layers and how they collide with all 32 layers
+        for (var i = 0; i < 15; i++) {
+            //Check
+            for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
+                var gameLayerI = 17 + i;
+                var ignored = Physics.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
+                areLayersIgnored[i * 32 + otherLayerI] = ignored;
+                TheMatrixLog += "GameLayer" + i + " and Layer: " + otherLayerI + " ignored: " + ignored + " \n";
+            }
+        }
+
+        // Debug.Log(TheMatrixLog);
+        physicsMatrix = areLayersIgnored;
+
+        // Physics settings
+        gravity = Physics.gravity;
+        bounceThreshold = Physics.bounceThreshold;
+        defaultMaxDepenetrationVelocity = Physics.defaultMaxDepenetrationVelocity;
+        sleepThreshold = Physics.sleepThreshold;
+        defaultContactOffset = Physics.defaultContactOffset;
+        defaultSolverIterations = Physics.defaultSolverIterations;
+        defaultSolverVelocityIterations = Physics.defaultSolverVelocityIterations;
+        queriesHitBackfaces = Physics.queriesHitBackfaces;
+        queriesHitTriggers = Physics.queriesHitTriggers;
+        fixedDeltaTime = Time.fixedDeltaTime;
+
+
+        // Update physics 2D matrix        
+        areLayersIgnored = new bool[15 * 32];
+        TheMatrixLog = "SAVING 2D GAME LAYER MATRIX: \n";
+        // 15 Game Layers and how they collide with all 32 layers
+        for (var i = 0; i < 15; i++) {
+            //Check
+            for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
+                var gameLayerI = 17 + i;
+                var ignored = Physics2D.GetIgnoreLayerCollision(gameLayerI, otherLayerI);
+                areLayersIgnored[i * 32 + otherLayerI] = ignored;
+                TheMatrixLog += "2D GameLayer" + i + " and Layer: " + otherLayerI + " ignored: " + ignored + " \n";
+            }
+        }
+
+        // Debug.Log(TheMatrixLog);
+        physicsMatrix2D = areLayersIgnored;
+
+        // Physics 2D settings
+        gravity2D = Physics2D.gravity;
+        velocityIterations2D = Physics2D.velocityIterations;
+        positionIterations2D = Physics2D.positionIterations;
+        bounceThreshold2D = Physics2D.bounceThreshold;
+        maxLinearCorrection2D = Physics2D.maxLinearCorrection;
+        maxAngularCorrection2D = Physics2D.maxAngularCorrection;
+        maxTranslationSpeed2D = Physics2D.maxTranslationSpeed;
+        maxRotationSpeed2D = Physics2D.maxRotationSpeed;
+        baumgarteScale2D = Physics2D.baumgarteScale;
+        baumgarteTOIScale2D = Physics2D.baumgarteTOIScale;
+        timeToSleep2D = Physics2D.timeToSleep;
+        linearSleepTolerance2D = Physics2D.linearSleepTolerance;
+        angularSleepTolerance2D = Physics2D.angularSleepTolerance;
+        defaultContactOffset2D = Physics2D.defaultContactOffset;
+        contactThreshold2D = Physics2D.contactThreshold;
+        queriesHitTriggers2D = Physics2D.queriesHitTriggers;
+        queriesStartInColliders2D = Physics2D.queriesStartInColliders;
+        callbacksOnDisable2D = Physics2D.callbacksOnDisable;
+        reuseCollisionCallbacks2D = Physics2D.reuseCollisionCallbacks;
+        autoSyncTransforms2D = Physics2D.autoSyncTransforms;
     }
+#endif
 
     public void DeserializeSettings() {
         try { 

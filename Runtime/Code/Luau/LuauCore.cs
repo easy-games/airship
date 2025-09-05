@@ -9,6 +9,7 @@ using UnityEngine.Profiling;
 using System.Collections;
 using System.Linq;
 using System.Text;
+using Code.Luau.LuauAssembly.Protection;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -24,28 +25,6 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 #endif
-
-    public enum PODTYPE : int {
-        POD_DOUBLE = 0,
-        POD_OBJECT = 1,
-        POD_STRING = 2,
-        POD_INT32 = 3,
-        POD_VECTOR3 = 4,
-        POD_BOOL = 5,
-        POD_NULL = 6,
-        POD_RAY = 7,
-        POD_MATRIX = 8,
-        POD_QUATERNION = 9,
-        POD_PLANE = 10,
-        POD_COLOR = 11,
-        POD_LUAFUNCTION = 12,
-        POD_BINARYBLOB = 13,
-        POD_VECTOR2 = 14,
-        POD_VECTOR4 = 15,
-        POD_FLOAT = 16,
-        POD_AIRSHIP_COMPONENT = 17,
-        POD_BUFFER = 18,
-    };
 
     private static bool s_shutdown = false;
  
@@ -83,11 +62,6 @@ public partial class LuauCore : MonoBehaviour {
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
     private static Type luauBufferType = typeof(LuauBuffer);
     private static Type actionType = typeof(Action);
-
-    private static readonly string[] protectedScenesNames = {
-        "corescene", "mainmenu", "login", "disconnected", "airshipupdateapp", "dontdestroyonload",
-    };
-    private static HashSet<int> protectedSceneHandles = new HashSet<int>();
 
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;
@@ -133,9 +107,10 @@ public partial class LuauCore : MonoBehaviour {
 
         initialized = true;
 
-        SetupProtectedSceneHandleListener();
+        LuauProtection.SetupProtectedSceneHandleListener();
         SetupReflection();
         CreateCallbacks();
+        // SetupGeneratedCallbacks();
 
         var stringCount = unityAPIClasses.Count;
         var stringList = new IntPtr[stringCount];
@@ -194,26 +169,6 @@ public partial class LuauCore : MonoBehaviour {
         SetupNamespaceStrings();
     }
 
-    private void SetupProtectedSceneHandleListener() {
-        for (var i = 0; i < SceneManager.sceneCount; i++) {
-            var scene = SceneManager.GetSceneAt(i);
-            RegisterPossiblyProtectedScene(scene);
-        }
-
-        SceneManager.sceneLoaded += (scene, mode) => {
-            RegisterPossiblyProtectedScene(scene);
-        };
-        SceneManager.sceneUnloaded += scene => {
-            protectedSceneHandles.Remove(scene.handle);
-        };
-    }
-
-    private void RegisterPossiblyProtectedScene(Scene scene) {
-        if (IsProtectedSceneName(scene.name)) {
-            protectedSceneHandles.Add(scene.handle);
-        }
-    }
-
     public void OnDestroy() {
 #if UNITY_EDITOR
         EditorApplication.pauseStateChanged -= OnPauseStateChanged;
@@ -249,10 +204,9 @@ public partial class LuauCore : MonoBehaviour {
         _awaitingTasks.Clear();
         eventConnections.Clear();
         propertyGetCache.Clear();
-        protectedSceneHandles.Clear();
         _propertySetterCache.Clear();
         WriteMethodFunctions.Clear();
-        CurrentContext = LuauContext.Game;
+        LuauProtection.CurrentContext = LuauContext.Game;
         s_shutdown = false;
     }
 
@@ -322,37 +276,6 @@ public partial class LuauCore : MonoBehaviour {
 
     private static void Quit() {
         s_shutdown = true;
-    }
-
-    public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
-        if (gameObject == null) return false;
-        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene)) {
-            if (gameObject.transform.parent?.name is "GameReadAccess" || gameObject.transform.parent?.parent?.name is "GameReadAccess") {
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    public static bool IsProtectedScene(Scene scene) {
-        return protectedSceneHandles.Contains(scene.handle);
-    }
-
-    /// <summary>
-    /// Unless you only have scene name you should use IsProtectedScene
-    /// </summary>
-    public static bool IsProtectedSceneName(string sceneName) {
-        if (string.IsNullOrEmpty(sceneName)) return false;
-
-        foreach (var protectedSceneName in protectedScenesNames) {
-            if (protectedSceneName.Equals(sceneName, StringComparison.OrdinalIgnoreCase)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public void Update() {

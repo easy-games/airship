@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Assets.Luau.Network;
 using Code.Bootstrap;
+using Code.Luau.LuauAssembly.Protection;
 using Code.RemoteConsole;
 using Mirror;
 using UnityEngine;
@@ -185,7 +186,7 @@ public class AirshipNetworkManager : NetworkManager {
                     if (isActiveScene) {
                         for (int i = 0; i < SceneManager.sceneCount; i++) {
                             var s = SceneManager.GetSceneAt(i);
-                            if (LuauCore.IsProtectedScene(s)) continue;
+                            if (LuauProtection.IsProtectedScene(s)) continue;
                             if (s.name == newSceneName) continue;
                             foundNewActiveScene = true;
                             newActiveScene = s;

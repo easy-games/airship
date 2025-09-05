@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Adrenak.UniMic;
 using Airship.DevConsole;
+using Code.Luau.LuauAssembly.Protection;
 using Code.VoiceChat;
 using Mirror;
 using Tayx.Graphy;
@@ -430,12 +431,12 @@ public static class Bridge {
     }
 
     public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
-        if (LuauCore.IsProtectedScene(scene) && LuauCore.CurrentContext == LuauContext.Game) {
+        if (LuauProtection.IsProtectedScene(scene) && LuauProtection.CurrentContext == LuauContext.Game) {
             Debug.Log("[Airship] Unable to move gameobject to protected scene.");
             return;
         }
 
-        if (LuauCore.IsAccessBlocked(LuauCore.CurrentContext, gameObject)) {
+        if (LuauProtection.IsAccessBlocked(LuauProtection.CurrentContext, gameObject)) {
             Debug.Log("[Airship] Unable to move protected gameobject: " + gameObject.name);
             return;
         }
@@ -447,7 +448,7 @@ public static class Bridge {
         List<Scene> scenes = new();
         for (var i = 0; i < SceneManager.sceneCount; i++) {
             var scene = SceneManager.GetSceneAt(i);
-            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene)) {
+            if (LuauProtection.CurrentContext == LuauContext.Game && LuauProtection.IsProtectedScene(scene)) {
                 continue;
             }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Code.Luau.LuauAssembly.Protection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
@@ -55,8 +56,8 @@ namespace Code.PoolManager {
 
 		public void InternalPreLoadPool(GameObject prefab, int size, Transform parent = null) {
 			if (parent != null) {
-				if (LuauCore.CurrentContext == LuauContext.Game) {
-					if (LuauCore.IsProtectedScene(parent.gameObject.scene)) {
+				if (LuauProtection.CurrentContext == LuauContext.Game) {
+					if (LuauProtection.IsProtectedScene(parent.gameObject.scene)) {
 						Debug.LogError("[Airship] Access denied. Tried to use PoolManager to spawn GameObject into a protected scene.");
 						return;
 					}
