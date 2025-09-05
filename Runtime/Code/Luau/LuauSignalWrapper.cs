@@ -76,13 +76,6 @@ namespace Luau {
                 LuauCore.WritePropertyToThread(thread, parameter, parameter.GetType());
             }
         }
-
-        // public LuauSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong propNameHash) {
-        //     _context = context;
-        //     _thread = thread;
-        //     _instanceId = instanceId;
-        //     _propNameHash = propNameHash;
-        // }
         
         public LuauSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong propNameHash) {
             _context = context;
