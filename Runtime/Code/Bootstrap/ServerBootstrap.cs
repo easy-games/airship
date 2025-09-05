@@ -148,7 +148,11 @@ public class ServerBootstrap : MonoBehaviour
 	public void InvokeOnProcessExit() {
 		// Don't need to refire shutdown events if they've already been processed or if agones has been notified of
 		// the shutdown. (agones in shutdown state means we are exiting immediately (OnApplicationQuit) and cannot yield)
-		if (this.isShutdownEventTriggered || this.isAgonesShutdownTriggered) return;
+		if (this.isAgonesShutdownTriggered) {
+			Debug.Log("Agones Shutdown already triggered when invoking OnProcessExit. TS Handlers will not be called.");
+			return;
+		}
+		if (this.isShutdownEventTriggered) return;
 		this.isShutdownEventTriggered = true;
 		
 		// Ensure we always shut down the server after 1 hour even if TS fails to complete for some reason.
