@@ -8,7 +8,7 @@ public class WheelColliderAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         
         if (methodName == "GetGroundHit") {
             var target = (WheelCollider)targetObject;

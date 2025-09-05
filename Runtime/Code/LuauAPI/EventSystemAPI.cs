@@ -11,7 +11,7 @@ public class EventSystemAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         var target = (EventSystem)targetObject;
         if (methodName == "ClearSelected") {
             target.SetSelectedGameObject(null);

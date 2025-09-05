@@ -6,6 +6,8 @@ using Airship.Editor;
 using UnityEngine;
 
 public static class ConsoleFormatting {
+    public const string TSPrefix = "<color=#8e8e8e>TS</color> ";
+    
     public static string LinkWithLineAndColumn(string link, string text, int line, int column) {
         if (string.IsNullOrEmpty(text)) {
             return "unknown";
@@ -24,8 +26,16 @@ public static class ConsoleFormatting {
         return $"<color=#e5a03b>{value}</color>";
     }
     
-    private static string Red(string value) {
+    public static string Red(string value) {
         return $"<color=#e05f67>{value}</color>";
+    }
+
+    public static string DarkRed(string value) {
+        return $"<color=#ff534a>{value}</color>";
+    }
+
+    public static string Green(string value) {
+        return $"<color=#77f777>{value}</color>";
     }
     
     private static string ErrorCode(int value) {

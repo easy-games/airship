@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Code.Luau.LuauAssembly;
 using Luau;
 using UnityEditor;
 using UnityEngine;
@@ -94,7 +95,7 @@ namespace Code.Luau.Editor {
 
                 var paramPodType = LuauCore.GetParamPodType(sourceParamType);
                 podTypes[paramIndex] = (int) paramPodType;
-                if (paramPodType == LuauCore.PODTYPE.POD_OBJECT) {
+                if (paramPodType == PODTYPE.POD_OBJECT) {
                     podObjects.Add(sourceParamType);
                 }
             }

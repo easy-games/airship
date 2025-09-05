@@ -147,8 +147,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(Ray),
             typeof(MaterialPropertyBlock),
             typeof(DevConsole),
-            typeof(EasyShake),
-            typeof(EasyMotion),
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
@@ -210,7 +208,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
             typeof(EventTrigger),
-            typeof(EasyShake),
             typeof(TreeInstance),
             typeof(Terrain),
             typeof(GameServer),
@@ -278,6 +275,15 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterAnimationSyncData),
             typeof(AccessoryAddMode),
             typeof(RectMask2D),
+            typeof(EasyShake),
+            typeof(EasyMotion),
+            typeof(EasyLookAt),
+            typeof(EasyDestroy),
+            typeof(EasyGridAlign),
+            typeof(EasyTransformAnchor),
+            typeof(EasyAxis),
+
+            
             
             // Steam
             typeof(AirshipSteamFriendInfo),

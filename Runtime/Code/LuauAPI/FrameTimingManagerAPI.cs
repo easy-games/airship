@@ -8,12 +8,12 @@ public class FrameTimingManagerAPI : BaseLuaAPIClass {
     }
 
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters,
-        ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs,
-        ArraySegment<int> parameterDataSizes) {
+        Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs,
+        Span<int> parameterDataSizes) {
         if (methodName is "GetLatestTimings") {
             if (numParameters != 1) throw new ArgumentException("GetLatestTimings expects 1 parameter.");
 
-            var numTimings = (uint) LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+            var numTimings = (uint) LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                 parameterDataSizes);
             
             // Arbitrary limit to avoid huge allocations / requests

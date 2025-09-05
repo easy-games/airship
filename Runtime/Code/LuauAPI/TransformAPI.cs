@@ -16,9 +16,9 @@ public class TransformAPI : BaseLuaAPIClass {
         object targetObject,
         string methodName,
         int numParameters,
-        ArraySegment<int> parameterDataPODTypes,
-        ArraySegment<IntPtr> parameterDataPtrs,
-        ArraySegment<int> parameterDataSizes) 
+        Span<int> parameterDataPODTypes,
+        Span<IntPtr> parameterDataPtrs,
+        Span<int> parameterDataSizes) 
     {
         if (methodName == "GetAirshipComponent") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
@@ -164,7 +164,7 @@ public class TransformAPI : BaseLuaAPIClass {
                 case 2: {
                     var axis = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         parameterDataSizes);
-                    var relativeTo = (Space)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt32(1, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
 
                     var t = (Transform)targetObject;
@@ -176,7 +176,7 @@ public class TransformAPI : BaseLuaAPIClass {
                         parameterDataSizes);
                     var angle = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         parameterDataSizes);
-                    var relativeTo = (Space)LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes,
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt32(2, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
 
                     var t = (Transform)targetObject;
@@ -190,7 +190,7 @@ public class TransformAPI : BaseLuaAPIClass {
                         parameterDataSizes);
                     var axisZ = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         parameterDataSizes);
-                    var relativeTo = (Space)LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes,
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt32(3, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, parameterDataSizes);
 
                     var t = (Transform)targetObject;

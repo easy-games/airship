@@ -14,9 +14,9 @@ public class VolumeProfileAPI : BaseLuaAPIClass {
         object targetObject,
         string methodName,
         int numParameters,
-        ArraySegment<int> parameterDataPODTypes,
-        ArraySegment<IntPtr> parameterDataPtrs,
-        ArraySegment<int> parameterDataSizes) {
+        Span<int> parameterDataPODTypes,
+        Span<IntPtr> parameterDataPtrs,
+        Span<int> parameterDataSizes) {
         var target = (VolumeProfile)targetObject;
 
         if (methodName == "GetDepthOfField") {
