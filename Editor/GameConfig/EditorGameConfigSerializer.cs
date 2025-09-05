@@ -7,7 +7,9 @@ using Debug = UnityEngine.Debug;
 [InitializeOnLoad]
 public class EditorGameConfigSerializer {
     static EditorGameConfigSerializer() {
+        #if !AIRSHIP_PLAYER
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        #endif
     }
 
     private static void OnPlayModeStateChanged(PlayModeStateChange stateChange) {
