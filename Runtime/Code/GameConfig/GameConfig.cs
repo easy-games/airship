@@ -149,7 +149,8 @@ public class GameConfig : ScriptableObject {
         var json = JsonUtility.ToJson(gameConfigDto);
         return json;
     }
-
+    
+#if UNITY_EDITOR
     /// <summary>
     /// Copies Unity properties (such as tag, layer, physics and time settings) into the GameConfig.
     /// </summary>
@@ -239,6 +240,7 @@ public class GameConfig : ScriptableObject {
         reuseCollisionCallbacks2D = Physics2D.reuseCollisionCallbacks;
         autoSyncTransforms2D = Physics2D.autoSyncTransforms;
     }
+#endif
 
     public void DeserializeSettings() {
         try { 
