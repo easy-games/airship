@@ -239,24 +239,13 @@ public static class CreateAssetBundles {
 
 	public static GameConfig BuildGameConfig() {
 		GameConfig gameConfig = GameConfig.Load();
-
-		// Update tags
-		var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
-		if (tagList.Length > GameConfig.MaximumTags) {
-			Debug.LogError($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
+		try {
+			gameConfig.SerializeSettings();
+		} catch (Exception ex) {
+			Debug.LogError("Error when copying Unity properties to GameConfig: " + ex);
 			return null;
 		}
-		gameConfig.gameTags = tagList.ToArray();
 
-		// Update layers
-		var layers = new List<string>();
-		for (int i = 0; i < 31; i++) {
-			var layerName = LayerMask.LayerToName(i);
-			layers.Add(layerName);
-		}
-		gameConfig.gameLayers = layers.ToArray();
-		gameConfig.SerializeSettings();       
-		
 		// Local source packages set to forceLatest
 		foreach (var package in gameConfig.packages) {
 			if (package.localSource) {

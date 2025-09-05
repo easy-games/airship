@@ -1427,26 +1427,19 @@ public partial class LuauCore : MonoBehaviour
 
     //Generalized utility version - move these!
     public static string GetParameterAsString(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
+        return GetParameterAsStringWithHash(paramIndex, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out _);
+    }
+    
+    public static string GetParameterAsStringWithHash(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes, out ulong hash) {
+        hash = 0;
         if (paramIndex >= numParameters) {
             return null;
         }
         if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_STRING) {
             return null;
         }
-        return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], parameterDataSizes[paramIndex]);
+        return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], parameterDataSizes[paramIndex], out hash);
     }
-
-    // public static AirshipComponent GetParameterAsAirshipComponent(int paramIndex, int numParameters, int[] parameterDataPODTypes,
-    //     IntPtr[] parameterDataPtrs, int[] parameterDataSizes) {
-    //     if (paramIndex >= numParameters)
-    //     {
-    //         return null;
-    //     }
-    //     if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_STRING)
-    //     {
-    //         return null;
-    //     }
-    // }
 
     public static string GetPropertyAsString(PODTYPE dataPodType, IntPtr dataPtr) {
         return dataPodType == PODTYPE.POD_STRING ? PtrToStringUTF8NullTerminated(dataPtr) : null;
