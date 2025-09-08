@@ -664,6 +664,7 @@ public class VoxelBlocks : MonoBehaviour {
                     Debug.LogWarning($"Duplicate Block Id: {scopedId} at index {blockIdCounter}");
                     continue;
                 }
+                Debug.Log($"Adding Scoped Id: {scopedId}");
                 blockIdLookup.Add(scopedId, block.blockId);
 
                 if (block.definition.sideTexture.diffuse != null) {
