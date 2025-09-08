@@ -9,6 +9,23 @@ using UnityEngine;
 /// Provides raw Lua API methods.
 /// </summary>
 public static class LuauPluginRaw {
+#if UNITY_EDITOR
+	public static IntPtr libHandle;
+
+	public delegate void InitDelegate();
+#endif
+	
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
+	[DllImport("__Internal")]
+	public static extern IntPtr dlopen(string path, int flag);
+
+	[DllImport("__Internal")]
+	public static extern IntPtr dlsym(IntPtr handle, string symbolName);
+
+	[DllImport("__Internal")]
+	public static extern IntPtr dlclose(IntPtr handle);
+#endif
+	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static void ThrowIfNotNullPtr(IntPtr luauExceptionPtr) {
 		if (luauExceptionPtr != IntPtr.Zero) {

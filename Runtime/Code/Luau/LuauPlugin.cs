@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -13,6 +14,21 @@ using Luau;
 using Debug = UnityEngine.Debug;
 
 public static class LuauPlugin {
+	private const string BasePluginsPath = "/Packages/gg.easy.airship/Runtime/Plugins";
+#if UNITY_EDITOR_OSX
+	private const string LuauLibPath = BasePluginsPath + "/Mac/LuauPlugin.bundle/Contents/MacOS/LuauPlugin";
+#elif UNITY_EDITOR_LINUX
+	private const string LuauLibPath = BasePluginsPath + "/Linux/libLuauPlugin.so";
+#elif UNITY_EDITOR_WIN
+	private const string LuauLibPath = BasePluginsPath + "/Windows/x64/LuauPlugin.dll";
+#endif
+	
+#if UNITY_EDITOR
+	public static IntPtr LibHandle;
+
+	public delegate void InitDelegate();
+#endif
+	
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom);
 	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom, int type, IntPtr propertyData, ulong propertySize, byte isTable);
@@ -149,8 +165,7 @@ public static class LuauPlugin {
 	    }
     }
 
-	public static void BeginExecutionCheck(CurrentCaller caller)
-	{
+	public static void BeginExecutionCheck(CurrentCaller caller) {
 #if DO_CALL_SAFTEYCHECK
 		if (s_currentlyExecuting == true) {
             Debug.LogError("LuauPlugin called " + caller + " while a lua thread was still executing " + s_currentCaller);
@@ -165,6 +180,58 @@ public static class LuauPlugin {
 		s_currentCaller = CurrentCaller.None;
 #endif
     }
+    
+#if UNITY_EDITOR
+	// All delegates for Editor-time plugin access:
+    private delegate bool StartupDelegate(LuauPluginStartup pluginStartup);
+    private static StartupDelegate Startup;
+    
+    private delegate bool InitializePrintCallbackDelegate(PrintCallback printCallback);
+    private static InitializePrintCallbackDelegate InitializePrintCallback;
+
+    private delegate bool InitializeComponentCallbacksDelegate(ComponentSetEnabledCallback setEnabledCallback);
+    private static InitializeComponentCallbacksDelegate InitializeComponentCallbacks;
+
+    private static void PopulateDelegates() {
+	    Startup = NativeLibUtil.GetDelegate<StartupDelegate>(LibHandle, "Startup");
+	    InitializePrintCallback = NativeLibUtil.GetDelegate<InitializePrintCallbackDelegate>(LibHandle, "InitializePrintCallback");
+	    InitializeComponentCallbacks = NativeLibUtil.GetDelegate<InitializeComponentCallbacksDelegate>(LibHandle, "InitializeComponentCallbacks");
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void InitPlugin() {
+	    DeinitPlugin();
+	    
+	    var fullLibPath = Path.GetFullPath(Path.Join(Application.dataPath, "..", LuauLibPath));
+	    LibHandle = NativeLibUtil.OpenLibrary(fullLibPath);
+	    PopulateDelegates();
+
+	    // TODO: Is this necessary to avoid leaking extra connections? I think it is? Need to double check.
+	    Application.quitting -= DeinitPlugin;
+	    Application.quitting += DeinitPlugin;
+    }
+
+    private static void DeinitPlugin() {
+	    if (LibHandle == IntPtr.Zero) {
+		    return;
+	    }
+		NativeLibUtil.CloseLibrary(LibHandle);
+		LibHandle = IntPtr.Zero;
+    }
+
+    private static void TryInitPlugin() {
+	    if (LibHandle == IntPtr.Zero) {
+		    InitPlugin();
+	    }
+    }
+#else
+	// All extern plugin APIs:
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern bool Startup(LuauPluginStartup pluginStartup);
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -172,35 +239,30 @@ public static class LuauPlugin {
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
     private static extern bool InitializePrintCallback(PrintCallback printCallback);
-    public static bool LuauInitializePrintCallback(PrintCallback printCallback) {
-	    ThreadSafetyCheck();
-
-	    bool returnValue = InitializePrintCallback(printCallback);
-	    return returnValue;
-    }
+	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
     private static extern bool InitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback);
+#endif
+	
     public static bool LuauInitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback) {
 	    ThreadSafetyCheck();
-
-	    bool returnValue = InitializeComponentCallbacks(setEnabledCallback);
-	    return returnValue;
+		return InitializeComponentCallbacks(setEnabledCallback);
     }
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern bool Startup(LuauPluginStartup pluginStartup);
+    
 	public static bool LuauStartup(LuauPluginStartup pluginStartup) {
         ThreadSafetyCheck();
         return Startup(pluginStartup);
     }
+	
+	public static bool LuauInitializePrintCallback(PrintCallback printCallback) {
+		TryInitPlugin();
+		ThreadSafetyCheck();
+		return InitializePrintCallback(printCallback);
+	}
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -223,7 +285,6 @@ public static class LuauPlugin {
 		ThreadSafetyCheck();
 		SetProfilerEnabled(enabled);
 	}
-
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
