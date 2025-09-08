@@ -275,7 +275,7 @@ namespace Luau {
             { "Vector2", PODTYPE.POD_VECTOR2 },
             { "Quaternion", PODTYPE.POD_QUATERNION },
             { "Matrix4x4", PODTYPE.POD_MATRIX },
-            // { "Rect", PODTYPE.POD_RECT }, // POD_RECT doesn't exist
+            { "Rect", PODTYPE.POD_RECT },
             // { "LayerMask", PODTYPE.POD_LAYERMASK }, // POD_LAYERMASK doesn't exist
         };
 
@@ -514,6 +514,12 @@ namespace Luau {
                 }
                 case AirshipComponentPropertyType.AirshipPod: {
                     var objType = TypeReflection.GetTypeFromString(typeStr);
+                    // JsonUtility doesn't support Rect
+                    if (objType == typeof(Rect)) {
+                        obj = LuauMetadataPropertySerializer.DeserializeRect(serializedObjectValue);
+                        break;
+                    }
+                    
                     obj = JsonUtility.FromJson(serializedObjectValue, objType);
                     if (obj == null) {
                         obj = Activator.CreateInstance(objType);
