@@ -179,6 +179,7 @@ namespace Luau {
             [typeof(Graphics)] = LuauContextAll,
             [typeof(Material)] = LuauContextAll,
             [typeof(Texture2D)] = LuauContextAll,
+            [typeof(Texture2DArray)] = LuauContextAll,
             [typeof(RenderTexture)] = LuauContextAll,
             [typeof(Renderer)] = LuauContextAll,
             [typeof(LineRenderer)] = LuauContextAll,
