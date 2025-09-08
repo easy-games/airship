@@ -146,12 +146,20 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	public void InvokeOnProcessExit() {
+		// If Shutdown() was called, any future term signals or mark for shutdown should immedately close the server.
+		// Shutdown() should never be called unless we are ok with not running shutdown handlers (usually because they already
+		// finished).
+		if (isShutdownComplete) {
+			Application.Quit();
+			return;
+		}
 		// Don't need to refire shutdown events if they've already been processed or if agones has been notified of
 		// the shutdown. (agones in shutdown state means we are exiting immediately (OnApplicationQuit) and cannot yield)
 		if (this.isAgonesShutdownTriggered) {
 			Debug.Log("Agones Shutdown already triggered when invoking OnProcessExit. TS Handlers will not be called.");
 			return;
 		}
+		// Don't refire the events if we've already fired them. (This might happen if we have multiple sigterms)
 		if (this.isShutdownEventTriggered) return;
 		this.isShutdownEventTriggered = true;
 		
@@ -162,6 +170,9 @@ public class ServerBootstrap : MonoBehaviour
 		if ((this.onProcessExit?.GetInvocationList().Length ?? 0) > 0) {
 			Debug.Log("Invoking OnProcessExit handlers.");
 			this.onProcessExit?.Invoke();
+		} else {
+			// If we don't have handlers, shut down immediately.
+			Application.Quit();
 		}
 	}
 	
@@ -176,7 +187,8 @@ public class ServerBootstrap : MonoBehaviour
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
 			Debug.Log($"Application quitting. Notifying Agones.");
-			agones.Shutdown();
+			var ok = agones.Shutdown().GetAwaiter().GetResult();
+			Debug.Log($"Notified Agones of shutdown: {ok}");
 		}
 	}
 
@@ -519,10 +531,16 @@ public class ServerBootstrap : MonoBehaviour
 
 	/**
 	 * Used to immediately shutdown the server. Used by TS to confirm it is ready to shut down.
+	 * Sets the isShutdownComplete field, meaning that InvokeOnProcessExit has completed and will not be called
+	 * again.
 	 */
 	public void Shutdown()
 	{
-		Debug.LogWarning($"Shutdown confirmed from TS.");
+		Debug.LogWarning($"Bootstrap Shutdown() started.");
+		if (!isShutdownEventTriggered) {
+			Debug.LogWarning("Shutdown() was called before InvokeOnProcessExit(). TS handlers will not be fired.");
+		}
+		isShutdownComplete = true; // The application _should_ quit, but if it doesn't we'll mark shutdown as complete so the next interrupt will immediately shut down.
 		Application.Quit();
 	}
 
