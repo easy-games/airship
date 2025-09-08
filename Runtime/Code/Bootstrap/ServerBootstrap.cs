@@ -183,12 +183,13 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void OnApplicationQuit() {
+		Debug.Log($"OnApplicationQuit() fired.");
+		
 		// Notify agones we are going to quit
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
-			Debug.Log($"Application quitting. Notifying Agones.");
-			var ok = agones.Shutdown().GetAwaiter().GetResult();
-			Debug.Log($"Notified Agones of shutdown: {ok}");
+			agones.Shutdown();
+			Debug.Log($"Sent Agones Shutdown notification.");
 		}
 	}
 
