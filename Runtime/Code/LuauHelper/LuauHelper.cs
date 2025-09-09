@@ -58,9 +58,7 @@ public class LuauHelper : Singleton<LuauHelper> {
             foreach (var type in assembly.GetTypes()) {
                 // Get custom attributes for type
                 var typeAttribute = type.GetCustomAttribute<LuauAPIAttribute>(true);
-                if (typeAttribute == null) {
-                    continue;
-                }
+                if (typeAttribute == null) continue;
 
                 // Add Luau contextual permissions for the class and methods
                 ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
