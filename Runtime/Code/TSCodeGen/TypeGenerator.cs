@@ -177,6 +177,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(DecalProjector),
             typeof(Time),
             typeof(FrameTimingManager),
+            typeof(Texture2DArray),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),
@@ -311,6 +312,7 @@ public class TypeGenerator : MonoBehaviour
             "UnityEngine.Vector4",
             "UnityEngine.Matrix4x4",
             "UnityEngine.Quaternion",
+            "UnityEngine.Rect",
             // "Object",
             "^UnityEngine.Object$",
             "ListCache",

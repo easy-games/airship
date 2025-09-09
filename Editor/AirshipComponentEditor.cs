@@ -1083,10 +1083,10 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     
     private void DrawCustomRectProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified)
     {
-        var currentValue = JsonUtility.FromJson<Rect>(value.stringValue);
+        var currentValue = LuauMetadataPropertySerializer.DeserializeRect(value.stringValue);
         var newValue = EditorGUILayout.RectField(guiContent, currentValue);
         if (newValue != currentValue) {
-            value.stringValue = JsonUtility.ToJson(newValue);
+            value.stringValue = LuauMetadataPropertySerializer.SerializeRect(newValue);
             modified.boolValue = true;
         }
     }

@@ -573,6 +573,18 @@ public partial class LuauCore : MonoBehaviour {
                         break;
                     }
 
+                    case PODTYPE.POD_RECT: {
+                        if (t.IsAssignableFrom(rectType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, NewRectFromPointer(propertyData));
+                            } else {
+                                SetValue<Rect>(objectReference, NewRectFromPointer(propertyData), property);
+                            }
+                            return 0;
+                        }
+                        break;
+                    }
+
                     case PODTYPE.POD_QUATERNION: {
                         if (t.IsAssignableFrom(quaternionType)) {
                             if (field != null) {
