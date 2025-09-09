@@ -8,7 +8,7 @@ namespace Code.Bootstrap {
         public ServerBootstrap serverBootstrap;
         public UnityMainThreadDispatcher unityMainThread;
         
-#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX || true
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void SignalDelegate();
 
