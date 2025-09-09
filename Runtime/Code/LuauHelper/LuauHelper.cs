@@ -8,7 +8,6 @@ using UnityEditor;
 using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {
-
 #if UNITY_EDITOR
     [MenuItem("Airship/Fix Missing UI")]
     public static void RequestMonoScriptRecompile() {
@@ -17,16 +16,15 @@ public class LuauHelper : Singleton<LuauHelper> {
 #endif
 
     private void OnEnable() {
-        LuauCore.onSetupReflection += this.LuauCore_OnSetupReflection;
+        LuauCore.onSetupReflection += LuauCore_OnSetupReflection;
         DevConsole.EnableConsole();
 
-        DevConsole.AddCommand(Command.Create("disconnect", "", "Disconnect from the server and return to Main Menu.", () => {
-            TransferManager.Instance.Disconnect();
-        }));
+        DevConsole.AddCommand(Command.Create("disconnect", "", "Disconnect from the server and return to Main Menu.",
+            () => { TransferManager.Instance.Disconnect(); }));
     }
 
     private void OnDisable() {
-        LuauCore.onSetupReflection -= this.LuauCore_OnSetupReflection;
+        LuauCore.onSetupReflection -= LuauCore_OnSetupReflection;
     }
 
     private void LuauCore_OnSetupReflection() {
@@ -52,22 +50,29 @@ public class LuauHelper : Singleton<LuauHelper> {
     private void SetupUnityAPIClasses() {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         foreach (var assembly in assemblies) {
-            if (!FastStartsWith(assembly.FullName, "Airship") && !FastStartsWith(assembly.FullName, "Easy")) continue;
-            
+            if (!FastStartsWith(assembly.FullName, "Airship") && !FastStartsWith(assembly.FullName, "Easy")) {
+                continue;
+            }
+
             // Loop over all types
             foreach (var type in assembly.GetTypes()) {
                 // Get custom attributes for type
-                var typeAttribute = type.GetCustomAttribute<LuauAPI>(true);
-                if (typeAttribute == null) continue;
-                
+                var typeAttribute = type.GetCustomAttribute<LuauAPIAttribute>(true);
+                if (typeAttribute == null) {
+                    continue;
+                }
+
                 // Add Luau contextual permissions for the class and methods
                 ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
                 foreach (var methodInfo in type.GetMethods()) {
-                    var methodTypeAttr = methodInfo.GetCustomAttribute<LuauAPI>();
-                    if (methodTypeAttr == null) continue;
+                    var methodTypeAttr = methodInfo.GetCustomAttribute<LuauAPIAttribute>();
+                    if (methodTypeAttr == null) {
+                        continue;
+                    }
+
                     ReflectionList.AddToMethodList(methodInfo, methodTypeAttr.AllowedContextsMask);
                 }
-                
+
                 if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
                     var instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
                     ReflectionList.AddToReflectionList(instance.GetAPIType(), typeAttribute.AllowedContextsMask);
