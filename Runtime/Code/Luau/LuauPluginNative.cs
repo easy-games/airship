@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using Luau;
+using NativePlugins;
 using UnityEngine;
 
 public static class LuauPluginNative {
@@ -26,13 +27,17 @@ public static class LuauPluginNative {
 #elif UNITY_EDITOR_WIN
 	private const string LuauLibPath = BasePluginsPath + "/Windows/x64/LuauPlugin.dll";
 #endif
-	
-#if UNITY_EDITOR
-	private static IntPtr _libHandle;
-#endif
 
 #if UNITY_EDITOR
+	public static IntPtr LibHandle;
+	
 	// All delegates for Editor-time plugin access:
+	// private delegate void UnityPluginLoadDelegate(IntPtr unityInterfaces);
+	// private static UnityPluginLoadDelegate UnityPluginLoad;
+	//
+	// private delegate void UnityPluginUnloadDelegate();
+	// private static UnityPluginUnloadDelegate UnityPluginUnload;
+	
 	internal delegate bool StartupDelegate(LuauPluginStartup pluginStartup);
 	internal static StartupDelegate Startup;
     
@@ -826,111 +831,98 @@ public static class LuauPluginNative {
 	
 #if UNITY_EDITOR
 	private static void PopulateDelegates() {
-		Startup = NativeLibUtil.GetDelegate<StartupDelegate>(_libHandle, "Startup");
-		InitializePrintCallback = NativeLibUtil.GetDelegate<InitializePrintCallbackDelegate>(_libHandle, "InitializePrintCallback");
-		InitializeComponentCallbacks = NativeLibUtil.GetDelegate<InitializeComponentCallbacksDelegate>(_libHandle, "InitializeComponentCallbacks");
-		SubsystemRegistration = NativeLibUtil.GetDelegate<SubsystemRegistrationDelegate>(_libHandle, "SubsystemRegistration");
-		SetProfilerEnabled = NativeLibUtil.GetDelegate<SetProfilerEnabledDelegate>(_libHandle, "SetProfilerEnabled");
-		OpenState = NativeLibUtil.GetDelegate<OpenStateDelegate>(_libHandle, "OpenState");
-		CloseState = NativeLibUtil.GetDelegate<CloseStateDelegate>(_libHandle, "CloseState");
-		Reset = NativeLibUtil.GetDelegate<ResetDelegate>(_libHandle, "Reset");
-		GetUniqueInstanceIdCount = NativeLibUtil.GetDelegate<GetUniqueInstanceIdCountDelegate>(_libHandle, "GetUniqueInstanceIdCount");
-		GetUniqueInstanceIds = NativeLibUtil.GetDelegate<GetUniqueInstanceIdsDelegate>(_libHandle, "GetUniqueInstanceIds");
-		RunBeginFrameLogic = NativeLibUtil.GetDelegate<RunBeginFrameLogicDelegate>(_libHandle, "RunBeginFrameLogic");
-		RunEndFrameLogic = NativeLibUtil.GetDelegate<RunEndFrameLogicDelegate>(_libHandle, "RunEndFrameLogic");
-		Shutdown = NativeLibUtil.GetDelegate<ShutdownDelegate>(_libHandle, "Shutdown");
-		InitializeAirshipComponent = NativeLibUtil.GetDelegate<InitializeAirshipComponentDelegate>(_libHandle, "InitializeAirshipComponent");
-		PrewarmAirshipComponent = NativeLibUtil.GetDelegate<PrewarmAirshipComponentDelegate>(_libHandle, "PrewarmAirshipComponent");
-		RemoveAirshipComponent = NativeLibUtil.GetDelegate<RemoveAirshipComponentDelegate>(_libHandle, "RemoveAirshipComponent");
-		WriteToAirshipComponent = NativeLibUtil.GetDelegate<WriteToAirshipComponentDelegate>(_libHandle, "WriteToAirshipComponent");
-		PushAirshipComponent = NativeLibUtil.GetDelegate<PushAirshipComponentDelegate>(_libHandle, "PushAirshipComponent");
-		PushAirshipComponents = NativeLibUtil.GetDelegate<PushAirshipComponentsDelegate>(_libHandle, "PushAirshipComponents");
-		UpdateIndividualAirshipComponent = NativeLibUtil.GetDelegate<UpdateIndividualAirshipComponentDelegate>(_libHandle, "UpdateIndividualAirshipComponent");
-		UpdateCollisionAirshipComponent = NativeLibUtil.GetDelegate<UpdateCollisionAirshipComponentDelegate>(_libHandle, "UpdateCollisionAirshipComponent");
-		UpdateAllAirshipComponents = NativeLibUtil.GetDelegate<UpdateAllAirshipComponentsDelegate>(_libHandle, "UpdateAllAirshipComponents");
-		GetAirshipComponentEnabled = NativeLibUtil.GetDelegate<GetAirshipComponentEnabledDelegate>(_libHandle, "GetAirshipComponentEnabled");
-		SetAirshipComponentEnabled = NativeLibUtil.GetDelegate<SetAirshipComponentEnabledDelegate>(_libHandle, "SetAirshipComponentEnabled");
-		HasAirshipMethod = NativeLibUtil.GetDelegate<HasAirshipMethodDelegate>(_libHandle, "HasAirshipMethod");
-		PushSignal = NativeLibUtil.GetDelegate<PushSignalDelegate>(_libHandle, "PushSignal");
-		EmitSignal = NativeLibUtil.GetDelegate<EmitSignalDelegate>(_libHandle, "EmitSignal");
-		DestroySignals = NativeLibUtil.GetDelegate<DestroySignalsDelegate>(_libHandle, "DestroySignals");
-		CreateThread = NativeLibUtil.GetDelegate<CreateThreadDelegate>(_libHandle, "CreateThread");
-		CreateThreadWithCachedModule = NativeLibUtil.GetDelegate<CreateThreadWithCachedModuleDelegate>(_libHandle, "CreateThreadWithCachedModule");
-		CacheModuleOnThread = NativeLibUtil.GetDelegate<CacheModuleOnThreadDelegate>(_libHandle, "CacheModuleOnThread");
-		SetThreadDestroyed = NativeLibUtil.GetDelegate<SetThreadDestroyedDelegate>(_libHandle, "SetThreadDestroyed");
-		SetMutableGlobals = NativeLibUtil.GetDelegate<SetMutableGlobalsDelegate>(_libHandle, "SetMutableGlobals");
-		CompileCode = NativeLibUtil.GetDelegate<CompileCodeDelegate>(_libHandle, "CompileCode");
-		RunThread = NativeLibUtil.GetDelegate<RunThreadDelegate>(_libHandle, "RunThread");
-		ResumeThread = NativeLibUtil.GetDelegate<ResumeThreadDelegate>(_libHandle, "ResumeThread");
-		ResumeThreadError = NativeLibUtil.GetDelegate<ResumeThreadErrorDelegate>(_libHandle, "ResumeThreadError");
-		CallMethodOnThread = NativeLibUtil.GetDelegate<CallMethodOnThreadDelegate>(_libHandle, "CallMethodOnThread");
-		DestroyThread = NativeLibUtil.GetDelegate<DestroyThreadDelegate>(_libHandle, "DestroyThread");
-		PinThread = NativeLibUtil.GetDelegate<PinThreadDelegate>(_libHandle, "PinThread");
-		UnpinThread = NativeLibUtil.GetDelegate<UnpinThreadDelegate>(_libHandle, "UnpinThread");
-		PushValueToThread = NativeLibUtil.GetDelegate<PushValueToThreadDelegate>(_libHandle, "PushValueToThread");
-		PushVector3ToThread = NativeLibUtil.GetDelegate<PushVector3ToThreadDelegate>(_libHandle, "PushVector3ToThread");
-		PushTableToThread = NativeLibUtil.GetDelegate<PushTableToThreadDelegate>(_libHandle, "PushTableToThread");
-		ErrorThread = NativeLibUtil.GetDelegate<ErrorThreadDelegate>(_libHandle, "ErrorThread");
-		GetDebugTrace = NativeLibUtil.GetDelegate<GetDebugTraceDelegate>(_libHandle, "GetDebugTrace");
-		RunTaskScheduler = NativeLibUtil.GetDelegate<RunTaskSchedulerDelegate>(_libHandle, "RunTaskScheduler");
-		ResetTimeCache = NativeLibUtil.GetDelegate<ResetTimeCacheDelegate>(_libHandle, "ResetTimeCache");
-		GetContextFromThread = NativeLibUtil.GetDelegate<GetContextFromThreadDelegate>(_libHandle, "GetContextFromThread");
-		GetBytecodeVersion = NativeLibUtil.GetDelegate<GetBytecodeVersionDelegate>(_libHandle, "GetBytecodeVersion");
-		SetScriptTimeoutDuration = NativeLibUtil.GetDelegate<SetScriptTimeoutDurationDelegate>(_libHandle, "SetScriptTimeoutDuration");
-		SetIsPaused = NativeLibUtil.GetDelegate<SetIsPausedDelegate>(_libHandle, "SetIsPaused");
-		CopyTableToArray = NativeLibUtil.GetDelegate<CopyTableToArrayDelegate>(_libHandle, "CopyTableToArray");
-		RegisterStringAtom = NativeLibUtil.GetDelegate<RegisterStringAtomDelegate>(_libHandle, "RegisterStringAtom");
-		PushCsError = NativeLibUtil.GetDelegate<PushCsErrorDelegate>(_libHandle, "PushCsError");
-		SetGCState = NativeLibUtil.GetDelegate<SetGCStateDelegate>(_libHandle, "SetGCState");
-		CountGC = NativeLibUtil.GetDelegate<CountGCDelegate>(_libHandle, "CountGC");
-		GetLuauPluginVersion = NativeLibUtil.GetDelegate<GetLuauPluginVersionDelegate>(_libHandle, "GetLuauPluginVersion");
-		DebugPrintStack = NativeLibUtil.GetDelegate<DebugPrintStackDelegate>(_libHandle, "DebugPrintStack");
-		GetUnityObjectCount = NativeLibUtil.GetDelegate<GetUnityObjectCountDelegate>(_libHandle, "GetUnityObjectCount");
-		GetMemoryCategoryDump = NativeLibUtil.GetDelegate<GetMemoryCategoryDumpDelegate>(_libHandle, "GetMemoryCategoryDump");
-		DebugCountAllRegistryItems = NativeLibUtil.GetDelegate<DebugCountAllRegistryItemsDelegate>(_libHandle, "DebugCountAllRegistryItems");
-		DebugGetAllTrackedInstanceIds = NativeLibUtil.GetDelegate<DebugGetAllTrackedInstanceIdsDelegate>(_libHandle, "DebugGetAllTrackedInstanceIds");
-		LuaNewTable = NativeLibUtil.GetDelegate<LuaNewTableDelegate>(_libHandle, "LuaNewTable");
-		LuaPushNil = NativeLibUtil.GetDelegate<LuaPushNilDelegate>(_libHandle, "LuaPushNil");
-		LuaPushInteger = NativeLibUtil.GetDelegate<LuaPushIntegerDelegate>(_libHandle, "LuaPushInteger");
-		LuaPushUnsignedInteger = NativeLibUtil.GetDelegate<LuaPushUnsignedIntegerDelegate>(_libHandle, "LuaPushUnsignedInteger");
-		LuaPushVector = NativeLibUtil.GetDelegate<LuaPushVectorDelegate>(_libHandle, "LuaPushVector");
-		LuaPushBoolean = NativeLibUtil.GetDelegate<LuaPushBooleanDelegate>(_libHandle, "LuaPushBoolean");
-		LuaPushString = NativeLibUtil.GetDelegate<LuaPushStringDelegate>(_libHandle, "LuaPushString");
-		LuaPushThread = NativeLibUtil.GetDelegate<LuaPushThreadDelegate>(_libHandle, "LuaPushThread");
-		LuaRawSetI = NativeLibUtil.GetDelegate<LuaRawSetIDelegate>(_libHandle, "LuaRawSetI");
-		LuaPop = NativeLibUtil.GetDelegate<LuaPopDelegate>(_libHandle, "LuaPop");
-		LuaSetReadonly = NativeLibUtil.GetDelegate<LuaSetReadonlyDelegate>(_libHandle, "LuaSetReadonly");
-		LuaRef = NativeLibUtil.GetDelegate<LuaRefDelegate>(_libHandle, "LuaRef");
-		LuaUnref = NativeLibUtil.GetDelegate<LuaUnrefDelegate>(_libHandle, "LuaUnref");
-		LuaGetRef = NativeLibUtil.GetDelegate<LuaGetRefDelegate>(_libHandle, "LuaGetRef");
-		LuaGetTop = NativeLibUtil.GetDelegate<LuaGetTopDelegate>(_libHandle, "LuaGetTop");
+		// UnityPluginLoad = NativeLibUtil.GetDelegate<UnityPluginLoadDelegate>(LibHandle, "UnityPluginLoad");
+		// UnityPluginUnload = NativeLibUtil.GetDelegate<UnityPluginUnloadDelegate>(LibHandle, "UnityPluginUnload");
+		Startup = NativeLibUtil.GetDelegate<StartupDelegate>(LibHandle, "Startup");
+		InitializePrintCallback = NativeLibUtil.GetDelegate<InitializePrintCallbackDelegate>(LibHandle, "InitializePrintCallback");
+		InitializeComponentCallbacks = NativeLibUtil.GetDelegate<InitializeComponentCallbacksDelegate>(LibHandle, "InitializeComponentCallbacks");
+		SubsystemRegistration = NativeLibUtil.GetDelegate<SubsystemRegistrationDelegate>(LibHandle, "SubsystemRegistration");
+		SetProfilerEnabled = NativeLibUtil.GetDelegate<SetProfilerEnabledDelegate>(LibHandle, "SetProfilerEnabled");
+		OpenState = NativeLibUtil.GetDelegate<OpenStateDelegate>(LibHandle, "OpenState");
+		CloseState = NativeLibUtil.GetDelegate<CloseStateDelegate>(LibHandle, "CloseState");
+		Reset = NativeLibUtil.GetDelegate<ResetDelegate>(LibHandle, "Reset");
+		GetUniqueInstanceIdCount = NativeLibUtil.GetDelegate<GetUniqueInstanceIdCountDelegate>(LibHandle, "GetUniqueInstanceIdCount");
+		GetUniqueInstanceIds = NativeLibUtil.GetDelegate<GetUniqueInstanceIdsDelegate>(LibHandle, "GetUniqueInstanceIds");
+		RunBeginFrameLogic = NativeLibUtil.GetDelegate<RunBeginFrameLogicDelegate>(LibHandle, "RunBeginFrameLogic");
+		RunEndFrameLogic = NativeLibUtil.GetDelegate<RunEndFrameLogicDelegate>(LibHandle, "RunEndFrameLogic");
+		Shutdown = NativeLibUtil.GetDelegate<ShutdownDelegate>(LibHandle, "Shutdown");
+		InitializeAirshipComponent = NativeLibUtil.GetDelegate<InitializeAirshipComponentDelegate>(LibHandle, "InitializeAirshipComponent");
+		PrewarmAirshipComponent = NativeLibUtil.GetDelegate<PrewarmAirshipComponentDelegate>(LibHandle, "PrewarmAirshipComponent");
+		RemoveAirshipComponent = NativeLibUtil.GetDelegate<RemoveAirshipComponentDelegate>(LibHandle, "RemoveAirshipComponent");
+		WriteToAirshipComponent = NativeLibUtil.GetDelegate<WriteToAirshipComponentDelegate>(LibHandle, "WriteToAirshipComponent");
+		PushAirshipComponent = NativeLibUtil.GetDelegate<PushAirshipComponentDelegate>(LibHandle, "PushAirshipComponent");
+		PushAirshipComponents = NativeLibUtil.GetDelegate<PushAirshipComponentsDelegate>(LibHandle, "PushAirshipComponents");
+		UpdateIndividualAirshipComponent = NativeLibUtil.GetDelegate<UpdateIndividualAirshipComponentDelegate>(LibHandle, "UpdateIndividualAirshipComponent");
+		UpdateCollisionAirshipComponent = NativeLibUtil.GetDelegate<UpdateCollisionAirshipComponentDelegate>(LibHandle, "UpdateCollisionAirshipComponent");
+		UpdateAllAirshipComponents = NativeLibUtil.GetDelegate<UpdateAllAirshipComponentsDelegate>(LibHandle, "UpdateAllAirshipComponents");
+		GetAirshipComponentEnabled = NativeLibUtil.GetDelegate<GetAirshipComponentEnabledDelegate>(LibHandle, "GetAirshipComponentEnabled");
+		SetAirshipComponentEnabled = NativeLibUtil.GetDelegate<SetAirshipComponentEnabledDelegate>(LibHandle, "SetAirshipComponentEnabled");
+		HasAirshipMethod = NativeLibUtil.GetDelegate<HasAirshipMethodDelegate>(LibHandle, "HasAirshipMethod");
+		PushSignal = NativeLibUtil.GetDelegate<PushSignalDelegate>(LibHandle, "PushSignal");
+		EmitSignal = NativeLibUtil.GetDelegate<EmitSignalDelegate>(LibHandle, "EmitSignal");
+		DestroySignals = NativeLibUtil.GetDelegate<DestroySignalsDelegate>(LibHandle, "DestroySignals");
+		CreateThread = NativeLibUtil.GetDelegate<CreateThreadDelegate>(LibHandle, "CreateThread");
+		CreateThreadWithCachedModule = NativeLibUtil.GetDelegate<CreateThreadWithCachedModuleDelegate>(LibHandle, "CreateThreadWithCachedModule");
+		CacheModuleOnThread = NativeLibUtil.GetDelegate<CacheModuleOnThreadDelegate>(LibHandle, "CacheModuleOnThread");
+		SetThreadDestroyed = NativeLibUtil.GetDelegate<SetThreadDestroyedDelegate>(LibHandle, "SetThreadDestroyed");
+		SetMutableGlobals = NativeLibUtil.GetDelegate<SetMutableGlobalsDelegate>(LibHandle, "SetMutableGlobals");
+		CompileCode = NativeLibUtil.GetDelegate<CompileCodeDelegate>(LibHandle, "CompileCode");
+		RunThread = NativeLibUtil.GetDelegate<RunThreadDelegate>(LibHandle, "RunThread");
+		ResumeThread = NativeLibUtil.GetDelegate<ResumeThreadDelegate>(LibHandle, "ResumeThread");
+		ResumeThreadError = NativeLibUtil.GetDelegate<ResumeThreadErrorDelegate>(LibHandle, "ResumeThreadError");
+		CallMethodOnThread = NativeLibUtil.GetDelegate<CallMethodOnThreadDelegate>(LibHandle, "CallMethodOnThread");
+		DestroyThread = NativeLibUtil.GetDelegate<DestroyThreadDelegate>(LibHandle, "DestroyThread");
+		PinThread = NativeLibUtil.GetDelegate<PinThreadDelegate>(LibHandle, "PinThread");
+		UnpinThread = NativeLibUtil.GetDelegate<UnpinThreadDelegate>(LibHandle, "UnpinThread");
+		PushValueToThread = NativeLibUtil.GetDelegate<PushValueToThreadDelegate>(LibHandle, "PushValueToThread");
+		PushVector3ToThread = NativeLibUtil.GetDelegate<PushVector3ToThreadDelegate>(LibHandle, "PushVector3ToThread");
+		PushTableToThread = NativeLibUtil.GetDelegate<PushTableToThreadDelegate>(LibHandle, "PushTableToThread");
+		ErrorThread = NativeLibUtil.GetDelegate<ErrorThreadDelegate>(LibHandle, "ErrorThread");
+		GetDebugTrace = NativeLibUtil.GetDelegate<GetDebugTraceDelegate>(LibHandle, "GetDebugTrace");
+		RunTaskScheduler = NativeLibUtil.GetDelegate<RunTaskSchedulerDelegate>(LibHandle, "RunTaskScheduler");
+		ResetTimeCache = NativeLibUtil.GetDelegate<ResetTimeCacheDelegate>(LibHandle, "ResetTimeCache");
+		GetContextFromThread = NativeLibUtil.GetDelegate<GetContextFromThreadDelegate>(LibHandle, "GetContextFromThread");
+		GetBytecodeVersion = NativeLibUtil.GetDelegate<GetBytecodeVersionDelegate>(LibHandle, "GetBytecodeVersion");
+		SetScriptTimeoutDuration = NativeLibUtil.GetDelegate<SetScriptTimeoutDurationDelegate>(LibHandle, "SetScriptTimeoutDuration");
+		SetIsPaused = NativeLibUtil.GetDelegate<SetIsPausedDelegate>(LibHandle, "SetIsPaused");
+		CopyTableToArray = NativeLibUtil.GetDelegate<CopyTableToArrayDelegate>(LibHandle, "CopyTableToArray");
+		RegisterStringAtom = NativeLibUtil.GetDelegate<RegisterStringAtomDelegate>(LibHandle, "RegisterStringAtom");
+		PushCsError = NativeLibUtil.GetDelegate<PushCsErrorDelegate>(LibHandle, "PushCsError");
+		SetGCState = NativeLibUtil.GetDelegate<SetGCStateDelegate>(LibHandle, "SetGCState");
+		CountGC = NativeLibUtil.GetDelegate<CountGCDelegate>(LibHandle, "CountGC");
+		GetLuauPluginVersion = NativeLibUtil.GetDelegate<GetLuauPluginVersionDelegate>(LibHandle, "GetLuauPluginVersion");
+		DebugPrintStack = NativeLibUtil.GetDelegate<DebugPrintStackDelegate>(LibHandle, "DebugPrintStack");
+		GetUnityObjectCount = NativeLibUtil.GetDelegate<GetUnityObjectCountDelegate>(LibHandle, "GetUnityObjectCount");
+		GetMemoryCategoryDump = NativeLibUtil.GetDelegate<GetMemoryCategoryDumpDelegate>(LibHandle, "GetMemoryCategoryDump");
+		DebugCountAllRegistryItems = NativeLibUtil.GetDelegate<DebugCountAllRegistryItemsDelegate>(LibHandle, "DebugCountAllRegistryItems");
+		DebugGetAllTrackedInstanceIds = NativeLibUtil.GetDelegate<DebugGetAllTrackedInstanceIdsDelegate>(LibHandle, "DebugGetAllTrackedInstanceIds");
+		LuaNewTable = NativeLibUtil.GetDelegate<LuaNewTableDelegate>(LibHandle, "LuaNewTable");
+		LuaPushNil = NativeLibUtil.GetDelegate<LuaPushNilDelegate>(LibHandle, "LuaPushNil");
+		LuaPushInteger = NativeLibUtil.GetDelegate<LuaPushIntegerDelegate>(LibHandle, "LuaPushInteger");
+		LuaPushUnsignedInteger = NativeLibUtil.GetDelegate<LuaPushUnsignedIntegerDelegate>(LibHandle, "LuaPushUnsignedInteger");
+		LuaPushVector = NativeLibUtil.GetDelegate<LuaPushVectorDelegate>(LibHandle, "LuaPushVector");
+		LuaPushBoolean = NativeLibUtil.GetDelegate<LuaPushBooleanDelegate>(LibHandle, "LuaPushBoolean");
+		LuaPushString = NativeLibUtil.GetDelegate<LuaPushStringDelegate>(LibHandle, "LuaPushString");
+		LuaPushThread = NativeLibUtil.GetDelegate<LuaPushThreadDelegate>(LibHandle, "LuaPushThread");
+		LuaRawSetI = NativeLibUtil.GetDelegate<LuaRawSetIDelegate>(LibHandle, "LuaRawSetI");
+		LuaPop = NativeLibUtil.GetDelegate<LuaPopDelegate>(LibHandle, "LuaPop");
+		LuaSetReadonly = NativeLibUtil.GetDelegate<LuaSetReadonlyDelegate>(LibHandle, "LuaSetReadonly");
+		LuaRef = NativeLibUtil.GetDelegate<LuaRefDelegate>(LibHandle, "LuaRef");
+		LuaUnref = NativeLibUtil.GetDelegate<LuaUnrefDelegate>(LibHandle, "LuaUnref");
+		LuaGetRef = NativeLibUtil.GetDelegate<LuaGetRefDelegate>(LibHandle, "LuaGetRef");
+		LuaGetTop = NativeLibUtil.GetDelegate<LuaGetTopDelegate>(LibHandle, "LuaGetTop");
 	}
 
-	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void InitPlugin() {
-		DeinitPlugin();
-	    
-		var fullLibPath = Path.GetFullPath(Path.Join(Application.dataPath, "..", LuauLibPath));
-		_libHandle = NativeLibUtil.OpenLibrary(fullLibPath);
+		LibHandle = NativePluginHandles.LibLuauPluginHandle;
 		PopulateDelegates();
-
-		// TODO: Is this necessary to avoid leaking extra connections? I think it is? Need to double check.
-		Application.quitting -= DeinitPlugin;
-		Application.quitting += DeinitPlugin;
 
 		SubsystemRegistration();
 	}
 
-	private static void DeinitPlugin() {
-		if (_libHandle == IntPtr.Zero) {
-			return;
-		}
-		NativeLibUtil.CloseLibrary(_libHandle);
-		_libHandle = IntPtr.Zero;
-	}
-
 	internal static void TryInitPlugin() {
-		if (_libHandle == IntPtr.Zero) {
+		if (LibHandle == IntPtr.Zero) {
 			InitPlugin();
 		}
 	}

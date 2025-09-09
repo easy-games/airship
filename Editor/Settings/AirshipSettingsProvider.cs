@@ -251,7 +251,7 @@ public class AirshipSettingsProvider : SettingsProvider
         return provider;
     }
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void OnReload() {
         LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
     }

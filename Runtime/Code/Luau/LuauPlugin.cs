@@ -163,9 +163,14 @@ public static class LuauPlugin {
 		return LuauPluginNative.OpenState(context);
 	}
 	
-	public static bool CloseState(LuauContext context) {
+	public static void CloseState(LuauContext context) {
 		ThreadSafetyCheck();
-		return LuauPluginNative.CloseState(context);
+#if UNITY_EDITOR
+		if (LuauPluginNative.LibHandle == IntPtr.Zero) {
+			return;
+		}
+#endif
+		LuauPluginNative.CloseState(context);
 	}
 	
 	public static void Reset(LuauContext context) {
@@ -296,6 +301,11 @@ public static class LuauPlugin {
 	
 	public static void DestroySignals(LuauContext context, IntPtr thread, int unityInstanceId) {
 		ThreadSafetyCheck();
+#if UNITY_EDITOR
+		if (LuauPluginNative.LibHandle == IntPtr.Zero) {
+			return;
+		}
+#endif
 		ThrowIfNotNullPtr(LuauPluginNative.DestroySignals(context, thread, unityInstanceId));
 	}
 	
@@ -408,8 +418,12 @@ public static class LuauPlugin {
 	}
 	
 	public static void UnpinThread(IntPtr thread) {
-        // Debug.Log("Unpinning thread " + thread);
         ThreadSafetyCheck();
+#if UNITY_EDITOR
+        if (LuauPluginNative.LibHandle == IntPtr.Zero) {
+	        return;
+        }
+#endif
         ThrowIfNotNullPtr(LuauPluginNative.UnpinThread(thread));
 	}
 	
@@ -458,10 +472,12 @@ public static class LuauPlugin {
 	}
 	
 	public static void SetScriptTimeoutDuration(int duration) {
+		LuauPluginNative.TryInitPlugin();
 		LuauPluginNative.SetScriptTimeoutDuration(duration);
 	}
 	
 	public static void SetIsPaused(bool isPaused) {
+		LuauPluginNative.TryInitPlugin();
 		LuauPluginNative.SetIsPaused(isPaused ? 1 : 0);
 	}
 	
