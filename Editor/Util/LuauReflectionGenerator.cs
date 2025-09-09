@@ -95,7 +95,7 @@ namespace Editor.Util {
 			"CsToTs",
 			"Easy.Airship",
 			"LeTai.TrueShadow",
-			"LuauAPI",
+			"LuauAPIAttribute",
 			"Mirror.Authenticators",
 			"Mirror.CompilerSymbols",
 			"Mirror.Components",
@@ -247,3 +247,4 @@ namespace Editor.Util {
 	}
 }
 */
+
