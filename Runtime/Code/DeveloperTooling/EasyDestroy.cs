@@ -1,15 +1,17 @@
 using UnityEngine;
 
+[LuauAPI]
 public class EasyDestroy : MonoBehaviour {
     public enum DestroyMode {
         DESTROY,
-        DEACTIVATE,
+        DEACTIVATE
     }
+
     public float timeUntilDeathInSeconds = 1f;
-    public DestroyMode destroyMode = DestroyMode.DESTROY; 
+    public DestroyMode destroyMode = DestroyMode.DESTROY;
 
     // Use this for initialization
-    void OnEnable() {
+    private void OnEnable() {
         if (timeUntilDeathInSeconds <= 0) {
             Destroy();
             return;
@@ -18,12 +20,13 @@ public class EasyDestroy : MonoBehaviour {
         if (destroyMode == DestroyMode.DEACTIVATE) {
             gameObject.SetActive(true);
         }
-        Invoke (nameof(Destroy), timeUntilDeathInSeconds);
+
+        Invoke(nameof(Destroy), timeUntilDeathInSeconds);
     }
-    
-    private void Destroy(){
+
+    private void Destroy() {
         if (destroyMode == DestroyMode.DESTROY) {
-            Destroy (gameObject);
+            Destroy(gameObject);
         } else {
             gameObject.SetActive(false);
         }
