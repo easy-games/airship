@@ -9,23 +9,6 @@ using UnityEngine;
 /// Provides raw Lua API methods.
 /// </summary>
 public static class LuauPluginRaw {
-#if UNITY_EDITOR
-	public static IntPtr libHandle;
-
-	public delegate void InitDelegate();
-#endif
-	
-#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
-	[DllImport("__Internal")]
-	public static extern IntPtr dlopen(string path, int flag);
-
-	[DllImport("__Internal")]
-	public static extern IntPtr dlsym(IntPtr handle, string symbolName);
-
-	[DllImport("__Internal")]
-	public static extern IntPtr dlclose(IntPtr handle);
-#endif
-	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static void ThrowIfNotNullPtr(IntPtr luauExceptionPtr) {
 		if (luauExceptionPtr != IntPtr.Zero) {
@@ -33,212 +16,123 @@ public static class LuauPluginRaw {
 		}
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaNewTable(IntPtr thread, int nArray, int nRecord);
 	/// <summary>
 	/// Pushes a new table to the Lua stack. Optional initial capacity arguments can be supplied.
 	/// </summary>
 	public static void NewTable(IntPtr thread, int nArray = 0, int nRecord = 0) {
-		ThrowIfNotNullPtr(LuaNewTable(thread, nArray, nRecord));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaNewTable(thread, nArray, nRecord));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPushNil(IntPtr thread);
 	/// <summary>
 	/// Pushes nil to the Lua stack.
 	/// </summary>
 	public static void PushNil(IntPtr thread) {
-		ThrowIfNotNullPtr(LuaPushNil(thread));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPushNil(thread));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPushInteger(IntPtr thread, int n);
 	/// <summary>
 	/// Pushes an integer to the Lua stack.
 	/// </summary>
 	public static void PushInteger(IntPtr thread, int n) {
-		ThrowIfNotNullPtr(LuaPushInteger(thread, n));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPushInteger(thread, n));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPushUnsignedInteger(IntPtr thread, uint n);
 	/// <summary>
 	/// Pushes an unsigned integer to the Lua stack.
 	/// </summary>
 	public static void PushUnsignedInteger(IntPtr thread, uint n) {
-		ThrowIfNotNullPtr(LuaPushUnsignedInteger(thread, n));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPushUnsignedInteger(thread, n));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPushVector(IntPtr thread, float x, float y, float z);
 	/// <summary>
 	/// Pushes a vector to the Lua stack.
 	/// </summary>
 	public static void PushVector(IntPtr thread, float x, float y, float z) {
-		ThrowIfNotNullPtr(LuaPushVector(thread, x, y, z));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPushVector(thread, x, y, z));
 	}
+	
 	/// <summary>
 	/// Pushes a vector to the Lua stack.
 	/// </summary>
 	public static void PushVector(IntPtr thread, Vector3 vec) {
-		ThrowIfNotNullPtr(LuaPushVector(thread, vec.x, vec.y, vec.z));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPushVector(thread, vec.x, vec.y, vec.z));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPushBoolean(IntPtr thread, int b);
 	/// <summary>
 	/// Pushes a boolean to the Lua stack.
 	/// </summary>
 	public static void PushBoolean(IntPtr thread, bool b) {
-		ThrowIfNotNullPtr(LuaPushBoolean(thread, b ? 1 : 0));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPushBoolean(thread, b ? 1 : 0));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPushString(IntPtr thread, IntPtr str, int len);
 	/// <summary>
 	/// Pushes a string to the Lua stack.
 	/// </summary>
 	public static void PushString(IntPtr thread, string str) {
 		var strPtr = Marshal.StringToCoTaskMemUTF8(str);
 		var len = Encoding.UTF8.GetByteCount(str);
-		var res = LuaPushString(thread, strPtr, len);
+		var res = LuauPluginNative.LuaPushString(thread, strPtr, len);
 		Marshal.FreeCoTaskMem(strPtr);
 		ThrowIfNotNullPtr(res);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPushThread(IntPtr thread);
 	/// <summary>
 	/// Pushes the thread to its own Lua stack.
 	/// </summary>
 	public static void PushThread(IntPtr thread) {
-		ThrowIfNotNullPtr(LuaPushThread(thread));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPushThread(thread));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaRawSetI(IntPtr thread, int idx, int n);
 	/// <summary>
 	/// Sets the nth table index to the value at the top of the stack. The table is located at "idx."
 	/// </summary>
 	public static void RawSetI(IntPtr thread, int idx, int n) {
-		ThrowIfNotNullPtr(LuaRawSetI(thread, idx, n));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaRawSetI(thread, idx, n));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaPop(IntPtr thread, int n);
 	/// <summary>
 	/// Pops "n" values from the top of the stack.
 	/// </summary>
 	public static void Pop(IntPtr thread, int n) {
-		ThrowIfNotNullPtr(LuaPop(thread, n));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaPop(thread, n));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaSetReadonly(IntPtr thread, int idx, int enabled);
 	/// <summary>
 	/// Sets the read-only flag on the table at index "idx."
 	/// </summary>
 	public static void SetReadonly(IntPtr thread, int idx, bool enabled) {
-		ThrowIfNotNullPtr(LuaSetReadonly(thread, idx, enabled ? 1 : 0));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaSetReadonly(thread, idx, enabled ? 1 : 0));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaRef(IntPtr thread, int idx, ref int refVal);
 	/// <summary>
 	/// Creates a reference to the value at index "idx."
 	/// </summary>
 	public static int Ref(IntPtr thread, int idx) {
 		var refVal = 0;
-		ThrowIfNotNullPtr(LuaRef(thread, idx, ref refVal));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaRef(thread, idx, ref refVal));
 		return refVal;
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaUnref(IntPtr thread, int refVal);
 	/// <summary>
 	/// Removes "refVal" reference.
 	/// </summary>
 	public static void Unref(IntPtr thread, int refVal) {
-		ThrowIfNotNullPtr(LuaUnref(thread, refVal));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaUnref(thread, refVal));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaGetRef(IntPtr thread, int refVal);
 	/// <summary>
 	/// Pushes the value referenced by "refVal" to the top of the thread's stack.
 	/// </summary>
 	public static void GetRef(IntPtr thread, int refVal) {
-		ThrowIfNotNullPtr(LuaGetRef(thread, refVal));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaGetRef(thread, refVal));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr LuaGetTop(IntPtr thread, ref int top);
 	/// <summary>
 	/// Gets the top index of the thread's stack (which can also be seen as the stack size).
 	/// </summary>
 	public static int GetTop(IntPtr thread) {
 		var top = 0;
-		ThrowIfNotNullPtr(LuaGetTop(thread, ref top));
+		ThrowIfNotNullPtr(LuauPluginNative.LuaGetTop(thread, ref top));
 		return top;
 	}
 }

@@ -27,22 +27,22 @@ using System.Text.RegularExpressions;
 #endif
 
 public partial class LuauCore : MonoBehaviour {
-    private static LuauPlugin.PrintCallback printCallback_holder = PrintCallback;
+    private static LuauPluginNative.PrintCallback printCallback_holder = PrintCallback;
 
     private const int MaxParameters = 20;
     private const int MaxParsedObjects = 100;
     
-    private LuauPlugin.ComponentSetEnabledCallback componentSetEnabledCallback_holder;
-    private LuauPlugin.GetPropertyCallback getPropertyCallback_holder;
-    private LuauPlugin.SetPropertyCallback setPropertyCallback_holder;
-    private LuauPlugin.CallMethodCallback callMethodCallback_holder;
-    private LuauPlugin.ObjectGCCallback objectGCCallback_holder;
-    private LuauPlugin.RequireCallback requireCallback_holder;
-    private LuauPlugin.ConstructorCallback constructorCallback_holder;
-    private LuauPlugin.RequirePathCallback requirePathCallback_holder;
-    private LuauPlugin.ToStringCallback toStringCallback_holder;
-    private LuauPlugin.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
-    private LuauPlugin.GetUnityObjectName getUnityObjectNameCallback_holder;
+    private LuauPluginNative.ComponentSetEnabledCallback componentSetEnabledCallback_holder;
+    private LuauPluginNative.GetPropertyCallback getPropertyCallback_holder;
+    private LuauPluginNative.SetPropertyCallback setPropertyCallback_holder;
+    private LuauPluginNative.CallMethodCallback callMethodCallback_holder;
+    private LuauPluginNative.ObjectGCCallback objectGCCallback_holder;
+    private LuauPluginNative.RequireCallback requireCallback_holder;
+    private LuauPluginNative.ConstructorCallback constructorCallback_holder;
+    private LuauPluginNative.RequirePathCallback requirePathCallback_holder;
+    private LuauPluginNative.ToStringCallback toStringCallback_holder;
+    private LuauPluginNative.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
+    private LuauPluginNative.GetUnityObjectName getUnityObjectNameCallback_holder;
     
 
     private struct AwaitingTask {
@@ -167,7 +167,7 @@ public partial class LuauCore : MonoBehaviour {
 
 
     //when a lua thread prints something to console
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.PrintCallback))]
     static void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
         LuauProtection.CurrentContext = context;
         
@@ -205,7 +205,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
     
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToStringCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.ToStringCallback))]
     static void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
         var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true, true);
         
@@ -217,12 +217,12 @@ public partial class LuauCore : MonoBehaviour {
         Marshal.Copy(bytes, 0, str, len);
     }
 
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.IsObjectDestroyedCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.IsObjectDestroyedCallback))]
     static int IsObjectDestroyedCallback(int instanceId) {
         return ThreadDataManager.IsUnityObjectReferenceDestroyed(instanceId) ? 1 : 0;
     }
 
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetUnityObjectName))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.GetUnityObjectName))]
     static void GetUnityObjectNameCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
         var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true, true);
         if (obj is UnityEngine.Object unityObj) {
@@ -238,7 +238,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.ObjectGCCallback))]
     static unsafe int ObjectGcCallback(int instanceId, IntPtr objectDebugPointer) {
         ThreadDataManager.DeleteObjectReference(instanceId);
         // Debug.Log("GC " + instanceId + " ptr:" + objectDebugPointer);
@@ -246,7 +246,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     // When a lua object wants to set a property
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.SetPropertyCallback))]
     private static int SetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int propertyNameAtom, int type, IntPtr propertyData, ulong propertyDataSize, byte isTable) {
         var ret = 0;
         try {
@@ -754,7 +754,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     // When a lua object wants to get a property
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.GetPropertyCallback))]
     private static int GetPropertySafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, int propertyNameAtom) {
         var ret = 0;
         try {
@@ -1075,7 +1075,7 @@ public partial class LuauCore : MonoBehaviour {
 
     //Take a random path name from a require and transform it into its path relative to /assets/.
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.RequireCallback))]
     private static void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen) {
         LuauProtection.CurrentContext = context;
         
@@ -1089,7 +1089,7 @@ public partial class LuauCore : MonoBehaviour {
         LuauPluginRaw.PushString(thread, fileRequirePath);
     }
     
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.RequireCallback))]
     private static IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
         LuauProtection.CurrentContext = context;
 
@@ -1142,7 +1142,7 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     /// When lua wants to toggle the enabled state of a component
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ComponentSetEnabledCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.ComponentSetEnabledCallback))]
     private static void SetComponentEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled) {
         var gameObject = AirshipBehaviourRootV2.GetGameObject(instanceId);
         if (gameObject == null) {
@@ -1168,7 +1168,7 @@ public partial class LuauCore : MonoBehaviour {
     private static int numCalls = 0;
     
     // When a lua object wants to call a method
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.CallMethodCallback))]
     static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int methodNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
         LuauProtection.CurrentContext = context;
         Marshal.WriteInt32(shouldYield, 0);
@@ -1495,7 +1495,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
     
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.ConstructorCallback))]
     static unsafe int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int classNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable) {
         LuauProtection.CurrentContext = context;
         

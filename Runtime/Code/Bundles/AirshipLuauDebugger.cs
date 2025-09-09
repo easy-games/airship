@@ -8,7 +8,7 @@ using UnityEngine;
 
 public class AirshipLuauDebugger : NetworkBehaviour {
 	[NonSerialized] [SyncVar] public string luauPluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
-	[NonSerialized] [SyncVar] public LuauPlugin.LuauBytecodeVersion bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
+	[NonSerialized] [SyncVar] public LuauPluginNative.LuauBytecodeVersion bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
 	[NonSerialized] [SyncVar] public string serverPlayerVersion = "";
 	[NonSerialized] [SyncVar(hook = nameof(OnLuauObjectsDebugStringChanged))] public string luauObjectsDebugString = "";
 

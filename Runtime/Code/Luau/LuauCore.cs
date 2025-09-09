@@ -132,7 +132,7 @@ public partial class LuauCore : MonoBehaviour {
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
         LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
         LuauPlugin.LuauStartup(
-            new LuauPlugin.LuauPluginStartup {
+            new LuauPluginNative.LuauPluginStartup {
                 getPropertyCallback = getPropertyCallback_holder,
                 setPropertyCallback = setPropertyCallback_holder,
                 callMethodCallback = callMethodCallback_holder,
