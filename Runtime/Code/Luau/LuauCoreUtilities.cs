@@ -12,7 +12,7 @@ public partial class LuauCore : MonoBehaviour {
     public static unsafe void ErrorThread(IntPtr thread, string errorMsg) {
         byte[] str = System.Text.Encoding.UTF8.GetBytes(errorMsg);
         fixed (byte* ptr = str) {
-            LuauPlugin.LuauErrorThread(thread, new IntPtr(ptr), str.Length);
+            LuauPlugin.ErrorThread(thread, new IntPtr(ptr), str.Length);
         }
     }
 

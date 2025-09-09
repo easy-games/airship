@@ -147,7 +147,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static int LuauError(IntPtr thread, string err) {
-        LuauPlugin.LuauPushCsError(err);
+        LuauPlugin.PushCsError(err);
         ThreadDataManager.Error(thread);
         return -1;
     }
@@ -1594,7 +1594,7 @@ public partial class LuauCore : MonoBehaviour {
             try {
                 LuauPluginRaw.PushString(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
                 ThreadDataManager.Error(thread);
-                LuauPlugin.LuauResumeThreadError(thread);
+                LuauPlugin.ResumeThreadError(thread);
             } catch (LuauException e) {
                 Debug.LogException(e);
             }
@@ -1619,7 +1619,7 @@ public partial class LuauCore : MonoBehaviour {
 
         if (!immediate) {
             try {
-                LuauPlugin.LuauResumeThread(thread, nArgs);
+                LuauPlugin.ResumeThread(thread, nArgs);
             } catch (LuauException e) {
                 Debug.LogException(e);
             }
@@ -1645,7 +1645,7 @@ public partial class LuauCore : MonoBehaviour {
 
     private static void GetLuauDebugTrace(IntPtr thread) {
         //Call this to get a bunch of prints of the current thread execution state
-        LuauPlugin.LuauGetDebugTrace(thread);
+        LuauPlugin.GetDebugTrace(thread);
     }
 
     private struct FastCacheEntry {

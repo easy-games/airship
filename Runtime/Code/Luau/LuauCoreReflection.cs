@@ -392,7 +392,7 @@ public partial class LuauCore : MonoBehaviour
     
     // Called from WriteProperty
     public static void WritePropertyToThreadVector3(IntPtr thread, Vector3 value) {
-        LuauPlugin.LuauPushVector3ToThread(thread, value.x, value.y, value.z);
+        LuauPlugin.PushVector3ToThread(thread, value.x, value.y, value.z);
     }
     
     public static unsafe void WritePropertyToThreadVector2(IntPtr thread, Vector2 vec) {
@@ -400,7 +400,7 @@ public partial class LuauCore : MonoBehaviour
         vecData[0] = vec.x;
         vecData[1] = vec.y;
 
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, new IntPtr(vecData), 0); // 0, because we know how big an intPtr is
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, new IntPtr(vecData), 0); // 0, because we know how big an intPtr is
     }
     
     public static unsafe void WritePropertyToThreadVector4(IntPtr thread, Vector4 vec) {
@@ -410,7 +410,7 @@ public partial class LuauCore : MonoBehaviour
         vecData[2] = vec.z;
         vecData[3] = vec.w;
 
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR4, new IntPtr(vecData), 0); // 0, because we know how big an intPtr is
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_VECTOR4, new IntPtr(vecData), 0); // 0, because we know how big an intPtr is
     }
 
     public static unsafe void WritePropertyToThreadRay(IntPtr thread, Ray ray) {
@@ -422,7 +422,7 @@ public partial class LuauCore : MonoBehaviour
         rayData[4] = ray.direction.y;
         rayData[5] = ray.direction.z;
 
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RAY, new IntPtr(rayData), 0); // 0, because we know how big an intPtr is
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_RAY, new IntPtr(rayData), 0); // 0, because we know how big an intPtr is
     }
     
     // Called from WriteProperty
@@ -433,34 +433,34 @@ public partial class LuauCore : MonoBehaviour
         quatData[2] = quat.z;
         quatData[3] = quat.w;
         
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_QUATERNION, new IntPtr(quatData), 0);
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_QUATERNION, new IntPtr(quatData), 0);
     }
     
     // Called from WriteProperty
     public static unsafe void WritePropertyToThreadInt32(IntPtr thread, int value) {
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value), 0);
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value), 0);
     }
 
     public static unsafe void WritePropertyToThreadBoolean(IntPtr thread, bool value) {
         if ((bool)value == true) {
             int fixedValue = 1;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue), 0); // 0, because we know how big an intPtr is
         } else {
             int fixedValue = 0;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BOOL, new IntPtr(&fixedValue), 0); // 0, because we know how big an intPtr is
         }
     }
     
     // Called from WriteProperty
     public static unsafe void WritePropertyToThreadSingle(IntPtr thread, float value) {
         double number = value;
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number), 0);
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number), 0);
     }
 
     public static unsafe void WritePropertyToThreadString(IntPtr thread, string value) {
         var strPtr = Marshal.StringToCoTaskMemUTF8(value);
         var strLen = Encoding.UTF8.GetByteCount(value);
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, strLen);
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, strLen);
         Marshal.FreeCoTaskMem(strPtr);
     }
 
@@ -471,12 +471,12 @@ public partial class LuauCore : MonoBehaviour
         rectData[2] = rect.width;
         rectData[3] = rect.height;
 
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RECT, new IntPtr(rectData), 0); // 0, because we know how big an intPtr is
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_RECT, new IntPtr(rectData), 0); // 0, because we know how big an intPtr is
     }
     
     // Called from WriteProperty
     public static unsafe void WritePropertyToThreadDouble(IntPtr thread, double value) {
-        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value), 0);
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value), 0);
     }
 
     public static bool WriteArrayToThread(IntPtr thread, IEnumerable array, Type t, int knownSize = 0) {
@@ -497,7 +497,7 @@ public partial class LuauCore : MonoBehaviour
 
     public static void WritePropertyToThreadObject(IntPtr thread, object value) {
         if (value == null) {
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
             return;
         }
         
@@ -507,21 +507,21 @@ public partial class LuauCore : MonoBehaviour
          */
         if (value is UnityEngine.Object go) {
             if (go == null) {
-                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
                 return;
             }
         }
 
         int objectInstanceId = ThreadDataManager.AddObjectReference(thread, value);
         unsafe {
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_OBJECT, new IntPtr(value: &objectInstanceId),
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_OBJECT, new IntPtr(value: &objectInstanceId),
                 0); //size == 0, intptr size known.
         }
     }
 
     public static unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
         if (value == null) {
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
             return true;
         }
         
@@ -554,35 +554,35 @@ public partial class LuauCore : MonoBehaviour
         if (t == luauBufferType) {
             var buf = (LuauBuffer)value;
             fixed (byte* bytesPtr = buf.Data) {
-                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), buf.Data.Length);
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), buf.Data.Length);
             }
             return true;
         }
 
         if (t.IsEnum) {
             System.Int32 integer = (System.Int32)value;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
         if (t == uIntType) {
             UInt32 uintVal = (UInt32)value;
             System.Int32 integer = unchecked((int)uintVal);
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
             return true;
         }
         
         if (t == byteType) {
             byte byteVal = (byte)value;
             System.Int32 integer = byteVal;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
             return true;
         }
         
         if (t == longType) {
             Int64 intVal = (Int64)value;
             System.Int32 integer = unchecked((int)intVal);
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
@@ -593,7 +593,7 @@ public partial class LuauCore : MonoBehaviour
 
         if (t == vector3IntType) {
             Vector3 vec = Vector3Int.FloorToInt((Vector3Int)value);
-            LuauPlugin.LuauPushVector3ToThread(thread, vec.x, vec.y, vec.z);
+            LuauPlugin.PushVector3ToThread(thread, vec.x, vec.y, vec.z);
             return true;
         }
 
@@ -614,7 +614,7 @@ public partial class LuauCore : MonoBehaviour
 
         if (t == ushortType) {
             double number = (ushort)value;
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
@@ -632,7 +632,7 @@ public partial class LuauCore : MonoBehaviour
             colorData[2] = color.b;
             colorData[3] = color.a;
 
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_COLOR, new IntPtr(colorData), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_COLOR, new IntPtr(colorData), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
@@ -640,7 +640,7 @@ public partial class LuauCore : MonoBehaviour
             var blob = (BinaryBlob)value;
 
             fixed (byte* dataPtr = blob.data) {
-                LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), blob.dataSize);
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), blob.dataSize);
             }
 
             return true;
@@ -674,7 +674,7 @@ public partial class LuauCore : MonoBehaviour
             planeData[2] = plane.normal.z;
             planeData[3] = plane.distance;
 
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_PLANE, new IntPtr(planeData), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_PLANE, new IntPtr(planeData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
@@ -704,7 +704,7 @@ public partial class LuauCore : MonoBehaviour
             matData[14] = mat.m32;
             matData[15] = mat.m33;
 
-            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_MATRIX, new IntPtr(matData), 0); // 0, because we know how big an intPtr is
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_MATRIX, new IntPtr(matData), 0); // 0, because we know how big an intPtr is
 
             return true;
         }
@@ -749,61 +749,61 @@ public partial class LuauCore : MonoBehaviour
             case PODTYPE.POD_DOUBLE: {
                 if (elementType != null) {
                     if (elementType.IsAssignableFrom(doubleType)) {
-                        LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(floatType)) {
-                        LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_FLOAT, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_FLOAT, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(byteType)) {
-                        LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.BaseType == enumType) {
                         if (Enum.GetUnderlyingType(sourceParamType) == byteType) {
-                            LuauPlugin.LuauCopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
+                            LuauPlugin.CopyTableToArray<byte>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                             value = arr;
                             return true;
                         } else {
-                            LuauPlugin.LuauCopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr, arrayAsList);
+                            LuauPlugin.CopyTableToArray<double>(thread, PODTYPE.POD_DOUBLE, size, idx, out var arr, arrayAsList);
                             value = arr;
                             return true;
                         }
                     }
 
                     if (elementType.IsAssignableFrom(intType)) {
-                        LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<int>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(uIntType)) {
-                        LuauPlugin.LuauCopyTableToArray<uint>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<uint>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(ushortType)) {
-                        LuauPlugin.LuauCopyTableToArray<ushort>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<ushort>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(longType)) {
-                        LuauPlugin.LuauCopyTableToArray<long>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<long>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
 
                     if (elementType.IsAssignableFrom(uLongType)) {
-                        LuauPlugin.LuauCopyTableToArray<ulong>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
+                        LuauPlugin.CopyTableToArray<ulong>(thread, PODTYPE.POD_INT32, size, idx, out var arr, arrayAsList);
                         value = arr;
                         return true;
                     }
@@ -812,7 +812,7 @@ public partial class LuauCore : MonoBehaviour
                 break;
             }
             case PODTYPE.POD_COLOR: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_COLOR, size * 4, idx, out var arr, arrayAsList);
+                LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_COLOR, size * 4, idx, out var arr, arrayAsList);
 
                 IList<Color> colors = arrayAsList ? new List<Color>(size) : new Color[size];
                 for (var i = 0; i < size; i++) {
@@ -829,7 +829,7 @@ public partial class LuauCore : MonoBehaviour
                 return true;
             }
             case PODTYPE.POD_VECTOR2: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR2, size * 2, idx, out var arr, arrayAsList);
+                LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_VECTOR2, size * 2, idx, out var arr, arrayAsList);
                 
                 IList<Vector2> vectors = arrayAsList ? new List<Vector2>(size) : new Vector2[size];
                 for (var i = 0; i < size; i++) {
@@ -846,7 +846,7 @@ public partial class LuauCore : MonoBehaviour
                 return true;
             }
             case PODTYPE.POD_VECTOR3: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR3, size * 3, idx, out var arr, arrayAsList);
+                LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_VECTOR3, size * 3, idx, out var arr, arrayAsList);
 
                 IList<Vector3> vectors = arrayAsList ? new List<Vector3>(size) : new Vector3[size];
                 for (var i = 0; i < size; i++) {
@@ -863,7 +863,7 @@ public partial class LuauCore : MonoBehaviour
                 return true;
             }
             case PODTYPE.POD_VECTOR4: {
-                LuauPlugin.LuauCopyTableToArray<float>(thread, PODTYPE.POD_VECTOR4, size * 4, idx, out var arr, arrayAsList);
+                LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_VECTOR4, size * 4, idx, out var arr, arrayAsList);
 
                 IList<Vector4> vectors = arrayAsList ? new List<Vector4>(size) : new Vector4[size];
                 for (var i = 0; i < size; i++) {
@@ -880,7 +880,7 @@ public partial class LuauCore : MonoBehaviour
                 return true;
             }
             case PODTYPE.POD_BOOL: {
-                LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_BOOL, size, idx, out var arr, arrayAsList);
+                LuauPlugin.CopyTableToArray<int>(thread, PODTYPE.POD_BOOL, size, idx, out var arr, arrayAsList);
 
                 IList<bool> booleans = arrayAsList ? new List<bool>(size) : new bool[size];
                 for (var i = 0; i < size; i++) {
@@ -896,7 +896,7 @@ public partial class LuauCore : MonoBehaviour
                 return true;
             }
             case PODTYPE.POD_OBJECT: {
-                LuauPlugin.LuauCopyTableToArray<int>(thread, PODTYPE.POD_OBJECT, size, idx, out var arr, false);
+                LuauPlugin.CopyTableToArray<int>(thread, PODTYPE.POD_OBJECT, size, idx, out var arr, false);
 
                 IList objects = Array.CreateInstance(elementType, size);
                 for (var i = 0; i < size; i++) {

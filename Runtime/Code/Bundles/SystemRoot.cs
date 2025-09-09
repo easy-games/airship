@@ -717,15 +717,15 @@ public class SystemRoot : Singleton<SystemRoot> {
 				val = val.ToLower();
 				switch (val) {
 					case "full":
-						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Full);
+						LuauPlugin.SetGCState(LuauPlugin.LuauGCState.Full);
 						Debug.Log("Luau per-frame GC set to FULL");
 						break;
 					case "step":
-						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Step);
+						LuauPlugin.SetGCState(LuauPlugin.LuauGCState.Step);
 						Debug.Log("Luau per-frame GC set to STEP");
 						break;
 					case "off":
-						LuauPlugin.LuauSetGCState(LuauPlugin.LuauGCState.Off);
+						LuauPlugin.SetGCState(LuauPlugin.LuauGCState.Off);
 						Debug.Log("Luau per-frame GC set to OFF");
 						break;
 					default:
@@ -734,8 +734,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 				}
 			},
 			() => {
-				var gcKbGame = LuauPlugin.LuauCountGC(LuauContext.Game);
-				var gcKbProtected = LuauPlugin.LuauCountGC(LuauContext.Protected);
+				var gcKbGame = LuauPlugin.CountGC(LuauContext.Game);
+				var gcKbProtected = LuauPlugin.CountGC(LuauContext.Protected);
 				var gcKb = gcKbGame + gcKbProtected;
 				Debug.Log($"Luau GC: [Game: {gcKbGame} KB] [Protected: {gcKbProtected} KB] [Total: {gcKb} KB]");
 			}
@@ -751,8 +751,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}));
 
 		DevConsole.AddCommand(Command.Create("luau", "", "Prints info about the Luau plugin", () => {
-			var pluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
-			var bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
+			var pluginVersion = LuauPlugin.GetLuauPluginVersion();
+			var bytecodeVersion = LuauPlugin.GetBytecodeVersion();
 			var server = FindAnyObjectByType<AirshipLuauDebugger>();
 			
 			Debug.Log($"CLIENT: {pluginVersion} - Bytecode Version: {bytecodeVersion.Target} (Min: {bytecodeVersion.Min}, Max: {bytecodeVersion.Max})");
@@ -770,10 +770,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 			string registryDump;
 			switch (val) {
 				case "game":
-					registryDump = LuauPlugin.LuauDebugCountAllRegistryItems(LuauContext.Game);
+					registryDump = LuauPlugin.DebugCountAllRegistryItems(LuauContext.Game);
 					break;
 				case "protected":
-					registryDump = LuauPlugin.LuauDebugCountAllRegistryItems(LuauContext.Protected);
+					registryDump = LuauPlugin.DebugCountAllRegistryItems(LuauContext.Protected);
 					break;
 				default:
 					Debug.Log($"Invalid context: \"{val}\"");

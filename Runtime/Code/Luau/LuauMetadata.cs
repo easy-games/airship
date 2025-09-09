@@ -593,7 +593,7 @@ namespace Luau {
             var strPtrs = new List<IntPtr>();
             AsStructDto(thread, gcHandles, strPtrs, out var dto);
             
-            LuauPlugin.LuauWriteToAirshipComponent(LuauContext.Game, thread, unityInstanceId, componentId, dto);
+            LuauPlugin.WriteToAirshipComponent(LuauContext.Game, thread, unityInstanceId, componentId, dto);
 
             foreach (var handle in gcHandles) {
                 handle.Free();

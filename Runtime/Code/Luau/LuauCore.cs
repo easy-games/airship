@@ -21,7 +21,7 @@ public partial class LuauCore : MonoBehaviour {
     [InitializeOnLoad]
     private class LuauCorePrintCallbackLoader {
         static LuauCorePrintCallbackLoader() {
-            LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
+            LuauPlugin.InitializePrintCallback(printCallback_holder);
         }
     }
 #endif
@@ -129,9 +129,9 @@ public partial class LuauCore : MonoBehaviour {
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
         var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
-        LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
-        LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
-        LuauPlugin.LuauStartup(
+        LuauPlugin.InitializePrintCallback(printCallback_holder);
+        LuauPlugin.InitializeComponentCallbacks(componentSetEnabledCallback_holder);
+        LuauPlugin.Startup(
             new LuauPluginNative.LuauPluginStartup {
                 getPropertyCallback = getPropertyCallback_holder,
                 setPropertyCallback = setPropertyCallback_holder,
@@ -179,7 +179,7 @@ public partial class LuauCore : MonoBehaviour {
             initialized = false;
             LuauState.ShutdownAll();
             Profiler.BeginSample("ShutdownLuauPlugin");
-            LuauPlugin.LuauShutdown();
+            LuauPlugin.Shutdown();
             Profiler.EndSample();
             if (endOfFrameCoroutine != null) {
                 StopCoroutine(endOfFrameCoroutine);
@@ -250,13 +250,13 @@ public partial class LuauCore : MonoBehaviour {
     private static void ResetOnReload() {
         ResetStaticFields();
         _coreInstance = null;
-        LuauPlugin.LuauSubsystemRegistration();
+        LuauPlugin.SubsystemRegistration();
         Application.quitting -= Quit;
     }
 
 #if UNITY_EDITOR
     private void OnPauseStateChanged(PauseState state) {
-        LuauPlugin.LuauSetIsPaused(state == PauseState.Paused);
+        LuauPlugin.SetIsPaused(state == PauseState.Paused);
     }
 #endif
 
@@ -285,7 +285,7 @@ public partial class LuauCore : MonoBehaviour {
         }
         
         Profiler.BeginSample("BeginFrameLogic");
-        LuauPlugin.LuauRunBeginFrameLogic();
+        LuauPlugin.RunBeginFrameLogic();
         Profiler.EndSample();
 
         // List<CallbackRecord> runBuffer = m_currentBuffer;

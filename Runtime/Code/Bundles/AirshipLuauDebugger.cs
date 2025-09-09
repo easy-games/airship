@@ -7,8 +7,8 @@ using Mirror;
 using UnityEngine;
 
 public class AirshipLuauDebugger : NetworkBehaviour {
-	[NonSerialized] [SyncVar] public string luauPluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
-	[NonSerialized] [SyncVar] public LuauPluginNative.LuauBytecodeVersion bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
+	[NonSerialized] [SyncVar] public string luauPluginVersion = LuauPlugin.GetLuauPluginVersion();
+	[NonSerialized] [SyncVar] public LuauPluginNative.LuauBytecodeVersion bytecodeVersion = LuauPlugin.GetBytecodeVersion();
 	[NonSerialized] [SyncVar] public string serverPlayerVersion = "";
 	[NonSerialized] [SyncVar(hook = nameof(OnLuauObjectsDebugStringChanged))] public string luauObjectsDebugString = "";
 
@@ -19,15 +19,15 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 		[LuauContext.Protected] = 0,
 	};
 
-	[NonSerialized] [SyncVar] public ulong ServerUnityObjects = LuauPlugin.LuauGetUnityObjectCount();
+	[NonSerialized] [SyncVar] public ulong ServerUnityObjects = LuauPlugin.GetUnityObjectCount();
 	
 	private const float MinServerMemDumpUpdateInterval = 1; 
 
 	private void OnServerInitialized() {
-		luauPluginVersion = LuauPlugin.LuauGetLuauPluginVersion();
-		bytecodeVersion = LuauPlugin.LuauGetBytecodeVersion();
+		luauPluginVersion = LuauPlugin.GetLuauPluginVersion();
+		bytecodeVersion = LuauPlugin.GetBytecodeVersion();
 		serverPlayerVersion = AirshipVersion.GetVersionHash();
-		ServerUnityObjects = LuauPlugin.LuauGetUnityObjectCount();
+		ServerUnityObjects = LuauPlugin.GetUnityObjectCount();
 	}
 
 	[Command(requiresAuthority = false)]
@@ -43,10 +43,10 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 			ServerMemDump.Add(context, dump);
 		}
 		
-		LuauPlugin.LuauGetMemoryCategoryDump(context, dump);
+		LuauPlugin.GetMemoryCategoryDump(context, dump);
 		ServerMemDump[context] = dump; // Force update
 		
-		ServerUnityObjects = LuauPlugin.LuauGetUnityObjectCount();
+		ServerUnityObjects = LuauPlugin.GetUnityObjectCount();
 	}
 
 	[Command(requiresAuthority = false)]
@@ -55,7 +55,7 @@ public class AirshipLuauDebugger : NetworkBehaviour {
 	}
 	
 	public static string FetchLuauUnityInstanceIds(LuauContext context) {
-		var instanceIds = LuauPlugin.LuauDebugGetAllTrackedInstanceIds(context);
+		var instanceIds = LuauPlugin.DebugGetAllTrackedInstanceIds(context);
 		
 		var sb = new StringBuilder("OBJECTS:\n");
 			

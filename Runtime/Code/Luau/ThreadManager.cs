@@ -164,7 +164,7 @@ namespace Luau {
                 }
 
                 if (!preventTrace && thread != IntPtr.Zero) {
-                    LuauPlugin.LuauGetDebugTrace(thread);
+                    LuauPlugin.GetDebugTrace(thread);
                 }
 
                 return null;
@@ -282,7 +282,7 @@ namespace Luau {
                     
                     int numParameters = 0;
                     System.Int32 integer = (System.Int32)threadData.m_onUpdateHandle;
-                    int retValue = LuauPlugin.LuauCallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
+                    int retValue = LuauPlugin.CallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
                     if (retValue < 0) {
                         ThreadDataManager.Error(threadData.m_threadHandle);
                     }
@@ -307,7 +307,7 @@ namespace Luau {
                     
                     int numParameters = 0;
                     System.Int32 integer = (System.Int32)threadData.m_onLateUpdateHandle;
-                    int retValue = LuauPlugin.LuauCallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
+                    int retValue = LuauPlugin.CallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
                     if (retValue < 0) {
                         ThreadDataManager.Error(threadData.m_threadHandle);
                     }
@@ -333,7 +333,7 @@ namespace Luau {
 
                     int numParameters = 0;
                     System.Int32 integer = (System.Int32)threadData.m_onFixedUpdateHandle;
-                    int retValue = LuauPlugin.LuauCallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
+                    int retValue = LuauPlugin.CallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
                     if (retValue < 0) {
                         ThreadDataManager.Error(threadData.m_threadHandle);
                     }
@@ -342,7 +342,7 @@ namespace Luau {
         }
 
         public static void RunEndOfFrame() {
-            LuauPlugin.LuauRunEndFrameLogic();
+            LuauPlugin.RunEndFrameLogic();
             
             // Temporary removal process:
             s_removalList.Clear();

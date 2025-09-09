@@ -284,7 +284,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 			propertyDtos[i] = dto;
 		}
 		
-		LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
+		LuauPlugin.InitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
 
 		// Free handles:
 		foreach (var handle in InitGcHandles) {
@@ -313,14 +313,14 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	private void OnEnable() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, true);
+		LuauPlugin.SetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, true);
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
 	}
 
 	private void OnDisable() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, false);
+		LuauPlugin.SetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, false);
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
 	}
 	
@@ -331,11 +331,11 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
-		LuauPlugin.LuauRemoveAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId);
+		LuauPlugin.RemoveAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId);
 		AirshipBehaviourRootV2.CleanIdOnDestroy(gameObject, this);
 		if (LuauState.IsContextActive(context)) {
-			LuauPlugin.LuauUnpinThread(thread);
-			LuauPlugin.LuauDestroyThread(thread);
+			LuauPlugin.UnpinThread(thread);
+			LuauPlugin.DestroyThread(thread);
 		}
 		thread = IntPtr.Zero;
 	}
@@ -417,12 +417,12 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	#endregion
 
 	private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
-		LuauPlugin.LuauUpdateIndividualAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, 0, true);
+		LuauPlugin.UpdateIndividualAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, 0, true);
 	}
 
 	private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object obj) {
 		var argObjId = ThreadDataManager.AddObjectReference(thread, obj);
-		LuauPlugin.LuauUpdateCollisionAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, argObjId);
+		LuauPlugin.UpdateCollisionAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, argObjId);
 	}
 
 	private IReadOnlyList<AirshipComponent> GetDependencies() {
@@ -452,7 +452,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		}
         
 		// Fetch from Luau plugin & cache the result:
-		var hasMethod = LuauPlugin.LuauHasAirshipMethod(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType);
+		var hasMethod = LuauPlugin.HasAirshipMethod(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType);
 		_hasAirshipUpdateMethods.Add(updateType, hasMethod);
         
 		return hasMethod;
@@ -470,7 +470,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(transform);
 		AirshipBehaviourRootV2.LinkComponentToGameObject(this, out var unityInstanceId);
         
-		LuauPlugin.LuauPrewarmAirshipComponent(context, thread, unityInstanceId, _airshipComponentId, transformInstanceId);
+		LuauPlugin.PrewarmAirshipComponent(context, thread, unityInstanceId, _airshipComponentId, transformInstanceId);
 	}
 
 	public string GetAirshipComponentName() {

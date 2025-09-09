@@ -32,6 +32,12 @@ public static class LuauPlugin {
 		Max = 2,
 	}
 
+	public enum LuauGCState {
+		Off = 0,
+		Step = 1,
+		Full = 2,
+	}
+
 	// Must match MemoryCategoryDumpItem struct in Debug.h
 	[StructLayout(LayoutKind.Sequential)]
 	private struct LuauMemoryCategoryDumpItemInternal {
@@ -124,50 +130,50 @@ public static class LuauPlugin {
 #endif
     }
 	
-    public static void LuauInitializeComponentCallbacks(LuauPluginNative.ComponentSetEnabledCallback setEnabledCallback) {
+    public static void InitializeComponentCallbacks(LuauPluginNative.ComponentSetEnabledCallback setEnabledCallback) {
 	    ThreadSafetyCheck();
 		LuauPluginNative.InitializeComponentCallbacks(setEnabledCallback);
     }
     
-	public static bool LuauStartup(LuauPluginNative.LuauPluginStartup pluginStartup) {
+	public static bool Startup(LuauPluginNative.LuauPluginStartup pluginStartup) {
         ThreadSafetyCheck();
         return LuauPluginNative.Startup(pluginStartup);
     }
 	
-	public static void LuauInitializePrintCallback(LuauPluginNative.PrintCallback printCallback) {
+	public static void InitializePrintCallback(LuauPluginNative.PrintCallback printCallback) {
 		LuauPluginNative.TryInitPlugin();
 		ThreadSafetyCheck();
 		LuauPluginNative.InitializePrintCallback(printCallback);
 	}
 
-	public static void LuauSubsystemRegistration() {
+	public static void SubsystemRegistration() {
 #if !UNITY_EDITOR // The SubsystemRegistration call is done automatically within LuauPluginNative at editor time
 		ThreadSafetyCheck();
 		LuauPluginNative.SubsystemRegistration();
 #endif
 	}
 	
-	public static void LuauSetProfilerEnabled(bool enabled) {
+	public static void SetProfilerEnabled(bool enabled) {
 		ThreadSafetyCheck();
 		LuauPluginNative.SetProfilerEnabled(enabled);
 	}
 	
-	public static bool LuauOpenState(LuauContext context) {
+	public static bool OpenState(LuauContext context) {
 		ThreadSafetyCheck();
 		return LuauPluginNative.OpenState(context);
 	}
 	
-	public static bool LuauCloseState(LuauContext context) {
+	public static bool CloseState(LuauContext context) {
 		ThreadSafetyCheck();
 		return LuauPluginNative.CloseState(context);
 	}
 	
-	public static void LuauReset(LuauContext context) {
+	public static void Reset(LuauContext context) {
         ThreadSafetyCheck();
         LuauPluginNative.Reset(context);
 	}
 	
-	public static unsafe ReadOnlySpan<int> LuauGetUniqueInstanceIds(LuauContext context) {
+	public static unsafe ReadOnlySpan<int> GetUniqueInstanceIds(LuauContext context) {
 		var count = LuauPluginNative.GetUniqueInstanceIdCount(context);
 		var ids = new int[count];
 		
@@ -180,24 +186,24 @@ public static class LuauPlugin {
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauRunBeginFrameLogic() {
+	public static void RunBeginFrameLogic() {
 		ThreadSafetyCheck();
 		LuauPluginNative.RunBeginFrameLogic();
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void LuauRunEndFrameLogic() {
+    public static void RunEndFrameLogic() {
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(LuauPluginNative.RunEndFrameLogic());
     }
 	
-	public static void LuauShutdown() {
+	public static void Shutdown() {
 		ThreadSafetyCheck();
 		LuauPluginNative.Shutdown();
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, Span<LuauMetadataPropertyMarshalDto> props) {
+	public static unsafe void InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, Span<LuauMetadataPropertyMarshalDto> props) {
 		ThreadSafetyCheck();
 		fixed (LuauMetadataPropertyMarshalDto* ptr = &MemoryMarshal.GetReference(props)) {
 			ThrowIfNotNullPtr(LuauPluginNative.InitializeAirshipComponent(context, thread, unityInstanceId, componentId, ptr, props.Length));
@@ -208,49 +214,49 @@ public static class LuauPlugin {
 	/// Create the reference pointer for the AirshipComponent
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static void LuauPrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId) {
+	internal static void PrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.PrewarmAirshipComponent(context, thread, unityInstanceId, componentId, transformComponentId));
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauRemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
+	public static void RemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.RemoveAirshipComponent(context, thread, unityInstanceId, componentId));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauWriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop) {
+	public static void WriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.WriteToAirshipComponent(context, thread, unityInstanceId, componentId, prop));
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauPushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
+	public static void PushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.PushAirshipComponent(context, thread, unityInstanceId, componentId));
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauPushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false) {
+	public static void PushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.PushAirshipComponents(context, thread, unityInstanceId, componentIds, componentIds.Length, appendToTable));
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauUpdateIndividualAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt, bool safe) {
+	public static void UpdateIndividualAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt, bool safe) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.UpdateIndividualAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, dt, true));
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauUpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, int collisionObjId) {
+	public static void UpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, int collisionObjId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.UpdateCollisionAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, collisionObjId));
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void LuauUpdateAllAirshipComponents(LuauContext context, AirshipComponentUpdateType updateType, float dt) {
+	public static void UpdateAllAirshipComponents(LuauContext context, AirshipComponentUpdateType updateType, float dt) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.UpdateAllAirshipComponents(context, (int)updateType, dt));
 	}
@@ -262,38 +268,38 @@ public static class LuauPlugin {
 		return result != 0;
 	}
 	
-	public static void LuauSetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
+	public static void SetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.SetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, enabled ? 1 : 0));
 	}
 	
-	public static bool LuauHasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
+	public static bool HasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
 		ThreadSafetyCheck();
 		var result = 0;
 		ThrowIfNotNullPtr(LuauPluginNative.HasAirshipMethod(context, thread, unityInstanceId, componentId, (int)updateType, ref result));
 		return result != 0;
 	}
 	
-	public static bool LuauPushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash) {
+	public static bool PushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash) {
 		ThreadSafetyCheck();
 		var result = 0;
 		ThrowIfNotNullPtr(LuauPluginNative.PushSignal(context, thread, unityInstanceId, propNameHash, ref result));
 		return result != 0;
 	}
 	
-	public static bool LuauEmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
+	public static bool EmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
 		ThreadSafetyCheck();
 		var result = 0;
 		ThrowIfNotNullPtr(LuauPluginNative.EmitSignal(context, thread, unityInstanceId, propNameHash, numParams, ref result));
 		return result != 0;
 	}
 	
-	public static void LuauDestroySignals(LuauContext context, IntPtr thread, int unityInstanceId) {
+	public static void DestroySignals(LuauContext context, IntPtr thread, int unityInstanceId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.DestroySignals(context, thread, unityInstanceId));
 	}
 	
-	public static unsafe IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
+	public static unsafe IntPtr CreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
 		
@@ -312,14 +318,14 @@ public static class LuauPlugin {
         return returnValue;
     }
 	
-	public static IntPtr LuauCreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId) {
+	public static IntPtr CreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId) {
 		ThreadSafetyCheck();
 		var returnValue = LuauPluginNative.CreateThreadWithCachedModule(context, filename, gameObjectId);
 		EndExecutionCheck();
 		return returnValue;
 	}
 	
-	public static void LuauCacheModuleOnThread(IntPtr thread, string filename) {
+	public static void CacheModuleOnThread(IntPtr thread, string filename) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.CacheModuleOnThread(thread, filename));
 		EndExecutionCheck();
@@ -330,7 +336,7 @@ public static class LuauPlugin {
 		ThrowIfNotNullPtr(LuauPluginNative.SetThreadDestroyed(thread));
 	}
 	
-	public static unsafe void LuauSetMutableGlobals(string[] mutableGlobals) {
+	public static unsafe void SetMutableGlobals(string[] mutableGlobals) {
 		Span<IntPtr> strings = stackalloc IntPtr[mutableGlobals.Length];
 		var lengths = stackalloc int[mutableGlobals.Length];
         
@@ -354,12 +360,12 @@ public static class LuauPlugin {
 		ThrowIfNotNullPtr(res);
 	}
 	
-	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, LuauOptimizationLevel optimizationLevel) {
+	public static IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, LuauOptimizationLevel optimizationLevel) {
         var returnValue = LuauPluginNative.CompileCode(script, scriptLength, filename, filenameLength, (int)optimizationLevel);
 		return returnValue;
 	}
 	
-	public static int LuauRunThread(IntPtr thread, int nArgs = 0) {
+	public static int RunThread(IntPtr thread, int nArgs = 0) {
         ThreadSafetyCheck();
 		//BeginExecutionCheck(CurrentCaller.CreateThread);
         var returnValue = 0;
@@ -368,21 +374,21 @@ public static class LuauPlugin {
         return returnValue;
     }
 	
-	public static int LuauResumeThread(IntPtr thread, int nArgs = 0) {
+	public static int ResumeThread(IntPtr thread, int nArgs = 0) {
 		ThreadSafetyCheck();
 		var returnValue = 0;
 		ThrowIfNotNullPtr(LuauPluginNative.ResumeThread(thread, nArgs, ref returnValue));
 		return returnValue;
 	}
 	
-	public static int LuauResumeThreadError(IntPtr thread) {
+	public static int ResumeThreadError(IntPtr thread) {
 		ThreadSafetyCheck();
 		var returnValue = 0;
 		ThrowIfNotNullPtr(LuauPluginNative.ResumeThreadError(thread, ref returnValue));
 		return returnValue;
 	}
 	
-	public static int LuauCallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters) {
+	public static int CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters) {
         ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CallMethodOnThread);
         var returnValue = 0;
@@ -391,75 +397,75 @@ public static class LuauPlugin {
         return returnValue;
     }
 	
-	public static void LuauDestroyThread(IntPtr thread) {
+	public static void DestroyThread(IntPtr thread) {
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(LuauPluginNative.DestroyThread(thread));
 	}
 	
-	public static void LuauPinThread(IntPtr thread) {
+	public static void PinThread(IntPtr thread) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.PinThread(thread));
 	}
 	
-	public static void LuauUnpinThread(IntPtr thread) {
+	public static void UnpinThread(IntPtr thread) {
         // Debug.Log("Unpinning thread " + thread);
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(LuauPluginNative.UnpinThread(thread));
 	}
 	
-	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
+	public static void PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(LuauPluginNative.PushValueToThread(thread, type, data, dataSize, arraySize));
 	}
 	
-	public static void LuauPushVector3ToThread(IntPtr thread, float x, float y, float z) {
+	public static void PushVector3ToThread(IntPtr thread, float x, float y, float z) {
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(LuauPluginNative.PushVector3ToThread(thread, x, y, z));
 	}
 	
-	public static void LuauPushTableToThread(IntPtr thread, int initialSize = 0) {
+	public static void PushTableToThread(IntPtr thread, int initialSize = 0) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.PushTableToThread(thread, initialSize));
 	}
 	
-	public static void LuauErrorThread(IntPtr thread, IntPtr msg, int msgSize) {
+	public static void ErrorThread(IntPtr thread, IntPtr msg, int msgSize) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.ErrorThread(thread, msg, msgSize));
 	}
 	
-	public static void LuauGetDebugTrace(IntPtr thread) {
+	public static void GetDebugTrace(IntPtr thread) {
         ThreadSafetyCheck();
         var result = 0;
         ThrowIfNotNullPtr(LuauPluginNative.GetDebugTrace(thread, ref result));
 	}
 	
-	public static void LuauRunTaskScheduler(LuauContext context) {
+	public static void RunTaskScheduler(LuauContext context) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.RunTaskScheduler(context, Time.time, Time.unscaledTime));
 	}
 	
-	public static void LuauResetTimeCache(LuauContext context, bool fixedUpdate) {
+	public static void ResetTimeCache(LuauContext context, bool fixedUpdate) {
 		LuauPluginNative.ResetTimeCache(context, fixedUpdate ? 1 : 0);
 	}
 	
-	public static LuauContext LuauGetContextFromThread(IntPtr thread) {
+	public static LuauContext GetContextFromThread(IntPtr thread) {
 		ThreadSafetyCheck();
 		return LuauPluginNative.GetContextFromThread(thread);
 	}
 	
-	public static LuauPluginNative.LuauBytecodeVersion LuauGetBytecodeVersion() {
+	public static LuauPluginNative.LuauBytecodeVersion GetBytecodeVersion() {
 		return LuauPluginNative.GetBytecodeVersion();
 	}
 	
-	public static void LuauSetScriptTimeoutDuration(int duration) {
+	public static void SetScriptTimeoutDuration(int duration) {
 		LuauPluginNative.SetScriptTimeoutDuration(duration);
 	}
 	
-	public static void LuauSetIsPaused(bool isPaused) {
+	public static void SetIsPaused(bool isPaused) {
 		LuauPluginNative.SetIsPaused(isPaused ? 1 : 0);
 	}
 	
-	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
+	public static unsafe void CopyTableToArray<T>(IntPtr thread, PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
 		var arr = new T[size];
 		array = arr;
 		IntPtr res;
@@ -473,7 +479,7 @@ public static class LuauPlugin {
 		}
 	}
 	
-	public static int LuauRegisterStringAtom(string str) {
+	public static int RegisterStringAtom(string str) {
 		var strPtr = Marshal.StringToCoTaskMemUTF8(str);
 		var strLen = (ulong)Encoding.UTF8.GetByteCount(str);
 		var atom = LuauPluginNative.RegisterStringAtom(strPtr, strLen);
@@ -481,40 +487,35 @@ public static class LuauPlugin {
 		return atom;
 	}
 	
-	public static void LuauPushCsError(string err) {
+	public static void PushCsError(string err) {
 		var errPtr = Marshal.StringToCoTaskMemUTF8(err);
 		var errLen = Encoding.UTF8.GetByteCount(err);
 		LuauPluginNative.PushCsError(errPtr, errLen);
 		Marshal.FreeCoTaskMem(errPtr);
 	}
-
-	public enum LuauGCState {
-		Off = 0,
-		Step = 1,
-		Full = 2,
-	}
-	public static void LuauSetGCState(LuauGCState state) {
+	
+	public static void SetGCState(LuauGCState state) {
 		LuauPluginNative.SetGCState((int)state);
 	}
 	
-	public static int LuauCountGC(LuauContext context) {
+	public static int CountGC(LuauContext context) {
 		return LuauPluginNative.CountGC((int)context);
 	}
 	
-	public static string LuauGetLuauPluginVersion() {
+	public static string GetLuauPluginVersion() {
 		var len = LuauPluginNative.GetLuauPluginVersion(out var versionPtr);
 		return Marshal.PtrToStringUTF8(versionPtr, len);
 	}
 	
-	public static void LuauDebugPrintStack(IntPtr thread) {
+	public static void DebugPrintStack(IntPtr thread) {
 		LuauPluginNative.DebugPrintStack(thread);
 	}
 	
-	public static ulong LuauGetUnityObjectCount() {
+	public static ulong GetUnityObjectCount() {
 		return LuauPluginNative.GetUnityObjectCount();
 	}
 	
-	public static void LuauGetMemoryCategoryDump(LuauContext context, List<LuauMemoryCategoryDumpItem> memCatDump) {
+	public static void GetMemoryCategoryDump(LuauContext context, List<LuauMemoryCategoryDumpItem> memCatDump) {
 		ulong count = 0;
 		var memCatDumpItemsPtr = LuauPluginNative.GetMemoryCategoryDump(context, ref count);
 
@@ -537,12 +538,12 @@ public static class LuauPlugin {
 		}
 	}
 	
-	public static string LuauDebugCountAllRegistryItems(LuauContext context) {
+	public static string DebugCountAllRegistryItems(LuauContext context) {
 		var strLen = LuauPluginNative.DebugCountAllRegistryItems(context, out var strPtr);
 		return Marshal.PtrToStringUTF8(strPtr, strLen);
 	}
 	
-	public static int[] LuauDebugGetAllTrackedInstanceIds(LuauContext context) {
+	public static int[] DebugGetAllTrackedInstanceIds(LuauContext context) {
 		var listLen = LuauPluginNative.DebugGetAllTrackedInstanceIds(context, out var arrPtr);
 		var list = new int[listLen];
 		var elementSize = Marshal.SizeOf<int>();
