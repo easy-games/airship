@@ -398,7 +398,7 @@ namespace Editor.Packages {
             if (isCoreMaterials) {
                 platforms.Clear();
                 platforms.Add(AirshipPlatform.iOS);
-                // platforms.Add(AirshipPlatform.Android);
+                platforms.Add(AirshipPlatform.Android);
                 // platforms.Add(AirshipPlatform.Windows);
                 // platforms.Add(AirshipPlatform.Mac);
             }
