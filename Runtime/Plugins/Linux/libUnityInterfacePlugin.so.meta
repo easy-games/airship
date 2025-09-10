@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ba77463029eba0948a30ef97cc5e1ef8
+guid: 4f047b63741b81d44b2ced6d486f6168
 PluginImporter:
   externalObjects: {}
   serializedVersion: 3
@@ -17,6 +17,7 @@ PluginImporter:
         AndroidLibraryDependee: UnityLibrary
         AndroidSharedLibraryType: Executable
         CPU: ARMv7
+        Is16KbAligned: false
     Any:
       enabled: 0
       settings:
@@ -32,7 +33,7 @@ PluginImporter:
       settings:
         CPU: x86_64
         DefaultValueInitialized: true
-        OS: Windows
+        OS: Linux
     Linux64:
       enabled: 0
       settings:
@@ -48,11 +49,7 @@ PluginImporter:
     Win64:
       enabled: 0
       settings:
-        CPU: x86_64
-    WindowsStoreApps:
-      enabled: 0
-      settings:
-        CPU: x64
+        CPU: None
     iOS:
       enabled: 0
       settings:
