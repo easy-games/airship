@@ -73,7 +73,10 @@ namespace NativePlugins {
 				}
 			}
 			LoadedPluginHandles.Clear();
+			
+			// Set all handles to zero here:
 			_libLuauPluginHandle = IntPtr.Zero;
+			
 			foreach (var path in libPaths) {
 				InitPlugin(path);
 			}
