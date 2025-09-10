@@ -463,6 +463,16 @@ public partial class LuauCore : MonoBehaviour
         LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, strLen);
         Marshal.FreeCoTaskMem(strPtr);
     }
+
+    public static unsafe void WritePropertyToThreadRect(IntPtr thread, Rect rect) {
+        var rectData = stackalloc float[4];
+        rectData[0] = rect.x;
+        rectData[1] = rect.y;
+        rectData[2] = rect.width;
+        rectData[3] = rect.height;
+
+        LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RECT, new IntPtr(rectData), 0); // 0, because we know how big an intPtr is
+    }
     
     // Called from WriteProperty
     public static unsafe void WritePropertyToThreadDouble(IntPtr thread, double value) {
@@ -666,6 +676,11 @@ public partial class LuauCore : MonoBehaviour
 
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_PLANE, new IntPtr(planeData), 0); // 0, because we know how big an intPtr is
 
+            return true;
+        }
+
+        if (t == rectType) {
+            WritePropertyToThreadRect(thread, (Rect) value);
             return true;
         }
 
@@ -1021,6 +1036,10 @@ public partial class LuauCore : MonoBehaviour
                     parsedData[paramIndex] = NewPlaneFromPointer(intPtrs[i]);
                     continue;
                 }
+                case PODTYPE.POD_RECT: {
+                    parsedData[paramIndex] = NewRectFromPointer(intPtrs[i]);
+                    continue;
+                }
                 case PODTYPE.POD_QUATERNION: {
                     parsedData[paramIndex] = NewQuaternionFromPointer(intPtrs[i]);
                     continue;
@@ -1145,6 +1164,12 @@ public partial class LuauCore : MonoBehaviour
                 case PODTYPE.POD_PLANE:
                     if (sourceParamType.IsAssignableFrom(planeType) == true) {
                         return PODTYPE.POD_PLANE;
+                    }
+
+                    break;
+                case PODTYPE.POD_RECT:
+                    if (sourceParamType.IsAssignableFrom(rectType) == true) {
+                        return PODTYPE.POD_RECT;
                     }
 
                     break;
@@ -1399,6 +1424,11 @@ public partial class LuauCore : MonoBehaviour
                         continue;
                     }
                     break;
+                case PODTYPE.POD_RECT:
+                    if (sourceParamType.IsAssignableFrom(rectType)) {
+                        continue;
+                    }
+                    break;
                 case PODTYPE.POD_QUATERNION:
                     if (sourceParamType.IsAssignableFrom(quaternionType)) {
                         continue;
@@ -1427,26 +1457,19 @@ public partial class LuauCore : MonoBehaviour
 
     //Generalized utility version - move these!
     public static string GetParameterAsString(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
+        return GetParameterAsStringWithHash(paramIndex, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out _);
+    }
+    
+    public static string GetParameterAsStringWithHash(int paramIndex, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes, out ulong hash) {
+        hash = 0;
         if (paramIndex >= numParameters) {
             return null;
         }
         if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_STRING) {
             return null;
         }
-        return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], parameterDataSizes[paramIndex]);
+        return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], parameterDataSizes[paramIndex], out hash);
     }
-
-    // public static AirshipComponent GetParameterAsAirshipComponent(int paramIndex, int numParameters, int[] parameterDataPODTypes,
-    //     IntPtr[] parameterDataPtrs, int[] parameterDataSizes) {
-    //     if (paramIndex >= numParameters)
-    //     {
-    //         return null;
-    //     }
-    //     if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_STRING)
-    //     {
-    //         return null;
-    //     }
-    // }
 
     public static string GetPropertyAsString(PODTYPE dataPodType, IntPtr dataPtr) {
         return dataPodType == PODTYPE.POD_STRING ? PtrToStringUTF8NullTerminated(dataPtr) : null;
@@ -1625,6 +1648,14 @@ public partial class LuauCore : MonoBehaviour
         return new Plane(new Vector3(VectorData[0], VectorData[1], VectorData[2]), VectorData[3]);
     }
     public static int PlaneSize() {
+        return 4 * sizeof(float);
+    }
+
+    public static Rect NewRectFromPointer(IntPtr data) {
+        Marshal.Copy(data, VectorData, 0, 4);
+        return new Rect(new Vector2(VectorData[0], VectorData[1]), new Vector2(VectorData[2], VectorData[3]));
+    }
+    public static int RectSize() {
         return 4 * sizeof(float);
     }
 

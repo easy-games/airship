@@ -12,7 +12,9 @@
         "FishNet.Runtime",
         "GameKit.Dependencies",
         "GameKit.Utilities",
-        "Airship.Util"
+        "Airship.Util",
+        "Mirror",
+        "Mirror.CompilerSymbols"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

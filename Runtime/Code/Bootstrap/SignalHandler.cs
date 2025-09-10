@@ -7,7 +7,7 @@ namespace Code.Bootstrap {
     public class SignalHandler : MonoBehaviour {
         public ServerBootstrap serverBootstrap;
         public UnityMainThreadDispatcher unityMainThread;
-
+        
 #if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void SignalDelegate();
@@ -47,12 +47,10 @@ namespace Code.Bootstrap {
             }
         }
 
-        private IEnumerator HandleSigterm()
-        {
-            Debug.Log("SIGTERM received. Performing cleanup.");
+        private IEnumerator HandleSigterm() {
+            Debug.Log("SIGTERM received. Starting application shutdown.");
             serverBootstrap.InvokeOnProcessExit();
             yield return null;
-            Application.Quit();
         }
 #endif
     }

@@ -58,6 +58,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type vector2IntType = typeof(UnityEngine.Vector2Int);
     private static Type vector4Type = typeof(UnityEngine.Vector4);
     private static Type planeType = typeof(UnityEngine.Plane);
+    private static Type rectType = typeof(UnityEngine.Rect);
     private static Type colorType = typeof(UnityEngine.Color);
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
     private static Type luauBufferType = typeof(LuauBuffer);

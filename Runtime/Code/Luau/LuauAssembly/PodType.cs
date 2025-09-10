@@ -20,5 +20,6 @@ namespace Code.Luau.LuauAssembly {
         POD_FLOAT = 16,
         POD_AIRSHIP_COMPONENT = 17,
         POD_BUFFER = 18,
+        POD_RECT = 19,
     };
 }

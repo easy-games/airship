@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -9,10 +10,12 @@ using Mirror;
 using Tayx.Graphy;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [LuauAPI] [Preserve]
@@ -30,12 +33,22 @@ public static class Bridge {
     }
 
     //TEXTURES
+    [Obsolete]
     public static Texture2D MakeDefaultTexture2D(int width, int height) {
         return new Texture2D(width, height);
     }
 
+    [Obsolete]
     public static Texture2D MakeTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear) {
         return new Texture2D(width, height, format, mipChain, linear);
+    }
+    
+    public static Texture2DArray MakeDefaultTexture2DArray(int width, int height, int depth) {
+        return new Texture2DArray(width, height, depth, DefaultFormat.LDR, TextureCreationFlags.None);
+    }
+    
+    public static Texture2DArray MakeTextureFormatTexture2DArray(int width, int height, int depth, TextureFormat format, bool mipChain) {
+        return new Texture2DArray(width, height, depth, format, mipChain);
     }
 
     //SPRITES
@@ -402,28 +415,30 @@ public static class Bridge {
     public static void UnloadGlobalSceneByName(string sceneName) {
         // InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
     }
-    
+
     [LuauAPI(LuauContext.Protected)]
     public static bool IsLowEndDevice() {
         // CPU check
-        string cpu = SystemInfo.processorType.ToLower();
+        var cpu = SystemInfo.processorType.ToLower();
         if (cpu.Contains("celeron") || cpu.Contains("pentium") || cpu.Contains("atom")) {
             return true;
         }
-    
+
         // GPU check
-        string gpu = SystemInfo.graphicsDeviceName.ToLower();
+        var gpu = SystemInfo.graphicsDeviceName.ToLower();
         if (gpu.Contains("intel") || gpu.Contains("uhd") || gpu.Contains("hd graphics")) {
             return true;
         }
 
         // RAM check
-        if (SystemInfo.systemMemorySize < 8000) { // Less than 8GB RAM
+        if (SystemInfo.systemMemorySize < 8000) {
+            // Less than 8GB RAM
             return true;
         }
 
         // GPU memory check
-        if (SystemInfo.graphicsMemorySize < 2000) { // Less than 2GB VRAM
+        if (SystemInfo.graphicsMemorySize < 2000) {
+            // Less than 2GB VRAM
             return true;
         }
 
