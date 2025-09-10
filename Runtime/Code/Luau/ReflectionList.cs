@@ -140,7 +140,7 @@ namespace Luau {
             [typeof(TMP_InputField)] = LuauContextAll,
             [typeof(TMP_Text)] = LuauContextAll,
             [typeof(TextMeshProUGUI)] = LuauContextAll,
-            [typeof(Slider)] = LuauContextAll,
+            [typeof(UnityEngine.UI.Slider)] = LuauContextAll,
             [typeof(CanvasScaler)] = LuauContextAll,
             [typeof(UnityEngine.UI.Toggle)] = LuauContextAll,
             [typeof(Mask)] = LuauContextAll,
@@ -215,14 +215,8 @@ namespace Luau {
             [typeof(VolumeProfile)] = LuauContextAll,
             [typeof(DepthOfField)] = LuauContextAll,
             [typeof(GraphicRaycaster)] = LuauContextAll,
-            //Easy Helpers
-            [typeof(EasyLookAt)] = LuauContextAll,
-            [typeof(EasyMotion)] = LuauContextAll,
-            [typeof(EasyGridAlign)] = LuauContextAll,
-            [typeof(EasyDestroy)] = LuauContextAll,
-            [typeof(EasyShake)] = LuauContextAll
         };
-
+        
         // Add types (as strings) here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
