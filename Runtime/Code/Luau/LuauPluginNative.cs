@@ -32,245 +32,239 @@ public static class LuauPluginNative {
 	public static IntPtr LibHandle;
 	
 	// All delegates for Editor-time plugin access:
-	// private delegate void UnityPluginLoadDelegate(IntPtr unityInterfaces);
-	// private static UnityPluginLoadDelegate UnityPluginLoad;
-	//
-	// private delegate void UnityPluginUnloadDelegate();
-	// private static UnityPluginUnloadDelegate UnityPluginUnload;
-	
 	internal delegate bool StartupDelegate(LuauPluginStartup pluginStartup);
-	internal static StartupDelegate Startup;
+	[NativeDelegate] internal static StartupDelegate Startup;
     
 	internal delegate bool InitializePrintCallbackDelegate(PrintCallback printCallback);
-	internal static InitializePrintCallbackDelegate InitializePrintCallback;
+	[NativeDelegate] internal static InitializePrintCallbackDelegate InitializePrintCallback;
 
 	internal delegate bool InitializeComponentCallbacksDelegate(ComponentSetEnabledCallback setEnabledCallback);
-	internal static InitializeComponentCallbacksDelegate InitializeComponentCallbacks;
+	[NativeDelegate] internal static InitializeComponentCallbacksDelegate InitializeComponentCallbacks;
     
 	internal delegate void SubsystemRegistrationDelegate();
-	internal static SubsystemRegistrationDelegate SubsystemRegistration;
+	[NativeDelegate] internal static SubsystemRegistrationDelegate SubsystemRegistration;
 
 	internal delegate void SetProfilerEnabledDelegate(bool enabled);
-	internal static SetProfilerEnabledDelegate SetProfilerEnabled;
+	[NativeDelegate] internal static SetProfilerEnabledDelegate SetProfilerEnabled;
 	
 	internal delegate bool OpenStateDelegate(LuauContext context);
-	internal static OpenStateDelegate OpenState;
+	[NativeDelegate] internal static OpenStateDelegate OpenState;
 	
 	internal delegate bool CloseStateDelegate(LuauContext context);
-	internal static CloseStateDelegate CloseState;
+	[NativeDelegate] internal static CloseStateDelegate CloseState;
 	
 	internal delegate void ResetDelegate(LuauContext context);
-	internal static ResetDelegate Reset;
+	[NativeDelegate] internal static ResetDelegate Reset;
 	
 	internal delegate ulong GetUniqueInstanceIdCountDelegate(LuauContext context);
-	internal static GetUniqueInstanceIdCountDelegate GetUniqueInstanceIdCount;
+	[NativeDelegate] internal static GetUniqueInstanceIdCountDelegate GetUniqueInstanceIdCount;
 	
 	internal delegate ulong GetUniqueInstanceIdsDelegate(LuauContext context, IntPtr arr, ulong arrSize);
-	internal static GetUniqueInstanceIdsDelegate GetUniqueInstanceIds;
+	[NativeDelegate] internal static GetUniqueInstanceIdsDelegate GetUniqueInstanceIds;
 	
 	internal delegate void RunBeginFrameLogicDelegate();
-	internal static RunBeginFrameLogicDelegate RunBeginFrameLogic;
+	[NativeDelegate] internal static RunBeginFrameLogicDelegate RunBeginFrameLogic;
 	
 	internal delegate IntPtr RunEndFrameLogicDelegate();
-	internal static RunEndFrameLogicDelegate RunEndFrameLogic;
+	[NativeDelegate] internal static RunEndFrameLogicDelegate RunEndFrameLogic;
 	
 	internal delegate void ShutdownDelegate();
-	internal static ShutdownDelegate Shutdown;
+	[NativeDelegate] internal static ShutdownDelegate Shutdown;
 	
 	internal unsafe delegate IntPtr InitializeAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto* props, int nProps);
-	internal static InitializeAirshipComponentDelegate InitializeAirshipComponent;
+	[NativeDelegate] internal static InitializeAirshipComponentDelegate InitializeAirshipComponent;
 	
 	internal delegate IntPtr PrewarmAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId);
-	internal static PrewarmAirshipComponentDelegate PrewarmAirshipComponent;
+	[NativeDelegate] internal static PrewarmAirshipComponentDelegate PrewarmAirshipComponent;
 	
 	internal delegate IntPtr RemoveAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
-	internal static RemoveAirshipComponentDelegate RemoveAirshipComponent;
+	[NativeDelegate] internal static RemoveAirshipComponentDelegate RemoveAirshipComponent;
 	
 	internal delegate IntPtr WriteToAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop);
-	internal static WriteToAirshipComponentDelegate WriteToAirshipComponent;
+	[NativeDelegate] internal static WriteToAirshipComponentDelegate WriteToAirshipComponent;
 	
 	internal delegate IntPtr PushAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
-	internal static PushAirshipComponentDelegate PushAirshipComponent;
+	[NativeDelegate] internal static PushAirshipComponentDelegate PushAirshipComponent;
 	
 	internal delegate IntPtr PushAirshipComponentsDelegate(LuauContext context, IntPtr thread, int unityInstanceId, [In, Out] int[] componentIds, int nComponents, bool appendToTable);
-	internal static PushAirshipComponentsDelegate PushAirshipComponents;
+	[NativeDelegate] internal static PushAirshipComponentsDelegate PushAirshipComponents;
 	
 	internal delegate IntPtr UpdateIndividualAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, float dt, bool safe);
-	internal static UpdateIndividualAirshipComponentDelegate UpdateIndividualAirshipComponent;
+	[NativeDelegate] internal static UpdateIndividualAirshipComponentDelegate UpdateIndividualAirshipComponent;
 	
 	internal delegate IntPtr UpdateCollisionAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, int collisionObjId);
-	internal static UpdateCollisionAirshipComponentDelegate UpdateCollisionAirshipComponent;
+	[NativeDelegate] internal static UpdateCollisionAirshipComponentDelegate UpdateCollisionAirshipComponent;
 	
 	internal delegate IntPtr UpdateAllAirshipComponentsDelegate(LuauContext context, int updateType, float dt);
-	internal static UpdateAllAirshipComponentsDelegate UpdateAllAirshipComponents;
+	[NativeDelegate] internal static UpdateAllAirshipComponentsDelegate UpdateAllAirshipComponents;
 	
 	internal delegate IntPtr GetAirshipComponentEnabledDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, ref int result);
-	internal static GetAirshipComponentEnabledDelegate GetAirshipComponentEnabled;
+	[NativeDelegate] internal static GetAirshipComponentEnabledDelegate GetAirshipComponentEnabled;
 	
 	internal delegate IntPtr SetAirshipComponentEnabledDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int result);
-	internal static SetAirshipComponentEnabledDelegate SetAirshipComponentEnabled;
+	[NativeDelegate] internal static SetAirshipComponentEnabledDelegate SetAirshipComponentEnabled;
 	
 	internal delegate IntPtr HasAirshipMethodDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, ref int result);
-	internal static HasAirshipMethodDelegate HasAirshipMethod;
+	[NativeDelegate] internal static HasAirshipMethodDelegate HasAirshipMethod;
 	
 	internal delegate IntPtr PushSignalDelegate(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, ref int result);
-	internal static PushSignalDelegate PushSignal;
+	[NativeDelegate] internal static PushSignalDelegate PushSignal;
 	
 	internal delegate IntPtr EmitSignalDelegate(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams, ref int result);
-	internal static EmitSignalDelegate EmitSignal;
+	[NativeDelegate] internal static EmitSignalDelegate EmitSignal;
 	
 	internal delegate IntPtr DestroySignalsDelegate(LuauContext context, IntPtr thread, int unityInstanceId);
-	internal static DestroySignalsDelegate DestroySignals;
+	[NativeDelegate] internal static DestroySignalsDelegate DestroySignals;
 	
 	internal unsafe delegate IntPtr CreateThreadDelegate(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
-	internal static CreateThreadDelegate CreateThread;
+	[NativeDelegate] internal static CreateThreadDelegate CreateThread;
 	
 	internal delegate IntPtr CreateThreadWithCachedModuleDelegate(LuauContext context, string filename, int gameObjectId);
-	internal static CreateThreadWithCachedModuleDelegate CreateThreadWithCachedModule;
+	[NativeDelegate] internal static CreateThreadWithCachedModuleDelegate CreateThreadWithCachedModule;
 	
 	internal delegate IntPtr CacheModuleOnThreadDelegate(IntPtr thread, string filename);
-	internal static CacheModuleOnThreadDelegate CacheModuleOnThread;
+	[NativeDelegate] internal static CacheModuleOnThreadDelegate CacheModuleOnThread;
 	
 	internal delegate IntPtr SetThreadDestroyedDelegate(IntPtr thread);
-	internal static SetThreadDestroyedDelegate SetThreadDestroyed;
+	[NativeDelegate] internal static SetThreadDestroyedDelegate SetThreadDestroyed;
 	
 	internal unsafe delegate IntPtr SetMutableGlobalsDelegate(IntPtr* strings, IntPtr stringLengths, int numStrings);
-	internal static SetMutableGlobalsDelegate SetMutableGlobals;
+	[NativeDelegate] internal static SetMutableGlobalsDelegate SetMutableGlobals;
 	
 	internal delegate IntPtr CompileCodeDelegate(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel);
-	internal static CompileCodeDelegate CompileCode;
+	[NativeDelegate] internal static CompileCodeDelegate CompileCode;
 	
 	internal delegate IntPtr RunThreadDelegate(IntPtr thread, int nArgs, ref int result);
-	internal static RunThreadDelegate RunThread;
+	[NativeDelegate] internal static RunThreadDelegate RunThread;
 	
 	internal delegate IntPtr ResumeThreadDelegate(IntPtr thread, int nArgs, ref int result);
-	internal static ResumeThreadDelegate ResumeThread;
+	[NativeDelegate] internal static ResumeThreadDelegate ResumeThread;
 	
 	internal delegate IntPtr ResumeThreadErrorDelegate(IntPtr thread, ref int result);
-	internal static ResumeThreadErrorDelegate ResumeThreadError;
+	[NativeDelegate] internal static ResumeThreadErrorDelegate ResumeThreadError;
 	
 	internal delegate IntPtr CallMethodOnThreadDelegate(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters, ref int result);
-	internal static CallMethodOnThreadDelegate CallMethodOnThread;
+	[NativeDelegate] internal static CallMethodOnThreadDelegate CallMethodOnThread;
 	
 	internal delegate IntPtr DestroyThreadDelegate(IntPtr thread);
-	internal static DestroyThreadDelegate DestroyThread;
+	[NativeDelegate] internal static DestroyThreadDelegate DestroyThread;
 	
 	internal delegate IntPtr PinThreadDelegate(IntPtr thread);
-	internal static PinThreadDelegate PinThread;
+	[NativeDelegate] internal static PinThreadDelegate PinThread;
 	
 	internal delegate IntPtr UnpinThreadDelegate(IntPtr thread);
-	internal static UnpinThreadDelegate UnpinThread;
+	[NativeDelegate] internal static UnpinThreadDelegate UnpinThread;
 	
 	internal delegate IntPtr PushValueToThreadDelegate(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
-	internal static PushValueToThreadDelegate PushValueToThread;
+	[NativeDelegate] internal static PushValueToThreadDelegate PushValueToThread;
 	
 	internal delegate IntPtr PushVector3ToThreadDelegate(IntPtr thread, float x, float y, float z);
-	internal static PushVector3ToThreadDelegate PushVector3ToThread;
+	[NativeDelegate] internal static PushVector3ToThreadDelegate PushVector3ToThread;
 	
 	internal delegate IntPtr PushTableToThreadDelegate(IntPtr thread, int initialSize);
-	internal static PushTableToThreadDelegate PushTableToThread;
+	[NativeDelegate] internal static PushTableToThreadDelegate PushTableToThread;
 	
 	internal delegate IntPtr ErrorThreadDelegate(IntPtr thread, IntPtr msg, int msgSize);
-	internal static ErrorThreadDelegate ErrorThread;
+	[NativeDelegate] internal static ErrorThreadDelegate ErrorThread;
 	
 	internal delegate IntPtr GetDebugTraceDelegate(IntPtr thread, ref int result);
-	internal static GetDebugTraceDelegate GetDebugTrace;
+	[NativeDelegate] internal static GetDebugTraceDelegate GetDebugTrace;
 	
 	internal delegate IntPtr RunTaskSchedulerDelegate(LuauContext context, float now, float unscaledNow);
-	internal static RunTaskSchedulerDelegate RunTaskScheduler;
+	[NativeDelegate] internal static RunTaskSchedulerDelegate RunTaskScheduler;
 	
 	internal delegate void ResetTimeCacheDelegate(LuauContext context, int fixedUpdate);
-	internal static ResetTimeCacheDelegate ResetTimeCache;
+	[NativeDelegate] internal static ResetTimeCacheDelegate ResetTimeCache;
 	
 	internal delegate LuauContext GetContextFromThreadDelegate(IntPtr thread);
-	internal static GetContextFromThreadDelegate GetContextFromThread;
+	[NativeDelegate] internal static GetContextFromThreadDelegate GetContextFromThread;
 	
 	internal delegate LuauBytecodeVersion GetBytecodeVersionDelegate();
-	internal static GetBytecodeVersionDelegate GetBytecodeVersion;
+	[NativeDelegate] internal static GetBytecodeVersionDelegate GetBytecodeVersion;
 	
 	internal delegate void SetScriptTimeoutDurationDelegate(int duration);
-	internal static SetScriptTimeoutDurationDelegate SetScriptTimeoutDuration;
+	[NativeDelegate] internal static SetScriptTimeoutDurationDelegate SetScriptTimeoutDuration;
 	
 	internal delegate void SetIsPausedDelegate(int isPaused);
-	internal static SetIsPausedDelegate SetIsPaused;
+	[NativeDelegate] internal static SetIsPausedDelegate SetIsPaused;
 	
 	internal delegate IntPtr CopyTableToArrayDelegate(IntPtr thread, IntPtr array, int type, int size, int idx);
-	internal static CopyTableToArrayDelegate CopyTableToArray;
+	[NativeDelegate] internal static CopyTableToArrayDelegate CopyTableToArray;
 	
 	internal delegate int RegisterStringAtomDelegate(IntPtr strPtr, ulong strLen);
-	internal static RegisterStringAtomDelegate RegisterStringAtom;
+	[NativeDelegate] internal static RegisterStringAtomDelegate RegisterStringAtom;
 	
 	internal delegate void PushCsErrorDelegate(IntPtr errPtr, int errLen);
-	internal static PushCsErrorDelegate PushCsError;
+	[NativeDelegate] internal static PushCsErrorDelegate PushCsError;
 	
 	internal delegate void SetGCStateDelegate(int state);
-	internal static SetGCStateDelegate SetGCState;
+	[NativeDelegate] internal static SetGCStateDelegate SetGCState;
 	
 	internal delegate int CountGCDelegate(int context);
-	internal static CountGCDelegate CountGC;
+	[NativeDelegate] internal static CountGCDelegate CountGC;
 	
 	internal delegate int GetLuauPluginVersionDelegate(out IntPtr versionPtr);
-	internal static GetLuauPluginVersionDelegate GetLuauPluginVersion;
+	[NativeDelegate] internal static GetLuauPluginVersionDelegate GetLuauPluginVersion;
 	
 	internal delegate void DebugPrintStackDelegate(IntPtr thread);
-	internal static DebugPrintStackDelegate DebugPrintStack;
+	[NativeDelegate] internal static DebugPrintStackDelegate DebugPrintStack;
 	
 	internal delegate ulong GetUnityObjectCountDelegate();
-	internal static GetUnityObjectCountDelegate GetUnityObjectCount;
+	[NativeDelegate] internal static GetUnityObjectCountDelegate GetUnityObjectCount;
 	
 	internal delegate IntPtr GetMemoryCategoryDumpDelegate(LuauContext context, ref ulong count);
-	internal static GetMemoryCategoryDumpDelegate GetMemoryCategoryDump;
+	[NativeDelegate] internal static GetMemoryCategoryDumpDelegate GetMemoryCategoryDump;
 	
 	internal delegate int DebugCountAllRegistryItemsDelegate(LuauContext context, out IntPtr str);
-	internal static DebugCountAllRegistryItemsDelegate DebugCountAllRegistryItems;
+	[NativeDelegate] internal static DebugCountAllRegistryItemsDelegate DebugCountAllRegistryItems;
 	
 	internal delegate int DebugGetAllTrackedInstanceIdsDelegate(LuauContext context, out IntPtr ids);
-	internal static DebugGetAllTrackedInstanceIdsDelegate DebugGetAllTrackedInstanceIds;
+	[NativeDelegate] internal static DebugGetAllTrackedInstanceIdsDelegate DebugGetAllTrackedInstanceIds;
 	
 	internal delegate IntPtr LuaNewTableDelegate(IntPtr thread, int nArray, int nRecord);
-	internal static LuaNewTableDelegate LuaNewTable;
+	[NativeDelegate] internal static LuaNewTableDelegate LuaNewTable;
 	
 	internal delegate IntPtr LuaPushNilDelegate(IntPtr thread);
-	internal static LuaPushNilDelegate LuaPushNil;
+	[NativeDelegate] internal static LuaPushNilDelegate LuaPushNil;
 	
 	internal delegate IntPtr LuaPushIntegerDelegate(IntPtr thread, int n);
-	internal static LuaPushIntegerDelegate LuaPushInteger;
+	[NativeDelegate] internal static LuaPushIntegerDelegate LuaPushInteger;
 	
 	internal delegate IntPtr LuaPushUnsignedIntegerDelegate(IntPtr thread, uint n);
-	internal static LuaPushUnsignedIntegerDelegate LuaPushUnsignedInteger;
+	[NativeDelegate] internal static LuaPushUnsignedIntegerDelegate LuaPushUnsignedInteger;
 	
 	internal delegate IntPtr LuaPushVectorDelegate(IntPtr thread, float x, float y, float z);
-	internal static LuaPushVectorDelegate LuaPushVector;
+	[NativeDelegate] internal static LuaPushVectorDelegate LuaPushVector;
 	
 	internal delegate IntPtr LuaPushBooleanDelegate(IntPtr thread, int b);
-	internal static LuaPushBooleanDelegate LuaPushBoolean;
+	[NativeDelegate] internal static LuaPushBooleanDelegate LuaPushBoolean;
 	
 	internal delegate IntPtr LuaPushStringDelegate(IntPtr thread, IntPtr str, int len);
-	internal static LuaPushStringDelegate LuaPushString;
+	[NativeDelegate] internal static LuaPushStringDelegate LuaPushString;
 	
 	internal delegate IntPtr LuaPushThreadDelegate(IntPtr thread);
-	internal static LuaPushThreadDelegate LuaPushThread;
+	[NativeDelegate] internal static LuaPushThreadDelegate LuaPushThread;
 	
 	internal delegate IntPtr LuaRawSetIDelegate(IntPtr thread, int idx, int n);
-	internal static LuaRawSetIDelegate LuaRawSetI;
+	[NativeDelegate] internal static LuaRawSetIDelegate LuaRawSetI;
 	
 	internal delegate IntPtr LuaPopDelegate(IntPtr thread, int n);
-	internal static LuaPopDelegate LuaPop;
+	[NativeDelegate] internal static LuaPopDelegate LuaPop;
 	
 	internal delegate IntPtr LuaSetReadonlyDelegate(IntPtr thread, int idx, int enabled);
-	internal static LuaSetReadonlyDelegate LuaSetReadonly;
+	[NativeDelegate] internal static LuaSetReadonlyDelegate LuaSetReadonly;
 	
 	internal delegate IntPtr LuaRefDelegate(IntPtr thread, int idx, ref int refVal);
-	internal static LuaRefDelegate LuaRef;
+	[NativeDelegate] internal static LuaRefDelegate LuaRef;
 	
 	internal delegate IntPtr LuaUnrefDelegate(IntPtr thread, int refVal);
-	internal static LuaUnrefDelegate LuaUnref;
+	[NativeDelegate] internal static LuaUnrefDelegate LuaUnref;
 	
 	internal delegate IntPtr LuaGetRefDelegate(IntPtr thread, int refVal);
-	internal static LuaGetRefDelegate LuaGetRef;
+	[NativeDelegate] internal static LuaGetRefDelegate LuaGetRef;
 	
 	internal delegate IntPtr LuaGetTopDelegate(IntPtr thread, ref int top);
-	internal static LuaGetTopDelegate LuaGetTop;
+	[NativeDelegate] internal static LuaGetTopDelegate LuaGetTop;
 #else
 	// All extern plugin APIs:
 #if UNITY_IPHONE
@@ -830,93 +824,10 @@ public static class LuauPluginNative {
 #endif
 	
 #if UNITY_EDITOR
-	private static void PopulateDelegates() {
-		// UnityPluginLoad = NativeLibUtil.GetDelegate<UnityPluginLoadDelegate>(LibHandle, "UnityPluginLoad");
-		// UnityPluginUnload = NativeLibUtil.GetDelegate<UnityPluginUnloadDelegate>(LibHandle, "UnityPluginUnload");
-		Startup = NativeLibUtil.GetDelegate<StartupDelegate>(LibHandle, "Startup");
-		InitializePrintCallback = NativeLibUtil.GetDelegate<InitializePrintCallbackDelegate>(LibHandle, "InitializePrintCallback");
-		InitializeComponentCallbacks = NativeLibUtil.GetDelegate<InitializeComponentCallbacksDelegate>(LibHandle, "InitializeComponentCallbacks");
-		SubsystemRegistration = NativeLibUtil.GetDelegate<SubsystemRegistrationDelegate>(LibHandle, "SubsystemRegistration");
-		SetProfilerEnabled = NativeLibUtil.GetDelegate<SetProfilerEnabledDelegate>(LibHandle, "SetProfilerEnabled");
-		OpenState = NativeLibUtil.GetDelegate<OpenStateDelegate>(LibHandle, "OpenState");
-		CloseState = NativeLibUtil.GetDelegate<CloseStateDelegate>(LibHandle, "CloseState");
-		Reset = NativeLibUtil.GetDelegate<ResetDelegate>(LibHandle, "Reset");
-		GetUniqueInstanceIdCount = NativeLibUtil.GetDelegate<GetUniqueInstanceIdCountDelegate>(LibHandle, "GetUniqueInstanceIdCount");
-		GetUniqueInstanceIds = NativeLibUtil.GetDelegate<GetUniqueInstanceIdsDelegate>(LibHandle, "GetUniqueInstanceIds");
-		RunBeginFrameLogic = NativeLibUtil.GetDelegate<RunBeginFrameLogicDelegate>(LibHandle, "RunBeginFrameLogic");
-		RunEndFrameLogic = NativeLibUtil.GetDelegate<RunEndFrameLogicDelegate>(LibHandle, "RunEndFrameLogic");
-		Shutdown = NativeLibUtil.GetDelegate<ShutdownDelegate>(LibHandle, "Shutdown");
-		InitializeAirshipComponent = NativeLibUtil.GetDelegate<InitializeAirshipComponentDelegate>(LibHandle, "InitializeAirshipComponent");
-		PrewarmAirshipComponent = NativeLibUtil.GetDelegate<PrewarmAirshipComponentDelegate>(LibHandle, "PrewarmAirshipComponent");
-		RemoveAirshipComponent = NativeLibUtil.GetDelegate<RemoveAirshipComponentDelegate>(LibHandle, "RemoveAirshipComponent");
-		WriteToAirshipComponent = NativeLibUtil.GetDelegate<WriteToAirshipComponentDelegate>(LibHandle, "WriteToAirshipComponent");
-		PushAirshipComponent = NativeLibUtil.GetDelegate<PushAirshipComponentDelegate>(LibHandle, "PushAirshipComponent");
-		PushAirshipComponents = NativeLibUtil.GetDelegate<PushAirshipComponentsDelegate>(LibHandle, "PushAirshipComponents");
-		UpdateIndividualAirshipComponent = NativeLibUtil.GetDelegate<UpdateIndividualAirshipComponentDelegate>(LibHandle, "UpdateIndividualAirshipComponent");
-		UpdateCollisionAirshipComponent = NativeLibUtil.GetDelegate<UpdateCollisionAirshipComponentDelegate>(LibHandle, "UpdateCollisionAirshipComponent");
-		UpdateAllAirshipComponents = NativeLibUtil.GetDelegate<UpdateAllAirshipComponentsDelegate>(LibHandle, "UpdateAllAirshipComponents");
-		GetAirshipComponentEnabled = NativeLibUtil.GetDelegate<GetAirshipComponentEnabledDelegate>(LibHandle, "GetAirshipComponentEnabled");
-		SetAirshipComponentEnabled = NativeLibUtil.GetDelegate<SetAirshipComponentEnabledDelegate>(LibHandle, "SetAirshipComponentEnabled");
-		HasAirshipMethod = NativeLibUtil.GetDelegate<HasAirshipMethodDelegate>(LibHandle, "HasAirshipMethod");
-		PushSignal = NativeLibUtil.GetDelegate<PushSignalDelegate>(LibHandle, "PushSignal");
-		EmitSignal = NativeLibUtil.GetDelegate<EmitSignalDelegate>(LibHandle, "EmitSignal");
-		DestroySignals = NativeLibUtil.GetDelegate<DestroySignalsDelegate>(LibHandle, "DestroySignals");
-		CreateThread = NativeLibUtil.GetDelegate<CreateThreadDelegate>(LibHandle, "CreateThread");
-		CreateThreadWithCachedModule = NativeLibUtil.GetDelegate<CreateThreadWithCachedModuleDelegate>(LibHandle, "CreateThreadWithCachedModule");
-		CacheModuleOnThread = NativeLibUtil.GetDelegate<CacheModuleOnThreadDelegate>(LibHandle, "CacheModuleOnThread");
-		SetThreadDestroyed = NativeLibUtil.GetDelegate<SetThreadDestroyedDelegate>(LibHandle, "SetThreadDestroyed");
-		SetMutableGlobals = NativeLibUtil.GetDelegate<SetMutableGlobalsDelegate>(LibHandle, "SetMutableGlobals");
-		CompileCode = NativeLibUtil.GetDelegate<CompileCodeDelegate>(LibHandle, "CompileCode");
-		RunThread = NativeLibUtil.GetDelegate<RunThreadDelegate>(LibHandle, "RunThread");
-		ResumeThread = NativeLibUtil.GetDelegate<ResumeThreadDelegate>(LibHandle, "ResumeThread");
-		ResumeThreadError = NativeLibUtil.GetDelegate<ResumeThreadErrorDelegate>(LibHandle, "ResumeThreadError");
-		CallMethodOnThread = NativeLibUtil.GetDelegate<CallMethodOnThreadDelegate>(LibHandle, "CallMethodOnThread");
-		DestroyThread = NativeLibUtil.GetDelegate<DestroyThreadDelegate>(LibHandle, "DestroyThread");
-		PinThread = NativeLibUtil.GetDelegate<PinThreadDelegate>(LibHandle, "PinThread");
-		UnpinThread = NativeLibUtil.GetDelegate<UnpinThreadDelegate>(LibHandle, "UnpinThread");
-		PushValueToThread = NativeLibUtil.GetDelegate<PushValueToThreadDelegate>(LibHandle, "PushValueToThread");
-		PushVector3ToThread = NativeLibUtil.GetDelegate<PushVector3ToThreadDelegate>(LibHandle, "PushVector3ToThread");
-		PushTableToThread = NativeLibUtil.GetDelegate<PushTableToThreadDelegate>(LibHandle, "PushTableToThread");
-		ErrorThread = NativeLibUtil.GetDelegate<ErrorThreadDelegate>(LibHandle, "ErrorThread");
-		GetDebugTrace = NativeLibUtil.GetDelegate<GetDebugTraceDelegate>(LibHandle, "GetDebugTrace");
-		RunTaskScheduler = NativeLibUtil.GetDelegate<RunTaskSchedulerDelegate>(LibHandle, "RunTaskScheduler");
-		ResetTimeCache = NativeLibUtil.GetDelegate<ResetTimeCacheDelegate>(LibHandle, "ResetTimeCache");
-		GetContextFromThread = NativeLibUtil.GetDelegate<GetContextFromThreadDelegate>(LibHandle, "GetContextFromThread");
-		GetBytecodeVersion = NativeLibUtil.GetDelegate<GetBytecodeVersionDelegate>(LibHandle, "GetBytecodeVersion");
-		SetScriptTimeoutDuration = NativeLibUtil.GetDelegate<SetScriptTimeoutDurationDelegate>(LibHandle, "SetScriptTimeoutDuration");
-		SetIsPaused = NativeLibUtil.GetDelegate<SetIsPausedDelegate>(LibHandle, "SetIsPaused");
-		CopyTableToArray = NativeLibUtil.GetDelegate<CopyTableToArrayDelegate>(LibHandle, "CopyTableToArray");
-		RegisterStringAtom = NativeLibUtil.GetDelegate<RegisterStringAtomDelegate>(LibHandle, "RegisterStringAtom");
-		PushCsError = NativeLibUtil.GetDelegate<PushCsErrorDelegate>(LibHandle, "PushCsError");
-		SetGCState = NativeLibUtil.GetDelegate<SetGCStateDelegate>(LibHandle, "SetGCState");
-		CountGC = NativeLibUtil.GetDelegate<CountGCDelegate>(LibHandle, "CountGC");
-		GetLuauPluginVersion = NativeLibUtil.GetDelegate<GetLuauPluginVersionDelegate>(LibHandle, "GetLuauPluginVersion");
-		DebugPrintStack = NativeLibUtil.GetDelegate<DebugPrintStackDelegate>(LibHandle, "DebugPrintStack");
-		GetUnityObjectCount = NativeLibUtil.GetDelegate<GetUnityObjectCountDelegate>(LibHandle, "GetUnityObjectCount");
-		GetMemoryCategoryDump = NativeLibUtil.GetDelegate<GetMemoryCategoryDumpDelegate>(LibHandle, "GetMemoryCategoryDump");
-		DebugCountAllRegistryItems = NativeLibUtil.GetDelegate<DebugCountAllRegistryItemsDelegate>(LibHandle, "DebugCountAllRegistryItems");
-		DebugGetAllTrackedInstanceIds = NativeLibUtil.GetDelegate<DebugGetAllTrackedInstanceIdsDelegate>(LibHandle, "DebugGetAllTrackedInstanceIds");
-		LuaNewTable = NativeLibUtil.GetDelegate<LuaNewTableDelegate>(LibHandle, "LuaNewTable");
-		LuaPushNil = NativeLibUtil.GetDelegate<LuaPushNilDelegate>(LibHandle, "LuaPushNil");
-		LuaPushInteger = NativeLibUtil.GetDelegate<LuaPushIntegerDelegate>(LibHandle, "LuaPushInteger");
-		LuaPushUnsignedInteger = NativeLibUtil.GetDelegate<LuaPushUnsignedIntegerDelegate>(LibHandle, "LuaPushUnsignedInteger");
-		LuaPushVector = NativeLibUtil.GetDelegate<LuaPushVectorDelegate>(LibHandle, "LuaPushVector");
-		LuaPushBoolean = NativeLibUtil.GetDelegate<LuaPushBooleanDelegate>(LibHandle, "LuaPushBoolean");
-		LuaPushString = NativeLibUtil.GetDelegate<LuaPushStringDelegate>(LibHandle, "LuaPushString");
-		LuaPushThread = NativeLibUtil.GetDelegate<LuaPushThreadDelegate>(LibHandle, "LuaPushThread");
-		LuaRawSetI = NativeLibUtil.GetDelegate<LuaRawSetIDelegate>(LibHandle, "LuaRawSetI");
-		LuaPop = NativeLibUtil.GetDelegate<LuaPopDelegate>(LibHandle, "LuaPop");
-		LuaSetReadonly = NativeLibUtil.GetDelegate<LuaSetReadonlyDelegate>(LibHandle, "LuaSetReadonly");
-		LuaRef = NativeLibUtil.GetDelegate<LuaRefDelegate>(LibHandle, "LuaRef");
-		LuaUnref = NativeLibUtil.GetDelegate<LuaUnrefDelegate>(LibHandle, "LuaUnref");
-		LuaGetRef = NativeLibUtil.GetDelegate<LuaGetRefDelegate>(LibHandle, "LuaGetRef");
-		LuaGetTop = NativeLibUtil.GetDelegate<LuaGetTopDelegate>(LibHandle, "LuaGetTop");
-	}
-
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void InitPlugin() {
 		LibHandle = NativePluginHandles.LibLuauPluginHandle;
-		PopulateDelegates();
+		NativeLibUtil.BindDelegates(typeof(LuauPluginNative), LibHandle);
 
 		SubsystemRegistration();
 	}
