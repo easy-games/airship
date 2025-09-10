@@ -33,6 +33,24 @@ namespace NativePlugins {
 			}
 			return Marshal.GetDelegateForFunctionPointer<T>(symbol);
 		}
+
+		public static object GetDelegate(IntPtr handle, string fnName, Type delegateType) {
+			var symbol = dlsym(handle, fnName);
+			if (symbol == IntPtr.Zero) {
+				throw new Exception($"Failed to get function delegate: {fnName}");
+			}
+			return Marshal.GetDelegateForFunctionPointer(symbol, delegateType);
+		}
+
+		public static bool TryGetDelegate<T>(IntPtr handle, string fnName, out T del) where T : class {
+			var symbol = dlsym(handle, fnName);
+			if (symbol == IntPtr.Zero) {
+				del = null;
+				return false;
+			}
+			del = Marshal.GetDelegateForFunctionPointer<T>(symbol);
+			return true;
+		}
 		
 #elif UNITY_EDITOR_WIN
 		[DllImport("kernel32.dll")]
@@ -81,7 +99,9 @@ namespace NativePlugins {
 			del = Marshal.GetDelegateForFunctionPointer<T>(symbol);
 			return true;
 		}
+#endif
 
+#if UNITY_EDITOR
 		public static void BindDelegates(Type cls, IntPtr libHandle) {
 			var fields = cls.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
 			foreach (var field in fields) {
