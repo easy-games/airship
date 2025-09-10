@@ -197,7 +197,7 @@ namespace Luau {
                             LuauPlugin.UnpinThread(thread);
                         }
                         eventInfo.RemoveEventHandler(objectReference, eventDelegate);
-                        InstanceIds.Remove(signalInstanceId);
+                        InstanceIds.Remove(objectReference);
                     });
                 } else {
                     // Disconnect static C# events when the associated LuauContext is reset:
@@ -238,7 +238,7 @@ namespace Luau {
                         LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
-                    InstanceIds.Remove(signalInstanceId);
+                    InstanceIds.Remove(objectReference);
                 });
             }
             return 1;
@@ -265,7 +265,7 @@ namespace Luau {
                         LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_1);
-                    InstanceIds.Remove(signalInstanceId);
+                    InstanceIds.Remove(objectReference);
                 });
             }
             return 1;
@@ -292,7 +292,7 @@ namespace Luau {
                         LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_2);
-                    InstanceIds.Remove(signalInstanceId);
+                    InstanceIds.Remove(objectReference);
                 });
             }
             return 1;
@@ -319,7 +319,7 @@ namespace Luau {
                         LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_3);
-                    InstanceIds.Remove(signalInstanceId);
+                    InstanceIds.Remove(objectReference);
                 });
             }
             return 1;
@@ -346,7 +346,7 @@ namespace Luau {
                         LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_4);
-                    InstanceIds.Remove(signalInstanceId);
+                    InstanceIds.Remove(objectReference);
                 });
             }
             return 1;
