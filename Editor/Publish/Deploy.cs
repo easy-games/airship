@@ -61,6 +61,17 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
+	[MenuItem("Airship/Misc/Build Game Asset Bundle")]
+	public static void BuildGameAssetBundleForAnalysis() {
+		List<AirshipPlatform> platforms = new();
+#if UNITY_EDITOR_OSX
+		platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Windows);
+#endif
+		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false, true, true)));
+	}
+
 	[MenuItem("Airship/Publish Game (Code Only)", priority = 50)]
 	public static void DeployCodeOnly()
 	{
@@ -76,7 +87,7 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
-	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true) {
+	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true, bool dontUpload = false) {
 		var possibleKeys = new List<string>() { AuthConfig.instance.deployKey, InternalHttpManager.editorAuthToken };
 		possibleKeys.RemoveAll(string.IsNullOrEmpty);
 		if (possibleKeys.Count == 0) {
@@ -97,8 +108,6 @@ public class Deploy {
 				yield break;
 			}
 		}
-
-
 
 		var confirmedSaveState = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
 		if (!confirmedSaveState  || SceneManager.GetActiveScene().isDirty) { // User clicked "cancel"
@@ -319,9 +328,9 @@ public class Deploy {
 			yield return null;
 		}
 
-		if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
+		if (EditorIntegrationsConfig.instance.buildWithoutUpload || dontUpload) {
 			if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
-			Debug.Log("Build without upload is enabled. Ending early. You can now view bundles using AssetBundle browser.");
+			Debug.Log("Build without upload is enabled. Ending early. You can now inspect the built bundle inside \"bundles\" folder.");
 			yield break;
 		}
 
