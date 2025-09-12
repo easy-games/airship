@@ -14,6 +14,9 @@ namespace NativePlugins {
 		[DllImport("__Internal")]
 		private static extern void dlclose(IntPtr handle);
 
+		[DllImport("__Internal")]
+		private static extern IntPtr dlerror();
+
 		public static void CloseLibrary(IntPtr handle) {
 			dlclose(handle);
 		}
@@ -27,8 +30,25 @@ namespace NativePlugins {
 			symbolHandle = dlsym(handle, symbolName);
 			return symbolHandle != IntPtr.Zero;
 		}
+
+		private static bool TryGetError(out string error) {
+			var errPtr = dlerror();
+			if (errPtr == IntPtr.Zero) {
+				error = null;
+				return false;
+			}
+			error = Marshal.PtrToStringUTF8(errPtr);
+			return true;
+		}
 		
 #elif UNITY_EDITOR_WIN
+		private const uint FormatMessageAllocateBuffer = 0x00000100;
+		private const uint FormatMessageArgumentArray = 0x00002000;
+		private const uint FormatMessageFromHModule = 0x00000800;
+		private const uint FormatMessageFromString = 0x00000400;
+		private const uint FormatMessageFromSystem = 0x00001000;
+		private const uint FormatMessageIgnoreInserts = 0x00000200;
+		
 		[DllImport("kernel32.dll")]
 		private static extern IntPtr LoadLibrary(string path);
 		
@@ -38,6 +58,15 @@ namespace NativePlugins {
 		[DllImport("kernel32.dll")]
 		private static extern void FreeLibrary(IntPtr handle);
 
+		[DllImport("kernel32.dll")]
+		private static extern uint GetLastError();
+
+		[DllImport("kernel32.dll")]
+		private static extern uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, uint dwExtraInfo, out IntPtr lpBuffer, uint nSize);
+
+		[DllImport("kernel32.dll")]
+		private static extern uint LocalFree(IntPtr ptr);
+		
 		public static void CloseLibrary(IntPtr handle) {
 			FreeLibrary(handle);
 		}
@@ -51,6 +80,33 @@ namespace NativePlugins {
 			symbolHandle = GetProcAddress(handle, symbolName);
 			return symbolHandle != IntPtr.Zero;
 		}
+
+		private static bool TryGetError(out string error) {
+			var errCode = GetLastError();
+			if (errCode != 0) {
+				var size = FormatMessage(
+					FormatMessageAllocateBuffer | FormatMessageFromSystem | FormatMessageIgnoreInserts,
+					IntPtr.Zero,
+					errCode,
+					0,
+					0,
+					out var errPtr,
+					0
+				);
+				if (size != 0) {
+					error = Marshal.PtrToStringUni(errPtr, (int)size);
+					// Need to tell Windows to free the buffer containing the error string:
+					LocalFree(errPtr);
+				} else {
+					// FormatMessage failed, but we still want some info on the error,
+					// so we'll just give back the error code:
+					error = $"[Windows error code: {errCode}]";
+				}
+				return true;
+			}
+			error = null;
+			return false;
+		}
 #endif
 
 #if UNITY_EDITOR
@@ -58,21 +114,33 @@ namespace NativePlugins {
 			if (TryOpenLibrary(path, out var handle)) {
 				return handle;
 			}
-			throw new Exception($"Failed to open library: {path}");
+
+			if (TryGetError(out var error)) {
+				throw new Exception($"Error when opening library '{path}' - {error}");
+			}
+			throw new Exception($"Unknown error when opening library '{path}'");
 		}
 
 		public static T GetDelegate<T>(IntPtr handle, string fnName) where T : class {
 			if (TryGetSymbol(handle, fnName, out var symbol)) {
 				return Marshal.GetDelegateForFunctionPointer<T>(symbol);
 			}
-			throw new Exception($"Failed to find function delegate: {fnName}");
+
+			if (TryGetError(out var error)) {
+				throw new Exception($"Error when getting symbol '{fnName}' - {error}");
+			}
+			throw new Exception($"Unknown error when getting symbol '{fnName}'");
 		}
 
 		private static object GetDelegate(IntPtr handle, string fnName, Type delegateType) {
 			if (TryGetSymbol(handle, fnName, out var symbol)) {
 				return Marshal.GetDelegateForFunctionPointer(symbol, delegateType);
 			}
-			throw new Exception($"Failed to find function delegate: {fnName}");
+
+			if (TryGetError(out var error)) {
+				throw new Exception($"Error when getting symbol '{fnName}' - {error}");
+			}
+			throw new Exception($"Unknown error when getting symbol '{fnName}'");
 		}
 
 		public static bool TryGetDelegate<T>(IntPtr handle, string fnName, out T del) where T : class {
@@ -99,18 +167,4 @@ namespace NativePlugins {
 		}
 #endif
 	}
-
-#if UNITY_EDITOR
-	[AttributeUsage(AttributeTargets.Field)]
-	public class NativeDelegateAttribute : Attribute {
-		public readonly string SymbolName;
-		public NativeDelegateAttribute() {
-			SymbolName = null;
-		}
-		public NativeDelegateAttribute(string symbolName) {
-			SymbolName = symbolName;
-		}
-	}
-#endif
-
 }

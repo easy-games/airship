@@ -19,6 +19,7 @@ public static class LuauPluginNative {
 	public delegate int IsObjectDestroyedCallback(int instanceId);
 	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 
+#if UNITY_EDITOR
 	private const string BasePluginsPath = "/Packages/gg.easy.airship/Runtime/Plugins";
 #if UNITY_EDITOR_OSX
 	private const string LuauLibPath = BasePluginsPath + "/Mac/LuauPlugin.bundle/Contents/MacOS/LuauPlugin";
@@ -27,8 +28,8 @@ public static class LuauPluginNative {
 #elif UNITY_EDITOR_WIN
 	private const string LuauLibPath = BasePluginsPath + "/Windows/x64/LuauPlugin.dll";
 #endif
-
-#if UNITY_EDITOR
+	
+	[NativePlugin(LuauLibPath)]
 	public static IntPtr LibHandle;
 	
 	// All delegates for Editor-time plugin access:
@@ -826,8 +827,9 @@ public static class LuauPluginNative {
 #if UNITY_EDITOR
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void InitPlugin() {
-		LibHandle = NativePluginHandles.LibLuauPluginHandle;
-		NativeLibUtil.BindDelegates(typeof(LuauPluginNative), LibHandle);
+		// LibHandle = NativePluginHandles.LibLuauPluginHandle;
+		// NativeLibUtil.BindDelegates(typeof(LuauPluginNative), LibHandle);
+		NativePluginHandles.RegisterPlugin(typeof(LuauPluginNative));
 
 		SubsystemRegistration();
 	}

@@ -2,49 +2,68 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Reflection;
 using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace NativePlugins {
+	internal class PluginHandles {
+		internal IntPtr Handle;
+		internal List<FieldInfo> FieldInfos;
+	}
+	
 	public static class NativePluginHandles {
 #if UNITY_EDITOR
 		private delegate void UnityPluginLoadDelegate(IntPtr unityInterfaces);
 		private delegate void UnityPluginUnloadDelegate();
 		
-		private const string BasePluginsPath = "/Packages/gg.easy.airship/Runtime/Plugins";
-#if UNITY_EDITOR_OSX
-		private const string LuauLibPath = BasePluginsPath + "/Mac/LuauPlugin.bundle/Contents/MacOS/LuauPlugin";
-#elif UNITY_EDITOR_LINUX
-		private const string LuauLibPath = BasePluginsPath + "/Linux/libLuauPlugin.so";
-#elif UNITY_EDITOR_WIN
-		private const string LuauLibPath = BasePluginsPath + "/Windows/x64/LuauPlugin.dll";
-#endif
+		private static readonly Dictionary<string, PluginHandles> LoadedPluginHandles = new();
 
-		private static IntPtr _libLuauPluginHandle;
-		public static IntPtr LibLuauPluginHandle {
-			get {
-				if (_libLuauPluginHandle == IntPtr.Zero) {
-					_libLuauPluginHandle = InitPlugin(LuauLibPath);
+		private static bool FindPluginHandle(Type cls, out FieldInfo fieldInfo, out NativePluginAttribute attr) {
+			var fields = cls.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			foreach (var field in fields) {
+				var nativePluginAttr = field.GetCustomAttribute<NativePluginAttribute>();
+				if (nativePluginAttr != null && field.FieldType == typeof(IntPtr)) {
+					fieldInfo = field;
+					attr = nativePluginAttr;
+					return true;
 				}
-				return _libLuauPluginHandle;
 			}
+			fieldInfo = null;
+			attr = null;
+			return false;
 		}
-		
-		private static readonly Dictionary<string, IntPtr> LoadedPluginHandles = new();
+
+		public static void RegisterPlugin(Type cls) {
+			if (!FindPluginHandle(cls, out var field, out var attr)) {
+				throw new Exception($"Failed to register plugin for class {cls.Name}: Could not find static field with NativePluginAttribute");
+			}
+
+			IntPtr libHandle;
+			if (LoadedPluginHandles.TryGetValue(attr.LibPath, out var handles)) {
+				libHandle = handles.Handle;
+				handles.FieldInfos.Add(field);
+				field.SetValue(null, handles.Handle);
+			} else {
+				libHandle = InitPlugin(attr.LibPath);
+				var newHandles = new PluginHandles() {
+					Handle = libHandle,
+					FieldInfos = new List<FieldInfo>() { field },
+				};
+				LoadedPluginHandles.Add(attr.LibPath, newHandles);
+			}
+			
+			NativeLibUtil.BindDelegates(cls, libHandle);
+		}
 
 		private static IntPtr InitPlugin(string path) {
 			var fullLibPath = Path.GetFullPath(Path.Join(Application.dataPath, "..", path));
 
-			if (LoadedPluginHandles.TryGetValue(path, out var existingHandle)) {
-				Debug.LogWarning($"attempted to load plugin more than once: {fullLibPath}");
-				return existingHandle;
+			if (LoadedPluginHandles.TryGetValue(path, out var existingHandles)) {
+				return existingHandles.Handle;
 			}
 			
 			// Open the library:
 			var handle = NativeLibUtil.OpenLibrary(fullLibPath);
-			LoadedPluginHandles.Add(path, handle);
 
 			// Call the UnityPluginLoad plugin function if it exists:
 			if (NativeLibUtil.TryGetDelegate<UnityPluginLoadDelegate>(handle, "UnityPluginLoad", out var loadFn)) {
@@ -64,42 +83,23 @@ namespace NativePlugins {
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		private static void InitPlugins() {
 			// Reload libraries:
-			var libPaths = LoadedPluginHandles.Keys;
-			foreach (var (path, handle) in LoadedPluginHandles) {
+			foreach (var (path, handles) in LoadedPluginHandles) {
 				try {
-					DeinitPlugin(handle);
+					DeinitPlugin(handles.Handle);
+					handles.Handle = InitPlugin(path);
 				} catch (Exception e) {
 					Debug.LogException(e);
+				}
+				foreach (var field in handles.FieldInfos) {
+					field.SetValue(null, handles.Handle);
 				}
 			}
 			LoadedPluginHandles.Clear();
 			
-			// Set all handles to zero here:
-			_libLuauPluginHandle = IntPtr.Zero;
-			
-			foreach (var path in libPaths) {
-				InitPlugin(path);
-			}
-
-			EditorApplication.quitting -= DeinitPlugins;
-			EditorApplication.quitting += DeinitPlugins;
-		}
-
-		private static void DeinitPlugins() {
-			if (LoadedPluginHandles.Count == 0) {
-				return;
-			}
-
-			foreach (var (path, handle) in LoadedPluginHandles) {
-				try {
-					DeinitPlugin(handle);
-				} catch (Exception e) {
-					Debug.LogException(e);
-				}
-			}
-			LoadedPluginHandles.Clear();
-			
-			_libLuauPluginHandle = IntPtr.Zero;
+			// Note: We don't bind to EditorApplication.quitting because that will prematurely
+			// close the libraries before some finalizers might run (e.g. ZstdContext freeing
+			// up its context object). Since loaded libraries are loaded into the address space
+			// of the application, we'll just let the OS close out our libraries when Unity exits.
 		}
 	
 		[DllImport("UnityInterfacePlugin")]

@@ -132,6 +132,16 @@ namespace Code.Zstd {
 		}
 		
 #if UNITY_EDITOR
+		private const string BasePluginsPath = "/Packages/gg.easy.airship/Runtime/Plugins";
+#if UNITY_EDITOR_OSX
+	private const string LuauLibPath = BasePluginsPath + "/Mac/LuauPlugin.bundle/Contents/MacOS/LuauPlugin";
+#elif UNITY_EDITOR_LINUX
+	private const string LuauLibPath = BasePluginsPath + "/Linux/libLuauPlugin.so";
+#elif UNITY_EDITOR_WIN
+		private const string LuauLibPath = BasePluginsPath + "/Windows/x64/LuauPlugin.dll";
+#endif
+		
+		[NativePlugin(LuauLibPath)]
 		private static IntPtr _libHandle;
 		
 		// Delegates:
@@ -257,8 +267,7 @@ namespace Code.Zstd {
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 		private static void InitPlugin() {
-			_libHandle = NativePluginHandles.LibLuauPluginHandle;
-			NativeLibUtil.BindDelegates(typeof(ZstdNative), _libHandle);
+			NativePluginHandles.RegisterPlugin(typeof(ZstdNative));
 
 			Application.quitting -= DeinitPlugin;
 			Application.quitting += DeinitPlugin;
