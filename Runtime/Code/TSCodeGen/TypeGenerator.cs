@@ -314,7 +314,7 @@ public class TypeGenerator : MonoBehaviour
             "UnityEngine.Vector4",
             "UnityEngine.Matrix4x4",
             "UnityEngine.Quaternion",
-            "UnityEngine.Rect",
+            // "UnityEngine.Rect",
             // "Object",
             "^UnityEngine.Object$",
             "ListCache",
