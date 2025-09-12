@@ -250,9 +250,6 @@ public class GameConfig : ScriptableObject {
         autoSyncTransforms2D = Physics2D.autoSyncTransforms;
 
         //Render Settings
-        var activeBuildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
-        var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(activeBuildTargetGroup);
-        var assets = new List<RenderPipelineAsset>();
         for (var i = 0; i < QualitySettings.names.Length; i++) {
             var name = QualitySettings.names[i];
             var renderAsset = QualitySettings.GetRenderPipelineAssetAt(i);
@@ -334,6 +331,22 @@ public class GameConfig : ScriptableObject {
                 Physics2D.callbacksOnDisable = callbacksOnDisable2D;
                 Physics2D.reuseCollisionCallbacks = reuseCollisionCallbacks2D;
                 Physics2D.autoSyncTransforms = autoSyncTransforms2D;
+
+                //Render Settings
+                var qualityLevel = QualitySettings.GetQualityLevel();
+                Debug.Log("Using quality level: " + qualityLevel);
+                if (qualityLevel >= 0 && qualityLevel < QualitySettings.names.Length) {
+                    var name = QualitySettings.names[qualityLevel];
+                    if (name == "Normal" && normalURPRenderAsset) {
+                        Debug.Log("Found using normal. Setting to: " + normalURPRenderAsset.name);
+                        //GraphicsSettings.defaultRenderPipeline = normalURPRenderAsset;
+                        QualitySettings.renderPipeline = normalURPRenderAsset;
+                    } else if (name == "Low" && lowURPRenderAsset) {
+                        //GraphicsSettings.defaultRenderPipeline = lowURPRenderAsset;
+                        Debug.Log("Found using low. Setting to: " + lowURPRenderAsset.name);
+                        QualitySettings.renderPipeline = lowURPRenderAsset;
+                    }
+                }
             } else {
                 Debug.LogError("Game hasn't generated a 2D game config yet");
             }
