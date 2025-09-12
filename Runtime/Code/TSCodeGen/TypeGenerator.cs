@@ -387,7 +387,7 @@ public class TypeGenerator : MonoBehaviour
                 }
 
                 if (type.Contains("[,")) {
-                    type = Regex.Replace(typeString, @"\[(,+)\]", match =>
+                    type = Regex.Replace(type, @"\[(,+)\]", match =>
                     {
                         int commaCount = match.Groups[1].Value.Length;
                         int dimensions = commaCount + 1;
