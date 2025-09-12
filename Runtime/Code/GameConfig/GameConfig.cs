@@ -4,8 +4,10 @@ using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.Build;
 #endif
 using UnityEngine;
+using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
@@ -18,6 +20,9 @@ public class GameConfig : ScriptableObject {
 
     [Obsolete]
     private string startingSceneName;
+
+    public RenderPipelineAsset normalURPRenderAsset = null;
+    public RenderPipelineAsset lowURPRenderAsset = null;
 
     public List<AirshipPackageDocument> packages = new();
 
@@ -39,6 +44,7 @@ public class GameConfig : ScriptableObject {
     [HideInInspector] public bool queriesHitTriggers = true;
     [HideInInspector] public float fixedDeltaTime = .025f;
 
+    //2D Physics
     [HideInInspector] public Vector3 gravity2D = new(0, -9.81f, 0);
     [HideInInspector] public int velocityIterations2D = 8;
     [HideInInspector] public int positionIterations2D = 3;
@@ -61,7 +67,7 @@ public class GameConfig : ScriptableObject {
     [HideInInspector] public bool autoSyncTransforms2D = false;
 
     [HideInInspector] public bool supportsMobile;
-    
+
     [HideInInspector] public bool compileURPShaders = false;
 
     private const string TagPrefix = "AirshipTag";
@@ -143,13 +149,13 @@ public class GameConfig : ScriptableObject {
 
     public string ToJson() {
         var gameConfigDto = new GameConfigDto() {
-            gameId = this.gameId,
-            packages = this.packages
+            gameId = gameId,
+            packages = packages
         };
         var json = JsonUtility.ToJson(gameConfigDto);
         return json;
     }
-    
+
 #if UNITY_EDITOR
     /// <summary>
     /// Copies Unity properties (such as tag, layer, physics and time settings) into the GameConfig.
@@ -158,19 +164,22 @@ public class GameConfig : ScriptableObject {
     public void SerializeSettings() {
         // Update tags
         var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
-        if (tagList.Length > GameConfig.MaximumTags) {
-            throw new ArgumentException($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
+        if (tagList.Length > MaximumTags) {
+            throw new ArgumentException(
+                $"Maximum number of allowed unity tags in Airship is {MaximumTags} - you have {tagList.Length} defined.");
         }
+
         gameTags = tagList.ToArray();
 
         // Update layers
         var layers = new List<string>();
-        for (int i = 0; i < 31; i++) {
+        for (var i = 0; i < 31; i++) {
             var layerName = LayerMask.LayerToName(i);
             layers.Add(layerName);
         }
+
         gameLayers = layers.ToArray();
-        
+
         // Update physics matrix        
         var areLayersIgnored = new bool[15 * 32];
         var TheMatrixLog = "SAVING GAME LAYER MATRIX: \n";
@@ -239,11 +248,26 @@ public class GameConfig : ScriptableObject {
         callbacksOnDisable2D = Physics2D.callbacksOnDisable;
         reuseCollisionCallbacks2D = Physics2D.reuseCollisionCallbacks;
         autoSyncTransforms2D = Physics2D.autoSyncTransforms;
+
+        //Render Settings
+        var activeBuildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+        var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(activeBuildTargetGroup);
+        var assets = new List<RenderPipelineAsset>();
+        for (var i = 0; i < QualitySettings.names.Length; i++) {
+            var name = QualitySettings.names[i];
+            var renderAsset = QualitySettings.GetRenderPipelineAssetAt(i);
+            Debug.Log("Found quality: " + QualitySettings.names[i] + " Asset: " + renderAsset.name);
+            if (name == "Normal") {
+                normalURPRenderAsset = renderAsset;
+            } else if (name == "Low") {
+                lowURPRenderAsset = renderAsset;
+            }
+        }
     }
 #endif
 
     public void DeserializeSettings() {
-        try { 
+        try {
             // 15 Game Layers and how they collide with all 32 layers
             var gameLayerI = 17;
             var TheMatrixLog = "LOADING GAME LAYER MATRIX: \n";
@@ -251,7 +275,8 @@ public class GameConfig : ScriptableObject {
                 for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
                     var ignored = physicsMatrix[byteI + otherLayerI];
                     Physics.IgnoreLayerCollision(gameLayerI, otherLayerI, ignored);
-				    TheMatrixLog += "GameLayer" + gameLayerI + " and Layer: " + otherLayerI +" ignored: " + ignored + " \n";
+                    TheMatrixLog += "GameLayer" + gameLayerI + " and Layer: " + otherLayerI + " ignored: " + ignored +
+                                    " \n";
                 }
 
                 gameLayerI++;
@@ -279,14 +304,15 @@ public class GameConfig : ScriptableObject {
                     for (var otherLayerI = 0; otherLayerI < 32; otherLayerI++) {
                         var ignored = physicsMatrix2D[byteI + otherLayerI];
                         Physics2D.IgnoreLayerCollision(gameLayerI, otherLayerI, ignored);
-                        TheMatrixLog += "2D GameLayer" + gameLayerI + " and Layer: " + otherLayerI + " ignored: " + ignored +
+                        TheMatrixLog += "2D GameLayer" + gameLayerI + " and Layer: " + otherLayerI + " ignored: " +
+                                        ignored +
                                         " \n";
                     }
 
                     gameLayerI++;
                 }
                 // Debug.Log(TheMatrixLog);
-                
+
                 // Physics 2D Settings
                 Physics2D.gravity = gravity2D;
                 Physics2D.velocityIterations = velocityIterations2D;
@@ -311,7 +337,6 @@ public class GameConfig : ScriptableObject {
             } else {
                 Debug.LogError("Game hasn't generated a 2D game config yet");
             }
-        
         } catch (Exception e) {
             Debug.LogError("Error in Deserialize Game Config: " + e);
         }
