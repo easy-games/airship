@@ -1,7 +1,7 @@
 ﻿namespace Code.Components {
    using UnityEngine;
 
-    [ExecuteAlways]
+    // [ExecuteAlways]
     public class WorldSpaceCanvasScaler : MonoBehaviour {
         [Header("Camera & Facing")]
         public Camera cam;                         // If null, uses Camera.main
