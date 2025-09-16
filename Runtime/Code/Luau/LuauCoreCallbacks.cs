@@ -877,7 +877,11 @@ public partial class LuauCore : MonoBehaviour {
             }
 
             if (cacheData.Value.Exists) {
-                Type t = cacheData.Value.t;
+                var propertyType = cacheData.Value.t;
+                if (!ReflectionList.IsMemberAllowed(sourceType, cacheData.Value.propertyInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                }
+                
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
@@ -921,7 +925,7 @@ public partial class LuauCore : MonoBehaviour {
                                 instanceId, propNameHash, sliderEvent);
                         }
 
-                        WritePropertyToThread(thread, value, t);
+                        WritePropertyToThread(thread, value, propertyType);
                         return 1;
                     }
                     else {
@@ -993,15 +997,23 @@ public partial class LuauCore : MonoBehaviour {
             // Get C# event:
             var eventInfo = sourceType.GetRuntimeEvent(propName);
             if (eventInfo != null) {
+                if (!ReflectionList.IsMemberAllowed(sourceType, eventInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                }
+                
                 return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
                     eventInfo, false);
             }
             
             // Get field:
-            FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
-            if (field != null) {
-                Type t = field.FieldType;
-                System.Object value = field.GetValue(objectReference);
+            var fieldInfo = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
+            if (fieldInfo != null) {
+                if (!ReflectionList.IsMemberAllowed(sourceType, fieldInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                }
+                
+                Type t = fieldInfo.FieldType;
+                System.Object value = fieldInfo.GetValue(objectReference);
                 WritePropertyToThread(thread, value, t);
                 return 1;
             }

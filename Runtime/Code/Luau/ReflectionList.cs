@@ -77,6 +77,7 @@ namespace Luau {
             [typeof(NetworkTransformUnreliable)] = LuauContextAll,
             [typeof(NetworkIdentity)] = LuauContextAll,
             [typeof(NetworkAnimator)] = LuauContextAll,
+            [typeof(LocalConnectionToClient)] = LuauContextAll,
             [typeof(NetworkConnectionToClient)] = LuauContextAll,
             [typeof(NetworkConnectionToServer)] = LuauContextAll,
             [typeof(NetworkConnection)] = LuauContextAll,
