@@ -780,36 +780,50 @@ public partial class LuauCore : MonoBehaviour {
                 return LuauError(thread, "ERROR - type of " + staticClassName + " class not found");
             }
 
-            Type objectType = staticClassApi.GetAPIType();
+            var classType = staticClassApi.GetAPIType();
+            
             if (printReferenceAssemblies) {
-                referencedAssemblies.Add(objectType.Assembly.FullName);
+                referencedAssemblies.Add(classType.Assembly.FullName);
             }
 
             // Get PropertyInfo from cache if possible -- otherwise put it in cache
             PropertyGetReflectionCache? cacheData;
-            if (!(cacheData = LuauCore.GetPropertyCacheValue(objectType, propName)).HasValue) {
-                var propertyInfo = objectType.GetProperty(propName,
+            if (!(cacheData = LuauCore.GetPropertyCacheValue(classType, propName)).HasValue) {
+                var propertyInfo = classType.GetProperty(propName,
                     BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-                cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
+                cacheData = LuauCore.SetPropertyCacheValue(classType, propName, propertyInfo);
             }
 
+            // Try access as PropertyInfo
             if (cacheData.Value.Exists) {
-                // Type t = propertyInfo.PropertyType;
+                if (!ReflectionList.IsMemberAllowed(classType, cacheData.Value.propertyInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {staticClassName}.{propName}.");
+                }
+                
                 System.Object value = cacheData.Value.propertyInfo.GetValue(null);
                 WritePropertyToThread(thread, value, cacheData.Value.t);
                 return 1;
             }
 
-            // Get C# event:
-            var eventInfo = objectType.GetRuntimeEvent(propName);
+            // Try access as C# event
+            var eventInfo = classType.GetRuntimeEvent(propName);
             if (eventInfo != null) {
+                if (!ReflectionList.IsMemberAllowed(classType, eventInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {staticClassName}.{propName}.");
+                }
+                
                 return LuauSignalWrapper.HandleCsEvent(context, thread, staticClassApi, instanceId, propNameHash,
                     eventInfo, true);
             }
 
-            FieldInfo fieldInfo = objectType.GetField(propName,
+            // Try access as FieldInfo
+            FieldInfo fieldInfo = classType.GetField(propName,
                 BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
             if (fieldInfo != null) {
+                if (!ReflectionList.IsMemberAllowed(classType, fieldInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {staticClassName}.{propName}.");
+                }
+                
                 Type t = fieldInfo.FieldType;
                 System.Object value = fieldInfo.GetValue(null);
                 WritePropertyToThread(thread, value, t);
@@ -863,7 +877,11 @@ public partial class LuauCore : MonoBehaviour {
             }
 
             if (cacheData.Value.Exists) {
-                Type t = cacheData.Value.t;
+                var propertyType = cacheData.Value.t;
+                if (!ReflectionList.IsMemberAllowed(sourceType, cacheData.Value.propertyInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                }
+                
                 try {
                     // Try a fast write on value type (Vector3, int, etc. Not objects)
                     if (FastGetAndWriteValueProperty(thread, objectReference, cacheData.Value)) {
@@ -907,7 +925,7 @@ public partial class LuauCore : MonoBehaviour {
                                 instanceId, propNameHash, sliderEvent);
                         }
 
-                        WritePropertyToThread(thread, value, t);
+                        WritePropertyToThread(thread, value, propertyType);
                         return 1;
                     }
                     else {
@@ -979,15 +997,23 @@ public partial class LuauCore : MonoBehaviour {
             // Get C# event:
             var eventInfo = sourceType.GetRuntimeEvent(propName);
             if (eventInfo != null) {
+                if (!ReflectionList.IsMemberAllowed(sourceType, eventInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                }
+                
                 return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
                     eventInfo, false);
             }
             
             // Get field:
-            FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
-            if (field != null) {
-                Type t = field.FieldType;
-                System.Object value = field.GetValue(objectReference);
+            var fieldInfo = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
+            if (fieldInfo != null) {
+                if (!ReflectionList.IsMemberAllowed(sourceType, fieldInfo, context)) {
+                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                }
+                
+                Type t = fieldInfo.FieldType;
+                System.Object value = fieldInfo.GetValue(objectReference);
                 WritePropertyToThread(thread, value, t);
                 return 1;
             }
