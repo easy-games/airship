@@ -1231,7 +1231,7 @@ public partial class LuauCore : MonoBehaviour
                 bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable, contextAttached);
                 if (match) {
                     if (!type.IsArray) {
-                        if (!ReflectionList.IsMethodAllowed(type, info, context)) {
+                        if (!ReflectionList.IsMemberAllowed(type, info, context)) {
                             insufficientContext = true;
                             return;
                         }
@@ -1276,7 +1276,7 @@ public partial class LuauCore : MonoBehaviour
             bool match = MatchParameters(numParameters, parameters, podTypes, podObjects, podIsTable, false);
 
             if (match) {
-                if (!ReflectionList.IsMethodAllowed(type, info, context)) {
+                if (!ReflectionList.IsMemberAllowed(type, info, context)) {
                     insufficientContext = true;
                     return;
                 }
