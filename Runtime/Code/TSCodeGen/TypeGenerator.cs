@@ -15,6 +15,7 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
+using Code.Haptics;
 using Code.Managers;
 using Code.Network;
 using Code.Network.Simulation;
@@ -284,6 +285,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyGridAlign),
             typeof(EasyTransformAnchor),
             typeof(EasyAxis),
+            
+            typeof(VibrationManager),
+            typeof(VibrationFeedbackType),
 
             
             
