@@ -9,7 +9,7 @@
 
         [Header("Screen-Space Target")]
         [Tooltip("How tall (in pixels) the whole RectTransform should appear on screen.")]
-        public float targetScreenHeightPixels = 64f;
+        public float targetScreenHeightScale = 0.15f;
 
         // [Tooltip("Clamp the apparent size (pixels). Set to 0 to disable.")]
         // public float minScreenHeightPixels = 0f;
@@ -49,7 +49,7 @@
             // if (maxDistance > 0f && maxDistance >= minDistance && d > maxDistance) d = maxDistance;
 
             // Desired pixel height with clamps
-            float desiredPx = targetScreenHeightPixels;
+            float desiredPx = targetScreenHeightScale * Screen.height;
             // if (minScreenHeightPixels > 0f) desiredPx = Mathf.Max(desiredPx, minScreenHeightPixels);
             // if (maxScreenHeightPixels > 0f && maxScreenHeightPixels >= minScreenHeightPixels)
             //     desiredPx = Mathf.Min(desiredPx, maxScreenHeightPixels);
