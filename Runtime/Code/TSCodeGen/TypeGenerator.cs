@@ -287,7 +287,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyAxis),
             
             typeof(VibrationManager),
-            typeof(HapticFeedbackType),
+            typeof(VibrationFeedbackType),
 
             
             

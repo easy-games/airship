@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Code.Haptics {
     // Matches Vibration.mm
-    public enum HapticFeedbackType : int {
+    public enum VibrationFeedbackType : int {
         Light = 0,
         Medium = 1,
         Heavy = 2,
@@ -25,9 +25,9 @@ namespace Code.Haptics {
         private static extern void PlayHaptic(int hapticType);
 #endif
 
-        public static void Play(HapticFeedbackType hapticFeedbackType) {
+        public static void Play(VibrationFeedbackType vibrationFeedbackType) {
 #if UNITY_IOS
-            PlayHaptic((int) hapticFeedbackType);
+            PlayHaptic((int) vibrationFeedbackType);
 #endif
         }
     }
