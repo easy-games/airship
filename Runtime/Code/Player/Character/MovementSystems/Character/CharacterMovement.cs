@@ -734,13 +734,15 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                 // Don't allow walking up hills that are too steep to be grounded
                 if (!grounded && detectedGround) {
-                    var velocityProjectedOnSlope = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
+                    var velocityProjectedOnSlope
+                        = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal) * slopeDot;
                     // If we're going uphill, project the velocity on the contour of the slope (to allow moving
                     // horizontally as falling while preventing running up slope by running into slope).
                     if (velocityProjectedOnSlope.y > 0) {
                         // Vector in the direction of slope contour
                         var slopeContourVector = Vector3.Cross(groundSlopeDir, groundHit.normal);
-                        characterMoveVelocity = slopeContourVector * Vector3.Dot(characterMoveVelocity, slopeContourVector);
+                        characterMoveVelocity
+                            = slopeContourVector * Vector3.Dot(characterMoveVelocity, slopeContourVector);
                     }
                 }
 
@@ -1842,9 +1844,23 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public void SetMovementEnabled(bool isEnabled) {
-            disableInput = !isEnabled;
+            if (isServer && !isClient) {
+                RpcSetMovementEnabled(isEnabled);
+            }
+
+
+            enabled = isEnabled;
+            if (isEnabled) {
+                //Reset the active mode
+                SetMode(mode);
+            } else {
+                //Stop rigidbody movement
+                rb.isKinematic = true;
+                rb.interpolation = RigidbodyInterpolation.None;
+            }
         }
 
+        [TargetRpc()]
         public void SetDebugFlying(bool flying) {
             if (!movementSettings.allowDebugFlying) {
                 // Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
@@ -2048,6 +2064,11 @@ namespace Code.Player.Character.MovementSystems.Character {
         [TargetRpc]
         public void RpcSetFlying(bool flying) {
             SetFlying(flying);
+        }
+
+        [TargetRpc]
+        public void RpcSetMovementEnabled(bool isEnabled) {
+            SetMovementEnabled(isEnabled);
         }
 
 #endregion
