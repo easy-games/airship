@@ -9,7 +9,7 @@
 
         [Header("Screen-Space Target")]
         [Tooltip("How tall (in pixels) the whole RectTransform should appear on screen.")]
-        public float targetScreenHeightScale = 0.15f;
+        public float targetScreenHeightScale = 0.2f;
 
         // [Tooltip("Clamp the apparent size (pixels). Set to 0 to disable.")]
         // public float minScreenHeightPixels = 0f;
