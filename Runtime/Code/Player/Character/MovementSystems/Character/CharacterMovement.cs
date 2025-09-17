@@ -1857,10 +1857,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             if (isEnabled) {
                 //Reset the active mode
                 SetMode(mode);
-            } else {
-                //Stop rigidbody movement
-                rb.isKinematic = true;
-                rb.interpolation = RigidbodyInterpolation.None;
             }
         }
 
