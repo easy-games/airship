@@ -34,9 +34,9 @@ namespace Editor.Quality {
             // Not super necessary, so if we notice animation issues on mobile we can increase this.
             QualitySettings.skinWeights = SkinWeights.TwoBones;
 
-            QualitySettings.renderPipeline =
-                AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
-                    "Packages/gg.easy.airship/URP/AirshipMobileURPAsset.asset");
+            // QualitySettings.renderPipeline =
+            //     AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
+            //         "Packages/gg.easy.airship/URP/AirshipMobileURPAsset.asset");
         }
 
         private static void ConfigureForNormal() {
@@ -44,18 +44,19 @@ namespace Editor.Quality {
 
             QualitySettings.skinWeights = SkinWeights.FourBones;
 
-            QualitySettings.renderPipeline =
-                AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
-                    "Packages/gg.easy.airship/URP/AirshipURPAsset.asset");
+            // QualitySettings.renderPipeline =
+            //     AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
+            //         "Packages/gg.easy.airship/URP/AirshipURPAsset.asset");
         }
 
         private static void SwapToQualityLevel(string name) {
-            int index = GetQualityIndex(name);
+            var index = GetQualityIndex(name);
             if (index < 0) {
                 if (!TryAddQualityLevel(name, out index)) {
                     Debug.LogError("Failed to add Mobile quality level. See console for details.");
                     return;
                 }
+
                 Debug.Log($"Created quality level '{name}' at index {index}.");
             } else {
                 Debug.Log($"Found existing quality level '{name}' at index {index}.");
