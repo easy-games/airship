@@ -17,7 +17,7 @@ public class CanvasDistanceCondition : MonoBehaviour {
     [NonSerialized]
     public float maxDistanceSqrd = 2500.0f;
 
-    private void Start() {
+    private void OnEnable() {
         CanvasDistanceManager.Instance.Register(this);
     }
 }
