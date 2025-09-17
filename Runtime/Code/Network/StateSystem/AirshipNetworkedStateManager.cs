@@ -369,10 +369,6 @@ namespace Code.Network.StateSystem
         #region Top Level Event Functions
 
         private void OnTick(object tickObj, object timeObj, object replayObj) {
-            if (!enabled || !stateSystem.enabled) {
-                return;
-            }
-            
             if (tickObj is not int tick || timeObj is not double time || replayObj is not bool replay) {
                 Debug.LogWarning($"OnTick: Unexpected value in tick object.");
                 return;

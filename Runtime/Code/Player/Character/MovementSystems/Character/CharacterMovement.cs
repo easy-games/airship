@@ -361,6 +361,10 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void Tick(CharacterInputData command, int tick, double time, bool replay) {
+            if (!enabled) {
+                return;
+            }
+            
             if (command == null) {
                 // If there is no command, we use a "no input" command. This command uses the same command number as our lastProcessedCommand state data
                 // so that we treat this input essentially as a ghost input that doesn't effect our stored command information, but allows us to
