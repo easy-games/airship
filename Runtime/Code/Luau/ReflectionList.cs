@@ -239,6 +239,7 @@ namespace Luau {
             #if UNITY_EDITOR
             ["AudioMixerSnapshotController"] = LuauContextAll,
             ["AudioMixerController"] = LuauContextAll,
+            ["AudioMixerGroupController"] = LuauContextAll,
             #endif
             ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
         };
