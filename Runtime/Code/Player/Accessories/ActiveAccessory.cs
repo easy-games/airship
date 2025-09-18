@@ -3,6 +3,7 @@ using Code.Player.Accessories;
 using UnityEngine;
 using UnityEngine.Serialization;
 
+[LuauAPI]
 public class ActiveAccessory {
     public AccessoryComponent AccessoryComponent;
     public int lodLevel;
