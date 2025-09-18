@@ -214,8 +214,16 @@ namespace Code.Player.Character.MovementSystems.Character {
         private BinaryBlob customSnapshotData;
         private Vector3 pendingImpulse = new(); // Impulse that will be applied on the next tick.
 
+        //Used for tracking data in the current Tick
+        private Vector3 newVelocity = Vector3.zero;
+        private bool grounded = false;
+        private bool inAir = false;
+        private bool didStepUp = false;
+        private bool didJump = false;
+
 #region PUBLIC GET
 
+        public bool movementTickEnabled { get; private set; } = true;
         public float currentCharacterHeight { get; private set; }
         public float standingCharacterHeight => movementSettings.characterHeight;
         public float characterRadius => movementSettings.characterRadius;
@@ -277,24 +285,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                 rb.isKinematic = false;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-
-                // non-authoritative client functions for interpolating mispredicts
-                if (isClient && mode == NetworkedStateSystemMode.Input) {
-                    AirshipSimulationManager.Instance.OnSetPaused += OnPaused;
-                }
             }
 
             OnSetMode?.Invoke(mode);
         }
 
-        public void OnDestroy() {
-            // non-authoritative client
-            if (isClient && mode == NetworkedStateSystemMode.Input) {
-                AirshipSimulationManager.Instance.OnSetPaused -= OnPaused;
-            }
-        }
-
-        private void OnPaused(bool paused) {
+        public override void OnPaused(bool paused) {
             if (paused) {
                 correctionLastSimulatedPosition
                     = airshipTransform
@@ -361,10 +357,6 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void Tick(CharacterInputData command, int tick, double time, bool replay) {
-            if (!enabled) {
-                return;
-            }
-            
             if (command == null) {
                 // If there is no command, we use a "no input" command. This command uses the same command number as our lastProcessedCommand state data
                 // so that we treat this input essentially as a ghost input that doesn't effect our stored command information, but allows us to
@@ -387,9 +379,11 @@ namespace Code.Player.Character.MovementSystems.Character {
                     Color.green, 5);
             }
 
-            // If input is disabled, we use default inputs, but we keep customData since we don't know how TS will want to handle that data.
-            // TODO: in the future we might not want to actually overwrite the data passed in by the client. It might be nice for TS to be able
-            // to still read what direction the character wants to move, even if processing that input is disabled.
+            //Let other classes implement their own movement logic
+            OnProcessCommand?.Invoke(command, currentMoveSnapshot, replay);
+
+            // If input is disabled, we use default inputs
+            //Do this after OnProcessCommand so TS can use the values even if our movement tick doesn't
             if (disableInput) {
                 var replacementCmd = command.Clone() as CharacterInputData;
                 replacementCmd.tick = tick;
@@ -401,14 +395,79 @@ namespace Code.Player.Character.MovementSystems.Character {
                 command = replacementCmd;
             }
 
-            OnProcessCommand?.Invoke(command, currentMoveSnapshot, replay);
+            //Run our movement logic if its enabled
+            if (movementTickEnabled) {
+                RunMovementTick(command);
 
+                // only update animations if we are not in a replay
+                if (!replay) {
+                    SetMovementAnimState(newVelocity, command.lookVector,
+                        !inAir || didStepUp || (currentMoveSnapshot.canJump > 0 &&
+                                                currentMoveSnapshot.canJump < byte.MaxValue),
+                        currentMoveSnapshot.isSprinting, currentMoveSnapshot.isCrouching,
+                        didJump);
+                }
+            }
+
+            // Handle OnMoveDirectionChanged event
+            if (moveDirInput != command.moveDir) {
+                OnMoveDirectionChanged?.Invoke(command.moveDir);
+            }
+
+            moveDirInput = command.moveDir;
+
+            //Track speed based on position
+            if (useExtraLogging) {
+                //print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
+            }
+
+            //Finished movement tick event
+            OnProcessedCommand?.Invoke(command, currentMoveSnapshot, replay);
+        }
+
+        public void SetMovementAnimState(
+            Vector3 velocity,
+            Vector3 lookVector,
+            bool grounded = true,
+            bool isSprinting = false,
+            bool isCrouching = false,
+            bool didJump = false) {
+#region SAVE STATE
+
+            var newState = new CharacterAnimationSyncData() {
+                state = currentMoveSnapshot.state,
+                grounded = grounded,
+                sprinting = isSprinting,
+                crouching = isCrouching,
+                localVelocity = graphicTransform.InverseTransformDirection(velocity),
+                lookVector = lookVector,
+                jumping = didJump
+            };
+
+            if (newState != currentAnimState) {
+                stateChanged?.Invoke((int)newState.state);
+                if (animationHelper) {
+                    animationHelper.SetState(newState);
+                }
+            }
+
+            if (animationHelper) {
+                animationHelper.SetVelocity(newState.localVelocity);
+            }
+
+            currentAnimState = newState;
+
+#endregion
+        }
+
+        private void RunMovementTick(CharacterInputData command) {
             var currentVelocity = rb.linearVelocity;
-            var newVelocity = currentVelocity;
-            var isIntersecting = false; // TODO: this was "IsIntersectingWithBlock" which just returned false
             var deltaTime = Time.fixedDeltaTime;
             var isImpulsing = pendingImpulse != Vector3.zero;
             var rootPosition = rb.position;
+            newVelocity = currentVelocity;
+            didJump = false;
+            didStepUp = false;
 
             // Apply rotation when ticking on the server. This rotation is automatically applied on the owning client in LateUpdate.
             // and for observers in Interpolate()
@@ -417,11 +476,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             //Ground checks
-            var (grounded, groundHit, detectedGround) =
+            var (groundedCheck, groundHit, detectedGround) =
                 physics.CheckIfGrounded(rootPosition, newVelocity * deltaTime, command.moveDir);
-            if (isIntersecting) {
-                grounded = true;
-            }
+            grounded = groundedCheck;
 
             groundedRaycastHit = groundHit;
 
@@ -511,7 +568,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 currentMoveSnapshot.alreadyJumped = false;
             }
 
-            var didJump = false;
             var ableToJump = false;
             if (movementSettings.numberOfJumps > 0 && requestJump &&
                 (!currentMoveSnapshot.alreadyJumped || grounded) &&
@@ -588,7 +644,7 @@ namespace Code.Player.Character.MovementSystems.Character {
              * We CANNOT read md.State at this point. Only md.currentMoveState.prevState.
              */
             var isMoving = currentVelocity.sqrMagnitude > .1f;
-            var inAir = didJump || (!detectedGround && !currentMoveSnapshot.prevStepUp);
+            inAir = didJump || (!detectedGround && !currentMoveSnapshot.prevStepUp);
             var tryingToSprint = movementSettings.onlySprintForward
                 ? command.sprint && airshipTransform.InverseTransformVector(command.moveDir).z > 0.1f
                 : //Only sprint if you are moving forward
@@ -1062,7 +1118,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region STEP_UP
 
             //Step up as the last step so we have the most up to date velocity to work from
-            var didStepUp = false;
             if (movementSettings.detectStepUps && //Want to check step ups
                 (!command.crouch || !movementSettings.preventStepUpWhileCrouching) && //Not blocked by crouch
                 (movementSettings.assistedLedgeJump ||
@@ -1426,44 +1481,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region SAVE STATE
 
-            // if(currentMoveState.timeSinceBecameGrounded < .1){
-            // 	print("LANDED! prevVel: " + currentVelocity + " newVel: " + newVelocity);
-            // }
-
-            // only update animations if we are not in a replay
-            if (!replay) {
-                var newState = new CharacterAnimationSyncData() {
-                    state = currentMoveSnapshot.state,
-                    grounded = !inAir || didStepUp ||
-                               (currentMoveSnapshot.canJump > 0 && currentMoveSnapshot.canJump < byte.MaxValue),
-                    sprinting = currentMoveSnapshot.isSprinting,
-                    crouching = currentMoveSnapshot.isCrouching,
-                    localVelocity = graphicTransform.InverseTransformDirection(newVelocity),
-                    lookVector = lookVector,
-                    jumping = didJump
-                };
-
-                if (newState != currentAnimState) {
-                    stateChanged?.Invoke((int)newState.state);
-                    if (animationHelper) {
-                        animationHelper.SetState(newState);
-                    }
-                }
-
-                if (animationHelper) {
-                    animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(newVelocity));
-                }
-
-                currentAnimState = newState;
-            }
-
-            // Handle OnMoveDirectionChanged event
-            if (moveDirInput != command.moveDir) {
-                OnMoveDirectionChanged?.Invoke(command.moveDir);
-            }
-
-            moveDirInput = command.moveDir;
-
             // Record variables that will not change due to physics tick. Variables affected by physics tick will need to be
             // recorded as part of OnCaptureSnapshot so that they record the value post physics tick.
             currentMoveSnapshot.lookVector = command.lookVector;
@@ -1472,13 +1489,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             currentMoveSnapshot.prevStepUp = didStepUp;
 
 #endregion
-
-            //Track speed based on position
-            if (useExtraLogging) {
-                //print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootPosition, lastPos) / deltaTime));
-            }
-
-            OnProcessedCommand?.Invoke(command, currentMoveSnapshot, replay);
         }
 
         public override void Interpolate(
@@ -1852,8 +1862,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 RpcSetMovementEnabled(isEnabled);
             }
 
-
-            enabled = isEnabled;
+            movementTickEnabled = isEnabled;
             if (isEnabled) {
                 //Reset the active mode
                 SetMode(mode);

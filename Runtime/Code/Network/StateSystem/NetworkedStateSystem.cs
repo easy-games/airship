@@ -67,6 +67,11 @@ namespace Code.Network.StateSystem
          */
         public abstract void Tick([CanBeNull] Input command, int tick, double time, bool replay);
 
+        /*
+         * non-authoritative client functions for interpolating mispredicts
+         */
+        public abstract void OnPaused(bool paused);
+
         /**
          * Set the state to be the interpolated state between these two snapshots. This is called every frame
          * during LateUpdate.

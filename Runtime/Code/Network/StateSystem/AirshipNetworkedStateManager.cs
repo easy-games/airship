@@ -146,37 +146,40 @@ namespace Code.Network.StateSystem
         private void Start() {
             // We are a shared client and server
             if (isClient && isServer) {
-                this.stateSystem.mode = NetworkedStateSystemMode.Authority;
-                this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
+                stateSystem.mode = NetworkedStateSystemMode.Authority;
+                stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are an authoritative client
             else if (isClient && isOwned && !serverAuth) {
-                this.stateSystem.mode = NetworkedStateSystemMode.Authority;
-                this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
+                stateSystem.mode = NetworkedStateSystemMode.Authority;
+                stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative client
             else if (isClient && isOwned && serverAuth) {
-                this.stateSystem.mode = NetworkedStateSystemMode.Input;
-                this.stateSystem.SetMode(NetworkedStateSystemMode.Input);
+                stateSystem.mode = NetworkedStateSystemMode.Input;
+                stateSystem.SetMode(NetworkedStateSystemMode.Input);
+                // non-authoritative client functions for interpolating mispredicts
+                if (isClient) {
+                    AirshipSimulationManager.Instance.OnSetPaused += stateSystem.OnPaused;
+                }
             }
             // We are an observing client
             else if (isClient && !isOwned) {
-                this.stateSystem.mode = NetworkedStateSystemMode.Observer;
-                this.stateSystem.SetMode(NetworkedStateSystemMode.Observer);
+                stateSystem.mode = NetworkedStateSystemMode.Observer;
+                stateSystem.SetMode(NetworkedStateSystemMode.Observer);
             }
             // We are an authoritative server
             else if (isServer && serverAuth) {
-                this.stateSystem.mode = NetworkedStateSystemMode.Authority;
-                this.stateSystem.SetMode(NetworkedStateSystemMode.Authority);
+                stateSystem.mode = NetworkedStateSystemMode.Authority;
+                stateSystem.SetMode(NetworkedStateSystemMode.Authority);
             }
             // We are a non-authoritative server
             else if (isServer && !serverAuth) {
-                this.stateSystem.mode = NetworkedStateSystemMode.Observer;
-                this.stateSystem.SetMode(NetworkedStateSystemMode.Observer);
-            }
-            else {
+                stateSystem.mode = NetworkedStateSystemMode.Observer;
+                stateSystem.SetMode(NetworkedStateSystemMode.Observer);
+            } else {
                 Debug.LogWarning(
-                    $"Unable to determine networked state system mode for {this.name}. Did we miss a case? " +
+                    $"Unable to determine networked state system mode for {name}. Did we miss a case? " +
                     isServer +
                     " " +
                     isClient + " " + isOwned + " " + serverAuth);
@@ -232,6 +235,9 @@ namespace Code.Network.StateSystem
             this.OnServerReceiveSnapshot -= ServerReceiveSnapshot;
             this.OnServerReceiveInput -= ServerReceiveInputCommand;
             this.OnServerReceiveFullSnapshotRequest -= ServerReceiveFullSnapshotRequest;
+            if (stateSystem && isClient && stateSystem.mode == NetworkedStateSystemMode.Input) {
+                simManager.OnSetPaused -= stateSystem.OnPaused;
+            }
         }
 
         private void SendNetworkMessages() {

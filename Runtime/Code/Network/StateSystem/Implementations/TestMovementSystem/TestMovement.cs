@@ -85,6 +85,10 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
             // Noop
         }
 
+        public override void OnPaused(bool paused) {
+            // Noop
+        }
+
         public override TestMovementInput GetCommand(int commandNumber, int tick)
         {
             var command = new TestMovementInput() { moveDirection = moveVector, commandNumber = commandNumber, jump = jump};
