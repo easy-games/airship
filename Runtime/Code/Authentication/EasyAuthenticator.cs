@@ -124,6 +124,7 @@ namespace Code.Authentication {
         }
 
         private void Client_OnKickBroadcast(KickMessage kickMessage) {
+            print("Received kick with reason: " + kickMessage.reason);
             TransferManager.Instance.Disconnect(true, kickMessage.reason);
         }
 
