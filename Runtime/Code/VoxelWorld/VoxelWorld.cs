@@ -95,6 +95,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     public event Action<Chunk> BeforeVoxelChunkUpdated;//Array of chunkIds
     public event Action<Chunk> VoxelChunkUpdated;//Array of chunkIds
+    public Action<Chunk> ChunkAdded;
     public event Action<VoxelData, Vector3Int> BeforeVoxelPlaced;
     public event Action<object, object, object, object> VoxelPlaced;
     public event Action OnFinishedLoading;
@@ -485,9 +486,10 @@ public partial class VoxelWorld : MonoBehaviour {
     } 
 
     public static Chunk CreateChunk(Vector3Int key) {
-        return new Chunk {
+        var chunk = new Chunk {
             chunkKey = key,
         };
+        return chunk;
     }
 
     /**

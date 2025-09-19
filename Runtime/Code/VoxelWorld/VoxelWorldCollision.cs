@@ -1,6 +1,10 @@
+using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using UnityEngine;
+using Object = UnityEngine.Object;
 using Vector3 = UnityEngine.Vector3;
 
 namespace VoxelWorldStuff {
@@ -19,47 +23,35 @@ namespace VoxelWorldStuff {
         // Pre-allocated array to check for overlap results
         private static Collider[] chunkOverlapResults = new Collider[1];
         
-        public static void ClearCollision(Chunk src)
-        {
+        public static void ClearCollision(Chunk src) {
             src.colliders.Clear();
-            GameObject obj = src.GetGameObject();
-            if (obj == null)
-            {
-                return;
-            }
-            //clear all the boxColliders
-            if (Application.isPlaying)
-            {
-                BoxCollider[] colliders = obj.GetComponents<BoxCollider>();
-                foreach (BoxCollider collider in colliders)
-                {
-                    Object.Destroy(collider);
-                }
-            }
-            else
-            {
-                BoxCollider[] colliders = obj.GetComponents<BoxCollider>();
-                foreach (BoxCollider collider in colliders)
-                {
+            var obj = src.GetCollisionGameObject();
+            if (obj == null) return;
+            
+            // Clear all the boxColliders
+            var colliders = obj.GetComponents<BoxCollider>();
+            foreach (var collider in colliders) {
+#if UNITY_EDITOR
+                if (!Application.isPlaying) {
                     Object.DestroyImmediate(collider);
+                    continue;
                 }
+#endif
+                Object.Destroy(collider);
             }
-            
-
         }
+        
+        /// <summary>
+        /// Creates greedy meshed collisions for a chunk
+        /// </summary>
+        public static void MakeCollision(Chunk src) {
+            var obj = src.GetCollisionGameObject();
+            if (obj == null) return;
             
-        public static void MakeCollision(Chunk src)
-        {
-            
-            GameObject obj = src.GetGameObject();
-            if (obj == null)
-            {
-                return;
-            }
-
             //allocate new bytes
-            bool[] used = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
-
+            var arraySize = VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize;
+            var used = ArrayPool<bool>.Shared.Rent(arraySize);
+            Array.Clear(used, 0, arraySize);
             List<CollisionDescriptor> collisions = new List<CollisionDescriptor>();
             
             //greedily convert collision into box colliders
@@ -89,6 +81,7 @@ namespace VoxelWorldStuff {
                     }
                 }
             }
+            ArrayPool<bool>.Shared.Return(used);
 
             src.colliders.RemoveAll(collider => collider == null);
 
@@ -119,50 +112,9 @@ namespace VoxelWorldStuff {
             }
             if (removeLength > 0) src.colliders.RemoveRange(removeStart, removeLength);
         }
-
-        public static List<GreedyMeshRegion> GreedyMesh(Chunk src) {
-            var meshes = new List<GreedyMeshRegion>();
-            GameObject obj = src.GetGameObject();
-            if (obj == null) {
-                return meshes;
-            }
-            
-            var usedVoxels = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
-
-            //greedily convert collision into box colliders
-            /*
-            for (int x = 0; x < VoxelWorld.chunkSize; x++) {
-                for (int y = 0; y < VoxelWorld.chunkSize; y++) {
-                    for (int z = 0; z < VoxelWorld.chunkSize; z++) {
-                        var localVoxel = src.GetLocalVoxelAt(x, y, z);
-                        var used = IsVoxelUsed(x, y, z, usedVoxels);
-                        if (used) continue;
-                        
-                        if (localVoxel > 0) {
-                            //grow a box from this point
-                            var size = new Vector3Int(1, 1, 1);
-                            var origin = new Vector3Int(x, y, z);
-
-                            while (GrowY(origin, size, src, localVoxel, usedVoxels)) size.y++; // Grow y Axis first for tall blocks
-                            while (GrowX(origin, size, src, localVoxel, usedVoxels)) size.x++;
-                            while (GrowZ(origin, size, src, localVoxel, usedVoxels)) size.z++;
-
-                            //Was all good, clear these voxels and continue
-                            MarkAllVoxelsUsed(origin, size, usedVoxels);
-
-                            //Output a collider
-                            MakeCollider(src,
-                                src.bottomLeftInt + new Vector3(origin.x + size.x * 0.5f, origin.y + size.y * 0.5f,
-                                    origin.z + size.z * 0.5f), size);
-                        }
-                    }
-                }
-            }
-            */
-            return meshes;
-        }
-        private static void MarkAllVoxelsUsed(Vector3Int origin, Vector3Int size, bool[] usedVoxels)
-        {
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void MarkAllVoxelsUsed(Vector3Int origin, Vector3Int size, bool[] usedVoxels) {
             for (int x = 0; x < size.x; x++) {
                 for (int y = 0; y < size.y; y++) {
                     for (int z = 0; z < size.z; z++) {
@@ -176,14 +128,17 @@ namespace VoxelWorldStuff {
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsVoxelUsed(int x, int y, int z, bool[] usedVoxels) {
             return usedVoxels[GetUsedVoxelIndex(x, y, z)];
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void SetVoxelUsed(int x, int y, int z, bool[] usedVoxels, bool used) {
             usedVoxels[GetUsedVoxelIndex(x, y, z)] = used;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int GetUsedVoxelIndex(int x, int y, int z) {
             return x + y * VoxelWorld.chunkSize + z * VoxelWorld.chunkSize * VoxelWorld.chunkSize;
         }
@@ -271,7 +226,7 @@ namespace VoxelWorldStuff {
         }
 
         public static void RemoveSingleVoxelCollision(Chunk chunk, Vector3 pos) {
-            var chunkGO = chunk.GetGameObject();
+            var chunkGO = chunk.GetCollisionGameObject();
             var resultCount = Physics.OverlapBoxNonAlloc(pos, Vector3.one / 3, chunkOverlapResults, chunkGO.transform.rotation, 1 << chunkGO.layer, QueryTriggerInteraction.Ignore);
             if (resultCount == 0) return; // Already no collider here
 
@@ -284,10 +239,6 @@ namespace VoxelWorldStuff {
             // Pos adjusted so 0,0,0 is the min corner of the size of the collider
             var minCorner = (bcCenter - bcSize / 2);
             var posRelativeToSize = Vector3Int.FloorToInt(pos - minCorner);
-            
-            var bcComp = new GameObject("ComponentTrue");
-            bcComp.transform.localScale = bcSize;
-            bcComp.transform.position = bcCenter;
             
             // Create 6 new colliders split off
             if (posRelativeToSize.x > 0) {
@@ -324,9 +275,8 @@ namespace VoxelWorldStuff {
             Object.Destroy(bc);
         } 
 
-        public static void MakeCollider(Chunk chunk, Vector3 pos, Vector3Int size)
-        {
-            BoxCollider col = chunk.GetGameObject().AddComponent<BoxCollider>();
+        public static void MakeCollider(Chunk chunk, Vector3 pos, Vector3Int size) {
+            BoxCollider col = chunk.GetCollisionGameObject().AddComponent<BoxCollider>();
             col.size = size;
             col.center = pos;
             chunk.colliders.Add(col);

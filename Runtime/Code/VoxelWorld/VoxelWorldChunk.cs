@@ -141,6 +141,10 @@ namespace VoxelWorldStuff {
         private Mesh mesh;
         private MeshFilter filter;
         private MeshRenderer renderer;
+        /// <summary>
+        /// GameObject that holds all colliders and lives under main chunk GameObject.
+        /// </summary>
+        private GameObject _collisionGameObject;
 
         private GameObject[] detailGameObjects;
         private Mesh[] detailMeshes;
@@ -154,6 +158,10 @@ namespace VoxelWorldStuff {
 
         private MeshProcessor meshProcessor;
 
+        public Chunk() {
+            SetupChunkGameObject();
+        }
+
         public Vector3Int GetKey() {
             return chunkKey;
         }
@@ -165,6 +173,11 @@ namespace VoxelWorldStuff {
         public void SetWorld(VoxelWorld world) {
             this.world = world;
             parent = world.chunksFolder.gameObject;
+            
+            obj.layer = world.gameObject.layer;
+            obj.transform.parent = parent.transform;
+            
+            world.ChunkAdded?.Invoke(this);
         }
 
         public void SetGeometryDirty(bool dirty, bool priority = false) {
@@ -615,8 +628,6 @@ namespace VoxelWorldStuff {
 
         public void Clear() {
             if (obj != null) {
-                // colliders.Clear();
-                // Object.DestroyImmediate(obj);
                 if (detailGameObjects != null && detailGameObjects[0] != null) {
                     for (var i = 0; i < 2; i++) {
                         Object.DestroyImmediate(detailGameObjects[i]);
@@ -629,9 +640,26 @@ namespace VoxelWorldStuff {
                         Object.DestroyImmediate(detailMesh);
                     }
                 }
-
-                // obj = null;
             }
+        }
+
+        private void SetupChunkGameObject() {
+            obj = new GameObject("Chunk");
+            if (world != null) {
+                obj.layer = world.gameObject.layer;
+                obj.transform.parent = parent.transform;
+            }
+            
+            obj.transform.localRotation = Quaternion.identity;
+            obj.transform.localScale = Vector3.one;
+            obj.transform.localPosition = Vector3.zero;
+            obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+
+            _collisionGameObject = new GameObject("ChunkCollisions");
+            _collisionGameObject.transform.parent = obj.transform;
+            _collisionGameObject.layer = obj.layer;
+
+            renderer = obj.AddComponent<MeshRenderer>();
         }
 
         public void MainthreadForceCollisionRebuild() {
@@ -652,28 +680,12 @@ namespace VoxelWorldStuff {
 
         private bool DoHeadlessUpdate(VoxelWorld world) {
             if (IsGeometryDirty() == true) {
-                var newChunk = new GameObject();
-
                 if (obj != null) {
-                    // Copy prefabs to new chunk (so we don't destroy them)
-                    foreach (var (pos, prefab) in prefabObjects) {
-                        prefab.Item1.transform.parent = newChunk.transform;
-                    }
-
                     Clear();
                 }
 
                 if (obj == null) {
-                    obj = newChunk;
-                    obj.layer = world.gameObject.layer;
-                    obj.transform.parent = parent.transform;
-                    obj.transform.localRotation = Quaternion.identity;
-                    obj.transform.localScale = Vector3.one;
-                    obj.transform.localPosition = Vector3.zero;
-                    obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-                    obj.name = "Chunk";
-
-                    renderer = obj.AddComponent<MeshRenderer>();
+                    SetupChunkGameObject();
                 }
 
                 //Fill the prefabs out
@@ -724,14 +736,7 @@ namespace VoxelWorldStuff {
                     Profiler.BeginSample("ChunkMainThread");
 
                     if (obj == null) {
-                        obj = new GameObject();
-                        obj.layer = world.gameObject.layer;
-                        obj.transform.parent = parent.transform;
-                        obj.transform.localRotation = Quaternion.identity;
-                        obj.transform.localScale = Vector3.one;
-                        obj.transform.localPosition = Vector3.zero;
-                        obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-                        obj.name = "Chunk";
+                        SetupChunkGameObject();
                     }
                     
                     // Copy prefabs to new chunk (so we don't destroy them)
@@ -963,6 +968,10 @@ namespace VoxelWorldStuff {
 
         public GameObject GetGameObject() {
             return obj;
+        }
+
+        public GameObject GetCollisionGameObject() {
+            return _collisionGameObject;
         }
     }
 }
