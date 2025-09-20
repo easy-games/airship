@@ -17,6 +17,7 @@ namespace Code.Managers {
 
         public void Register(CanvasDistanceCondition canvasObject) {
             _canvasObjects.Add(canvasObject);
+            CheckDistanceCondition(canvasObject, _camera.transform.position);
         }
 
         public void SetCamera(Camera cam) {
@@ -32,17 +33,21 @@ namespace Code.Managers {
                         _canvasObjects.RemoveAt(i);
                         continue;
                     }
-
-                    var canvGo = canvDistComp.gameObject;
-
-                    var distSqr = Vector3.SqrMagnitude(canvDistComp.transform.position - cameraPosition);
-                    var shouldBeEnabled = distSqr < canvDistComp.maxDistanceSqrd;
-                    if (shouldBeEnabled != canvGo.activeSelf) {
-                        canvGo.SetActive(shouldBeEnabled);
-                    }
+                    
+                    CheckDistanceCondition(canvDistComp, cameraPosition);
                 }
             } catch (Exception ex) {
                 Debug.LogError("Error ticking canvas distance: " + ex);
+            }
+        }
+
+        private void CheckDistanceCondition(CanvasDistanceCondition canvDistComp, Vector3 cameraPosition) {
+            var canvGo = canvDistComp.gameObject;
+
+            var distSqr = Vector3.SqrMagnitude(canvDistComp.transform.position - cameraPosition);
+            var shouldBeEnabled = distSqr < canvDistComp.maxDistanceSqrd;
+            if (shouldBeEnabled != canvGo.activeSelf) {
+                canvGo.SetActive(shouldBeEnabled);
             }
         }
     }
