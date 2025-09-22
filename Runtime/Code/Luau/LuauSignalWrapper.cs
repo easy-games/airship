@@ -118,7 +118,7 @@ namespace Luau {
                     WritePropertyToThread(_thread, param);
                 }
 
-                var alive = LuauPlugin.LuauEmitSignal(_context, _thread, _instanceId, _propNameHash, p.Length);
+                var alive = LuauPlugin.EmitSignal(_context, _thread, _instanceId, _propNameHash, p.Length);
                 if (!alive) {
                     RequestDisconnect?.Invoke();
                 }
@@ -158,7 +158,7 @@ namespace Luau {
         
         public static int HandleCsEvent(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, EventInfo eventInfo, bool staticClass) {
             var signalInstanceId = GetOrCreateId(objectReference);
-            var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, signalInstanceId, propNameHash);
+            var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 GameObject go = null;
                 if (!staticClass) {
@@ -166,7 +166,7 @@ namespace Luau {
                     if (go == null) return 0;
                 }
             
-                LuauPlugin.LuauPinThread(thread);
+                LuauPlugin.PinThread(thread);
                 
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
 
@@ -193,8 +193,8 @@ namespace Luau {
                     // Disconnect when the object is destroyed or the context is reset:
                     AddSignalDestroyWatcher(go, context, (contextReset) => {
                         if (!contextReset && LuauState.IsContextActive(context)) {
-                            LuauPlugin.LuauDestroySignals(context, thread, signalInstanceId);
-                            LuauPlugin.LuauUnpinThread(thread);
+                            LuauPlugin.DestroySignals(context, thread, signalInstanceId);
+                            LuauPlugin.UnpinThread(thread);
                         }
                         eventInfo.RemoveEventHandler(objectReference, eventDelegate);
                         InstanceIds.Remove(objectReference);
@@ -219,12 +219,12 @@ namespace Luau {
         
         public static int HandleUnityEvent0(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent unityEvent) {
             var signalInstanceId = GetOrCreateId(objectReference);
-            var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, signalInstanceId, propNameHash);
+            var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.LuauPinThread(thread);
+                LuauPlugin.PinThread(thread);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_0);
@@ -234,8 +234,8 @@ namespace Luau {
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
-                        LuauPlugin.LuauDestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.LuauUnpinThread(thread);
+                        LuauPlugin.DestroySignals(context, thread, signalInstanceId);
+                        LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
                     InstanceIds.Remove(objectReference);
@@ -246,12 +246,12 @@ namespace Luau {
         
         public static int HandleUnityEvent1<T0>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0> unityEvent) {
             var signalInstanceId = GetOrCreateId(objectReference);
-            var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, signalInstanceId, propNameHash);
+            var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.LuauPinThread(thread);
+                LuauPlugin.PinThread(thread);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_1);
@@ -261,8 +261,8 @@ namespace Luau {
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
-                        LuauPlugin.LuauDestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.LuauUnpinThread(thread);
+                        LuauPlugin.DestroySignals(context, thread, signalInstanceId);
+                        LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_1);
                     InstanceIds.Remove(objectReference);
@@ -273,12 +273,12 @@ namespace Luau {
         
         public static int HandleUnityEvent2<T0, T1>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0, T1> unityEvent) {
             var signalInstanceId = GetOrCreateId(objectReference);
-            var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, signalInstanceId, propNameHash);
+            var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.LuauPinThread(thread);
+                LuauPlugin.PinThread(thread);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_2);
@@ -288,8 +288,8 @@ namespace Luau {
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
-                        LuauPlugin.LuauDestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.LuauUnpinThread(thread);
+                        LuauPlugin.DestroySignals(context, thread, signalInstanceId);
+                        LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_2);
                     InstanceIds.Remove(objectReference);
@@ -300,12 +300,12 @@ namespace Luau {
         
         public static int HandleUnityEvent3<T0, T1, T2>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0, T1, T2> unityEvent) {
             var signalInstanceId = GetOrCreateId(objectReference);
-            var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, signalInstanceId, propNameHash);
+            var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.LuauPinThread(thread);
+                LuauPlugin.PinThread(thread);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_3);
@@ -315,8 +315,8 @@ namespace Luau {
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
-                        LuauPlugin.LuauDestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.LuauUnpinThread(thread);
+                        LuauPlugin.DestroySignals(context, thread, signalInstanceId);
+                        LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_3);
                     InstanceIds.Remove(objectReference);
@@ -327,12 +327,12 @@ namespace Luau {
         
         public static int HandleUnityEvent4<T0, T1, T2, T3>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0, T1, T2, T3> unityEvent) {
             var signalInstanceId = GetOrCreateId(objectReference);
-            var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, signalInstanceId, propNameHash);
+            var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.LuauPinThread(thread);
+                LuauPlugin.PinThread(thread);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_4);
@@ -342,8 +342,8 @@ namespace Luau {
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
-                        LuauPlugin.LuauDestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.LuauUnpinThread(thread);
+                        LuauPlugin.DestroySignals(context, thread, signalInstanceId);
+                        LuauPlugin.UnpinThread(thread);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_4);
                     InstanceIds.Remove(objectReference);

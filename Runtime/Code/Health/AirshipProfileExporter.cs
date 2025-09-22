@@ -134,7 +134,7 @@ namespace Code.Health
         private void Update() {
             if (Profiler.enabled != lastProfilerEnabled) {
                 lastProfilerEnabled = Profiler.enabled;
-                LuauPlugin.LuauSetProfilerEnabled(Profiler.enabled);
+                LuauPlugin.SetProfilerEnabled(Profiler.enabled);
             }
         }
 

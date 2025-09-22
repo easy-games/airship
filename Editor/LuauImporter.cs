@@ -81,7 +81,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter {
         } finally {
             AssetDatabase.StopAssetEditing();   
         }
-        Debug.Log("Byte count: " + byteCounter);
+        Debug.Log($"Total Luau bytecode size: {EditorUtility.FormatBytes(byteCounter)}");
     }
 
     protected (string fileName, LuauCompiler.CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, AirshipScript subAsset, string assetPath) {
@@ -89,7 +89,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter {
 
         if (!_mutableGlobalsSet) {
             try {
-                LuauPlugin.LuauSetMutableGlobals(LuauCompiler.MutableGlobals);
+                LuauPlugin.SetMutableGlobals(LuauCompiler.MutableGlobals);
                 _mutableGlobalsSet = true;
             } catch (LuauException e) {
                 Debug.LogError(e);
@@ -125,7 +125,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter {
         // Compile
         StopwatchCompile.Start();
         var len = Encoding.UTF8.GetByteCount(data);
-        var res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, ctx.assetPath.Length, LuauPlugin.LuauOptimizationLevel.Baseline);
+        var res = LuauPlugin.CompileCode(dataStr, len, filenameStr, ctx.assetPath.Length, LuauPlugin.LuauOptimizationLevel.Baseline);
         StopwatchCompile.Stop();
 
         Marshal.FreeCoTaskMem(dataStr);

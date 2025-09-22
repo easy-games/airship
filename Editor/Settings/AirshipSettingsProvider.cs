@@ -185,7 +185,7 @@ public class AirshipSettingsProvider : SettingsProvider
 
             if (newTimeout != EditorIntegrationsConfig.instance.luauScriptTimeout) {
                 EditorIntegrationsConfig.instance.luauScriptTimeout = newTimeout;
-                LuauPlugin.LuauSetScriptTimeoutDuration(newTimeout);
+                LuauPlugin.SetScriptTimeoutDuration(newTimeout);
             }
             
             if (GUI.changed) {
@@ -251,8 +251,8 @@ public class AirshipSettingsProvider : SettingsProvider
         return provider;
     }
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void OnReload() {
-        LuauPlugin.LuauSetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
+        LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
     }
 }

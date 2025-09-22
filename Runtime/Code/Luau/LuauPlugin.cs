@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -13,19 +14,6 @@ using Luau;
 using Debug = UnityEngine.Debug;
 
 public static class LuauPlugin {
-	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
-	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom);
-	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom, int type, IntPtr propertyData, ulong propertySize, byte isTable);
-	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int methodNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield);
-	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int classNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
-	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
-	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
-	public delegate void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen);
-	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
-	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
-	public delegate int IsObjectDestroyedCallback(int instanceId);
-	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
-
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
 	public enum CurrentCaller {
@@ -44,33 +32,10 @@ public static class LuauPlugin {
 		Max = 2,
 	}
 
-	// Must match BytecodeVersion struct in Plugin.cpp
-	[StructLayout(LayoutKind.Sequential)]
-	public struct LuauBytecodeVersion {
-		public int Min;
-		public int Max;
-		public int Target;
-	}
-
-	// Must match PluginStartup struct in LuauManager.h
-	[StructLayout(LayoutKind.Sequential)]
-	public struct LuauPluginStartup {
-		public GetPropertyCallback getPropertyCallback;
-		public SetPropertyCallback setPropertyCallback;
-		public CallMethodCallback callMethodCallback;
-		public ObjectGCCallback objectGcCallback;
-		public RequireCallback requireCallback;
-		public RequirePathCallback requirePathCallback;
-		public ConstructorCallback constructorCallback;
-		public ToStringCallback toStringCallback;
-		public IsObjectDestroyedCallback isObjectDestroyedCallback;
-		public GetUnityObjectName getUnityObjectNameCallback;
-		
-		public IntPtr staticList;
-		public IntPtr staticListStrLen;
-		public int staticCount;
-		public int isServer;
-		public int useUnityAllocator;
+	public enum LuauGCState {
+		Off = 0,
+		Step = 1,
+		Full = 2,
 	}
 
 	// Must match MemoryCategoryDumpItem struct in Debug.h
@@ -149,8 +114,7 @@ public static class LuauPlugin {
 	    }
     }
 
-	public static void BeginExecutionCheck(CurrentCaller caller)
-	{
+	private static void BeginExecutionCheck(CurrentCaller caller) {
 #if DO_CALL_SAFTEYCHECK
 		if (s_currentlyExecuting == true) {
             Debug.LogError("LuauPlugin called " + caller + " while a lua thread was still executing " + s_currentCaller);
@@ -159,350 +123,193 @@ public static class LuauPlugin {
 		s_currentlyExecuting = true;
 #endif
 	}
-    public static void EndExecutionCheck() {
+	private static void EndExecutionCheck() {
 #if DO_CALL_SAFTEYCHECK
         s_currentlyExecuting = false;
 		s_currentCaller = CurrentCaller.None;
 #endif
     }
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-    private static extern bool InitializePrintCallback(PrintCallback printCallback);
-    public static bool LuauInitializePrintCallback(PrintCallback printCallback) {
+	
+    public static void InitializeComponentCallbacks(LuauPluginNative.ComponentSetEnabledCallback setEnabledCallback) {
 	    ThreadSafetyCheck();
-
-	    bool returnValue = InitializePrintCallback(printCallback);
-	    return returnValue;
+		LuauPluginNative.InitializeComponentCallbacks(setEnabledCallback);
     }
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-    private static extern bool InitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback);
-    public static bool LuauInitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback) {
-	    ThreadSafetyCheck();
-
-	    bool returnValue = InitializeComponentCallbacks(setEnabledCallback);
-	    return returnValue;
-    }
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern bool Startup(LuauPluginStartup pluginStartup);
-	public static bool LuauStartup(LuauPluginStartup pluginStartup) {
+    
+	public static bool Startup(LuauPluginNative.LuauPluginStartup pluginStartup) {
         ThreadSafetyCheck();
-        return Startup(pluginStartup);
+        return LuauPluginNative.Startup(pluginStartup);
     }
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern void SubsystemRegistration();
-	public static void LuauSubsystemRegistration() {
+	public static void InitializePrintCallback(LuauPluginNative.PrintCallback printCallback) {
+		LuauPluginNative.TryInitPlugin();
 		ThreadSafetyCheck();
-		SubsystemRegistration();
+		LuauPluginNative.InitializePrintCallback(printCallback);
 	}
 
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern void SetProfilerEnabled(bool enabled);
-	public static void LuauSetProfilerEnabled(bool enabled) {
+	public static void SubsystemRegistration() {
+#if !UNITY_EDITOR // The SubsystemRegistration call is done automatically within LuauPluginNative at editor time
 		ThreadSafetyCheck();
-		SetProfilerEnabled(enabled);
+		LuauPluginNative.SubsystemRegistration();
+#endif
 	}
-
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern bool OpenState(LuauContext context);
-	public static bool LuauOpenState(LuauContext context) {
+	public static void SetProfilerEnabled(bool enabled) {
 		ThreadSafetyCheck();
-		return OpenState(context);
+		LuauPluginNative.SetProfilerEnabled(enabled);
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern bool CloseState(LuauContext context);
-	public static bool LuauCloseState(LuauContext context) {
+	
+	public static bool OpenState(LuauContext context) {
 		ThreadSafetyCheck();
-		return CloseState(context);
+		return LuauPluginNative.OpenState(context);
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+	
+	public static void CloseState(LuauContext context) {
+		ThreadSafetyCheck();
+#if UNITY_EDITOR
+		if (LuauPluginNative.LibHandle == IntPtr.Zero) {
+			return;
+		}
 #endif
-	private static extern void Reset(LuauContext context);
-	public static void LuauReset(LuauContext context) {
+		LuauPluginNative.CloseState(context);
+	}
+	
+	public static void Reset(LuauContext context) {
         ThreadSafetyCheck();
-        Reset(context);
+        LuauPluginNative.Reset(context);
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern ulong GetUniqueInstanceIdCount(LuauContext context);
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern ulong GetUniqueInstanceIds(LuauContext context, IntPtr arr, ulong arrSize);
-	public static unsafe ReadOnlySpan<int> LuauGetUniqueInstanceIds(LuauContext context) {
-		var count = GetUniqueInstanceIdCount(context);
+	
+	public static unsafe ReadOnlySpan<int> GetUniqueInstanceIds(LuauContext context) {
+		var count = LuauPluginNative.GetUniqueInstanceIdCount(context);
 		var ids = new int[count];
 		
 		ulong countFetched;
 		fixed (int* idsPtr = ids) {
-			countFetched = GetUniqueInstanceIds(context, new IntPtr(idsPtr), count);
+			countFetched = LuauPluginNative.GetUniqueInstanceIds(context, new IntPtr(idsPtr), count);
 		}
 
 		return new ReadOnlySpan<int>(ids, 0, (int)countFetched);
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern void RunBeginFrameLogic();
-	public static void LuauRunBeginFrameLogic() {
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void RunBeginFrameLogic() {
 		ThreadSafetyCheck();
-		RunBeginFrameLogic();
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-    private static extern IntPtr RunEndFrameLogic();
-    public static void LuauRunEndFrameLogic() {
-        ThreadSafetyCheck();
-        ThrowIfNotNullPtr(RunEndFrameLogic());
-    }
-
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
-#endif
-	private static extern void Shutdown();
-	public static void LuauShutdown() {
-		ThreadSafetyCheck();
-        Shutdown();
+		LuauPluginNative.RunBeginFrameLogic();
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern unsafe IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto* props, int nProps);
-	public static unsafe void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, Span<LuauMetadataPropertyMarshalDto> props) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void RunEndFrameLogic() {
+        ThreadSafetyCheck();
+        ThrowIfNotNullPtr(LuauPluginNative.RunEndFrameLogic());
+    }
+	
+	public static void Shutdown() {
+		ThreadSafetyCheck();
+		LuauPluginNative.Shutdown();
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static unsafe void InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, Span<LuauMetadataPropertyMarshalDto> props) {
 		ThreadSafetyCheck();
 		fixed (LuauMetadataPropertyMarshalDto* ptr = &MemoryMarshal.GetReference(props)) {
-			ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, ptr, props.Length));
+			ThrowIfNotNullPtr(LuauPluginNative.InitializeAirshipComponent(context, thread, unityInstanceId, componentId, ptr, props.Length));
 		}
 	}
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId);
 
 	/// <summary>
 	/// Create the reference pointer for the AirshipComponent
 	/// </summary>
-	internal static void LuauPrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void PrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(PrewarmAirshipComponent(context, thread, unityInstanceId, componentId, transformComponentId));
+		ThrowIfNotNullPtr(LuauPluginNative.PrewarmAirshipComponent(context, thread, unityInstanceId, componentId, transformComponentId));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr RemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
-	public static void LuauRemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void RemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(RemoveAirshipComponent(context, thread, unityInstanceId, componentId));
+		ThrowIfNotNullPtr(LuauPluginNative.RemoveAirshipComponent(context, thread, unityInstanceId, componentId));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void WriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.WriteToAirshipComponent(context, thread, unityInstanceId, componentId, prop));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr WriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop);
-	public static void LuauWriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void PushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(WriteToAirshipComponent(context, thread, unityInstanceId, componentId, prop));
+		ThrowIfNotNullPtr(LuauPluginNative.PushAirshipComponent(context, thread, unityInstanceId, componentId));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
-	public static void LuauPushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void PushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(PushAirshipComponent(context, thread, unityInstanceId, componentId));
+		ThrowIfNotNullPtr(LuauPluginNative.PushAirshipComponents(context, thread, unityInstanceId, componentIds, componentIds.Length, appendToTable));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, [In, Out] int[] componentIds, int nComponents, bool appendToTable);
-	public static void LuauPushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void UpdateIndividualAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt, bool safe) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(PushAirshipComponents(context, thread, unityInstanceId, componentIds, componentIds.Length, appendToTable));
+		ThrowIfNotNullPtr(LuauPluginNative.UpdateIndividualAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, dt, true));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr UpdateIndividualAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, float dt, bool safe);
-	public static void LuauUpdateIndividualAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt, bool safe) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void UpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, int collisionObjId) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(UpdateIndividualAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, dt, true));
+		ThrowIfNotNullPtr(LuauPluginNative.UpdateCollisionAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, collisionObjId));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr UpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, int collisionObjId);
-	public static void LuauUpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, int collisionObjId) {
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void UpdateAllAirshipComponents(LuauContext context, AirshipComponentUpdateType updateType, float dt) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(UpdateCollisionAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, collisionObjId));
+		ThrowIfNotNullPtr(LuauPluginNative.UpdateAllAirshipComponents(context, (int)updateType, dt));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr UpdateAllAirshipComponents(LuauContext context, int updateType, float dt);
-	public static void LuauUpdateAllAirshipComponents(LuauContext context, AirshipComponentUpdateType updateType, float dt) {
-		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(UpdateAllAirshipComponents(context, (int)updateType, dt));
-	}
-	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr GetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, ref int result);
 	public static bool GetComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		var result = 0;
-		ThrowIfNotNullPtr(GetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, ref result));
+		ThrowIfNotNullPtr(LuauPluginNative.GetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, ref result));
 		return result != 0;
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr SetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int result);
-	public static void LuauSetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
+	public static void SetAirshipComponentEnabled(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, bool enabled) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(SetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, enabled ? 1 : 0));
+		ThrowIfNotNullPtr(LuauPluginNative.SetAirshipComponentEnabled(context, thread, unityInstanceId, componentId, enabled ? 1 : 0));
 	}
-    
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr HasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, ref int result);
-	public static bool LuauHasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
+	
+	public static bool HasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
 		ThreadSafetyCheck();
 		var result = 0;
-		ThrowIfNotNullPtr(HasAirshipMethod(context, thread, unityInstanceId, componentId, (int)updateType, ref result));
+		ThrowIfNotNullPtr(LuauPluginNative.HasAirshipMethod(context, thread, unityInstanceId, componentId, (int)updateType, ref result));
 		return result != 0;
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, ref int result);
-	public static bool LuauPushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash) {
+	public static bool PushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash) {
 		ThreadSafetyCheck();
 		var result = 0;
-		ThrowIfNotNullPtr(PushSignal(context, thread, unityInstanceId, propNameHash, ref result));
+		ThrowIfNotNullPtr(LuauPluginNative.PushSignal(context, thread, unityInstanceId, propNameHash, ref result));
 		return result != 0;
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr EmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams, ref int result);
-	public static bool LuauEmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
+	public static bool EmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
 		ThreadSafetyCheck();
 		var result = 0;
-		ThrowIfNotNullPtr(EmitSignal(context, thread, unityInstanceId, propNameHash, numParams, ref result));
+		ThrowIfNotNullPtr(LuauPluginNative.EmitSignal(context, thread, unityInstanceId, propNameHash, numParams, ref result));
 		return result != 0;
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr DestroySignals(LuauContext context, IntPtr thread, int unityInstanceId);
-	public static void LuauDestroySignals(LuauContext context, IntPtr thread, int unityInstanceId) {
+	public static void DestroySignals(LuauContext context, IntPtr thread, int unityInstanceId) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(DestroySignals(context, thread, unityInstanceId));
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
+#if UNITY_EDITOR
+		if (LuauPluginNative.LibHandle == IntPtr.Zero) {
+			return;
+		}
 #endif
-	private static extern unsafe IntPtr CreateThread(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
-	public static unsafe IntPtr LuauCreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
+		ThrowIfNotNullPtr(LuauPluginNative.DestroySignals(context, thread, unityInstanceId));
+	}
+	
+	public static unsafe IntPtr CreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
 		
@@ -511,7 +318,7 @@ public static class LuauPlugin {
 
 		IntPtr returnValue;
 		fixed (byte* bytecodePtr = scriptBytecode) {
-			returnValue = CreateThread(context, bytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+			returnValue = LuauPluginNative.CreateThread(context, bytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
 		}
 		
 		Marshal.FreeCoTaskMem(filenamePtr);
@@ -520,50 +327,26 @@ public static class LuauPlugin {
         
         return returnValue;
     }
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr CreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId);
-	public static IntPtr LuauCreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId) {
+	
+	public static IntPtr CreateThreadWithCachedModule(LuauContext context, string filename, int gameObjectId) {
 		ThreadSafetyCheck();
-		IntPtr returnValue = CreateThreadWithCachedModule(context, filename, gameObjectId);
+		var returnValue = LuauPluginNative.CreateThreadWithCachedModule(context, filename, gameObjectId);
 		EndExecutionCheck();
 		return returnValue;
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr CacheModuleOnThread(IntPtr thread, string filename);
-	public static void LuauCacheModuleOnThread(IntPtr thread, string filename) {
+	
+	public static void CacheModuleOnThread(IntPtr thread, string filename) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(CacheModuleOnThread(thread, filename));
+		ThrowIfNotNullPtr(LuauPluginNative.CacheModuleOnThread(thread, filename));
 		EndExecutionCheck();
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr SetThreadDestroyed(IntPtr thread);
+	
 	public static void LuauSetThreadDestroyed(IntPtr thread) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(SetThreadDestroyed(thread));
+		ThrowIfNotNullPtr(LuauPluginNative.SetThreadDestroyed(thread));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern unsafe IntPtr SetMutableGlobals(IntPtr* strings, IntPtr stringLengths, int numStrings);
-	public static unsafe void LuauSetMutableGlobals(string[] mutableGlobals) {
+	public static unsafe void SetMutableGlobals(string[] mutableGlobals) {
 		Span<IntPtr> strings = stackalloc IntPtr[mutableGlobals.Length];
 		var lengths = stackalloc int[mutableGlobals.Length];
         
@@ -577,7 +360,7 @@ public static class LuauPlugin {
 
 		IntPtr res;
 		fixed (IntPtr* stringsPtr = &MemoryMarshal.GetReference(strings)) {
-			res = SetMutableGlobals(stringsPtr, new IntPtr(lengths), mutableGlobals.Length);
+			res = LuauPluginNative.SetMutableGlobals(stringsPtr, new IntPtr(lengths), mutableGlobals.Length);
 		}
 
 		foreach (var strPtr in strings) {
@@ -587,237 +370,123 @@ public static class LuauPlugin {
 		ThrowIfNotNullPtr(res);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel);
-	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, LuauOptimizationLevel optimizationLevel) {
-        var returnValue = CompileCode(script, scriptLength, filename, filenameLength, (int)optimizationLevel);
+	public static IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, LuauOptimizationLevel optimizationLevel) {
+        var returnValue = LuauPluginNative.CompileCode(script, scriptLength, filename, filenameLength, (int)optimizationLevel);
 		return returnValue;
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr RunThread(IntPtr thread, int nArgs, ref int result);
-	public static int LuauRunThread(IntPtr thread, int nArgs = 0) {
+	
+	public static int RunThread(IntPtr thread, int nArgs = 0) {
         ThreadSafetyCheck();
 		//BeginExecutionCheck(CurrentCaller.CreateThread);
         var returnValue = 0;
-        ThrowIfNotNullPtr(RunThread(thread, nArgs, ref returnValue));
+        ThrowIfNotNullPtr(LuauPluginNative.RunThread(thread, nArgs, ref returnValue));
         //EndExecutionCheck();
         return returnValue;
     }
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr ResumeThread(IntPtr thread, int nArgs, ref int result);
-	public static int LuauResumeThread(IntPtr thread, int nArgs = 0) {
+	
+	public static int ResumeThread(IntPtr thread, int nArgs = 0) {
 		ThreadSafetyCheck();
 		var returnValue = 0;
-		ThrowIfNotNullPtr(ResumeThread(thread, nArgs, ref returnValue));
+		ThrowIfNotNullPtr(LuauPluginNative.ResumeThread(thread, nArgs, ref returnValue));
 		return returnValue;
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr ResumeThreadError(IntPtr thread, ref int result);
-	public static int LuauResumeThreadError(IntPtr thread) {
+	
+	public static int ResumeThreadError(IntPtr thread) {
 		ThreadSafetyCheck();
 		var returnValue = 0;
-		ThrowIfNotNullPtr(ResumeThreadError(thread, ref returnValue));
+		ThrowIfNotNullPtr(LuauPluginNative.ResumeThreadError(thread, ref returnValue));
 		return returnValue;
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters, ref int result);
-	public static int LuauCallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters) {
+	
+	public static int CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters) {
         ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CallMethodOnThread);
         var returnValue = 0;
-        ThrowIfNotNullPtr(CallMethodOnThread(thread, methodName, methodNameSize, numParameters, ref returnValue));
+        ThrowIfNotNullPtr(LuauPluginNative.CallMethodOnThread(thread, methodName, methodNameSize, numParameters, ref returnValue));
         EndExecutionCheck();
         return returnValue;
     }
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr DestroyThread(IntPtr thread);
-	public static void LuauDestroyThread(IntPtr thread) {
+	
+	public static void DestroyThread(IntPtr thread) {
         ThreadSafetyCheck();
-        ThrowIfNotNullPtr(DestroyThread(thread));
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PinThread(IntPtr thread);
-	public static void LuauPinThread(IntPtr thread) {
-		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(PinThread(thread));
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr UnpinThread(IntPtr thread);
-	public static void LuauUnpinThread(IntPtr thread) {
-        // Debug.Log("Unpinning thread " + thread);
-        ThreadSafetyCheck();
-        ThrowIfNotNullPtr(UnpinThread(thread));
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
-	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
-        ThreadSafetyCheck();
-        ThrowIfNotNullPtr(PushValueToThread(thread, type, data, dataSize, arraySize));
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PushVector3ToThread(IntPtr thread, float x, float y, float z);
-	public static void LuauPushVector3ToThread(IntPtr thread, float x, float y, float z) {
-        ThreadSafetyCheck();
-        ThrowIfNotNullPtr(PushVector3ToThread(thread, x, y, z));
-	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr PushTableToThread(IntPtr thread, int initialSize);
-	public static void LuauPushTableToThread(IntPtr thread, int initialSize = 0) {
-		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(PushTableToThread(thread, initialSize));
+        ThrowIfNotNullPtr(LuauPluginNative.DestroyThread(thread));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr ErrorThread(IntPtr thread, IntPtr msg, int msgSize);
-	public static void LuauErrorThread(IntPtr thread, IntPtr msg, int msgSize) {
+	public static void PinThread(IntPtr thread) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(ErrorThread(thread, msg, msgSize));
+		ThrowIfNotNullPtr(LuauPluginNative.PinThread(thread));
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
+	public static void UnpinThread(IntPtr thread) {
+        ThreadSafetyCheck();
+#if UNITY_EDITOR
+        if (LuauPluginNative.LibHandle == IntPtr.Zero) {
+	        return;
+        }
 #endif
-	private static extern IntPtr GetDebugTrace(IntPtr thread, ref int result);
-	public static void LuauGetDebugTrace(IntPtr thread) {
+        ThrowIfNotNullPtr(LuauPluginNative.UnpinThread(thread));
+	}
+	
+	public static void PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
+        ThreadSafetyCheck();
+        ThrowIfNotNullPtr(LuauPluginNative.PushValueToThread(thread, type, data, dataSize, arraySize));
+	}
+	
+	public static void PushVector3ToThread(IntPtr thread, float x, float y, float z) {
+        ThreadSafetyCheck();
+        ThrowIfNotNullPtr(LuauPluginNative.PushVector3ToThread(thread, x, y, z));
+	}
+	
+	public static void PushTableToThread(IntPtr thread, int initialSize = 0) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.PushTableToThread(thread, initialSize));
+	}
+	
+	public static void ErrorThread(IntPtr thread, IntPtr msg, int msgSize) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.ErrorThread(thread, msg, msgSize));
+	}
+	
+	public static void GetDebugTrace(IntPtr thread) {
         ThreadSafetyCheck();
         var result = 0;
-        ThrowIfNotNullPtr(GetDebugTrace(thread, ref result));
+        ThrowIfNotNullPtr(LuauPluginNative.GetDebugTrace(thread, ref result));
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr RunTaskScheduler(LuauContext context, float now, float unscaledNow);
-	public static void LuauRunTaskScheduler(LuauContext context) {
+	
+	public static void RunTaskScheduler(LuauContext context) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(RunTaskScheduler(context, Time.time, Time.unscaledTime));
+		ThrowIfNotNullPtr(LuauPluginNative.RunTaskScheduler(context, Time.time, Time.unscaledTime));
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern void ResetTimeCache(LuauContext context, int fixedUpdate);
-	public static void LuauResetTimeCache(LuauContext context, bool fixedUpdate) {
-		ResetTimeCache(context, fixedUpdate ? 1 : 0);
+	
+	public static void ResetTimeCache(LuauContext context, bool fixedUpdate) {
+		LuauPluginNative.ResetTimeCache(context, fixedUpdate ? 1 : 0);
 	}
-
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern LuauContext GetContextFromThread(IntPtr thread);
-	public static LuauContext LuauGetContextFromThread(IntPtr thread) {
+	
+	public static LuauContext GetContextFromThread(IntPtr thread) {
 		ThreadSafetyCheck();
-		return GetContextFromThread(thread);
+		return LuauPluginNative.GetContextFromThread(thread);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern LuauBytecodeVersion GetBytecodeVersion();
-	public static LuauBytecodeVersion LuauGetBytecodeVersion() {
-		return GetBytecodeVersion();
+	public static LuauPluginNative.LuauBytecodeVersion GetBytecodeVersion() {
+		return LuauPluginNative.GetBytecodeVersion();
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern void SetScriptTimeoutDuration(int duration);
-	public static void LuauSetScriptTimeoutDuration(int duration) {
-		SetScriptTimeoutDuration(duration);
+	public static void SetScriptTimeoutDuration(int duration) {
+		LuauPluginNative.TryInitPlugin();
+		LuauPluginNative.SetScriptTimeoutDuration(duration);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern void SetIsPaused(int isPaused);
-	public static void LuauSetIsPaused(bool isPaused) {
-		SetIsPaused(isPaused ? 1 : 0);
+	public static void SetIsPaused(bool isPaused) {
+		LuauPluginNative.TryInitPlugin();
+		LuauPluginNative.SetIsPaused(isPaused ? 1 : 0);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr CopyTableToArray(IntPtr thread, IntPtr array, int type, int size, int idx);
-	public static unsafe void LuauCopyTableToArray<T>(IntPtr thread, PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
+	public static unsafe void CopyTableToArray<T>(IntPtr thread, PODTYPE type, int size, int idx, out IList<T> array, bool asList) where T : unmanaged {
 		var arr = new T[size];
 		array = arr;
 		IntPtr res;
 		fixed (T* arrayPtr = arr) {
-			res = CopyTableToArray(thread, new IntPtr(arrayPtr), (int)type, size, idx);
+			res = LuauPluginNative.CopyTableToArray(thread, new IntPtr(arrayPtr), (int)type, size, idx);
 		}
 		ThrowIfNotNullPtr(res);
 
@@ -826,101 +495,45 @@ public static class LuauPlugin {
 		}
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int RegisterStringAtom(IntPtr strPtr, ulong strLen);
-	public static int LuauRegisterStringAtom(string str) {
+	public static int RegisterStringAtom(string str) {
 		var strPtr = Marshal.StringToCoTaskMemUTF8(str);
 		var strLen = (ulong)Encoding.UTF8.GetByteCount(str);
-		var atom = RegisterStringAtom(strPtr, strLen);
+		var atom = LuauPluginNative.RegisterStringAtom(strPtr, strLen);
 		Marshal.FreeCoTaskMem(strPtr);
 		return atom;
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern void PushCsError(IntPtr errPtr, int errLen);
-	public static void LuauPushCsError(string err) {
+	public static void PushCsError(string err) {
 		var errPtr = Marshal.StringToCoTaskMemUTF8(err);
 		var errLen = Encoding.UTF8.GetByteCount(err);
-		PushCsError(errPtr, errLen);
+		LuauPluginNative.PushCsError(errPtr, errLen);
 		Marshal.FreeCoTaskMem(errPtr);
 	}
-
-	public enum LuauGCState {
-		Off = 0,
-		Step = 1,
-		Full = 2,
-	}
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern void SetGCState(int state);
-	public static void LuauSetGCState(LuauGCState state) {
-		SetGCState((int)state);
+	
+	public static void SetGCState(LuauGCState state) {
+		LuauPluginNative.SetGCState((int)state);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int CountGC(int context);
-	public static int LuauCountGC(LuauContext context) {
-		return CountGC((int)context);
+	public static int CountGC(LuauContext context) {
+		return LuauPluginNative.CountGC((int)context);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int GetLuauPluginVersion(out IntPtr versionPtr);
-	public static string LuauGetLuauPluginVersion() {
-		var len = GetLuauPluginVersion(out var versionPtr);
+	public static string GetLuauPluginVersion() {
+		var len = LuauPluginNative.GetLuauPluginVersion(out var versionPtr);
 		return Marshal.PtrToStringUTF8(versionPtr, len);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern void DebugPrintStack(IntPtr thread);
-	public static void LuauDebugPrintStack(IntPtr thread) {
-		DebugPrintStack(thread);
+	public static void DebugPrintStack(IntPtr thread) {
+		LuauPluginNative.DebugPrintStack(thread);
 	}
 	
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern ulong GetUnityObjectCount();
-	public static ulong LuauGetUnityObjectCount() {
-		return GetUnityObjectCount();
+	public static ulong GetUnityObjectCount() {
+		return LuauPluginNative.GetUnityObjectCount();
 	}
 	
-	/// <summary>
-	/// Get the various memory categories from Luau. The memCatDump list should be unique per Luau context.
-	/// </summary>
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern IntPtr GetMemoryCategoryDump(LuauContext context, ref ulong count);
-	public static void LuauGetMemoryCategoryDump(LuauContext context, List<LuauMemoryCategoryDumpItem> memCatDump) {
+	public static void GetMemoryCategoryDump(LuauContext context, List<LuauMemoryCategoryDumpItem> memCatDump) {
 		ulong count = 0;
-		var memCatDumpItemsPtr = GetMemoryCategoryDump(context, ref count);
+		var memCatDumpItemsPtr = LuauPluginNative.GetMemoryCategoryDump(context, ref count);
 
 		if (memCatDumpItemsPtr == IntPtr.Zero) {
 			throw new Exception("Failed to get memory category dump");
@@ -941,31 +554,13 @@ public static class LuauPlugin {
 		}
 	}
 	
-	/// <summary>
-	/// Fetch a string that contains the count of all registry item tables.
-	/// </summary>
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int DebugCountAllRegistryItems(LuauContext context, out IntPtr str);
-	public static string LuauDebugCountAllRegistryItems(LuauContext context) {
-		var strLen = DebugCountAllRegistryItems(context, out var strPtr);
+	public static string DebugCountAllRegistryItems(LuauContext context) {
+		var strLen = LuauPluginNative.DebugCountAllRegistryItems(context, out var strPtr);
 		return Marshal.PtrToStringUTF8(strPtr, strLen);
 	}
 	
-	/// <summary>
-	/// Fetch a list of all UnityObject Instance IDs tracked by the plugin.
-	/// </summary>
-#if UNITY_IPHONE
-    [DllImport("__Internal")]
-#else
-	[DllImport("LuauPlugin")]
-#endif
-	private static extern int DebugGetAllTrackedInstanceIds(LuauContext context, out IntPtr ids);
-	public static int[] LuauDebugGetAllTrackedInstanceIds(LuauContext context) {
-		var listLen = DebugGetAllTrackedInstanceIds(context, out var arrPtr);
+	public static int[] DebugGetAllTrackedInstanceIds(LuauContext context) {
+		var listLen = LuauPluginNative.DebugGetAllTrackedInstanceIds(context, out var arrPtr);
 		var list = new int[listLen];
 		var elementSize = Marshal.SizeOf<int>();
 		for (var i = 0; i < listLen; i++) {

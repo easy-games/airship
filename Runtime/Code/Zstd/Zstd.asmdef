@@ -1,7 +1,9 @@
 {
     "name": "Zstd",
     "rootNamespace": "Code.Zstd",
-    "references": [],
+    "references": [
+        "GUID:c00c241a2956b664a9f05dd88842d5b7"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,

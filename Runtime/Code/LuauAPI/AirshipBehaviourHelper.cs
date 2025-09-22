@@ -21,7 +21,7 @@ public static class AirshipBehaviourHelper {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int PushEmptyTable(IntPtr thread) {
-        LuauPlugin.LuauPushTableToThread(thread);
+        LuauPlugin.PushTableToThread(thread);
         return 1;
     }
     
@@ -88,7 +88,7 @@ public static class AirshipBehaviourHelper {
 
             var componentId = airshipComponent.GetAirshipComponentId();
 
-            LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
+            LuauPlugin.PushAirshipComponent(context, thread, unityInstanceId, componentId);
             return 1;
         }
 
@@ -117,7 +117,7 @@ public static class AirshipBehaviourHelper {
             }
 
             if (hasAny) {
-                LuauPlugin.LuauPushAirshipComponents(context, thread, unityInstanceId, ComponentIds.ToArray());
+                LuauPlugin.PushAirshipComponents(context, thread, unityInstanceId, ComponentIds.ToArray());
                 return 1;
             }
         }
@@ -142,7 +142,7 @@ public static class AirshipBehaviourHelper {
 
             var componentId = airshipComponent.GetAirshipComponentId();
 
-            LuauPlugin.LuauPushAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(airshipComponent), componentId);
+            LuauPlugin.PushAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(airshipComponent), componentId);
             return 1;
         }
 
@@ -167,7 +167,7 @@ public static class AirshipBehaviourHelper {
 
             var componentId = airshipComponent.GetAirshipComponentId();
 
-            LuauPlugin.LuauPushAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(airshipComponent), componentId);
+            LuauPlugin.PushAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(airshipComponent), componentId);
             return 1;
         }
 
@@ -202,7 +202,7 @@ public static class AirshipBehaviourHelper {
         if (componentIdsByUnityInstanceIds.Count > 0) {
             var first = true;
             foreach (var (unityInstanceId, componentIds) in componentIdsByUnityInstanceIds) {
-                LuauPlugin.LuauPushAirshipComponents(context, thread, unityInstanceId, componentIds.ToArray(), !first);
+                LuauPlugin.PushAirshipComponents(context, thread, unityInstanceId, componentIds.ToArray(), !first);
                 first = false;
             }
 
@@ -242,7 +242,7 @@ public static class AirshipBehaviourHelper {
         if (componentIdsByUnityInstanceIds.Count > 0) {
             var first = true;
             foreach (var (unityInstanceId, componentIds) in componentIdsByUnityInstanceIds) {
-                LuauPlugin.LuauPushAirshipComponents(context, thread, unityInstanceId, componentIds.ToArray(), !first);
+                LuauPlugin.PushAirshipComponents(context, thread, unityInstanceId, componentIds.ToArray(), !first);
                 first = false;
             }
 
@@ -285,7 +285,7 @@ public static class AirshipBehaviourHelper {
         
         var componentId = component.GetAirshipComponentId();
         var unityInstanceId = AirshipBehaviourRootV2.GetId(gameObject);
-        LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
+        LuauPlugin.PushAirshipComponent(context, thread, unityInstanceId, componentId);
 
         return 1;
     }
