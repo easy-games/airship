@@ -823,23 +823,25 @@ public static class LuauPluginNative {
 #endif
 	internal static extern IntPtr LuaGetTop(IntPtr thread, ref int top);
 #endif
-	
-#if UNITY_EDITOR
+
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void InitPlugin() {
+#if UNITY_EDITOR
 		// LibHandle = NativePluginHandles.LibLuauPluginHandle;
 		// NativeLibUtil.BindDelegates(typeof(LuauPluginNative), LibHandle);
 		NativePluginHandles.RegisterPlugin(typeof(LuauPluginNative));
 
 		SubsystemRegistration();
+#endif
 	}
 
 	internal static void TryInitPlugin() {
+#if UNITY_EDITOR
 		if (LibHandle == IntPtr.Zero) {
 			InitPlugin();
 		}
-	}
 #endif
+	}
 
 	// Must match PluginStartup struct in LuauManager.h
 	[StructLayout(LayoutKind.Sequential)]
