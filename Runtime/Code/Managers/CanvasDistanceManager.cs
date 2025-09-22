@@ -16,6 +16,9 @@ namespace Code.Managers {
         }
 
         public void Register(CanvasDistanceCondition canvasObject) {
+            if (!_camera) {
+                _camera = Camera.main;
+            }
             _canvasObjects.Add(canvasObject);
             CheckDistanceCondition(canvasObject, _camera.transform.position);
         }
