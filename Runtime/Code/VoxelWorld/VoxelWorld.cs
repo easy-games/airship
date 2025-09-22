@@ -21,7 +21,7 @@ using ParrelSync;
 using UnityEditor;
 #endif
 
-[ExecuteInEditMode]
+[LuauAPI][ExecuteInEditMode]
 public partial class VoxelWorld : MonoBehaviour {
     /// <summary>
     /// If enabled all quarter blocks will be replaced with default cube voxels

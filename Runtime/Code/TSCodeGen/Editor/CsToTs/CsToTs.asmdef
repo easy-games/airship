@@ -17,7 +17,21 @@
         "GUID:33b0850c3f930a440abe6b01a9898921",
         "GUID:103be11cab738ef4d849a96eca5df2eb",
         "GUID:47a57257b08841e9a7b6a61ce7119d42",
-        "GUID:befe48b9a36afc04ea625c93daad910e"
+        "GUID:befe48b9a36afc04ea625c93daad910e",
+        "GUID:eab6daf15424fc24a878e63a8cd81ec2",
+        "GUID:b582c0b40f964333afc4a6497c53b0b9",
+        "GUID:34b86c7776fb64479aa6cc8114a663f0",
+        "GUID:15fc0a57446b3144c949da3e2b9737a9",
+        "GUID:7ab3663edede26740845931880bf22af",
+        "GUID:1f7f51f8968140b8be5bcee537b6d629",
+        "GUID:7dd74451810670845a58d4701944add9",
+        "GUID:24bfc259149c3734cba1694dd7de5c32",
+        "GUID:842bf14b8e2ba45638e25dba28f03539",
+        "GUID:e10a6a15f18d241fa88984ee1739200c",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:21d1eb854b91ade49bc69a263d12bee2",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95"
     ],
     "includePlatforms": [
         "Editor"
