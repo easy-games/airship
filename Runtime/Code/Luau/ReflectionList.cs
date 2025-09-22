@@ -77,6 +77,7 @@ namespace Luau {
             [typeof(NetworkTransformUnreliable)] = LuauContextAll,
             [typeof(NetworkIdentity)] = LuauContextAll,
             [typeof(NetworkAnimator)] = LuauContextAll,
+            [typeof(LocalConnectionToClient)] = LuauContextAll,
             [typeof(NetworkConnectionToClient)] = LuauContextAll,
             [typeof(NetworkConnectionToServer)] = LuauContextAll,
             [typeof(NetworkConnection)] = LuauContextAll,
@@ -238,6 +239,7 @@ namespace Luau {
             #if UNITY_EDITOR
             ["AudioMixerSnapshotController"] = LuauContextAll,
             ["AudioMixerController"] = LuauContextAll,
+            ["AudioMixerGroupController"] = LuauContextAll,
             #endif
             ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
         };
@@ -247,7 +249,7 @@ namespace Luau {
         };
 
         public static Dictionary<Type, LuauContext> allowedTypesInternal;
-        private static Dictionary<MethodInfo, LuauContext> _allowedMethodInfos;
+        private static Dictionary<MemberInfo, int> _memberInfoContextMasks;
         
         private static Dictionary<string, Type> _stringToTypeCache;
         private static Dictionary<Assembly, List<string>> _assemblyNamespaces;
@@ -264,8 +266,12 @@ namespace Luau {
             allowedTypesInternal[t] = contextMask;
         }
 
-        public static void AddToMethodList(MethodInfo info, LuauContext contextMask) {
-            _allowedMethodInfos.TryAdd(info, contextMask);
+        /// <summary>
+        /// Tries to register a context mask for a MethodInfo. If the MethodInfo already has a context mask
+        /// returns false and does nothing.
+        /// </summary>
+        public static bool RegisterMemberInfoContextMask(MemberInfo info, int contextMask) {
+            return _memberInfoContextMasks.TryAdd(info, contextMask);
         }
 
         /// <summary>
@@ -299,7 +305,11 @@ namespace Luau {
             return allowed;
         }
 
-        public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {
+        /// <summary>
+        /// If provided MemberInfo has an explicit context mask we compare against that. Otherwise this falls back
+        /// to checking if IsAllowed on the classType.
+        /// </summary>
+        public static bool IsMemberAllowed(Type classType, MemberInfo memberInfo, LuauContext context) {
             if (!IsReflectionListEnabled) return true;
 
             // Protected context has access to all
@@ -307,13 +317,13 @@ namespace Luau {
                 return true;
             }
 
-            if (_allowedMethodInfos.TryGetValue(methodInfo, out var methodMask)) {
-                return (methodMask & context) != 0;
+            if (_memberInfoContextMasks.TryGetValue(memberInfo, out var methodMask)) {
+                return (methodMask & (int) context) != 0;
             }
 
             return IsAllowed(classType, context);
         }
-
+        
         public static bool IsAllowedFromString(string typeStr, LuauContext context) {
             if (_stringToTypeCache.TryGetValue(typeStr, out var t)) {
                 return IsAllowed(t, context);
@@ -383,7 +393,7 @@ namespace Luau {
         private static void Reset() {
             allowedTypesInternal = new Dictionary<Type, LuauContext>(AllowedTypes);
             _stringToTypeCache = new Dictionary<string, Type>();
-            _allowedMethodInfos = new Dictionary<MethodInfo, LuauContext>();
+            _memberInfoContextMasks = new Dictionary<MemberInfo, int>();
 
             // Collect all namespaces per assembly:
             _assemblyNamespaces = new Dictionary<Assembly, List<string>>();

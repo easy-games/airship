@@ -12,6 +12,7 @@ public class AirshipNetworkManager : NetworkManager {
     public Net net;
     public ServerConsole serverConsole;
     public ClientBundleLoader clientBundleLoader;
+    public static string lastClientError;
     
     public override void OnStartServer() {
         this.net.OnStartServer();
@@ -23,6 +24,11 @@ public class AirshipNetworkManager : NetworkManager {
 #if UNITY_SERVER
         Debug.Log(msg);
 #endif
+    }
+
+    public override void OnClientError(TransportError error, string reason) {
+        base.OnClientError(error, reason);
+        lastClientError = $"{error}: {reason}";
     }
 
     public override void OnStartClient() {

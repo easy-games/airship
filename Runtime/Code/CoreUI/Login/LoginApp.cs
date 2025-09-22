@@ -65,6 +65,12 @@ public class LoginApp : MonoBehaviour {
         } else {
             Screen.orientation = ScreenOrientation.LandscapeLeft;
         }
+
+        // Tablet uses desktop view and we need to hide a few elements.
+        if (device == AirshipDeviceType.Tablet) {
+            this.steamLoginButton.gameObject.SetActive(false);
+            this.quitButton.SetActive(false);
+        }
 #if !UNITY_IOS
         this.appleBtn.gameObject.SetActive(false);
 #endif
@@ -97,7 +103,10 @@ public class LoginApp : MonoBehaviour {
             this.showedNoInternet = false;
         }
 
-        this.quitButton.SetActive(Screen.fullScreen);
+        var device = DeviceBridge.GetDeviceType();
+        if (device == AirshipDeviceType.Desktop) {
+            this.quitButton.SetActive(Screen.fullScreen);
+        }
     }
 
     public void BackToFirstPage() {

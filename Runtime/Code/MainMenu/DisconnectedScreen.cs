@@ -10,7 +10,9 @@ public class DisconnectedScreen : MonoBehaviour {
     public GameObject quitButton;
 
     private void Start() {
-        this.reasonText.text = CrossSceneState.kickMessage;
+        string msg = CrossSceneState.kickMessage + "\n" + AirshipNetworkManager.lastClientError;
+        this.reasonText.text = msg;
+        
         Cursor.lockState = CursorLockMode.None;
         if (CrossSceneState.kickForceLogout) {
             CrossSceneState.kickForceLogout = false;

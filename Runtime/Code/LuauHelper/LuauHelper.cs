@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Airship.DevConsole;
 using Luau;
@@ -60,21 +62,37 @@ public class LuauHelper : Singleton<LuauHelper> {
                 var typeAttribute = type.GetCustomAttribute<LuauAPIAttribute>(true);
                 if (typeAttribute == null) continue;
 
-                // Add Luau contextual permissions for the class and methods
-                ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
-                foreach (var methodInfo in type.GetMethods()) {
-                    var methodTypeAttr = methodInfo.GetCustomAttribute<LuauAPIAttribute>();
-                    if (methodTypeAttr == null) {
-                        continue;
-                    }
+                var isLuauAPIClass = type.IsSubclassOf(typeof(BaseLuaAPIClass));
 
-                    ReflectionList.AddToMethodList(methodInfo, methodTypeAttr.AllowedContextsMask);
+                // Add Luau contextual permissions for the class and methods
+                if (!isLuauAPIClass) {
+                    ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
+                    foreach (var memberInfo in type.GetMembers()) {
+                        var methodTypeAttr = memberInfo.GetCustomAttribute<LuauAPIAttribute>();
+                        if (methodTypeAttr == null) {
+                            continue;
+                        }
+                    
+                        ReflectionList.RegisterMemberInfoContextMask(memberInfo,
+                            (int)methodTypeAttr.AllowedContextsMask);
+                    }
                 }
 
-                if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
+                if (isLuauAPIClass) {
                     var instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
-                    ReflectionList.AddToReflectionList(instance.GetAPIType(), typeAttribute.AllowedContextsMask);
+                    var apiType = instance.GetAPIType();
+                    ReflectionList.AddToReflectionList(apiType, typeAttribute.AllowedContextsMask);
                     LuauCore.CoreInstance.RegisterBaseAPI(instance);
+
+                    // Override context of individual methods / members
+                    if (typeAttribute.ContextOverrideList != null) {
+                        var overrideNameSet = new HashSet<string>(typeAttribute.ContextOverrideList); 
+                        foreach (var memberInfo in apiType.GetMembers()) {
+                            if (overrideNameSet.Contains(memberInfo.Name)) {
+                                ReflectionList.RegisterMemberInfoContextMask(memberInfo, typeAttribute.ContextOverrideMask);
+                            }
+                        }
+                    }
                 } else {
                     var customApi = new UnityCustomAPI(type);
                     LuauCore.CoreInstance.RegisterBaseAPI(customApi);
