@@ -81,7 +81,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter {
         } finally {
             AssetDatabase.StopAssetEditing();   
         }
-        Debug.Log("Byte count: " + byteCounter);
+        Debug.Log($"Total Luau bytecode size: {EditorUtility.FormatBytes(byteCounter)}");
     }
 
     protected (string fileName, LuauCompiler.CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, AirshipScript subAsset, string assetPath) {
