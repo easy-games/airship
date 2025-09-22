@@ -42,6 +42,11 @@ public class VoxelWorldCollisionLOD : MonoBehaviour {
     /// Set of all chunk keys that are currently active (have collisions)
     /// </summary>
     private HashSet<Vector3Int> _activeCollisionChunks = new();
+    /// <summary>
+    /// This can be supplied by a game to override the collision focal point. Typically would be useful to
+    /// set this to the local character transform.
+    /// </summary>
+    private Transform focalPointTransform;
 
     private void Awake() {
         if (RunCore.IsServer()) {
@@ -53,7 +58,24 @@ public class VoxelWorldCollisionLOD : MonoBehaviour {
         _refreshDistanceSqr = Mathf.Pow(VoxelWorld.chunkSize / 4.0f, 2);
     }
 
+    public void UpdateFocalTransform(Transform t) {
+        this.focalPointTransform = t;
+        CheckForLODUpdate();
+    }
+
+    /// <summary>
+    /// Clears the manually supplied transform focal point.
+    /// </summary>
+    public void ClearFocalPoint() {
+        this.focalPointTransform = null;
+    }
+
 #if !UNITY_SERVER
+    private Vector3 GetFocusPosition() {
+        if (focalPointTransform) return focalPointTransform.position;
+        return _voxelWorld.focusPosition;
+    }
+    
     private void OnEnable() {
         AirshipSimulationManager.Instance.OnTick += OnTick;
         _voxelWorld.ChunkAdded += OnChunkAdded;
@@ -64,6 +86,13 @@ public class VoxelWorldCollisionLOD : MonoBehaviour {
     }
 
     private void OnDisable() {
+        // OnDisable won't run in production server (above !UNITY_SERVER check) so this isn't necessary to short circuit
+#if UNITY_EDITOR
+        if (RunCore.IsServer()) {
+            return;
+        }
+#endif
+        
         AirshipSimulationManager.Instance.OnTick -= OnTick;
         _voxelWorld.ChunkAdded -= OnChunkAdded;
         _activeCollisionChunks.Clear();
@@ -91,7 +120,7 @@ public class VoxelWorldCollisionLOD : MonoBehaviour {
     }
     
     private void CheckForLODUpdate() {
-        var currentPosition = _voxelWorld.focusPosition;
+        var currentPosition = GetFocusPosition();
         CheckForLODUpdate(currentPosition);
     }
     
