@@ -104,6 +104,7 @@ namespace NativePlugins {
 	
 		[DllImport("UnityInterfacePlugin")]
 		private static extern IntPtr GetUnityInterfacesPointer();
-	}
+
 #endif
+	}
 }
