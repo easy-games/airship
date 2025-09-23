@@ -918,11 +918,38 @@ public partial class LuauCore : MonoBehaviour {
                                     instanceId, propNameHash, unityEvent4);
                             }
                         }
+                        
+                        if (valueType.BaseType != null && valueType.BaseType.BaseType == typeof(UnityEventBase)) {
+                            // Handle special abstractions of UnityEvents from other libraries:
+                            if (value is Slider.SliderEvent sliderEvent) {
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
+                                    instanceId, propNameHash, sliderEvent);
+                            }
 
-                        // Handle SliderEvents:
-                        if (value is Slider.SliderEvent sliderEvent) {
-                            return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
-                                instanceId, propNameHash, sliderEvent);
+                            if (value is TMPro.TMP_Dropdown.DropdownEvent dropdownEvent) {
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
+                                    instanceId, propNameHash, dropdownEvent);
+                            }
+                            if (value is TMPro.TMP_InputField.OnChangeEvent onChangeEvent) {
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
+                                    instanceId, propNameHash, onChangeEvent);
+                            }
+                            if (value is TMPro.TMP_InputField.SelectionEvent selectionEvent) {
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
+                                    instanceId, propNameHash, selectionEvent);
+                            }
+                            if (value is TMPro.TMP_InputField.SubmitEvent submitEvent) {
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
+                                    instanceId, propNameHash, submitEvent);
+                            }
+                            if (value is TMPro.TMP_InputField.TextSelectionEvent textSelectionEvent) {
+                                return LuauSignalWrapper.HandleUnityEvent3(context, thread, objectReference,
+                                    instanceId, propNameHash, textSelectionEvent);
+                            }
+                            if (value is TMPro.TMP_InputField.TouchScreenKeyboardEvent touchScreenKeyboardEvent) {
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
+                                    instanceId, propNameHash, touchScreenKeyboardEvent);
+                            }
                         }
 
                         WritePropertyToThread(thread, value, propertyType);
