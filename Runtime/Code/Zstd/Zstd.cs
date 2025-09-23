@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using UnityEngine;
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
@@ -348,9 +349,14 @@ namespace Code.Zstd {
 
 		private bool _disposed;
 		
+#if UNITY_EDITOR
+		private uint _pluginInitId;
+#endif
+		
 		public ZstdContext(ulong scratchBufferSize) {
 #if UNITY_EDITOR
 			ZstdNative.TryInitPlugin();
+			_pluginInitId = ZstdNative.InitId;
 #endif
 			ScratchBuffer = ArrayPool<byte>.Shared.Rent((int)scratchBufferSize);
 			Cctx = ZSTD_createCCtx();
@@ -374,6 +380,12 @@ namespace Code.Zstd {
 				ArrayPool<byte>.Shared.Return(ScratchBuffer);
 			}
 			
+#if UNITY_EDITOR
+			// Prevent calling into the plugin if it is no longer valid (e.g. on editor shutdown):
+			if (_pluginInitId != ZstdNative.InitId) {
+				return;
+			}
+#endif
 			ZSTD_freeCCtx(Cctx);
 			ZSTD_freeDCtx(Dctx);
 		}

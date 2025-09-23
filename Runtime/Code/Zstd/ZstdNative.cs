@@ -265,8 +265,15 @@ namespace Code.Zstd {
 		internal delegate ulong ZSTD_DStreamOutSize_Delegate();
 		[NativeDelegate] internal static ZSTD_DStreamOutSize_Delegate ZSTD_DStreamOutSize;
 
+		public static uint InitId {
+			get;
+			private set;
+		}
+
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 		private static void InitPlugin() {
+			InitId++;
+			
 			NativePluginHandles.RegisterPlugin(typeof(ZstdNative));
 
 			Application.quitting -= DeinitPlugin;
@@ -274,6 +281,7 @@ namespace Code.Zstd {
 		}
 
 		private static void DeinitPlugin() {
+			InitId++;
 			_libHandle = IntPtr.Zero;
 		}
 
