@@ -89,7 +89,7 @@ public class LoginWithApple : MonoBehaviour {
                 if (authorizationErrorCode == AuthorizationErrorCode.Canceled) {
                     // do nothing
                 } else if (authorizationErrorCode == AuthorizationErrorCode.Unknown) {
-                    this.loginApp.SetError($"Connection failed when trying to login. Please try again.");
+                    this.loginApp.SetError($"Connection failed when trying to login. {error.LocalizedFailureReason}\n{error.LocalizedDescription}\n Please try again.");
                 } else {
                     this.loginApp.SetError($"Failed to login. {error.LocalizedFailureReason}\n{error.LocalizedDescription}\nPlease try again.");
                 }
