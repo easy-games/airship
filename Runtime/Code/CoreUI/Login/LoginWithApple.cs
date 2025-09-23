@@ -74,7 +74,7 @@ public class LoginWithApple : MonoBehaviour {
             credential => {
                 if (credential is IAppleIDCredential appleIdCredential) {
                     // If a sign in with apple succeeds, we should have obtained the credential with the user id, name, and email, save it
-                    print("Apple credential. id_token=" + System.Text.Encoding.Default.GetString(appleIdCredential.IdentityToken));
+                    // print("Apple credential. id_token=" + System.Text.Encoding.Default.GetString(appleIdCredential.IdentityToken));
                     PlayerPrefs.SetString(AppleUserIdKey, credential.User);
                     this.loginApp.AuthenticateFirebaseWithApple(appleIdCredential);
                 } else {
@@ -84,12 +84,14 @@ public class LoginWithApple : MonoBehaviour {
             },
             error => {
                 var authorizationErrorCode = error.GetAuthorizationErrorCode();
-                Debug.LogWarning("Sign in with Apple failed " + authorizationErrorCode.ToString() + " " + error.ToString());
+                Debug.LogError("Sign in with Apple failed " + authorizationErrorCode.ToString() + " " + error.ToString());
+                this.loginApp.loading = false;
                 if (authorizationErrorCode == AuthorizationErrorCode.Canceled) {
-                    this.loginApp.loading = false;
+                    // do nothing
+                } else if (authorizationErrorCode == AuthorizationErrorCode.Unknown) {
+                    this.loginApp.SetError($"Connection failed when trying to login. Please try again.");
                 } else {
-                    this.loginApp.SetError("Failed to login. Error Code: " + authorizationErrorCode);
-                    this.loginApp.loading = false;
+                    this.loginApp.SetError($"Failed to login. {error.LocalizedFailureReason}\n{error.LocalizedDescription}\nPlease try again.");
                 }
             });
     }

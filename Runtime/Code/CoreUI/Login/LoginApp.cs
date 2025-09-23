@@ -51,13 +51,17 @@ public class LoginApp : MonoBehaviour {
     private bool showedNoInternet = false;
 
     private void OnEnable() {
+
+    }
+
+    private void Start() {
         Cursor.lockState = CursorLockMode.None;
 
-        #if AIRSHIP_STAGING
+#if AIRSHIP_STAGING
         Debug.Log("Starting as STAGING");
-        #else
+#else
         Debug.Log("Starting as PRODUCTION");
-        #endif
+#endif
 
         var device = DeviceBridge.GetDeviceType();
         if (device == AirshipDeviceType.Phone) {
@@ -186,6 +190,12 @@ public class LoginApp : MonoBehaviour {
             loading = false;
             return;
         }
+
+        // if (true) {
+        //     this.SetError("Failed to login. Please try again.");
+        //     loading = false;
+        //     return;
+        // }
         
         var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
         if (!selfRes.success) {
