@@ -413,7 +413,6 @@ namespace CsToTs.TypeScript {
 
                     var generics = "<void>";
                     if (eventHandlerType.IsGenericType) {
-                        var argsTest = eventHandlerType.GetGenericArguments();
                         var genericPrms = eventHandlerType.GetGenericArguments().Select(t => GetTypeRef(t, context));
                         generics = $"<[{string.Join(", ", genericPrms)}]>";
                     }
