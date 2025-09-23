@@ -10,6 +10,7 @@ namespace Code.Quality {
         Unhealthy = 1,
     }
 
+    [LuauAPI]
     public struct QualityReport {
         public double gpuAvg;
         public double cpuMainAvg;
