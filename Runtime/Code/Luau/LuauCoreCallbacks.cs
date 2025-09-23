@@ -925,7 +925,6 @@ public partial class LuauCore : MonoBehaviour {
                                 return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
                                     instanceId, propNameHash, sliderEvent);
                             }
-
                             if (value is TMPro.TMP_Dropdown.DropdownEvent dropdownEvent) {
                                 return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference,
                                     instanceId, propNameHash, dropdownEvent);

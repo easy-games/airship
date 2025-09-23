@@ -400,6 +400,9 @@ namespace CsToTs.TypeScript {
                 .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .Select(p => {
                     var eventHandlerType = p.PropertyType;
+                    if (eventHandlerType.BaseType != null && eventHandlerType.BaseType != typeof(UnityEventBase)) {
+                        eventHandlerType = eventHandlerType.BaseType;
+                    }
                     var nullable = false;
                     if (eventHandlerType.IsGenericType &&
                         eventHandlerType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
