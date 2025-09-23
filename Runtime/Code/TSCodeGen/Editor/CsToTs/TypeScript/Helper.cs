@@ -414,7 +414,7 @@ namespace CsToTs.TypeScript {
                     var generics = "<void>";
                     if (eventHandlerType.IsGenericType) {
                         var genericPrms = eventHandlerType.GetGenericArguments().Select(t => GetTypeRef(t, context));
-                        generics = $"<{string.Join(", ", genericPrms)}>";
+                        generics = $"<[{string.Join(", ", genericPrms)}]>";
                     }
 
                     var comment = GetParameterComment(p.DeclaringType.FullName, p.Name);
