@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Struct)]
 public class LuauAPIAttribute : Attribute {
     public readonly LuauContext AllowedContextsMask;
     /// <summary>
