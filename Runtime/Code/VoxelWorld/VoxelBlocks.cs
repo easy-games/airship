@@ -475,7 +475,7 @@ public class VoxelBlocks : MonoBehaviour {
             }
         }
     }
-    private void ParseStaticMeshBlock(BlockDefinition block) {
+    private void ParseStaticMeshBlock(BlockDefinition block, bool useSimplifiedBlocks) {
         if (block.definition.contextStyle != ContextStyle.StaticMesh) {
             return;
         }
@@ -487,20 +487,24 @@ public class VoxelBlocks : MonoBehaviour {
         block.mesh = new();
         
         block.mesh.lod0 = new VoxelMeshCopy(block.definition.staticMeshLOD0);
+        var mat = useSimplifiedBlocks  && block.definition.topTexture.material ? block.definition.topTexture.material : block.definition.meshMaterial;
+        if (mat != null) {
+            block.meshMaterial = mat;
+            block.mesh.lod0.ApplyMaterial(mat);
+        }
         
         if (block.definition.staticMeshLOD1 != null){
             block.mesh.lod1 = new VoxelMeshCopy(block.definition.staticMeshLOD1);
+            if (mat != null) {
+                block.mesh.lod1.ApplyMaterial(mat);
+            }
         }
         
         if (block.definition.staticMeshLOD2 != null){
             block.mesh.lod2 = new VoxelMeshCopy(block.definition.staticMeshLOD2);
-        }
-        
-        //Apply the material to this
-        if (block.meshMaterial != null) {
-            block.mesh.lod0.ApplyMaterial(block.meshMaterial);
-            block.mesh.lod1.ApplyMaterial(block.meshMaterial);
-            block.mesh.lod2.ApplyMaterial(block.meshMaterial);
+            if (mat != null) {
+                block.mesh.lod2.ApplyMaterial(mat);
+            }
         }
                 
     }
@@ -629,7 +633,7 @@ public class VoxelBlocks : MonoBehaviour {
         atlas?.Dispose();
     }
 
-    public void Load(bool loadTexturesDirectlyFromDisk = false) {
+    public void Load(bool useSimplifiedBlocks, bool loadTexturesDirectlyFromDisk = false) {
         //clear everything
         Clear();
                 
@@ -690,7 +694,7 @@ public class VoxelBlocks : MonoBehaviour {
 
                 ParseQuarterBlock(block);
 
-                ParseStaticMeshBlock(block);
+                ParseStaticMeshBlock(block, useSimplifiedBlocks);
 
                 ParseGreedyTilingMeshBlock(block);
 
@@ -868,12 +872,12 @@ public class VoxelBlocks : MonoBehaviour {
         return block.definition.collisionType;
     }
 
-    public void Reload(bool useTexturesDirectlyFromDisk = false) {
+    public void Reload(bool useSimplifiedBlocks, bool useTexturesDirectlyFromDisk = false) {
         // Only load VoxelBlocks once while application is running
         if (Application.isPlaying && hasBegunLoading) return;
         hasBegunLoading = true;
 
-        Load(useTexturesDirectlyFromDisk);
+        Load(useSimplifiedBlocks, useTexturesDirectlyFromDisk);
     }
 
     //When the game doesnt have this block definiton, we want to create a temporary one just so we dont wreck their data just for loading this file
@@ -908,9 +912,10 @@ public class VoxelBlockEditor : Editor {
     public override void OnInspectorGUI() {
         DrawDefaultInspector();
         
-        VoxelBlocks voxelBlocks = (VoxelBlocks)target;
         if (GUILayout.Button("Reload")) {
-            voxelBlocks.Reload();
+            VoxelBlocks voxelBlocks = (VoxelBlocks)target;
+            VoxelWorld voxelWorld = voxelBlocks.gameObject.GetComponent<VoxelWorld>();
+            voxelBlocks.Reload(voxelWorld ? voxelWorld.useSimplifiedVoxels : false);
         }
         
     }
