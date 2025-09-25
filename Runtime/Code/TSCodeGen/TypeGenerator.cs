@@ -183,6 +183,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Time),
             typeof(FrameTimingManager),
             typeof(Texture2DArray),
+            typeof(GraphicsStateCollection),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),
