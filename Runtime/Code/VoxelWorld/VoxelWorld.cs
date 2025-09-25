@@ -727,7 +727,7 @@ public partial class VoxelWorld : MonoBehaviour {
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
         }
-        voxelBlocks.Reload();
+        voxelBlocks.Reload(useSimplifiedVoxels);
         
         //this.blocks.Load(this.GetBlockDefinesContents());
 
@@ -886,7 +886,7 @@ public partial class VoxelWorld : MonoBehaviour {
         this.PrepareVoxelWorldGameObject();
         this.loadingStatus = LoadingStatus.Loading;
 
-        this.voxelBlocks.Reload();
+        this.voxelBlocks.Reload(useSimplifiedVoxels);
         
         //load the text of textAsset
         file.LoadIntoVoxelWorld(this);
@@ -950,7 +950,7 @@ public partial class VoxelWorld : MonoBehaviour {
         DeleteChildGameObjects(gameObject);
         this.PrepareVoxelWorldGameObject();
 
-        this.voxelBlocks.Reload();
+        this.voxelBlocks.Reload(useSimplifiedVoxels);
 
         RegenerateAllMeshes();
     }
@@ -1272,7 +1272,7 @@ public partial class VoxelWorld : MonoBehaviour {
         // we can't reload textures because changes have not been imported yet to unity
         // So to get around this, we load the textures directly from disk
         var useTexturesDirectlyFromDisk = Application.isPlaying && Application.isEditor;
-        voxelBlocks.Reload(useTexturesDirectlyFromDisk); // this.GetBlockDefinesContents(), useTexturesDirectlyFromDisk);
+        voxelBlocks.Reload(useSimplifiedVoxels, useTexturesDirectlyFromDisk);
         
         // refresh the geometry
         foreach (var (_, chunk) in chunks) {
