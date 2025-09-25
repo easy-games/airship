@@ -183,8 +183,10 @@ public class ServerBootstrap : MonoBehaviour
 	}
 
 	private void OnApplicationQuit() {
+#if AIRSHIP_PLAYER
 		Debug.Log($"OnApplicationQuit() fired.");
-		
+#endif
+
 		// Notify agones we are going to quit
 		if (agones && !this.isAgonesShutdownTriggered) {
 			this.isAgonesShutdownTriggered = true;
