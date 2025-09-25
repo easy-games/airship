@@ -65,7 +65,7 @@ public class ProfileManager {
         var task = new TaskCompletionSource<bool>();
         NativeGallery.GetImageFromGallery((path) => {
             // Create Texture from selected image
-            Texture2D texture = NativeGallery.LoadImageAtPath( path, 512);
+            Texture2D texture = NativeGallery.LoadImageAtPath( path, 512, false, false, false);
             if (texture == null) {
                 Debug.Log( "Couldn't load texture from " + path );
                 task.SetResult(false);

@@ -15,6 +15,7 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
+using Code.Components;
 using Code.Haptics;
 using Code.Managers;
 using Code.Network;
@@ -52,7 +53,9 @@ using Code.Player.Accessories;
 using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.NetworkedMovement;
 using Unity.Mathematics;
+using UnityEngine.InputSystem;
 using UnityEngine.Splines;
+using TouchPhase = UnityEngine.TouchPhase;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -254,6 +257,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
+            typeof(Touchscreen),
             
             // Splines
             typeof(BezierCurve),
@@ -285,11 +289,12 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyGridAlign),
             typeof(EasyTransformAnchor),
             typeof(EasyAxis),
+            typeof(WorldSpaceCanvasScaler),
             
             typeof(VibrationManager),
             typeof(VibrationFeedbackType),
 
-            
+
             
             // Steam
             typeof(AirshipSteamFriendInfo),
