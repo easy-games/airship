@@ -1480,8 +1480,10 @@ static BOOL pickingMultipleFiles = NO;
 	}
 	
 	UIImage *image = [UIImage imageWithContentsOfFile:path];
-	if( image == nil )
+	if( image == nil ) {
+		NSLog(@"Failed to get image at path %@", path);
 		return [self getCString:path];
+	}
 	
 	UIImage *scaledImage = [self scaleImage:image maxSize:maximumSize];
 	if( conversionNeeded || scaledImage != image )
