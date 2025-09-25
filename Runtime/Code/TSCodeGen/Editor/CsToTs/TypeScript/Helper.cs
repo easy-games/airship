@@ -321,7 +321,6 @@ namespace CsToTs.TypeScript {
 
             foreach (var method in methods) {
                 string declaration = memberRenamer(method);
-                var commentLines = GetFunctionComment(method);
                 string generics = "";
                 if (method.IsGenericMethod) {
                     var genericPrms = method.GetGenericArguments().Select(t => {
@@ -354,10 +353,23 @@ namespace CsToTs.TypeScript {
                 }
                 
                 var returnType = GetTypeRef(method.ReturnType, context);
-                var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic, commentLines);
+                
+                var methodDefinitions = new List<MethodDefinition>();
+                methodDefinitions.Add(new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic, GetFunctionComment(method)));
+                
+                var methodParams = method.GetParameters();
+                // Generate a method definition for each removed default value
+                for (var i = methodParams.Length - 1; i >= 0; i--) {
+                    if (methodParams[i].HasDefaultValue) {
+                        Texture2D a;
+                        methodDefinitions.Add(new MethodDefinition(declaration, generics, parameters.Take(i), null, decorators, returnType, method.IsStatic, GetFunctionComment(method, i)));
+                    }
+                }
 
-                if (shouldGenerateMethod(method, methodDefinition)) {
-                    retVal.Add(methodDefinition);
+                foreach (var methodDefinition in methodDefinitions) {
+                    if (shouldGenerateMethod(method, methodDefinition)) {
+                        retVal.Add(methodDefinition);
+                    }
                 }
             }
 
@@ -515,7 +527,9 @@ namespace CsToTs.TypeScript {
         /// <summary>
         /// Returns comment lines as a list
         /// </summary>
-        private static List<string> GetFunctionComment(MethodInfo methodInfo) {
+        /// <param name="paramCount">Number of params to include comments for (used to skip param comments for method
+        /// variants with default values)</param>
+        private static List<string> GetFunctionComment(MethodInfo methodInfo, int paramCount = -1) {
             // Create commentCache if doesn't exist
             if (!grabbedCommentCache) {
                 LoadXmlDocumentation();
@@ -536,7 +550,10 @@ namespace CsToTs.TypeScript {
                     
                     // Grab params
                     if (commentParamCache.TryGetValue(memberName, out Dictionary<string, string> commentParams)) {
-                        foreach (var param in methodParams) {
+                        for (var i = 0; i < methodParams.Length; i++) {
+                            if (paramCount >= 0 && i >= paramCount) break;
+                            
+                            var param = methodParams[i];
                             if (commentParams.TryGetValue(param.Name, out var paramComment)) {
                                 if (paramComment.Length == 0) continue;
                                 
