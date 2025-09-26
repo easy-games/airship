@@ -826,7 +826,7 @@ public static class LuauPluginNative {
 
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void InitPlugin() {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !UNITY_EDITOR_LINUX
 		// LibHandle = NativePluginHandles.LibLuauPluginHandle;
 		// NativeLibUtil.BindDelegates(typeof(LuauPluginNative), LibHandle);
 		NativePluginHandles.RegisterPlugin(typeof(LuauPluginNative));
