@@ -5,7 +5,8 @@ using System.Runtime.InteropServices;
 namespace NativePlugins {
 	public static class NativeLibUtil {
 #if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
-		private const int RtldLazy = 0x1; // RTLD_LAZY
+		[DllImport("UnityInterfacePlugin")]
+		private static extern int GetRtldLazy();
 
 		[DllImport("__Internal")]
 		private static extern IntPtr dlopen(string path, int flag);
@@ -24,7 +25,7 @@ namespace NativePlugins {
 		}
 
 		private static bool TryOpenLibrary(string path, out IntPtr handle) {
-			handle = dlopen(path, RtldLazy);
+			handle = dlopen(path, GetRtldLazy());
 			return handle != IntPtr.Zero;
 		}
 
