@@ -255,32 +255,19 @@ public static class AirshipBehaviourHelper {
     
     public static int AddAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string componentName) {
         if (componentName == null) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error: AddAirshipComponent takes a parameter");
-            return 0;
+            throw new ArgumentException("Error: AddAirshipComponent takes a parameter");
         }
 
         var buildInfo = AirshipBuildInfo.Instance;
         if (buildInfo == null || !buildInfo.HasAirshipBehaviourClass(componentName)) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError($"Error: AddAirshipComponent - Airship component \"{componentName}\" not found");
-            return 0;
+            throw new ArgumentException($"Error: AddAirshipComponent - Airship component \"{componentName}\" not found");
         }
         
         var path = buildInfo.GetScriptPath(componentName);
-        AirshipComponent component;
-        try {
-            component = AirshipComponent.Create(gameObject, $"Assets/{path}", context);
-        } catch (Exception e) {
-            ThreadDataManager.Error(thread);
-            Debug.LogException(e);
-            return 0;
-        }
+        AirshipComponent component = AirshipComponent.Create(gameObject, $"Assets/{path}", context);
 
         if (!AirshipBehaviourRootV2.HasId(gameObject)) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError($"Error: AddAirshipComponent - Failed to add \"{componentName}\"");
-            return 0;
+            throw new Exception($"Error: AddAirshipComponent - Failed to add \"{componentName}\"");
         }
         
         var componentId = component.GetAirshipComponentId();
@@ -293,9 +280,7 @@ public static class AirshipBehaviourHelper {
     public static int BypassIfTypeStringIsAllowed(string typeName, LuauContext context, IntPtr thread) {
         if (ReflectionList.IsAllowedFromString(typeName, context)) return -1;
         
-        ThreadDataManager.Error(thread);
-        Debug.LogError($"[Airship] Access denied. Component type \"{typeName}\" not allowed from {context} context");
-        return 0;
+        throw new UnauthorizedAccessException($"[Airship] Access denied. Component type \"{typeName}\" not allowed from {context} context");
     }
 
     public static int GetTypeFromTypeName(string typeName, LuauContext context, IntPtr thread, out Type componentType) {
@@ -306,9 +291,7 @@ public static class AirshipBehaviourHelper {
         
         componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
         if (componentType == null) {
-            ThreadDataManager.Error(thread);
-            Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
-            return 0;
+            throw new Exception("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
         }
 
         return 1;

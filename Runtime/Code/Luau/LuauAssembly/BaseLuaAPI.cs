@@ -1,5 +1,6 @@
 using System;
 using Code.Luau.LuauAssembly;
+using JetBrains.Annotations;
 
 public abstract class BaseLuaAPIClass {
     public abstract Type GetAPIType();

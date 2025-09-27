@@ -151,6 +151,10 @@ public partial class LuauCore : MonoBehaviour {
         ThreadDataManager.Error(thread);
         return -1;
     }
+    
+    public static int LuauError(IntPtr thread, Exception ex) {
+        return LuauError(thread, $"{ex.GetType()}: {ex.Message}");
+    }
 
 #if UNITY_EDITOR
     private static readonly Regex AnchorLinkPattern = new Regex(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -863,9 +867,13 @@ public partial class LuauCore : MonoBehaviour {
 
             _coreInstance.unityAPIClassesByType.TryGetValue(sourceType, out var valueTypeAPI);
             if (valueTypeAPI != null) {
-                var retValue = valueTypeAPI.OverrideMemberGetter(context, thread, objectReference, propName);
-                if (retValue >= 0) {
-                    return retValue;
+                try {
+                    var retValue = valueTypeAPI.OverrideMemberGetter(context, thread, objectReference, propName);
+                    if (retValue >= 0) {
+                        return retValue;
+                    }
+                } catch (Exception ex) {
+                    return LuauError(thread, ex);
                 }
             }
 
@@ -1251,10 +1259,15 @@ public partial class LuauCore : MonoBehaviour {
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
         if (staticClassApi != null) {
             type = staticClassApi.GetAPIType();
-            //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-            int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-            if (retValue >= 0) {
-                return retValue;
+            //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new
+            try {
+                int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters,
+                    parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                if (retValue >= 0) {
+                    return retValue;
+                }
+            } catch (Exception ex) {
+                return LuauError(thread, ex);
             }
         }
         
@@ -1318,10 +1331,16 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
 
-                int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
-                    parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-                if (retValue >= 0) {
-                    return retValue;
+                try {
+                    int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName,
+                        numParameters,
+                        parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+
+                    if (retValue >= 0) {
+                        return retValue;
+                    }
+                } catch (Exception ex) {
+                    return LuauError(thread, ex);
                 }
             }
         }
@@ -1580,10 +1599,15 @@ public partial class LuauCore : MonoBehaviour {
         
         type = staticClassApi.GetAPIType();
         // !!! This could be broken
-        //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-        if (retValue >= 0) {
-            return retValue;
+        //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new
+        try {
+            int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters,
+                parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            if (retValue >= 0) {
+                return retValue;
+            }
+        } catch (Exception ex) {
+            return LuauError(thread, ex);
         }
         
         return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, parameterIsTable);
