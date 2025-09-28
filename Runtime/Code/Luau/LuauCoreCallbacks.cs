@@ -760,7 +760,7 @@ public partial class LuauCore : MonoBehaviour {
         try {
             ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, propertyNameAtom);
         } catch (Exception e) {
-            ret = LuauError(thread, e.Message);
+            ret = LuauError(thread, $"{e.GetType()}: {e.Message}");
         }
 
         return ret;
@@ -789,8 +789,17 @@ public partial class LuauCore : MonoBehaviour {
             // Get PropertyInfo from cache if possible -- otherwise put it in cache
             PropertyGetReflectionCache? cacheData;
             if (!(cacheData = LuauCore.GetPropertyCacheValue(classType, propName)).HasValue) {
-                var propertyInfo = classType.GetProperty(propName,
-                    BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+                PropertyInfo propertyInfo = null;
+                try {
+                    propertyInfo = classType.GetProperty(propName,
+                        BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+                } catch (AmbiguousMatchException) {
+                    // If we get an ambiguous match we should use the type declared explicitly in this static class
+                    // (rather than whatever inherited static is causing the ambiguity)
+                    propertyInfo = classType.GetProperty(propName,
+                        BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
+                }
+
                 cacheData = LuauCore.SetPropertyCacheValue(classType, propName, propertyInfo);
             }
 
