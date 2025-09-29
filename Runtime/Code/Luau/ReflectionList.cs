@@ -208,6 +208,8 @@ namespace Luau {
             [typeof(SpriteRenderer)] = LuauContextAll,
             [typeof(ParticleSystem.MinMaxGradient)] = LuauContextAll,
             [typeof(Input)] = LuauContextAll,
+            [typeof(Touch)] = LuauContextAll,
+            [typeof(TouchPhase)] = LuauContextAll,
             // Tween
             [typeof(NativeTween)] = LuauContextAll,
             // Visual Effects
