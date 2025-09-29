@@ -242,6 +242,7 @@ namespace Luau {
             ["AudioMixerGroupController"] = LuauContextAll,
             #endif
             ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
+            ["UnityEngine.InputSystem.FastTouchscreen"] = LuauContextAll,
         };
 
         private static readonly HashSet<string> SkipNamespaces = new() {

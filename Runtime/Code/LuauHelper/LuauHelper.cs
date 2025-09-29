@@ -82,6 +82,14 @@ public class LuauHelper : Singleton<LuauHelper> {
                     var instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
                     var apiType = instance.GetAPIType();
                     ReflectionList.AddToReflectionList(apiType, typeAttribute.AllowedContextsMask);
+                    
+                    var descendantTypes = instance.GetDescendantTypes();
+                    if (descendantTypes != null) {
+                        foreach (var descendant in descendantTypes) {
+                            ReflectionList.AddToReflectionList(descendant, typeAttribute.AllowedContextsMask);
+                        }
+                    }
+
                     LuauCore.CoreInstance.RegisterBaseAPI(instance);
 
                     // Override context of individual methods / members
