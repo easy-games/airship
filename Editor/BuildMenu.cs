@@ -78,23 +78,35 @@ namespace Editor {
                 locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}",
                 options = BuildOptions.Development,
             };
-            
+
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
             switch (summary.result) {
                 case BuildResult.Succeeded:
+#if GAME_CI
+                    Debug.Log($"Build Linux succeeded during CI with size: {FormatBytes(summary)}");
+#else
                     Debug.Log($"Build Linux succeeded with size: {FormatBytes(summary)}");
+#endif
                     break;
                 case BuildResult.Failed:
-                    Debug.Log("Build Linux failed");
+#if GAME_CI
+                    Debug.Log("Build Linux failed during CI");
                     EditorApplication.Exit(1);
+#else
+                    Debug.Log("Build Linux failed");
+#endif
                     break;
                 default:
-                    Debug.Log("Build Linux unexpected result:" + summary.result);
+#if GAME_CI
+                    Debug.Log("Build Linux unexpected result during CI:" + summary.result);
                     EditorApplication.Exit(2);
+#else
+                    Debug.Log("Build Linux unexpected result:" + summary.result);
+#endif
                     break;
             }
-            
+
             CreateAssetBundles.AddAllGameBundleScenes();
         }
 
