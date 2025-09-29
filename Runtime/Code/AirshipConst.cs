@@ -1,6 +1,7 @@
 // ReSharper disable InconsistentNaming
 
 namespace Code {
+    [LuauAPI]
     public static class AirshipConst {
         public const int playerVersion = 16;
 
