@@ -83,7 +83,8 @@ namespace Editor {
             var summary = report.summary;
             switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log($"Build Linux succeeded with size: {FormatBytes(summary)}");
+                    Debug.Log($"Build Linux succeeded (exit expected) with size: {FormatBytes(summary)}");
+                    EditorApplication.Exit(1);
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Linux failed");
