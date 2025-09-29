@@ -87,9 +87,11 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Linux failed");
+                    EditorApplication.Exit(1);
                     break;
                 default:
                     Debug.Log("Build Linux unexpected result:" + summary.result);
+                    EditorApplication.Exit(2);
                     break;
             }
             
