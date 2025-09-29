@@ -83,8 +83,7 @@ namespace Editor {
             var summary = report.summary;
             switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log($"Build Linux succeeded (exit expected) with size: {FormatBytes(summary)}");
-                    EditorApplication.Exit(1);
+                    Debug.Log($"Build Linux succeeded with size: {FormatBytes(summary)}");
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Linux failed");
@@ -145,9 +144,11 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build Mac failed");
+                    EditorApplication.Exit(1);
                     break;
                 default:
                     Debug.LogError("Build Mac unexpected result:" + summary.result);
+                    EditorApplication.Exit(2);
                     break;
             }
 
@@ -184,9 +185,11 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build Mac failed");
+                    EditorApplication.Exit(1);
                     break;
                 default:
                     Debug.LogError("Build Mac unexpected result:" + summary.result);
+                    EditorApplication.Exit(2);
                     break;
             }
 
@@ -230,9 +233,11 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build iOS failed");
+                    EditorApplication.Exit(1);
                     break;
                 default:
                     Debug.LogError("Build iOS unexpected result:" + summary.result);
+                    EditorApplication.Exit(2);
                     break;
             }
 
@@ -287,9 +292,11 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build Android failed");
+                    EditorApplication.Exit(1);
                     break;
                 default:
                     Debug.LogError("Build Android unexpected result:" + summary.result);
+                    EditorApplication.Exit(2);
                     break;
             }
 
@@ -374,9 +381,11 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Windows failed");
+                    EditorApplication.Exit(1);
                     break;
                 default:
                     Debug.Log("Build Windows unexpected result:" + summary.result);
+                    EditorApplication.Exit(2);
                     break;
             }
 
@@ -410,9 +419,11 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Windows failed");
+                    EditorApplication.Exit(1);
                     break;
                 default:
                     Debug.Log("Build Windows unexpected result:" + summary.result);
+                    EditorApplication.Exit(2);
                     break;
             }
 
