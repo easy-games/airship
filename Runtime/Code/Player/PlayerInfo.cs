@@ -11,6 +11,7 @@ public class PlayerInfoDto {
 	public string username;
 	public string profileImageId;
 	public string orgRoleName;
+	public string transferPacket;
 	public GameObject gameObject;
 }
 
@@ -21,6 +22,7 @@ public class PlayerInfo : NetworkBehaviour {
 	[SyncVar] public int connectionId;
 	[SyncVar] public string profileImageId;
 	[SyncVar] public string orgRoleName;
+	public string transferPacket;
 	public AudioSource voiceChatAudioSource;
 
 	private void Start() {
@@ -28,20 +30,21 @@ public class PlayerInfo : NetworkBehaviour {
 		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
-	public void Init(int connectionId, string userId, string username, string profileImageId, string orgRoleName) {
+	public void Init(int connectionId, string userId, string username, string profileImageId, string orgRoleName, string transferPacket) {
 		this.gameObject.name = "Player_" + username;
 		this.connectionId = connectionId;
 		this.userId = userId;
 		this.username = username;
 		this.profileImageId = profileImageId;
 		this.orgRoleName = orgRoleName;
+		this.transferPacket = transferPacket;
 		
 		this.InitVoiceChat();
 	}
 
 	private void InitVoiceChat() {
 		var voiceChatGO = new GameObject(
-			$"{this.username}_VoiceChatAudioSourceOutput");
+			$"{this.username}_VoiceChatAudioSource");
 		this.voiceChatAudioSource = voiceChatGO.AddComponent<AudioSource>();
 		voiceChatGO.transform.SetParent(this.transform);
 	}
@@ -54,7 +57,7 @@ public class PlayerInfo : NetworkBehaviour {
 	public override void OnStartClient() {
 		base.OnStartClient();
 
-		if (isClient) {
+		if (isClient && !RunCore.IsServer()) {
 			this.InitVoiceChat();
 		}
 	}
@@ -82,6 +85,7 @@ public class PlayerInfo : NetworkBehaviour {
 			username = this.username,
 			profileImageId = this.profileImageId,
 			orgRoleName = this.orgRoleName,
+			transferPacket = this.transferPacket,
 			gameObject = this.gameObject,
 		};
 	}

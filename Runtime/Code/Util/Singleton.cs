@@ -30,12 +30,16 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 			if (_instance == null) {
 				_instance = (T) FindAnyObjectByType(typeof(T));
 				if (_instance == null) {
+					if (!SceneManager.GetActiveScene().isLoaded) {
+						// Prevent creating singleton when scene is closing
+						return null;
+					}
+					
 					var go = new GameObject();
 					go.name = typeof(T).ToString();
 					
 					var coreScene = SceneManager.GetSceneByName("CoreScene");
-					// if (!coreScene.isLoaded) return null;
-					if (coreScene.IsValid()) {
+					if (coreScene.IsValid() && coreScene.isLoaded) {
 						SceneManager.MoveGameObjectToScene(go, coreScene);
 					}
 

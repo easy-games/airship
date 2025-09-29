@@ -36,6 +36,8 @@ namespace Airship.Editor {
         internal static string LogFolder {
             get {
                 string logDir = Path.GetDirectoryName(Application.consoleLogPath);
+                if (logDir == "/dev") return null; // We can't write to /dev anyhow.
+                
                 string[] s = Application.dataPath.Split('/');
                 string projectName = s[^2];
                 return Path.Join(logDir, projectName);
@@ -141,38 +143,51 @@ namespace Airship.Editor {
 
         internal static void StartLogging() {
             if (started) return;
-            
-            if (!Directory.Exists(LogFolder)) {
-                Directory.CreateDirectory(LogFolder);
-            }
-            
-            string logDir = Path.GetDirectoryName(Application.consoleLogPath);
-            logPath = LogFilePath;
-            prevLogPath = LogFilePrevPath; // lol
-            
+
+            var logFolder = LogFolder;
+            if (logFolder == null) return; // can't start if no log folder
+
             try {
-                if (File.Exists(prevLogPath)) File.Delete(prevLogPath);
-                if (File.Exists(logPath)) File.Move(logPath, prevLogPath);
-            } catch (Exception e) {
-                Debug.LogError("Failed rotating typescript logs: " + e);
+                if (!Directory.Exists(logFolder)) Directory.CreateDirectory(logFolder);
+
+                string logDir = Path.GetDirectoryName(Application.consoleLogPath);
+                logPath = LogFilePath;
+                prevLogPath = LogFilePrevPath; // lol
+
+                var isDomainReload = SessionState.GetBool("StartedLogger", false);
+                
+                if (!isDomainReload) {
+                    try {
+                        if (File.Exists(prevLogPath)) File.Delete(prevLogPath);
+                        if (File.Exists(logPath)) File.Move(logPath, prevLogPath);
+                    } catch (Exception e) {
+                        Debug.LogError("Failed rotating typescript logs: " + e);
+                    }
+                }
+
+                if (writer != null) {
+                    writer.Close();
+                }
+
+            
+                if (isDomainReload) {
+                    Log(TypescriptLogLevel.Information, "Detected domain reload..."); // lol
+                }
+
+                writer = new StreamWriter(logPath, append: isDomainReload); // overwrite existing
+                writer.AutoFlush = true;
+
+                writeTask = Task.Run(ProcessQueue);
+                started = true;
+
+                SessionState.SetBool("StartedLogger", true);
+            } catch (UnauthorizedAccessException exception) {
+                Debug.LogError($"Cannot write typescript log to '{logPath}' due to file being inaccessible by device");
+            } catch (DirectoryNotFoundException directoryNotFoundException) {
+                Debug.LogError($"Cannot write typescript log to '{logPath}' due to being an invalid path");
+            } catch (Exception exception) {
+                Debug.LogException(exception);
             }
-            
-            if (writer != null) {
-                writer.Close();
-            }
-            
-            var isDomainReload = SessionState.GetBool("StartedLogger", false);
-            if (isDomainReload) {
-                Log(TypescriptLogLevel.Information, "Detected domain reload..."); // lol
-            }
-            
-            writer = new StreamWriter(logPath, append: isDomainReload); // overwrite existing
-            writer.AutoFlush = true;
-            
-            writeTask = Task.Run(ProcessQueue);
-            started = true;
-            
-            SessionState.SetBool("StartedLogger", true);
         }
         
         internal static void StopLogging() {

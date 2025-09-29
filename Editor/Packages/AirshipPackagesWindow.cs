@@ -28,6 +28,7 @@ using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
+// ReSharper disable ReplaceWithSingleAssignment.True
 
 namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
@@ -238,7 +239,7 @@ namespace Editor.Packages {
                 var style = new GUIStyle(EditorStyles.textField);
                 
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
-                EditorGUILayout.LabelField("Example: @Easy/Survival");
+                EditorGUILayout.LabelField("Example: @Easy/VoxelWorld");
                 EditorGUILayout.Space(4);
 
                 var addPackagePressed = GUILayout.Button("Add Package", GUILayout.Width(150));
@@ -288,7 +289,7 @@ namespace Editor.Packages {
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
                 this.createPackageId = EditorGUILayout.TextField("Package ID", this.createPackageId);
-                EditorGUILayout.LabelField("Example: @Easy/Survival");
+                EditorGUILayout.LabelField("Example: @Easy/VoxelWorld");
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Create Package", GUILayout.Width(150))) {
                     EditorCoroutineUtility.StartCoroutineOwnerless(CreateNewLocalSourcePackage(this.createPackageId));
@@ -396,7 +397,7 @@ namespace Editor.Packages {
             // Uncomment to just build iOS
             if (isCoreMaterials) {
                 platforms.Clear();
-                // platforms.Add(AirshipPlatform.iOS);
+                platforms.Add(AirshipPlatform.iOS);
                 platforms.Add(AirshipPlatform.Android);
                 // platforms.Add(AirshipPlatform.Windows);
                 // platforms.Add(AirshipPlatform.Mac);
@@ -413,7 +414,15 @@ namespace Editor.Packages {
                 Repaint();
                 yield return null; // give time to repaint
 
-                List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds();
+                // Act as if we are building all asset bundles (including CoreMaterials).
+                // This is so our current build target will have references to those asset bundles.
+                // This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
+                
+                var compileUrpShaders = true;
+                if (packageDoc.id.ToLower() == "@easy/core") {
+                    compileUrpShaders = false;
+                }
+                List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds(compileUrpShaders);
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
@@ -439,6 +448,12 @@ namespace Editor.Packages {
                         {
                             GraphicsDeviceType.Vulkan
                         });
+                    }
+
+                    if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
+                        CreateAssetBundles.SwapToQualityLevel("Low");
+                    } else {
+                        CreateAssetBundles.SwapToQualityLevel("Normal");
                     }
 
                     var buildParams = new BundleBuildParameters(
@@ -472,6 +487,7 @@ namespace Editor.Packages {
                         yield break;
                     }
 
+
                     // var manifest = BuildPipeline.BuildAssetBundles(
                     //     buildPath,
                     //     builds.ToArray(),
@@ -485,6 +501,8 @@ namespace Editor.Packages {
             }
 
             if (isCoreMaterials) {
+                packageUploadProgress.Remove(packageDoc.id);
+                Repaint();
                 yield break;
             }
 

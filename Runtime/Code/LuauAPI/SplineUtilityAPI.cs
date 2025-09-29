@@ -9,7 +9,7 @@ public class SplineUtilityAPI : BaseLuaAPIClass {
     }
 
     // public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters,
-    //     ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    //     Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
     //     
     //     if (methodName == "EvaluatePosition") {
     //         var spline = (ISpline) LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs,

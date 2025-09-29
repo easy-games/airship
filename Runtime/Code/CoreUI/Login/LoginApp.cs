@@ -51,19 +51,29 @@ public class LoginApp : MonoBehaviour {
     private bool showedNoInternet = false;
 
     private void OnEnable() {
+
+    }
+
+    private void Start() {
         Cursor.lockState = CursorLockMode.None;
 
-        #if AIRSHIP_STAGING
+#if AIRSHIP_STAGING
         Debug.Log("Starting as STAGING");
-        #else
+#else
         Debug.Log("Starting as PRODUCTION");
-        #endif
+#endif
 
         var device = DeviceBridge.GetDeviceType();
         if (device == AirshipDeviceType.Phone) {
             Screen.orientation = ScreenOrientation.Portrait;
         } else {
             Screen.orientation = ScreenOrientation.LandscapeLeft;
+        }
+
+        // Tablet uses desktop view and we need to hide a few elements.
+        if (device == AirshipDeviceType.Tablet) {
+            this.steamLoginButton.gameObject.SetActive(false);
+            this.quitButton.SetActive(false);
         }
 #if !UNITY_IOS
         this.appleBtn.gameObject.SetActive(false);
@@ -97,7 +107,10 @@ public class LoginApp : MonoBehaviour {
             this.showedNoInternet = false;
         }
 
-        this.quitButton.SetActive(Screen.fullScreen);
+        var device = DeviceBridge.GetDeviceType();
+        if (device == AirshipDeviceType.Desktop) {
+            this.quitButton.SetActive(Screen.fullScreen);
+        }
     }
 
     public void BackToFirstPage() {
@@ -139,9 +152,9 @@ public class LoginApp : MonoBehaviour {
         this.loading = false;
         if (this.mobileMode) {
             if (fullScreen) {
-                NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.64f), instant ? 0f : 0.12f);
+                NativeTween.AnchorMax(this.mobileBottom, new Vector2(1f, 0.74f), instant ? 0f : 0.12f);
             } else {
-                NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.4f), instant ? 0f : 0.12f);
+                NativeTween.AnchorMax(this.mobileBottom, new Vector2(1f, 0.46f), instant ? 0f : 0.12f);
             }
             this.mobileLoginPage.SetActive(false);
             this.mobilePickUsernamePage.SetActive(false);
@@ -157,9 +170,19 @@ public class LoginApp : MonoBehaviour {
         } else {
             this.backButton.SetActive(pageGameObject != this.loginPage);
         }
-    }   
+    }
+
+    public void BackToLoginPage() {
+        RouteToPage(this.mobileMode ? this.mobileLoginPage : this.loginPage, false);
+    }
 
     public async void PressContinueWithGoogle() {
+        // Uncomment to test transition
+        // if (true) {
+        //     RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+        //     return;
+        // }
+
         loading = true;
         var authResult = await AuthManager.AuthWithGoogle();
         if (!authResult.success) {
@@ -167,6 +190,12 @@ public class LoginApp : MonoBehaviour {
             loading = false;
             return;
         }
+
+        // if (true) {
+        //     this.SetError("Failed to login. Please try again.");
+        //     loading = false;
+        //     return;
+        // }
         
         var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
         if (!selfRes.success) {
@@ -272,11 +301,18 @@ public class LoginApp : MonoBehaviour {
             this.steamLoginButton.SetLoading(false);
             return;
         }
-
+        
+        // Different login route is required for the playtest app.
+        var prodApp = true;
+#if STEAMWORKS_NET
+        prodApp = SteamUtils.GetAppID().m_AppId == 2381730;
+#else
+        print("Pressed login with steam but STEAMWORKS_NET is not enabled.");
+#endif
         RestClient.Get(new RequestHelper() {
-            Uri = AirshipPlatformUrl.gameCoordinator + "/auth/steam/in-game",
+            Uri = AirshipPlatformUrl.gameCoordinator + (prodApp ? "/auth/steam/in-game" : "/auth/steam/in-game-playtest"),
             Headers = new Dictionary<string, string>() {
-                { "Authorization", steamToken }
+                { "steam-token", steamToken }
             },
         }).Then((gcRes) => {
             print("gc response: " + gcRes.Text);

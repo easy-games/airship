@@ -132,6 +132,7 @@ public class AccessoryCollectionTools {
     // }
 
 
+#if AIRSHIP_INTERNAL
     [MenuItem("Airship/Avatar/Create Outfit Accessories from Mesh %f8", true)]
     [MenuItem("Assets/Create/Airship/Accessories/Create Outfit Accessories from Mesh", true)]
     private static bool ValidateCreateAccFromMesh(){
@@ -159,13 +160,15 @@ public class AccessoryCollectionTools {
         return Selection.GetFiltered<GameObject>(AssetModeMask).Length == 1;
     }
 
-    [MenuItem("Airship/Avatar/Create Accessory from Mesh %f8")]
-    [MenuItem("Assets/Create/Airship/Accessories/Create Accessory from Mesh")]
+    [MenuItem("Airship/Avatar/Create Accessory from Mesh %f8", false, 100)]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Accessory from Mesh", false, 100)]
     static void CreateSingleAccFromMesh() {
         processedPaths.Clear();
         // defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials//MaterialLibrary/Organic/Clay.mat");
         UnpackSingleObject(Selection.GetFiltered<GameObject>(AssetModeMask)[0]);
     }
+
+#endif
 
     private static void UnpackSingleObject(GameObject rootGo){
         string rootPath = AssetDatabase.GetAssetPath(rootGo.GetInstanceID());

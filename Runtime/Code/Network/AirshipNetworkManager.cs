@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Assets.Luau.Network;
 using Code.Bootstrap;
+using Code.Luau.LuauAssembly.Protection;
 using Code.RemoteConsole;
 using Mirror;
 using UnityEngine;
@@ -11,6 +12,7 @@ public class AirshipNetworkManager : NetworkManager {
     public Net net;
     public ServerConsole serverConsole;
     public ClientBundleLoader clientBundleLoader;
+    public static string lastClientError;
     
     public override void OnStartServer() {
         this.net.OnStartServer();
@@ -22,6 +24,11 @@ public class AirshipNetworkManager : NetworkManager {
 #if UNITY_SERVER
         Debug.Log(msg);
 #endif
+    }
+
+    public override void OnClientError(TransportError error, string reason) {
+        base.OnClientError(error, reason);
+        lastClientError = $"{error}: {reason}";
     }
 
     public override void OnStartClient() {
@@ -58,7 +65,9 @@ public class AirshipNetworkManager : NetworkManager {
     }
 
     public override void ConfigureHeadlessFrameRate() {
-        // Override default behavior of setting target frame rate equal to send rate. 
+        if (RunCore.IsClient()) return;
+        
+        // Override default behavior of setting target frame rate equal to send rate.
         // Since we aren't rendering anything, doing tons of Update calls isn't really very important, so we definitely should
         // lower the target frame rate, we just don't want to use the mirror default of using send rate because we may
         // set send rate lower than tick rate in the future and we want framerate to always match tick rate for dedicated servers.
@@ -183,7 +192,7 @@ public class AirshipNetworkManager : NetworkManager {
                     if (isActiveScene) {
                         for (int i = 0; i < SceneManager.sceneCount; i++) {
                             var s = SceneManager.GetSceneAt(i);
-                            if (LuauCore.IsProtectedScene(s)) continue;
+                            if (LuauProtection.IsProtectedScene(s)) continue;
                             if (s.name == newSceneName) continue;
                             foundNewActiveScene = true;
                             newActiveScene = s;

@@ -15,10 +15,12 @@ MonoBehaviour:
   blockName: DefaultDirt
   description: 
   contextStyle: 0
+  meshMaterial: {fileID: 0}
+  halfBlock: 0
   topTexture:
     material: {fileID: 0}
-    diffuse: {fileID: 2800000, guid: 2df3bfbc1f210ba438d26e9d2ddccb9c, type: 3}
-    normal: {fileID: 2800000, guid: 15303d969da939849bc2c5ad9bf3c29c, type: 3}
+    diffuse: {fileID: 2800000, guid: bd09fa45c18442546858afeccf4a5cc3, type: 3}
+    normal: {fileID: 2800000, guid: 0c33d3bfe43dead49b46acc3f45fe2cf, type: 3}
     smooth: {fileID: 0}
     metallic: {fileID: 0}
     emissive: {fileID: 0}
@@ -36,9 +38,28 @@ MonoBehaviour:
     smooth: {fileID: 0}
     metallic: {fileID: 0}
     emissive: {fileID: 0}
-  meshMaterial: {fileID: 0}
-  quarterBlockMesh: {fileID: 0}
-  meshPathLod: 
+  quarterBlockMeshes: []
+  prefab: {fileID: 0}
+  staticMeshLOD0: {fileID: 0}
+  staticMeshLOD1: {fileID: 0}
+  staticMeshLOD2: {fileID: 0}
+  meshTile1x1x1:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  meshTile2x2x2:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  meshTile3x3x3:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  meshTile4x4x4:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  rotatedPlacement: 0
   metallic: 0
   smoothness: 0
   normalScale: 1
@@ -47,4 +68,3 @@ MonoBehaviour:
   solid: 1
   collisionType: 1
   randomRotation: 0
-  minecraftIds: 

@@ -316,7 +316,7 @@ using Object = UnityEngine.Object;
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
-                    WriteOnlyChanged = true,
+                    // WriteOnlyChanged = true,
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                     Incremental = EditorIntegrationsConfig.instance.typescriptIncremental,
                 };
@@ -439,6 +439,7 @@ using Object = UnityEngine.Object;
                     compilationState.CompiledFileCount = 0;
        
                     var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    TypescriptLogService.LogInfo($"Executed compiler build instance '{arguments.GetCommandString(CompilerCommand.BuildOnly)}' at pid {compilerProcess.Id}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     
                     while (!compilerProcess.HasExited) {
@@ -448,15 +449,6 @@ using Object = UnityEngine.Object;
                     }
                     
                     // compilerProcess.WaitForExit();
-                    
-                    if (compilerProcess.ExitCode == 0)
-                    {
-                        Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"<color=red><b>Failed to build'{packageInfo.Name}'</b></color>");
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -485,11 +477,10 @@ using Object = UnityEngine.Object;
             internal static void BuildTypescript(TypeScriptCompileFlags flags = 0) {
                 BuildTypescript(new []{ TypescriptProjectsService.Project }, flags);
             }
+            
             internal static void BuildTypescript(TypescriptProject[] projects, TypeScriptCompileFlags compileFlags = 0) {
-                var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
-                if (isRunningServices) StopCompilerServices();
-
-
+                // var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
+                // if (isRunningServices) StopCompilerServices();
                 
                 var compiled = 0;
                 var totalCompileCount = projects.Length;
@@ -504,6 +495,7 @@ using Object = UnityEngine.Object;
                         Project = project.Directory,
                         Package = project.TsConfig.airship.PackageFolderPath,
                         Json = true,
+                        SkipPackages = (compileFlags & TypeScriptCompileFlags.SkipPackages) != 0,
                         Publishing = (compileFlags & TypeScriptCompileFlags.Publishing) != 0,
                         Incremental = (compileFlags & TypeScriptCompileFlags.Incremental) != 0,
                         Verbose = (compileFlags & TypeScriptCompileFlags.Verbose) != 0 || EditorIntegrationsConfig.instance.typescriptVerbose,

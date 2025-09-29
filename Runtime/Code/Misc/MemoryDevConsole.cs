@@ -259,7 +259,7 @@ public class MemoryDevConsole : MonoBehaviour {
 
 		var unityObjects = 0UL;
 		if (_environment == MemoryEnvironment.Client) {
-			unityObjects = LuauPlugin.LuauGetUnityObjectCount();
+			unityObjects = LuauPlugin.GetUnityObjectCount();
 		} else if (_hasLuauDebugger) {
 			unityObjects = _luauDebugger.ServerUnityObjects;
 		}
@@ -273,7 +273,7 @@ public class MemoryDevConsole : MonoBehaviour {
 	private void Refresh() {
 		switch (_environment) {
 			case MemoryEnvironment.Client:
-				LuauPlugin.LuauGetMemoryCategoryDump(_context, _dumps[_context]);
+				LuauPlugin.GetMemoryCategoryDump(_context, _dumps[_context]);
 				break;
 			case MemoryEnvironment.Server:
 				break;

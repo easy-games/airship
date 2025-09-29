@@ -48,6 +48,11 @@ public class TransferManager : Singleton<TransferManager> {
         conn.Send(new KickMessage() {
             reason = kickMessage,
         });
+        StartCoroutine(KickAfterDelay(conn, 1));
+    }
+
+    private IEnumerator KickAfterDelay(NetworkConnectionToClient conn, float delay) {
+        yield return new WaitForSeconds(delay);
         conn.Disconnect();
     }
 
@@ -101,8 +106,8 @@ public class TransferManager : Singleton<TransferManager> {
         NetworkClient.Disconnect();
 
         CrossSceneState.disconnectKicked = kicked;
+        CrossSceneState.kickMessage = kickMessage;
         if (kicked) {
-            CrossSceneState.kickMessage = kickMessage;
             SceneManager.LoadScene("Disconnected");
         } else {
             SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);

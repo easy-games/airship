@@ -278,16 +278,13 @@ public class VoxelBlockDefinitionEditor : Editor {
         }
         if (block.contextStyle == VoxelBlocks.ContextStyle.Prefab) {
             block.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab", block.prefab, typeof(GameObject), false);
-        }
-        if (block.contextStyle == VoxelBlocks.ContextStyle.StaticMesh) {
+        } else if (block.contextStyle == VoxelBlocks.ContextStyle.StaticMesh) {
             block.meshMaterial = (Material)EditorGUILayout.ObjectField("Static Mesh Material", block.meshMaterial, typeof(Material), false);
             block.staticMeshLOD0 = (GameObject)EditorGUILayout.ObjectField("LOD0", block.staticMeshLOD0, typeof(GameObject), false);
             block.staticMeshLOD1 = (GameObject)EditorGUILayout.ObjectField("LOD1", block.staticMeshLOD1, typeof(GameObject), false);
             block.staticMeshLOD2 = (GameObject)EditorGUILayout.ObjectField("LOD2", block.staticMeshLOD2, typeof(GameObject), false);
             EditorGUILayout.HelpBox("LOD1 and LOD2 are optional.", MessageType.Info);
-        }
-
-        if (block.contextStyle == VoxelBlocks.ContextStyle.GreedyMeshingTiles) {
+        } else if (block.contextStyle == VoxelBlocks.ContextStyle.GreedyMeshingTiles) {
             block.meshMaterial = (Material)EditorGUILayout.ObjectField("Greedy Mesh Material", block.meshMaterial, typeof(Material), false);
             block.meshTile1x1x1 = ShowMeshEditor(block.meshTile1x1x1, "1x1x1");
             block.meshTile2x2x2 = ShowMeshEditor(block.meshTile2x2x2, "2x2x2");

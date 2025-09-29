@@ -1,17 +1,21 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Adrenak.UniMic;
 using Airship.DevConsole;
+using Code.Luau.LuauAssembly.Protection;
 using Code.VoiceChat;
 using Mirror;
 using Tayx.Graphy;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [LuauAPI] [Preserve]
@@ -29,12 +33,22 @@ public static class Bridge {
     }
 
     //TEXTURES
+    [Obsolete]
     public static Texture2D MakeDefaultTexture2D(int width, int height) {
         return new Texture2D(width, height);
     }
 
+    [Obsolete]
     public static Texture2D MakeTexture2D(int width, int height, TextureFormat format, bool mipChain, bool linear) {
         return new Texture2D(width, height, format, mipChain, linear);
+    }
+    
+    public static Texture2DArray MakeDefaultTexture2DArray(int width, int height, int depth) {
+        return new Texture2DArray(width, height, depth, DefaultFormat.LDR, TextureCreationFlags.None);
+    }
+    
+    public static Texture2DArray MakeTextureFormatTexture2DArray(int width, int height, int depth, TextureFormat format, bool mipChain) {
+        return new Texture2DArray(width, height, depth, format, mipChain);
     }
 
     //SPRITES
@@ -112,6 +126,17 @@ public static class Bridge {
 
     public static float GetVolume() {
         return AudioListener.volume;
+    }
+
+    public static void SetDefaultAudioSourceValues(AudioSource source) {
+        source.volume = 1.0f;
+        source.loop = false;
+        source.pitch = 1.0f;
+        source.panStereo = 0.0f;
+        source.minDistance = 1.0f;
+        source.maxDistance = 500.0f;
+        source.rolloffMode = AudioRolloffMode.Logarithmic;
+        source.dopplerLevel = 0.0f;
     }
 
     public static void SetFullScreen(bool value) {
@@ -390,28 +415,30 @@ public static class Bridge {
     public static void UnloadGlobalSceneByName(string sceneName) {
         // InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
     }
-    
+
     [LuauAPI(LuauContext.Protected)]
     public static bool IsLowEndDevice() {
         // CPU check
-        string cpu = SystemInfo.processorType.ToLower();
+        var cpu = SystemInfo.processorType.ToLower();
         if (cpu.Contains("celeron") || cpu.Contains("pentium") || cpu.Contains("atom")) {
             return true;
         }
-    
+
         // GPU check
-        string gpu = SystemInfo.graphicsDeviceName.ToLower();
+        var gpu = SystemInfo.graphicsDeviceName.ToLower();
         if (gpu.Contains("intel") || gpu.Contains("uhd") || gpu.Contains("hd graphics")) {
             return true;
         }
 
         // RAM check
-        if (SystemInfo.systemMemorySize < 8000) { // Less than 8GB RAM
+        if (SystemInfo.systemMemorySize < 8000) {
+            // Less than 8GB RAM
             return true;
         }
 
         // GPU memory check
-        if (SystemInfo.graphicsMemorySize < 2000) { // Less than 2GB VRAM
+        if (SystemInfo.graphicsMemorySize < 2000) {
+            // Less than 2GB VRAM
             return true;
         }
 
@@ -419,12 +446,12 @@ public static class Bridge {
     }
 
     public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
-        if (LuauCore.IsProtectedScene(scene) && LuauCore.CurrentContext == LuauContext.Game) {
+        if (LuauProtection.IsProtectedScene(scene) && LuauProtection.CurrentContext == LuauContext.Game) {
             Debug.Log("[Airship] Unable to move gameobject to protected scene.");
             return;
         }
 
-        if (LuauCore.IsAccessBlocked(LuauCore.CurrentContext, gameObject)) {
+        if (LuauProtection.IsAccessBlocked(LuauProtection.CurrentContext, gameObject)) {
             Debug.Log("[Airship] Unable to move protected gameobject: " + gameObject.name);
             return;
         }
@@ -436,7 +463,7 @@ public static class Bridge {
         List<Scene> scenes = new();
         for (var i = 0; i < SceneManager.sceneCount; i++) {
             var scene = SceneManager.GetSceneAt(i);
-            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene)) {
+            if (LuauProtection.CurrentContext == LuauContext.Game && LuauProtection.IsProtectedScene(scene)) {
                 continue;
             }
 

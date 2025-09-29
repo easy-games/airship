@@ -43,42 +43,42 @@ namespace Editor {
         }
 
         private static void OnBuild() {
-            PhysicsSetup.Setup(null);
-
-
+            PhysicsSetup.Setup();
         }
 
         public static void BuildLinuxServerStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
-            BuildLinuxServer();
+            BuildLinuxServer(new []{"AIRSHIP_STAGING"});
         }
-
+        
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Server/Linux", priority = 80)]
 #endif
-        public static void BuildLinuxServer() {
-            OnBuild();
-            EditorBuildSettingsScene[] scenes = {
-                new("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
-                new("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
-                new("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true)
-            };
-            EditorBuildSettings.scenes = scenes;
+        public static void BuildLinuxServerProduction() {
+            BuildLinuxServer(new string[]{});
+        }
 
+
+        public static void BuildLinuxServer(string[] extraDefines) {
+            OnBuild();
             FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
 
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            PlayerSettings.dedicatedServerOptimizations = true;
-            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
+            BuildProfile buildProfile =
+                AssetDatabase.LoadAssetAtPath<BuildProfile>("Assets/Settings/Build Profiles/Dedicated Server (Linux).asset");
+            buildProfile.overrideGlobalScenes = true;
+            buildProfile.scenes = new[] {
+                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true)
+            };
+            buildProfile.scriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" }.Concat(extraDefines).ToArray();
+            BuildProfile.SetActiveBuildProfile(buildProfile);
+            
+            Debug.Log("Building with " + buildProfile.scenes.Length + " scenes");
 
-            EditorUserBuildSettings.managedDebuggerFixedPort = 55000;
-            var options = new BuildPlayerOptions();
-            options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
-            options.locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}";
-            options.target = BuildTarget.StandaloneLinux64;
-            options.extraScriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" };
-            options.subtarget = (int)StandaloneBuildSubtarget.Server;
-            options.options |= BuildOptions.Development; //Enable the profiler
+            var options = new BuildPlayerWithProfileOptions() {
+                buildProfile = buildProfile,
+                locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}",
+                options = BuildOptions.Development,
+            };
+            
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
             switch (summary.result) {
@@ -92,7 +92,7 @@ namespace Editor {
                     Debug.Log("Build Linux unexpected result:" + summary.result);
                     break;
             }
-
+            
             CreateAssetBundles.AddAllGameBundleScenes();
         }
 
@@ -111,6 +111,8 @@ namespace Editor {
 #if UNITY_EDITOR_OSX
             OnBuild();
             CreateAssetBundles.ResetScenes();
+
+            CreateAssetBundles.SwapToQualityLevel("Normal");
 
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
@@ -158,6 +160,8 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Normal");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
@@ -192,9 +196,11 @@ namespace Editor {
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
+            CreateAssetBundles.SwapToQualityLevel("Low");
+
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = "build/client_ios";
@@ -208,7 +214,7 @@ namespace Editor {
             options.extraScriptingDefines = extraDefines.ToArray();
 
             if (development == true) {
-                options.options = BuildOptions.Development;
+                options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
 
             var report = BuildPipeline.BuildPlayer(options);
@@ -231,13 +237,24 @@ namespace Editor {
 #endif
         }
 
-        public static void BuildAndroidClient(bool development) {
+        public enum AndroidBuildType {
+            DevelopmentAPK,
+            ReleaseAPK,
+            ReleaseAAB,
+        }
+        
+        public static void BuildAndroidClient(AndroidBuildType buildType) {
+            var development = buildType == AndroidBuildType.DevelopmentAPK;
+            var buildApk = buildType != AndroidBuildType.ReleaseAAB;
+
+            CreateAssetBundles.SwapToQualityLevel("Low");
+            
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
-            PlayerSettings.Android.splitApplicationBinary = !development;
+            PlayerSettings.Android.splitApplicationBinary = !buildApk;
 
             BuildProfile buildProfile;
             if (development) {
@@ -253,9 +270,9 @@ namespace Editor {
             buildProfile.overrideGlobalScenes = true;
             buildProfile.scenes = editorBuildScenes.ToArray();
             options.buildProfile = buildProfile;
-            options.locationPathName = $"build/client_android/{ClientExecutableName}.{(development ? "apk" : "aab")}";
+            options.locationPathName = $"build/client_android/{ClientExecutableName}.{(buildApk ? "apk" : "aab")}";
             if (development) {
-                options.options = BuildOptions.Development;
+                options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
 
             var report = BuildPipeline.BuildPlayer(options);
@@ -301,14 +318,25 @@ namespace Editor {
             BuildIOSClient(false, true);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android", priority = 80)]
-        public static void BuildAndroidClientMenuItem() {
-            BuildAndroidClient(false);
+        [MenuItem("Airship/Create Binary/Client/iOS (Staging Development)", priority = 80)]
+        public static void BuildIOSClientStagingDevelopmentMenuItem() {
+            Debug.Log("Building iOS staging development client..");
+            BuildIOSClient(true, true);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android (Development)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Android (Google Play)", priority = 80)]
+        public static void BuildAndroidClientMenuItem() {
+            BuildAndroidClient(AndroidBuildType.ReleaseAAB);
+        }
+        
+        [MenuItem("Airship/Create Binary/Client/Android (APK)", priority = 80)]
+        public static void BuildAndroidProdAPK() {
+            BuildAndroidClient(AndroidBuildType.ReleaseAPK);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/Android (Development APK)", priority = 80)]
         public static void BuildAndroidDevelopmentClientMenuItem() {
-            BuildAndroidClient(true);
+            BuildAndroidClient(AndroidBuildType.DevelopmentAPK);
         }
 #endif
 
@@ -324,6 +352,8 @@ namespace Editor {
 #if UNITY_EDITOR
             OnBuild();
             CreateAssetBundles.ResetScenes();
+
+            CreateAssetBundles.SwapToQualityLevel("Normal");
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);

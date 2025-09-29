@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Code.Network.Simulation
 {
-    struct TransformSnapshot
+    struct PositionSnapshot
     {
         public Vector3 position;
         public Quaternion rotation;
@@ -14,29 +14,24 @@ namespace Code.Network.Simulation
      * This component is used to allow lag compensation, prediction, and other networked state systems to
      * work with a networked object controlled by the server.
      *
-     * When this component is placed on a object being networked with Mirror, the server can include it
+     * When this component is placed on a object, the server can include it
      * in lag compensation and clients can resimulate their predictions more accurately.
      */
-    public class AirshipNetworkedObject : NetworkBehaviour
-    {
-        private History<TransformSnapshot> history;
+    public class AirshipNetworkedObject : MonoBehaviour {
+        
+        [Tooltip("Adjusts the lag compensation timing by this amount in seconds. Useful to add or remove additional delay on the lag compensation request. Ex. Removing observer buffer delay for non-buffered entities.")]
+        [Range(-1, 1)]
+        public float bufferAdjustment = 0;
+        
+        private History<PositionSnapshot> history;
+        private Rigidbody rb;
 
-        private void Start()
-        {
-            if (isServer && authority)
-            {
-                history = new History<TransformSnapshot>(NetworkServer.sendRate);
-                AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
-                AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
-                AirshipSimulationManager.Instance.OnLagCompensationCheck += this.LagCompensationCheck;
-            }
-
-            if (isClient && !authority)
-            {
-                history = new History<TransformSnapshot>(NetworkClient.sendRate);
-                AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
-                AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
-            }
+        private void Start() {
+            rb = GetComponent<Rigidbody>();
+            history = new History<PositionSnapshot>(1);
+            AirshipSimulationManager.Instance.OnCaptureSnapshot += this.CaptureSnapshot;
+            AirshipSimulationManager.Instance.OnSetSnapshot += this.SetSnapshot;
+            AirshipSimulationManager.Instance.OnLagCompensationCheck += this.LagCompensationCheck;
         }
 
         private void OnDestroy() {
@@ -57,27 +52,42 @@ namespace Code.Network.Simulation
                 this.transform.rotation = state.rotation;
                 return;
             }
-            
-            this.history.Add(tick, new TransformSnapshot()
-            {
-                position = this.transform.position,
-                rotation = this.transform.rotation
-            });
+
+            var snapshot = rb != null
+                ? new PositionSnapshot() {
+                    position = this.rb.position,
+                    rotation = this.rb.rotation
+                }
+                : new PositionSnapshot() {
+                    position = this.transform.position,
+                    rotation = this.transform.rotation
+                };
+            this.history.Add(tick, snapshot);
         }
 
         private void SetSnapshot(object objTick)
         {
             if (objTick is int tick) {
                 var snapshot = this.history.Get(tick);
-                this.transform.position = snapshot.position;
-                this.transform.rotation = snapshot.rotation;
+                if (this.rb != null) {
+                    this.rb.position = snapshot.position;
+                    this.rb.rotation = snapshot.rotation;
+                } else {
+                    this.transform.position = snapshot.position;
+                    this.transform.rotation = snapshot.rotation;
+                }
+               
             }
         }
 
-        private void LagCompensationCheck(int clientId, int tick, double time, double latency, double buffer)
+        private void LagCompensationCheck(int clientId, int tick, double time, double latency, double bufferTime)
         {
-            var bufferedTicks = Math.Round((latency - NetworkClient.bufferTime - Time.fixedDeltaTime) / Time.fixedDeltaTime);
-            this.SetSnapshot(tick - bufferedTicks);
+            var commandBufferTime = (NetworkServer.sendInterval * (NetworkClient.bufferTimeMultiplier / 2f));
+            
+            var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
+            var lagCompensatedTime = time - (totalBuffer + bufferAdjustment);
+            var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
+            this.SetSnapshot(lagCompensatedTick);
         }
     }
 }

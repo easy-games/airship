@@ -3,21 +3,21 @@ using UnityEngine;
 using VoxelWorldStuff;
 
 namespace Assets.Airship.VoxelRenderer {
-
     public class VoxelMeshCopy {
         public class PrecalculatedRotation {
             public Vector3[] vertices;
             public Vector3[] normals;
-            Rotations rotation;
+            private Rotations rotation;
+
             public PrecalculatedRotation(Vector3[] srcVertices, Vector3[] srcNormals, Rotations rot, Quaternion quat) {
                 rotation = rot;
 
-                this.vertices = new Vector3[srcVertices.Length];
-                this.normals = new Vector3[srcNormals.Length];
+                vertices = new Vector3[srcVertices.Length];
+                normals = new Vector3[srcNormals.Length];
 
-                for (int i = 0; i < srcVertices.Length; i++) {
-                    this.vertices[i] = quat * srcVertices[i];
-                    this.normals[i] = quat * srcNormals[i];
+                for (var i = 0; i < srcVertices.Length; i++) {
+                    vertices[i] = quat * srcVertices[i];
+                    normals[i] = quat * srcNormals[i];
                 }
             }
         }
@@ -26,28 +26,31 @@ namespace Assets.Airship.VoxelRenderer {
             public Vector3[] vertices;
             public Vector3[] normals;
             public Surface[] surfaces;
-            
-            public PrecalculatedFlip(Vector3[] srcVertices, Vector3[] srcNormals, Surface[] srcSurfaces, VoxelWorld.Flips flip) {
-                
 
-                this.vertices = new Vector3[srcVertices.Length];
-                this.normals = new Vector3[srcNormals.Length];
+            public PrecalculatedFlip(
+                Vector3[] srcVertices,
+                Vector3[] srcNormals,
+                Surface[] srcSurfaces,
+                VoxelWorld.Flips flip) {
+                vertices = new Vector3[srcVertices.Length];
+                normals = new Vector3[srcNormals.Length];
 
-                VoxelWorld.Flips bits = (VoxelWorld.Flips)flip;
+                var bits = (VoxelWorld.Flips)flip;
 
                 //Copy the surfaces
-                this.surfaces = new Surface[srcSurfaces.Length];
-                for (int i = 0; i < srcSurfaces.Length; i++) {
-                    this.surfaces[i] = srcSurfaces[i].Clone();
+                surfaces = new Surface[srcSurfaces.Length];
+                for (var i = 0; i < srcSurfaces.Length; i++) {
+                    surfaces[i] = srcSurfaces[i].Clone();
                 }
 
 
                 //copy all the verts
-                for (int i = 0; i < srcVertices.Length; i++) {
-                    this.vertices[i] = srcVertices[i];
-                    this.normals[i] = srcNormals[i];
+                for (var i = 0; i < srcVertices.Length; i++) {
+                    vertices[i] = srcVertices[i];
+                    normals[i] = srcNormals[i];
                 }
-                int parity = 0;
+
+                var parity = 0;
 
                 //FlipBits
 
@@ -59,83 +62,87 @@ namespace Assets.Airship.VoxelRenderer {
                 //5 flip y, rot left
                 //6 flip y, rot right
                 //7 flip y, rot 180
-                
+
 
                 //check for 1
                 if (bits == VoxelWorld.Flips.Flip_90Deg) {
-
                     //Rot left 90
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i] = new Vector3(srcVertices[i].z, srcVertices[i].y, -srcVertices[i].x);
-                        this.normals[i] = new Vector3(srcNormals[i].z, srcNormals[i].y, -srcNormals[i].x);
+                    for (var i = 0; i < srcVertices.Length; i++) {
+                        vertices[i] = new Vector3(srcVertices[i].z, srcVertices[i].y, -srcVertices[i].x);
+                        normals[i] = new Vector3(srcNormals[i].z, srcNormals[i].y, -srcNormals[i].x);
                     }
-                    
                 }
+
                 //check for 2
                 if (bits == VoxelWorld.Flips.Flip_180Deg) {
                     //Rot 180
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, -srcVertices[i].z);
-                        this.normals[i] = new Vector3(-srcNormals[i].x, srcNormals[i].y, -srcNormals[i].z);
+                    for (var i = 0; i < srcVertices.Length; i++) {
+                        vertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, -srcVertices[i].z);
+                        normals[i] = new Vector3(-srcNormals[i].x, srcNormals[i].y, -srcNormals[i].z);
                     }
                 }
+
                 //check for 3
                 if (bits == VoxelWorld.Flips.Flip_270Deg) {
                     //Rot right 270
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i] = new Vector3(-srcVertices[i].z, srcVertices[i].y, srcVertices[i].x);
-                        this.normals[i] = new Vector3(-srcNormals[i].z, srcNormals[i].y, srcNormals[i].x);
+                    for (var i = 0; i < srcVertices.Length; i++) {
+                        vertices[i] = new Vector3(-srcVertices[i].z, srcVertices[i].y, srcVertices[i].x);
+                        normals[i] = new Vector3(-srcNormals[i].z, srcNormals[i].y, srcNormals[i].x);
                     }
-
                 }
 
                 //Do the vertical flipped ones
                 //check for 4
                 if (bits == VoxelWorld.Flips.Flip_0DegVertical) {
                     //Flip y
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y, srcVertices[i].z);
-                        this.normals[i] = new Vector3(srcNormals[i].x, -srcNormals[i].y, srcNormals[i].z);
+                    for (var i = 0; i < srcVertices.Length; i++) {
+                        vertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y, srcVertices[i].z);
+                        normals[i] = new Vector3(srcNormals[i].x, -srcNormals[i].y, srcNormals[i].z);
                     }
+
                     parity++;
                 }
+
                 //check for 5
                 if (bits == VoxelWorld.Flips.Flip_90DegVertical) {
                     //Flip y, rot left 90
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i] = new Vector3(srcVertices[i].z, -srcVertices[i].y, -srcVertices[i].x);
-                        this.normals[i] = new Vector3(srcNormals[i].z, -srcNormals[i].y, -srcNormals[i].x);
+                    for (var i = 0; i < srcVertices.Length; i++) {
+                        vertices[i] = new Vector3(srcVertices[i].z, -srcVertices[i].y, -srcVertices[i].x);
+                        normals[i] = new Vector3(srcNormals[i].z, -srcNormals[i].y, -srcNormals[i].x);
                     }
+
                     parity++;
                 }
+
                 //check for 6
                 if (bits == VoxelWorld.Flips.Flip_180DegVertical) {
-
                     //Flip y, rot 180
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i] = new Vector3(-srcVertices[i].x, -srcVertices[i].y, -srcVertices[i].z);
-                        this.normals[i] = new Vector3(-srcNormals[i].x, -srcNormals[i].y, -srcNormals[i].z);
+                    for (var i = 0; i < srcVertices.Length; i++) {
+                        vertices[i] = new Vector3(-srcVertices[i].x, -srcVertices[i].y, -srcVertices[i].z);
+                        normals[i] = new Vector3(-srcNormals[i].x, -srcNormals[i].y, -srcNormals[i].z);
                     }
+
                     parity++;
                 }
+
                 //check for 7
                 if (bits == VoxelWorld.Flips.Flip_270DegVertical) {
                     //Flip y, rot right 90
-                    for (int i = 0; i < srcVertices.Length; i++) {
-                        this.vertices[i] = new Vector3(-srcVertices[i].z, -srcVertices[i].y, srcVertices[i].x);
-                        this.normals[i] = new Vector3(-srcNormals[i].z, -srcNormals[i].y, srcNormals[i].x);
+                    for (var i = 0; i < srcVertices.Length; i++) {
+                        vertices[i] = new Vector3(-srcVertices[i].z, -srcVertices[i].y, srcVertices[i].x);
+                        normals[i] = new Vector3(-srcNormals[i].z, -srcNormals[i].y, srcNormals[i].x);
                     }
+
                     parity++;
                 }
-                
+
                 //Check for parity, if so we have to flip the winding orders
                 if (parity % 2 > 0) {
                     //flip faces
-                    for (int i = 0; i < this.surfaces.Length; i++) {
-                        this.surfaces[i].Invert();
+                    for (var i = 0; i < surfaces.Length; i++) {
+                        surfaces[i].Invert();
                     }
                 }
-
             }
         }
 
@@ -143,23 +150,23 @@ namespace Assets.Airship.VoxelRenderer {
             None,
             Y90,
             Y180,
-            Y270,
+            Y270
         }
-        Rotations[] allRotations = (Rotations[])System.Enum.GetValues(typeof(Rotations));
 
-        public KeyValuePair<Rotations, Quaternion>[] quaternions = new KeyValuePair<Rotations, Quaternion>[]
-        {
-            new KeyValuePair<Rotations, Quaternion>(Rotations.None, Quaternion.Euler(0, 0, 0)),
-            new KeyValuePair<Rotations, Quaternion>(Rotations.Y90, Quaternion.Euler(0, 90, 0)),
-            new KeyValuePair<Rotations, Quaternion>(Rotations.Y180, Quaternion.Euler(0, 180, 0)),
-            new KeyValuePair<Rotations, Quaternion>(Rotations.Y270, Quaternion.Euler(0, 270, 0)),
+        private Rotations[] allRotations = (Rotations[])System.Enum.GetValues(typeof(Rotations));
+
+        public KeyValuePair<Rotations, Quaternion>[] quaternions = new KeyValuePair<Rotations, Quaternion>[] {
+            new(Rotations.None, Quaternion.Euler(0, 0, 0)),
+            new(Rotations.Y90, Quaternion.Euler(0, 90, 0)),
+            new(Rotations.Y180, Quaternion.Euler(0, 180, 0)),
+            new(Rotations.Y270, Quaternion.Euler(0, 270, 0))
         };
 
         //List of vertices uvs etc
         public PrecalculatedFlip[] flip = new PrecalculatedFlip[8];
-      
+
         public PrecalculatedRotation[] rotation = new PrecalculatedRotation[4];
-        
+
         public Vector2[] srcUvs;
 
         public Color32[] srcColors;
@@ -177,30 +184,30 @@ namespace Assets.Airship.VoxelRenderer {
                 this.triangles = new int[triangles.Length];
                 System.Array.Copy(triangles, this.triangles, triangles.Length);
 
-                this.meshMaterial = material; // Assuming Material is a reference type; you might need to clone it depending on its implementation.
-                this.meshMaterialName = materialName;
-                this.meshMaterialId = materialId;
+                meshMaterial
+                    = material; // Assuming Material is a reference type; you might need to clone it depending on its implementation.
+                meshMaterialName = materialName;
+                meshMaterialId = materialId;
                 MeshProcessor.materialIdToMaterial[materialId] = material;
             }
 
-            public Surface() {
-            }
+            public Surface() { }
 
             public Surface Clone() {
                 // Clone the triangles array
-                int[] clonedTriangles = new int[this.triangles.Length];
-                System.Array.Copy(this.triangles, clonedTriangles, this.triangles.Length);
+                var clonedTriangles = new int[triangles.Length];
+                System.Array.Copy(triangles, clonedTriangles, triangles.Length);
 
                 // Clone the material (assuming a reference copy is okay, or implement deep copy if necessary)
-                Material clonedMaterial = this.meshMaterial;
+                var clonedMaterial = meshMaterial;
 
                 // Return a new Surface instance with the cloned data
-                return new Surface(clonedTriangles, clonedMaterial, this.meshMaterialName, this.meshMaterialId);
+                return new Surface(clonedTriangles, clonedMaterial, meshMaterialName, meshMaterialId);
             }
 
             public void Invert() {
-                for (int i = 0; i < triangles.Length; i += 3) {
-                    int temp = triangles[i + 1];
+                for (var i = 0; i < triangles.Length; i += 3) {
+                    var temp = triangles[i + 1];
                     triangles[i + 1] = triangles[i + 2];
                     triangles[i + 2] = temp;
                 }
@@ -226,27 +233,27 @@ namespace Assets.Airship.VoxelRenderer {
 
             //copy the surfaces
             surfaces = new Surface[src.surfaces.Length];
-            for (int i = 0; i < src.surfaces.Length; i++) {
-                surfaces[i] = new Surface(src.surfaces[i].triangles, src.surfaces[i].meshMaterial, src.surfaces[i].meshMaterialName, src.surfaces[i].meshMaterialId);
+            for (var i = 0; i < src.surfaces.Length; i++) {
+                surfaces[i] = new Surface(src.surfaces[i].triangles, src.surfaces[i].meshMaterial,
+                    src.surfaces[i].meshMaterialName, src.surfaces[i].meshMaterialId);
             }
 
             //Calculate the rotations
-            int cc = 0;
-            foreach(var rot in quaternions) {
+            var cc = 0;
+            foreach (var rot in quaternions) {
                 rotation[cc++] = new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value);
             }
 
             //Calculate the flips
-            for (int i = 0; i < 8; i++) {
+            for (var i = 0; i < 8; i++) {
                 flip[i] = new PrecalculatedFlip(srcVertices, srcNormals, surfaces, VoxelWorld.allFlips[i]);
             }
-
         }
 
         //Recursively get all filters and materials
         private void GetMeshes(GameObject gameObject, List<MeshFilter> filters) {
             //Get the mesh filter
-            MeshFilter filter = gameObject.GetComponent<MeshFilter>();
+            var filter = gameObject.GetComponent<MeshFilter>();
             if (filter != null) {
                 filters.Add(filter);
             }
@@ -258,12 +265,11 @@ namespace Assets.Airship.VoxelRenderer {
         }
 
         public VoxelMeshCopy(string assetPath, bool showError = false) {
-
             if (assetPath == "") {
                 return;
             }
 
-            Object asset = AssetBridge.Instance.LoadAssetInternal<Object>(assetPath + ".prefab", false);
+            var asset = AssetBridge.Instance.LoadAssetInternal<Object>(assetPath + ".prefab", false);
 
             if (asset == null) {
                 asset = AssetBridge.Instance.LoadAssetInternal<Object>(assetPath + ".FBX", false);
@@ -275,39 +281,41 @@ namespace Assets.Airship.VoxelRenderer {
             }
 
             if (asset is Mesh) {
-                Mesh mesh = asset as Mesh;
-                List<Vector3> srcVerticesList = new List<Vector3>();
+                var mesh = asset as Mesh;
+                var srcVerticesList = new List<Vector3>();
                 mesh.GetVertices(srcVerticesList);
                 srcVertices = srcVerticesList.ToArray();
 
-                List<Vector3> srcNormalsList = new List<Vector3>();
+                var srcNormalsList = new List<Vector3>();
                 mesh.GetNormals(srcNormalsList);
                 srcNormals = srcNormalsList.ToArray();
 
-                List<Vector2> uvsList = new List<Vector2>();
+                var uvsList = new List<Vector2>();
                 mesh.GetUVs(0, uvsList);
                 srcUvs = uvsList.ToArray();
 
-                Surface surf = new Surface();
+                var surf = new Surface();
                 surf.triangles = mesh.GetTriangles(0);
                 surfaces = new Surface[] { surf };
 
-                List<Color> colorsList = new List<Color>();
-                List<Color32> colors32List = new List<Color32>();
+                var colorsList = new List<Color>();
+                var colors32List = new List<Color32>();
 
                 mesh.GetColors(colorsList);
-                foreach (Color c in colorsList) {
+                foreach (var c in colorsList) {
                     colors32List.Add(c);
                 }
+
                 srcColors = colors32List.ToArray();
 
                 //Calculate the rotations
-                int cc = 0;
+                var cc = 0;
                 foreach (var rot in quaternions) {
-                    rotation[cc++] = new PrecalculatedRotation(srcVerticesList.ToArray(), srcNormalsList.ToArray(), rot.Key, rot.Value);
+                    rotation[cc++] = new PrecalculatedRotation(srcVerticesList.ToArray(), srcNormalsList.ToArray(),
+                        rot.Key, rot.Value);
                 }
 
-                for (int i = 0; i < 8; i++) {
+                for (var i = 0; i < 8; i++) {
                     flip[i] = new PrecalculatedFlip(srcVertices, srcNormals, surfaces, VoxelWorld.allFlips[i]);
                 }
 
@@ -316,51 +324,49 @@ namespace Assets.Airship.VoxelRenderer {
 
             if (asset is GameObject) {
                 // Instantiate the prefab
-                GameObject instance = GameObject.Instantiate((GameObject)asset);
+                var instance = Object.Instantiate((GameObject)asset);
 
                 ParseInstance(instance);
 
                 if (Application.isPlaying == true) {
-                    GameObject.Destroy(instance);
-                }
-                else {
-                    GameObject.DestroyImmediate(instance);
+                    Object.Destroy(instance);
+                } else {
+                    Object.DestroyImmediate(instance);
                 }
 
                 return;
             }
-
         }
 
         private void ParseInstance(GameObject instance) {
             // Loop through all child objects of the instance
-            List<MeshFilter> filters = new List<MeshFilter>();
+            var filters = new List<MeshFilter>();
 
             //Recursively interate over all child gameObjects
             GetMeshes(instance, filters);
             // Debug.Log("Name" + assetPath);
 
             //Do the mesh combine manually
-            List<Vector3> srcVerticesList = new List<Vector3>();
-            List<Vector3> srcNormalsList = new List<Vector3>();
-            List<Vector2> srcUvsList = new List<Vector2>();
-            List<Color32> srcColorsList = new List<Color32>();
-            List<Surface> surfaceList = new List<Surface>();
+            var srcVerticesList = new List<Vector3>();
+            var srcNormalsList = new List<Vector3>();
+            var srcUvsList = new List<Vector2>();
+            var srcColorsList = new List<Color32>();
+            var surfaceList = new List<Surface>();
 
             foreach (var filter in filters) {
                 //Get the mesh
-                Mesh mesh = filter.sharedMesh;
+                var mesh = filter.sharedMesh;
 
                 //Add the vertices
-                int vertexOffset = srcVerticesList.Count;
+                var vertexOffset = srcVerticesList.Count;
 
-                List<Vector3> tempVerticesList = new List<Vector3>();
-                List<Vector3> temmpNormalsList = new List<Vector3>();
+                var tempVerticesList = new List<Vector3>();
+                var temmpNormalsList = new List<Vector3>();
                 mesh.GetVertices(tempVerticesList);
                 mesh.GetNormals(temmpNormalsList);
 
-                Matrix4x4 mat = filter.transform.localToWorldMatrix;
-                for (int i = 0; i < tempVerticesList.Count; i++) {
+                var mat = filter.transform.localToWorldMatrix;
+                for (var i = 0; i < tempVerticesList.Count; i++) {
                     srcVerticesList.Add(mat * tempVerticesList[i]);
                     srcNormalsList.Add(mat * temmpNormalsList[i]);
                 }
@@ -370,29 +376,35 @@ namespace Assets.Airship.VoxelRenderer {
 
                 //Add the colors
                 if (mesh.colors.Length > 0) {
-                    List<Color> srcColors = new List<Color>();
+                    var srcColors = new List<Color>();
                     mesh.GetColors(srcColors);
-                    for (int i = 0; i < srcColors.Count; i++) {
+                    for (var i = 0; i < srcColors.Count; i++) {
                         srcColorsList.Add(srcColors[i]);
                     }
-                }
-                else {
-                    for (int i = 0; i < mesh.vertices.Length; i++) {
+                } else {
+                    for (var i = 0; i < mesh.vertices.Length; i++) {
                         srcColorsList.Add(new Color32(255, 255, 255, 255));
                     }
                 }
 
-                for (int subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++) {
+                for (var subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++) {
                     //Add a new surface
-                    Surface surf = new Surface();
+                    var surf = new Surface();
 
-                    UnityEngine.Rendering.SubMeshDescriptor subMeshDescriptor = mesh.GetSubMesh(subMeshIndex);
+                    var subMeshDescriptor = mesh.GetSubMesh(subMeshIndex);
                     surf.triangles = new int[subMeshDescriptor.indexCount];
-                    int[] tris = mesh.GetTriangles(subMeshIndex);
-                    for (int i = 0; i < subMeshDescriptor.indexCount; i++) {
+                    var tris = mesh.GetTriangles(subMeshIndex);
+                    for (var i = 0; i < subMeshDescriptor.indexCount; i++) {
                         surf.triangles[i] = tris[i] + vertexOffset;
                     }
-                    Material srcMat = filter.gameObject.GetComponent<MeshRenderer>().sharedMaterials[subMeshIndex];
+
+                    var srcMat = filter.gameObject.GetComponent<MeshRenderer>().sharedMaterials[subMeshIndex];
+                    if (!srcMat) {
+                        Debug.LogError("Unable to find material index: " + subMeshIndex + " on submesh: " +
+                                       subMeshIndex + " on object: " + filter.gameObject.name);
+                        continue;
+                    }
+
                     surf.meshMaterial = srcMat;
                     surf.meshMaterialName = srcMat.name;
                     surf.meshMaterialId = srcMat.GetInstanceID();
@@ -409,72 +421,77 @@ namespace Assets.Airship.VoxelRenderer {
             srcColors = srcColorsList.ToArray();
             surfaces = surfaceList.ToArray();
 
-            int cc = 0;
+            var cc = 0;
             foreach (var rot in quaternions) {
-                rotation[cc++] = new PrecalculatedRotation(srcVerticesList.ToArray(), srcNormalsList.ToArray(), rot.Key, rot.Value);
+                rotation[cc++] = new PrecalculatedRotation(srcVerticesList.ToArray(), srcNormalsList.ToArray(), rot.Key,
+                    rot.Value);
             }
-            for (int i = 0; i < 8; i++) {
+
+            for (var i = 0; i < 8; i++) {
                 flip[i] = new PrecalculatedFlip(srcVertices, srcNormals, surfaces, VoxelWorld.allFlips[i]);
             }
         }
 
         public void AdjustUVs(Rect uvs) {
-            if (this.srcUvs == null) {
+            if (srcUvs == null) {
                 return;
             }
+
             //Adjust the uvs to the atlased texture
-            for (int i = 0; i < this.srcUvs.Length; i++) {
-                this.srcUvs[i] = new Vector2(this.srcUvs[i].x * uvs.width + uvs.x, this.srcUvs[i].y * uvs.height + uvs.y);
+            for (var i = 0; i < srcUvs.Length; i++) {
+                srcUvs[i] = new Vector2(srcUvs[i].x * uvs.width + uvs.x, srcUvs[i].y * uvs.height + uvs.y);
             }
         }
 
         internal void FlipVertically() {
-            for (int i = 0; i < srcVertices.Length; i++) {
+            for (var i = 0; i < srcVertices.Length; i++) {
                 srcVertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y, srcVertices[i].z);
             }
+
             //flip the faces
-            foreach (Surface surf in surfaces) {
+            foreach (var surf in surfaces) {
                 surf.Invert();
             }
 
             //Flip the normals
-            for (int i = 0; i < srcNormals.Length; i++) {
+            for (var i = 0; i < srcNormals.Length; i++) {
                 srcNormals[i] = new Vector3(srcNormals[i].x, -srcNormals[i].y, srcNormals[i].z);
             }
 
 
             //Calculate the rotations
-            int cc = 0;
+            var cc = 0;
             foreach (var rot in quaternions) {
                 rotation[cc++] = new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value);
             }
 
-            for (int i = 0; i < 8; i++) {
+            for (var i = 0; i < 8; i++) {
                 flip[i] = new PrecalculatedFlip(srcVertices, srcNormals, surfaces, VoxelWorld.allFlips[i]);
             }
         }
 
         internal void FlipHorizontally() {
-            for (int i = 0; i < srcVertices.Length; i++) {
+            for (var i = 0; i < srcVertices.Length; i++) {
                 srcVertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, srcVertices[i].z);
             }
+
             //flip the faces
-            foreach (Surface surf in surfaces) {
+            foreach (var surf in surfaces) {
                 surf.Invert();
             }
 
             //Flip the normals
-            for (int i = 0; i < srcNormals.Length; i++) {
+            for (var i = 0; i < srcNormals.Length; i++) {
                 srcNormals[i] = new Vector3(-srcNormals[i].x, srcNormals[i].y, srcNormals[i].z);
             }
 
             //Calculate the rotations
-            int cc = 0;
+            var cc = 0;
             foreach (var rot in quaternions) {
                 rotation[cc++] = new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value);
             }
 
-            for (int i = 0; i < 8; i++) {
+            for (var i = 0; i < 8; i++) {
                 flip[i] = new PrecalculatedFlip(srcVertices, srcNormals, surfaces, VoxelWorld.allFlips[i]);
             }
         }
@@ -484,7 +501,7 @@ namespace Assets.Airship.VoxelRenderer {
                 return;
             }
 
-            foreach (Surface surf in surfaces) {
+            foreach (var surf in surfaces) {
                 surf.meshMaterial = meshMaterial;
                 surf.meshMaterialName = meshMaterial.name;
                 surf.meshMaterialId = meshMaterial.GetInstanceID();

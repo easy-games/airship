@@ -9,9 +9,10 @@ public class LuauCompiler {
     // Any globals in Luau that have values that change need to be added to this list (e.g. "Time" because "Time.time" changes):
     public static readonly string[] MutableGlobals = {"Time", "NetworkTime", "Physics", "Screen", "Input", "AirshipSimulationManager"};
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct CompilationResult {
         public IntPtr Data;
-        public long DataSize;
+        public ulong DataSize;
         public bool Compiled;
     }
 
@@ -21,7 +22,7 @@ public class LuauCompiler {
         // Read Lua source
         if (!_mutableGlobalsSet) {
             try {
-                LuauPlugin.LuauSetMutableGlobals(MutableGlobals);
+                LuauPlugin.SetMutableGlobals(MutableGlobals);
                 _mutableGlobalsSet = true;
             } catch (LuauException e) {
                 Debug.LogError(e);
@@ -33,7 +34,7 @@ public class LuauCompiler {
 
         // Compile
         var len = Encoding.UTF8.GetByteCount(data);
-        var res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, path.Length, LuauPlugin.LuauOptimizationLevel.Max);
+        var res = LuauPlugin.CompileCode(dataStr, len, filenameStr, path.Length, LuauPlugin.LuauOptimizationLevel.Max);
 
         Marshal.FreeCoTaskMem(dataStr);
         Marshal.FreeCoTaskMem(filenameStr);

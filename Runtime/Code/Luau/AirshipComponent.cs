@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
 using Code.Luau;
+using Code.Luau.LuauAssembly.Protection;
 using JetBrains.Annotations;
 using Luau;
 using UnityEngine;
@@ -180,7 +181,14 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 			script = runtimeScript;
 		}
 		else {
-			Debug.LogError($"Failed to find code.zip compiled script. Path: {script.m_path.ToLower()}, GameObject: {gameObject.name}", gameObject);
+			var isPackage = scriptPath.StartsWith("Assets/AirshipPackage");
+			if (script == null) {
+				var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
+				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) - {suggestion}", gameObject);
+			}
+			else {
+				Debug.LogError($"Could not find compiled script in code archive '{script.m_path.ToLower()}' for GameObject {gameObject.name} (Missing Runtime Script Code)", gameObject);
+			}
 			return;
 		}
 #endif
@@ -199,7 +207,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
 		if (!_validatedSceneInGameConfig) {
 			var scene = gameObject.scene;
-			if (!LuauCore.IsProtectedScene(scene)) {
+			if (!LuauProtection.IsProtectedScene(scene)) {
 				var sceneName = scene.name;
 				var gameConfig = GameConfig.Load();
 				if (gameConfig.gameScenes.ToList().Find((s) => s.name == sceneName) == null) {
@@ -276,7 +284,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 			propertyDtos[i] = dto;
 		}
 		
-		LuauPlugin.LuauInitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
+		LuauPlugin.InitializeAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, propertyDtos);
 
 		// Free handles:
 		foreach (var handle in InitGcHandles) {
@@ -305,31 +313,31 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	private void OnEnable() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, true);
+		LuauPlugin.SetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, true);
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
 	}
 
 	private void OnDisable() {
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
-		LuauPlugin.LuauSetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, false);
+		LuauPlugin.SetAirshipComponentEnabled(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, false);
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
 	}
 	
 	private void OnDestroy() {
 		ComponentIdToScriptName.Remove(_airshipComponentId);
+		LuauCore.onResetInstance -= OnLuauReset;
 		
 		if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
 		
 		InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
-		LuauPlugin.LuauRemoveAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId);
+		LuauPlugin.RemoveAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId);
 		AirshipBehaviourRootV2.CleanIdOnDestroy(gameObject, this);
 		if (LuauState.IsContextActive(context)) {
-			LuauPlugin.LuauUnpinThread(thread);
-			LuauPlugin.LuauDestroyThread(thread);
+			LuauPlugin.UnpinThread(thread);
+			LuauPlugin.DestroyThread(thread);
 		}
 		thread = IntPtr.Zero;
-		LuauCore.onResetInstance -= OnLuauReset;
 	}
 
 	#region Collision Events
@@ -409,12 +417,12 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	#endregion
 
 	private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
-		LuauPlugin.LuauUpdateIndividualAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, 0, true);
+		LuauPlugin.UpdateIndividualAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, 0, true);
 	}
 
 	private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object obj) {
 		var argObjId = ThreadDataManager.AddObjectReference(thread, obj);
-		LuauPlugin.LuauUpdateCollisionAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, argObjId);
+		LuauPlugin.UpdateCollisionAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, argObjId);
 	}
 
 	private IReadOnlyList<AirshipComponent> GetDependencies() {
@@ -444,7 +452,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		}
         
 		// Fetch from Luau plugin & cache the result:
-		var hasMethod = LuauPlugin.LuauHasAirshipMethod(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType);
+		var hasMethod = LuauPlugin.HasAirshipMethod(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType);
 		_hasAirshipUpdateMethods.Add(updateType, hasMethod);
         
 		return hasMethod;
@@ -453,6 +461,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	private void OnLuauReset(LuauContext ctx) {
 		if (ctx == context) {
 			thread = IntPtr.Zero;
+			LuauCore.onResetInstance -= OnLuauReset;
 		}
 	}
 
@@ -461,7 +470,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(transform);
 		AirshipBehaviourRootV2.LinkComponentToGameObject(this, out var unityInstanceId);
         
-		LuauPlugin.LuauPrewarmAirshipComponent(context, thread, unityInstanceId, _airshipComponentId, transformInstanceId);
+		LuauPlugin.PrewarmAirshipComponent(context, thread, unityInstanceId, _airshipComponentId, transformInstanceId);
 	}
 
 	public string GetAirshipComponentName() {

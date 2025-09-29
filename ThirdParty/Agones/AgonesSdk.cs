@@ -74,8 +74,10 @@ namespace Agones
             HealthCheckAsync();
         }
 
-        private void OnApplicationQuit()
+        // EASYMOD: Changed to OnDestroy from OnApplicationQuit. No tasks should run after destruction of the SDK.
+        private void OnDestroy()
         {
+            Debug.Log($"[Agones] Application exit. Disposing cancellation token.");
             cancellationTokenSource.Dispose();
         }
         #endregion
@@ -265,17 +267,17 @@ namespace Agones
         {
             while (healthEnabled)
             {
-                await Task.Delay(TimeSpan.FromSeconds(healthIntervalSecond));
-
-                try
-                {
+                try {
+                    await Task.Delay(TimeSpan.FromSeconds(healthIntervalSecond));
                     await SendRequestAsync("/health", "{}");
-                }
-                catch (ObjectDisposedException)
-                {
+                } catch (ObjectDisposedException) {
+                    Debug.LogWarning("Object disposed on heartbeat.");
                     break;
+                } catch (Exception ex) {
+                    Debug.LogWarning("Error sending heartbeat: " + ex);
                 }
             }
+            Debug.LogWarning("Heartbeat interval has exited. The server will be marked as unhealthy.");
         }
 
         /// <summary>
@@ -299,6 +301,7 @@ namespace Agones
                 downloadHandler = new DownloadHandlerBuffer()
             };
             req.SetRequestHeader("Content-Type", "application/json");
+            req.timeout = 10;
 
             await new AgonesAsyncOperationWrapper(req.SendWebRequest());
 
@@ -314,6 +317,8 @@ namespace Agones
             else
             {
                 Log($"Agones SendRequest failed: {method} {api} {json} {req.error}");
+                // Always send warning for failures. Don't include any body data though.
+                Debug.LogWarning($"Agones Request Failed: {method} {api} {req.error}");
             }
 
             req.Dispose();

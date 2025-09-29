@@ -20,9 +20,9 @@ namespace Luau {
             { "LayerMask", typeof(LayerMask) },
             { "AnimationCurve", typeof(AnimationCurve) },
         };
-        
-        public static string SerializeAirshipProperty(object obj, AirshipComponentPropertyType objectType) {
-            switch (objectType) {
+
+        public static string SerializeAirshipProperty(object obj, AirshipComponentPropertyType airshipPropertyType) {
+            switch (airshipPropertyType) {
                 case AirshipComponentPropertyType.AirshipFloat: {
                     return Convert.ToSingle(obj).ToString(CultureInfo.InvariantCulture);
                 }
@@ -68,21 +68,27 @@ namespace Luau {
                             obj = Activator.CreateInstance(objType, args);
                         } else if (objDefaultVal.target == "method") {
                             var args = objDefaultVal.arguments.ToArray();
-                            for (var i = 0; i < args.Length; i++)
-                            {
-                                if (args[i] is double)
-                                {
+                            
+                            var argTypes = new Type[args.Length];
+                            for (var i = 0; i < args.Length; i++) {
+                                if (args[i] is double) {
                                     args[i] = Convert.ToSingle(args[i]);
                                 }
+                                
+                                // Pass the argument types to GetMethod to clear any ambiguity
+                                argTypes[i] = args[i].GetType();
                             }
-
-                            var expectedMethod = objType.GetMethod(objDefaultVal.method);
+    
+                            var expectedMethod = objType.GetMethod(objDefaultVal.method, argTypes);
                             obj = expectedMethod?.Invoke(null, args);
                         }
 
-                        // Can't use JSONUtility on AnimationCurve
-                        if (objectType == AirshipComponentPropertyType.AirshipAnimationCurve) {
+                        // Can't use JSONUtility on AnimationCurve or Rect
+                        if (airshipPropertyType == AirshipComponentPropertyType.AirshipAnimationCurve) {
                             return SerializeAnimationCurve(obj as AnimationCurve);
+                        }
+                        if (objType == typeof(Rect)) {
+                            return SerializeRect((Rect) obj);
                         }
 
                         return JsonUtility.ToJson(obj);
@@ -97,6 +103,26 @@ namespace Luau {
             }
             Debug.Log($"Failed to serialize object: {obj.ToString()}");
             return "";
+        }
+        
+        /// <summary>
+        /// Serializes a rect as "x,y,width,height"
+        /// </summary>
+        public static string SerializeRect(Rect rect) {
+            return $"{rect.x.ToString(CultureInfo.InvariantCulture)},{rect.y.ToString(CultureInfo.InvariantCulture)},{rect.width.ToString(CultureInfo.InvariantCulture)},{rect.height.ToString(CultureInfo.InvariantCulture)}";
+        }
+
+        public static Rect DeserializeRect(string serializedRect) {
+            var elements = serializedRect.Split(",");
+            if (elements.Length != 4) {
+                return default;
+            }
+            
+            var x = float.Parse(elements[0], CultureInfo.InvariantCulture);
+            var y = float.Parse(elements[1], CultureInfo.InvariantCulture);
+            var width = float.Parse(elements[2], CultureInfo.InvariantCulture);
+            var height = float.Parse(elements[3], CultureInfo.InvariantCulture);
+            return new Rect(x, y, width, height);
         }
         
         public static string SerializeAnimationCurve(AnimationCurve curve) {

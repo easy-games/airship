@@ -19,9 +19,10 @@ public static class LuauPluginUpdateCheck {
 #if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX
     [InitializeOnLoadMethod]
     private static void SetLuauTimeout() {
-        LuauPlugin.LuauSetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
+        LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
     }
     
+    /*
     [UnityEditor.Callbacks.DidReloadScripts]
     private static void CheckHash() {
         if (Application.isPlaying || !EditorIntegrationsConfig.instance.promptIfLuauPluginChanged) {
@@ -67,5 +68,6 @@ public static class LuauPluginUpdateCheck {
             }
         }
     }
+    */
 #endif
 }

@@ -9,6 +9,7 @@ using UnityEngine.Profiling;
 using System.Collections;
 using System.Linq;
 using System.Text;
+using Code.Luau.LuauAssembly.Protection;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -20,31 +21,10 @@ public partial class LuauCore : MonoBehaviour {
     [InitializeOnLoad]
     private class LuauCorePrintCallbackLoader {
         static LuauCorePrintCallbackLoader() {
-            LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
+            LuauPlugin.InitializePrintCallback(printCallback_holder);
         }
     }
 #endif
-
-    public enum PODTYPE : int {
-        POD_DOUBLE = 0,
-        POD_OBJECT = 1,
-        POD_STRING = 2,
-        POD_INT32 = 3,
-        POD_VECTOR3 = 4,
-        POD_BOOL = 5,
-        POD_NULL = 6,
-        POD_RAY = 7,
-        POD_MATRIX = 8,
-        POD_QUATERNION = 9,
-        POD_PLANE = 10,
-        POD_COLOR = 11,
-        POD_LUAFUNCTION = 12,
-        POD_BINARYBLOB = 13,
-        POD_VECTOR2 = 14,
-        POD_VECTOR4 = 15,
-        POD_FLOAT = 16,
-        POD_AIRSHIP_COMPONENT = 17,
-    };
 
     private static bool s_shutdown = false;
  
@@ -78,18 +58,15 @@ public partial class LuauCore : MonoBehaviour {
     private static Type vector2IntType = typeof(UnityEngine.Vector2Int);
     private static Type vector4Type = typeof(UnityEngine.Vector4);
     private static Type planeType = typeof(UnityEngine.Plane);
+    private static Type rectType = typeof(UnityEngine.Rect);
     private static Type colorType = typeof(UnityEngine.Color);
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
+    private static Type luauBufferType = typeof(LuauBuffer);
     private static Type actionType = typeof(Action);
-
-    private static readonly string[] protectedScenesNames = {
-        "corescene", "mainmenu", "login", "disconnected", "airshipupdateapp"
-    };
-    private static HashSet<int> protectedSceneHandles = new HashSet<int>();
 
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;
-
+    
     private Dictionary<string, Type> shortTypeNames = new Dictionary<string, Type>();
 
     private List<string> namespaces = new List<string>();
@@ -131,12 +108,14 @@ public partial class LuauCore : MonoBehaviour {
 
         initialized = true;
 
-        SetupProtectedSceneHandleListener();
+        LuauProtection.SetupProtectedSceneHandleListener();
         SetupReflection();
         CreateCallbacks();
+        // SetupGeneratedCallbacks();
 
         var stringCount = unityAPIClasses.Count;
         var stringList = new IntPtr[stringCount];
+        var stringLenList = new int[stringCount];
         eventConnections.Clear();
         
         var counter = 0;
@@ -144,14 +123,16 @@ public partial class LuauCore : MonoBehaviour {
             var apiName = api.Value.GetAPIType().Name;
             var strPtr = Marshal.StringToCoTaskMemUTF8(apiName);
             stringList[counter] = strPtr;
+            stringLenList[counter] = apiName.Length;
             counter += 1;
         }
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
+        var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
-        LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
-        LuauPlugin.LuauInitializeComponentCallbacks(componentSetEnabledCallback_holder);
-        LuauPlugin.LuauStartup(
-            new LuauPlugin.LuauPluginStartup {
+        LuauPlugin.InitializePrintCallback(printCallback_holder);
+        LuauPlugin.InitializeComponentCallbacks(componentSetEnabledCallback_holder);
+        LuauPlugin.Startup(
+            new LuauPluginNative.LuauPluginStartup {
                 getPropertyCallback = getPropertyCallback_holder,
                 setPropertyCallback = setPropertyCallback_holder,
                 callMethodCallback = callMethodCallback_holder,
@@ -163,6 +144,7 @@ public partial class LuauCore : MonoBehaviour {
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
                 getUnityObjectNameCallback = getUnityObjectNameCallback_holder,
                 staticList = stringAddresses.AddrOfPinnedObject(),
+                staticListStrLen = stringLengthsHandle.AddrOfPinnedObject(),
                 staticCount = stringCount,
                 isServer = RunCore.IsServer() ? 1 : 0,
 #if UNITY_EDITOR
@@ -178,6 +160,7 @@ public partial class LuauCore : MonoBehaviour {
         LuauState.FromContext(LuauContext.Game);
 
         stringAddresses.Free();
+        stringLengthsHandle.Free();
         
         // Free up the strings:
         foreach (var ptr in stringList) {
@@ -185,26 +168,6 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         SetupNamespaceStrings();
-    }
-
-    private void SetupProtectedSceneHandleListener() {
-        for (var i = 0; i < SceneManager.sceneCount; i++) {
-            var scene = SceneManager.GetSceneAt(i);
-            RegisterPossiblyProtectedScene(scene);
-        }
-
-        SceneManager.sceneLoaded += (scene, mode) => {
-            RegisterPossiblyProtectedScene(scene);
-        };
-        SceneManager.sceneUnloaded += scene => {
-            protectedSceneHandles.Remove(scene.handle);
-        };
-    }
-
-    private void RegisterPossiblyProtectedScene(Scene scene) {
-        if (IsProtectedSceneName(scene.name)) {
-            protectedSceneHandles.Add(scene.handle);
-        }
     }
 
     public void OnDestroy() {
@@ -216,7 +179,7 @@ public partial class LuauCore : MonoBehaviour {
             initialized = false;
             LuauState.ShutdownAll();
             Profiler.BeginSample("ShutdownLuauPlugin");
-            LuauPlugin.LuauShutdown();
+            LuauPlugin.Shutdown();
             Profiler.EndSample();
             if (endOfFrameCoroutine != null) {
                 StopCoroutine(endOfFrameCoroutine);
@@ -242,10 +205,9 @@ public partial class LuauCore : MonoBehaviour {
         _awaitingTasks.Clear();
         eventConnections.Clear();
         propertyGetCache.Clear();
-        protectedSceneHandles.Clear();
         _propertySetterCache.Clear();
         WriteMethodFunctions.Clear();
-        CurrentContext = LuauContext.Game;
+        LuauProtection.CurrentContext = LuauContext.Game;
         s_shutdown = false;
     }
 
@@ -288,13 +250,13 @@ public partial class LuauCore : MonoBehaviour {
     private static void ResetOnReload() {
         ResetStaticFields();
         _coreInstance = null;
-        LuauPlugin.LuauSubsystemRegistration();
+        LuauPlugin.SubsystemRegistration();
         Application.quitting -= Quit;
     }
 
 #if UNITY_EDITOR
     private void OnPauseStateChanged(PauseState state) {
-        LuauPlugin.LuauSetIsPaused(state == PauseState.Paused);
+        LuauPlugin.SetIsPaused(state == PauseState.Paused);
     }
 #endif
 
@@ -317,44 +279,13 @@ public partial class LuauCore : MonoBehaviour {
         s_shutdown = true;
     }
 
-    public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
-        if (gameObject == null) return false;
-        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene)) {
-            if (gameObject.transform.parent?.name is "GameReadAccess" || gameObject.transform.parent?.parent?.name is "GameReadAccess") {
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    public static bool IsProtectedScene(Scene scene) {
-        return protectedSceneHandles.Contains(scene.handle);
-    }
-
-    /// <summary>
-    /// Unless you only have scene name you should use IsProtectedScene
-    /// </summary>
-    public static bool IsProtectedSceneName(string sceneName) {
-        if (string.IsNullOrEmpty(sceneName)) return false;
-
-        foreach (var protectedSceneName in protectedScenesNames) {
-            if (protectedSceneName.Equals(sceneName, StringComparison.OrdinalIgnoreCase)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public void Update() {
         if (!initialized) {
             return;
         }
         
         Profiler.BeginSample("BeginFrameLogic");
-        LuauPlugin.LuauRunBeginFrameLogic();
+        LuauPlugin.RunBeginFrameLogic();
         Profiler.EndSample();
 
         // List<CallbackRecord> runBuffer = m_currentBuffer;

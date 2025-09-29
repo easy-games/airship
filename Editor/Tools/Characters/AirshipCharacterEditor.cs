@@ -18,7 +18,7 @@ public class AirshipCharacterEditor : MonoBehaviour {
         }
     }
 
-    [MenuItem("Assets/Create/Airship/Viewmodel Variant", false, 1)]
+    [MenuItem("Assets/Create/Airship/Viewmodel Variant", false, -104)]
     static void CreateViewmodelVariant() {
         GameObject source =
             AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -29,7 +29,7 @@ public class AirshipCharacterEditor : MonoBehaviour {
         Selection.activeObject = prefab;
     }
 
-    [MenuItem("Assets/Create/Airship/Character Variant", false, 1)]
+    [MenuItem("Assets/Create/Airship/Character Variant", false, -105)]
     static void CreateCharacterVariant() {
         GameObject source =
             AssetDatabase.LoadAssetAtPath<GameObject>(

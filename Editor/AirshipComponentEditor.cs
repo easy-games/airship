@@ -21,6 +21,14 @@ public struct ArrayDisplayInfo {
     public AirshipComponentPropertyType listType;
     public Type objType;
     public string errorReason;
+    
+    internal bool IsArrayDataMismatched(SerializedObject serializedObject, SerializedProperty serializedArray) {
+        try {
+            return serializedArray.propertyPath != reorderableList.serializedProperty.propertyPath;
+        } catch (ObjectDisposedException exception) {
+            return true;
+        }
+    }
 }
 
 [CustomEditor(typeof(AirshipComponent))]
@@ -29,7 +37,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private static Dictionary<(string, string), bool> _openPropertyFoldouts = new();
 
     /** Maps (game object id, prop name) to ArrayDisplayInfo object (for Array properties) */
-    private Dictionary<(int, string), ArrayDisplayInfo> _reorderableLists = new();
+    private Dictionary<(int componentInstanceId, string propertyName), ArrayDisplayInfo> _reorderableLists = new();
 
     public void OnEnable() {
         var comp = (Component)serializedObject.targetObject;
@@ -42,6 +50,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var listPropType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(arrayType, false);
             GetOrCreateArrayDisplayInfo(comp.GetInstanceID(), serializedProperty, serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
         }
+    }
+
+    private void OnDisable() {
+        var comp = (AirshipComponent)serializedObject.targetObject;
+        if (comp == null) return;
+        
+        var componentInstanceId = comp.GetInstanceID();
+        _componentSeenArrayProps.Remove(componentInstanceId);
     }
 
     private bool debugging = false;
@@ -99,21 +115,53 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         serializedObject.ApplyModifiedProperties();
     }
 
+
+    private Dictionary<int, HashSet<string>> _componentSeenArrayProps = new();
+    private void CleanupOrphanedArrayDisplayInfos(int componentInstanceId) {
+        // We need to make sure we clean out dead array references
+        if (!_componentSeenArrayProps.TryGetValue(componentInstanceId, out var seenArrayProps)) return;
+        var removeSet = new HashSet<(int, string)>();
+        
+        foreach (var (key, value) in _reorderableLists) {
+            if (key.componentInstanceId != componentInstanceId) continue;
+            if (seenArrayProps.Contains(key.propertyName)) continue;
+            
+            // We cannot remove from a collection while iterating it, so we'll add it to a remove set
+            removeSet.Add(key);
+        }
+        
+        // array list removal pass
+        foreach (var item in removeSet) {
+            _reorderableLists.Remove(item);
+        }
+    }
+
+    private HashSet<string> GetOrCreateSeenArraysSet(int componentInstanceId) {
+        if (_componentSeenArrayProps.TryGetValue(componentInstanceId, out var seenArrays)) return seenArrays;
+        
+        seenArrays = new HashSet<string>();
+        _componentSeenArrayProps.Add(componentInstanceId, seenArrays);
+        return seenArrays;
+    }
+    
     private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(int componentInstanceId, SerializedProperty arraySerializedProperty, string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
-        var modified = arraySerializedProperty.FindPropertyRelative("modified");
+        
         
         Type objType = null;
         if (listType == AirshipComponentPropertyType.AirshipObject || listType == AirshipComponentPropertyType.AirshipComponent) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
         }
-        
-        if (!_reorderableLists.TryGetValue((componentInstanceId, propName), out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
+
+        var seenArrayProps = GetOrCreateSeenArraysSet(componentInstanceId);
+
+
+        void BindReorderableListToProperty(ReorderableList reorderableList) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
-            var newDisplayInfo = new ArrayDisplayInfo { listType = listType, objType = objType, reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true)};
+            var modified = arraySerializedProperty.FindPropertyRelative("modified");
             
-            newDisplayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
-            newDisplayInfo.reorderableList.onRemoveCallback = (ReorderableList list) => {
+            reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
+            reorderableList.onRemoveCallback = (ReorderableList list) => {
                 if (list.selectedIndices.Count == 1) {
                     var deletedIndex = list.selectedIndices[0];
                     list.Deselect(deletedIndex);
@@ -123,25 +171,62 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 list.serializedProperty.DeleteArrayElementAtIndex(list.serializedProperty.arraySize - 1);
             };
 
-            newDisplayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
+            reorderableList.onAddCallback = (list) => {
+                list.serializedProperty.InsertArrayElementAtIndex(list.serializedProperty.arraySize);
+            };
+
+            reorderableList.onChangedCallback = (ReorderableList list) => {
                 modified.boolValue = true;
                 // Match number of elements in inspector reorderable list to serialized objectRefs. This is to reconcile objectRefs
                 MatchReferenceArraySize(objectRefs, serializedArray);
             };
 
-            newDisplayInfo.reorderableList.onReorderCallbackWithDetails = (ReorderableList list, int oldIndex, int newIndex) => {
+            reorderableList.onReorderCallbackWithDetails = (ReorderableList list, int oldIndex, int newIndex) => {
                 objectRefs.MoveArrayElement(oldIndex, newIndex);
             };
             
-            newDisplayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+            reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+                if (!serializedArray.isArray) {
+                    EditorGUILayout.HelpBox("Is not array", MessageType.Error);
+                    return;
+                }
+                
+                if (index > serializedArray.arraySize - 1) {
+                    EditorGUILayout.HelpBox("Element exceeds array size", MessageType.Error);
+                    return;
+                }
+                
                 RenderArrayElement(rect, arraySerializedProperty, itemInfo, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
                 if (errReason.Length > 0) {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
+        
             };
+        }
+        
+        var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
+        if (!_reorderableLists.TryGetValue((componentInstanceId, propName), out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
+            var newDisplayInfo = new ArrayDisplayInfo {
+                listType = listType, 
+                objType = objType, 
+                reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true),
+            };
+            
+            BindReorderableListToProperty(newDisplayInfo.reorderableList);
+            
+            seenArrayProps.Add(propName);
             _reorderableLists[(componentInstanceId, propName)] = newDisplayInfo;
             return newDisplayInfo;
         }
+
+        
+        if (displayInfo.IsArrayDataMismatched(serializedObject, serializedArray)) {
+            displayInfo.reorderableList =
+                new ReorderableList(serializedObject, serializedArray, true, false, true, true);
+            BindReorderableListToProperty(displayInfo.reorderableList);
+        }
+        
+        seenArrayProps.Add(propName);
         return displayInfo;
     }
 
@@ -217,6 +302,30 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (binding.metadata == null || binding.script.m_metadata == null) return false;
 
         var metadata = serializedObject.FindProperty("metadata");
+        
+        var originalMetadata = binding.script.m_metadata;
+        
+        var originalDecorators = originalMetadata.decorators;
+        var serializedDecorators = binding.metadata.decorators;
+        
+        if (serializedDecorators.Count != originalDecorators.Count) {
+            return true;
+        }
+        
+        foreach (var serializedDecorator in serializedDecorators)
+        {
+            var decoratorName = serializedDecorator.name;
+            var originalDecorator = originalDecorators.Find(d => d.name == decoratorName);
+            
+            if (originalDecorator == null) {
+                return true;
+            }
+
+            var serializedParameters = serializedDecorator.parameters;
+            if (serializedParameters.Count != originalDecorator.parameters.Count) {
+                return true;
+            }
+        }
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
         var originalMetadataProperties = binding.script.m_metadata?.properties;
@@ -373,10 +482,21 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         propertyList.Sort((p1, p2) =>
             indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
         );
+
+        var componentInstanceId = binding.GetInstanceID();
+        
+        // Keeping track of which array properties that have been seen
+        var seenArraysSet = GetOrCreateSeenArraysSet(componentInstanceId);
+        
+        // We're running a new render, so haven't seen the arrays yet
+        seenArraysSet.Clear();
         
         foreach (var prop in propertyList) {
-            DrawCustomProperty(binding.GetInstanceID(), binding.script.m_metadata, prop);   
+            DrawCustomProperty(componentInstanceId, binding.script.m_metadata, prop);   
         }
+        
+        // By the end of the render of the properties, all the arrays should have been populated
+        CleanupOrphanedArrayDisplayInfos(componentInstanceId);
         
 #if AIRSHIP_DEBUG
         AirshipEditorGUI.HorizontalLine();
@@ -963,10 +1083,10 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     
     private void DrawCustomRectProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified)
     {
-        var currentValue = JsonUtility.FromJson<Rect>(value.stringValue);
+        var currentValue = LuauMetadataPropertySerializer.DeserializeRect(value.stringValue);
         var newValue = EditorGUILayout.RectField(guiContent, currentValue);
         if (newValue != currentValue) {
-            value.stringValue = JsonUtility.ToJson(newValue);
+            value.stringValue = LuauMetadataPropertySerializer.SerializeRect(newValue);
             modified.boolValue = true;
         }
     }

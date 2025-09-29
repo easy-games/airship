@@ -25,7 +25,7 @@ public class LuauScript : MonoBehaviour {
 	public AirshipScript script;
 
 	public IntPtr thread;
-	public LuauContext context = LuauContext.Game;
+	[NonSerialized] public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
 	
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -130,10 +130,10 @@ public class LuauScript : MonoBehaviour {
 		// Tell Luau to load the bytecode onto a new Luau thread:
 		switch (cacheMode) {
 			case LuauScriptCacheMode.NotCached:
-				return LuauPlugin.LuauCreateThread(context, script.m_bytes, cleanPath, id, nativeCodegen);
+				return LuauPlugin.CreateThread(context, script.m_bytes, cleanPath, id, nativeCodegen);
 			case LuauScriptCacheMode.Cached:
 				var requirePath = LuauCore.GetRequirePath(script.m_path, cleanPath);
-				return LuauPlugin.LuauCreateThreadWithCachedModule(context, requirePath, id);
+				return LuauPlugin.CreateThreadWithCachedModule(context, requirePath, id);
 			default:
 				throw new Exception($"[LuauScript]: Unhandled mode: {cacheMode}");
 		}
@@ -146,7 +146,7 @@ public class LuauScript : MonoBehaviour {
 		// Execute the new thread. We don't need to do anything after this. If the thread errors, the error will be
 		// outputted. If the thread yields, whoever yielded it owns responsibility for resuming it (e.g. the task
 		// scheduler):
-		return LuauPlugin.LuauRunThread(thread);
+		return LuauPlugin.RunThread(thread);
 	}
 
 	/// <summary>
@@ -180,7 +180,7 @@ public class LuauScript : MonoBehaviour {
 
 		if (shouldCacheValue && status == 0) {
 			var requirePath = LuauCore.GetRequirePath(script.m_path, CleanupFilePath(script.m_path));
-			LuauPlugin.LuauCacheModuleOnThread(thread, requirePath);
+			LuauPlugin.CacheModuleOnThread(thread, requirePath);
 		}
 
 		Profiler.EndSample();

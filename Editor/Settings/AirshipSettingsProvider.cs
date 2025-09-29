@@ -153,8 +153,7 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorIntegrationsConfig.instance.autoUpdatePackages = EditorGUILayout.Toggle(new GUIContent("Auto Update Packages", "Airship Packages will automatically update whenever a new update is available."), EditorIntegrationsConfig.instance.autoUpdatePackages);
             EditorIntegrationsConfig.instance.enableMainMenu = EditorGUILayout.Toggle(new GUIContent("Enable Main Menu", "When true, the main menu will show when pressing [Escape]."), EditorIntegrationsConfig.instance.enableMainMenu);
             EditorIntegrationsConfig.instance.buildWithoutUpload = EditorGUILayout.Toggle(new GUIContent("Build Without Upload", "When publishing, this will build the asset bundles but won't upload them to Airship. This is useful for testing file sizes with AssetBundle Browser."), EditorIntegrationsConfig.instance.buildWithoutUpload);
-            EditorIntegrationsConfig.instance.selfCompileAllShaders = EditorGUILayout.Toggle(new GUIContent("Self Compile All Shaders", "Instead of using pre-compiled shaders from CoreMaterials, you will compile all needed URP shaders when publishing. This makes publishing take significantly longer but reduces shader stripping issues."), EditorIntegrationsConfig.instance.selfCompileAllShaders);
-            
+
             // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
             // EditorIntegrationsConfig.instance.typescriptAutostartCompiler = EditorGUILayout.Toggle(
@@ -186,7 +185,7 @@ public class AirshipSettingsProvider : SettingsProvider
 
             if (newTimeout != EditorIntegrationsConfig.instance.luauScriptTimeout) {
                 EditorIntegrationsConfig.instance.luauScriptTimeout = newTimeout;
-                LuauPlugin.LuauSetScriptTimeoutDuration(newTimeout);
+                LuauPlugin.SetScriptTimeoutDuration(newTimeout);
             }
             
             if (GUI.changed) {
@@ -252,8 +251,8 @@ public class AirshipSettingsProvider : SettingsProvider
         return provider;
     }
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void OnReload() {
-        LuauPlugin.LuauSetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
+        LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
     }
 }

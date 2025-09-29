@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using Agones;
 using Agones.Model;
 using Code.Analytics;
+using Code.Authentication;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
@@ -58,6 +59,7 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string organizationId = "";
 	[NonSerialized] public bool isShutdownEventTriggered = false;
 	[NonSerialized] public bool isAgonesShutdownTriggered = false;
+	[NonSerialized] public bool isShutdownComplete = false;
 
     public ServerContext serverContext;
 
@@ -141,29 +143,56 @@ public class ServerBootstrap : MonoBehaviour
 		}
 
 		this.Setup();
-
-		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
 	}
 
 	public void InvokeOnProcessExit() {
+		// If Shutdown() was called, any future term signals or mark for shutdown should immedately close the server.
+		// Shutdown() should never be called unless we are ok with not running shutdown handlers (usually because they already
+		// finished).
+		if (isShutdownComplete) {
+			Application.Quit();
+			return;
+		}
+		// Don't need to refire shutdown events if they've already been processed or if agones has been notified of
+		// the shutdown. (agones in shutdown state means we are exiting immediately (OnApplicationQuit) and cannot yield)
+		if (this.isAgonesShutdownTriggered) {
+			Debug.Log("Agones Shutdown already triggered when invoking OnProcessExit. TS Handlers will not be called.");
+			return;
+		}
+		// Don't refire the events if we've already fired them. (This might happen if we have multiple sigterms)
 		if (this.isShutdownEventTriggered) return;
 		this.isShutdownEventTriggered = true;
+		
+		// Ensure we always shut down the server after 1 hour even if TS fails to complete for some reason.
+		StartCoroutine(HandleTimeout());
 
+		// If we have TS handlers, fire them.
 		if ((this.onProcessExit?.GetInvocationList().Length ?? 0) > 0) {
 			Debug.Log("Invoking OnProcessExit handlers.");
 			this.onProcessExit?.Invoke();
 		} else {
-			Debug.LogWarning("No OnProcessExit handlers were registered. Directly exiting process.");
-			this.Shutdown();
+			// If we don't have handlers, shut down immediately.
+			Application.Quit();
 		}
 	}
-
-	private void OnDestroy() {
-		AppDomain.CurrentDomain.ProcessExit -= ProcessExit;
+	
+	private IEnumerator HandleTimeout() {
+		yield return new WaitForSecondsRealtime(3600f);
+		Debug.Log($"OnProcessExit handlers did not complete after 1 hour. Shutting down.");
+		Application.Quit();
 	}
 
-	private void ProcessExit(object sender, EventArgs args) {
-		this.InvokeOnProcessExit();
+	private void OnApplicationQuit() {
+#if AIRSHIP_PLAYER
+		Debug.Log($"OnApplicationQuit() fired.");
+#endif
+
+		// Notify agones we are going to quit
+		if (agones && !this.isAgonesShutdownTriggered) {
+			this.isAgonesShutdownTriggered = true;
+			agones.Shutdown();
+			Debug.Log($"Sent Agones Shutdown notification.");
+		}
 	}
 
 	public bool IsAgonesEnvironment() {
@@ -251,7 +280,8 @@ public class ServerBootstrap : MonoBehaviour
 		if (!processedMarkedForDeletion && server.ObjectMeta != null && server.ObjectMeta.Labels != null && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
-			this.InvokeOnProcessExit();
+			InvokeOnProcessExit();
+			return;
 		}
 		
 		if (this.allocatedByAgones) return;
@@ -286,6 +316,7 @@ public class ServerBootstrap : MonoBehaviour
 			}
 			this.airshipJWT = annotations["JWT"];
 			UnityWebRequestProxyHelper.ProxyAuthCredentials = this.airshipJWT;
+			InternalHttpManager.authTokenSetTaskCompletionSource.SetResult(true);
 			// Debug.Log("Airship JWT:");
 			// Debug.Log(airshipJWT);
 
@@ -428,7 +459,15 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsEditor()) {
 			BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl, false,
 				(res) => {
-					downloadComplete = true;
+					if (!res)
+					{
+						Debug.LogWarning("[Airship]: Failed to download required files. See above logs for details. Shutting down server.");
+						ShutdownDueToAssetFailure(1);
+					}
+					else
+					{
+						downloadComplete = true;
+					}
 				});
 		} else {
 			downloadComplete = true;
@@ -477,12 +516,35 @@ public class ServerBootstrap : MonoBehaviour
         OnServerReady?.Invoke();
 	}
 
-	public void Shutdown() {
-		if (agones && !this.isAgonesShutdownTriggered) {
-			this.isAgonesShutdownTriggered = true;
-			agones.Shutdown();
-			Application.Quit();
+	private void ShutdownDueToAssetFailure(int exitCode = 1) {
+		if (NetworkServer.connections != null && NetworkServer.connections.Count > 0) {
+			var message = new ServerStartupFailureMessage {
+				reason = "Server failed to download required game assets.\n\nIf you are the game developer, ensure your game / packages have all been properly published.\n\nCheck the error console in the Airship Create portal for more details.",
+			};
+			
+			foreach (var connection in NetworkServer.connections.Values) {
+				if (connection != null) {
+					connection.Send(message);
+				}
+			}
 		}
+
+		Application.Quit(exitCode);
+	}
+
+	/**
+	 * Used to immediately shutdown the server. Used by TS to confirm it is ready to shut down.
+	 * Sets the isShutdownComplete field, meaning that InvokeOnProcessExit has completed and will not be called
+	 * again.
+	 */
+	public void Shutdown()
+	{
+		Debug.LogWarning($"Bootstrap Shutdown() started.");
+		if (!isShutdownEventTriggered) {
+			Debug.LogWarning("Shutdown() was called before InvokeOnProcessExit(). TS handlers will not be fired.");
+		}
+		isShutdownComplete = true; // The application _should_ quit, but if it doesn't we'll mark shutdown as complete so the next interrupt will immediately shut down.
+		Application.Quit();
 	}
 
 	/**

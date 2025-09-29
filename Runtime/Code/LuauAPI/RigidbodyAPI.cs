@@ -8,7 +8,7 @@ public class RigidbodyAPI : BaseLuaAPIClass {
 		return typeof(Rigidbody);
 	}
 
-    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName == "AddForce_ForceMode") {
             if (numParameters != 2) {
                 ThreadDataManager.Error(thread);
@@ -17,7 +17,7 @@ public class RigidbodyAPI : BaseLuaAPIClass {
             }
 
             var force = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-            var forceMode = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            var forceMode = LuauCore.GetParameterAsInt32(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
 
             var rb = (Rigidbody)targetObject;
 

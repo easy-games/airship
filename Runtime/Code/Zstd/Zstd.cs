@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using UnityEngine;
 using static Code.Zstd.ZstdNative;
 
 namespace Code.Zstd {
@@ -13,13 +14,34 @@ namespace Code.Zstd {
 		private const ulong MaxStackSize = 1024;
 
 		/// Minimum compression level.
-		public static readonly int MinCompressionLevel = ZSTD_minCLevel();
+		public static int MinCompressionLevel {
+			get {
+#if UNITY_EDITOR
+				ZstdNative.TryInitPlugin();
+#endif
+				return ZSTD_minCLevel();
+			}
+		}
 	
 		/// Maximum compression level.
-		public static readonly int MaxCompressionLevel = ZSTD_maxCLevel();
+		public static int MaxCompressionLevel {
+			get {
+#if UNITY_EDITOR
+				ZstdNative.TryInitPlugin();
+#endif
+				return ZSTD_maxCLevel();
+			}
+		}
 	
 		/// Default compression level.
-		public static readonly int DefaultCompressionLevel = ZSTD_defaultCLevel();
+		public static int DefaultCompressionLevel {
+			get {
+#if UNITY_EDITOR
+				ZstdNative.TryInitPlugin();
+#endif
+				return ZSTD_defaultCLevel();
+			}
+		}
 
 		private readonly ZstdContext _ctx;
 		
@@ -116,6 +138,9 @@ namespace Code.Zstd {
 		/// Get the maximum buffer size needed for compression.
 		/// </summary>
 		public static int GetCompressionBound(ReadOnlySpan<byte> uncompressedData) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			var bound = ZSTD_compressBound((ulong)uncompressedData.Length);
 			if (ZSTD_isError(bound)) {
 				throw new ZstdException(bound);
@@ -127,6 +152,9 @@ namespace Code.Zstd {
 		/// Get the maximum buffer size needed for decompression.
 		/// </summary>
 		public static unsafe int GetDecompressionBound(ReadOnlySpan<byte> compressedData) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			ulong rSize;
 			fixed (byte* src = compressedData) {
 				rSize = ZSTD_getFrameContentSize(new IntPtr(src), (ulong)compressedData.Length);
@@ -142,6 +170,9 @@ namespace Code.Zstd {
 		/// and <c>Zstd.MaxCompressionLevel</c>. Most use-cases should use <c>Zstd.DefaultCompressionLevel</c>.
 		/// </summary>
 		public static byte[] CompressData(ReadOnlySpan<byte> data, int compressionLevel, ZstdContext ctx = null) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			var bound = ZSTD_compressBound((ulong)data.Length);
 			if (ZSTD_isError(bound)) {
 				throw new ZstdException(bound);
@@ -156,6 +187,9 @@ namespace Code.Zstd {
 		/// Decompress the bytes.
 		/// </summary>
 		public static unsafe byte[] DecompressData(ReadOnlySpan<byte> data, ZstdContext ctx = null) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			ulong rSize;
 			fixed (byte* src = data) {
 				rSize = ZSTD_getFrameContentSize(new IntPtr(src), (ulong)data.Length);
@@ -173,6 +207,9 @@ namespace Code.Zstd {
 		}
 
 		private static unsafe byte[] DecompressWithStack(ReadOnlySpan<byte> data, ulong rSize, ZstdContext ctx) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			var decompressedData = stackalloc byte[(int)rSize];
 			ulong decompressedSize;
 			fixed (byte* src = data) {
@@ -193,6 +230,9 @@ namespace Code.Zstd {
 		}
 
 		private static unsafe byte[] DecompressWithHeap(ReadOnlySpan<byte> data, ulong rSize, ZstdContext ctx) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			var allocDst = ctx == null || rSize > (ulong)ctx.ScratchBuffer.Length;
 			var decompressedData = allocDst ? new byte[rSize] : ctx.ScratchBuffer;
 			ulong decompressedSize;
@@ -213,6 +253,9 @@ namespace Code.Zstd {
 		}
 
 		private static unsafe int DecompressWithBuffer(ReadOnlySpan<byte> data, byte[] dstBuffer, ZstdContext ctx) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			ulong decompressedSize;
 			fixed (byte* src = data) {
 				fixed (byte* dst = dstBuffer) {
@@ -230,6 +273,9 @@ namespace Code.Zstd {
 		}
 
 		private static unsafe byte[] CompressWithStack(ReadOnlySpan<byte> data, ulong bound, int compressionLevel, ZstdContext ctx) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			var dst = stackalloc byte[(int)bound];
 			ulong compressedSize;
 			fixed (byte* src = data) {
@@ -250,6 +296,9 @@ namespace Code.Zstd {
 		}
 
 		private static unsafe byte[] CompressWithHeap(ReadOnlySpan<byte> data, ulong bound, int compressionLevel, ZstdContext ctx) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			var allocDst = ctx == null || bound > (ulong)ctx.ScratchBuffer.Length;
 			var dstBuf = allocDst ? new byte[bound] : ctx.ScratchBuffer;
 			ulong compressedSize;
@@ -271,6 +320,9 @@ namespace Code.Zstd {
 		}
 	
 		private static unsafe int CompressWithBuffer(ReadOnlySpan<byte> data, byte[] dstBuffer, int compressionLevel, ZstdContext ctx) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+#endif
 			ulong compressedSize;
 			fixed (byte* src = data) {
 				fixed (byte* dst = dstBuffer) {
@@ -297,7 +349,15 @@ namespace Code.Zstd {
 
 		private bool _disposed;
 		
+#if UNITY_EDITOR
+		private uint _pluginInitId;
+#endif
+		
 		public ZstdContext(ulong scratchBufferSize) {
+#if UNITY_EDITOR
+			ZstdNative.TryInitPlugin();
+			_pluginInitId = ZstdNative.InitId;
+#endif
 			ScratchBuffer = ArrayPool<byte>.Shared.Rent((int)scratchBufferSize);
 			Cctx = ZSTD_createCCtx();
 			Dctx = ZSTD_createDCtx();
@@ -320,6 +380,12 @@ namespace Code.Zstd {
 				ArrayPool<byte>.Shared.Return(ScratchBuffer);
 			}
 			
+#if UNITY_EDITOR
+			// Prevent calling into the plugin if it is no longer valid (e.g. on editor shutdown):
+			if (_pluginInitId != ZstdNative.InitId) {
+				return;
+			}
+#endif
 			ZSTD_freeCCtx(Cctx);
 			ZSTD_freeDCtx(Dctx);
 		}

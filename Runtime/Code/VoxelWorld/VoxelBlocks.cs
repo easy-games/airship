@@ -297,10 +297,19 @@ public class VoxelBlocks : MonoBehaviour {
     public int maxResolution = 256;
     [SerializeField]
     public int atlasWidthTextures = 15;
-    private int atlasPaddingPx = 15;
+    
+    /// <summary>
+    /// TODO: Currently not serialized as this setting likely will not work without supporting _SpecialTex in our
+    /// atlas shader. If this is a requested feature we can support it easily (probably best to make a new atlas
+    /// shader that takes in normals).
+    /// </summary>
+    [Tooltip("If true we will pack texture normals into the texture atlas. This will double the RenderTexture memory cost. " +
+             "If you don't have custom normals leave this off.")]
+    [NonSerialized] private bool packNormalsIntoAtlas = false;
+    private int atlasPaddingPx = 32;
 
     public int atlasSize {
-        get => atlasWidthTextures * (maxResolution + atlasPaddingPx * 2);
+        get => atlasWidthTextures * (maxResolution);
     }
     [SerializeField]
     public bool pointFiltering = false;
@@ -322,6 +331,15 @@ public class VoxelBlocks : MonoBehaviour {
 
     [FormerlySerializedAs("blockDefinionLists")]
     [SerializeField] public List<VoxelBlockDefinitionList> blockDefinitionLists = new();
+
+    /// <summary>
+    /// When application is playing we only want to load VoxelBlocks once. This prevents multiple VoxelWorlds
+    /// from loading the same VoxelBlocks and regenerating the same atlas.
+    ///
+    /// Note: If we do have a reason to want reloading VoxelBlocks during play in the future we could
+    /// change this to only run the texture packing process once.
+    /// </summary>
+    private bool hasBegunLoading = false;
     private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
@@ -410,6 +428,8 @@ public class VoxelBlocks : MonoBehaviour {
     private void Clear() {
         blockIdCounter = 0;
         atlasMaterial = null;
+        
+        atlas.Dispose();
         atlas = new TexturePacker();
  
         temporaryTextures = new();
@@ -455,7 +475,7 @@ public class VoxelBlocks : MonoBehaviour {
             }
         }
     }
-    private void ParseStaticMeshBlock(BlockDefinition block) {
+    private void ParseStaticMeshBlock(BlockDefinition block, bool useSimplifiedBlocks) {
         if (block.definition.contextStyle != ContextStyle.StaticMesh) {
             return;
         }
@@ -467,20 +487,24 @@ public class VoxelBlocks : MonoBehaviour {
         block.mesh = new();
         
         block.mesh.lod0 = new VoxelMeshCopy(block.definition.staticMeshLOD0);
+        var mat = useSimplifiedBlocks  && block.definition.topTexture.material ? block.definition.topTexture.material : block.definition.meshMaterial;
+        if (mat != null) {
+            block.meshMaterial = mat;
+            block.mesh.lod0.ApplyMaterial(mat);
+        }
         
         if (block.definition.staticMeshLOD1 != null){
             block.mesh.lod1 = new VoxelMeshCopy(block.definition.staticMeshLOD1);
+            if (mat != null) {
+                block.mesh.lod1.ApplyMaterial(mat);
+            }
         }
         
         if (block.definition.staticMeshLOD2 != null){
             block.mesh.lod2 = new VoxelMeshCopy(block.definition.staticMeshLOD2);
-        }
-        
-        //Apply the material to this
-        if (block.meshMaterial != null) {
-            block.mesh.lod0.ApplyMaterial(block.meshMaterial);
-            block.mesh.lod1.ApplyMaterial(block.meshMaterial);
-            block.mesh.lod2.ApplyMaterial(block.meshMaterial);
+            if (mat != null) {
+                block.mesh.lod2.ApplyMaterial(mat);
+            }
         }
                 
     }
@@ -609,7 +633,7 @@ public class VoxelBlocks : MonoBehaviour {
         atlas?.Dispose();
     }
 
-    public void Load(bool loadTexturesDirectlyFromDisk = false) {
+    public void Load(bool useSimplifiedBlocks, bool loadTexturesDirectlyFromDisk = false) {
         //clear everything
         Clear();
                 
@@ -670,7 +694,7 @@ public class VoxelBlocks : MonoBehaviour {
 
                 ParseQuarterBlock(block);
 
-                ParseStaticMeshBlock(block);
+                ParseStaticMeshBlock(block, useSimplifiedBlocks);
 
                 ParseGreedyTilingMeshBlock(block);
 
@@ -691,15 +715,16 @@ public class VoxelBlocks : MonoBehaviour {
 
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
-        int defaultTextureSize = maxResolution;
-        atlas.PackTextures(temporaryTextures, atlasPaddingPx, atlasSize, atlasSize, numMips, defaultTextureSize);
+        int defaultTextureSize = maxResolution - atlasPaddingPx * 2;
+        
+        atlas.PackTextures(temporaryTextures, atlasPaddingPx, atlasSize, atlasSize, numMips, defaultTextureSize, packNormalsIntoAtlas);
         temporaryTextures.Clear();
 
         atlasMaterial.SetTexture("_MainTex", atlas.diffuse);
-        // atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
+        if (packNormalsIntoAtlas) atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
         atlasMaterial.SetFloat("_AtlasWidthTextures", atlasWidthTextures);
         atlasMaterial.SetFloat("_PaddingOverWidth", atlasPaddingPx / (float) atlasSize);
-        atlasMaterial.SetFloat("_TexWidthOverWidth", maxResolution / (float) atlasSize);
+        atlasMaterial.SetFloat("_TexWidthOverWidth", (maxResolution - atlasPaddingPx * 2) / (float) atlasSize);
 
         //create the materials
         Profiler.BeginSample("CreateMaterials");
@@ -847,12 +872,12 @@ public class VoxelBlocks : MonoBehaviour {
         return block.definition.collisionType;
     }
 
-    public void Reload(bool useTexturesDirectlyFromDisk = false) {
+    public void Reload(bool useSimplifiedBlocks, bool useTexturesDirectlyFromDisk = false) {
+        // Only load VoxelBlocks once while application is running
+        if (Application.isPlaying && hasBegunLoading) return;
+        hasBegunLoading = true;
 
-        Load(useTexturesDirectlyFromDisk);
-        //Todo!
-        //this.blocks = new VoxelBlocks();
-        //this.blocks.Load(this.GetBlockDefinesContents());
+        Load(useSimplifiedBlocks, useTexturesDirectlyFromDisk);
     }
 
     //When the game doesnt have this block definiton, we want to create a temporary one just so we dont wreck their data just for loading this file
@@ -887,9 +912,10 @@ public class VoxelBlockEditor : Editor {
     public override void OnInspectorGUI() {
         DrawDefaultInspector();
         
-        VoxelBlocks voxelBlocks = (VoxelBlocks)target;
         if (GUILayout.Button("Reload")) {
-            voxelBlocks.Reload();
+            VoxelBlocks voxelBlocks = (VoxelBlocks)target;
+            VoxelWorld voxelWorld = voxelBlocks.gameObject.GetComponent<VoxelWorld>();
+            voxelBlocks.Reload(voxelWorld ? voxelWorld.useSimplifiedVoxels : false);
         }
         
     }

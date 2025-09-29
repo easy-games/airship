@@ -7,6 +7,7 @@ using Steamworks;
 #endif
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Scripting;
 
 public struct AirshipSteamFriendInfo {
     public bool playingAirship;
@@ -17,6 +18,7 @@ public struct AirshipSteamFriendInfo {
 }
 
 
+[Preserve]
 [LuauAPI(LuauContext.Protected)]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private static List<(object, object)> commandLineQueue = new();
@@ -177,42 +179,46 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         return success;
     }
 
-        public static AirshipSteamFriendInfo[] GetSteamFriends() {
-        Assert.IsTrue(SteamManager.Initialized, "Can't fetch friends: steam is not initialized.");
+    [Preserve]
+        public static async Task<AirshipSteamFriendInfo[]> GetSteamFriends() {
+            Assert.IsTrue(SteamManager.Initialized, "Can't fetch friends: steam is not initialized.");
 
         #if !STEAMWORKS_NET
-            return Array.Empty<AirshipSteamFriendInfo>();
+            return Task.FromResult(Array.Empty<AirshipSteamFriendInfo>());
         #else
-            var friendCount = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
-            var friendInfos = new AirshipSteamFriendInfo[friendCount];
-            for (var i = 0; i < friendCount; i++) {
-                var friendId = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagImmediate);
-                var friendName = SteamFriends.GetFriendPersonaName(friendId);
-                var personaState = SteamFriends.GetFriendPersonaState(friendId);
-                SteamFriends.GetFriendGamePlayed(friendId, out var friendGameInfo);
+            return await Task.Run(() => {
+                var friendCount = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
+                var friendInfos = new AirshipSteamFriendInfo[friendCount];
+                for (var i = 0; i < friendCount; i++) {
+                    var friendId = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagImmediate);
+                    var friendName = SteamFriends.GetFriendPersonaName(friendId);
+                    var personaState = SteamFriends.GetFriendPersonaState(friendId);
+                    SteamFriends.GetFriendGamePlayed(friendId, out var friendGameInfo);
 
-                var friendInfoStruct = new AirshipSteamFriendInfo {
-                    steamId = friendId.m_SteamID,
-                    steamName = friendName
-                };
+                    var friendInfoStruct = new AirshipSteamFriendInfo {
+                        steamId = friendId.m_SteamID,
+                        steamName = friendName
+                    };
 
-                // Is friend playing Airship?
-                if (friendGameInfo.m_gameID.m_GameID == 2381730) {
-                    friendInfoStruct.playingAirship = true;
-                } else if (friendGameInfo.m_gameID.IsValid()) {
-                    friendInfoStruct.playingOtherGame = true;
+                    // Is friend playing Airship?
+                    if (friendGameInfo.m_gameID.m_GameID == SteamUtils.GetAppID().m_AppId) {
+                        friendInfoStruct.playingAirship = true;
+                    } else if (friendGameInfo.m_gameID.IsValid()) {
+                        friendInfoStruct.playingOtherGame = true;
+                    }
+
+                    // Check if online
+                    if (personaState != EPersonaState.k_EPersonaStateOffline) {
+                        friendInfoStruct.online = true;
+                    }
+
+                    friendInfos[i] = friendInfoStruct;
                 }
 
-                // Check if online
-                if (personaState != EPersonaState.k_EPersonaStateOffline) {
-                    friendInfoStruct.online = true;
-                }
-
-                friendInfos[i] = friendInfoStruct;
-            }
-            return friendInfos;
-        #endif
-    }
+                return friendInfos;
+            });
+#endif
+        }
 
     /// <summary>
     /// Can return null.

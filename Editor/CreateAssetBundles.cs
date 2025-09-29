@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
-using Luau;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
@@ -13,6 +12,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
+using Editor.Quality;
 #endif
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
@@ -173,7 +173,7 @@ public static class CreateAssetBundles {
 	/// Creates an AssetBundleBuild for every AirshipPackage in the project.
 	/// </summary>
 	/// <returns></returns>
-	public static List<AssetBundleBuild> GetPackageAssetBundleBuilds() {
+	public static List<AssetBundleBuild> GetPackageAssetBundleBuilds(bool compileURPShaders) {
 		List<AssetBundleBuild> builds = new();
 
 		if (!Directory.Exists(Path.Join("Assets", "AirshipPackages"))) {
@@ -197,7 +197,7 @@ public static class CreateAssetBundles {
 						assetGuids.AddRange(urpGuids);
 					});
 
-					if (!EditorIntegrationsConfig.instance.selfCompileAllShaders) {
+					if (!compileURPShaders) {
 						Debug.Log("Adding URP assets to CoreMaterials bundle.");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
@@ -239,24 +239,13 @@ public static class CreateAssetBundles {
 
 	public static GameConfig BuildGameConfig() {
 		GameConfig gameConfig = GameConfig.Load();
-
-		// Update tags
-		var tagList = UnityEditorInternal.InternalEditorUtility.tags[7..];
-		if (tagList.Length > GameConfig.MaximumTags) {
-			Debug.LogError($"Maximum number of allowed unity tags in Airship is {GameConfig.MaximumTags} - you have {tagList.Length} defined.");
+		try {
+			gameConfig.SerializeSettings();
+		} catch (Exception ex) {
+			Debug.LogError("Error when copying Unity properties to GameConfig: " + ex);
 			return null;
 		}
-		gameConfig.gameTags = tagList.ToArray();
 
-		// Update layers
-		var layers = new List<string>();
-		for (int i = 0; i < 31; i++) {
-			var layerName = LayerMask.LayerToName(i);
-			layers.Add(layerName);
-		}
-		gameConfig.gameLayers = layers.ToArray();
-		gameConfig.SerializeSettings();       
-		
 		// Local source packages set to forceLatest
 		foreach (var package in gameConfig.packages) {
 			if (package.localSource) {
@@ -294,7 +283,16 @@ public static class CreateAssetBundles {
 		Debug.Log($"[Editor]: Building {platform} asset bundles...");
 		Debug.Log("[Editor]: Build path: " + buildPath);
 
-		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds();
+		if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
+			SwapToQualityLevel("Low");
+		} else {
+			SwapToQualityLevel("Normal");
+		}
+
+		// Act as if we are building all asset bundles (including CoreMaterials).
+		// This is so our current build target will have references to those asset bundles.
+		// This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
+		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds(gameConfig.compileURPShaders);
 
 		// Make a fake asset bundle with all package content. This makes the build have the correct dependency data.
 		// {
@@ -481,6 +479,24 @@ public static class CreateAssetBundles {
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
 
 		return true;
+	}
+
+	public static void SwapToQualityLevel(string name) {
+#if UNITY_EDITOR
+		if (name == "Low") {
+			QualityConfig.ConfigureLowQualityLevel();
+		} else if (name == "Normal") {
+			QualityConfig.ConfigureNormalQualityLevel();
+		}
+#endif
+
+		int index = System.Array.IndexOf(QualitySettings.names, name);
+		if (index < 0) {
+			Debug.LogError($"Quality level '{name}' not found. Please report this issue to Airship devs.");
+			return;
+		}
+
+		QualitySettings.SetQualityLevel(index, applyExpensiveChanges: true);
 	}
 
 	static IList<IBuildTask> GetBuildTasks()

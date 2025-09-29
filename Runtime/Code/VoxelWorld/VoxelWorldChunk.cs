@@ -402,14 +402,17 @@ namespace VoxelWorldStuff {
             return false;
         }
 
-        ~Chunk() {
-            Free();
-        }
-
         public void Free() {
-            //if (voxel.IsCreated)
-            {
-                //  voxel.Dispose();
+            // Destroy all meshes
+            if (mesh != null) {
+                if (Application.isPlaying) Object.Destroy(mesh);
+                else Object.DestroyImmediate(mesh);
+            }
+            if (detailMeshes != null) {
+                foreach (var detailMesh in detailMeshes) {
+                    if (Application.isPlaying) Object.Destroy(detailMesh);
+                    else Object.DestroyImmediate(detailMesh);
+                }
             }
         }
 

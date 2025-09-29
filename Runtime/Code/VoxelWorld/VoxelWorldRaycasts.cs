@@ -5,6 +5,7 @@ using VoxelWorldStuff;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
+[LuauAPI]
 public struct VoxelRaycastResult {
     public bool Hit;
     public float Distance;

@@ -9,7 +9,7 @@ public class StyleColorAPI : BaseLuaAPIClass {
         return typeof(UnityEngine.UIElements.StyleColor);
     }
 
-    public override int OverrideMemberMethod(LuauContext context, IntPtr thread,System.Object targetObject, string methodName, int numParameters, ArraySegment<int> parameterDataPODTypes, ArraySegment<IntPtr> parameterDataPtrs, ArraySegment<int> parameterDataSizes) {
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread,System.Object targetObject, string methodName, int numParameters, Span<int> parameterDataPODTypes, Span<IntPtr> parameterDataPtrs, Span<int> parameterDataSizes) {
         if (methodName == "SetColor")
         {
             if (numParameters != 1)

@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Airship.DevConsole;
 using Code.Auth;
 using Code.Http.Internal;
+using Code.Network;
 using Code.Platform.Shared;
 using Code.Util;
 using Luau;
@@ -46,6 +48,28 @@ public class SocketManager : Singleton<SocketManager> {
 
     private void Awake() {
         DontDestroyOnLoad(this);
+    }
+
+    private void Start() {
+        DevConsole.AddCommand(Command.Create<string>("join", "", "Join a game from given gameId",
+            Parameter.Create("gameId", "Game ID of the target game."), async (gameId) => {
+                Debug.Log("Requesting transfer to game " + gameId + " ...");
+                var packet = $"{{\"gameId\": \"{gameId}\"}}";
+                var res = await InternalHttpManager.PostAsync(AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/self", packet);
+                if (res.success) {
+                    Debug.Log("<color=green>Joining...</color>");
+                }
+                else {
+                    Debug.LogError("Failed to join game: " + res.error);
+                }
+            }));
+        
+        DevConsole.AddCommand(Command.Create<string>("ping", "", "Measure ping to an airship server cluster",
+            Parameter.Create("Ping Server IP", "IP of the Airship cluster ping server."), (serverIp) => {
+               UdpPingTool.GetPing(serverIp, 1000).ContinueWith((result) => {
+                   Debug.Log($"Latency to {serverIp.Trim()} is {result.Result}ms");
+               });
+            }));
     }
 
     public static async Task<bool> ConnectAsyncInternal() {

@@ -190,6 +190,21 @@ namespace Airship.Editor {
             }
             AirshipEditorGUI.EndSettingGroup();
             
+            AirshipEditorGUI.BeginSettingGroup(new GUIContent("Publishing Options"));
+            {
+                projectSettings.codeSplitting = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Split Server/Client Code") {
+                        tooltip = "Will split your code into two versions - one for the server, one for the client. " +
+                                  " For example, code that is in a server-only block or method will not be in client code. " +
+                                  "This will slightly increase upload size of code bundles and make code deploys take longer, but will make your server code private."
+                    }, projectSettings.codeSplitting);
+
+                if (!projectSettings.codeSplitting) {
+                    EditorGUILayout.HelpBox("Disabling this will make all code available to the client. This is not recommended in a production build of an Airship game.", MessageType.Warning);
+                }
+            }
+            AirshipEditorGUI.EndSettingGroup();
+            
             // EditorGUILayout.Space(10);
             // EditorGUILayout.LabelField("* This property only applies to your instance of the project");
             

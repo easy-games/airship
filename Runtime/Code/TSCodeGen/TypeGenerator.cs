@@ -3,6 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
+using System.Linq;
 using Agones.Model;
 using Airship;
 using Assets.Code.Misc;
@@ -13,6 +15,8 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using Airship.DevConsole;
+using Code.Components;
+using Code.Haptics;
 using Code.Managers;
 using Code.Network;
 using Code.Network.Simulation;
@@ -49,7 +53,9 @@ using Code.Player.Accessories;
 using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.NetworkedMovement;
 using Unity.Mathematics;
+using UnityEngine.InputSystem;
 using UnityEngine.Splines;
+using TouchPhase = UnityEngine.TouchPhase;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -147,8 +153,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(Ray),
             typeof(MaterialPropertyBlock),
             typeof(DevConsole),
-            typeof(EasyShake),
-            typeof(EasyMotion),
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
@@ -178,6 +182,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipLongPress),
             typeof(DecalProjector),
             typeof(Time),
+            typeof(FrameTimingManager),
+            typeof(Texture2DArray),
+            typeof(GraphicsStateCollection),
             //Collider 2D Types
             typeof(BoxCollider2D),
             typeof(CircleCollider2D),
@@ -208,7 +215,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
             typeof(EventTrigger),
-            typeof(EasyShake),
             typeof(TreeInstance),
             typeof(Terrain),
             typeof(GameServer),
@@ -252,6 +258,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
+            typeof(Touchscreen),
             
             // Splines
             typeof(BezierCurve),
@@ -276,6 +283,19 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterAnimationSyncData),
             typeof(AccessoryAddMode),
             typeof(RectMask2D),
+            typeof(EasyShake),
+            typeof(EasyMotion),
+            typeof(EasyLookAt),
+            typeof(EasyDestroy),
+            typeof(EasyGridAlign),
+            typeof(EasyTransformAnchor),
+            typeof(EasyAxis),
+            typeof(WorldSpaceCanvasScaler),
+            
+            typeof(VibrationManager),
+            typeof(VibrationFeedbackType),
+
+
             
             // Steam
             typeof(AirshipSteamFriendInfo),
@@ -304,6 +324,7 @@ public class TypeGenerator : MonoBehaviour
             "UnityEngine.Vector4",
             "UnityEngine.Matrix4x4",
             "UnityEngine.Quaternion",
+            "UnityEngine.Rect$",
             // "Object",
             "^UnityEngine.Object$",
             "ListCache",
@@ -368,10 +389,20 @@ public class TypeGenerator : MonoBehaviour
                     return "Vector3";
                 }
                 type = type.Replace("*", "");
+
                 if (type.Contains("$1"))
                 {
                     print(type);
                     type = type.Substring(0, type.IndexOf("$1"));
+                }
+
+                if (type.Contains("[,")) {
+                    type = Regex.Replace(type, @"\[(,+)\]", match =>
+                    {
+                        int commaCount = match.Groups[1].Value.Length;
+                        int dimensions = commaCount + 1;
+                        return string.Concat(Enumerable.Repeat("[]", dimensions));
+                    });
                 }
 
                 return type;

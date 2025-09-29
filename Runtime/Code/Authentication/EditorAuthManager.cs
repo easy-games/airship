@@ -187,7 +187,7 @@ namespace Code.Authentication {
                 "Packages/gg.easy.airship/Editor/ProfileIcons/PurpleDefaultProfilePicture.png",
             };
 
-            var idx = userId.GetHashCode() % files.Count;
+            var idx = Mathf.Abs(userId.GetHashCode()) % files.Count;
             var path = files[idx];
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }

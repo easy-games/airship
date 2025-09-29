@@ -15,30 +15,51 @@ MonoBehaviour:
   blockName: DefaultGrass
   description: 
   contextStyle: 0
+  meshMaterial: {fileID: 0}
+  halfBlock: 0
   topTexture:
     material: {fileID: 0}
-    diffuse: {fileID: 2800000, guid: 6877ac1e21f015b47882cd4f5cfad6d4, type: 3}
-    normal: {fileID: 2800000, guid: 10169fd60e126c546981cfb05122fd92, type: 3}
+    diffuse: {fileID: 2800000, guid: c6aa94f27b3a6a94c80f24e6a7a71bb0, type: 3}
+    normal: {fileID: 2800000, guid: ba220a7d912f09c48acaa9861f9cead1, type: 3}
     smooth: {fileID: 0}
     metallic: {fileID: 0}
     emissive: {fileID: 0}
   sideTexture:
     material: {fileID: 0}
-    diffuse: {fileID: 2800000, guid: 774a50afe866e154e9e12594437eff14, type: 3}
-    normal: {fileID: 2800000, guid: c2a85cd3e3c45f3449abd7dca38c71e4, type: 3}
+    diffuse: {fileID: 2800000, guid: 3cb3bf741f189ae4f89512a9472e1b1c, type: 3}
+    normal: {fileID: 2800000, guid: 2d684f19c81b19b48a83bd701ab2c59f, type: 3}
     smooth: {fileID: 0}
     metallic: {fileID: 0}
     emissive: {fileID: 0}
   bottomTexture:
     material: {fileID: 0}
-    diffuse: {fileID: 2800000, guid: 20a990699f2fcef47a191abc4da68e74, type: 3}
-    normal: {fileID: 2800000, guid: 3ed7190f24d18f54ba65329f30dda62c, type: 3}
+    diffuse: {fileID: 2800000, guid: a6074d5a6b531fb40a263e6505bf6e7a, type: 3}
+    normal: {fileID: 2800000, guid: d581222f926a28840a2d904411527245, type: 3}
     smooth: {fileID: 0}
     metallic: {fileID: 0}
     emissive: {fileID: 0}
-  meshMaterial: {fileID: 0}
-  quarterBlockMesh: {fileID: 0}
-  meshPathLod: 
+  quarterBlockMeshes: []
+  prefab: {fileID: 0}
+  staticMeshLOD0: {fileID: 0}
+  staticMeshLOD1: {fileID: 0}
+  staticMeshLOD2: {fileID: 0}
+  meshTile1x1x1:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  meshTile2x2x2:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  meshTile3x3x3:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  meshTile4x4x4:
+    mesh_LOD0: {fileID: 0}
+    mesh_LOD1: {fileID: 0}
+    mesh_LOD2: {fileID: 0}
+  rotatedPlacement: 0
   metallic: 0
   smoothness: 0
   normalScale: 1
@@ -47,4 +68,3 @@ MonoBehaviour:
   solid: 1
   collisionType: 1
   randomRotation: 0
-  minecraftIds: 

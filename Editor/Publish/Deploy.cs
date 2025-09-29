@@ -9,6 +9,7 @@ using Airship.Editor;
 using Code.Authentication;
 using Code.Bootstrap;
 using Code.Http.Internal;
+using Code.Luau.LuauAssembly.Protection;
 using Code.Platform.Shared;
 using Editor.Packages;
 using Luau;
@@ -60,6 +61,17 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
+	[MenuItem("Airship/Misc/Build Game Asset Bundle")]
+	public static void BuildGameAssetBundleForAnalysis() {
+		List<AirshipPlatform> platforms = new();
+#if UNITY_EDITOR_OSX
+		platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Windows);
+#endif
+		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false, true, true)));
+	}
+
 	[MenuItem("Airship/Publish Game (Code Only)", priority = 50)]
 	public static void DeployCodeOnly()
 	{
@@ -75,7 +87,7 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
-	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true) {
+	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true, bool dontUpload = false) {
 		var possibleKeys = new List<string>() { AuthConfig.instance.deployKey, InternalHttpManager.editorAuthToken };
 		possibleKeys.RemoveAll(string.IsNullOrEmpty);
 		if (possibleKeys.Count == 0) {
@@ -97,8 +109,6 @@ public class Deploy {
 			}
 		}
 
-
-
 		var confirmedSaveState = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
 		if (!confirmedSaveState  || SceneManager.GetActiveScene().isDirty) { // User clicked "cancel"
 			Debug.LogError("[Airship]: Cancelling publish: you must save or discard scene changes.");
@@ -106,7 +116,7 @@ public class Deploy {
 		}
 
 		foreach (var scene in gameConfig.gameScenes) {
-			if (LuauCore.IsProtectedSceneName(scene.name)) {
+			if (LuauProtection.IsProtectedSceneName(scene.name)) {
 				Debug.LogError($"Game scene name not allowed: {scene.name}");
 				yield break;
 			}
@@ -117,7 +127,7 @@ public class Deploy {
 			}
 		}
 
-		if (LuauCore.IsProtectedSceneName(gameConfig.startingScene.name)) {
+		if (LuauProtection.IsProtectedSceneName(gameConfig.startingScene.name)) {
 			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingScene}");
 			yield break;
 		}
@@ -125,17 +135,43 @@ public class Deploy {
 		// Rebuild Typescript
 		var shouldRecompile = !skipBuild;
 		var shouldResumeTypescriptWatch = shouldRecompile && TypescriptCompilationService.IsWatchModeRunning;
+		var useSplitCodeBundle = EditorIntegrationsConfig.instance.codeSplitting;
+
+		if (!useSplitCodeBundle) {
+			var result = EditorUtility.DisplayDialogComplex("Code stripping is disabled",
+				"You are about to publish with code stripping disabled, are you sure you want to continue?\n\nThis will make any server code available to the client.", "Continue",
+				"Enable", "Cancel");
+
+			if (result == 1) {
+				EditorIntegrationsConfig.instance.codeSplitting = true;
+				useSplitCodeBundle = true;
+			} else if (result == 2) {
+				yield break;
+			}
+		}
 		
 		// We want to do a full publish
-		
 		if (shouldRecompile) {
-			TypescriptCompilationService.StopCompilers();
+			var compileFlags = TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file
 			
-			var compileFlags = TypeScriptCompileFlags.Publishing | TypeScriptCompileFlags.DisplayProgressBar; // FullClean will clear the incremental file & Publishing will omit editor data
-
+			// Compiler doesn't need to be stopped if it's a split code bundle, since that's compiled to the dist folder
+			//		The publish flag here will enable all the fancy features around this
+			if (useSplitCodeBundle) {
+				compileFlags |= TypeScriptCompileFlags.Publishing;
+			} else {
+				TypescriptCompilationService.StopCompilers();
+			}
+			
 			if (skipBuild) {
 				compileFlags |= TypeScriptCompileFlags.SkipReimportQueue; // code publish does not require asset reimport
 			}
+			
+			TypescriptCompilationService.BuildTypescript(compileFlags);
+		} else if (useSplitCodeBundle) {
+			var compileFlags = TypeScriptCompileFlags.Publishing 
+			                   | TypeScriptCompileFlags.DisplayProgressBar 
+			                   | TypeScriptCompileFlags.SkipPackages 
+			                   | TypeScriptCompileFlags.SkipReimportQueue; // skipping packages in the bg
 			
 			TypescriptCompilationService.BuildTypescript(compileFlags);
 		}
@@ -228,7 +264,7 @@ public class Deploy {
 					codeZip.AddEntry(path, File.ReadAllBytes(path));
 					continue;
 				}
-				
+
 				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
 				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
 				if (!File.Exists(luaOutPath)) {
@@ -238,9 +274,34 @@ public class Deploy {
 
 				// We want a .lua in the same spot the .ts would be
 				var luaFakePath = path.Replace(".ts", ".lua");
-				var bytes = File.ReadAllBytes(luaOutPath);
-				codeZip.AddEntry(luaFakePath, bytes);
-
+                
+				if (useSplitCodeBundle) {
+					var serverPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+						TypescriptProjectsService.DeploymentContext.Server);
+					var clientPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+						TypescriptProjectsService.DeploymentContext.Client);
+					
+					if (File.Exists(serverPath) && File.Exists(clientPath)) {
+						var serverBytes = File.ReadAllBytes(serverPath);
+						var serverFakePath = path.Replace(".ts", AirshipRuntimePath.ServerExtension);
+						codeZip.AddEntry(serverFakePath, serverBytes);
+						
+						var clientBytes = File.ReadAllBytes(clientPath);
+						var clientFakePath = path.Replace(".ts", AirshipRuntimePath.ClientExtension);
+						codeZip.AddEntry(clientFakePath, clientBytes);
+					} else {
+						var sharedPath = TypescriptProjectsService.GetPublishingContextPath(luaOutPath,
+							TypescriptProjectsService.DeploymentContext.Shared);
+						
+						var sharedBytes = File.ReadAllBytes(sharedPath);
+						var sharedFakePath = path.Replace(".ts", AirshipRuntimePath.LuaExtension);
+						codeZip.AddEntry(sharedFakePath, sharedBytes);
+					}
+				} else {
+					var bytes = File.ReadAllBytes(luaOutPath);
+					codeZip.AddEntry(luaFakePath, bytes);
+				}
+				
 				var jsonPath = luaOutPath + ".json~";
 				if (File.Exists(jsonPath)) {
 					// var jsonBytes = File.ReadAllBytes(jsonPath);
@@ -267,9 +328,9 @@ public class Deploy {
 			yield return null;
 		}
 
-		if (EditorIntegrationsConfig.instance.buildWithoutUpload) {
+		if (EditorIntegrationsConfig.instance.buildWithoutUpload || dontUpload) {
 			if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
-			Debug.Log("Build without upload is enabled. Ending early. You can now view bundles using AssetBundle browser.");
+			Debug.Log("Build without upload is enabled. Ending early. You can now inspect the built bundle inside \"bundles\" folder.");
 			yield break;
 		}
 

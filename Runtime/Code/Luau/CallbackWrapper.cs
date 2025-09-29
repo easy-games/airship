@@ -49,7 +49,7 @@ namespace Luau
             if (m_threadPinCount[thread] <= 0)
             {
                 m_threadPinCount.Remove(thread);
-                LuauPlugin.LuauUnpinThread(thread);
+                LuauPlugin.UnpinThread(thread);
                 // Debug.Log("Releasing pin " + m_name);
             }
             
@@ -78,7 +78,7 @@ namespace Luau
 
                 Profiler.BeginSample("HandleEventDelayed0 " + this.methodName);
                 System.Int32 integer = (System.Int32)handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
+                int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
@@ -108,7 +108,7 @@ namespace Luau
                 Profiler.BeginSample("EngineEvent." + this.methodName);
                 WritePropertyToThread(this.thread, param0);
                 System.Int32 integer = (System.Int32)handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
+                int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
@@ -134,7 +134,7 @@ namespace Luau
                 WritePropertyToThread(this.thread, param0);
                 WritePropertyToThread(this.thread, param1);
                 System.Int32 integer = (System.Int32)handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
+                int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
@@ -158,7 +158,7 @@ namespace Luau
                 WritePropertyToThread(this.thread, param1);
                 WritePropertyToThread(this.thread, param2);
                 System.Int32 integer = (System.Int32)handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
+                int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
@@ -183,7 +183,7 @@ namespace Luau
                 WritePropertyToThread(this.thread, param2);
                 WritePropertyToThread(this.thread, param3);
                 System.Int32 integer = (System.Int32)handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
+                int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);

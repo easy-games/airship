@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -12,6 +13,7 @@ using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Assets.Luau;
+using Luau;
 using UnityEngine.Serialization;
 
 #if UNITY_EDITOR
@@ -42,8 +44,7 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized] internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
     
     [NonSerialized] internal const bool chunkSizeIsPowerOfTwo = (chunkSize & (chunkSize - 1)) == 0;
-     
- 
+    
     [HideInInspector]
     public Vector3 focusPosition {
         get {
@@ -86,8 +87,6 @@ public partial class VoxelWorld : MonoBehaviour {
     [SerializeField] public bool autoLoad = true;
     
     [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
-
-    //[SerializeField][HideInInspector] private WorldSaveFile domainReloadSaveFile = null;
     
     [SerializeField][HideInInspector] public VoxelWorldNetworker worldNetworker;
 
@@ -183,8 +182,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public static bool VoxelIsSolid(VoxelData voxel) {
         return (voxel & 0x8000) != 0; //15th bit 
     }
-
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static VoxelData SetVoxelSolidBit(VoxelData voxel, bool solid) {
         //Solid bit is bit 15, toggle it on or off
@@ -195,8 +193,6 @@ public partial class VoxelWorld : MonoBehaviour {
             return (ushort)(voxel & 0x7FFF);
         }
     }
-
-
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetVoxelFlippedBits(VoxelData voxel) {
@@ -251,7 +247,6 @@ public partial class VoxelWorld : MonoBehaviour {
         return voxel;
     }
 
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int HashCoordinates(int x, int y, int z) {
         const int prime1 = 73856093;
@@ -259,7 +254,6 @@ public partial class VoxelWorld : MonoBehaviour {
         const int prime3 = 83492791;
 
         return x * prime1 ^ y * prime2 ^ z * prime3;
-
     }
 
     public VoxelBlocks.CollisionType GetCollisionType(VoxelData voxelData) {
@@ -290,7 +284,6 @@ public partial class VoxelWorld : MonoBehaviour {
     public Vector3 TransformVectorToLocalSpace(Vector3 vec) {
         return transform.worldToLocalMatrix.MultiplyVector(vec);
     }
-
 
     public void InvokeOnFinishedReplicatingChunksFromServer() {
         this.finishedReplicatingChunksFromServer = true;
@@ -420,7 +413,7 @@ public partial class VoxelWorld : MonoBehaviour {
         foreach (Transform child in gameObject.transform) {
             children.Add(child.gameObject);
         }
-
+        
         return children;
     }
      
@@ -430,7 +423,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (chunk == null) {
             return null;
         }
- 
+        
         return chunk.GetPrefabAt(pos);
     }
 
@@ -485,18 +478,16 @@ public partial class VoxelWorld : MonoBehaviour {
                         this.chunks.Add(chunk.chunkKey, chunk);
                         chunk.SetWorld(this);
                         chunks[chunkKey] = chunk;
-
                     }
                 }
             }
         }
-
     } 
 
     public static Chunk CreateChunk(Vector3Int key) {
-        Chunk chunk = new();
-        chunk.chunkKey = key;
-        return chunk;
+        return new Chunk {
+            chunkKey = key,
+        };
     }
 
     /**
@@ -565,7 +556,6 @@ public partial class VoxelWorld : MonoBehaviour {
         chunk.SetWorld(this);
         chunks[pos] = chunk;
     }
- 
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(Vector3Int globalCoordinate) {
@@ -621,8 +611,7 @@ public partial class VoxelWorld : MonoBehaviour {
         return (value.GetVoxelAt(pos), value);
     }
 
-    public VoxelData 
-        GetVoxelAt(Vector3 pos) {
+    public VoxelData GetVoxelAt(Vector3 pos) {
         Vector3Int posi = FloorInt(pos);
         Vector3Int chunkKey = WorldPosToChunkKey(posi);
         chunks.TryGetValue(chunkKey, out Chunk value);
@@ -645,7 +634,6 @@ public partial class VoxelWorld : MonoBehaviour {
     public void DirtyMesh(Vector3Int voxel, bool dirtyCollisions, bool priority = false) {
         Chunk chunk = GetChunkByVoxel(voxel);
         if (chunk != null) {
-
             chunk.SetGeometryDirty(true, priority);
             if (dirtyCollisions) chunk.SetCollisionDirty(true);
             
@@ -662,9 +650,6 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public void DirtyNeighborMeshes(Vector3Int voxel, bool dirtyCollision, bool priority = false) {
-
-        //DateTime startTime = DateTime.Now;
-
         DirtyMesh(voxel, dirtyCollision, priority);
         Vector3Int localPosition = Chunk.WorldPosToLocalPos(voxel);
 
@@ -719,7 +704,6 @@ public partial class VoxelWorld : MonoBehaviour {
      * Creates missing child GameObjects and names things properly.
      */
     private void PrepareVoxelWorldGameObject() {
-        
         this.loadingStatus = LoadingStatus.NotLoading;
         
         if (transform.Find("Chunks") != null) {
@@ -738,12 +722,12 @@ public partial class VoxelWorld : MonoBehaviour {
 
     public void GenerateWorld(bool populateTerrain = false) {
         this.PrepareVoxelWorldGameObject();
-                
+        
         if (!voxelBlocks) {
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
         }
-        voxelBlocks.Reload();
+        voxelBlocks.Reload(useSimplifiedVoxels);
         
         //this.blocks.Load(this.GetBlockDefinesContents());
 
@@ -757,7 +741,6 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public void CreateSingleStarterBlock() {
-
         if (voxelBlocks == null || voxelBlocks.loadedBlocks.Count < 2) {
             Debug.LogError("No voxel blocks defined.");
             return;
@@ -769,13 +752,11 @@ public partial class VoxelWorld : MonoBehaviour {
                 return;
             }
         }
-
     }
 
     public void FillRandomTerrain() {
         float scale = 4;
         System.Random rand = new System.Random();
-
        
         VoxelData grass = voxelBlocks.SearchForBlockIdByString("GRASS");
         VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
@@ -789,7 +770,6 @@ public partial class VoxelWorld : MonoBehaviour {
                 }
 
                 WriteVoxelAtInternal(new Vector3Int(x, height, z), grass, out _);
-
             }
         }
         RegenerateAllMeshes();
@@ -811,7 +791,6 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public void FillSingleBlock() {
-        
         VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
 
         WriteVoxelAtInternal(new Vector3Int(0, 0, 0), dirt, out _);
@@ -822,7 +801,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public void RegenerateAllMeshes() {
         Profiler.BeginSample("RegenerateAllMeshes");
 
-        //Force a mesh update
+        // Force a mesh update
         foreach (var (_, chunk) in chunks) {
             chunk.SetGeometryDirty(true);
             chunk.SetCollisionDirty(true);
@@ -831,8 +810,7 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     private void OnDestroy() {
-
-#if UNITY_EDITOR        
+#if UNITY_EDITOR
         AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
 #endif
@@ -859,14 +837,12 @@ public partial class VoxelWorld : MonoBehaviour {
         }
     }
 
-
     public Vector3 CalculatePlaneIntersection(Vector3 origin, Vector3 dir, Vector3 planeNormal, Vector3 planePoint) {
         float t = Vector3.Dot(planePoint - origin, planeNormal) / Vector3.Dot(dir, planeNormal);
         return origin + dir * t;
     }
 
     public GameObject SpawnDebugSphere(Vector3 pos, Color col, float radius = 0.1f) {
-
         GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         sphere.transform.position = pos;
         sphere.transform.localScale = new Vector3(radius, radius, radius);
@@ -891,7 +867,6 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     public LoadingStatus loadingStatus = LoadingStatus.NotLoading;
     
-    
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
         if (this.voxelBlocks == null) {
             //Error
@@ -911,7 +886,7 @@ public partial class VoxelWorld : MonoBehaviour {
         this.PrepareVoxelWorldGameObject();
         this.loadingStatus = LoadingStatus.Loading;
 
-        this.voxelBlocks.Reload();
+        this.voxelBlocks.Reload(useSimplifiedVoxels);
         
         //load the text of textAsset
         file.LoadIntoVoxelWorld(this);
@@ -927,7 +902,6 @@ public partial class VoxelWorld : MonoBehaviour {
    
     [HideFromTS]
     public void CreateEmptyWorld() {
-        
         if (voxelBlocks == null) {
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
@@ -938,15 +912,12 @@ public partial class VoxelWorld : MonoBehaviour {
  
         DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
- 
     }
-
-
     
     public void SaveToFile() {
 #if UNITY_EDITOR
         if (this.voxelWorldFile == null) return;
- 
+        
         this.voxelWorldFile.CreateFromVoxelWorld(this);
         //Save the asset
         EditorUtility.SetDirty(this.voxelWorldFile);
@@ -954,20 +925,16 @@ public partial class VoxelWorld : MonoBehaviour {
         
         hasUnsavedChanges = false;
 #endif
-    } 
+    }
 
     public void SaveToDomainReloadFile() {
 #if UNITY_EDITOR
-
         if (chunks.Count > 0 && hasUnsavedChanges) {
-            //Create a temporary asset for saving
-            /*this.domainReloadSaveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
-            this.domainReloadSaveFile.CreateFromVoxelWorld(this);
-            Debug.Log("Temporarily saving Voxel World");*/
+            // Create a temporary asset for saving
             SaveToFile();
         }
-#endif        
-    } 
+#endif
+    }
 
     /**
      * Used in TS on the client.
@@ -975,7 +942,6 @@ public partial class VoxelWorld : MonoBehaviour {
      * send data over network.
      */
     public void LoadEmptyWorld() {
-
         if (voxelBlocks == null) {
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
@@ -984,12 +950,10 @@ public partial class VoxelWorld : MonoBehaviour {
         DeleteChildGameObjects(gameObject);
         this.PrepareVoxelWorldGameObject();
 
-        this.voxelBlocks.Reload();
+        this.voxelBlocks.Reload(useSimplifiedVoxels);
 
         RegenerateAllMeshes();
- 
     }
- 
 
     private void Awake() {
         var mainCam = Camera.main;
@@ -1091,16 +1055,13 @@ public partial class VoxelWorld : MonoBehaviour {
             if (chunkPair.Value.NeedsToCopyMeshToScene()) {
                 chunksThatNeedMeshUpdates.Add(chunkPair.Value);
                 continue;
-            }
-            else
-            if (chunkPair.Value.NeedsToGenerateMesh()) {
+            } else if (chunkPair.Value.NeedsToGenerateMesh()) {
                 chunksThatNeedThreadKickoff.Add(chunkPair.Value);
             }
-
         }
 
         Profiler.BeginSample("ThreadKickoff");
-        //Kickoff threads, sorted by closest to camera
+        // Kickoff threads, sorted by closest to camera
         int currentlyUpdatingChunks = GetNumProcessingMeshChunks();
         maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
         int updateCounter = 0;
@@ -1157,12 +1118,10 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.EndSample();
 
         Profiler.BeginSample("MainthreadUpdateMeshs");
-        //Kickoff mainthread mesh copies, sorted by closest to camera
+        // Kickoff mainthread mesh copies, sorted by closest to camera
         maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
-
-
+        
         if (chunksThatNeedMeshUpdates.Count > 0) {
-           
             float startTime = Time.realtimeSinceStartup;
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
 
@@ -1183,9 +1142,7 @@ public partial class VoxelWorld : MonoBehaviour {
             //Debug.Log("Updated:" + updateCounter);
         }
 
-
         if (this.loadingStatus == LoadingStatus.Loading) {
-            
             bool hasDirtyChunk = false;
             foreach (var chunkPair in chunks) {
                 if (chunkPair.Value.IsGeometryDirty()) {
@@ -1233,6 +1190,7 @@ public partial class VoxelWorld : MonoBehaviour {
             StepWorld();
         }
     }
+    
     public void Update() {
         if (Application.isPlaying && !renderingDisabled) {
             if (this.delayUpdate > 0) {
@@ -1244,7 +1202,6 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     private void StepWorld() {
-       
         FullWorldUpdate();
     }
 
@@ -1305,27 +1262,22 @@ public partial class VoxelWorld : MonoBehaviour {
             }
         }
     }
-
     
     public void ReloadTextureAtlas() {
-      
         if (this.voxelBlocks == null) {
             return;
         }
 
-        //If we're in the editor and we're playing the game
-        //we can't reload textures because changes have not been imported yet to unity
-        //So to get around this, we load the textures directly from disk
-        bool useTexturesDirectlyFromDisk = false;
-        if (Application.isPlaying && Application.isEditor == true) {
-            useTexturesDirectlyFromDisk = true;
-        }
-        voxelBlocks.Reload(useTexturesDirectlyFromDisk); // this.GetBlockDefinesContents(), useTexturesDirectlyFromDisk);
-         
-        //refresh the geometry
+        // If we're in the editor and we're playing the game
+        // we can't reload textures because changes have not been imported yet to unity
+        // So to get around this, we load the textures directly from disk
+        var useTexturesDirectlyFromDisk = Application.isPlaying && Application.isEditor;
+        voxelBlocks.Reload(useSimplifiedVoxels, useTexturesDirectlyFromDisk);
+        
+        // refresh the geometry
         foreach (var (_, chunk) in chunks) {
             chunk.SetGeometryDirty(true, false);
-        } 
+        }
     }
     
     public void AddChunk(Vector3Int key, Chunk chunk) {
@@ -1334,14 +1286,55 @@ public partial class VoxelWorld : MonoBehaviour {
         chunk.SetCollisionDirty(true);
     }
 
-    //Todo: How do we want to handle having multiple voxelworlds?
+    public LuauBuffer ToBuffer() {
+        var saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+        saveFile.CreateFromVoxelWorld(this);
+        
+        using var memStream = new MemoryStream();
+        using var writer = new BinaryWriter(memStream);
+        
+        // Serialize the BlockIdToScopeNames list:
+        saveFile.SerializeBlockIdToScopeNames(writer);
+
+        // Get serialized data from above:
+        var serialized = memStream.GetBuffer();
+        var blockIdToScopeNamesSerialized = new ReadOnlySpan<byte>(serialized, 0, (int)memStream.Length);
+        
+        // Combine BlockIdToScopeNames and chunksCompressed:
+        var allData = new byte[blockIdToScopeNamesSerialized.Length + saveFile.chunksCompressed.Length + sizeof(int)];
+        using var memStreamFinal = new MemoryStream(allData);
+        using var writerFinal = new BinaryWriter(memStreamFinal);
+        writerFinal.Write(blockIdToScopeNamesSerialized);
+        writerFinal.Write(saveFile.chunksCompressed.Length);
+        writerFinal.Write(saveFile.chunksCompressed);
+        
+        return allData;
+    }
+
+    public void FromBuffer(LuauBuffer buffer) {
+        var saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+        
+        using var memStream = new MemoryStream(buffer);
+        using var reader = new BinaryReader(memStream);
+        
+        saveFile.DeserializeBlockIdToScopeNames(reader);
+
+        var chunksCompressedLen = reader.ReadInt32();
+        var chunksCompressed = reader.ReadBytes(chunksCompressedLen);
+        saveFile.chunksCompressed = chunksCompressed;
+        saveFile.chunksCompressedV2 = true;
+        
+        saveFile.LoadIntoVoxelWorld(this);
+    }
+
+    // Todo: How do we want to handle having multiple voxelworlds?
     public static VoxelWorld GetFirstInstance() {
-        return GameObject.FindAnyObjectByType<VoxelWorld>(); 
+        return GameObject.FindAnyObjectByType<VoxelWorld>();
     }
     
     private void OnBeforeAssemblyReload() {
         SaveToDomainReloadFile();
-    } 
+    }
 
 #if UNITY_EDITOR
     private void OnPlayModeStateChanged(PlayModeStateChange state) {
@@ -1350,7 +1343,4 @@ public partial class VoxelWorld : MonoBehaviour {
         }
     }
 #endif
-
-
-
 }

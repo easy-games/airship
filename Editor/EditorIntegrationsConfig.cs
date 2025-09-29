@@ -32,14 +32,14 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] public bool enableMainMenu = false;
 
     [SerializeField] public bool buildWithoutUpload = false;
+
+    [SerializeField] public bool codeSplitting = true;
     
     [SerializeField] 
     public bool manageTypescriptProject = false;
     
     [SerializeField] 
     public bool safeguardBundleModification = true;
-
-    [SerializeField] public bool selfCompileAllShaders = false;
 
     [SerializeField] internal bool useProjectReconcileOption = false;
     [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;

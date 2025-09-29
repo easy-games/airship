@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[LuauAPI]
 public class EasyTransformAnchor : MonoBehaviour {
     public Transform anchor;
     public bool matchPosition = true;
