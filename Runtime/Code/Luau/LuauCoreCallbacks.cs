@@ -1064,32 +1064,46 @@ public partial class LuauCore : MonoBehaviour {
     /// <returns>True if successful, otherwise false if nothing was written.</returns>
     private static bool FastGetAndWriteValueProperty(IntPtr thread, object objectReference, PropertyGetReflectionCache cacheData) {
         var propType = cacheData.propertyInfo.PropertyType;
-        if (propType == intType) {
+        if (IsOfType(propType, intType)) {
             var intValue = GetValue<int>(objectReference, cacheData);
             WritePropertyToThreadInt32(thread, intValue);
             return true;
         }
-        if (propType == doubleType) {
+        if (IsOfType(propType, doubleType)) {
             var doubleVal = GetValue<double>(objectReference, cacheData);
             WritePropertyToThreadDouble(thread, doubleVal);
             return true;
         }
-        if (propType == floatType) {
+        if (IsOfType(propType, floatType)) {
             var shortVal = GetValue<float>(objectReference, cacheData);
             WritePropertyToThreadSingle(thread, shortVal);
             return true;
         }
-        if (propType == vector3Type) {
+        if (IsOfType(propType, vector3Type)) {
             var vecValue = GetValue<Vector3>(objectReference, cacheData);
             WritePropertyToThreadVector3(thread, vecValue);
             return true;
         }
-        if (propType == quaternionType) {
+        if (IsOfType(propType, vector2Type)) {
+            var vecValue = GetValue<Vector2>(objectReference, cacheData);
+            WritePropertyToThreadVector2(thread, vecValue);
+            return true;
+        }
+        if (IsOfType(propType, quaternionType)) {
             var quatValue = GetValue<Quaternion>(objectReference, cacheData);
             WritePropertyToThreadQuaternion(thread, quatValue);
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Checks if type is of specified ofType including if it is a reference of the ofType. 
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsOfType(Type type, Type ofType) {
+        if (type.IsByRef) return type == ofType.MakeByRefType();
+        return type == ofType;
     }
     
     public static string GetRequirePath(string originalScriptPath, string fileNameStr) {
