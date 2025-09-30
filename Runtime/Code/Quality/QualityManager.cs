@@ -107,9 +107,17 @@ namespace Code.Quality {
                 this.tracer.SetData("frame_health", frameHealth == FrameHealth.Ok ? "ok" : "unhealthy");
                 this.tracer.Finish(SpanStatus.Ok);
                 Debug.Log($"[QualityManager] Quality check complete. Ending span");
+
+                // TODO: Remove this test crash after Sentry testing
+                Invoke(nameof(TestCrash), 5f);
             }
 
             OnQualityCheck?.Invoke(frameHealth, avgFrameTimings);
+        }
+
+        private void TestCrash() {
+            Debug.Log("[QualityManager] Triggering test crash for Sentry...");
+            UnityEngine.Diagnostics.Utils.ForceCrash(UnityEngine.Diagnostics.ForcedCrashCategory.Abort);
         }
 
         private QualityReport GetRecentAverageFrameTimings() {
