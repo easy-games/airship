@@ -518,12 +518,7 @@ namespace Code.Network.StateSystem
             // ensures that we are rolling back to the time the user actually saw on their
             // client when they issued the command.
             
-            // This buffer covers the command buffer time. We queue commands locally on the server before processing them
-            // TODO: We could get lag comp a little more accurate if we tracked the actual time the command was buffered. It's good enough
-            // to use the ideal commands in one interval for now though.
-            var commandBufferTime = (NetworkServer.sendInterval * (NetworkClient.bufferTimeMultiplier / 2f));
-            
-            var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
+            var totalBuffer = (latency * 2) + bufferTime;
             var lagCompensatedTime = currentTime - totalBuffer;
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             
