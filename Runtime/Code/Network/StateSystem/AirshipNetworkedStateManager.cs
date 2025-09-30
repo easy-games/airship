@@ -35,6 +35,10 @@ namespace Code.Network.StateSystem
         [Range(0, 3)]
         public uint maxServerCommandPrediction = 1;
 
+        [Tooltip("The size multiplier of the command buffer for this character. Also used to buffer client state snapshots in client authoritative mode. Increasing this value will increase player latency, but will improve smoothness in bad network conditions. Defaults to 3.")]
+        [Range(2, 5)]
+        public int commandBufferMultiplier = 3;
+
         // Determines if the server has authority over the character
         public bool serverAuth = false;
 
@@ -200,7 +204,7 @@ namespace Code.Network.StateSystem
             // must convert send interval to scaled time because fixedDeltaTime is scaled
             // This value is refreshed in auth server tick
             this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
-                (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
+                (int)Math.Ceiling(NetworkServer.sendInterval * this.commandBufferMultiplier / Time.fixedUnscaledDeltaTime));
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -556,7 +560,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
+                    (int)Math.Ceiling(NetworkServer.sendInterval * this.commandBufferMultiplier / Time.fixedUnscaledDeltaTime));
             // Optimal max is when we will start processing extra commands.
             // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize} {NetworkClient.bufferTime} {NetworkClient.bufferTimeMultiplier} {Time.timeScale} {NetworkServer.sendInterval}");
 
@@ -644,10 +648,10 @@ namespace Code.Network.StateSystem
             } while (commandsProcessed < 1 + this.maxServerCommandCatchup && serverCommandCatchUpRequired > 0);
             // We add 1 to maxServerCommandCatchup because we always want to process at least 1 command per fixed update.
 
-            // if (commandsProcessed > 1)
-            // {
-            //     print("Processed " + commandsProcessed + " commands for " + this.gameObject.name + $". There are now {this.serverCommandBuffer.Count} commands in the buffer.");
-            // }
+            if (commandsProcessed > 1)
+            {
+                print("Processed " + commandsProcessed + " commands for " + this.gameObject.name + $". There are now {this.serverCommandBuffer.Count} commands in the buffer.");
+            }
         }
 
         public void AuthServerCaptureSnapshot(int tick, double time, bool replay)
@@ -763,7 +767,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
+                    (int)Math.Ceiling(NetworkServer.sendInterval * commandBufferMultiplier / Time.fixedUnscaledDeltaTime));
             // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
