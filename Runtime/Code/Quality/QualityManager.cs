@@ -116,8 +116,8 @@ namespace Code.Quality {
         }
 
         private void TestCrash() {
-            Debug.Log("[QualityManager] Triggering test crash for Sentry...");
-            UnityEngine.Diagnostics.Utils.ForceCrash(UnityEngine.Diagnostics.ForcedCrashCategory.Abort);
+            // Stack overflow crash
+            TestCrash();
         }
 
         private QualityReport GetRecentAverageFrameTimings() {
