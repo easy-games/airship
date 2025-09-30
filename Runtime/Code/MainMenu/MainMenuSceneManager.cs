@@ -39,13 +39,11 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private bool successfulTSLoad = false;
 
-    private void Start()
-    {
+    private void Start() {
         InternalAirshipUtil.HandleWindowSize();
 
         var savedAccount = AuthManager.GetSavedAccount();
-        if (savedAccount == null)
-        {
+        if (savedAccount == null) {
             SceneManager.LoadScene("Login");
             return;
         }
@@ -54,10 +52,6 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         Application.focusChanged += OnApplicationFocus;
         OnApplicationFocus(Application.isFocused);
-
-        SentrySdk.CaptureMessage("Test event1");
-
-        Debug.LogError("This is an error message");
     }
 
     /**
@@ -218,16 +212,20 @@ public class MainMenuSceneManager : MonoBehaviour {
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {
         var st = Stopwatch.StartNew();
         this.successfulTSLoad = false;
-        SentrySdk.AddBreadcrumb("Begin loading main menu packages", "menu.begin-loading-packages");
-        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true, (step) => {
-            loadingScreen.SetProgress(step, 50);
-        });
-        SentrySdk.AddBreadcrumb("Finish loading main menu packages", "menu.finish-loading-packages");
+        var tr = SentrySdk.StartTransaction("main-menu", "load-packages");
+        try {
+            yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true, (step) => {
+                loadingScreen.SetProgress(step, 50);
+            });
+        } finally {
+            tr.Finish();
+        }
+
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
         //Setup project configurations from loaded package
         PhysicsSetup.SetupFromGameConfig();
-        
+
         // var mainMenuBindingGO = new GameObject("MainMenuBinding");
         // var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
         // mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
@@ -240,7 +238,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         var coreLuauBindingGo = new GameObject("CoreLuauBinding");
         LuauScript.Create(coreLuauBindingGo, "AirshipPackages/@Easy/Core/Shared/MainMenu.ts", LuauContext.Protected, false);
-        
+
         StartCoroutine(CheckForFailedStartup());
     }
 

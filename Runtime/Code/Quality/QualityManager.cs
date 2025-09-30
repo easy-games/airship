@@ -59,11 +59,10 @@ namespace Code.Quality {
         private void Awake() {
             _nextQualityCheck = Time.unscaledTime + QualityCheckTimeSec;
             SceneManager.sceneLoaded += (scene, mode) => {
-                Debug.Log($"[QualityManager] Scene loaded: {scene.name}, mode: {mode}");
                 this.tracer = SentrySdk.StartTransaction(
                     "quality-manager",
                     "sample-quality"
-                    );
+                );
             };
         }
 
@@ -106,23 +105,15 @@ namespace Code.Quality {
                 this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg, MeasurementUnit.Fraction.Percent);
                 this.tracer.SetData("frame_health", frameHealth == FrameHealth.Ok ? "ok" : "unhealthy");
                 this.tracer.Finish(SpanStatus.Ok);
-                Debug.Log($"[QualityManager] Quality check complete. Ending span");
-
-                // TODO: Remove this test crash after Sentry testing
-                Invoke(nameof(TestCrash), 5f);
+                this.tracer = null;
             }
 
             OnQualityCheck?.Invoke(frameHealth, avgFrameTimings);
         }
 
-        private void TestCrash() {
-            // Stack overflow crash
-            TestCrash();
-        }
-
         private QualityReport GetRecentAverageFrameTimings() {
             if (!FrameTimingManager.IsFeatureEnabled()) return default;
-            
+
             var numLatestTimings = FrameTimingManager.GetLatestTimings(FrameTimingCount, _frameTimings);
             if (numLatestTimings <= 0) return default;
 
@@ -135,7 +126,7 @@ namespace Code.Quality {
             result.cpuMainAvg /= numLatestTimings;
             result.cpuRenderAvg /= numLatestTimings;
             result.gpuAvg /= numLatestTimings;
-            result.numFrames = (int) numLatestTimings;
+            result.numFrames = (int)numLatestTimings;
             return result;
         }
         
