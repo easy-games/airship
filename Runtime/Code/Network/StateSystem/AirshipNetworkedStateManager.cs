@@ -562,7 +562,7 @@ namespace Code.Network.StateSystem
                 Math.Min(this.serverCommandBufferMaxSize,
                     (int)Math.Ceiling(NetworkServer.sendInterval * this.bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
             // Optimal max is when we will start processing extra commands.
-            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize}");
+            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize}");
 
             // If we don't allow command catchup, drop commands to get to the target buffer size.
             if (this.maxServerCommandCatchup == 0)
