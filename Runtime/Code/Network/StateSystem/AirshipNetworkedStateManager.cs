@@ -35,10 +35,6 @@ namespace Code.Network.StateSystem
         [Range(0, 3)]
         public uint maxServerCommandPrediction = 1;
 
-        [Tooltip("The size multiplier of the command buffer for this character. Also used to buffer client state snapshots in client authoritative mode. Increasing this value will increase player latency, but will improve smoothness in bad network conditions. Defaults to 3.")]
-        [Range(2, 5)]
-        public int commandBufferMultiplier = 3;
-
         // Determines if the server has authority over the character
         public bool serverAuth = false;
 
@@ -116,6 +112,10 @@ namespace Code.Network.StateSystem
         // A map between clientId and the last acked snapshot they received. We use this to select
         // the snapshot we use to generate diffs for the client.
         private Dictionary<int, int> serverAckedSnapshots = new();
+        
+        private double bufferTimeMultiplier => this.connectionToClient != null
+            ? this.connectionToClient.bufferTimeMultiplier // The server's connection to the client with client specific buffer settings
+            : NetworkClient.bufferTimeMultiplier;
 
         #endregion
 
@@ -203,8 +203,8 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
             // must convert send interval to scaled time because fixedDeltaTime is scaled
             // This value is refreshed in auth server tick
-            this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
-                (int)Math.Ceiling(NetworkServer.sendInterval * this.commandBufferMultiplier / Time.fixedUnscaledDeltaTime));
+            this.serverCommandBufferTargetSize =Math.Min(this.serverCommandBufferMaxSize,
+                (int)Math.Ceiling(NetworkServer.sendInterval * bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -560,9 +560,9 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkServer.sendInterval * this.commandBufferMultiplier / Time.fixedUnscaledDeltaTime));
+                    (int)Math.Ceiling(NetworkServer.sendInterval * this.bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
             // Optimal max is when we will start processing extra commands.
-            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize} {NetworkClient.bufferTime} {NetworkClient.bufferTimeMultiplier} {Time.timeScale} {NetworkServer.sendInterval}");
+            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize}");
 
             // If we don't allow command catchup, drop commands to get to the target buffer size.
             if (this.maxServerCommandCatchup == 0)
@@ -767,7 +767,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkServer.sendInterval * commandBufferMultiplier / Time.fixedUnscaledDeltaTime));
+                    (int)Math.Ceiling(NetworkServer.sendInterval * bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
             // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
