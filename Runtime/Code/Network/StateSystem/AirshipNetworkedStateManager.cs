@@ -648,10 +648,10 @@ namespace Code.Network.StateSystem
             } while (commandsProcessed < 1 + this.maxServerCommandCatchup && serverCommandCatchUpRequired > 0);
             // We add 1 to maxServerCommandCatchup because we always want to process at least 1 command per fixed update.
 
-            if (commandsProcessed > 1)
-            {
-                print("Processed " + commandsProcessed + " commands for " + this.gameObject.name + $". There are now {this.serverCommandBuffer.Count} commands in the buffer.");
-            }
+            // if (commandsProcessed > 1)
+            // {
+            //     print("Processed " + commandsProcessed + " commands for " + this.gameObject.name + $". There are now {this.serverCommandBuffer.Count} commands in the buffer.");
+            // }
         }
 
         public void AuthServerCaptureSnapshot(int tick, double time, bool replay)
