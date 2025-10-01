@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Sentry;
+using Tayx.Graphy;
 
 namespace Code.Quality {
     // We should redo this to be a single core number for quality
@@ -48,44 +50,54 @@ namespace Code.Quality {
         /// True once we've first loaded all SampleCount samples into _fps
         /// </summary>
         private bool _fpsSamplesLoaded;
-        private float _nextQualityCheck;
+        private bool firstRun = true;
 
-        /// <summary>
-        /// For now we only run the quality check once after 15 seconds.
-        /// </summary>
-        private bool _hasRunQualityCheck;
+        private bool capturingFrameTimings = false;
+        private float captureFrameTimingsUntilTime = 0;
+
         private ITransactionTracer tracer;
 
-        private void Awake() {
-            _nextQualityCheck = Time.unscaledTime + QualityCheckTimeSec;
-            SceneManager.sceneLoaded += (scene, mode) => {
-                this.tracer = SentrySdk.StartTransaction(
-                    "quality-manager",
-                    "sample-quality"
-                );
-            };
+        private void Start() {
+            this.StartCapture();
+        }
+
+        private void StartCapture() {
+            this.capturingFrameTimings = true;
+            this.captureFrameTimingsUntilTime = Time.unscaledTime + QualityCheckTimeSec;
+            this.tracer = SentrySdk.StartTransaction("quality-manager", "sample-quality");
         }
 
         private void Update() {
-            if (_hasRunQualityCheck) return;
-            
-            FrameTimingManager.CaptureFrameTimings();
-            
-            if (!_fpsSamplesLoaded && _fpsFront == SampleCount - 1) _fpsSamplesLoaded = true;
-            _fps[_fpsFront++ % SampleCount] = (short) (1d / Time.unscaledDeltaTime);
-            
-            // Should we do a quality check?
-            if (Time.time > _nextQualityCheck) {
-                _hasRunQualityCheck = true;
-                DoQualityCheck();
-                _nextQualityCheck = Time.time + QualityCheckTimeSec;
+            if (this.capturingFrameTimings) {
+                FrameTimingManager.CaptureFrameTimings();
+
+                if (!_fpsSamplesLoaded && _fpsFront == SampleCount - 1) _fpsSamplesLoaded = true;
+                _fps[_fpsFront++ % SampleCount] = (short) (1d / Time.unscaledDeltaTime);
+
+                // Are we ready to stop capturing and do the quality check?
+                if (Time.unscaledTime > this.captureFrameTimingsUntilTime) {
+                    this.capturingFrameTimings = false;
+                    DoQualityCheck(this.firstRun);
+                    this.firstRun = false;
+                    this.StartCoroutine(this.ScheduleNextCapture());
+                }
             }
         }
 
-        private void DoQualityCheck() {
+        private IEnumerator ScheduleNextCapture() {
+            yield return new WaitForSeconds(120);
+            this.StartCapture();
+        }
+
+        private int GetRealTargetFPS() {
             var targetFrameRate = Application.targetFrameRate;
             if (targetFrameRate < 0 || targetFrameRate > Screen.currentResolution.refreshRateRatio.value)
                 targetFrameRate = (int) (1.0 / Screen.currentResolution.refreshRateRatio.value);
+            return targetFrameRate;
+        }
+
+        private void DoQualityCheck(bool fireSignal) {
+            var targetFrameRate = this.GetRealTargetFPS();
             
             var currentFivePercent = GetPercentFps(0.05f);
 
@@ -108,7 +120,9 @@ namespace Code.Quality {
                 this.tracer = null;
             }
 
-            OnQualityCheck?.Invoke(frameHealth, avgFrameTimings);
+            if (fireSignal) {
+                OnQualityCheck?.Invoke(frameHealth, avgFrameTimings);
+            }
         }
 
         private QualityReport GetRecentAverageFrameTimings() {
