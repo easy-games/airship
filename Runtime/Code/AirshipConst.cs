@@ -3,7 +3,7 @@
 namespace Code {
     [LuauAPI]
     public static class AirshipConst {
-        public const int playerVersion = 17;
+        public const int playerVersion = 18;
 
         /// <summary>
         /// The server will kick clients that have a playerVersion lower than this value.
