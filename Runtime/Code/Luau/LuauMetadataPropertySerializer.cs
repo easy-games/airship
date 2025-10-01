@@ -36,6 +36,9 @@ namespace Luau {
                 case AirshipComponentPropertyType.AirshipInt: {
                     return Convert.ToInt32(obj).ToString(CultureInfo.InvariantCulture);
                 }
+                case AirshipComponentPropertyType.AirshipLayerMask: {
+                    return Convert.ToInt32(obj).ToString(CultureInfo.InvariantCulture);
+                }
                 case AirshipComponentPropertyType.AirshipString: {
                     return Convert.ToString(obj);
                 }
@@ -185,9 +188,12 @@ namespace Luau {
                         return AirshipComponentPropertyType.AirshipFloat;
                     }
                 }
+                case "LayerMask":
+                    return AirshipComponentPropertyType.AirshipLayerMask;
                 case "StringEnum": {
                     return AirshipComponentPropertyType.AirshipString;
                 }
+                case "FlagEnum":
                 case "IntEnum": {
                     return AirshipComponentPropertyType.AirshipInt;
                 }
