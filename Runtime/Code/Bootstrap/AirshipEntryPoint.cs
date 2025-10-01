@@ -16,7 +16,7 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
 
         SentryUnity.Init(options => {
 #if UNITY_IOS || UNITY_ANDROID
-            options.Release = AirshipVersion.GetVersionHash() + "_" + Application.version;
+            options.Release = Application.version + "@" + AirshipVersion.GetVersionHash();
 #else
             options.Release = AirshipVersion.GetVersionHash();
 #endif
