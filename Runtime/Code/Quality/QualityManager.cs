@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using Sentry;
 
 namespace Code.Quality {
     // We should redo this to be a single core number for quality
@@ -52,9 +54,16 @@ namespace Code.Quality {
         /// For now we only run the quality check once after 15 seconds.
         /// </summary>
         private bool _hasRunQualityCheck;
+        private ITransactionTracer tracer;
 
         private void Awake() {
             _nextQualityCheck = Time.unscaledTime + QualityCheckTimeSec;
+            SceneManager.sceneLoaded += (scene, mode) => {
+                this.tracer = SentrySdk.StartTransaction(
+                    "quality-manager",
+                    "sample-quality"
+                );
+            };
         }
 
         private void Update() {
@@ -87,13 +96,24 @@ namespace Code.Quality {
             if (currentFivePercent < 0.80 * targetFrameRate) {
                 frameHealth = FrameHealth.Unhealthy;
             }
-            
+
+            if (this.tracer != null) {
+                this.tracer.SetMeasurement("fps_5_percent", currentFivePercent, MeasurementUnit.Fraction.Percent);
+                this.tracer.SetMeasurement("target_fps", targetFrameRate, MeasurementUnit.Duration.Millisecond);
+                this.tracer.SetMeasurement("cpu_main_avg", avgFrameTimings.cpuMainAvg, MeasurementUnit.Fraction.Percent);
+                this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg, MeasurementUnit.Fraction.Percent);
+                this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg, MeasurementUnit.Fraction.Percent);
+                this.tracer.SetData("frame_health", frameHealth == FrameHealth.Ok ? "ok" : "unhealthy");
+                this.tracer.Finish(SpanStatus.Ok);
+                this.tracer = null;
+            }
+
             OnQualityCheck?.Invoke(frameHealth, avgFrameTimings);
         }
 
         private QualityReport GetRecentAverageFrameTimings() {
             if (!FrameTimingManager.IsFeatureEnabled()) return default;
-            
+
             var numLatestTimings = FrameTimingManager.GetLatestTimings(FrameTimingCount, _frameTimings);
             if (numLatestTimings <= 0) return default;
 
@@ -106,7 +126,7 @@ namespace Code.Quality {
             result.cpuMainAvg /= numLatestTimings;
             result.cpuRenderAvg /= numLatestTimings;
             result.gpuAvg /= numLatestTimings;
-            result.numFrames = (int) numLatestTimings;
+            result.numFrames = (int)numLatestTimings;
             return result;
         }
         
