@@ -16,6 +16,10 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
             scope.SetExtra("platform", AirshipPlatformUtil.GetLocalPlatform().ToString());
             scope.SetExtra("deviceType", DeviceBridge.GetDeviceType().ToString());
             scope.SetExtra("graphicsDeviceType", SystemInfo.graphicsDeviceType.ToString());
+
+            if (RunCore.IsServer()) {
+                scope.SetExtra("server", true);
+            }
         });
 #endif
     }
