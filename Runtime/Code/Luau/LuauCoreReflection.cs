@@ -921,7 +921,7 @@ public partial class LuauCore : MonoBehaviour
     private static bool ParseParameterData(IntPtr thread, int numParameters, Span<IntPtr> intPtrs, Span<int> podTypes, ParameterInfo[] methodParameters, Span<int> sizes, Span<int> isTable, Span<object> podObjects, bool usingAttachedContext, out object[] parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
-        parsedData = new object[numParametersIncludingContext];
+        parsedData = new object[methodParameters.Length];
 
         for (int i = 0; i < numParameters; i++) {
             var paramIndex = i;
@@ -1069,6 +1069,17 @@ public partial class LuauCore : MonoBehaviour
             Debug.LogError("Param " + paramIndex + " " + podTypes[i] + " not valid type for this parameter/unhandled so far.");
             return false;
         }
+
+        // Add in all additional default parameters
+        for (var i = numParametersIncludingContext; i < methodParameters.Length; i++) {
+            if (!methodParameters[i].HasDefaultValue) {
+                return false;
+            }
+            
+            // Used to tell reflection we wish to use the default for a param
+            // https://learn.microsoft.com/en-us/dotnet/api/system.type.missing?view=net-9.0
+            parsedData[i] = Type.Missing;
+        }
         return true;
     }
 
@@ -1210,10 +1221,11 @@ public partial class LuauCore : MonoBehaviour
             nameFound = true;
             foreach (var info in methods) {
                 ParameterInfo[] parameters = GetCachedParameters(info);
+                var numRequiredParameters = parameters.Sum((param) => param.HasDefaultValue ? 0 : 1);
 
                 var contextAttached = false;
                 //match parameters
-                if (parameters.Length != numParameters) {
+                if (numRequiredParameters > numParameters || numParameters > parameters.Length) {
                     // Check for context pass through (c# function would have 1 more param then Luau call)
                     if (parameters.Length != (numParameters + 1)) {
                         continue;
