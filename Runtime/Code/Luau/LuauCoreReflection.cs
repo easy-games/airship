@@ -1225,7 +1225,8 @@ public partial class LuauCore : MonoBehaviour
 
                 var contextAttached = false;
                 //match parameters
-                if (numRequiredParameters > numParameters || numParameters > parameters.Length) {
+                var validNumParams = numRequiredParameters <= numParameters && numParameters <= parameters.Length; 
+                if (!validNumParams) {
                     // Check for context pass through (c# function would have 1 more param then Luau call)
                     if (parameters.Length != (numParameters + 1)) {
                         continue;
