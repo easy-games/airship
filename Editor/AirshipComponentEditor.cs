@@ -598,6 +598,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             case "IntEnum":
                 DrawCustomIntEnumProperty(guiContent, bindingProp, value, modified);
                 break;
+            case "FlagEnum":
+                DrawCustomFlagEnumProperty(guiContent, bindingProp, value, modified);
+                break;
             case "boolean" or "bool":
                 DrawCustomBoolProperty(guiContent, type, decorators, value, modified);
                 break;
@@ -882,11 +885,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         {
             newValue = Math.Max(Convert.ToInt32(minParams[0].value), newValue);
         }
-        if (modifiers.TryGetValue("Max", out var maxParams))
-        {
+
+        if (modifiers.TryGetValue("Max", out var maxParams)) {
             newValue = Math.Min(Convert.ToInt32(maxParams[0].value), newValue);
         }
-        
+
         if (newValue != currentValue) {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
             modified.boolValue = true;
@@ -981,7 +984,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         List<GUIContent> items = new();
         foreach (var item in enumerableType.members) {
-            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name) + " [" + item.IntValue + "]") );
+            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name)) );
         }
             
         int idx = 0;
@@ -1014,6 +1017,26 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (tsEnum == null) return;
 
         DrawCustomIntEnumDropdown(guiContent, tsEnum, value, modified, null);
+    }
+    
+    private void DrawCustomFlagEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
+        SerializedProperty value, SerializedProperty modified) {
+
+        if (!AirshipEditorInfo.Instance) return;
+
+        if (metadataProperty.refPath == null) {
+            return;
+        }
+        
+        var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
+        if (tsEnum == null) return;
+        
+        int.TryParse(value.stringValue, out int currentMask);
+        var newMask = EditorGUILayout.MaskField(guiContent, currentMask, tsEnum.keys);
+        if (newMask != currentMask) {
+            value.stringValue = newMask.ToString(CultureInfo.InvariantCulture);
+            modified.boolValue = true;
+        }
     }
     
     private void DrawCustomStringEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty value,
@@ -1097,11 +1120,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         {
             currentValue = 0;
         }
-        int newValue = EditorGUILayout.LayerField(guiContent, currentValue);
-        if (newValue != currentValue)
-        {
-            value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
-            modified.boolValue = true;
+
+        int maskValue = EditorGUILayout.MaskField(guiContent, currentValue, GameConfig.Load().gameLayers);
+        if (maskValue != currentValue) {
+            value.stringValue = maskValue.ToString(CultureInfo.InvariantCulture);
+            modified.boolValue = true;   
         }
     }
     

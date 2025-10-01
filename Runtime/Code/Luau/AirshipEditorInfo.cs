@@ -26,6 +26,8 @@ public class TypeScriptEnum {
     public string id;
     public TypeScriptEnumMemberType memberType;
     public List<TyperScriptEnumMember> members;
+
+    public string[] keys => members.Select(member => member.Name).ToArray();
 }
 
 public class EditorMetadataJson {
