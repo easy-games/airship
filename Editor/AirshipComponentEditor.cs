@@ -645,6 +645,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
                 break;
         }
+
+        if (Application.isPlaying) {
+            var component = (AirshipComponent)target;
+            component.WriteChangedComponentProperties();
+        }
         
         if (hasOverride && Event.current.type == EventType.Repaint) {
             var lastRect = GUILayoutUtility.GetLastRect();
