@@ -100,6 +100,7 @@ namespace Code.Quality {
             var targetFrameRate = this.GetRealTargetFPS();
             
             var currentFivePercent = GetPercentFps(0.05f);
+            var pointFivePercent = GetPercentFps(0.005f);
 
             var frameHealth = FrameHealth.Ok;
             var avgFrameTimings = GetRecentAverageFrameTimings();
@@ -111,6 +112,7 @@ namespace Code.Quality {
 
             if (this.tracer != null) {
                 this.tracer.SetMeasurement("fps_5_percent", currentFivePercent);
+                this.tracer.SetMeasurement("fps_0.5_percent", pointFivePercent);
                 this.tracer.SetMeasurement("target_fps", targetFrameRate);
                 this.tracer.SetMeasurement("cpu_main_avg", avgFrameTimings.cpuMainAvg);
                 this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg);
