@@ -1,8 +1,0 @@
----
-triple:          'arm64-apple-darwin'
-binary-path:     '/Users/liamlutton/Library/Developer/Xcode/DerivedData/TitlebarLib-abojtaygepcuyzfopszjtfdbwezi/Build/Products/Release/libTitlebarLib.dylib'
-relocations:
-  - { offset: 0xCAEAD, size: 0x8, addend: 0x0, symName: _ShowTitleBar, symObjAddr: 0x0, symBinAddr: 0x698, symSize: 0xAC }
-  - { offset: 0xCAEBB, size: 0x8, addend: 0x0, symName: _ShowTitleBar, symObjAddr: 0x0, symBinAddr: 0x698, symSize: 0xAC }
-  - { offset: 0xCAEF6, size: 0x8, addend: 0x0, symName: _HideTitleBar, symObjAddr: 0xAC, symBinAddr: 0x744, symSize: 0xC4 }
-...
