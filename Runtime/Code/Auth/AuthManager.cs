@@ -181,8 +181,13 @@ public class AuthManager {
         using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 
         // Opens a browser to log user in
-        AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
-		accessToken = accessTokenResponse.accessToken;
+        try {
+	        AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
+	        accessToken = accessTokenResponse.accessToken;
+        } catch (Exception e) {
+			Debug.LogError(e);
+			return (false, e.Message);
+        }
 #endif
         if (accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
