@@ -27,7 +27,8 @@ namespace Code.Quality {
     public class QualityManager : Singleton<QualityManager> {
         public static event Action<object, object> OnQualityCheck;
         
-        private const int SampleCount = 500;
+        private const int MaxSampleCount = 500;
+        private int samplesCaptured = 0;
         /// <summary>
         /// Time after starting that we'll run a quality check on the client. This
         /// will be sent to game clients to allow them to configure quality based on
@@ -38,7 +39,7 @@ namespace Code.Quality {
         /// We use this to determine GPU/CPU bound.
         /// </summary>
         private const int FrameTimingCount = 50;
-        private short[] _fps = new short[SampleCount];
+        private short[] _fps = new short[MaxSampleCount];
         private FrameTiming[] _frameTimings = new FrameTiming[FrameTimingCount];
         private int currentQualityLevel = 5;
 
@@ -64,6 +65,7 @@ namespace Code.Quality {
         private void StartCapture() {
             this.capturingFrameTimings = true;
             this.captureFrameTimingsUntilTime = Time.unscaledTime + QualityCheckTimeSec;
+            this.samplesCaptured = 0;
             this.tracer = SentrySdk.StartTransaction("quality-manager", "sample-quality");
         }
 
@@ -71,8 +73,11 @@ namespace Code.Quality {
             if (this.capturingFrameTimings) {
                 FrameTimingManager.CaptureFrameTimings();
 
-                if (!_fpsSamplesLoaded && _fpsFront == SampleCount - 1) _fpsSamplesLoaded = true;
-                _fps[_fpsFront++ % SampleCount] = (short) (1d / Time.unscaledDeltaTime);
+                if (!_fpsSamplesLoaded && _fpsFront == MaxSampleCount - 1) _fpsSamplesLoaded = true;
+                if (this.samplesCaptured < MaxSampleCount) {
+                    _fps[_fpsFront++ % MaxSampleCount] = (short) (1d / Time.unscaledDeltaTime);
+                    this.samplesCaptured++;
+                }
 
                 // Are we ready to stop capturing and do the quality check?
                 if (Time.unscaledTime > this.captureFrameTimingsUntilTime) {
@@ -109,6 +114,8 @@ namespace Code.Quality {
             if (currentFivePercent < 0.80 * targetFrameRate) {
                 frameHealth = FrameHealth.Unhealthy;
             }
+
+            print($"[Quality Check] 5%: {currentFivePercent}, 0.5%: {pointFivePercent}, health: {frameHealth}");
 
             if (this.tracer != null) {
                 this.tracer.SetMeasurement("fps_5_percent", currentFivePercent);
@@ -150,13 +157,13 @@ namespace Code.Quality {
         /// Gets the slowest percent of frames and averages them.
         /// </summary>
         private double GetPercentFps(float percent) {
-            var percentSampleCount = (int) Mathf.Ceil(SampleCount * percent);
+            var percentSampleCount = (int) Mathf.Ceil(this.samplesCaptured * percent);
             
             // Load the first N samples and keep samples sorted
             var samples = new List<short>(_fps.AsSpan(0, percentSampleCount).ToArray());
             samples.Sort();
             
-            for (var i = percentSampleCount; i < _fps.Length; i++) {
+            for (var i = percentSampleCount; i < this.samplesCaptured; i++) {
                 // If we're slower than the best FPS in samples, insert
                 var largestFpsSample = samples[^1];
                 var sample = _fps[i];
