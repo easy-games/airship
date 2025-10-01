@@ -110,11 +110,11 @@ namespace Code.Quality {
             }
 
             if (this.tracer != null) {
-                this.tracer.SetMeasurement("fps_5_percent", currentFivePercent, MeasurementUnit.Fraction.Percent);
-                this.tracer.SetMeasurement("target_fps", targetFrameRate, MeasurementUnit.Duration.Millisecond);
-                this.tracer.SetMeasurement("cpu_main_avg", avgFrameTimings.cpuMainAvg, MeasurementUnit.Fraction.Percent);
-                this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg, MeasurementUnit.Fraction.Percent);
-                this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg, MeasurementUnit.Fraction.Percent);
+                this.tracer.SetMeasurement("fps_5_percent", currentFivePercent);
+                this.tracer.SetMeasurement("target_fps", targetFrameRate);
+                this.tracer.SetMeasurement("cpu_main_avg", avgFrameTimings.cpuMainAvg);
+                this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg);
+                this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg);
                 this.tracer.SetData("frame_health", frameHealth == FrameHealth.Ok ? "ok" : "unhealthy");
                 this.tracer.Finish(SpanStatus.Ok);
                 this.tracer = null;
