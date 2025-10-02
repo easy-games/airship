@@ -95,7 +95,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     }
 
     private void SetupClientVoxelWorld() {
-        this.world.voxelBlocks.Reload();
+        this.world.voxelBlocks.Reload(world.useSimplifiedVoxels);
     }
 
     [TargetRpc]

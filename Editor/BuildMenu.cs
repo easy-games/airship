@@ -80,7 +80,7 @@ namespace Editor {
                 locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}",
                 options = BuildOptions.Development,
             };
-            
+
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
             switch (summary.result) {
@@ -89,12 +89,18 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Linux failed");
+#if GAME_CI
+                    EditorApplication.Exit(1);
+#endif
                     break;
                 default:
                     Debug.Log("Build Linux unexpected result:" + summary.result);
+#if GAME_CI
+                    EditorApplication.Exit(2);
+#endif
                     break;
             }
-            
+
             CreateAssetBundles.AddAllGameBundleScenes();
         }
 
@@ -144,9 +150,15 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build Mac failed");
+#if GAME_CI
+                    EditorApplication.Exit(1);
+#endif
                     break;
                 default:
                     Debug.LogError("Build Mac unexpected result:" + summary.result);
+#if GAME_CI
+                    EditorApplication.Exit(2);
+#endif
                     break;
             }
 
@@ -183,9 +195,15 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build Mac failed");
+#if GAME_CI
+                    EditorApplication.Exit(1);
+#endif
                     break;
                 default:
                     Debug.LogError("Build Mac unexpected result:" + summary.result);
+#if GAME_CI
+                    EditorApplication.Exit(2);
+#endif
                     break;
             }
 
@@ -229,9 +247,15 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build iOS failed");
+#if GAME_CI
+                    EditorApplication.Exit(1);
+#endif
                     break;
                 default:
                     Debug.LogError("Build iOS unexpected result:" + summary.result);
+#if GAME_CI
+                    EditorApplication.Exit(2);
+#endif
                     break;
             }
 
@@ -312,9 +336,15 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.LogError("Build Android failed");
+#if GAME_CI
+                    EditorApplication.Exit(1);
+#endif
                     break;
                 default:
                     Debug.LogError("Build Android unexpected result:" + summary.result);
+#if GAME_CI
+                    EditorApplication.Exit(2);
+#endif
                     break;
             }
             
@@ -411,9 +441,15 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Windows failed");
+#if GAME_CI
+                    EditorApplication.Exit(1);
+#endif
                     break;
                 default:
                     Debug.Log("Build Windows unexpected result:" + summary.result);
+#if GAME_CI
+                    EditorApplication.Exit(2);
+#endif
                     break;
             }
 
@@ -447,9 +483,15 @@ namespace Editor {
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Windows failed");
+#if GAME_CI
+                    EditorApplication.Exit(1);
+#endif
                     break;
                 default:
                     Debug.Log("Build Windows unexpected result:" + summary.result);
+#if GAME_CI
+                    EditorApplication.Exit(2);
+#endif
                     break;
             }
 

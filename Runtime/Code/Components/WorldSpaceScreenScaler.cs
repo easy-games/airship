@@ -2,6 +2,7 @@
    using UnityEngine;
 
     // [ExecuteAlways]
+    [LuauAPI]
     public class WorldSpaceCanvasScaler : MonoBehaviour {
         [Header("Camera & Facing")]
         public Camera cam;                         // If null, uses Camera.main

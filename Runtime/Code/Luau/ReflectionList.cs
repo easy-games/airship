@@ -208,6 +208,8 @@ namespace Luau {
             [typeof(SpriteRenderer)] = LuauContextAll,
             [typeof(ParticleSystem.MinMaxGradient)] = LuauContextAll,
             [typeof(Input)] = LuauContextAll,
+            [typeof(Touch)] = LuauContextAll,
+            [typeof(TouchPhase)] = LuauContextAll,
             // Tween
             [typeof(NativeTween)] = LuauContextAll,
             // Visual Effects
@@ -242,6 +244,7 @@ namespace Luau {
             ["AudioMixerGroupController"] = LuauContextAll,
             #endif
             ["Toggle"] = LuauContextAll, // "no idea why this needs to be a string...
+            ["UnityEngine.InputSystem.FastTouchscreen"] = LuauContextAll,
         };
 
         private static readonly HashSet<string> SkipNamespaces = new() {

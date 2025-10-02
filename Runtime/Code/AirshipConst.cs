@@ -1,8 +1,9 @@
 // ReSharper disable InconsistentNaming
 
 namespace Code {
+    [LuauAPI]
     public static class AirshipConst {
-        public const int playerVersion = 16;
+        public const int playerVersion = 17;
 
         /// <summary>
         /// The server will kick clients that have a playerVersion lower than this value.
