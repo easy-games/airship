@@ -138,7 +138,7 @@ public class AirshipEditorInfo : ScriptableObject {
                 return _instance;
             }
 #if UNITY_EDITOR
-            if (_instance == null && !Application.isPlaying) {
+            if (_instance == null) {
                 _instance = AssetDatabase.LoadAssetAtPath<AirshipEditorInfo>($"Assets/{BundlePath}");
             }
 
