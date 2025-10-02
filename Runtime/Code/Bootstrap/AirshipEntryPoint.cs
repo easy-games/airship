@@ -20,6 +20,11 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
 #else
             options.Release = AirshipVersion.GetVersionHash();
 #endif
+#if AIRSHIP_STAGING
+                scope.Environment = "staging";
+#else
+                scope.Environment = "production";
+#endif
         });
 
         SentrySdk.ConfigureScope(scope => {
