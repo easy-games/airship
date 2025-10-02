@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Agones;
 using Airship.DevConsole;
+using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -108,17 +109,12 @@ namespace Code.Player {
             _userData.Add(connectionId, userData);
         }
 
-        public UserData GetUserDataFromClientId(int connectionId) {
-            // var data = new UserData() {
-            // 	uid = "1",
-            // 	username = "Player1",
-            // 	fullTransferPacket = "{}",
-            // 	profileImageId = "",
-            // };
-            // _userData.Remove(connectionId);
-            // _userData[connectionId] = data;
-
-            return _userData[connectionId];
+       [CanBeNull]
+       public UserData GetUserDataFromClientId(int connectionId) {
+           if (_userData.TryGetValue(connectionId, out var userData)) {
+                return userData;
+           }
+           return null;
         }
 
         /// <summary>
