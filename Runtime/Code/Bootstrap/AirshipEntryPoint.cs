@@ -21,9 +21,9 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
             options.Release = AirshipVersion.GetVersionHash();
 #endif
 #if AIRSHIP_STAGING
-                scope.Environment = "staging";
+            options.Environment = "staging";
 #else
-                scope.Environment = "production";
+            options.Environment = "production";
 #endif
         });
 
