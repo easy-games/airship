@@ -28,8 +28,13 @@ public class AirshipEditorGUI {
 
                 break;
         }
-
+        
         EditorGUI.DrawRect(r, color);
+    }
+
+    public static Sprite SpriteField(Rect rect, GUIContent label, Sprite currentValue, bool allowSceneObjects) {
+        return (Sprite) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_spriteFieldHash".GetHashCode(), currentValue, null,
+            typeof(Sprite), null, allowSceneObjects, EditorStyles.objectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
     }
 
     private const int TabButtonHeight = 22;

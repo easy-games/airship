@@ -859,11 +859,22 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
             case AirshipComponentPropertyType.AirshipObject: {
                 var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
-                var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
-                if (objOld != objNew) {
-                    objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
-                    arrayModified.boolValue = true;
+
+                if (objectType == typeof(Sprite)) {
+                    var objNew = AirshipEditorGUI.SpriteField(rect, new GUIContent(label), (Sprite) objOld, true);
+                    if (objOld != objNew) {
+                        objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
+                        arrayModified.boolValue = true;
+                    }
+                } else {
+                    var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
+                    if (objOld != objNew) {
+                        objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
+                        arrayModified.boolValue = true;
+                    }
                 }
+                
+
                 break;
             }
             default:
@@ -1012,14 +1023,21 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private void DrawCustomIntEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
         SerializedProperty value, SerializedProperty modified) {
         //
-        if (!AirshipEditorInfo.Instance) return;
+        if (!AirshipEditorInfo.Instance) {
+            EditorGUILayout.HelpBox("Cannot find editor info", MessageType.Error);
+            return;
+        }
 
         if (metadataProperty.refPath == null) {
+            EditorGUILayout.HelpBox("Cannot find refPath", MessageType.Error);
             return;
         }
         
         var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
-        if (tsEnum == null) return;
+        if (tsEnum == null) {
+            EditorGUILayout.HelpBox("Cannot find enum from refPath", MessageType.Error);
+            return;
+        }
 
         DrawCustomIntEnumDropdown(guiContent, tsEnum, value, modified, null);
     }
@@ -1253,6 +1271,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private void DrawCustomObjectProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType, SerializedProperty modified) {
         var currentObject = obj.objectReferenceValue;
         var t = objType.stringValue != "" ? TypeReflection.GetTypeFromString(objType.stringValue) : typeof(Object);
+        
         var newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
             
         if (newObject != currentObject) {
