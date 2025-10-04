@@ -5,7 +5,7 @@ using Editor.EditorInternal;
 using UnityEditor;
 using UnityEngine;
 
-public class AirshipEditorGUI {
+public static class AirshipEditorGUI {
     public static void HorizontalLine(Color color = default, int thickness = 1, int padding = 10, int margin = 0)
     {
         color = color != default ? color : Color.grey;
@@ -58,26 +58,6 @@ public class AirshipEditorGUI {
         var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
         return ObjectField(rect, label, currentValue, type, allowSceneObjects);
     }
-    
-    // public static Sprite SpriteField(Rect rect, GUIContent label, Sprite currentValue, bool allowSceneObjects) {
-    //     return (Sprite) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_spriteFieldHash".GetHashCode(), currentValue, null,
-    //         typeof(Sprite), null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
-    // }
-    //
-    // public static Sprite SpriteField(GUIContent label, Sprite currentValue) {
-    //     var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
-    //     return SpriteField(rect, label, currentValue, false);
-    // }
-    //
-    // public static Texture2D Texture2DField(Rect rect, GUIContent label, Texture2D currentValue) {
-    //     return (Texture2D) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_texture2DFieldHash".GetHashCode(), currentValue, null,
-    //         typeof(Texture2D), null, false, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
-    // }
-    //
-    // public static Texture2D Texture2DField(GUIContent label, Texture2D currentValue) {
-    //     var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
-    //     return Texture2DField(rect, label, currentValue);
-    // }
 
     private const int TabButtonHeight = 22;
     

@@ -9,7 +9,7 @@ internal static class AirshipObjectGUIInternal {
 
     public delegate void ObjectSelectAction(UnityEngine.Object obj, System.Type[] requiredTypes);
     
-    public static UnityEngine.Object DoCustomObjectField(
+    private static Object DoCustomObjectField(
         Rect position, 
         Rect dropRect, 
         int id, 
@@ -24,9 +24,7 @@ internal static class AirshipObjectGUIInternal {
         ) {
 
         var visualType = EditorGUI.ObjectFieldVisualType.IconAndText;
-        
-        if (validator == null)
-            validator = new EditorGUI.ObjectFieldValidator(EditorGUI.ValidateObjectFieldAssignment);
+        validator ??= EditorGUI.ValidateObjectFieldAssignment;
         
         var current = Event.current;
         var eventType = current.type;
@@ -36,9 +34,12 @@ internal static class AirshipObjectGUIInternal {
         {
             var actualObject = obj;
             var menu = new GenericMenu();
-            // if (EditorGUI.FillPropertyContextMenu(property, menu: menu) != null)
+            
+            // if (EditorGUI.FillPropertyContextMenu(null, menu: menu) != null) {
             //     menu.AddSeparator("");
-            menu.AddItem(new GUIContent("Properties..."), false, (GenericMenu.MenuFunction) (() => PropertyEditor.OpenPropertyEditor(actualObject)));
+            // }
+            
+            menu.AddItem(new GUIContent("Properties..."), false, () => PropertyEditor.OpenPropertyEditor(actualObject));
             menu.DropDown(position);
             Event.current.Use();
         }
@@ -51,6 +52,11 @@ internal static class AirshipObjectGUIInternal {
                         obj = null;
                         GUI.changed = true;
                         current.Use();
+                    }
+                    if (current.MainActionKeyForControl(id)) {
+                        onRequestSelectObject(obj, new[] { objType });
+                        current.Use();
+                        GUIUtility.ExitGUI();
                     }
                 }
                 
@@ -109,6 +115,33 @@ internal static class AirshipObjectGUIInternal {
                 
                 break;
             }
+            case EventType.DragUpdated:
+            case EventType.DragPerform: {
+                if (dropRect.Contains(UnityEngine.Event.current.mousePosition) && GUI.enabled) {
+                    var objectReferences = DragAndDrop.objectReferences;
+                    var target = validator(objectReferences, objType, null, EditorGUI.ObjectFieldValidatorOptions.None);
+                    if (target != null && !allowSceneObjects && !EditorUtility.IsPersistent(target)) {
+                        target = null;
+                    }
+                    if (target != null) {
+                        if (DragAndDrop.visualMode == DragAndDropVisualMode.None)
+                            DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+
+                        if (eventType == EventType.DragPerform) {
+                            obj = target;
+                            GUI.changed = true;
+                            DragAndDrop.AcceptDrag();
+                            DragAndDrop.activeControlID = 0;
+                        } else DragAndDrop.activeControlID = id;
+                        current.Use();
+                    }
+                }
+
+                break;
+            }
+            case EventType.DragExited:
+                if (GUI.enabled) HandleUtility.Repaint();
+                break;
         }
 
         return obj;
