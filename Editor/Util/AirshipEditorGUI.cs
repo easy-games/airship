@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
+using Code.Luau;
 using Editor.EditorInternal;
 using Luau;
 using UnityEditor;
@@ -98,7 +100,7 @@ public static class AirshipEditorGUI {
         return new Rect(rect.x + left, rect.y, right - left,  /* kTabButtonHeight */ TabButtonHeight);
     }
 
-    internal static int BeginTabs(int selectedIndex, GUIContent[] tabs) {
+    public static int BeginTabs(int selectedIndex, GUIContent[] tabs) {
         var rect = EditorGUILayout.BeginVertical(new GUIStyle("FrameBox"));
         GUILayoutUtility.GetRect(10, TabButtonHeight);
         
@@ -118,7 +120,7 @@ public static class AirshipEditorGUI {
         return selectedIndex;
     }
 
-    internal static void EndTabs() {
+    public static void EndTabs() {
         EditorGUILayout.EndVertical();
     }
     
@@ -147,7 +149,7 @@ public static class AirshipEditorGUI {
         EditorGUILayout.EndVertical();
     }
 
-    public static string TextField(Rect rect, AirshipProperty property) {
+    public static string TextProperty(Rect rect, AirshipProperty property) {
         if (property.type != "string") {
             EditorGUILayout.HelpBox("Expected string", MessageType.Error);
             return "";
@@ -262,7 +264,71 @@ public static class AirshipEditorGUI {
 
         return nextValue;
     }
+
+    public static int EnumField(GUIContent label, AirshipProperty property) {
+        var typescriptEnum = property.@enum;
+        if (typescriptEnum == null) return -1;
+
+        if (typescriptEnum.memberType == TypeScriptEnumMemberType.Integer) {
+            int prevValue = property.selectedEnumMember.IntValue;
+            int nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
+            
+            if (prevValue != nextValue) {
+                property.selectedEnumMember = typescriptEnum.members[nextValue];
+                property.serializedModified.boolValue = true;
+            }
+            
+            return nextValue;
+        }
+
+        return -1;
+    }
+
+    public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipProperty property) {
+        var currentValue = property.objectReferenceValue;
+        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.objectType, true);
+
+        return nextValue;
+    }
+
+    public static AirshipComponent AirshipComponentProperty(GUIContent label, AirshipProperty property) {
+        var currentValue = (AirshipComponent)property.serializedObject.objectReferenceValue;
+        var fileRefStr = "Assets/" + property.serializedFileRef.stringValue.Replace("\\", "/");
+                
+        var script = AirshipScript.GetBinaryFileFromPath(fileRefStr);
+        if (script == null) {
+            EditorGUILayout.HelpBox($"Cannot find script at path {property.serializedFileRef.stringValue}", MessageType.Error);
+            return null;
+        }
+                
+        var binding = AirshipScriptGUI.AirshipBehaviourField(label, script, currentValue);
+                
+        // if (binding != null && target is AirshipComponent parentBinding && binding == parentBinding) {
+        //     EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
+        //         "OK");
+        //     return;
+        // }
+                
+        if (binding != currentValue) {
+            property.serializedObject.objectReferenceValue = binding;
+            property.serializedModified.boolValue = true;
+        }
+
+        return binding;
+    }
+
+    private static bool ArrayPropertyField(GUIContent label, AirshipProperty property) {
+        var array = property.arrayValue;
+        
+        return false;
+    }
     
+    /// <summary>
+    /// Will render the given AirshipProperty
+    /// </summary>
+    /// <param name="label">The label to display before the property</param>
+    /// <param name="property">The property to display</param>
+    /// <returns></returns>
     public static bool PropertyField(GUIContent label, AirshipProperty property) {
         switch (property.type) {
             case "string": {
@@ -270,12 +336,24 @@ public static class AirshipEditorGUI {
                 return false;
             }
             case "boolean": {
-                BooleanProperty(label, property);
-                return false;
+                return BooleanProperty(label, property);
             }
             case "number": {
                 NumberProperty(label, property);
                 return false;
+            }
+            case "IntEnum" or "StringEnum":
+                EnumField(label, property);
+                break;
+            case "object": {
+                ObjectProperty(label, property);
+                break;
+            }
+            case "AirshipBehaviour": {
+                return AirshipComponentProperty(label, property) != null;
+            }
+            case "Array": {
+                break;
             }
             default: {
                 EditorGUILayout.HelpBox($"{property.type} is not yet supported by PropertyFieldLayout!",
@@ -285,5 +363,10 @@ public static class AirshipEditorGUI {
         }
 
         return false;
+    }
+
+    public static bool PropertyField(AirshipProperty property) {
+        var name = ObjectNames.NicifyVariableName(property.name);
+        return PropertyField(new GUIContent(name), property);
     }
 }

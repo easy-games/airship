@@ -53,11 +53,12 @@ public struct AirshipProperty {
     internal SerializedProperty serializedItems { get; }
     internal SerializedProperty serializedDecorators { get; }
     internal SerializedProperty serializedRefPath { get; }
+    internal SerializedProperty serializedFileRef { get; }
     internal LuauMetadataProperty propertyMetadata { get; }
 
     public string name => serializedName.stringValue;
     public AirshipType airshipType => isAirshipType ? AirshipBuildInfo.Instance.GetTypeByName(serializedObjectType.stringValue) : null;
-    public string type => serializedType.stringValue;
+    public string type => propertyMetadata.type ?? serializedType.stringValue;
     public Type objectType => serializedObjectType.stringValue != "" ? TypeReflection.GetTypeFromString(serializedObjectType.stringValue) : typeof(UnityEngine.Object);
     public bool isModified => serializedModified.boolValue;
     public bool isObject => serializedType.stringValue == "object";
@@ -65,6 +66,25 @@ public struct AirshipProperty {
     public bool isEnum => serializedType.stringValue is "IntEnum" or "StringEnum" or "FlagEnum";
     public bool isAirshipType => serializedType.stringValue == "AirshipBehaviour";
 
+    public string enumRef => this.serializedRefPath.stringValue;
+    public TypeScriptEnum @enum => AirshipEditorInfo.Enums.GetEnum(this.serializedRefPath.stringValue);
+    public TyperScriptEnumMember selectedEnumMember {
+        get {
+            if (@enum == null) return null;
+            if (@enum.memberType == TypeScriptEnumMemberType.Integer) {
+                var intValue = int.Parse(serializedValue.stringValue);
+                return @enum.members.Find(f => f.IntValue == intValue);
+            } else {
+                var strValue = serializedValue.stringValue;
+                return @enum.members.Find(f => f.StringValue == strValue);
+            }
+        }
+        set {
+            if (@enum == null) throw new InvalidCastException("Invalid cast");
+            this.serializedValue.stringValue = @enum.memberType == TypeScriptEnumMemberType.Integer ? value.IntValue.ToString(CultureInfo.InvariantCulture) : value.StringValue;
+        }
+    }
+    
     public List<LuauMetadataDecoratorElement> decorators { get; private set; }
 
     public bool TryGetDecorator(string targetDecoratorName, out List<LuauMetadataDecoratorValue> parameters) {
@@ -138,6 +158,7 @@ public struct AirshipProperty {
         serializedItems = property.FindPropertyRelative("serializedItems");
         serializedDecorators = property.FindPropertyRelative("decorators");
         serializedRefPath = property.FindPropertyRelative("refPath");
+        serializedFileRef = property.FindPropertyRelative("fileRef");
         propertyMetadata = metadata;
         
         // Debug.Log($"Create property {serializedName.stringValue}, with decorators {serializedDecorators.arraySize}, {metadata.GetDecorators().Count}");

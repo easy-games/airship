@@ -8,6 +8,7 @@ using UnityEngine;
 public static class AirshipCustomEditors {
     private static Dictionary<string, Type> editorTypes = new();
     private static Dictionary<int, AirshipEditor> editors = new();
+    private static Dictionary<string, Type> decoratorBehaviourMethods = new();
     
     [InitializeOnLoadMethod]
     internal static void RegisterCustomEditors() {
@@ -20,6 +21,18 @@ public static class AirshipCustomEditors {
                 }
             }
         }
+        
+        var modifiers = TypeCache.GetTypesWithAttribute<AirshipComponentDecoratorAttribute>();
+        foreach (var method in modifiers) {
+            var attr = method.GetCustomAttribute<AirshipComponentDecoratorAttribute>();
+            if (!decoratorBehaviourMethods.TryGetValue(attr.DecoratorName, out var methodInfo)) {
+                decoratorBehaviourMethods.Add(attr.DecoratorName, method);
+            }
+        }
+    }
+
+    public static bool GetDecoratorEditor(string methodName, out Type methodInfo) {
+        return decoratorBehaviourMethods.TryGetValue(methodName, out methodInfo);
     }
 
     public static Type GetEditorForFilePath(string filePath) {
