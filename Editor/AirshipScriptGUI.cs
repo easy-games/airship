@@ -188,7 +188,7 @@ namespace Code.Luau {
                         temp.image = displayIcon;
                     }
                     
-                    EditorStyles.objectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
+                    AirshipEditorGUI.nonClippingObjectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
                         position.Contains(Event.current.mousePosition));
 
 

@@ -860,8 +860,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             case AirshipComponentPropertyType.AirshipObject: {
                 var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
 
-                if (objectType == typeof(Sprite)) {
-                    var objNew = AirshipEditorGUI.SpriteField(rect, new GUIContent(label), (Sprite) objOld, true);
+                if (objectType == typeof(Sprite) || objectType == typeof(Texture2D)) {
+                    var objNew = AirshipEditorGUI.ObjectField(rect, new GUIContent(label), objOld, objectType, true);
                     if (objOld != objNew) {
                         objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
                         arrayModified.boolValue = true;
@@ -1055,11 +1055,23 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (tsEnum == null) return;
         
         int.TryParse(value.stringValue, out int currentMask);
-        var newMask = EditorGUILayout.MaskField(guiContent, currentMask, tsEnum.keys);
+
+#if AIRSHIP_INTERNAL
+        EditorGUILayout.BeginHorizontal();
+#endif
+        var newMask = EditorGUILayout.MaskField(guiContent, currentMask, tsEnum.flagNames);
         if (newMask != currentMask) {
             value.stringValue = newMask.ToString(CultureInfo.InvariantCulture);
             modified.boolValue = true;
         }
+
+#if AIRSHIP_INTERNAL
+        GUI.enabled = false;
+        EditorGUILayout.IntField(newMask, GUILayout.Width(100));
+        EditorGUILayout.Toggle("", tsEnum.isFlagLike, GUILayout.Width(30));
+        GUI.enabled = true;
+        EditorGUILayout.EndHorizontal();
+#endif
     }
     
     private void DrawCustomStringEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty value,
@@ -1271,8 +1283,13 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private void DrawCustomObjectProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType, SerializedProperty modified) {
         var currentObject = obj.objectReferenceValue;
         var t = objType.stringValue != "" ? TypeReflection.GetTypeFromString(objType.stringValue) : typeof(Object);
-        
-        var newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
+
+        UnityEngine.Object newObject;
+        if (t == typeof(Sprite) || t == typeof(Texture2D)) {
+            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true);
+        } else {
+            newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
+        }
             
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;

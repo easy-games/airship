@@ -32,10 +32,52 @@ public class AirshipEditorGUI {
         EditorGUI.DrawRect(r, color);
     }
 
-    public static Sprite SpriteField(Rect rect, GUIContent label, Sprite currentValue, bool allowSceneObjects) {
-        return (Sprite) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_spriteFieldHash".GetHashCode(), currentValue, null,
-            typeof(Sprite), null, allowSceneObjects, EditorStyles.objectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
+    
+    private static GUIStyle _nonClippingObjectField;
+    internal static GUIStyle nonClippingObjectField {
+        get {
+            if (_nonClippingObjectField == null) {
+                _nonClippingObjectField = new GUIStyle(EditorStyles.objectField) {
+                    imagePosition = ImagePosition.ImageLeft,
+                    clipping = TextClipping.Ellipsis,
+                };
+            }
+
+            return _nonClippingObjectField;
+        }
     }
+
+    public static UnityEngine.Object ObjectField(Rect rect, GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
+        allowSceneObjects) {
+        return AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_objectFieldHash".GetHashCode(), currentValue, null,
+            type, null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
+    }
+
+    public static UnityEngine.Object ObjectFieldLayout(GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
+        allowSceneObjects) {
+        var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
+        return ObjectField(rect, label, currentValue, type, allowSceneObjects);
+    }
+    
+    // public static Sprite SpriteField(Rect rect, GUIContent label, Sprite currentValue, bool allowSceneObjects) {
+    //     return (Sprite) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_spriteFieldHash".GetHashCode(), currentValue, null,
+    //         typeof(Sprite), null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
+    // }
+    //
+    // public static Sprite SpriteField(GUIContent label, Sprite currentValue) {
+    //     var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
+    //     return SpriteField(rect, label, currentValue, false);
+    // }
+    //
+    // public static Texture2D Texture2DField(Rect rect, GUIContent label, Texture2D currentValue) {
+    //     return (Texture2D) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_texture2DFieldHash".GetHashCode(), currentValue, null,
+    //         typeof(Texture2D), null, false, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
+    // }
+    //
+    // public static Texture2D Texture2DField(GUIContent label, Texture2D currentValue) {
+    //     var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
+    //     return Texture2DField(rect, label, currentValue);
+    // }
 
     private const int TabButtonHeight = 22;
     
