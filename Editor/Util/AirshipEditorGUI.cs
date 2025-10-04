@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Editor.EditorInternal;
 using Luau;
@@ -162,22 +163,127 @@ public static class AirshipEditorGUI {
         return newValue;
     }
     
-    public static bool PropertyField(Rect position, GUIContent label, AirshipProperty property) {
-        if (!property) return false;
-        position = EditorGUI.PrefixLabel(position, label);
+    public static float NumberProperty(GUIContent label, AirshipProperty property) {
+        var prevValue = property.floatValue;
+        float nextValue;
+
+        if (property.type != "number") {
+            EditorGUILayout.HelpBox($"Expected number property, got {property.type}", MessageType.Warning);
+            return 0;
+        }
+
+        if (property.TryGetDecorator("Range", out var rangeProps)) {
+            var min = Convert.ToSingle(rangeProps[0].value, CultureInfo.InvariantCulture);
+            var max = Convert.ToSingle(rangeProps[1].value, CultureInfo.InvariantCulture);
+            nextValue = EditorGUILayout.Slider(label, prevValue, min, max);
+        } else {
+            nextValue = EditorGUILayout.FloatField(label, prevValue);   
+        }
         
+        if (property.TryGetDecorator("Min", out var minParams))
+        {
+            nextValue = Math.Max(Convert.ToSingle(minParams[0].value, CultureInfo.InvariantCulture), nextValue);
+        }
+        if (property.TryGetDecorator("Max", out var maxParams))
+        {
+            nextValue = Math.Min(Convert.ToSingle(maxParams[0].value, CultureInfo.InvariantCulture), nextValue);
+        }
+        
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (prevValue != nextValue) {
+            property.floatValue = nextValue;
+            property.serializedModified.boolValue = true;
+        }
+
+        return nextValue;
+    }
+    
+    public static bool BooleanProperty(GUIContent label, AirshipProperty property) {
+        var prevValue = property.boolValue;
+
+        if (property.type != "boolean") {
+            EditorGUILayout.HelpBox($"Expected boolean property, got {property.type}", MessageType.Warning);
+            return false;
+        }
+
+        bool nextValue = EditorGUILayout.Toggle(label, prevValue);
+        if (prevValue != nextValue) {
+            property.boolValue = nextValue;
+            property.serializedModified.boolValue = true;
+        }
+
+        return nextValue;
+    }
+
+    public static string TextProperty(GUIContent label, AirshipProperty property) {
+        var prevValue = property.stringValue;
+        string nextValue;
+        
+        if (property.type != "string") {
+            EditorGUILayout.HelpBox($"Expected string property, got {property.type}", MessageType.Warning);
+            return null;
+        }
+                
+        var textAreaMaxLines = 3;
+        var useTextArea = false;
+        var displayTextAreaHorizontal = true;
+        var displayFixedHeight = false;
+        
+        if (property.TryGetDecorator("Multiline", out var multilineParams)) {
+            if (multilineParams.Count > 0) textAreaMaxLines = int.Parse(multilineParams[0].serializedValue);
+            useTextArea = true;
+            displayFixedHeight = true;
+        }
+        if (property.TryGetDecorator("TextArea", out var _))
+        {
+            useTextArea = true;
+            displayTextAreaHorizontal = false;
+            displayFixedHeight = false;
+        }
+        
+        if (useTextArea) {
+            if (displayTextAreaHorizontal) EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.PrefixLabel(label);
+
+            var style = EditorStyles.textArea;
+
+            var maxHeight = style.lineHeight * textAreaMaxLines;
+            if (displayFixedHeight) style.fixedHeight = maxHeight;
+            nextValue = EditorGUILayout.TextArea(prevValue, style, new []{ GUILayout.MaxHeight(maxHeight) });
+            if (displayTextAreaHorizontal) EditorGUILayout.EndHorizontal();
+        } else {
+            nextValue = EditorGUILayout.TextField(label, property.stringValue);
+        }
+
+        if (prevValue != nextValue) {
+            property.stringValue = nextValue;
+            property.serializedModified.boolValue = true;
+        }
+
+        return nextValue;
+    }
+    
+    public static bool PropertyField(GUIContent label, AirshipProperty property) {
         switch (property.type) {
             case "string": {
-                TextField(position, property);
-                break;
+                TextProperty(label, property);
+                return false;
+            }
+            case "boolean": {
+                BooleanProperty(label, property);
+                return false;
+            }
+            case "number": {
+                NumberProperty(label, property);
+                return false;
+            }
+            default: {
+                EditorGUILayout.HelpBox($"{property.type} is not yet supported by PropertyFieldLayout!",
+                    MessageType.Warning);
+                return false;
             }
         }
 
         return false;
-    }
-
-    public static bool PropertyFieldLayout(GUIContent label, AirshipProperty property) {
-        var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
-        return PropertyField(rect, label, property);
     }
 }

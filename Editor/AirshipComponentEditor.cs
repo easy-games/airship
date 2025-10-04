@@ -68,8 +68,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         AirshipComponent binding = (AirshipComponent)target;
 
         if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
-            // Debug.Log("Setting Script File from Path: " + binding.scriptPath);
-            // binding.SetScriptFromPath(binding.scriptPath, LuauContext.Game);
             if (binding.script == null) {
                 Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
                 EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
@@ -81,15 +79,17 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var editor = AirshipCustomEditors.GetEditor(binding, typeCache, serializedObject);
             editor.OnInspectorGUI();
             
-            // if (binding.script != null && binding.script.m_metadata != null) {
-            //     if (ShouldReconcile(binding)) {
-            //         binding.ReconcileMetadata(ReconcileSource.Inspector);
-            //         serializedObject.ApplyModifiedProperties();
-            //         serializedObject.Update();
-            //     }
-            //
-            //     CheckDefaults(binding);
-            // }
+            if (binding.script != null && binding.script.m_metadata != null) {
+                if (ShouldReconcile(binding)) {
+                    binding.ReconcileMetadata(ReconcileSource.Inspector);
+                    serializedObject.ApplyModifiedProperties();
+                    serializedObject.Update();
+                }
+            
+                CheckDefaults(binding);
+            }
+            
+            serializedObject.ApplyModifiedProperties();
             return;
         }
 
@@ -1070,7 +1070,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
         if (tsEnum == null) return;
-        
+
         int.TryParse(value.stringValue, out int currentMask);
 
 #if AIRSHIP_INTERNAL
@@ -1303,7 +1303,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         UnityEngine.Object newObject;
         if (t == typeof(Sprite) || t == typeof(Texture2D)) {
-            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true);
+            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, false);
         } else {
             newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
         }

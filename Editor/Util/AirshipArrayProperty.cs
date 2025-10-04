@@ -2,9 +2,11 @@
 using Luau;
 using UnityEditor;
 
-public struct AirshipArrayProperty<T> {
+public readonly struct AirshipArrayProperty {
     internal SerializedProperty serializedItemsType { get; }
     internal SerializedProperty serializedItemsObjectType { get; }
+    
+    public int length => 0;
     public string type => serializedItemsType.stringValue;
     public bool isAirshipType => serializedItemsType.stringValue == "AirshipBehaviour";
     public AirshipType airshipType => isAirshipType ? AirshipBuildInfo.Instance.GetTypeByName(serializedItemsObjectType.stringValue) : null;
