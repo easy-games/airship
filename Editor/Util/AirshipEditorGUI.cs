@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Editor.EditorInternal;
+using Luau;
 using UnityEditor;
 using UnityEngine;
 
@@ -143,5 +144,40 @@ public static class AirshipEditorGUI {
         
         EditorGUILayout.Space();
         EditorGUILayout.EndVertical();
+    }
+
+    public static string TextField(Rect rect, AirshipProperty property) {
+        if (property.type != "string") {
+            EditorGUILayout.HelpBox("Expected string", MessageType.Error);
+            return "";
+        }
+
+        string currentValue = property.stringValue;
+        string newValue = EditorGUI.TextField(rect, currentValue);
+
+        if (newValue != currentValue) {
+            property.stringValue = newValue;
+        }
+        
+        return newValue;
+    }
+    
+    public static bool PropertyField(Rect position, GUIContent label, AirshipProperty property) {
+        if (!property) return false;
+        position = EditorGUI.PrefixLabel(position, label);
+        
+        switch (property.type) {
+            case "string": {
+                TextField(position, property);
+                break;
+            }
+        }
+
+        return false;
+    }
+
+    public static bool PropertyFieldLayout(GUIContent label, AirshipProperty property) {
+        var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
+        return PropertyField(rect, label, property);
     }
 }

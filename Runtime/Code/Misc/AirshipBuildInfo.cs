@@ -24,6 +24,17 @@ namespace Luau {
         private AirshipBehaviourMetaTop() { }
     }
     
+    public class AirshipType {
+        public string Name { get; }
+        public string FilePath { get; }
+        public AirshipType[] BaseTypes { get; internal set; }
+
+        public AirshipType(AirshipBehaviourMeta meta) {
+            Name = meta.className;
+            FilePath = meta.filePath;
+        }
+    }
+    
     /// <summary>
     /// Defines each AirshipBehaviour component class.
     /// </summary>
@@ -34,6 +45,7 @@ namespace Luau {
         public string filePath;
         public List<string> extends;
 
+        public AirshipType _typeCache;
         private AirshipBehaviourMeta() {}
     }
     
@@ -99,7 +111,8 @@ namespace Luau {
         private static AirshipBuildInfo _instance = null;
         
         public AirshipBuildData data;
-
+        
+        private readonly Dictionary<string, AirshipType> _types = new();
         private readonly Dictionary<string, AirshipBehaviourMeta> _classes = new();
 
 #if UNITY_EDITOR
@@ -171,6 +184,33 @@ namespace Luau {
 
         private Dictionary<string, string> scriptPathByTypeNameCache = new();
         private Dictionary<(string childPath, string parentPath), bool> inheritanceCheckCache = new();
+
+        [CanBeNull]
+        public AirshipType GetTypeByName(string typeName) {
+            if (_types.TryGetValue(typeName, out var type)) {
+                return type;
+            }
+
+            if (_classes.TryGetValue(typeName, out var meta)) {
+                type = new AirshipType(meta);
+                _types[typeName] = type;
+
+                List<AirshipType> inheritance = new();
+                foreach (var inherits in meta.extends) {
+                    if (_types.TryGetValue(inherits, out var inheritedType)) {
+                        inheritance.Add(inheritedType);
+                    } else if (_classes.TryGetValue(inherits, out var baseMeta)) {
+                        inheritedType = new AirshipType(baseMeta);
+                        _types.Add(inherits, inheritedType);
+                    }
+                }
+
+                type.BaseTypes = inheritance.ToArray();
+                return type;
+            }
+
+            return null;
+        }
         
         [CanBeNull]
         public string GetScriptPathByTypeName(string typeName) {
