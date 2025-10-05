@@ -98,8 +98,8 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         this.world.voxelBlocks.Reload(world.useSimplifiedVoxels);
     }
 
-    [TargetRpc]
-    public void TargetWriteVoxelRpc(NetworkConnection conn, Vector3Int pos, VoxelData voxel) {
+    [ClientRpc]
+    public void TargetWriteVoxelRpc(Vector3Int pos, VoxelData voxel) {
         world.WriteVoxelAt(pos, voxel, true);
     }
 

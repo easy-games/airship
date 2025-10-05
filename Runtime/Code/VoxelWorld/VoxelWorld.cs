@@ -300,7 +300,7 @@ public partial class VoxelWorld : MonoBehaviour {
             HitNormal = hitNormal,
         };
     }
-
+    
     public void WriteVoxelAt(Vector3 pos, double num, bool priority) {
         Vector3Int posInt = Vector3Int.FloorToInt(pos);
         VoxelData voxel = (VoxelData)num;
@@ -310,7 +310,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (affectedChunk != null) {
             //Send network update
             if (RunCore.IsServer() && worldNetworker != null && worldNetworker.networkWriteVoxels) {
-                worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
+                worldNetworker.TargetWriteVoxelRpc(posInt, voxel);
             }
         }
     }
