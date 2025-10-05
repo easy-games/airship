@@ -46,13 +46,13 @@ public static class AirshipCustomEditors {
     public static AirshipEditor GetEditor(AirshipComponent component, Type type, SerializedObject serializedObject) {
         if (editors.TryGetValue(component.GetInstanceID(), out var editor)) {
             editor._serializedObject = new AirshipSerializedObject();
-            editor._serializedObject.UpdateObject(serializedObject, component.script.m_metadata);
+            editor._serializedObject.UpdateObject(editor, serializedObject, component.script.m_metadata);
             return editor;
         }
 
         editor = (AirshipEditor) ScriptableObject.CreateInstance(type);
         editor._serializedObject ??= new AirshipSerializedObject();
-        editor._serializedObject.UpdateObject(serializedObject, component.script.m_metadata);
+        editor._serializedObject.UpdateObject(editor, serializedObject, component.script.m_metadata);
         editors.Add(component.GetInstanceID(), editor);
         return editor;
     }

@@ -75,10 +75,15 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
 
         var typeCache = AirshipCustomEditors.GetEditorForFilePath(binding.TypescriptFilePath);
-        if (typeCache != null) {
-            var editor = AirshipCustomEditors.GetEditor(binding, typeCache, serializedObject);
-            editor.OnInspectorGUI();
-            
+        if (typeCache != null && binding.script != null) {
+            var metadata = serializedObject.FindProperty("metadata");
+            var metadataName = metadata.FindPropertyRelative("name");
+
+            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
+                var editor = AirshipCustomEditors.GetEditor(binding, typeCache, serializedObject);
+                editor.OnInspectorGUI();
+            }
+
             if (binding.script != null && binding.script.m_metadata != null) {
                 if (ShouldReconcile(binding)) {
                     binding.ReconcileMetadata(ReconcileSource.Inspector);
@@ -90,6 +95,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
             
             serializedObject.ApplyModifiedProperties();
+            
             return;
         }
 
