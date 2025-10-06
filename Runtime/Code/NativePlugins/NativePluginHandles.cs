@@ -148,8 +148,7 @@ namespace NativePlugins {
 				return new IntPtr(ptr64);
 			}
 
-			Debug.LogError("[NativePluginHandles::GetUnityInterfacesPointer] Failed to get pointer from editor prefs");
-			return IntPtr.Zero;
+			throw new Exception("Failed to get pointer from editor prefs");
 		}
 
 		private readonly Dictionary<long, long> _editorIdToPtr = new();
