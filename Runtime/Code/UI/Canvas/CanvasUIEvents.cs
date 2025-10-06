@@ -244,6 +244,7 @@ public class CanvasUIEvents : MonoBehaviour {
      * Captured event is routed to the interceptor and dispatched to TS.
      */
     public void PointerExitHook(GameObject go, PointerEventData data) {
+        if (go == null || data == null) return;
         this.SetInterceptor();
         interceptor.FireHoverEvent(go.GetInstanceID(), 1, data);
     }

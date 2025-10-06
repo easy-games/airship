@@ -2,8 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-public class ManageFullscreenSwitch : MonoBehaviour
-{
+public class ManageFullscreenSwitch : MonoBehaviour {
     private int _fullscreenWidth = 0;
     private int _fullscreenHeight = 0;
     private int _fullscreenAspectRatio = 0;
@@ -11,13 +10,13 @@ public class ManageFullscreenSwitch : MonoBehaviour
     private bool _fullscreen = false;
 
     private void Start() {
-#if !UNITY_IOS && !UNITY_ANDROID
+#if !UNITY_IOS && !UNITY_ANDROID && !UNITY_SERVER
         _fullscreen = Screen.fullScreen;
         SetFullScreenValues();
 #endif
     }
     private void Update() {
-#if !UNITY_IOS && !UNITY_ANDROID
+#if !UNITY_IOS && !UNITY_ANDROID && !UNITY_SERVER
         if (_fullscreen != Screen.fullScreen) {
             if (Screen.fullScreen) {
                 RestoreFullscreenResolution();
@@ -33,8 +32,7 @@ public class ManageFullscreenSwitch : MonoBehaviour
         Screen.SetResolution(_fullscreenWidth, _fullscreenHeight, true, _fullscreenAspectRatio);
     }
 
-    private void SetFullScreenValues()
-    {
+    private void SetFullScreenValues() {
         // Set the screen width and height
         int systemWidth = Display.main.systemWidth;
         int systemHeight = Display.main.systemHeight;

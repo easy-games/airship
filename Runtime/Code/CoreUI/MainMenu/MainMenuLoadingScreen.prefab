@@ -832,7 +832,7 @@ MonoBehaviour:
   continueButton: {fileID: 9053801594986153048}
   spinner: {fileID: 4779218537929143458}
   errorWrapper: {fileID: 4109353328159437557}
-  logo: {fileID: 0}
+  logo: {fileID: 6569058341477827078}
   errorText: {fileID: 5212947246896266066}
   sceneManager: {fileID: 0}
   mainContent: {fileID: 387499054817921413}
