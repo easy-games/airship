@@ -184,15 +184,16 @@ namespace Code.Player.Character.MovementSystems.Character {
             var normalizedForward = forwardVector.normalized;
             var distance = forwardVector.magnitude - _movement.characterRadius;
             var centerHeight = ignoreStepUp
-                ? (_movement.movementSettings.maxStepUpHeight + _movement.currentCharacterHeight) / 2f
-                : _movement.currentCharacterHeight / 2f;
+                ? (_movement.movementSettings.maxStepUpHeight + _movement.currentCharacterHeight + _movement.movementSettings.colliderGroundOffset) / 2f
+                : _movement.currentCharacterHeight + _movement.movementSettings.colliderGroundOffset;
             //Move from root to center of collider
-            var startPos = rootPos + new Vector3(0, centerHeight, 0);
-            var extents = ignoreStepUp
-                ? new Vector3(_movement.characterHalfExtents.x,
-                    _movement.characterHalfExtents.y - _movement.movementSettings.maxStepUpHeight / 2f,
-                    _movement.characterHalfExtents.z)
-                : _movement.characterHalfExtents;
+            var startPos = rootPos + new Vector3(0, centerHeight /2f, 0);
+            var extentHeight = ignoreStepUp
+                ? _movement.movementSettings.maxStepUpHeight + _movement.movementSettings.colliderGroundOffset
+                : _movement.movementSettings.colliderGroundOffset;
+            var extents = new Vector3(_movement.characterHalfExtents.x,
+                _movement.characterHalfExtents.y - extentHeight / 2f,
+                _movement.characterHalfExtents.z);
             if (drawGizmo && _movement.drawDebugGizmos_FORWARD) {
                 GizmoUtils.DrawBox(startPos, Quaternion.identity, extents, Color.blue, gizmoDuration);
                 GizmoUtils.DrawBox(startPos + normalizedForward * distance, Quaternion.identity, extents, Color.green,
@@ -372,10 +373,9 @@ namespace Code.Player.Character.MovementSystems.Character {
                 startPos - velDir * offsetMargin, velDir * (stepUpRampDistance + offsetMargin), false, false);
 
             //See if we should fallback to simplified stepup
-            if (_movement.movementSettings.alwaysStepUp ||
-                (didHitExactForward && _movement.currentMoveSnapshot.isGrounded &&
+            if (didHitExactForward && _movement.currentMoveSnapshot.isGrounded &&
                  flatDistance < velFrame.magnitude + _movement.characterRadius
-                 && !IsWalkableSurface(forwardExactHitInfo.normal))) {
+                 && !IsWalkableSurface(forwardExactHitInfo.normal)) {
                 //(Equals(currentUpNormal, Vector3.up) ||
                 //We hit something but don't qualify for the advanced ramp step up
                 Vector3 startPoint;
