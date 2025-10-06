@@ -119,6 +119,7 @@ namespace NativePlugins {
 		private static IntPtr _unityInterfacesPointerCache;
 
 		static UnityInterfacesPointerStore() {
+			// When Unity is closing, remove the pointer reference for this editor session:
 			EditorApplication.quitting += () => {
 				using var store = new UnityInterfacesPointerStore();
 				var currentEditorId = EditorAnalyticsSessionInfo.id;
@@ -126,6 +127,11 @@ namespace NativePlugins {
 			};
 		}
 
+		/// <summary>
+		/// Attempts to get the unity interface pointer through various means.
+		/// </summary>
+		/// <returns>Unity interface pointer.</returns>
+		/// <exception cref="Exception">Throws an exception if the pointer cannot be retreived.</exception>
 		internal static IntPtr GetUnityInterfacesPointer() {
 			// Attempt to get cached version (gets cleared during domain refreshes):
 			if (_unityInterfacesPointerCache != IntPtr.Zero) {
@@ -161,6 +167,7 @@ namespace NativePlugins {
 		private void Refresh() {
 			_editorIdToPtr.Clear();
 			
+			// Values are stored like URL parameters: editorId1=abc&editorId2=xyz ...
 			var editorPref = EditorPrefs.GetString(EditorPrefAirshipUnityInterfacePointer);
 			var editorPtrPairs = new List<string>(editorPref.Split("&"));
 			foreach (var pair in editorPtrPairs) {
@@ -180,6 +187,7 @@ namespace NativePlugins {
 		private void Save() {
 			if (!_modified) return;
 			
+			// Values are stored like URL parameters: editorId1=abc&editorId2=xyz ...
 			var pairs = new List<string>(_editorIdToPtr.Count);
 			foreach (var (editorId, ptr64) in _editorIdToPtr) {
 				pairs.Add($"{editorId:x}={ptr64:x}");
