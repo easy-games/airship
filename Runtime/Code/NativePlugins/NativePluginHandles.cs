@@ -67,7 +67,7 @@ namespace NativePlugins {
 
 			// Call the UnityPluginLoad plugin function if it exists:
 			if (NativeLibUtil.TryGetDelegate<UnityPluginLoadDelegate>(handle, "UnityPluginLoad", out var loadFn)) {
-				loadFn(GetUnityInterfacesPointer());
+				loadFn(UnityInterfaces);
 			}
 			
 			return handle;
@@ -102,8 +102,18 @@ namespace NativePlugins {
 			// of the application, we'll just let the OS close out our libraries when Unity exits.
 		}
 	
-		[DllImport("UnityInterfacePlugin")]
-		private static extern IntPtr GetUnityInterfacesPointer();
+		[DllImport("UnityInterfacePlugin", EntryPoint = "GetUnityInterfacesPointer")]
+		private static extern IntPtr GetUnityInterfacesPointerNative();
+
+		private static IntPtr _unityInterfacesPointer;
+		private static IntPtr UnityInterfaces {
+			get {
+				if (_unityInterfacesPointer == IntPtr.Zero) {
+					_unityInterfacesPointer = GetUnityInterfacesPointerNative();
+				}
+				return _unityInterfacesPointer;
+			}
+		}
 
 #endif
 	}
