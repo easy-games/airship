@@ -542,7 +542,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 #endif
     }
 
-    private void WriteChangedComponentProperties() {
+    internal void WriteChangedComponentProperties() {
         if (!AirshipBehaviourRootV2.HasId(gameObject) || thread == IntPtr.Zero) return;
         
         foreach (var property in metadata.properties) {

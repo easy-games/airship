@@ -22,10 +22,64 @@ public enum TypeScriptEnumMemberType {
 }
 
 [Serializable]
-public class TypeScriptEnum {
+public class TypeScriptEnum : ISerializationCallbackReceiver {
     public string id;
     public TypeScriptEnumMemberType memberType;
     public List<TyperScriptEnumMember> members;
+
+    public void OnAfterDeserialize() {
+        if (memberType != TypeScriptEnumMemberType.Integer) return;
+        
+        isFlagLike = members.Count > 0;
+        foreach (var value in members) {
+            if (value.IntValue == 0 || value.IntValue == -1) continue;
+            var log2 = Math.Log(Math.Abs(value.IntValue), 2);
+            if (log2 % 1 != 0) {
+                isFlagLike = false;
+                break;
+            }
+        }
+    }
+
+    public void OnBeforeSerialize() {
+        
+    }
+
+    public string[] keys => members.Select(member => member.Name).ToArray();
+    
+    public TyperScriptEnumMember this[int index] {
+        get {
+            return members.Find(f => f.IntValue == index);
+        }
+    }
+
+    public bool isFlagLike { get; private set; }
+    private string[] _flags;
+    public string[] flagNames {
+        get {
+            if (memberType != TypeScriptEnumMemberType.Integer ) return new string[] {};
+            // if (_flags != null) return _flags;
+            
+            var maxIndex = 0;
+            for (var i = 0; i < 32; i++) {
+                var text = this[1 << i];
+                if (text == null) continue;
+                maxIndex = i;
+            }
+            
+            Debug.Log($"maxIndex is {maxIndex} for {id}");
+
+            var flagArray = new string[maxIndex + 1];
+            for (var i = 0; i < maxIndex + 1; i++) {
+                var text = this[1 << i];
+                if (text == null) continue;
+                flagArray[i] = text.Name;
+            }
+
+            _flags = flagArray;
+            return flagArray;
+        }
+    }
 }
 
 public class EditorMetadataJson {
@@ -136,7 +190,7 @@ public class AirshipEditorInfo : ScriptableObject {
                 return _instance;
             }
 #if UNITY_EDITOR
-            if (_instance == null && !Application.isPlaying) {
+            if (_instance == null) {
                 _instance = AssetDatabase.LoadAssetAtPath<AirshipEditorInfo>($"Assets/{BundlePath}");
             }
 
