@@ -127,11 +127,8 @@ namespace NativePlugins {
 		}
 
 		internal static IntPtr GetUnityInterfacesPointer() {
-			Debug.Log("[NativePluginHandles::GetUnityInterfacesPointer] Called!");
-			
 			// Attempt to get cached version (gets cleared during domain refreshes):
 			if (_unityInterfacesPointerCache != IntPtr.Zero) {
-				Debug.Log("[NativePluginHandles::GetUnityInterfacesPointer] Got from cache");
 				return _unityInterfacesPointerCache;
 			}
 			
@@ -142,17 +139,15 @@ namespace NativePlugins {
 			// method doesn't get called again:
 			var ptrFromPlugin = GetUnityInterfacesPointerNative();
 			if (ptrFromPlugin != IntPtr.Zero) {
-				Debug.Log("[NativePluginHandles::GetUnityInterfacesPointer] Got from plugin");
 				_unityInterfacesPointerCache = ptrFromPlugin;
 				store.Add(currentEditorId, ptrFromPlugin.ToInt64());
 				return ptrFromPlugin;
 			}
 			
-			Debug.Log("[NativePluginHandles::GetUnityInterfacesPointer] Getting from editor prefs");
 			if (store.TryGet(currentEditorId, out var ptr64)) {
 				return new IntPtr(ptr64);
 			}
-			
+
 			Debug.LogError("[NativePluginHandles::GetUnityInterfacesPointer] Failed to get pointer from editor prefs");
 			return IntPtr.Zero;
 		}
@@ -165,7 +160,6 @@ namespace NativePlugins {
 		}
 
 		private void Refresh() {
-			Debug.Log("[Store::Refresh] Refreshing");
 			_editorIdToPtr.Clear();
 			
 			var editorPref = EditorPrefs.GetString(EditorPrefAirshipUnityInterfacePointer);
@@ -185,9 +179,7 @@ namespace NativePlugins {
 		}
 
 		private void Save() {
-			Debug.Log("[Store::Refresh] Saving maybe");
 			if (!_modified) return;
-			Debug.Log("[Store::Refresh] Saving");
 			
 			var pairs = new List<string>(_editorIdToPtr.Count);
 			foreach (var (editorId, ptr64) in _editorIdToPtr) {
@@ -204,20 +196,16 @@ namespace NativePlugins {
 		}
 
 		private void Add(long editorId, long ptr64) {
-			Debug.Log("[Store::Refresh] Adding maybe");
 			if (_editorIdToPtr.TryGetValue(editorId, out var existingPtr64) && existingPtr64 == ptr64) {
 				return;
 			}
 			
 			_editorIdToPtr[editorId] = ptr64;
 			_modified = true;
-			Debug.Log("[Store::Refresh] Added");
 		}
 
 		private void Remove(long editorId) {
-			Debug.Log("[Store::Refresh] Removing maybe");
 			if (_editorIdToPtr.Remove(editorId)) {
-				Debug.Log("[Store::Refresh] Removed");
 				_modified = true;
 			}
 		}
