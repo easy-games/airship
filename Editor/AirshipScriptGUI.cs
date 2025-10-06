@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 using System;
+using Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
@@ -187,7 +188,7 @@ namespace Code.Luau {
                         temp.image = displayIcon;
                     }
                     
-                    EditorStyles.objectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
+                    AirshipEditorGUI.nonClippingObjectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
                         position.Contains(Event.current.mousePosition));
 
 
@@ -241,6 +242,10 @@ namespace Code.Luau {
         public static AirshipComponent AirshipBehaviourField(GUIContent content, AirshipScript script, AirshipComponent airshipComponent) {
             var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
             return AirshipBehaviourField(r, content, script, airshipComponent, null);
+        }
+
+        internal static Sprite AirshipSpriteField(Rect position, GUIContent content, Sprite sprite) {
+            return (Sprite) AirshipEditorInternals.DoCustomObjectField(position, content, sprite, typeof(Sprite));
         }
     }
 }

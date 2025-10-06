@@ -28,6 +28,7 @@ namespace Luau {
         AirshipArray,
         AirshipPod,
         AirshipComponent,
+        AirshipLayerMask
     }
     
     [Serializable]
@@ -504,6 +505,13 @@ namespace Luau {
                 }
                 case AirshipComponentPropertyType.AirshipString: {
                     obj = serializedObjectValue;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipLayerMask: {
+                    var deserializedLayerMask = (LayerMask)int.Parse(serializedObjectValue);
+                    var objInstanceId = ThreadDataManager.AddObjectReference(thread, deserializedLayerMask);
+                    obj = objInstanceId;
+                    
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipAnimationCurve: {
