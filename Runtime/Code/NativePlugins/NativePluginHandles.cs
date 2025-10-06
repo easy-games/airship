@@ -131,7 +131,7 @@ namespace NativePlugins {
 		/// Attempts to get the unity interface pointer through various means.
 		/// </summary>
 		/// <returns>Unity interface pointer.</returns>
-		/// <exception cref="Exception">Throws an exception if the pointer cannot be retreived.</exception>
+		/// <exception cref="Exception">Throws an exception if the pointer cannot be retrieved.</exception>
 		internal static IntPtr GetUnityInterfacesPointer() {
 			// Attempt to get cached version (gets cleared during domain refreshes):
 			if (_unityInterfacesPointerCache != IntPtr.Zero) {
