@@ -69,8 +69,9 @@ public class PSOTraceManager : MonoBehaviour {
                         // My understanding is that a unique GraphicsStateCollection per graphics API is necessary but
                         // not necessarily per platform. Although it would be necessary for different quality levels.
                         var qualityLevel = QualitySettings.GetQualityLevel();
+                        var qualityName = QualitySettings.names[qualityLevel];
                         var graphicsApiName = SystemInfo.graphicsDeviceType.ToString();
-                        var fileName = $"GraphicsStateCollection_{graphicsApiName}_{qualityLevel}";
+                        var fileName = $"GraphicsStateCollection_{graphicsApiName}_{qualityName}";
                         if (activeGraphicsStateCollection.SendToEditor(fileName)) {
                             Debug.Log(
                                 $"Saved to Assets/{fileName}. This collection is best used for Graphics API {graphicsApiName}" +
