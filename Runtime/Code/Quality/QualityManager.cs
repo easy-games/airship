@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Code.Bootstrap;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Sentry;
@@ -115,7 +116,7 @@ namespace Code.Quality {
                 frameHealth = FrameHealth.Unhealthy;
             }
 
-            print($"[Quality Check] 5%: {currentFivePercent}, 0.5%: {pointFivePercent}, health: {frameHealth}");
+            // print($"[Quality Check] 5%: {currentFivePercent}, 0.5%: {pointFivePercent}, health: {frameHealth}");
 
             if (this.tracer != null) {
                 this.tracer.SetMeasurement("fps_5_percent", currentFivePercent);

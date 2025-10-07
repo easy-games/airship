@@ -429,8 +429,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 if (!currentMoveSnapshot.prevStepUp && !isImpulsing &&
                     !currentMoveSnapshot.airborneFromImpulse //Don't snap when we are moving from something else
                     && newVelocity.y < 1 && //Only snap when moving downward
-                    (movementSettings.alwaysSnapToGround || //Snap if we always snap to ground
-                     (!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0))) {
+                     !currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0) {
                     //OR snap if we just hit the ground
                     //Snap if we just became became grounded
                     SnapToY(groundHit.point.y);
@@ -483,8 +482,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (movementSettings.useGravity) {
                 if (!currentMoveSnapshot.isFlying && !currentMoveSnapshot.prevStepUp &&
-                    (movementSettings.useGravityWhileGrounded ||
-                     ((!grounded || newVelocity.y > .01f) && !currentMoveSnapshot.isFlying))) {
+                    (!grounded || newVelocity.y > .01f) && !currentMoveSnapshot.isFlying) {
                     //print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
                     //apply gravity
                     var verticalGravMod = !grounded && currentVelocity.y > .1f
