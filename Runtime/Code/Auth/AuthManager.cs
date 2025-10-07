@@ -136,7 +136,7 @@ public class AuthManager {
         });
 
 #if UNITY_ANDROID
-        GoogleSignIn.Configuration = new GoogleSignInConfiguration() {
+		GoogleSignIn.Configuration ??= new GoogleSignInConfiguration() {
 			RequestEmail = true,
 			RequestProfile = true,
 			RequestAuthCode = true,
@@ -144,7 +144,7 @@ public class AuthManager {
 #if UNITY_EDITOR || UNITY_STANDALONE
 			ClientSecret = clientSecret,
 #endif
-        };
+		};
 #endif
         
 #if AIRSHIP_ANDROID_DEBUG
