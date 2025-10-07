@@ -236,9 +236,13 @@ namespace Code.VoiceChat {
                 }
             }
 
-            var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(sender.connectionId);
-            await Awaitable.MainThreadAsync();
-            OnPeerJoinedChatroom?.Invoke(peerId, sender.connectionId, playerInfo.voiceChatAudioSource);
+            try {
+                var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(sender.connectionId);
+                await Awaitable.MainThreadAsync();
+                OnPeerJoinedChatroom?.Invoke(peerId, sender.connectionId, playerInfo.voiceChatAudioSource);
+            } catch (Exception e) {
+                Debug.LogError("Failed to fetch playerInfo during VoiceChat.OnReadyCommand: " + e);
+            }
         }
 
         void Log(string msg) {
