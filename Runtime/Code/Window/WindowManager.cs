@@ -2,14 +2,14 @@ using System.Collections;
 using System.Runtime.InteropServices;
 using UnityEngine;
  
-#if !UNITY_IOS
+#if UNITY_STANDALONE_OSX
 
 [DisallowMultipleComponent]
 public class WindowManager : MonoBehaviour {
-    [DllImport("libTitlebarLib")]
+    [DllImport("Titlebar")]
     private static extern int ShowTitleBar();
  
-    [DllImport("libTitlebarLib")]
+    [DllImport("Titlebar")]
     private static extern int HideTitleBar();
 
     private bool isFullScreen = false;

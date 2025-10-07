@@ -220,7 +220,9 @@ namespace Code.Network.Simulation
                 {
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
-                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt / 2f, entry.Key.bufferTime);
+                    // commandBufferTime is the additional time we queue commands locally on the server before processing them
+                    var commandBufferTime = (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f));
+                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt / 2f, entry.Key.bufferTime + commandBufferTime);
                     foreach (var request in entry.Value)
                     {
                         request.check();

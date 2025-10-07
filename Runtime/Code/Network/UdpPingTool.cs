@@ -25,7 +25,6 @@ namespace Code.Network
 
             using (var udpClient = new UdpClient())
             {
-                udpClient.Client.ReceiveTimeout = timeoutMilliseconds;
                 var endpoint = new IPEndPoint(ipAddress, port);
 
                 var uniqueId = Guid.NewGuid().ToByteArray();
@@ -53,6 +52,16 @@ namespace Code.Network
                     }
                     else
                     {
+                        // Timeout - close client to cancel receive, then observe the task to prevent unobserved exception
+                        try
+                        {
+                            udpClient.Close();
+                            await receiveTask;
+                        }
+                        catch
+                        {
+                            // Ignore - we're timing out anyway
+                        }
                         throw new TimeoutException("Ping request timed out.");
                     }
                 }

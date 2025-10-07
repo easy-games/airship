@@ -5,7 +5,7 @@ using Editor.EditorInternal;
 using UnityEditor;
 using UnityEngine;
 
-public class AirshipEditorGUI {
+public static class AirshipEditorGUI {
     public static void HorizontalLine(Color color = default, int thickness = 1, int padding = 10, int margin = 0)
     {
         color = color != default ? color : Color.grey;
@@ -28,8 +28,35 @@ public class AirshipEditorGUI {
 
                 break;
         }
-
+        
         EditorGUI.DrawRect(r, color);
+    }
+
+    
+    private static GUIStyle _nonClippingObjectField;
+    internal static GUIStyle nonClippingObjectField {
+        get {
+            if (_nonClippingObjectField == null) {
+                _nonClippingObjectField = new GUIStyle(EditorStyles.objectField) {
+                    imagePosition = ImagePosition.ImageLeft,
+                    clipping = TextClipping.Ellipsis,
+                };
+            }
+
+            return _nonClippingObjectField;
+        }
+    }
+
+    public static UnityEngine.Object ObjectField(Rect rect, GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
+        allowSceneObjects) {
+        return AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_objectFieldHash".GetHashCode(), currentValue, null,
+            type, null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
+    }
+
+    public static UnityEngine.Object ObjectFieldLayout(GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
+        allowSceneObjects) {
+        var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
+        return ObjectField(rect, label, currentValue, type, allowSceneObjects);
     }
 
     private const int TabButtonHeight = 22;

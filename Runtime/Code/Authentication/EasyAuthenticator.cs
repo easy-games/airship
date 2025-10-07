@@ -207,6 +207,7 @@ namespace Code.Authentication {
                         username = loginMessage.editorUsername,
                         orgRoleName = "Owner",
                         profileImageId = loginMessage.editorProfileImageId,
+                        playerVersion = AirshipConst.playerVersion,
                     });
                     return await tcs.Task;
                 }
@@ -215,7 +216,8 @@ namespace Code.Authentication {
                     username = "Player" + this.connectionCounter,
                     orgRoleName = "Owner",
                     profileImageId = string.Empty,
-                    fullTransferPacket = "{}"
+                    fullTransferPacket = "{}",
+                    playerVersion = AirshipConst.playerVersion,
                 });
                 return await tcs.Task;
             }
@@ -244,7 +246,8 @@ namespace Code.Authentication {
                     username = transferData.user.username,
                     profileImageId = transferData.user.profileImageId,
                     orgRoleName = transferData.orgRoleName,
-                    fullTransferPacket = fullTransferPacket
+                    fullTransferPacket = fullTransferPacket,
+                    playerVersion = loginMessage.playerVersion,
                 });
             }).Catch((err) => {
                 var error = err as RequestException;

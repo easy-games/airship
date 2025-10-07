@@ -9,6 +9,7 @@ using Code.Analytics;
 using Code.Luau.LuauAssembly.Protection;
 using Luau;
 using Mirror;
+using Sentry;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -71,6 +72,8 @@ namespace Code.Bootstrap {
 
         private int setupClientSessionCounter = 0;
 
+        public static string CurrentGameId;
+
         /// <summary>
         /// Client downloads and combines all LuauScriptDto objects into this single dto.
         /// This is then serialized to disk as a cache.
@@ -84,6 +87,13 @@ namespace Code.Bootstrap {
             if (RunCore.IsClient()) {
                 this._airshipScriptTemplate = ScriptableObject.CreateInstance<AirshipScript>();
             }
+        }
+
+        private void OnDestroy() {
+            CurrentGameId = "";
+            SentrySdk.ConfigureScope(scope => {
+                scope.SetExtra("gameId", "");
+            });
         }
 
         public void SetupServer() {
@@ -170,6 +180,11 @@ namespace Code.Bootstrap {
 
             NetworkClient.RegisterHandler<InitializeGameMessage>(async data => {
                 this.initMessage = data;
+                CurrentGameId = data.startupConfig.GameBundleId;
+                SentrySdk.ConfigureScope(scope => {
+                    scope.SetExtra("gameId", CurrentGameId);
+                });
+
                 NetworkManager.networkSceneName = data.startupConfig.StartingSceneName;
 
                 StartCoroutine(this.LoadPackages(data.startupConfig));

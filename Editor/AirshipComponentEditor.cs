@@ -598,6 +598,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             case "IntEnum":
                 DrawCustomIntEnumProperty(guiContent, bindingProp, value, modified);
                 break;
+            case "FlagEnum":
+                DrawCustomFlagEnumProperty(guiContent, bindingProp, value, modified);
+                break;
             case "boolean" or "bool":
                 DrawCustomBoolProperty(guiContent, type, decorators, value, modified);
                 break;
@@ -641,6 +644,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             default:
                 GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
                 break;
+        }
+
+        if (Application.isPlaying) {
+            var component = (AirshipComponent)target;
+            component.WriteChangedComponentProperties();
         }
         
         if (hasOverride && Event.current.type == EventType.Repaint) {
@@ -851,11 +859,22 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
             case AirshipComponentPropertyType.AirshipObject: {
                 var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
-                var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
-                if (objOld != objNew) {
-                    objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
-                    arrayModified.boolValue = true;
+
+                if (objectType == typeof(Sprite) || objectType == typeof(Texture2D)) {
+                    var objNew = AirshipEditorGUI.ObjectField(rect, new GUIContent(label), objOld, objectType, true);
+                    if (objOld != objNew) {
+                        objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
+                        arrayModified.boolValue = true;
+                    }
+                } else {
+                    var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
+                    if (objOld != objNew) {
+                        objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
+                        arrayModified.boolValue = true;
+                    }
                 }
+                
+
                 break;
             }
             default:
@@ -882,11 +901,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         {
             newValue = Math.Max(Convert.ToInt32(minParams[0].value), newValue);
         }
-        if (modifiers.TryGetValue("Max", out var maxParams))
-        {
+
+        if (modifiers.TryGetValue("Max", out var maxParams)) {
             newValue = Math.Min(Convert.ToInt32(maxParams[0].value), newValue);
         }
-        
+
         if (newValue != currentValue) {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
             modified.boolValue = true;
@@ -981,7 +1000,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         List<GUIContent> items = new();
         foreach (var item in enumerableType.members) {
-            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name) + " [" + item.IntValue + "]") );
+            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name)) );
         }
             
         int idx = 0;
@@ -1004,6 +1023,28 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private void DrawCustomIntEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
         SerializedProperty value, SerializedProperty modified) {
         //
+        if (!AirshipEditorInfo.Instance) {
+            EditorGUILayout.HelpBox("Cannot find editor info", MessageType.Error);
+            return;
+        }
+
+        if (metadataProperty.refPath == null) {
+            EditorGUILayout.HelpBox("Cannot find refPath", MessageType.Error);
+            return;
+        }
+        
+        var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
+        if (tsEnum == null) {
+            EditorGUILayout.HelpBox("Cannot find enum from refPath", MessageType.Error);
+            return;
+        }
+
+        DrawCustomIntEnumDropdown(guiContent, tsEnum, value, modified, null);
+    }
+    
+    private void DrawCustomFlagEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
+        SerializedProperty value, SerializedProperty modified) {
+
         if (!AirshipEditorInfo.Instance) return;
 
         if (metadataProperty.refPath == null) {
@@ -1012,8 +1053,25 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
         if (tsEnum == null) return;
+        
+        int.TryParse(value.stringValue, out int currentMask);
 
-        DrawCustomIntEnumDropdown(guiContent, tsEnum, value, modified, null);
+#if AIRSHIP_INTERNAL
+        EditorGUILayout.BeginHorizontal();
+#endif
+        var newMask = EditorGUILayout.MaskField(guiContent, currentMask, tsEnum.flagNames);
+        if (newMask != currentMask) {
+            value.stringValue = newMask.ToString(CultureInfo.InvariantCulture);
+            modified.boolValue = true;
+        }
+
+#if AIRSHIP_INTERNAL
+        GUI.enabled = false;
+        EditorGUILayout.IntField(newMask, GUILayout.Width(100));
+        EditorGUILayout.Toggle("", tsEnum.isFlagLike, GUILayout.Width(30));
+        GUI.enabled = true;
+        EditorGUILayout.EndHorizontal();
+#endif
     }
     
     private void DrawCustomStringEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty value,
@@ -1097,11 +1155,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         {
             currentValue = 0;
         }
-        int newValue = EditorGUILayout.LayerField(guiContent, currentValue);
-        if (newValue != currentValue)
-        {
-            value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
-            modified.boolValue = true;
+
+        int maskValue = EditorGUILayout.MaskField(guiContent, currentValue, GameConfig.Load().gameLayers);
+        if (maskValue != currentValue) {
+            value.stringValue = maskValue.ToString(CultureInfo.InvariantCulture);
+            modified.boolValue = true;   
         }
     }
     
@@ -1225,7 +1283,13 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     private void DrawCustomObjectProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType, SerializedProperty modified) {
         var currentObject = obj.objectReferenceValue;
         var t = objType.stringValue != "" ? TypeReflection.GetTypeFromString(objType.stringValue) : typeof(Object);
-        var newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
+
+        UnityEngine.Object newObject;
+        if (t == typeof(Sprite) || t == typeof(Texture2D)) {
+            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true);
+        } else {
+            newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
+        }
             
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;

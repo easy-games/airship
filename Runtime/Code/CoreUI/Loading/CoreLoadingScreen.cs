@@ -24,6 +24,8 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public TMP_Text progressText;
     public Button disconnectButton;
     public Button continueButton;
+    public TMP_Text skipText;
+    public Button skipButton;
     public GameObject spinner;
     public RawImage gameImage;
     public Color editorGameImageColor;
@@ -36,13 +38,22 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public RectTransform voiceChatCard;
     public InternalToggle voiceChatToggle;
 
+    public bool skipRequested = false;
     public bool updatedByGame = false;
 
     public static Dictionary<string, Texture2D> gameImageCache = new Dictionary<string, Texture2D>();
+    
+    private GameObject skipButtonGameObject;
 
     private void Awake() {
         base.showContinueButton = true;
         _canvas = GetComponent<Canvas>();
+        
+        skipButtonGameObject = skipButton.gameObject;
+        
+        // Default to hidden
+        skipText.alpha = 0;
+        skipButtonGameObject.SetActive(false);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -215,6 +226,18 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public override void SetProgress(string text, float percent) {
         percent = Math.Clamp(percent, 0, 100);
         progressText.text = text;
+    }
+
+    public void SkipBtn_OnClick() {
+        SetSkipButtonShown(false);
+        skipRequested = true;
+    }
+
+    public void SetSkipButtonShown(bool shown) {
+        if (skipButtonGameObject.activeSelf == shown) return;
+        
+        skipButtonGameObject.SetActive(shown);
+        skipText.GraphicAlpha(shown ? 1 : 0, 0.2f);
     }
 
     public void Close() {
