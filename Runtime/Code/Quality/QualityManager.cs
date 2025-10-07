@@ -126,11 +126,6 @@ namespace Code.Quality {
                 this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg);
                 this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg);
                 this.tracer.SetData("frame_health", frameHealth == FrameHealth.Ok ? "ok" : "unhealthy");
-
-                if (RunCore.IsClient()) {
-                    this.tracer.SetData("gameId", ClientBundleLoader.CurrentGameId);
-                }
-
                 this.tracer.Finish(SpanStatus.Ok);
                 this.tracer = null;
             }
