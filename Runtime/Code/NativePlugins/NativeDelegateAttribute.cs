@@ -1,7 +1,7 @@
-﻿using System;
+﻿#if UNITY_EDITOR
+using System;
 
 namespace NativePlugins {
-#if UNITY_EDITOR
 	/// <summary>
 	/// Binds a delegate to a native library plugin.
 	/// </summary>
@@ -16,5 +16,6 @@ namespace NativePlugins {
 			SymbolName = symbolName;
 		}
 	}
-#endif
 }
+
+#endif
