@@ -9,18 +9,14 @@ using UnityEngine;
 using System.Collections;
 using UnityEditor;
 using Unity.EditorCoroutines.Editor;
-#endif
 
 namespace NativePlugins {
-#if UNITY_EDITOR
 	internal class PluginHandles {
 		internal IntPtr Handle;
 		internal List<FieldInfo> FieldInfos;
 	}
-#endif
 	
 	public static class NativePluginHandles {
-#if UNITY_EDITOR
 		private delegate void UnityPluginLoadDelegate(IntPtr unityInterfaces);
 		private delegate void UnityPluginUnloadDelegate();
 		
@@ -109,10 +105,8 @@ namespace NativePlugins {
 			// up its context object). Since loaded libraries are loaded into the address space
 			// of the application, we'll just let the OS close out our libraries when Unity exits.
 		}
-#endif
 	}
 	
-#if UNITY_EDITOR
 	[InitializeOnLoad]
 	internal class UnityInterfacesPointerStore : IDisposable {
 		private const string EditorPrefAirshipUnityInterfacePointer = "AirshipUnityInterfacePointer";
@@ -256,5 +250,6 @@ namespace NativePlugins {
 	public class UnityInterfacesException : Exception {
 		public UnityInterfacesException(string message) : base(message) {}
 	}
-#endif
 }
+
+#endif

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if UNITY_EDITOR
+using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -112,7 +113,6 @@ namespace NativePlugins {
 		}
 #endif
 
-#if UNITY_EDITOR
 		public static IntPtr OpenLibrary(string path) {
 			if (TryOpenLibrary(path, out var handle)) {
 				return handle;
@@ -168,6 +168,7 @@ namespace NativePlugins {
 				field.SetValue(null, fnHandle);
 			}
 		}
-#endif
 	}
 }
+
+#endif
