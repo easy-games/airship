@@ -71,6 +71,8 @@ namespace Code.Bootstrap {
 
         private int setupClientSessionCounter = 0;
 
+        public static string CurrentGameId;
+
         /// <summary>
         /// Client downloads and combines all LuauScriptDto objects into this single dto.
         /// This is then serialized to disk as a cache.
@@ -84,6 +86,10 @@ namespace Code.Bootstrap {
             if (RunCore.IsClient()) {
                 this._airshipScriptTemplate = ScriptableObject.CreateInstance<AirshipScript>();
             }
+        }
+
+        private void OnDestroy() {
+            CurrentGameId = "";
         }
 
         public void SetupServer() {
@@ -170,6 +176,8 @@ namespace Code.Bootstrap {
 
             NetworkClient.RegisterHandler<InitializeGameMessage>(async data => {
                 this.initMessage = data;
+                CurrentGameId = data.startupConfig.GameBundleId;
+
                 NetworkManager.networkSceneName = data.startupConfig.StartingSceneName;
 
                 StartCoroutine(this.LoadPackages(data.startupConfig));
