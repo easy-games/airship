@@ -2,8 +2,10 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using Luau;
-using NativePlugins;
 using UnityEngine;
+#if UNITY_EDITOR
+using NativePlugins;
+#endif
 
 public static class LuauPluginNative {
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);

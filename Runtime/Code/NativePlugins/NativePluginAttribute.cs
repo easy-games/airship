@@ -1,7 +1,7 @@
-﻿using System;
+﻿#if UNITY_EDITOR
+using System;
 
 namespace NativePlugins {
-#if UNITY_EDITOR
 	[AttributeUsage(AttributeTargets.Field)]
 	public class NativePluginAttribute : Attribute {
 		public readonly string LibPath;
@@ -11,5 +11,6 @@ namespace NativePlugins {
 			LibPath = libPath;
 		}
 	}
-#endif
 }
+
+#endif
