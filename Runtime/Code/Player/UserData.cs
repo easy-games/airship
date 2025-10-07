@@ -5,4 +5,5 @@ public class UserData
     public string profileImageId;
     public string orgRoleName;
     public string fullTransferPacket;
+    public int playerVersion;
 }

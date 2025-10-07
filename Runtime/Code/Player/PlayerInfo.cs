@@ -22,6 +22,7 @@ public class PlayerInfo : NetworkBehaviour {
 	[SyncVar] public int connectionId;
 	[SyncVar] public string profileImageId;
 	[SyncVar] public string orgRoleName;
+	[SyncVar] public int playerVersion = 19;
 	public string transferPacket;
 	public AudioSource voiceChatAudioSource;
 
@@ -30,7 +31,7 @@ public class PlayerInfo : NetworkBehaviour {
 		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
-	public void Init(int connectionId, string userId, string username, string profileImageId, string orgRoleName, string transferPacket) {
+	public void Init(int connectionId, string userId, string username, string profileImageId, string orgRoleName, string transferPacket, int playerVersion) {
 		this.gameObject.name = "Player_" + username;
 		this.connectionId = connectionId;
 		this.userId = userId;
@@ -38,6 +39,7 @@ public class PlayerInfo : NetworkBehaviour {
 		this.profileImageId = profileImageId;
 		this.orgRoleName = orgRoleName;
 		this.transferPacket = transferPacket;
+		this.playerVersion = playerVersion;
 		
 		this.InitVoiceChat();
 	}

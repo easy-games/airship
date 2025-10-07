@@ -93,20 +93,9 @@ namespace Code.Player.Character.MovementSystems.Character {
         // [SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
         // public float jumpBufferTime = 0.1f;
 
-        [FormerlySerializedAs("jumpCooldown")]
-        [Tooltip("Minimum interval (in seconds) between jumps, measured from the time the player became grounded")]
-        [Min(0f)]
-        public float jumpUpBlockCooldown = 0.4f;
-
 
         [Header("Gravity")] [Tooltip("Apply Physics.gravity force every tick")]
         public bool useGravity = true;
-
-        [Tooltip("Apply gravity even when on the ground for accurate physics")]
-        public bool useGravityWhileGrounded = false;
-
-        [Tooltip("When grounded force the Y position of the character to the found ground plane")]
-        public bool alwaysSnapToGround = false;
 
         [Tooltip("Multiplier of global gravity force")]
         public float gravityMultiplier = 2;
@@ -148,9 +137,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         [Header("Step Ups")] [Tooltip("Push the character up when they stop over a set threshold")]
         public bool detectStepUps = true;
-
-        [Tooltip("Step the character up every frame if it theres nothing to push up to")]
-        public bool alwaysStepUp = false;
 
         [Tooltip(
             "While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
