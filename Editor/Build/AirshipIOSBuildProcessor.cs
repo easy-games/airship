@@ -19,6 +19,7 @@ namespace Editor.Build {
             var root = plist.root;
             var buildKey = "NSCameraUsageDescription";
             root.SetString(buildKey, "Use the camera to take profile pictures.");
+            root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
             root.SetBoolean("GCSupportsGameMode", true);
             File.WriteAllText(plistPath, plist.WriteToString());
 #endif
