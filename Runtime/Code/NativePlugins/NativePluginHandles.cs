@@ -1,19 +1,23 @@
-﻿using System;
+﻿#if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Reflection;
 using UnityEngine;
-#if UNITY_EDITOR
+using System.Collections;
 using UnityEditor;
+using Unity.EditorCoroutines.Editor;
 #endif
 
 namespace NativePlugins {
+#if UNITY_EDITOR
 	internal class PluginHandles {
 		internal IntPtr Handle;
 		internal List<FieldInfo> FieldInfos;
 	}
+#endif
 	
 	public static class NativePluginHandles {
 #if UNITY_EDITOR
@@ -61,14 +65,14 @@ namespace NativePlugins {
 
 		private static IntPtr InitPlugin(string path) {
 			var fullLibPath = Path.GetFullPath(Path.Join(Application.dataPath, "..", path));
-
+			
 			if (LoadedPluginHandles.TryGetValue(path, out var existingHandles)) {
 				return existingHandles.Handle;
 			}
 			
 			// Open the library:
 			var handle = NativeLibUtil.OpenLibrary(fullLibPath);
-
+			
 			// Call the UnityPluginLoad plugin function if it exists:
 			if (NativeLibUtil.TryGetDelegate<UnityPluginLoadDelegate>(handle, "UnityPluginLoad", out var loadFn)) {
 				loadFn(UnityInterfacesPointerStore.GetUnityInterfacesPointer());
@@ -146,17 +150,38 @@ namespace NativePlugins {
 			var ptrFromPlugin = GetUnityInterfacesPointerNative();
 			if (ptrFromPlugin != IntPtr.Zero) {
 				_unityInterfacesPointerCache = ptrFromPlugin;
-				store.Add(currentEditorId, ptrFromPlugin.ToInt64());
+				if (currentEditorId == 0) {
+					EditorCoroutineUtility.StartCoroutineOwnerless(AddAfterSessionIdReady(ptrFromPlugin));
+				} else {
+					store.Add(currentEditorId, ptrFromPlugin.ToInt64());
+				}
+
 				return ptrFromPlugin;
+			}
+			
+			if (currentEditorId == 0) {
+				// Editor session ID is only zero right at editor launch. The native plugin should always succeed
+				// at this time. Throw an exception if that fails.
+				throw new UnityInterfacesException("Failed to get unity interface pointer from native plugin");
 			}
 			
 			if (store.TryGet(currentEditorId, out var ptr64)) {
 				return new IntPtr(ptr64);
 			}
 
-			throw new Exception("Failed to get pointer from editor prefs");
+			throw new UnityInterfacesException("Failed to get unity interface pointer from editor prefs");
 		}
 
+		private static IEnumerator AddAfterSessionIdReady(IntPtr ptr) {
+			while (EditorAnalyticsSessionInfo.id == 0) {
+				yield return null;
+			}
+			
+			using var store = new UnityInterfacesPointerStore();
+			var currentEditorId = EditorAnalyticsSessionInfo.id;
+			store.Add(currentEditorId, ptr.ToInt64());
+		}
+		
 		private readonly Dictionary<long, long> _editorIdToPtr = new();
 		private bool _modified;
 
@@ -178,7 +203,8 @@ namespace NativePlugins {
 				var editorId = long.Parse(editorAndPtr[0], NumberStyles.HexNumber);
 				var ptr64 = long.Parse(editorAndPtr[1], NumberStyles.HexNumber);
 				if (!_editorIdToPtr.TryAdd(editorId, ptr64)) {
-					Debug.LogWarning($"[NativePluginHandles::Refresh] Pointer already found for given editor id {editorId}");
+					// If a duplicate was found, simply set the store as modified, so that it will save
+					// without any duplicates once disposed.
 					_modified = true;
 				}
 			}
@@ -187,12 +213,8 @@ namespace NativePlugins {
 		private void Save() {
 			if (!_modified) return;
 			
-			// Values are stored like URL parameters: editorId1=abc&editorId2=xyz ...
-			var pairs = new List<string>(_editorIdToPtr.Count);
-			foreach (var (editorId, ptr64) in _editorIdToPtr) {
-				pairs.Add($"{editorId:x}={ptr64:x}");
-			}
-			var editorPref = string.Join("&", pairs);
+			var editorPref = Serialize();
+			
 			EditorPrefs.SetString(EditorPrefAirshipUnityInterfacePointer, editorPref);
 			
 			_modified = false;
@@ -217,9 +239,22 @@ namespace NativePlugins {
 			}
 		}
 
+		private string Serialize() {
+			// Values are stored like URL parameters: editorId1=abc&editorId2=xyz ...
+			var pairs = new List<string>(_editorIdToPtr.Count);
+			foreach (var (editorId, ptr64) in _editorIdToPtr) {
+				pairs.Add($"{editorId:x}={ptr64:x}");
+			}
+			return string.Join("&", pairs);
+		}
+
 		public void Dispose() {
 			Save();
 		}
+	}
+
+	public class UnityInterfacesException : Exception {
+		public UnityInterfacesException(string message) : base(message) {}
 	}
 #endif
 }
