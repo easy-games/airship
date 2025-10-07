@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using NativePlugins;
 using UnityEngine;
+#if UNITY_EDITOR
+using NativePlugins;
+#endif
 
 // ReSharper disable InconsistentNaming
 

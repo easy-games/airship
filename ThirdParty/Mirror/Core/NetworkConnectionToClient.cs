@@ -33,7 +33,8 @@ namespace Mirror
         ExponentialMovingAverage deliveryTimeEma; // average delivery time (standard deviation gives average jitter)
         public double remoteTimeline;
         public double remoteTimescale;
-        double bufferTimeMultiplier = 2;
+        // EASYMOD: Made public
+        public double bufferTimeMultiplier = 2;
         public double bufferTime => NetworkServer.sendInterval * bufferTimeMultiplier;
 
         // <clienttime, snaps>

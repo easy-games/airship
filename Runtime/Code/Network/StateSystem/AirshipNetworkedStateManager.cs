@@ -112,6 +112,10 @@ namespace Code.Network.StateSystem
         // A map between clientId and the last acked snapshot they received. We use this to select
         // the snapshot we use to generate diffs for the client.
         private Dictionary<int, int> serverAckedSnapshots = new();
+        
+        private double bufferTimeMultiplier => this.connectionToClient != null
+            ? this.connectionToClient.bufferTimeMultiplier // The server's connection to the client with client specific buffer settings
+            : NetworkClient.bufferTimeMultiplier;
 
         #endregion
 
@@ -199,8 +203,8 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
             // must convert send interval to scaled time because fixedDeltaTime is scaled
             // This value is refreshed in auth server tick
-            this.serverCommandBufferTargetSize = Math.Min(this.serverCommandBufferMaxSize,
-                (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
+            this.serverCommandBufferTargetSize =Math.Min(this.serverCommandBufferMaxSize,
+                (int)Math.Ceiling(NetworkServer.sendInterval * bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -514,12 +518,7 @@ namespace Code.Network.StateSystem
             // ensures that we are rolling back to the time the user actually saw on their
             // client when they issued the command.
             
-            // This buffer covers the command buffer time. We queue commands locally on the server before processing them
-            // TODO: We could get lag comp a little more accurate if we tracked the actual time the command was buffered. It's good enough
-            // to use the ideal commands in one interval for now though.
-            var commandBufferTime = (NetworkServer.sendInterval * (NetworkClient.bufferTimeMultiplier / 2f));
-            
-            var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
+            var totalBuffer = (latency * 2) + bufferTime;
             var lagCompensatedTime = currentTime - totalBuffer;
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             
@@ -556,9 +555,9 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
+                    (int)Math.Ceiling(NetworkServer.sendInterval * this.bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
             // Optimal max is when we will start processing extra commands.
-            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize} {NetworkClient.bufferTime} {NetworkClient.bufferTimeMultiplier} {Time.timeScale} {NetworkServer.sendInterval}");
+            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize}");
 
             // If we don't allow command catchup, drop commands to get to the target buffer size.
             if (this.maxServerCommandCatchup == 0)
@@ -763,7 +762,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize =
                 Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkClient.bufferTime / Time.fixedUnscaledDeltaTime));
+                    (int)Math.Ceiling(NetworkServer.sendInterval * bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
             // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
