@@ -20,7 +20,7 @@ namespace Code.Bootstrap {
     }
     
     public static class LuauScriptsDtoSerializer {
-        private static Zstd.Zstd zstd = new(1024 * 4);
+        private static readonly Lazy<Zstd.Zstd> zstd = new(() => new Zstd.Zstd(1024 * 4));
         private static readonly Dictionary<string, CachedCompressedFile> compressedFileCache = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -47,7 +47,7 @@ namespace Code.Bootstrap {
                         Profiler.BeginSample("Luau Compress");
                         var maxCompressionSize = Zstd.Zstd.GetCompressionBound(file.bytes);
                         byte[] compressedBytes = new byte[maxCompressionSize];
-                        var compressedSize = zstd.Compress(file.bytes, compressedBytes);
+                        var compressedSize = zstd.Value.Compress(file.bytes, compressedBytes);
                         writer.WriteInt(compressedSize);
                         writer.WriteBytes(compressedBytes, 0, compressedSize);
                         
@@ -81,7 +81,7 @@ namespace Code.Bootstrap {
 
                     // Decompress the bytes
                     script.bytes = new byte[Zstd.Zstd.GetDecompressionBound(compressedBytes)];
-                    zstd.Decompress(new ReadOnlySpan<byte>(compressedBytes, 0, compressedBytesLen), script.bytes);
+                    zstd.Value.Decompress(new ReadOnlySpan<byte>(compressedBytes, 0, compressedBytesLen), script.bytes);
 
                     script.airshipBehaviour = reader.ReadBool();
 
