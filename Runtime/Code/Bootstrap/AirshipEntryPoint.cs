@@ -1,8 +1,5 @@
-using System;
 using Code.Bootstrap;
-using Code.Bundles;
 using Sentry;
-using Sentry.Unity;
 using UnityEngine;
 
 
@@ -13,19 +10,6 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
     private void Start() {
 #if AIRSHIP_PLAYER
         Debug.unityLogger.logHandler = new AirshipLogHandler();
-
-        SentryUnity.Init(options => {
-#if UNITY_IOS || UNITY_ANDROID
-            options.Release = Application.version + "@" + AirshipVersion.GetVersionHash();
-#else
-            options.Release = AirshipVersion.GetVersionHash();
-#endif
-#if AIRSHIP_STAGING
-            options.Environment = "staging";
-#else
-            options.Environment = "production";
-#endif
-        });
 
         SentrySdk.ConfigureScope(scope => {
             scope.SetExtra("platform", AirshipPlatformUtil.GetLocalPlatform().ToString());
