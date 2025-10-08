@@ -108,7 +108,6 @@ public class PickUsernamePage : MonoBehaviour {
         var res = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator +
                                                      "/users/availability?username=" + username);
         avail = res.success;
-        print("username check: " + res.data);
         if (!res.success) {
             SetResponse(this.usernameTakenText);
             Debug.LogError(res.error);
