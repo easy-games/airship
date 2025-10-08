@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Code.Bootstrap;
+using NUnit;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Profile;
@@ -266,8 +268,16 @@ namespace Editor {
             ReleaseAPK,
             ReleaseAAB,
         }
+
+        public enum AndroidEnvironment {
+            Production,
+            Staging,
+        }
         
-        public static void BuildAndroidClient(AndroidBuildType buildType) {
+        public static void BuildAndroidClient(AndroidBuildType buildType, AndroidEnvironment environment) {
+#if AIRSHIP_PLAYER
+           StreamingAssets.SetCoreMaterialPlatform(AirshipPlatform.Android);
+            
             var development = buildType == AndroidBuildType.DevelopmentAPK;
             var buildApk = buildType != AndroidBuildType.ReleaseAAB;
 
@@ -279,18 +289,35 @@ namespace Editor {
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.splitApplicationBinary = !buildApk;
-
+            PlayerSettings.Android.applicationEntry = AndroidApplicationEntry.GameActivity;
+            
+            PlayerSettings.Android.keyaliasName = environment switch {
+                AndroidEnvironment.Production => "airship",
+                AndroidEnvironment.Staging => "airship-staging",
+                _ => throw new ArgumentOutOfRangeException(nameof(environment), environment, null)
+            };
+            
+            var editorBuildScenes = new List<EditorBuildSettingsScene>();
+            foreach (var sceneName in scenes) {
+                editorBuildScenes.Add(new EditorBuildSettingsScene(sceneName, true));
+            }
+            
             BuildProfile buildProfile;
             if (development) {
                 buildProfile = AssetDatabase.LoadAssetAtPath<BuildProfile>("Assets/Settings/Build Profiles/Android Debug.asset");
             } else {
                 buildProfile = AssetDatabase.LoadAssetAtPath<BuildProfile>("Assets/Settings/Build Profiles/Android Google Play.asset");
             }
-            var options = new BuildPlayerWithProfileOptions();
-            var editorBuildScenes = new List<EditorBuildSettingsScene>();
-            foreach (var sceneName in scenes) {
-                editorBuildScenes.Add(new EditorBuildSettingsScene(sceneName, true));
+
+            var defines = new List<string>();
+            defines.Add("AIRSHIP_PLAYER");
+            if (environment == AndroidEnvironment.Staging) {
+                defines.Add("AIRSHIP_STAGING");
+                defines.Add("AIRSHIP_INTERNAL");
             }
+            buildProfile.scriptingDefines = defines.ToArray();
+            
+            var options = new BuildPlayerWithProfileOptions();
             buildProfile.overrideGlobalScenes = true;
             buildProfile.scenes = editorBuildScenes.ToArray();
             options.buildProfile = buildProfile;
@@ -298,8 +325,9 @@ namespace Editor {
             if (development) {
                 options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
             }
-
-            var report = BuildPipeline.BuildPlayer(options);
+        
+            var  report = BuildPipeline.BuildPlayer(options);
+            
             var summary = report.summary;
             switch (summary.result) {
                 case BuildResult.Succeeded:
@@ -319,8 +347,10 @@ namespace Editor {
 #endif
                     break;
             }
-
+            
+            StreamingAssets.ResetCoreMaterials();
             CreateAssetBundles.AddAllGameBundleScenes();
+#endif
         }
 
 #if AIRSHIP_PLAYER
@@ -354,19 +384,29 @@ namespace Editor {
             BuildIOSClient(true, true);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android (Google Play)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Android/Android Release (Google Play)", priority = 10)]
         public static void BuildAndroidClientMenuItem() {
-            BuildAndroidClient(AndroidBuildType.ReleaseAAB);
+            BuildAndroidClient(AndroidBuildType.ReleaseAAB, AndroidEnvironment.Production);
         }
         
-        [MenuItem("Airship/Create Binary/Client/Android (APK)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Android/Android APK", priority = 80)]
         public static void BuildAndroidProdAPK() {
-            BuildAndroidClient(AndroidBuildType.ReleaseAPK);
+            BuildAndroidClient(AndroidBuildType.ReleaseAPK, AndroidEnvironment.Production);
         }
 
-        [MenuItem("Airship/Create Binary/Client/Android (Development APK)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Android/Android APK (Development)", priority = 80)]
         public static void BuildAndroidDevelopmentClientMenuItem() {
-            BuildAndroidClient(AndroidBuildType.DevelopmentAPK);
+            BuildAndroidClient(AndroidBuildType.DevelopmentAPK, AndroidEnvironment.Production);
+        }
+        
+        [MenuItem("Airship/Create Binary/Client/Android/Android Staging APK", priority = 150)]
+        public static void BuildAndroidProdStagingAPK() {
+            BuildAndroidClient(AndroidBuildType.ReleaseAPK, AndroidEnvironment.Staging);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/Android/Android Staging APK (Development)", priority = 150)]
+        public static void BuildAndroidDevelopmentStagingClientMenuItem() {
+            BuildAndroidClient(AndroidBuildType.DevelopmentAPK, AndroidEnvironment.Staging);
         }
 #endif
 
