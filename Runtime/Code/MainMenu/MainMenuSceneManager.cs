@@ -193,7 +193,7 @@ public class MainMenuSceneManager : MonoBehaviour {
             AirshipPlatformUrl.gameCdn,
             packages.ToArray(),
             null,
-            loadingScreen,
+            this.loadingScreen,
             null,
             true,
             (success) => {

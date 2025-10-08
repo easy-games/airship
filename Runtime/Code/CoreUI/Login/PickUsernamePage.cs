@@ -5,6 +5,7 @@ using Code.Http.Public;
 using Code.Platform.Shared;
 using ElRaccoone.Tweens;
 using Proyecto26;
+using Sentry;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -138,6 +139,9 @@ public class PickUsernamePage : MonoBehaviour {
                 username = username,
             }));
         if (res.success) {
+            SentrySdk.ConfigureScope(scope => {
+                scope.User.Username = username;
+            });
             SceneManager.LoadScene("MainMenu");
         } else {
             Debug.LogError(res.error);
