@@ -193,20 +193,23 @@ public class MainMenuSceneManager : MonoBehaviour {
             AirshipPlatformUrl.gameCdn,
             packages.ToArray(),
             null,
-            loadingScreen,
+            this.loadingScreen,
             null,
             true,
-            (success) => {
+            (success, errorMsg) => {
                 if (!success) {
-                    this.loadingScreen.SetError("Failed to download game content. An error has occurred.");
+                    string err;
+                    if (string.IsNullOrEmpty(errorMsg)) {
+                        err = "Failed to download game content. An error has occurred";
+                    } else {
+                        err = "Failed to download game content. An error has occurred: " + errorMsg;
+                    }
+                    this.loadingScreen.SetError(err);
                     return;
                 }
                 StartCoroutine(StartPackageLoad(packages, true));
             }
         );
-        if (!downloadSuccess) {
-            this.loadingScreen.SetError("<b>Failed to download content.</b> Would you like to try again?");
-        }
     }
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {

@@ -402,10 +402,10 @@ namespace Code.Bootstrap {
                     loadingScreen,
                     null,
                     false,
-                    (success) => {
+                    (success, errorMsg) => {
                         finishedDownload = true;
                         if (!success) {
-                            loadingScreen.SetError("Failed to download game content. An error has occurred.");
+                            loadingScreen.SetError("Failed to download game content. An error has occurred: " + errorMsg);
                         }
                     }
                 );
