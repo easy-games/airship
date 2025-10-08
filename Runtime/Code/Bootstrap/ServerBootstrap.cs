@@ -458,14 +458,11 @@ public class ServerBootstrap : MonoBehaviour
 		bool downloadComplete = false;
 		if (!RunCore.IsEditor()) {
 			BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl, false,
-				(res) => {
-					if (!res)
-					{
+				(res, errorMsg) => {
+					if (!res) {
 						Debug.LogWarning("[Airship]: Failed to download required files. See above logs for details. Shutting down server.");
 						ShutdownDueToAssetFailure(1);
-					}
-					else
-					{
+					} else {
 						downloadComplete = true;
 					}
 				});
