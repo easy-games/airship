@@ -402,8 +402,8 @@ public partial class VoxelWorld : MonoBehaviour {
             }
         }
 
-        if (RunCore.IsServer() && worldNetworker != null) {
-            worldNetworker.TargetWriteVoxelGroupRpc(null, positions, nums, priority);
+        if (RunCore.IsServer() && worldNetworker != null && worldNetworker.networkWriteVoxels) {
+            worldNetworker.TargetWriteVoxelGroupRpc(positions, nums, priority);
         }
     }
 
