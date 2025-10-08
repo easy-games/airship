@@ -637,9 +637,9 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_BINARYBLOB: {
                         if (t.IsAssignableFrom(binaryBlobType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, (int)propertyDataSize));
+                                field.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData));
                             } else {
-                                SetValue<BinaryBlob>(objectReference, NewBinaryBlobFromPointer(propertyData, (int)propertyDataSize), property);
+                                SetValue<BinaryBlob>(objectReference, NewBinaryBlobFromPointer(propertyData), property);
                             }
 
                             return 0;

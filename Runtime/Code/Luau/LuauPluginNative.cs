@@ -158,7 +158,7 @@ public static class LuauPluginNative {
 	internal delegate IntPtr UnpinThreadDelegate(IntPtr thread);
 	[NativeDelegate] internal static UnpinThreadDelegate UnpinThread;
 	
-	internal delegate IntPtr PushValueToThreadDelegate(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
+	internal delegate IntPtr PushValueToThreadDelegate(IntPtr thread, int type, IntPtr data, ulong dataSize, int arraySize);
 	[NativeDelegate] internal static PushValueToThreadDelegate PushValueToThread;
 	
 	internal delegate IntPtr PushVector3ToThreadDelegate(IntPtr thread, float x, float y, float z);
@@ -562,7 +562,7 @@ public static class LuauPluginNative {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	internal static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
+	internal static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, ulong dataSize, int arraySize);
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
