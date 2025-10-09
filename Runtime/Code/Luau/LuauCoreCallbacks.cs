@@ -128,7 +128,6 @@ public partial class LuauCore : MonoBehaviour {
     public static Dictionary<int, EventConnection> eventConnections = new();
     private static int eventIdCounter = 0;
 
-    private static readonly List<AwaitingTask> _awaitingTasks = new();
     private static readonly Queue<AwaitingTask> _completedTasks = new();
     private static int _taskId = 0;
 
