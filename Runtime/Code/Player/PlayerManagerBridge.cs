@@ -248,6 +248,7 @@ namespace Code.Player {
 				if (this.agones) {
 					_ = this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, user.uid);
 					_ = this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, user.uid);
+                    agonesReservationMap.Remove(user.uid);
 				}
 #endif
         }
