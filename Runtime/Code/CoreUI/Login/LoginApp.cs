@@ -220,6 +220,8 @@ public class LoginApp : MonoBehaviour {
             RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
             return;
         }
+
+        AuthManager.SetUserInfo(user.uid, user.username);
         
         loading = false;
         SceneManager.LoadScene("MainMenu");
@@ -268,6 +270,8 @@ public class LoginApp : MonoBehaviour {
                     this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                     return;
                 }
+
+                AuthManager.SetUserInfo(user.uid, user.username);
 
                 SceneManager.LoadScene("MainMenu");
             } catch (Exception e) {
@@ -360,6 +364,8 @@ public class LoginApp : MonoBehaviour {
                         this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                         return;
                     }
+
+                    AuthManager.SetUserInfo(user.uid, user.username);
 
                     this.loading = false;
                     this.steamLoginButton.SetLoading(false);

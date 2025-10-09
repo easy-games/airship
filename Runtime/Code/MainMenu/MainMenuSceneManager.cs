@@ -16,6 +16,8 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 using Newtonsoft.Json;
+using Sentry;
+
 
 [Serializable]
 class PlatformVersionsResponse {
@@ -38,12 +40,8 @@ public class MainMenuSceneManager : MonoBehaviour {
     private bool successfulTSLoad = false;
 
     private void Start() {
-#if AIRSHIP_STAGING
-        print("Airship running in STAGING mode.");
-#endif
-        
         InternalAirshipUtil.HandleWindowSize();
-        
+
         var savedAccount = AuthManager.GetSavedAccount();
         if (savedAccount == null) {
             SceneManager.LoadScene("Login");
@@ -195,33 +193,42 @@ public class MainMenuSceneManager : MonoBehaviour {
             AirshipPlatformUrl.gameCdn,
             packages.ToArray(),
             null,
-            loadingScreen,
+            this.loadingScreen,
             null,
             true,
-            (success) => {
+            (success, errorMsg) => {
                 if (!success) {
-                    this.loadingScreen.SetError("Failed to download game content. An error has occurred.");
+                    string err;
+                    if (string.IsNullOrEmpty(errorMsg)) {
+                        err = "Failed to download game content. An error has occurred";
+                    } else {
+                        err = "Failed to download game content. An error has occurred: " + errorMsg;
+                    }
+                    this.loadingScreen.SetError(err);
                     return;
                 }
                 StartCoroutine(StartPackageLoad(packages, true));
             }
         );
-        if (!downloadSuccess) {
-            this.loadingScreen.SetError("<b>Failed to download content.</b> Would you like to try again?");
-        }
     }
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {
         var st = Stopwatch.StartNew();
         this.successfulTSLoad = false;
-        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true, (step) => {
-            loadingScreen.SetProgress(step, 50);
-        });
+        var tr = SentrySdk.StartTransaction("main-menu", "load-packages");
+        try {
+            yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true, (step) => {
+                loadingScreen.SetProgress(step, 50);
+            });
+        } finally {
+            tr.Finish();
+        }
+
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
         //Setup project configurations from loaded package
         PhysicsSetup.SetupFromGameConfig();
-        
+
         // var mainMenuBindingGO = new GameObject("MainMenuBinding");
         // var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
         // mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
@@ -234,7 +241,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         var coreLuauBindingGo = new GameObject("CoreLuauBinding");
         LuauScript.Create(coreLuauBindingGo, "AirshipPackages/@Easy/Core/Shared/MainMenu.ts", LuauContext.Protected, false);
-        
+
         StartCoroutine(CheckForFailedStartup());
     }
 

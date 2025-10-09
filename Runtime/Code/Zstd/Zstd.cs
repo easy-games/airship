@@ -12,6 +12,7 @@ namespace Code.Zstd {
 		// Compression & decompression will try to utilize the stack if certain buffers can fit
 		// within the given byte size here:
 		private const ulong MaxStackSize = 1024;
+		private const ulong ContentSizeError = 18446744073709551614; // #define ZSTD_CONTENTSIZE_ERROR (0ULL - 2)
 
 		/// Minimum compression level.
 		public static int MinCompressionLevel {
@@ -143,7 +144,7 @@ namespace Code.Zstd {
 #endif
 			var bound = ZSTD_compressBound((ulong)uncompressedData.Length);
 			if (ZSTD_isError(bound)) {
-				throw new ZstdException(bound);
+				throw new ZstdNativeException(bound);
 			}
 			return (int)bound;
 		}
@@ -159,9 +160,18 @@ namespace Code.Zstd {
 			fixed (byte* src = compressedData) {
 				rSize = ZSTD_getFrameContentSize(new IntPtr(src), (ulong)compressedData.Length);
 			}
+			
 			if (ZSTD_isError(rSize)) {
-				throw new ZstdException(rSize);
+				if (rSize == ContentSizeError) {
+					throw new ZstdException("Failed to get frame content size");
+				}
+				throw new ZstdNativeException(rSize);
 			}
+
+			if (rSize > int.MaxValue) {
+				throw new ZstdException("Frame content size is too large");
+			}
+			
 			return (int)rSize;
 		}
 
@@ -175,7 +185,7 @@ namespace Code.Zstd {
 #endif
 			var bound = ZSTD_compressBound((ulong)data.Length);
 			if (ZSTD_isError(bound)) {
-				throw new ZstdException(bound);
+				throw new ZstdNativeException(bound);
 			}
 			if (bound <= MaxStackSize) {
 				return CompressWithStack(data, bound, compressionLevel, ctx);
@@ -195,7 +205,7 @@ namespace Code.Zstd {
 				rSize = ZSTD_getFrameContentSize(new IntPtr(src), (ulong)data.Length);
 			}
 			if (ZSTD_isError(rSize)) {
-				throw new ZstdException(rSize);
+				throw new ZstdNativeException(rSize);
 			}
 			byte[] decompressedData;
 			if (rSize <= MaxStackSize) {
@@ -220,7 +230,7 @@ namespace Code.Zstd {
 				}
 			}
 			if (ZSTD_isError(decompressedSize)) {
-				throw new ZstdException(decompressedSize);
+				throw new ZstdNativeException(decompressedSize);
 			}
 			var decompressedBuffer = new byte[decompressedSize];
 			fixed (byte* decompressedBuf = decompressedBuffer) {
@@ -246,7 +256,7 @@ namespace Code.Zstd {
 				}
 			}
 			if (ZSTD_isError(decompressedSize)) {
-				throw new ZstdException(decompressedSize);
+				throw new ZstdNativeException(decompressedSize);
 			}
 			Array.Resize(ref decompressedData, (int)decompressedSize);
 			return decompressedData;
@@ -267,7 +277,7 @@ namespace Code.Zstd {
 				}
 			}
 			if (ZSTD_isError(decompressedSize)) {
-				throw new ZstdException(decompressedSize);
+				throw new ZstdNativeException(decompressedSize);
 			}
 			return (int)decompressedSize;
 		}
@@ -286,7 +296,7 @@ namespace Code.Zstd {
 				}
 			}
 			if (ZSTD_isError(compressedSize)) {
-				throw new ZstdException(compressedSize);
+				throw new ZstdNativeException(compressedSize);
 			}
 			var compressedBuffer = new byte[compressedSize];
 			fixed (byte* compressedBuf = compressedBuffer) {
@@ -313,7 +323,7 @@ namespace Code.Zstd {
 				}
 			}
 			if (ZSTD_isError(compressedSize)) {
-				throw new ZstdException(compressedSize);
+				throw new ZstdNativeException(compressedSize);
 			}
 			Array.Resize(ref dstBuf, (int)compressedSize);
 			return dstBuf;
@@ -335,7 +345,7 @@ namespace Code.Zstd {
 				}
 			}
 			if (ZSTD_isError(compressedSize)) {
-				throw new ZstdException(compressedSize);
+				throw new ZstdNativeException(compressedSize);
 			}
 			return (int)compressedSize;
 		}
@@ -392,7 +402,11 @@ namespace Code.Zstd {
 	}
 
 	public class ZstdException : Exception {
-		public ZstdException(ulong code) : base(ZSTD_getErrorName(code)) { }
+		public ZstdException(string message) : base(message) { }
+	}
+
+	public class ZstdNativeException : ZstdException {
+		public ZstdNativeException(ulong code) : base(ZSTD_getErrorName(code)) { }
 	}
 
 	public class ZstdStreamException : Exception {

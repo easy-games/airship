@@ -154,13 +154,7 @@ namespace Code.Player.Character.MovementSystems.Character
             this.isFlying = copySnapshot.isFlying;
             this.inputDisabled = copySnapshot.inputDisabled;
             this.lookVector = copySnapshot.lookVector;
-            this.customData = copySnapshot.customData != null
-                ? new BinaryBlob()
-                {
-                    dataSize = copySnapshot.customData.dataSize,
-                    data = (byte[])copySnapshot.customData.data.Clone(),
-                }
-                : default;
+            this.customData = copySnapshot.customData?.Clone();
         }
 
         public override string ToString()
@@ -185,7 +179,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 $"IsFlying: {isFlying}\n" +
                 $"InputDisabled: {inputDisabled}\n" +
                 $"LookVector: {lookVector} ({NetworkSerializationUtil.CompressToShort(lookVector.x)}, {NetworkSerializationUtil.CompressToShort(lookVector.y)}, {NetworkSerializationUtil.CompressToShort(lookVector.z)})\n" +
-                $"CustomData: {(customData != null ? $"Size: {customData.dataSize}" : "null")}";
+                $"CustomData: {(customData != null ? $"Size: {customData.DataSize}" : "null")}";
         }
 
         public override object Clone()
@@ -211,11 +205,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 isFlying = isFlying,
                 inputDisabled = inputDisabled,
                 lookVector = lookVector,
-                customData = customData != null ? new BinaryBlob()
-                {
-                    dataSize = customData.dataSize,
-                    data = (byte[]) customData.data.Clone(),
-                } : default,
+                customData = customData?.Clone(),
             };
         }
         
@@ -387,7 +377,7 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(this.canJump);
             writer.Write((byte) this.state);
             writer.Write(this.jumpCount);
-            if (this.customData != null) writer.Write(this.customData.data);
+            if (this.customData != null) writer.Write(this.customData.Data);
             var bytes = writer.ToArray();
             
             NetworkWriterPool.Return(writer);
@@ -415,8 +405,8 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(bools);
 
             if (value.customData != null) {
-                writer.WriteInt(value.customData.dataSize);
-                writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+                writer.WriteInt(value.customData.DataSize);
+                writer.WriteBytes(value.customData.Data, 0, value.customData.Data.Length);
             }
             else {
                 writer.WriteInt(0);

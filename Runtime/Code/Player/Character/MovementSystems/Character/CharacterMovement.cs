@@ -425,12 +425,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                 //Store this move dir
                 // currentMoveSnapshot.lastGroundedMoveDir = command.moveDir;
 
-                //Snap to the ground if you are falling into the ground
+                //Snap to the ground if you are falling into the ground 
                 if (!currentMoveSnapshot.prevStepUp && !isImpulsing &&
                     !currentMoveSnapshot.airborneFromImpulse //Don't snap when we are moving from something else
                     && newVelocity.y < 1 && //Only snap when moving downward
-                    (movementSettings.alwaysSnapToGround || //Snap if we always snap to ground
-                     (!currentMoveSnapshot.isGrounded && movementSettings.colliderGroundOffset > 0))) {
+                    movementSettings.colliderGroundOffset > 0) {
+                    //With the collider offset we want to always keep the character up above the ground by the offset, not let the rigidbody get forced into to the ground by an impulse
                     //OR snap if we just hit the ground
                     //Snap if we just became became grounded
                     SnapToY(groundHit.point.y);
@@ -483,8 +483,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             if (movementSettings.useGravity) {
                 if (!currentMoveSnapshot.isFlying && !currentMoveSnapshot.prevStepUp &&
-                    (movementSettings.useGravityWhileGrounded ||
-                     ((!grounded || newVelocity.y > .01f) && !currentMoveSnapshot.isFlying))) {
+                    (!grounded || newVelocity.y > .01f) && !currentMoveSnapshot.isFlying) {
                     //print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
                     //apply gravity
                     var verticalGravMod = !grounded && currentVelocity.y > .1f

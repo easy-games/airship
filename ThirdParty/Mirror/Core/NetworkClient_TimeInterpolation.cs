@@ -15,14 +15,12 @@ namespace Mirror
         // buffer time is dynamically adjusted.
         // store the current multiplier here, without touching the original in settings.
         // this way we can easily reset to or compare with original where needed.
-        // EASY MOD: Made this a 
-        public static double bufferTimeMultiplier => snapshotSettings.bufferTimeMultiplier;
+        public static double bufferTimeMultiplier = snapshotSettings.bufferTimeMultiplier;
 
         // original buffer time based on the settings
         // dynamically adjusted buffer time based on dynamically adjusted multiplier
         public static double initialBufferTime => NetworkServer.sendInterval * snapshotSettings.bufferTimeMultiplier;
-        // EASY MOD: Just to ensure that we never use a dynamic buffer time, we overwrite with initialBufferTime. It's important to use the getter because snapshotSettings needs to be loaded
-        public static double bufferTime => initialBufferTime; // NetworkServer.sendInterval * bufferTimeMultiplier;
+        public static double bufferTime => NetworkServer.sendInterval * bufferTimeMultiplier;
 
         // <servertime, snaps>
         public static SortedList<double, TimeSnapshot> snapshots = new SortedList<double, TimeSnapshot>();
@@ -84,8 +82,7 @@ namespace Mirror
         static void InitTimeInterpolation()
         {
             // reset timeline, localTimescale & snapshots from last session (if any)
-            // EASY MOD: Don't need this now that bufferTimeMultiplier is a getter
-            // bufferTimeMultiplier = snapshotSettings.bufferTimeMultiplier;
+            bufferTimeMultiplier = snapshotSettings.bufferTimeMultiplier;
             localTimeline = 0;
             localTimescale = 1;
             snapshots.Clear();

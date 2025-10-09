@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Agones;
 using Airship.DevConsole;
+using JetBrains.Annotations;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -108,17 +109,12 @@ namespace Code.Player {
             _userData.Add(connectionId, userData);
         }
 
-        public UserData GetUserDataFromClientId(int connectionId) {
-            // var data = new UserData() {
-            // 	uid = "1",
-            // 	username = "Player1",
-            // 	fullTransferPacket = "{}",
-            // 	profileImageId = "",
-            // };
-            // _userData.Remove(connectionId);
-            // _userData[connectionId] = data;
-
-            return _userData[connectionId];
+       [CanBeNull]
+       public UserData GetUserDataFromClientId(int connectionId) {
+           if (_userData.TryGetValue(connectionId, out var userData)) {
+                return userData;
+           }
+           return null;
         }
 
         /// <summary>
@@ -177,7 +173,7 @@ namespace Code.Player {
             var go = Instantiate(playerPrefab, Instance.transform.parent);
 
             var playerInfo = go.GetComponent<PlayerInfo>();
-            playerInfo.Init(connectionId, userId, username, profilePictureId, string.Empty, string.Empty);
+            playerInfo.Init(connectionId, userId, username, profilePictureId, string.Empty, string.Empty, AirshipConst.playerVersion);
 
             // var identity = go.GetComponent<NetworkIdentity>();
             NetworkServer.Spawn(go);
@@ -221,7 +217,7 @@ namespace Code.Player {
 // 				Debug.Log($"Initializing Player as {userData.username} owned by " + conn);
 // #endif
                 playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId,
-                    userData.orgRoleName, userData.fullTransferPacket);
+                    userData.orgRoleName, userData.fullTransferPacket, userData.playerVersion);
             } else {
 #if UNITY_SERVER || true
                 Debug.Log("Missing UserData for " + conn);

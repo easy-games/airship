@@ -427,7 +427,7 @@ public static class LuauPlugin {
         ThrowIfNotNullPtr(LuauPluginNative.UnpinThread(thread));
 	}
 	
-	public static void PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
+	public static void PushValueToThread(IntPtr thread, int type, IntPtr data, ulong dataSize, int arraySize = -1) {
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(LuauPluginNative.PushValueToThread(thread, type, data, dataSize, arraySize));
 	}
@@ -451,6 +451,12 @@ public static class LuauPlugin {
         ThreadSafetyCheck();
         var result = 0;
         ThrowIfNotNullPtr(LuauPluginNative.GetDebugTrace(thread, ref result));
+	}
+	
+	public static string GetTraceback(IntPtr thread) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.GetTraceback(thread, out var strPtr));
+		return Marshal.PtrToStringUTF8(strPtr);
 	}
 	
 	public static void RunTaskScheduler(LuauContext context) {

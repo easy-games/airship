@@ -1076,7 +1076,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
         if (tsEnum == null) return;
-
+        
         int.TryParse(value.stringValue, out int currentMask);
 
 #if AIRSHIP_INTERNAL
@@ -1309,7 +1309,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         UnityEngine.Object newObject;
         if (t == typeof(Sprite) || t == typeof(Texture2D)) {
-            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, false);
+            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true);
         } else {
             newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
         }

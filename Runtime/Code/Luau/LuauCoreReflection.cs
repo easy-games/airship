@@ -460,7 +460,7 @@ public partial class LuauCore : MonoBehaviour
     public static unsafe void WritePropertyToThreadString(IntPtr thread, string value) {
         var strPtr = Marshal.StringToCoTaskMemUTF8(value);
         var strLen = Encoding.UTF8.GetByteCount(value);
-        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, strLen);
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, (ulong)strLen);
         Marshal.FreeCoTaskMem(strPtr);
     }
 
@@ -554,7 +554,7 @@ public partial class LuauCore : MonoBehaviour
         if (t == luauBufferType) {
             var buf = (LuauBuffer)value;
             fixed (byte* bytesPtr = buf.Data) {
-                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), buf.Data.Length);
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), (ulong)buf.Data.Length);
             }
             return true;
         }
@@ -639,8 +639,8 @@ public partial class LuauCore : MonoBehaviour
         if (t == binaryBlobType) {
             var blob = (BinaryBlob)value;
 
-            fixed (byte* dataPtr = blob.data) {
-                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), blob.dataSize);
+            fixed (byte* dataPtr = blob.Data) {
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), (ulong)blob.DataSize);
             }
 
             return true;
@@ -921,7 +921,7 @@ public partial class LuauCore : MonoBehaviour
     private static bool ParseParameterData(IntPtr thread, int numParameters, Span<IntPtr> intPtrs, Span<int> podTypes, ParameterInfo[] methodParameters, Span<int> sizes, Span<int> isTable, Span<object> podObjects, bool usingAttachedContext, out object[] parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
-        parsedData = new object[numParametersIncludingContext];
+        parsedData = new object[methodParameters.Length];
 
         for (int i = 0; i < numParameters; i++) {
             var paramIndex = i;
@@ -1028,7 +1028,7 @@ public partial class LuauCore : MonoBehaviour
                 }
 
                 case PODTYPE.POD_BINARYBLOB: {
-                    parsedData[paramIndex] = NewBinaryBlobFromPointer(intPtrs[i], sizes[i]);
+                    parsedData[paramIndex] = NewBinaryBlobFromPointer(intPtrs[i]);
                     continue;
                 }
 
@@ -1068,6 +1068,17 @@ public partial class LuauCore : MonoBehaviour
 
             Debug.LogError("Param " + paramIndex + " " + podTypes[i] + " not valid type for this parameter/unhandled so far.");
             return false;
+        }
+
+        // Add in all additional default parameters
+        for (var i = numParametersIncludingContext; i < methodParameters.Length; i++) {
+            if (!methodParameters[i].HasDefaultValue) {
+                return false;
+            }
+            
+            // Used to tell reflection we wish to use the default for a param
+            // https://learn.microsoft.com/en-us/dotnet/api/system.type.missing?view=net-9.0
+            parsedData[i] = Type.Missing;
         }
         return true;
     }
@@ -1210,10 +1221,12 @@ public partial class LuauCore : MonoBehaviour
             nameFound = true;
             foreach (var info in methods) {
                 ParameterInfo[] parameters = GetCachedParameters(info);
+                var numRequiredParameters = parameters.Sum((param) => param.HasDefaultValue ? 0 : 1);
 
                 var contextAttached = false;
                 //match parameters
-                if (parameters.Length != numParameters) {
+                var validNumParams = numRequiredParameters <= numParameters && numParameters <= parameters.Length; 
+                if (!validNumParams) {
                     // Check for context pass through (c# function would have 1 more param then Luau call)
                     if (parameters.Length != (numParameters + 1)) {
                         continue;
@@ -1598,10 +1611,9 @@ public partial class LuauCore : MonoBehaviour
         return new Vector3(VectorData[0], VectorData[1], VectorData[2]);
     }
 
-    public static Assets.Luau.BinaryBlob NewBinaryBlobFromPointer(IntPtr data, int size) {
-        var bytes = new byte[size];
-        Marshal.Copy(data, bytes, 0, size);
-        return new Assets.Luau.BinaryBlob(bytes);
+    public static BinaryBlob NewBinaryBlobFromPointer(IntPtr data) {
+        var blob = new BinaryBlob(data);
+        return blob;
     }
 
     private static readonly float[] RayData = new float[6]; 

@@ -36,7 +36,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		[CanBeNull] BundleLoadingScreen loadingScreen = null,
 		[CanBeNull] string gameCodeZipUrl = null,
 		bool downloadCodeZipOnClient = false,
-		Action<bool> onComplete = null
+		Action<bool, string> onComplete = null
 	) {
 		try {
 			var totalSt = Stopwatch.StartNew();
@@ -47,8 +47,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				remoteBundleFiles.AddRange(package.GetPublicRemoteBundleFiles(cdnUrl, platform));
 			}
 
-			if (privateRemoteFiles != null)
-			{
+			if (privateRemoteFiles != null) {
 				remoteBundleFiles.AddRange(privateRemoteFiles);
 			}
 
@@ -205,12 +204,12 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 						Debug.LogError(
 							$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
 						Debug.LogError(request.webRequest.error);
-						onComplete?.Invoke(false);
+						onComplete?.Invoke(false, request.webRequest.error);
 						return false;
 					}
 				} else if (!string.IsNullOrEmpty(request.webRequest.downloadHandler.error)) {
 					Debug.LogError($"File download handler failed on bundle file {remoteBundleFile.fileName}. Error: {request.webRequest.downloadHandler.error}");
-					onComplete?.Invoke(false);
+					onComplete?.Invoke(false, request.webRequest.downloadHandler.error);
 					return false;
 				}  else {
 					var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
@@ -220,12 +219,12 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				}
 
 				if (!success && RunCore.IsServer()) {
-					onComplete?.Invoke(false);
+					onComplete?.Invoke(false, "");
 					return false;
 				}
 
 				if (!success && RunCore.IsClient()) {
-					onComplete?.Invoke(false);
+					onComplete?.Invoke(false, "");
 					return false;
 				}
 
@@ -265,9 +264,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					if (loadingScreen) {
 						loadingScreen.SetError("Failed to download Main Menu scripts.");
 					}
-					if (RunCore.IsServer())
-					{
-						onComplete?.Invoke(false);
+					if (RunCore.IsServer()) {
+						onComplete?.Invoke(false, "");
 						return false;
 					}
 				} else {
@@ -294,11 +292,11 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
 			}
 			Debug.Log($"Completed bundle downloader step in {totalSt.ElapsedMilliseconds} ms.");
-			onComplete?.Invoke(true);
+			onComplete?.Invoke(true, "");
 			return true;
 		} catch (Exception e) {
 			Debug.LogError("Failed to download bundles: " + e);
-			onComplete?.Invoke(false);
+			onComplete?.Invoke(false, e.Message);
 			return false;
 		}
 	}

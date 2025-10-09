@@ -2,8 +2,10 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using Luau;
-using NativePlugins;
 using UnityEngine;
+#if UNITY_EDITOR
+using NativePlugins;
+#endif
 
 public static class LuauPluginNative {
 	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
@@ -156,7 +158,7 @@ public static class LuauPluginNative {
 	internal delegate IntPtr UnpinThreadDelegate(IntPtr thread);
 	[NativeDelegate] internal static UnpinThreadDelegate UnpinThread;
 	
-	internal delegate IntPtr PushValueToThreadDelegate(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
+	internal delegate IntPtr PushValueToThreadDelegate(IntPtr thread, int type, IntPtr data, ulong dataSize, int arraySize);
 	[NativeDelegate] internal static PushValueToThreadDelegate PushValueToThread;
 	
 	internal delegate IntPtr PushVector3ToThreadDelegate(IntPtr thread, float x, float y, float z);
@@ -170,6 +172,9 @@ public static class LuauPluginNative {
 	
 	internal delegate IntPtr GetDebugTraceDelegate(IntPtr thread, ref int result);
 	[NativeDelegate] internal static GetDebugTraceDelegate GetDebugTrace;
+	
+	internal delegate IntPtr GetTracebackDelegate(IntPtr thread, out IntPtr strPtr);
+	[NativeDelegate] internal static GetTracebackDelegate GetTraceback;
 	
 	internal delegate IntPtr RunTaskSchedulerDelegate(LuauContext context, float now, float unscaledNow);
 	[NativeDelegate] internal static RunTaskSchedulerDelegate RunTaskScheduler;
@@ -560,7 +565,7 @@ public static class LuauPluginNative {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	internal static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize);
+	internal static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, ulong dataSize, int arraySize);
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -589,6 +594,13 @@ public static class LuauPluginNative {
 	[DllImport("LuauPlugin")]
 #endif
 	internal static extern IntPtr GetDebugTrace(IntPtr thread, ref int result);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern IntPtr GetTraceback(IntPtr thread, out IntPtr strPtr);
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]

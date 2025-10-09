@@ -1,6 +1,7 @@
 using UnityEngine;
 
 namespace Code.Bundles {
+    [LuauAPI]
     public class AirshipVersion {
         private static string versionHash = null;
         public static string GetVersionHash() {

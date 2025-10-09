@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
+using Code.Bootstrap;
 using Code.Http.Internal;
 #if UNITY_ANDROID
 using Google;
@@ -11,12 +12,16 @@ using Google;
 using JetBrains.Annotations;
 using Proyecto26;
 using RSG;
+using Sentry;
 using UnityEngine;
 using UnityEngine.Networking;
 
 [LuauAPI(LuauContext.Protected)]
 public class AuthManager {
     public static Action authed;
+
+    public static string uid;
+    public static string username;
 
 	private static string GetAccountJSONPath() {
 		var stagingExtension = "";
@@ -55,6 +60,22 @@ public class AuthManager {
 		};
 		var path = GetAccountJSONPath();
 		File.WriteAllText(path, JsonUtility.ToJson(authSave));
+	}
+
+	/**
+	 * Additional information about the user that is sent from TS.
+	 *
+	 * Base info (such as device info) is done in AirshipEntryPoint.cs when app first starts.
+	 */
+	public static void SetUserInfo(string uid, string username) {
+		AuthManager.uid = uid;
+		AuthManager.username = username;
+#if AIRSHIP_PLAYER
+		SentrySdk.ConfigureScope(scope => {
+			scope.User.Id = uid;
+			scope.User.Username = username;
+		});
+#endif
 	}
 
 	public static async Task<FirebaseTokenResponse> LoginWithRefreshToken(string refreshToken) {
@@ -115,7 +136,7 @@ public class AuthManager {
         });
 
 #if UNITY_ANDROID
-        GoogleSignIn.Configuration = new GoogleSignInConfiguration() {
+		GoogleSignIn.Configuration ??= new GoogleSignInConfiguration() {
 			RequestEmail = true,
 			RequestProfile = true,
 			RequestAuthCode = true,
@@ -123,7 +144,7 @@ public class AuthManager {
 #if UNITY_EDITOR || UNITY_STANDALONE
 			ClientSecret = clientSecret,
 #endif
-        };
+		};
 #endif
         
 #if AIRSHIP_ANDROID_DEBUG
@@ -160,8 +181,13 @@ public class AuthManager {
         using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 
         // Opens a browser to log user in
-        AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
-		accessToken = accessTokenResponse.accessToken;
+        try {
+	        AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
+	        accessToken = accessTokenResponse.accessToken;
+        } catch (Exception e) {
+			Debug.LogError(e);
+			return (false, e.Message);
+        }
 #endif
         if (accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
