@@ -75,7 +75,7 @@ namespace Assets.Luau.Network {
 
 	    private void OnBroadcastFromClient(NetworkConnectionToClient conn, NetBroadcast msg) {
 		    // Runs on the server, when the client broadcasts a message
-		    if ((ulong)msg.Blob.uncompressedDataSize >= MaxBytesAtOnce) {
+		    if ((ulong)msg.Blob.DecompressedDataSize >= MaxBytesAtOnce) {
 			    Debug.LogWarning($"Dropping message from client connection {conn.connectionId} due to exceeding max data size.");
 			    return;
 		    }
@@ -91,7 +91,7 @@ namespace Assets.Luau.Network {
 			    throttle.nextClear = now + ThrottleResetPeriod;
 		    }
 
-		    throttle.dataAmount += (ulong)msg.Blob.uncompressedDataSize;
+		    throttle.dataAmount += (ulong)msg.Blob.DecompressedDataSize;
 		    if (throttle.dataAmount >= MaxBytesPerPeriod) {
 			    Debug.LogWarning(
 				    $"Disconnecting connection {conn.connectionId} because it's sending too much data. Data total {throttle.dataAmount} > {MaxBytesPerPeriod}");
