@@ -109,12 +109,9 @@ namespace Code.Player {
             _userData.Add(connectionId, userData);
         }
 
-       [CanBeNull]
-       public UserData GetUserDataFromClientId(int connectionId) {
-           if (_userData.TryGetValue(connectionId, out var userData)) {
-                return userData;
-           }
-           return null;
+        [CanBeNull]
+        public UserData GetUserDataFromClientId(int connectionId) {
+           return _userData.GetValueOrDefault(connectionId, null);
         }
 
         /// <summary>
@@ -241,18 +238,18 @@ namespace Code.Player {
 
         // Handler for on disconnect of any connection, including connections that failed to validate
         // or didn't get fully set up. Occurs after HandlePlayerLeave
-        private async void NetworkServer_OnDisconnected(NetworkConnectionToClient conn) {
+        private void NetworkServer_OnDisconnected(NetworkConnectionToClient conn) {
             var user = GetUserDataFromClientId(conn.connectionId);
-            if (user != null) {
-                Debug.Log($"Cleaning up {user.username}'s connection.");
+            if (user == null) return;
+            Debug.Log($"Cleaning up {user.username}'s connection.");
+            _userData.Remove(conn.connectionId);
+            
 #if UNITY_SERVER
 				if (this.agones) {
-					await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{user.uid}");
-					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{user.uid}");
+					_ = this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, user.uid);
+					_ = this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, user.uid);
 				}
 #endif
-                _userData.Remove(conn.connectionId);
-            }
         }
 
         public void AddPlayer(PlayerInfo playerInfo) {

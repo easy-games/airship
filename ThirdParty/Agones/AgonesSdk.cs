@@ -317,8 +317,7 @@ namespace Agones
             else
             {
                 Log($"Agones SendRequest failed: {method} {api} {json} {req.error}");
-                // Always send warning for failures. Don't include any body data though.
-                Debug.LogWarning($"Agones Request Failed: {method} {api} {req.error}");
+                Debug.LogWarning($"Agones Request Failed: {method} {api} {req.error} {json}");
             }
 
             req.Dispose();
