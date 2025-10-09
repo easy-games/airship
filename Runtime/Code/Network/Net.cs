@@ -26,17 +26,36 @@ namespace Assets.Luau.Network {
         public delegate void BroadcastFromClientAction(object context, object clientId, BinaryBlob blob);
         [AttachContext]
         public event BroadcastFromClientAction broadcastFromClientAction;
+
+        private readonly Dictionary<int, ThrottleTrack> _throttle = new();
+
+        // Client-to-server data throttle parameters:
+        private const float ThrottleResetPeriod = 1f;
+        private const ulong MaxBytesPerSecond = 1024 * 1024 * 50; // 50 MB
+        private const ulong MaxBytesAtOnce = 1024 * 1024 * 5; // 5 MB
         
-	    private void OnEnable() {
+        private const ulong MaxBytesPerPeriod = (ulong)((double)MaxBytesPerSecond * (double)ThrottleResetPeriod);
+
+        private void OnEnable() {
 		    NetworkCore.SetNet(this);
+        }
+
+	    private void OnClientConnected(NetworkConnectionToClient conn) {
+		    _throttle[conn.connectionId] = new ThrottleTrack();
+	    }
+
+	    private void OnClientDisconnected(NetworkConnectionToClient conn) {
+		    _throttle.Remove(conn.connectionId);
 	    }
 
 	    public void OnStartServer() {
 		    if (RunCore.IsServer()) {
 			    NetworkServer.RegisterHandler<NetBroadcast>(OnBroadcastFromClient, RequireAuth);
+			    NetworkServer.OnConnectedEvent += OnClientConnected;
+			    NetworkServer.OnDisconnectedEvent += OnClientDisconnected;
 		    }
 	    }
-
+	    
 	    public void OnStartClient() {
 		    if (RunCore.IsClient()) {
 			    NetworkClient.RegisterHandler<NetBroadcast>(OnBroadcastFromServer, RequireAuth);
@@ -46,6 +65,8 @@ namespace Assets.Luau.Network {
 	    private void OnDisable() {
 		    if (RunCore.IsServer()) {
 			    NetworkServer.UnregisterHandler<NetBroadcast>();
+			    NetworkServer.OnConnectedEvent -= OnClientConnected;
+			    NetworkServer.OnDisconnectedEvent -= OnClientDisconnected;
 		    }
 		    if (RunCore.IsClient()) {
 			    NetworkClient.UnregisterHandler<NetBroadcast>();
@@ -54,6 +75,30 @@ namespace Assets.Luau.Network {
 
 	    private void OnBroadcastFromClient(NetworkConnectionToClient conn, NetBroadcast msg) {
 		    // Runs on the server, when the client broadcasts a message
+		    if ((ulong)msg.Blob.uncompressedDataSize >= MaxBytesAtOnce) {
+			    Debug.LogWarning($"Dropping message from client connection {conn.connectionId} due to exceeding max data size.");
+			    return;
+		    }
+		    
+		    var now = Time.realtimeSinceStartup;
+		    if (!_throttle.TryGetValue(conn.connectionId, out var throttle)) {
+			    // If we don't have a throttle key, that means the client isn't connected anymore and we are processing an old message.
+			    return;
+		    }
+		    
+		    if (now >= throttle.nextClear) {
+			    throttle.dataAmount = 0;
+			    throttle.nextClear = now + ThrottleResetPeriod;
+		    }
+
+		    throttle.dataAmount += (ulong)msg.Blob.uncompressedDataSize;
+		    if (throttle.dataAmount >= MaxBytesPerPeriod) {
+			    Debug.LogWarning(
+				    $"Disconnecting connection {conn.connectionId} because it's sending too much data. Data total {throttle.dataAmount} > {MaxBytesPerPeriod}");
+			    conn.Disconnect();
+			    return;
+		    }
+
 		    var targetContext = msg.FromProtectedContext ? LuauContext.Protected : LuauContext.Game;
 		    broadcastFromClientAction?.Invoke((object) targetContext, (object)conn.connectionId, msg.Blob);
 		}
@@ -125,5 +170,10 @@ namespace Assets.Luau.Network {
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
 			NetworkClient.Send(msg, channel);
 		}
+    }
+
+    internal class ThrottleTrack {
+	    internal ulong dataAmount;
+	    internal float nextClear;
     }
 }
