@@ -13,6 +13,7 @@ namespace Assets.Luau {
         public BinaryBlob() {
             data = new byte[] { };
             dataSize = 0;
+            uncompressedDataSize = 0;
         }
         
         public BinaryBlob(byte[] bytes) {
@@ -129,6 +130,7 @@ namespace Assets.Luau {
             
             var newBlob = new BinaryBlob() {
                 data = byteWriter.ToArray(), // new byte array with the diff applied
+                uncompressedDataSize = byteWriter.Position,
                 dataSize = byteWriter.Position // size of new byte array
             };
             NetworkWriterPool.Return(byteWriter);
