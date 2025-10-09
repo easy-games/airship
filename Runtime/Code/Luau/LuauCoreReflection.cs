@@ -640,10 +640,7 @@ public partial class LuauCore : MonoBehaviour
             var blob = (BinaryBlob)value;
 
             fixed (byte* dataPtr = blob.data) {
-                var dataSize = (ulong)blob.dataSize;
-                var uncompressedDataSize = (ulong)blob.uncompressedDataSize;
-                var combinedSize = dataSize | (uncompressedDataSize << 32);
-                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), combinedSize);
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), (ulong)blob.dataSize);
             }
 
             return true;

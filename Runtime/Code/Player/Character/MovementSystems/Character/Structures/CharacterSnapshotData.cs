@@ -158,7 +158,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 ? new BinaryBlob()
                 {
                     dataSize = copySnapshot.customData.dataSize,
-                    uncompressedDataSize = copySnapshot.customData.dataSize,
                     data = (byte[])copySnapshot.customData.data.Clone(),
                 }
                 : default;
@@ -215,7 +214,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 customData = customData != null ? new BinaryBlob()
                 {
                     dataSize = customData.dataSize,
-                    uncompressedDataSize = customData.dataSize,
                     data = (byte[]) customData.data.Clone(),
                 } : default,
             };

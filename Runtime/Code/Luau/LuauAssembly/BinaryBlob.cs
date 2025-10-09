@@ -2,39 +2,36 @@
 using System.Runtime.InteropServices;
 using Mirror;
 using Code.Util;
+using Code.Zstd;
 
 namespace Assets.Luau {
     [Serializable]
     public class BinaryBlob : IEquatable<BinaryBlob> {
         public int dataSize;
-        public int uncompressedDataSize;
         public byte[] data;
+
+        public int DecompressedDataSize => IsCompressed ? Zstd.GetDecompressionBound(data) : dataSize;
+
+        public bool IsCompressed => data.Length > 0 && data[0] == 1;
         
         public BinaryBlob() {
             data = new byte[] { };
             dataSize = 0;
-            uncompressedDataSize = 0;
         }
         
         public BinaryBlob(byte[] bytes) {
             dataSize = bytes.Length;
-            uncompressedDataSize = dataSize;
             data = bytes;
         }
 
         public BinaryBlob(IntPtr nativeBinaryBlobPtr) {
             var marshal = LuauBinaryBlobMarshal.FromIntPtr(nativeBinaryBlobPtr);
             dataSize = (int)marshal.DataSize;
-            uncompressedDataSize = (int)marshal.UncompressedDataSize;
             data = marshal.ReadData();
         }
 
         public bool Equals(BinaryBlob other) {
             return this.dataSize == other?.dataSize;
-        }
-
-        public bool IsCompressed() {
-            return data.Length > 0 && data[0] == 1 && dataSize < uncompressedDataSize;
         }
 
         public byte[] CreateDiff(BinaryBlob other) {
@@ -93,7 +90,6 @@ namespace Assets.Luau {
             byte changedLength = bytes[0];
             if (changedLength == 0) return new BinaryBlob() {
                 dataSize = dataSize,
-                uncompressedDataSize = uncompressedDataSize,
                 data = (byte[]) data.Clone(),
             };
             
@@ -130,7 +126,6 @@ namespace Assets.Luau {
             
             var newBlob = new BinaryBlob() {
                 data = byteWriter.ToArray(), // new byte array with the diff applied
-                uncompressedDataSize = byteWriter.Position,
                 dataSize = byteWriter.Position // size of new byte array
             };
             NetworkWriterPool.Return(byteWriter);
@@ -146,7 +141,6 @@ namespace Assets.Luau {
         // Ordering of these fields must match BinaryBlob struct in native LuauPlugin:
         public readonly IntPtr Data;
         public readonly ulong DataSize;
-        public readonly ulong UncompressedDataSize;
 
         public static LuauBinaryBlobMarshal FromIntPtr(IntPtr ptr) {
             return Marshal.PtrToStructure<LuauBinaryBlobMarshal>(ptr);
