@@ -7,6 +7,9 @@ using Code.Zstd;
 namespace Assets.Luau {
     [Serializable]
     public class BinaryBlob : IEquatable<BinaryBlob> {
+        /// <summary>
+        /// Underlying data of the binary blob.
+        /// </summary>
         public readonly byte[] Data;
         
         /// <summary>
@@ -42,6 +45,9 @@ namespace Assets.Luau {
             return this.DataSize == other?.DataSize;
         }
 
+        /// <summary>
+        /// Creates a clone of the BinaryBlob.
+        /// </summary>
         public BinaryBlob Clone() {
             var clonedData = new byte[Data.Length];
             Array.Copy(Data, clonedData, Data.Length);
