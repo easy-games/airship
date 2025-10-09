@@ -38,12 +38,7 @@ namespace Code.Player.Character.MovementSystems.Character
 				crouch = crouch,
 				sprint = sprint,
 				lookVector = lookVector,
-				customData = customData != null ?  new BinaryBlob()
-				{
-					dataSize = customData.dataSize,
-					uncompressedDataSize = customData.dataSize,
-					data = (byte[])customData.data.Clone(),
-				} : default,
+				customData = customData?.Clone(),
 			};
 		}
 	}
@@ -65,7 +60,7 @@ namespace Code.Player.Character.MovementSystems.Character
 			// of the above bytes and we know that we send each cmd packet individually. If we were to pass multiple cmds as an array in a single packet,
 			// we could not do this optimization since there would be no way to know where the next cmd starts.
 			if (value.customData != null) {
-				writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+				writer.WriteBytes(value.customData.Data, 0, value.customData.Data.Length);
 			}
 		}
 
