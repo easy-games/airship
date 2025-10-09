@@ -377,7 +377,7 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(this.canJump);
             writer.Write((byte) this.state);
             writer.Write(this.jumpCount);
-            if (this.customData != null) writer.Write(this.customData.data);
+            if (this.customData != null) writer.Write(this.customData.Data);
             var bytes = writer.ToArray();
             
             NetworkWriterPool.Return(writer);
@@ -406,7 +406,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
             if (value.customData != null) {
                 writer.WriteInt(value.customData.DataSize);
-                writer.WriteBytes(value.customData.data, 0, value.customData.data.Length);
+                writer.WriteBytes(value.customData.Data, 0, value.customData.Data.Length);
             }
             else {
                 writer.WriteInt(0);

@@ -639,7 +639,7 @@ public partial class LuauCore : MonoBehaviour
         if (t == binaryBlobType) {
             var blob = (BinaryBlob)value;
 
-            fixed (byte* dataPtr = blob.data) {
+            fixed (byte* dataPtr = blob.Data) {
                 LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), (ulong)blob.DataSize);
             }
 

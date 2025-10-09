@@ -7,35 +7,35 @@ using Code.Zstd;
 namespace Assets.Luau {
     [Serializable]
     public class BinaryBlob : IEquatable<BinaryBlob> {
-        public byte[] data;
+        public readonly byte[] Data;
         
         /// <summary>
         /// Gets the size of the data. This is the same as <c>data.Length</c>.
         /// </summary>
-        public int DataSize => data.Length;
+        public int DataSize => Data.Length;
 
         /// <summary>
         /// Gets the decompressed size of the underlying data, if the data is currently compressed. If not compressed,
         /// then this returns <c>dataSize</c>.
         /// </summary>
-        public int DecompressedDataSize => IsCompressed ? Zstd.GetDecompressionBound(data) : data.Length;
+        public int DecompressedDataSize => IsCompressed ? Zstd.GetDecompressionBound(Data) : Data.Length;
 
         /// <summary>
         /// Returns <c>true</c> if the BinaryBlob data appears to be compressed.
         /// </summary>
-        public bool IsCompressed => data.Length > 0 && data[0] == 1;
+        public bool IsCompressed => Data.Length > 0 && Data[0] == 1;
         
         public BinaryBlob() {
-            data = new byte[] { };
+            Data = new byte[] { };
         }
         
         public BinaryBlob(byte[] bytes) {
-            data = bytes;
+            Data = bytes;
         }
 
         public BinaryBlob(IntPtr nativeBinaryBlobPtr) {
             var marshal = LuauBinaryBlobMarshal.FromIntPtr(nativeBinaryBlobPtr);
-            data = marshal.ReadData();
+            Data = marshal.ReadData();
         }
 
         public bool Equals(BinaryBlob other) {
@@ -43,13 +43,13 @@ namespace Assets.Luau {
         }
 
         public BinaryBlob Clone() {
-            var clonedData = new byte[data.Length];
-            Array.Copy(data, clonedData, data.Length);
+            var clonedData = new byte[Data.Length];
+            Array.Copy(Data, clonedData, Data.Length);
             return new BinaryBlob(clonedData);
         }
 
         public byte[] CreateDiff(BinaryBlob other) {
-            int length = Math.Max(other.data.Length, data.Length);
+            int length = Math.Max(other.Data.Length, Data.Length);
             var neededBytes = (int) Math.Ceiling(length / 8f);
             byte[] changeBytes = new byte[neededBytes];
             var writer = NetworkWriterPool.Get();
@@ -61,26 +61,26 @@ namespace Assets.Luau {
                 int byteIndex = i / 8;
                 
                 // We ran out of new data. we will continue to write changed bits, but we will not write byte data
-                if (i > other.data.Length - 1) {
+                if (i > other.Data.Length - 1) {
                     BitUtil.SetBit(ref changeBytes[byteIndex], bitIndex, true);
                     continue;
                 }
 
                 // We ran out of base data. We will continue to write change bits and the new data
-                if (i > data.Length - 1) {
+                if (i > Data.Length - 1) {
                     BitUtil.SetBit(ref changeBytes[byteIndex], bitIndex, true);
-                    changedByteWriter.Write(other.data[i]);
+                    changedByteWriter.Write(other.Data[i]);
                     continue;
                 }
 
                 // We have values to compare
-                if (other.data[i] == data[i]) {
+                if (other.Data[i] == Data[i]) {
                     // Byte values are equal. No need to write a new value
                     BitUtil.SetBit(ref changeBytes[byteIndex], bitIndex, false);
                 } else {
                     // Byte values don't match. Write new value 
                     BitUtil.SetBit(ref changeBytes[byteIndex], bitIndex, true);
-                    changedByteWriter.Write(other.data[i]);
+                    changedByteWriter.Write(other.Data[i]);
                 }
             }
 
@@ -125,12 +125,12 @@ namespace Assets.Luau {
 
                     // If we run out of base data, but update wasn't set, it means we've reached the end of the changed flags. This happens when you have
                     // 7 bytes of data, but you have to include 1 full byte of change flags (8 bits). The last bit will be zero since there's no associated byte for that flag.
-                    if (existingByteIndex > (data.Length - 1) && !update) {
+                    if (existingByteIndex > (Data.Length - 1) && !update) {
                         // We do nothing since this bit flag is meaningless.
                         continue;
                     }
                     
-                    byteWriter.Write(update ? bytes[diffReadIndex] : data[existingByteIndex]);
+                    byteWriter.Write(update ? bytes[diffReadIndex] : Data[existingByteIndex]);
                     if (update) diffReadIndex++; // Move our read pointer forward since we read a byte from our diff data.
                 }
             }
