@@ -83,7 +83,6 @@ namespace Assets.Luau.Network {
 		    var now = Time.realtimeSinceStartup;
 		    if (!_throttle.TryGetValue(conn.connectionId, out var throttle)) {
 			    // If we don't have a throttle key, that means the client isn't connected anymore and we are processing an old message.
-			    print("hiu");
 			    return;
 		    }
 		    
