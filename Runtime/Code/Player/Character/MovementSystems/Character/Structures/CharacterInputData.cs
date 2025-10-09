@@ -38,11 +38,7 @@ namespace Code.Player.Character.MovementSystems.Character
 				crouch = crouch,
 				sprint = sprint,
 				lookVector = lookVector,
-				customData = customData != null ?  new BinaryBlob()
-				{
-					dataSize = customData.dataSize,
-					data = (byte[])customData.data.Clone(),
-				} : default,
+				customData = customData?.Clone(),
 			};
 		}
 	}

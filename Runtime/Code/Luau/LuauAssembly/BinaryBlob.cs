@@ -7,31 +7,45 @@ using Code.Zstd;
 namespace Assets.Luau {
     [Serializable]
     public class BinaryBlob : IEquatable<BinaryBlob> {
-        public int dataSize;
         public byte[] data;
+        
+        /// <summary>
+        /// Gets the size of the data. This is the same as <c>data.Length</c>.
+        /// </summary>
+        public int DataSize => data.Length;
 
-        public int DecompressedDataSize => IsCompressed ? Zstd.GetDecompressionBound(data) : dataSize;
+        /// <summary>
+        /// Gets the decompressed size of the underlying data, if the data is currently compressed. If not compressed,
+        /// then this returns <c>dataSize</c>.
+        /// </summary>
+        public int DecompressedDataSize => IsCompressed ? Zstd.GetDecompressionBound(data) : data.Length;
 
+        /// <summary>
+        /// Returns <c>true</c> if the BinaryBlob data appears to be compressed.
+        /// </summary>
         public bool IsCompressed => data.Length > 0 && data[0] == 1;
         
         public BinaryBlob() {
             data = new byte[] { };
-            dataSize = 0;
         }
         
         public BinaryBlob(byte[] bytes) {
-            dataSize = bytes.Length;
             data = bytes;
         }
 
         public BinaryBlob(IntPtr nativeBinaryBlobPtr) {
             var marshal = LuauBinaryBlobMarshal.FromIntPtr(nativeBinaryBlobPtr);
-            dataSize = (int)marshal.DataSize;
             data = marshal.ReadData();
         }
 
         public bool Equals(BinaryBlob other) {
-            return this.dataSize == other?.dataSize;
+            return this.DataSize == other?.DataSize;
+        }
+
+        public BinaryBlob Clone() {
+            var clonedData = new byte[data.Length];
+            Array.Copy(data, clonedData, data.Length);
+            return new BinaryBlob(clonedData);
         }
 
         public byte[] CreateDiff(BinaryBlob other) {
@@ -88,10 +102,7 @@ namespace Assets.Luau {
             // ie. bit 0 is byte zero of the base data. If the flag is true, we should read
             // a byte from the diff data and replace index 0 with the new byte data.
             byte changedLength = bytes[0];
-            if (changedLength == 0) return new BinaryBlob() {
-                dataSize = dataSize,
-                data = (byte[]) data.Clone(),
-            };
+            if (changedLength == 0) return Clone();
             
             var byteWriter = NetworkWriterPool.Get();
             var diffReadIndex = changedLength + 1; // + 1 for the byte used to encode the data size
@@ -123,11 +134,8 @@ namespace Assets.Luau {
                     if (update) diffReadIndex++; // Move our read pointer forward since we read a byte from our diff data.
                 }
             }
-            
-            var newBlob = new BinaryBlob() {
-                data = byteWriter.ToArray(), // new byte array with the diff applied
-                dataSize = byteWriter.Position // size of new byte array
-            };
+
+            var newBlob = new BinaryBlob(byteWriter.ToArray()); // new byte array with the diff applied
             NetworkWriterPool.Return(byteWriter);
             return newBlob;
         }
