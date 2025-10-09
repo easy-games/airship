@@ -453,6 +453,12 @@ public static class LuauPlugin {
         ThrowIfNotNullPtr(LuauPluginNative.GetDebugTrace(thread, ref result));
 	}
 	
+	public static string GetTraceback(IntPtr thread) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.GetTraceback(thread, out var strPtr));
+		return Marshal.PtrToStringUTF8(strPtr);
+	}
+	
 	public static void RunTaskScheduler(LuauContext context) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.RunTaskScheduler(context, Time.time, Time.unscaledTime));

@@ -173,6 +173,9 @@ public static class LuauPluginNative {
 	internal delegate IntPtr GetDebugTraceDelegate(IntPtr thread, ref int result);
 	[NativeDelegate] internal static GetDebugTraceDelegate GetDebugTrace;
 	
+	internal delegate IntPtr GetTracebackDelegate(IntPtr thread, out IntPtr strPtr);
+	[NativeDelegate] internal static GetTracebackDelegate GetTraceback;
+	
 	internal delegate IntPtr RunTaskSchedulerDelegate(LuauContext context, float now, float unscaledNow);
 	[NativeDelegate] internal static RunTaskSchedulerDelegate RunTaskScheduler;
 	
@@ -591,6 +594,13 @@ public static class LuauPluginNative {
 	[DllImport("LuauPlugin")]
 #endif
 	internal static extern IntPtr GetDebugTrace(IntPtr thread, ref int result);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern IntPtr GetTraceback(IntPtr thread, out IntPtr strPtr);
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]

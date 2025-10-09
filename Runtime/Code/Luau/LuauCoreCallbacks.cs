@@ -55,6 +55,7 @@ public partial class LuauCore : MonoBehaviour {
         public MethodInfo Method;
         public LuauContext Context;
         public Type Type;
+        public string Traceback;
     }
 
     private struct PropertyGetReflectionCache {
@@ -127,7 +128,8 @@ public partial class LuauCore : MonoBehaviour {
     public static Dictionary<int, EventConnection> eventConnections = new();
     private static int eventIdCounter = 0;
 
-    private static readonly List<AwaitingTask> _awaitingTasks = new();
+    private static readonly Queue<AwaitingTask> _completedTasks = new();
+    private static int _taskId = 0;
 
     public static GameObject luauModulesFolder;
 
@@ -1630,34 +1632,71 @@ public partial class LuauCore : MonoBehaviour {
             if (task.IsCompleted) {
                 shouldYield = false;
                 if (task.IsFaulted) {
-                    return LuauError(thread, $"Error: Exception thrown in {type.Name} {method.Name}: {task.Exception.Message}");
+                    return LuauError(thread, GetAwaitingTaskExceptionMessage(awaitingTask));
                 }
                 ResumeAsyncTask(awaitingTask, true);
                 return 0;
             }
-
+            
             LuauPluginRaw.PushThread(thread);
             awaitingTask.ThreadRef = LuauPluginRaw.Ref(thread, -1);
             LuauPluginRaw.Pop(thread, 1);
 
-            _awaitingTasks.Add(awaitingTask);
-            // LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-            //
-            // if (binding != null) {
-            //     binding.m_asyncYield = true;
-            // } else {
-            //     LuauPlugin.LuauPinThread(thread);
-            // }
-            // ThreadDataManager.SetThreadYielded(thread, true);
-
+            awaitingTask.Traceback = LuauPlugin.GetTraceback(thread);
+            
+            _ = RunTask(awaitingTask);
             shouldYield = true;
+            
             return 0;
         } catch (Exception e) {
             shouldYield = false;
-            return LuauError(thread, $"Error: Exception thrown in {type.Name} {method.Name}: {e.Message}");
+            return LuauError(thread, $"Error: Exception thrown in method {type.Name}.{method.Name}: {e.Message}");
         }
     }
 
+    private static async Task RunTask(AwaitingTask awaitingTask) {
+        var id = _taskId;
+        try {
+            await awaitingTask.Task;
+        } catch (Exception e) {
+            if (id != _taskId) {
+                // This task completed after the Luau context was reset, so it's an orphaned task. Just log the exception:
+                var trace = awaitingTask.Traceback;
+                if (trace.StartsWith("[C] ", StringComparison.Ordinal)) {
+                    var newline = trace.IndexOf('\n');
+                    if (newline != -1) {
+                        trace = trace.Substring(newline + 1);
+                    }
+                }
+                Debug.LogError(GetAwaitingTaskExceptionMessage(awaitingTask) + "\n" + trace + "\n[This error occurred in an async task that completed after its originating Luau context reset].");
+            }
+            // Otherwise, the exception is handled by the task completion loop, which resumes the calling Luau thread
+            // with the results of the task (or the error message from the exception).
+        } finally {
+            // Only mark task as ready for resumption if the original context is still alive (id == _taskId):
+            if (id == _taskId) {
+                _completedTasks.Enqueue(awaitingTask);
+            }
+        }
+    }
+
+    private static string GetAwaitingTaskExceptionMessage(AwaitingTask awaitingTask) {
+        var aggregateException = awaitingTask.Task.Exception;
+        
+        if (aggregateException == null) {
+            return $"Error: Unknown exception thrown in method {awaitingTask.Type.Name}.{awaitingTask.Method.Name}";
+        }
+
+        // Multiple exceptions:
+        if (aggregateException.InnerExceptions.Count != 1) {
+            return $"Error: Multiple exceptions thrown in method {awaitingTask.Type.Name}.{awaitingTask.Method.Name}: {aggregateException.Message}";
+        }
+        
+        // Only one exception to log:
+        var ex =  aggregateException.InnerExceptions[0];
+        return $"Error: Exception thrown in method {awaitingTask.Type.Name}.{awaitingTask.Method.Name}: {ex.Message}";
+    }
+    
     private static void ResumeAsyncTask(AwaitingTask awaitingTask, bool immediate = false) {
         var thread = awaitingTask.Thread;
 
@@ -1667,7 +1706,7 @@ public partial class LuauCore : MonoBehaviour {
 
         if (awaitingTask.Task.IsFaulted) {
             try {
-                LuauPluginRaw.PushString(thread, $"Error: Exception thrown in {awaitingTask.Type.Name} {awaitingTask.Method.Name}: {awaitingTask.Task.Exception.Message}");
+                LuauPluginRaw.PushString(thread, GetAwaitingTaskExceptionMessage(awaitingTask));
                 ThreadDataManager.Error(thread);
                 LuauPlugin.ResumeThreadError(thread);
             } catch (LuauException e) {
@@ -1701,26 +1740,15 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    public static void TryResumeAsyncTasks() {
-        for (var i = 0; i < _awaitingTasks.Count; i++) {
-            var awaitingTask = _awaitingTasks[i];
-            if (!awaitingTask.Task.IsCompleted) continue;
-
-            // Task has completed. Remove from list and resume lua thread:
-            _awaitingTasks.RemoveAt(i);
+    private static void ResumeCompletedTasks() {
+        while (_completedTasks.TryDequeue(out var awaitingTask)) {
             ResumeAsyncTask(awaitingTask);
-            i--;
         }
     }
 
     /// Get the string representation of a Lua thread in the same format that Lua would print a thread.
     public static string LuaThreadToString(IntPtr thread) {
         return $"thread: 0x{thread.ToInt64():x16}";
-    }
-
-    private static void GetLuauDebugTrace(IntPtr thread) {
-        //Call this to get a bunch of prints of the current thread execution state
-        LuauPlugin.GetDebugTrace(thread);
     }
 
     private struct FastCacheEntry {
