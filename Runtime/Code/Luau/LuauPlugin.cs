@@ -427,7 +427,7 @@ public static class LuauPlugin {
         ThrowIfNotNullPtr(LuauPluginNative.UnpinThread(thread));
 	}
 	
-	public static void PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize, int arraySize = -1) {
+	public static void PushValueToThread(IntPtr thread, int type, IntPtr data, ulong dataSize, int arraySize = -1) {
         ThreadSafetyCheck();
         ThrowIfNotNullPtr(LuauPluginNative.PushValueToThread(thread, type, data, dataSize, arraySize));
 	}

@@ -85,8 +85,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.000061035156, y: 0}
-  m_SizeDelta: {x: -59.999893, y: -40}
+  m_AnchoredPosition: {x: -0.000061035156, y: -5.5122}
+  m_SizeDelta: {x: -59.9999, y: -28.9756}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7131854604237137100
 CanvasRenderer:
@@ -161,7 +161,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 1
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 0
+  m_overflowMode: 1
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -1012,7 +1012,7 @@ GameObject:
   - component: {fileID: 8811223116906599597}
   - component: {fileID: 6036842439956431236}
   m_Layer: 5
-  m_Name: Text (TMP)
+  m_Name: RetryBtn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1034,7 +1034,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: -57}
+  m_AnchoredPosition: {x: 0, y: -75}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1161445418170421426
@@ -1229,8 +1229,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0, y: 0}
-  m_SizeDelta: {x: 521.6703, y: 103.36}
+  m_AnchoredPosition: {x: -0, y: -20.2114}
+  m_SizeDelta: {x: 521.6703, y: 143.7827}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7156213477813682496
 CanvasRenderer:
