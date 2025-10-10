@@ -125,7 +125,6 @@ namespace Luau {
             [typeof(CanvasGroup)] = LuauContextAll,
             [typeof(CanvasScaler)] = LuauContextAll,
             [typeof(EventSystem)] = LuauContextAll,
-            [typeof(RaycastResult)] = LuauContextAll,
             [typeof(RawImage)] = LuauContextAll,
             [typeof(UnityEngine.UI.Image)] = LuauContextAll,
             [typeof(UnityEngine.UIElements.Image)] = LuauContextAll,
@@ -177,6 +176,7 @@ namespace Luau {
             [typeof(Animation)] = LuauContextAll,
             [typeof(AnimationCurve)] = LuauContextAll,
             [typeof(RuntimeAnimatorController)] = LuauContextAll,
+            [typeof(AnimatorControllerParameter)] = LuauContextAll,
             [typeof(AnimationClip)] = LuauContextAll,
             // Audio
             [typeof(AudioClip)] = LuauContextAll,
