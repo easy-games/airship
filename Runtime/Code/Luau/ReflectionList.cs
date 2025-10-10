@@ -125,6 +125,7 @@ namespace Luau {
             [typeof(CanvasGroup)] = LuauContextAll,
             [typeof(CanvasScaler)] = LuauContextAll,
             [typeof(EventSystem)] = LuauContextAll,
+            [typeof(RaycastResult)] = LuauContextAll,
             [typeof(RawImage)] = LuauContextAll,
             [typeof(UnityEngine.UI.Image)] = LuauContextAll,
             [typeof(UnityEngine.UIElements.Image)] = LuauContextAll,
