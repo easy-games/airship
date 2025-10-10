@@ -153,7 +153,7 @@ public class AirshipSettingsProvider : SettingsProvider
             EditorIntegrationsConfig.instance.autoUpdatePackages = EditorGUILayout.Toggle(new GUIContent("Auto Update Packages", "Airship Packages will automatically update whenever a new update is available."), EditorIntegrationsConfig.instance.autoUpdatePackages);
             EditorIntegrationsConfig.instance.enableMainMenu = EditorGUILayout.Toggle(new GUIContent("Enable Main Menu", "When true, the main menu will show when pressing [Escape]."), EditorIntegrationsConfig.instance.enableMainMenu);
             EditorIntegrationsConfig.instance.buildWithoutUpload = EditorGUILayout.Toggle(new GUIContent("Build Without Upload", "When publishing, this will build the asset bundles but won't upload them to Airship. This is useful for testing file sizes with AssetBundle Browser."), EditorIntegrationsConfig.instance.buildWithoutUpload);
-
+            
             // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
             // EditorIntegrationsConfig.instance.typescriptAutostartCompiler = EditorGUILayout.Toggle(
@@ -227,6 +227,10 @@ public class AirshipSettingsProvider : SettingsProvider
             var result = EditorGUILayout.Popup(new GUIContent("Reconciliation Beta Target", "How to test this feature"), 
                 EditorIntegrationsConfig.instance.useProjectReconcileOption ? 1 : 0, new[] { "Local Instance (Only you)", "Project-wide (All users)" });
             EditorIntegrationsConfig.instance.useProjectReconcileOption = result == 1;
+            
+            EditorIntegrationsConfig.instance.experimentalCustomEditor = EditorGUILayout.Toggle(
+                new GUIContent("Enable Custom Editors", "Use the new Airship editor system which allows custom editors and the new property API"),
+                EditorIntegrationsConfig.instance.experimentalCustomEditor);
             
             if (GUI.changed) {
                 AirshipLocalArtifactDatabase.instance.Modify();

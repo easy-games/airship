@@ -74,31 +74,32 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
         }
 
-        var customEditorType = binding.script != null ? AirshipCustomEditors.GetEditorForFilePath(binding.script.assetPath) : null;
-        if (customEditorType != null && binding.script != null) {
-            var metadata = serializedObject.FindProperty("metadata");
-            var metadataName = metadata.FindPropertyRelative("name");
+        if (!Application.isPlaying) {
+            var customEditorType = binding.script != null ? AirshipCustomEditors.GetEditorForFilePath(binding.script.assetPath) : null;
+            if (customEditorType != null && binding.script != null) {
+                var metadata = serializedObject.FindProperty("metadata");
+                var metadataName = metadata.FindPropertyRelative("name");
 
-            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
-                editor.script = binding.script;
-                editor.target = binding;
-                editor.OnInspectorGUI();
-            }
-
-            if (binding.script != null && binding.script.m_metadata != null) {
-                if (ShouldReconcile(binding)) {
-                    binding.ReconcileMetadata(ReconcileSource.Inspector);
-                    serializedObject.ApplyModifiedProperties();
-                    serializedObject.Update();
+                if (!string.IsNullOrEmpty(metadataName.stringValue)) {
+                    var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
+                    editor.script = binding.script;
+                    editor.target = binding;
+                    editor.OnInspectorGUI();
                 }
-            
-                CheckDefaults(binding);
+
+                if (binding.script != null && binding.script.m_metadata != null) {
+                    if (ShouldReconcile(binding)) {
+                        binding.ReconcileMetadata(ReconcileSource.Inspector);
+                        serializedObject.ApplyModifiedProperties();
+                        serializedObject.Update();
+                    }
+                
+                    CheckDefaults(binding);
+                }
+                
+                serializedObject.ApplyModifiedProperties();
+                return;
             }
-            
-            serializedObject.ApplyModifiedProperties();
-            
-            return;
         }
 
         DrawScriptBindingProperties(binding);

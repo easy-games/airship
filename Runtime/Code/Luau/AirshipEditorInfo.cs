@@ -45,6 +45,10 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
         
     }
 
+    public int IndexOf(string stringValue) {
+        return this.members.FindIndex(item => item.StringValue == stringValue);
+    }
+
     public string[] keys => members.Select(member => member.Name).ToArray();
     
     public TyperScriptEnumMember this[int index] {
@@ -66,8 +70,6 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
                 if (text == null) continue;
                 maxIndex = i;
             }
-            
-            Debug.Log($"maxIndex is {maxIndex} for {id}");
 
             var flagArray = new string[maxIndex + 1];
             for (var i = 0; i < maxIndex + 1; i++) {

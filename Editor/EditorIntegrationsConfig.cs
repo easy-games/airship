@@ -75,6 +75,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";
+    public bool experimentalCustomEditor;
 
     public IReadOnlyList<string> TypeScriptBuildArgs {
         get {

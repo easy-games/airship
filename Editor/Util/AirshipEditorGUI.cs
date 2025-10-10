@@ -145,13 +145,12 @@ public static partial class AirshipEditorGUI {
 
     internal static void EndSettingGroup() {
         EditorGUI.indentLevel--;
-        
         EditorGUILayout.Space();
         EditorGUILayout.EndVertical();
     }
 
-    public static string TextProperty(Rect rect, AirshipSerializedValue property) {
-        if (property.type != "string") {
+    public static string StringProperty(Rect rect, AirshipSerializedValue property) {
+        if (property.type != AirshipSerializedValue.PropertyType.String) {
             EditorGUILayout.HelpBox("Expected string", MessageType.Error);
             return "";
         }
@@ -165,123 +164,30 @@ public static partial class AirshipEditorGUI {
         
         return newValue;
     }
+
+    public static float NumberProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoNumberProperty(rect, label, property);
+    public static float NumberProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoNumberProperty(null, label, property);
+
+    public static bool BooleanProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoBooleanProperty(rect, label, property);
     
-    public static float NumberProperty(GUIContent label, AirshipSerializedValue property) {
-        if (property.type != "number") {
-            EditorGUILayout.HelpBox($"Expected number property, got {property.type}", MessageType.Warning);
-            return 0;
-        }
+    public static bool BooleanProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoBooleanProperty(null, label, property);
 
-        float? minValue = null;
-        float? maxValue = null;
-        (float, float)? range = null;
-        
-        if (property.TryGetDecorator("Range", out var rangeProps)) {
-            float min = Convert.ToSingle(rangeProps[0].value, CultureInfo.InvariantCulture);
-            float max = Convert.ToSingle(rangeProps[1].value, CultureInfo.InvariantCulture);
-            range = (min, max);
-        }
+    public static string StringProperty(GUIContent label, AirshipSerializedValue property) => DoStringProperty(null, label, property);
+    public static string StringProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoStringProperty(rect, label, property);
 
-        if (property.TryGetDecorator("Min", out var minParams))
-        {
-            minValue = Convert.ToSingle(minParams[0].value, CultureInfo.InvariantCulture);
-        }
-        
-        if (property.TryGetDecorator("Max", out var maxParams))
-        {
-            maxValue = Convert.ToSingle(maxParams[0].value, CultureInfo.InvariantCulture);
-        }
-
-        return DoNumberField(label, property.serializedValue, property.serializedModified, minValue, maxValue, range);
-    }
-    
-    public static bool BooleanProperty(GUIContent label, AirshipSerializedValue property) {
-        var prevValue = property.boolValue;
-
-        if (property.type != "boolean") {
-            EditorGUILayout.HelpBox($"Expected boolean property, got {property.type}", MessageType.Warning);
-            return false;
-        }
-
-        bool nextValue = EditorGUILayout.Toggle(label, prevValue);
-        if (prevValue != nextValue) {
-            property.boolValue = nextValue;
-            property.serializedModified.boolValue = true;
-        }
-
-        return nextValue;
-    }
-
-    public static string TextProperty(GUIContent label, AirshipSerializedValue property) {
-        var prevValue = property.stringValue;
-        string nextValue;
-        
-        if (property.type != "string") {
-            EditorGUILayout.HelpBox($"Expected string property, got {property.type}", MessageType.Warning);
-            return null;
-        }
-                
-        var textAreaMaxLines = 3;
-        var useTextArea = false;
-        var displayTextAreaHorizontal = true;
-        var displayFixedHeight = false;
-
-        if (property.TryGetDecorator("Multiline", out var multilineParams)) {
-            if (multilineParams.Count > 0) textAreaMaxLines = int.Parse(multilineParams[0].serializedValue);
-            useTextArea = true;
-            displayFixedHeight = true;
-        }
-        if (property.TryGetDecorator("TextArea", out var _))
-        {
-            useTextArea = true;
-            displayTextAreaHorizontal = false;
-            displayFixedHeight = false;
-        }
-        
-        if (useTextArea) {
-            if (displayTextAreaHorizontal) EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PrefixLabel(label);
-
-            var style = EditorStyles.textArea;
-
-            var maxHeight = style.lineHeight * textAreaMaxLines;
-            if (displayFixedHeight) style.fixedHeight = maxHeight;
-            nextValue = EditorGUILayout.TextArea(prevValue, style, new []{ GUILayout.MaxHeight(maxHeight) });
-            if (displayTextAreaHorizontal) EditorGUILayout.EndHorizontal();
-        } else {
-            nextValue = EditorGUILayout.TextField(label, property.stringValue);
-        }
-
-        if (prevValue != nextValue) {
-            property.stringValue = nextValue;
-            property.serializedModified.boolValue = true;
-        }
-
-        return nextValue;
-    }
-
-    public static int EnumField(GUIContent label, AirshipSerializedValue property) {
-        var typescriptEnum = property.enumType;
-        if (typescriptEnum == null) return -1;
-
-        if (typescriptEnum.memberType == TypeScriptEnumMemberType.Integer) {
-            int prevValue = property.enumValue.IntValue;
-            int nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
-            
-            if (prevValue != nextValue) {
-                property.enumValue = typescriptEnum.members[nextValue];
-                property.serializedModified.boolValue = true;
-            }
-            
-            return nextValue;
-        }
-
-        return -1;
-    }
+    public static int EnumProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoEnumProperty(null, label, property);
+    public static int EnumProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoEnumProperty(rect, label, property);
 
     public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
         var currentValue = property.objectReferenceValue;
-        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.objectType, true);
+        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.ObjectSerializedType, true);
         
         if (currentValue != nextValue) {
             property.serializedObjectValue.objectReferenceValue = nextValue;
@@ -295,7 +201,7 @@ public static partial class AirshipEditorGUI {
         if (!property.isObject) return null;
         
         var currentValue = property.serializedObjectValue.objectReferenceValue;
-        var nextValue = ObjectField(rect, label, currentValue, property.objectType, true);
+        var nextValue = ObjectField(rect, label, currentValue, property.ObjectSerializedType, true);
 
         if (currentValue != nextValue) {
             property.serializedObjectValue.objectReferenceValue = nextValue;
@@ -305,20 +211,17 @@ public static partial class AirshipEditorGUI {
         return nextValue;
     }
 
-    public static int LayerMask(Rect rect, GUIContent label, AirshipSerializedValue value) {
-        return DoLayerMask(rect, label, value);
+    public static int LayerMaskProperty(Rect rect, GUIContent label, AirshipSerializedValue value) => DoLayerMaskField(rect, label, value);
+    public static int LayerMaskProperty(GUIContent label, AirshipSerializedValue value) => DoLayerMaskField(null, label, value);
+    public static int FlagEnumProperty(GUIContent label, AirshipSerializedValue value) => DoMaskField(null, label, value);
+    public static int FlagEnumProperty(Rect rect, GUIContent label, AirshipSerializedValue value) => DoMaskField(rect, label, value);
+    
+    public static AirshipComponent AirshipComponentProperty(GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator validator = null) {
+        return DoAirshipComponent(null, label, property, validator);
     }
     
-    public static int LayerMaskLayout(GUIContent label, AirshipSerializedValue value) {
-        return DoLayerMask(null, label, value);
-    }
-
-    public static AirshipComponent AirshipComponentProperty(GUIContent label, AirshipSerializedValue property) {
-        return DoAirshipComponent(null, label, property);
-    }
-    
-    public static AirshipComponent AirshipComponentProperty(Rect rect, GUIContent label, AirshipSerializedValue property) {
-        return DoAirshipComponent(rect, label, property);
+    public static AirshipComponent AirshipComponentProperty(Rect rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator validator = null) {
+        return DoAirshipComponent(rect, label, property, validator);
     }
     
     public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property) {
@@ -334,53 +237,98 @@ public static partial class AirshipEditorGUI {
         
         if (enabled) {
             var editor = property.editor.GetOrCreatePropertyList(property);
+            var prevElementHeight = AirshipGUI.arrayItemHeight;
+
+            if (property.arraySize > 0) {
+            switch (property.array.elementType) {
+                    case AirshipSerializedValue.PropertyType.String:
+                        var style = EditorStyles.textArea;
+                        var textAreaMaxLines = 3;
+                        var useTextArea = false;
+                        var displayTextAreaHorizontal = true;
+                        var displayFixedHeight = false;
+                        
+                        if (property.TryGetDecorator("Multiline", out var multilineParams)) {
+                            if (multilineParams.Count > 0) textAreaMaxLines = int.Parse(multilineParams[0].serializedValue);
+                            useTextArea = true;
+                            displayFixedHeight = true;
+                        }
+                        
+                        if (property.TryGetDecorator("TextArea", out _)) {
+                            useTextArea = true;
+                            displayTextAreaHorizontal = false;
+                            displayFixedHeight = false;
+                        }
+
+                        if (displayFixedHeight) {
+                            var maxHeight = style.lineHeight * textAreaMaxLines;
+                            style.fixedHeight = maxHeight;
+                        }
+
+                        if (useTextArea) editor.elementHeight = style.lineHeight * textAreaMaxLines;
+                        if (displayTextAreaHorizontal == false) editor.elementHeight += EditorGUIUtility.singleLineHeight;
+                        break;
+                }
+            }
+            
             editor.DoLayoutList();
+            AirshipGUI.arrayItemHeight = prevElementHeight;
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
-        
-        return false;
+        return enabled;
     }
 
     /// <summary>
-    /// Will render the given AirshipProperty
+    /// Draws the given airship property value
     /// </summary>
     /// <param name="label">The label to display before the property</param>
     /// <param name="value">The property to display</param>
-    /// <returns></returns>
+    /// <returns>True if shown</returns>
     public static bool PropertyField(GUIContent label, AirshipSerializedValue value) {
         switch (value.type) {
-            case "string": {
-                TextProperty(label, value);
+            case AirshipSerializedValue.PropertyType.String: {
+                StringProperty(label, value);
                 return false;
             }
-            case "boolean": {
+            case AirshipSerializedValue.PropertyType.Boolean: {
                 return BooleanProperty(label, value);
             }
-            case "number": {
+            case AirshipSerializedValue.PropertyType.Number: {
                 NumberProperty(label, value);
                 return false;
             }
-            case "IntEnum" or "StringEnum":
-                EnumField(label, value);
+            case AirshipSerializedValue.PropertyType.Enum:
+                EnumProperty(label, value);
                 break;
-            case "LayerMask": {
-                LayerMaskLayout(label, value);
+            case AirshipSerializedValue.PropertyType.FlagEnum:
+                FlagEnumProperty(label, value);
+                break;
+            case AirshipSerializedValue.PropertyType.LayerMask: {
+                LayerMaskProperty(label, value);
                 break;
             }
-            case "object": {
+            case AirshipSerializedValue.PropertyType.Object: {
                 ObjectProperty(label, value);
                 break;
             }
-            case "AirshipBehaviour": {
-                return AirshipComponentProperty(label, value) != null;
+            case AirshipSerializedValue.PropertyType.AirshipBehaviour: {
+                return AirshipComponentProperty(label, value, (component, property) => {
+                    if (component && property is AirshipSerializedProperty serializedProperty &&
+                        serializedProperty.editor.target is AirshipComponent parentBinding && component == parentBinding) {
+                        EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
+                                 "OK");
+                        return false;
+                    }
+
+                    return true;
+                }) != null;
             }
             // Arrays can only really be used with serialized property not serialized array, due to how we set this up
-            case "Array" when value is AirshipSerializedProperty property: {
-                ArrayProperty(label, property);
-                return false;
+            case AirshipSerializedValue.PropertyType.Array when value is AirshipSerializedProperty property: {
+                return ArrayProperty(label, property);
             }
             default: {
-                EditorGUILayout.HelpBox($"{value.type} is not yet supported by PropertyFieldLayout!",
+                EditorGUILayout.HelpBox($"{value.typeString} is not yet supported by PropertyFieldLayout!",
                     MessageType.Warning);
                 return false;
             }
@@ -389,21 +337,44 @@ public static partial class AirshipEditorGUI {
         return false;
     }
 
+    /// <summary>
+    /// Draw a property field using a preset Rect for the size/position
+    /// </summary>
     public static bool PropertyField(Rect rect, GUIContent label, AirshipSerializedValue value) {
         switch (value.type) {
-            case "object": {
+            case AirshipSerializedValue.PropertyType.Object: {
                 ObjectProperty(rect, label, value);
                 break;
             }
-            case "LayerMask": {
-                LayerMask(rect, label, value);
+            case AirshipSerializedValue.PropertyType.String: {
+                StringProperty(rect, label, value);
                 break;
             }
-            case "AirshipBehaviour": {
+            case AirshipSerializedValue.PropertyType.LayerMask: {
+                LayerMaskProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.AirshipBehaviour: {
                 return AirshipComponentProperty(rect, label, value) != null;
             }
+            case AirshipSerializedValue.PropertyType.Number: {
+                NumberProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Boolean: {
+                BooleanProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Enum: {
+                EnumProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.FlagEnum: {
+                FlagEnumProperty(rect, label, value);
+                break;
+            }
             default: {
-                EditorGUI.HelpBox(rect, $"{value.type} is not yet supported by PropertyField!",
+                EditorGUI.HelpBox(rect, $"{value.typeString} is not yet supported by PropertyField!",
                     MessageType.Warning);
                 return false;
             }
@@ -415,7 +386,5 @@ public static partial class AirshipEditorGUI {
     public static bool PropertyField(AirshipSerializedValue property) {
         var name = ObjectNames.NicifyVariableName(property.serializedName.stringValue);
         return PropertyField(new GUIContent(name), property);
-
-        return false;
     }
 }

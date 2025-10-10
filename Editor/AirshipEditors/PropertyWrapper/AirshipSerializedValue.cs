@@ -6,6 +6,47 @@ using Luau;
 using UnityEditor;
 
 public abstract class AirshipSerializedValue {
+    public enum PropertyType {
+        Unknown,
+        String,
+        Number,
+        Boolean,
+        Object,
+        AirshipBehaviour,
+        LayerMask,
+        AnimationCurve,
+        Enum,
+        FlagEnum,
+        Array,
+    }
+
+    public static PropertyType GetTypeFromTypeString(string type) {
+        return type switch {
+            "string" => PropertyType.String,
+            "number" => PropertyType.Number,
+            "boolean" => PropertyType.Boolean,
+            "object" => PropertyType.Object,
+            "AirshipBehaviour" => PropertyType.AirshipBehaviour,
+            "AnimationCurve" => PropertyType.AnimationCurve,
+            "LayerMask" => PropertyType.LayerMask,
+            "FlagEnum" => PropertyType.FlagEnum,
+            "IntEnum" or "StringEnum" => PropertyType.Enum,
+            "Array" => PropertyType.Array,
+            _ => PropertyType.Unknown,
+        };
+    }
+    
+    public const string StringType = "string";
+    public const string NumberType = "number";
+    public const string BooleanType = "boolean";
+    public const string LayerMaskType = "LayerMask";
+    
+    public const string AirshipBehaviourType = "AirshipBehaviour";
+    public const string IntEnumType = "IntEnum";
+    public const string StringEnumType = "StringEnum";
+    public const string FlagEnumType = "FlagEnum";
+    public const string ObjectType = "object";
+    
     internal SerializedProperty serializedName { get; set; }
     internal SerializedProperty serializedModified { get; set; }
     internal SerializedProperty serializedType { get; set; }
@@ -21,10 +62,10 @@ public abstract class AirshipSerializedValue {
     public bool isAirshipType => serializedType.stringValue == "AirshipBehaviour";
     public bool isEnum => serializedType.stringValue is "IntEnum" or "StringEnum" or "FlagEnum";
     public bool isObject => serializedType.stringValue == "object";
-    
-    public string type => serializedType.stringValue;
+    public PropertyType type => GetTypeFromTypeString(serializedType.stringValue);
+    public string typeString => serializedType.stringValue;
     [CanBeNull]
-    public Type objectType => isObject ? TypeReflection.GetTypeFromString(serializedObjectType.stringValue) : null;
+    public Type ObjectSerializedType => isObject ? TypeReflection.GetTypeFromString(serializedObjectType.stringValue) : null;
     
     [CanBeNull]
     public AirshipType airshipType => isAirshipType ? AirshipBuildInfo.Instance.GetTypeByName(serializedObjectType.stringValue) : null;
@@ -64,6 +105,10 @@ public abstract class AirshipSerializedValue {
                 out var currentValue);
             return currentValue;
         }
+        set {
+            if (propertyType != AirshipComponentPropertyType.AirshipFloat) throw new InvalidCastException("Value is not a float");
+            serializedValue.stringValue = value.ToString(CultureInfo.InvariantCulture);
+        }
     }
 
     public int intValue {
@@ -96,11 +141,14 @@ public abstract class AirshipSerializedValue {
         get {
             if (enumType == null) return null;
             if (enumType.memberType == TypeScriptEnumMemberType.Integer) {
-                var intValue = int.Parse(serializedValue.stringValue);
-                return enumType.members.Find(f => f.IntValue == intValue);
+                if (int.TryParse(serializedValue.stringValue, out var intValue)) {
+                    return enumType.members.Find(f => f.IntValue == intValue);
+                }
+
+                return enumType.members[0];
             } else {
                 var strValue = serializedValue.stringValue;
-                return enumType.members.Find(f => f.StringValue == strValue);
+                return enumType.members.Find(f => f.StringValue == strValue) ?? enumType.members[0];
             }
         }
         set {
@@ -127,96 +175,3 @@ public abstract class AirshipSerializedValue {
         return false;
     }
 }
-
-public class AirshipSerializedProperty : AirshipSerializedValue {
-    public class AirshipArray {
-        public AirshipSerializedProperty property { get; }
-        private readonly SerializedProperty serializedItems;
-        private readonly SerializedProperty serializedObjects;
-        
-        public AirshipArray(AirshipSerializedProperty parentProperty, SerializedProperty serializedItems,
-            SerializedProperty objectRefs) {
-            this.property = parentProperty;
-            this.serializedItems = serializedItems;
-            this.serializedObjects = objectRefs;
-        }
-
-        public int size {
-            get {
-                return this.serializedItems.arraySize;
-            }
-        }
-
-        public AirshipArrayItem GetItemAtIndex(int index) {
-            var value = this.serializedItems.GetArrayElementAtIndex(index);
-            var obj = this.serializedObjects.GetArrayElementAtIndex(index);
-            return new AirshipArrayItem(property, index, value, obj);
-        }
-    }
-    
-    public class AirshipArrayItem : AirshipSerializedValue {
-        public AirshipArrayItem(AirshipSerializedProperty parentSerializedProperty, int index, SerializedProperty valueProperty, SerializedProperty objectValueProperty) {
-            serializedModified = parentSerializedProperty.serializedModified;
-
-            serializedType = parentSerializedProperty.serializedItems.FindPropertyRelative("type");
-            serializedObjectType = parentSerializedProperty.serializedItems.FindPropertyRelative("objectType");
-        
-            serializedObjectValue = objectValueProperty;
-            serializedValue = valueProperty;
-
-            serializedFileRef = parentSerializedProperty.serializedFileRef;
-            serializedRef = parentSerializedProperty.serializedRef;
-
-            propertyMetadata = parentSerializedProperty.propertyMetadata;
-            decorators = parentSerializedProperty.propertyMetadata.GetDecorators();
-        }
-    }
-    
-    internal SerializedProperty serializedItems { get; set; }
-    internal LuauMetadataProperty propertyMetadata { get; set; }
-    internal AirshipEditor editor { get; }
-
-    public bool isArray => serializedType.stringValue == "Array";
-
-    public int arraySize {
-        get {
-            if (isArray) {
-                return serializedItems.FindPropertyRelative("serializedItems").arraySize;
-            } else {
-                return 0;
-            }
-        }
-    }
-
-    public AirshipArray array {
-        get {
-            if (isArray) return new AirshipArray(
-                this, 
-                serializedItems.FindPropertyRelative("serializedItems"), 
-                serializedItems.FindPropertyRelative("objectRefs"));
-
-            return null;
-        }
-    }
-    
-    public AirshipSerializedProperty(SerializedProperty property, LuauMetadataProperty metadata, AirshipEditor editor) {
-        serializedName = property.FindPropertyRelative("name");
-        
-        serializedType = property.FindPropertyRelative("type");
-        serializedValue = property.FindPropertyRelative("serializedValue");
-        serializedModified = property.FindPropertyRelative("modified");
-        
-        serializedObjectType = property.FindPropertyRelative("objectType");
-        serializedObjectValue = property.FindPropertyRelative("serializedObject");
-        
-        serializedItems = property.FindPropertyRelative("items");
-        
-        serializedRef = property.FindPropertyRelative("refPath");
-        serializedFileRef = property.FindPropertyRelative("fileRef");
-
-        propertyMetadata = metadata;
-        decorators = metadata.GetDecorators();
-        this.editor = editor;
-    }
-}
-
