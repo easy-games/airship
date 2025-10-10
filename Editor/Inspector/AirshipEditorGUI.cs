@@ -305,32 +305,20 @@ public static partial class AirshipEditorGUI {
         return nextValue;
     }
 
-    public static AirshipComponent AirshipComponentProperty(GUIContent label, AirshipSerializedValue property) {
-        if (!property.isAirshipType) return null;
-        
-        var currentValue = (AirshipComponent)property.serializedObjectValue.objectReferenceValue;
-        var fileRefStr = "Assets/" + property.serializedFileRef.stringValue.Replace("\\", "/");
-                
-        var script = AirshipScript.GetBinaryFileFromPath(fileRefStr);
-        if (script == null) {
-            EditorGUILayout.HelpBox($"Cannot find script at path {property.serializedFileRef.stringValue}", MessageType.Error);
-            return null;
-        }
-                
-        var binding = AirshipScriptGUI.AirshipBehaviourField(label, script, currentValue);
-                
-        // if (binding != null && target is AirshipComponent parentBinding && binding == parentBinding) {
-        //     EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
-        //         "OK");
-        //     return;
-        // }
-                
-        if (binding != currentValue) {
-            property.serializedObjectValue.objectReferenceValue = binding;
-            property.serializedModified.boolValue = true;
-        }
+    public static int LayerMask(Rect rect, GUIContent label, AirshipSerializedValue value) {
+        return DoLayerMask(rect, label, value);
+    }
+    
+    public static int LayerMaskLayout(GUIContent label, AirshipSerializedValue value) {
+        return DoLayerMask(null, label, value);
+    }
 
-        return binding;
+    public static AirshipComponent AirshipComponentProperty(GUIContent label, AirshipSerializedValue property) {
+        return DoAirshipComponent(null, label, property);
+    }
+    
+    public static AirshipComponent AirshipComponentProperty(Rect rect, GUIContent label, AirshipSerializedValue property) {
+        return DoAirshipComponent(rect, label, property);
     }
     
     public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property) {
@@ -375,6 +363,10 @@ public static partial class AirshipEditorGUI {
             case "IntEnum" or "StringEnum":
                 EnumField(label, value);
                 break;
+            case "LayerMask": {
+                LayerMaskLayout(label, value);
+                break;
+            }
             case "object": {
                 ObjectProperty(label, value);
                 break;
@@ -403,8 +395,15 @@ public static partial class AirshipEditorGUI {
                 ObjectProperty(rect, label, value);
                 break;
             }
+            case "LayerMask": {
+                LayerMask(rect, label, value);
+                break;
+            }
+            case "AirshipBehaviour": {
+                return AirshipComponentProperty(rect, label, value) != null;
+            }
             default: {
-                EditorGUILayout.HelpBox($"{value.type} is not yet supported by PropertyField!",
+                EditorGUI.HelpBox(rect, $"{value.type} is not yet supported by PropertyField!",
                     MessageType.Warning);
                 return false;
             }

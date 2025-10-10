@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Globalization;
+using Code.Luau;
+using Luau;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,5 +33,53 @@ public static partial class AirshipEditorGUI {
         }
 
         return newValue;
+    }
+    
+    private static int DoLayerMask(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        int currentValue = property.intValue;
+
+        int nextValue;
+        if (rect != null) {
+            nextValue = EditorGUI.MaskField(rect.Value, label, currentValue, GameConfig.Load().gameLayers);
+        } else {
+            nextValue = EditorGUILayout.MaskField(label, currentValue, GameConfig.Load().gameLayers);
+        }
+
+        if (currentValue != nextValue) {
+            property.intValue = nextValue;
+            property.serializedModified.boolValue = true;
+        }
+
+        return nextValue;
+    }
+
+    private static AirshipComponent DoAirshipComponent(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        if (!property.isAirshipType) return null;
+        
+        var currentValue = (AirshipComponent)property.serializedObjectValue.objectReferenceValue;
+        if (property.serializedFileRef == null) return null;
+        
+        var fileRefStr = "Assets/" + property.serializedFileRef.stringValue.Replace("\\", "/");
+                
+        var script = AirshipScript.GetBinaryFileFromPath(fileRefStr);
+        if (script == null) {
+            EditorGUILayout.HelpBox($"Cannot find script at path {property.serializedFileRef.stringValue}", MessageType.Error);
+            return null;
+        }
+                
+        var binding = rect.HasValue ? AirshipScriptGUI.AirshipBehaviourField(rect.Value, label, script, currentValue) : AirshipScriptGUI.AirshipBehaviourField(label, script, currentValue);
+                
+        // if (binding != null && target is AirshipComponent parentBinding && binding == parentBinding) {
+        //     EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
+        //         "OK");
+        //     return;
+        // }
+                
+        if (binding != currentValue) {
+            property.serializedObjectValue.objectReferenceValue = binding;
+            property.serializedModified.boolValue = true;
+        }
+
+        return binding;
     }
 }

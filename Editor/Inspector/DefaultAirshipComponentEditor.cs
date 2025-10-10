@@ -4,6 +4,9 @@ using Luau;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// The default editor for airship components
+/// </summary>
 public class DefaultAirshipComponentEditor : AirshipEditor {
     private void DrawDefaultScriptHeader() {
         EditorGUILayout.Space(5);

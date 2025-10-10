@@ -15,6 +15,7 @@ public abstract class AirshipSerializedValue {
     internal SerializedProperty serializedObjectType { get; set; }
     internal SerializedProperty serializedObjectValue { get; set; }
     internal LuauMetadataProperty propertyMetadata { get; set; }
+    
     public string name => serializedName.stringValue;
     public bool isModified => serializedModified.boolValue;
     public bool isAirshipType => serializedType.stringValue == "AirshipBehaviour";
@@ -62,6 +63,21 @@ public abstract class AirshipSerializedValue {
             float.TryParse(serializedValue.stringValue, NumberStyles.Float, CultureInfo.InvariantCulture,
                 out var currentValue);
             return currentValue;
+        }
+    }
+
+    public int intValue {
+        get {
+            if (propertyType != AirshipComponentPropertyType.AirshipLayerMask 
+                && propertyType != AirshipComponentPropertyType.AirshipInt) throw new InvalidCastException("Value is not an integer");
+            int.TryParse(serializedValue.stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture,
+                out var currentValue);
+            return currentValue;
+        }
+        set {
+            if (propertyType != AirshipComponentPropertyType.AirshipLayerMask 
+                && propertyType != AirshipComponentPropertyType.AirshipInt) throw new InvalidCastException("Value is not an integer");
+            serializedValue.stringValue = value.ToString(CultureInfo.InvariantCulture);
         }
     }
 
@@ -148,6 +164,9 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
             serializedObjectValue = objectValueProperty;
             serializedValue = valueProperty;
 
+            serializedFileRef = parentSerializedProperty.serializedFileRef;
+            serializedRef = parentSerializedProperty.serializedRef;
+
             propertyMetadata = parentSerializedProperty.propertyMetadata;
             decorators = parentSerializedProperty.propertyMetadata.GetDecorators();
         }
@@ -191,6 +210,7 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         serializedObjectValue = property.FindPropertyRelative("serializedObject");
         
         serializedItems = property.FindPropertyRelative("items");
+        
         serializedRef = property.FindPropertyRelative("refPath");
         serializedFileRef = property.FindPropertyRelative("fileRef");
 
