@@ -40,7 +40,7 @@ public static class AirshipCustomEditors {
             return editorType;
         }
 
-        return null;
+        return typeof(DefaultAirshipComponentEditor);
     }
 
     public static AirshipEditor GetEditor(AirshipComponent component, Type type, SerializedObject serializedObject) {

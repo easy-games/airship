@@ -48,7 +48,7 @@ public abstract class AirshipSerializedValue {
     public bool boolValue {
         get {
             if (propertyType != AirshipComponentPropertyType.AirshipBoolean) throw new InvalidCastException("Value is not a boolean");
-            return serializedValue.stringValue != "0";
+            return serializedValue.stringValue != "" && serializedValue.stringValue != "0";
         }
         set {
             if (propertyType != AirshipComponentPropertyType.AirshipBoolean) throw new InvalidCastException("Value is not a boolean");

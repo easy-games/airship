@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using Code.Luau;
 using JetBrains.Annotations;
+using Luau;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -9,6 +11,9 @@ using UnityEngine;
 /// Base class to derive custom property drawers from.
 /// </summary>
 public abstract class AirshipEditor : ScriptableObject {
+    public object target { get; internal set; }
+    public AirshipScript script { get; internal set; }
+
     internal AirshipSerializedObject _serializedObject;
     protected AirshipSerializedObject serializedObject => _serializedObject;
 

@@ -74,13 +74,15 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
         }
 
-        var typeCache = AirshipCustomEditors.GetEditorForFilePath(binding.TypescriptFilePath);
-        if (typeCache != null && binding.script != null) {
+        var customEditorType = binding.script != null ? AirshipCustomEditors.GetEditorForFilePath(binding.script.assetPath) : null;
+        if (customEditorType != null && binding.script != null) {
             var metadata = serializedObject.FindProperty("metadata");
             var metadataName = metadata.FindPropertyRelative("name");
 
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                var editor = AirshipCustomEditors.GetEditor(binding, typeCache, serializedObject);
+                var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
+                editor.script = binding.script;
+                editor.target = binding;
                 editor.OnInspectorGUI();
             }
 
