@@ -177,6 +177,7 @@ namespace Luau {
             [typeof(Animation)] = LuauContextAll,
             [typeof(AnimationCurve)] = LuauContextAll,
             [typeof(RuntimeAnimatorController)] = LuauContextAll,
+            [typeof(AnimatorControllerParameter)] = LuauContextAll,
             [typeof(AnimationClip)] = LuauContextAll,
             // Audio
             [typeof(AudioClip)] = LuauContextAll,
