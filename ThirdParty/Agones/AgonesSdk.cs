@@ -316,7 +316,6 @@ namespace Agones
             }
             else
             {
-                Log($"Agones SendRequest failed: {method} {api} {json} {req.error}");
                 Debug.LogWarning($"Agones Request Failed: {method} {api} {req.error} {json}");
             }
 
