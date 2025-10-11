@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -29,6 +30,8 @@ namespace Luau {
         public string FilePath { get; }
         public AirshipType[] BaseTypes { get; internal set; }
 
+        public string UniqueId => $"{FilePath.Replace(".lua", "")}@{Name}";
+        
         public AirshipType(AirshipBehaviourMeta meta) {
             Name = meta.className;
             FilePath = meta.filePath;
@@ -187,6 +190,11 @@ namespace Luau {
 
         [CanBeNull]
         public AirshipType GetTypeByName(string typeName) {
+            if (typeName == null) {
+                Debug.LogWarning("Attempt to get type with null typeName");
+                return null;
+            }
+            
             if (_types.TryGetValue(typeName, out var type)) {
                 return type;
             }

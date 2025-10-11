@@ -50,6 +50,7 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
     }
 
     public string[] keys => members.Select(member => member.Name).ToArray();
+    public string[] keysNicified => members.Select(member => ObjectNames.NicifyVariableName(member.Name)).ToArray();
     
     public TyperScriptEnumMember this[int index] {
         get {
