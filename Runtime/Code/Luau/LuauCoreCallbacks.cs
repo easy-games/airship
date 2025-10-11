@@ -174,22 +174,24 @@ public partial class LuauCore : MonoBehaviour {
         LuauProtection.CurrentContext = context;
         
         var res = LuauCore.PtrToStringUTF8(buffer, length);
-        
+        UnityEngine.Object logContext = _coreInstance;
+
 #if UNITY_EDITOR
+        // Only do link injection and context fetching in-editor (expensive, and useless outside of editor)
+
         if (style == 1 || style == 2) {
-            if (res.Contains(".lua:")) {
+            if (res.Contains(".lua:", StringComparison.OrdinalIgnoreCase)) {
                 res = InjectAnchorLinkToLuaScript(res);
             }
         }
-#endif
 
-        UnityEngine.Object logContext = _coreInstance;
         if (gameObjectId >= 0) {
             var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
             if (obj is UnityEngine.Object unityObj) {
                 logContext = unityObj;
             }
         }
+#endif
 
         if (style == 1) {
             Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, logContext, res);
