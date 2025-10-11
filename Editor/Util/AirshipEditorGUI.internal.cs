@@ -24,36 +24,24 @@ public static class AirshipGUI {
 }
 
 public static partial class AirshipEditorGUI {
-    private static float DoNumberField(GUIContent label, SerializedProperty value, SerializedProperty modified, float? min, float? max, (float Min, float Max)? range) {
-        float.TryParse(value.stringValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var currentValue);
-        float newValue;
-        
-        if (range.HasValue) {
-            var (rangeMin, rangeMax) = range.Value;
-            newValue = EditorGUILayout.Slider(label, currentValue, rangeMin, rangeMax);
-        } else {
-            newValue = EditorGUILayout.FloatField(label, currentValue);
+    private static bool DoValidateProperty(Rect? rect, AirshipSerializedValue property, AirshipSerializedValue.PropertyType expectedType) {
+        if (property.type != expectedType) {
+            if (rect.GetCustomRect(out var position)) {
+                EditorGUI.HelpBox(position, $"Expected {expectedType} got {property.type}", MessageType.Error);
+            } else {
+                EditorGUILayout.HelpBox($"Expected {expectedType} got {property.type}", MessageType.Error);
+            }
+            
+            GUIUtility.ExitGUI();
+            return false;
         }
         
-        if (min.HasValue)
-        {
-            newValue = Math.Max(Convert.ToSingle(min, CultureInfo.InvariantCulture), newValue);
-        }
-        if (max.HasValue)
-        {
-            newValue = Math.Min(Convert.ToSingle(max, CultureInfo.InvariantCulture), newValue);
-        }
-        
-        // ReSharper disable once CompareOfFloatsByEqualityOperator
-        if (newValue != currentValue) {
-            value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
-            modified.boolValue = true;
-        }
-
-        return newValue;
+        return true;
     }
 
     private static int DoMaskField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.FlagEnum);
+        
         int currentValue = property.intValue;
 
         int nextValue;
@@ -106,12 +94,6 @@ public static partial class AirshipEditorGUI {
         }
                 
         var binding = rect.HasValue ? AirshipScriptGUI.AirshipBehaviourField(rect.Value, label, script, currentValue) : AirshipScriptGUI.AirshipBehaviourField(label, script, currentValue);
-                
-        // if (binding != null && target is AirshipComponent parentBinding && binding == parentBinding) {
-        //     EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
-        //         "OK");
-        //     return;
-        // }
 
         if (propertyValidator != null && !propertyValidator(binding, property)) {
             return binding;
@@ -139,7 +121,7 @@ public static partial class AirshipEditorGUI {
             float max = Convert.ToSingle(rangeProps[1].value, CultureInfo.InvariantCulture);
 
             if (rect.GetCustomRect(out var position)) {
-                nextValue = EditorGUI.Slider(position,  label, prevValue, min, max);
+                nextValue = EditorGUI.Slider(position, label, prevValue, min, max);
             } else {
                 nextValue = EditorGUILayout.Slider(label, prevValue, min, max);
             }
@@ -267,40 +249,43 @@ public static partial class AirshipEditorGUI {
         var typescriptEnum = property.enumType;
         if (typescriptEnum == null) return -1;
 
-        if (typescriptEnum.memberType == TypeScriptEnumMemberType.Integer) {
-            int prevValue = property.enumValue.IntValue;
-            int nextValue;
+        switch (typescriptEnum.memberType) {
+            case TypeScriptEnumMemberType.Integer: {
+                int prevValue = property.enumValue.IntValue;
+                int nextValue;
             
-            if (rect.GetCustomRect(out var position)) {
-                nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(v)).ToArray());
-            } else {
-                nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
+                if (rect.GetCustomRect(out var position)) {
+                    nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keysNicified.Select(v => new GUIContent(v)).ToArray());
+                } else {
+                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
+                }
+            
+                if (prevValue != nextValue) {
+                    property.enumValue = typescriptEnum.members[nextValue];
+                    property.serializedModified.boolValue = true;
+                }
+            
+                return nextValue;
             }
+            case TypeScriptEnumMemberType.String: {
+                int prevValue = typescriptEnum.IndexOf(property.enumValue.StringValue);
+                int nextValue;
             
-            if (prevValue != nextValue) {
-                property.enumValue = typescriptEnum.members[nextValue];
-                property.serializedModified.boolValue = true;
+                if (rect.GetCustomRect(out var position)) {
+                    nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keysNicified.Select(v => new GUIContent(v)).ToArray());
+                } else {
+                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
+                }
+            
+                if (prevValue != nextValue) {
+                    property.enumValue = typescriptEnum.members[nextValue];
+                    property.serializedModified.boolValue = true;
+                }
+            
+                return nextValue;
             }
-            
-            return nextValue;
-        } else if (typescriptEnum.memberType == TypeScriptEnumMemberType.String) {
-            int prevValue = typescriptEnum.IndexOf(property.enumValue.StringValue);
-            int nextValue;
-            
-            if (rect.GetCustomRect(out var position)) {
-                nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(v)).ToArray());
-            } else {
-                nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
-            }
-            
-            if (prevValue != nextValue) {
-                property.enumValue = typescriptEnum.members[nextValue];
-                property.serializedModified.boolValue = true;
-            }
-            
-            return nextValue;
+            default:
+                return -1;
         }
-
-        return -1;
     }
 }

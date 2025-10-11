@@ -58,7 +58,15 @@ public abstract class AirshipSerializedValue {
     internal LuauMetadataProperty propertyMetadata { get; set; }
     
     public string name => serializedName.stringValue;
-    public bool isModified => serializedModified.boolValue;
+    public bool isModified {
+        get {
+            return serializedModified.boolValue;
+        }
+        internal set {
+            serializedModified.boolValue = value;
+        }
+    }
+    
     public bool isAirshipType => serializedType.stringValue == "AirshipBehaviour";
     public bool isEnum => serializedType.stringValue is "IntEnum" or "StringEnum" or "FlagEnum";
     public bool isObject => serializedType.stringValue == "object";
@@ -172,6 +180,18 @@ public abstract class AirshipSerializedValue {
         }
 
         parameters = null;
+        return false;
+    }
+
+    public bool HasDecorator(string targetDecoratorName) {
+        if (decorators == null) {
+            return false;
+        }
+        
+        foreach (var decorator in decorators) {
+            if (decorator.name == targetDecoratorName) return true;
+        }
+
         return false;
     }
 }

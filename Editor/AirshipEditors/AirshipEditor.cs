@@ -11,14 +11,32 @@ using UnityEngine;
 /// Base class to derive custom property drawers from.
 /// </summary>
 public abstract class AirshipEditor : ScriptableObject {
+    internal Dictionary<string, ArrayDisplayInfo> _lists = new();
+    internal Dictionary<string, bool> _foldouts = new();
+
+    internal class ArrayDisplayInfo {
+        public ReorderableList reorderableList;
+        public AirshipSerializedProperty property;
+
+        public float elementHeight {
+            get => reorderableList.elementHeight;
+            set => reorderableList.elementHeight = value;
+        }
+
+        internal bool IsArrayDataMismatched(SerializedObject serializedObject, SerializedProperty serializedArray) {
+            try {
+                return serializedArray.propertyPath != reorderableList.serializedProperty.propertyPath;
+            } catch (ObjectDisposedException exception) {
+                return true;
+            }
+        }
+        
+        public void DoLayoutList() => reorderableList.DoLayoutList();
+    }
+    
+    public AirshipSerializedObject serializedObject { get; internal set; }
     public object target { get; internal set; }
     public AirshipScript script { get; internal set; }
-
-    internal AirshipSerializedObject _serializedObject;
-    protected AirshipSerializedObject serializedObject => _serializedObject;
-
-    internal Dictionary<string, ReorderableList> _lists = new();
-    internal Dictionary<string, bool> _foldouts = new();
 
     private void MatchReferenceArraySize(SerializedProperty targetArray, SerializedProperty referenceArray) {
         int additionalElementsInRefArray = referenceArray.arraySize - targetArray.arraySize;
@@ -32,8 +50,30 @@ public abstract class AirshipEditor : ScriptableObject {
         }
     }
     
-    internal ReorderableList GetOrCreatePropertyList(AirshipSerializedProperty property) {
+    internal ArrayDisplayInfo GetOrCreateArrayList(AirshipSerializedProperty property) {
         var itemInfo = property.serializedItems;
+
+        if (!_lists.TryGetValue(property.name, out var displayInfo)) {
+            var list = new ReorderableList(
+                serializedObject.serializedObject, 
+                property.array, 
+                true, 
+                false, 
+                true, 
+                true
+            );
+
+            displayInfo = new ArrayDisplayInfo() {
+                reorderableList = list,
+                property = property,
+            };
+
+            _lists.Add(property.name, displayInfo);
+            BindReorderableListToProperty(list);
+        }
+        
+        displayInfo.reorderableList.serializedProperty = property.array;
+        
         void BindReorderableListToProperty(ReorderableList reorderableList) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
@@ -41,7 +81,7 @@ public abstract class AirshipEditor : ScriptableObject {
             
             reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
             reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
-                var element = property.array.GetItemAtIndex(index);
+                var element = property.array.GetElementAtIndex(index);
                 AirshipEditorGUI.PropertyField(rect, new GUIContent($"Element {index}"), element);
             };
             
@@ -70,34 +110,43 @@ public abstract class AirshipEditor : ScriptableObject {
             };
         }
         
-        if (!_lists.TryGetValue(property.name, out var list)) {
-            list = new ReorderableList(
-                serializedObject.serializedObject, 
-                property.serializedItems.FindPropertyRelative("serializedItems"), 
-                true, 
-                false, 
-                true, 
-                true
-                );
-            
-            BindReorderableListToProperty(list);
-        }
-        
-        return list;
+        return displayInfo;
     }
     
-    protected void DrawDefault() {
-        foreach (var property in _serializedObject.GetProperties()) {
+    protected void DrawProperties() {
+        // Draw each property
+        foreach (var property in serializedObject.GetProperties()) {
+            if (property.HasDecorator("HideInInspector")) continue;
+            
+            if (property.TryGetDecorator("Header", out var headerParams)) {
+                EditorGUILayout.Space();
+                var guiStyle = EditorStyles.boldLabel;
+                guiStyle.richText = true;
+                var title = headerParams[0].value as string;
+                EditorGUILayout.LabelField(title, guiStyle);
+            }
+
+            if (property.TryGetDecorator("Spacing", out var spacingParams)) {
+                if (spacingParams.Count == 0) {
+                    EditorGUILayout.Space();
+                }
+                else {
+                    EditorGUILayout.Space(Convert.ToSingle(spacingParams[0].value));
+                }
+            }
+        
             AirshipEditorGUI.PropertyField(new GUIContent(ObjectNames.NicifyVariableName(property.name)), property);
+        
         }
     }
 
-    private void OnEnable() {
-        
+    internal void OnEnable() {}
+
+    internal void OnDisable() {
+        this._lists.Clear();
     }
 
-    private void OnDisable() {
-        this._lists.Clear();
+    private void OnDestroy() {
         this._foldouts.Clear();
     }
 
@@ -106,6 +155,6 @@ public abstract class AirshipEditor : ScriptableObject {
     }
     
     public virtual void OnInspectorGUI() {
-        this.DrawDefault();
+        this.DrawProperties();
     }
 }

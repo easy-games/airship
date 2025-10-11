@@ -1,25 +1,38 @@
 ﻿using System.Collections.Generic;
 using Luau;
 using UnityEditor;
+using UnityEditorInternal;
+using UnityEngine;
+
+public class AirshipReorderableArrayList : ReorderableList {
+    public AirshipReorderableArrayList(
+        AirshipSerializedObject serializedObject, 
+        AirshipSerializedProperty.AirshipArray property,
+        bool draggable = true,
+        bool displayHeader = false,
+        bool displayAddButton = true,
+        bool displayRemoveButton = true
+        ): base(
+        serializedObject, 
+        property, 
+        draggable, 
+        displayHeader, displayAddButton, displayRemoveButton) {}
+}
 
 public class AirshipSerializedObject {
-    internal SerializedObject serializedObject;
-    internal SerializedProperty serializedMetadata;
-    internal SerializedProperty serializedName;
-    internal SerializedProperty serializedProperties;
-    internal LuauMetadata metadata;
-    internal AirshipEditor editor;
-    
-    internal void UpdateObject(AirshipEditor editor, SerializedObject @object, LuauMetadata metadata) {
-        this.serializedObject = @object;
-        this.editor = editor;
-        this.metadata = metadata;
-        this.serializedMetadata = @object.FindProperty("metadata");
-        this.serializedName = @object.FindProperty("name");
-        this.serializedProperties = this.serializedMetadata.FindPropertyRelative("properties");
-    }
-
     internal Dictionary<string, AirshipSerializedProperty> _propertyCache = new();
+    internal SerializedObject serializedObject;
+    internal SerializedProperty serializedMetadata => serializedObject.FindProperty("metadata");
+    internal SerializedProperty serializedProperties => serializedMetadata.FindPropertyRelative("properties");
+    internal SerializedProperty serializedName => serializedObject.FindProperty("name");
+    internal LuauMetadata metadata { get; private set; }
+    internal AirshipEditor editor { get; private set; }
+
+    internal void Update(AirshipEditor currentEditor, SerializedObject currentSerializedObject, LuauMetadata currentMetadata) {
+        serializedObject = currentSerializedObject;
+        editor = currentEditor;
+        metadata = currentMetadata;
+    }
     
     /// <summary>
     /// Finds the airship property with the given name
@@ -27,26 +40,49 @@ public class AirshipSerializedObject {
     /// <param name="targetPropertyName">The name of the property (should match the variable in TypeScript)</param>
     /// <returns>The AirshipProperty, if it exists</returns>
     public AirshipSerializedProperty FindAirshipProperty(string targetPropertyName) {
+        // if (_propertyCache.TryGetValue(targetPropertyName, out var cachedProperty)) {
+        //     return cachedProperty;
+        // }
+        
         for (var i = 0; i < serializedProperties.arraySize; i++) {
             var property = serializedProperties.GetArrayElementAtIndex(i);
             var propertyName = property.FindPropertyRelative("name").stringValue;
             if (propertyName == targetPropertyName) {
                 var propertyMetadata = metadata.FindProperty(targetPropertyName);
-                return new AirshipSerializedProperty(property, propertyMetadata, this.editor);
+               
+                var airshipProperty = new AirshipSerializedProperty(property, propertyMetadata, this.editor);
+                // _propertyCache.Add(targetPropertyName, airshipProperty);
+                return airshipProperty;
             }
         }
         
         return default;
     }
     
-    public AirshipSerializedProperty[] GetProperties() {
-        var properties = new AirshipSerializedProperty[serializedProperties.arraySize];
-        
-        for (var i = 0; i < serializedProperties.arraySize; i++) {
+    public IReadOnlyList<AirshipSerializedProperty> GetProperties() {
+        var propertyList = new List<AirshipSerializedProperty>();
+        var indexDictionary = new Dictionary<string, int>();
+
+        for (var i = 0; i < this.serializedProperties.arraySize; i++) {
             var property = serializedProperties.GetArrayElementAtIndex(i);
-            properties[i] = new AirshipSerializedProperty(property, metadata.properties[i], this.editor);
+            var propertyName = property.FindPropertyRelative("name").stringValue;
+            
+            var bindingPropertyIndex = metadata.properties.FindIndex(p => p.name == propertyName);
+            if (bindingPropertyIndex == -1) continue;
+            var bindingProperty = metadata.properties[bindingPropertyIndex];
+            
+            propertyList.Add(new AirshipSerializedProperty(property, bindingProperty, editor));
+            indexDictionary.Add(bindingProperty.name, bindingPropertyIndex);
         }
+
+        propertyList.Sort((p1, p2) => {
+            return indexDictionary[p1.name] > indexDictionary[p2.name] ? 1 : -1;
+        });
+        
+        return propertyList;
+    }
     
-        return properties;
+    public static implicit operator SerializedObject(AirshipSerializedObject value) {
+        return value.serializedObject;
     }
 }

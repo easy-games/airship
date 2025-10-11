@@ -18,14 +18,7 @@ public class DefaultAirshipComponentEditor : AirshipEditor {
         
         EditorGUILayout.Space(5);
     }
-
-    private void DrawProperties() {
-        // Draw each property
-        foreach (var property in serializedObject.GetProperties()) {
-            AirshipEditorGUI.PropertyField(new GUIContent(ObjectNames.NicifyVariableName(property.name)), property);
-        }
-    }
-
+    
     private void DrawInternalDebug() {
         if (Application.isPlaying) {
             var binding = (AirshipComponent)target;

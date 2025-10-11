@@ -23,10 +23,41 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
             }
         }
 
-        public AirshipArrayItem GetItemAtIndex(int index) {
+        public AirshipArrayItem PushElement() {
+            int index = this.serializedItems.arraySize;
+            this.serializedItems.InsertArrayElementAtIndex(index);
+            this.serializedObjects.InsertArrayElementAtIndex(index);
+            return GetElementAtIndex(index);
+        }
+        
+        public AirshipArrayItem GetElementAtIndex(int index) {
             var value = this.serializedItems.GetArrayElementAtIndex(index);
             var obj = this.serializedObjects.GetArrayElementAtIndex(index);
             return new AirshipArrayItem(property, index, value, obj);
+        }
+
+        public void PopElement() {
+            var last = this.serializedItems.arraySize - 1;
+            this.serializedItems.DeleteArrayElementAtIndex(last);
+            this.serializedObjects.DeleteArrayElementAtIndex(last);
+        }
+
+        public void MoveArrayElement(int srcIndex, int dstIndex) {
+            this.serializedItems.MoveArrayElement(srcIndex, dstIndex);
+            this.serializedObjects.MoveArrayElement(srcIndex, dstIndex);
+        }
+
+        public void Resize(int newSize) {
+            this.serializedItems.arraySize = newSize;
+            this.serializedObjects.arraySize = newSize;
+        }
+
+        public static implicit operator SerializedProperty(AirshipArray array) {
+            if (array.elementType is PropertyType.Object or PropertyType.AirshipBehaviour) {
+                return array.serializedObjects;
+            } else {
+                return array.serializedItems;
+            }
         }
     }
     
@@ -48,50 +79,67 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         }
     }
     
+    internal SerializedProperty serializedProperty;
     internal SerializedProperty serializedItems { get; set; }
     internal LuauMetadataProperty propertyMetadata { get; set; }
-    internal AirshipEditor editor { get; }
+    internal AirshipEditor editor { get; private set; }
 
     public bool isArray => serializedType.stringValue == "Array";
 
     public int arraySize {
         get {
-            if (isArray) {
-                return serializedItems.FindPropertyRelative("serializedItems").arraySize;
-            } else {
-                return 0;
-            }
+            return serializedItems.FindPropertyRelative("serializedItems").arraySize;
         }
     }
 
     public AirshipArray array {
         get {
-            if (isArray) return new AirshipArray(
+            UpdateProperty();
+            return new AirshipArray(
                 this, 
                 serializedItems.FindPropertyRelative("serializedItems"), 
                 serializedItems.FindPropertyRelative("objectRefs"));
-
-            return null;
         }
     }
     
     public AirshipSerializedProperty(SerializedProperty property, LuauMetadataProperty metadata, AirshipEditor editor) {
-        serializedName = property.FindPropertyRelative("name");
-        
-        serializedType = property.FindPropertyRelative("type");
-        serializedValue = property.FindPropertyRelative("serializedValue");
-        serializedModified = property.FindPropertyRelative("modified");
-        
-        serializedObjectType = property.FindPropertyRelative("objectType");
-        serializedObjectValue = property.FindPropertyRelative("serializedObject");
-        
-        serializedItems = property.FindPropertyRelative("items");
-        
-        serializedRef = property.FindPropertyRelative("refPath");
-        serializedFileRef = property.FindPropertyRelative("fileRef");
-
+        serializedProperty = property;
+        UpdateProperty();
         propertyMetadata = metadata;
         decorators = metadata.GetDecorators();
         this.editor = editor;
+    }
+    
+    internal void UpdateProperty() {
+        serializedName = serializedProperty.FindPropertyRelative("name");
+        
+        serializedType = serializedProperty.FindPropertyRelative("type");
+        serializedValue = serializedProperty.FindPropertyRelative("serializedValue");
+        serializedModified = serializedProperty.FindPropertyRelative("modified");
+        
+        serializedObjectType = serializedProperty.FindPropertyRelative("objectType");
+        serializedObjectValue = serializedProperty.FindPropertyRelative("serializedObject");
+        
+        serializedItems = serializedProperty.FindPropertyRelative("items");
+        
+        serializedRef = serializedProperty.FindPropertyRelative("refPath");
+        serializedFileRef = serializedProperty.FindPropertyRelative("fileRef");
+    }
+
+    internal void ResetToDefault() {
+        var defaultValue = propertyMetadata.defaultValue;
+
+        if (isArray) {
+            return;
+        }
+        
+        if (isObject) {
+            serializedObjectValue.objectReferenceValue = null;
+            return;
+        }
+        
+        if (defaultValue == null) return;
+        serializedValue.stringValue =
+            LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, propertyType);
     }
 }

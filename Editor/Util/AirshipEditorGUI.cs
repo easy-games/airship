@@ -231,12 +231,29 @@ public static partial class AirshipEditorGUI {
         if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
             property.editor._foldouts.Add(property.name, false);
         }
+
+        var rect2 = EditorGUILayout.GetControlRect(false, EditorStyles.foldoutHeader.fixedHeight);
         
-        enabled = EditorGUILayout.BeginFoldoutHeaderGroup(enabled, content, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
+        enabled = EditorGUI.BeginFoldoutHeaderGroup(new Rect(rect2) {width = rect2.width - 40}, enabled, content, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
         property.editor._foldouts[property.name] = enabled;
         
+        var rect = GUILayoutUtility.GetLastRect();
+
+        var lastSize = property.arraySize;
+        
+        GUI.SetNextControlName("arrayResize");
+        var size = EditorGUI.IntField(
+            new Rect(rect) { width = 30, x = rect.width - 15 }, 
+            lastSize, 
+            new GUIStyle(EditorStyles.numberField) { alignment = TextAnchor.MiddleCenter}
+            );
+
+        if (size != lastSize && size >= 0) {
+            property.array.Resize(size);
+        }
+        
         if (enabled) {
-            var editor = property.editor.GetOrCreatePropertyList(property);
+            var reorderableList = property.editor.GetOrCreateArrayList(property);
             var prevElementHeight = AirshipGUI.arrayItemHeight;
 
             if (property.arraySize > 0) {
@@ -265,19 +282,19 @@ public static partial class AirshipEditorGUI {
                             style.fixedHeight = maxHeight;
                         }
 
-                        if (useTextArea) editor.elementHeight = style.lineHeight * textAreaMaxLines;
-                        if (displayTextAreaHorizontal == false) editor.elementHeight += EditorGUIUtility.singleLineHeight;
+                        if (useTextArea) reorderableList.elementHeight = style.lineHeight * textAreaMaxLines;
+                        if (displayTextAreaHorizontal == false) reorderableList.elementHeight += EditorGUIUtility.singleLineHeight;
                         break;
                 }
             }
             
-            editor.DoLayoutList();
+            reorderableList.DoLayoutList();
             AirshipGUI.arrayItemHeight = prevElementHeight;
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
         return enabled;
     }
-
+    
     /// <summary>
     /// Draws the given airship property value
     /// </summary>

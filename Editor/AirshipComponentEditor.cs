@@ -50,6 +50,15 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var listPropType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(arrayType, false);
             GetOrCreateArrayDisplayInfo(comp.GetInstanceID(), serializedProperty, serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
         }
+        
+        AirshipComponent binding = (AirshipComponent)target;
+        if (binding.script != null && binding.metadata != null) {
+            var customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+            
+            if (customEditorType != null && AirshipCustomEditors.TryGetEditor(binding, customEditorType, out var editor)) {
+                editor.OnEnable();
+            }
+        }
     }
 
     private void OnDisable() {
@@ -58,6 +67,23 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         var componentInstanceId = comp.GetInstanceID();
         _componentSeenArrayProps.Remove(componentInstanceId);
+        
+        AirshipComponent binding = (AirshipComponent)target;
+        if (binding.script != null && binding.metadata != null) {
+            var customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+            
+            if (customEditorType != null) {
+                var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
+                editor.OnDisable();
+            }
+        }
+    }
+
+    private void OnDestroy() {
+        AirshipComponent binding = (AirshipComponent)target;
+        if (binding.script != null && binding.metadata != null && !binding) {
+            AirshipCustomEditors.DestroyEditor(binding.GetInstanceID());
+        }
     }
 
     private bool debugging = false;
@@ -75,7 +101,15 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
 
         if (!Application.isPlaying) {
-            var customEditorType = binding.script != null ? AirshipCustomEditors.GetEditorForFilePath(binding.script.assetPath) : null;
+            // var customEditorType = binding.script != null ? 
+            //     AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name) ?? 
+            //     AirshipCustomEditors.GetEditorForFilePath(binding.script.assetPath) : null;
+
+            Type customEditorType = null;
+            if (binding.script != null && binding.metadata != null) {
+                customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+            }
+            
             if (customEditorType != null && binding.script != null) {
                 var metadata = serializedObject.FindProperty("metadata");
                 var metadataName = metadata.FindPropertyRelative("name");
