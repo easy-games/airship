@@ -192,18 +192,18 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         if (style == 1) {
-            Debug.LogWarning(res, logContext);
+            Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, logContext, res);
         } else if (style == 2) {
             // The STANDALONE here is just a test:
 #if UNITY_STANDALONE && !UNITY_EDITOR
             Debug.LogWarning("[ERROR] " + res, logContext);
 #else
-            Debug.LogError(res, logContext);
+            Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, logContext, res);
 #endif
-            //If it's an error, the thread is suspended 
+            //If it's an error, the thread is suspended
             ThreadDataManager.Error(thread);
         } else {
-            Debug.Log(res, logContext);
+            Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, logContext, res);
         }
     }
     
