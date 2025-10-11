@@ -196,7 +196,7 @@ public partial class LuauCore : MonoBehaviour {
         } else if (style == 2) {
             // The STANDALONE here is just a test:
 #if UNITY_STANDALONE && !UNITY_EDITOR
-            Debug.LogWarning("[ERROR] " + res, logContext);
+            Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, logContext, "[ERROR] " + res);
 #else
             Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, logContext, res);
 #endif
