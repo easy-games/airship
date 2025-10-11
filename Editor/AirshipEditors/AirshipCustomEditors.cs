@@ -49,6 +49,12 @@ public static class AirshipCustomEditors {
         }
         
         RegisterEditorsForRegisteredTypes();
+
+        EditorApplication.playModeStateChanged += change => {
+            if (change == PlayModeStateChange.ExitingEditMode || change == PlayModeStateChange.EnteredPlayMode) {
+                RegisterEditorsForRegisteredTypes();
+            }
+        };
     }
     
     public static Type GetEditorForTypeName(string typeName) {

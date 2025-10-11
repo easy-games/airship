@@ -39,6 +39,37 @@ public static partial class AirshipEditorGUI {
         return true;
     }
 
+    private static void DoPropertyEvents(Rect? rect, AirshipSerializedValue property) {
+        Rect position;
+        if (!rect.GetCustomRect(out position)) position = GUILayoutUtility.GetLastRect();
+
+        var currentEvent = Event.current;
+
+        switch (currentEvent.type) {
+            case EventType.MouseDown: {
+                if (position.Contains(currentEvent.mousePosition) && currentEvent.button == 1 && property is AirshipSerializedProperty serializedProperty) {
+                    GenericMenu menu = new GenericMenu();
+                    
+                    if (serializedProperty.isModified) {
+                        
+                        menu.AddItem(new GUIContent("Reset to Default"), false, () => {
+                            serializedProperty.ResetToDefault();
+                            serializedProperty.isModified = false;
+
+                            if (serializedProperty.editor.target is AirshipComponent component) {
+                                EditorUtility.SetDirty(component);
+                            }
+                        });
+                    }
+                    
+                    menu.ShowAsContext();
+                }
+
+                break;
+            }
+        }
+    }
+
     private static int DoMaskField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
         DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.FlagEnum);
         
@@ -56,6 +87,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
 
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
     
@@ -74,6 +106,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
 
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
 
@@ -104,6 +137,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
 
+        DoPropertyEvents(rect, property);
         return binding;
     }
 
@@ -149,6 +183,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
         
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
 
@@ -172,6 +207,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
         
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
 
@@ -242,6 +278,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
 
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
 
@@ -257,7 +294,7 @@ public static partial class AirshipEditorGUI {
                 if (rect.GetCustomRect(out var position)) {
                     nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keysNicified.Select(v => new GUIContent(v)).ToArray());
                 } else {
-                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
+                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keysNicified);
                 }
             
                 if (prevValue != nextValue) {
@@ -265,6 +302,7 @@ public static partial class AirshipEditorGUI {
                     property.serializedModified.boolValue = true;
                 }
             
+                DoPropertyEvents(rect, property);
                 return nextValue;
             }
             case TypeScriptEnumMemberType.String: {
@@ -274,7 +312,7 @@ public static partial class AirshipEditorGUI {
                 if (rect.GetCustomRect(out var position)) {
                     nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keysNicified.Select(v => new GUIContent(v)).ToArray());
                 } else {
-                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys);
+                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keysNicified);
                 }
             
                 if (prevValue != nextValue) {
@@ -282,6 +320,7 @@ public static partial class AirshipEditorGUI {
                     property.serializedModified.boolValue = true;
                 }
             
+                DoPropertyEvents(rect, property);
                 return nextValue;
             }
             default:

@@ -1,11 +1,21 @@
-﻿using Luau;
+﻿using System;
+using JetBrains.Annotations;
+using Luau;
 using UnityEditor;
+using Object = UnityEngine.Object;
 
 public class AirshipSerializedProperty : AirshipSerializedValue {
     public class AirshipArray {
         public AirshipSerializedProperty property { get; }
         public PropertyType elementType =>
             GetTypeFromTypeString(property.serializedItems.FindPropertyRelative("type").stringValue);
+
+        public string elementObjectTypeString => property.serializedItems.FindPropertyRelative("objectType").stringValue;
+        
+        [CanBeNull]
+        public Type elementObjectType => TypeReflection.GetTypeFromString(property.serializedItems.FindPropertyRelative("objectType").stringValue);
+        [CanBeNull]
+        public AirshipType elementAirshipType => AirshipBuildInfo.Instance.GetTypeByName(property.serializedItems.FindPropertyRelative("objectType").stringValue);
         
         private readonly SerializedProperty serializedItems;
         private readonly SerializedProperty serializedObjects;
@@ -30,6 +40,20 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
             return GetElementAtIndex(index);
         }
         
+        public AirshipArrayItem PushElement(Object obj) {
+            if (this.elementType == PropertyType.Object) {
+                var element = PushElement();
+                element.objectReferenceValue = obj;
+                return element;
+            } else if (this.elementType == PropertyType.AirshipBehaviour && obj is AirshipComponent component) {
+                var element = PushElement();
+                element.objectReferenceValue = component;
+                return element;
+            }
+
+            return null;
+        }
+        
         public AirshipArrayItem GetElementAtIndex(int index) {
             var value = this.serializedItems.GetArrayElementAtIndex(index);
             var obj = this.serializedObjects.GetArrayElementAtIndex(index);
@@ -40,6 +64,11 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
             var last = this.serializedItems.arraySize - 1;
             this.serializedItems.DeleteArrayElementAtIndex(last);
             this.serializedObjects.DeleteArrayElementAtIndex(last);
+        }
+
+        public void RemoveElementAtIndex(int index) {
+            this.serializedItems.DeleteArrayElementAtIndex(index);
+            this.serializedObjects.DeleteArrayElementAtIndex(index);
         }
 
         public void MoveArrayElement(int srcIndex, int dstIndex) {
@@ -127,19 +156,47 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
     }
 
     internal void ResetToDefault() {
-        var defaultValue = propertyMetadata.defaultValue;
+        // var defaultValue = propertyMetadata.defaultValue;
 
-        if (isArray) {
-            return;
-        }
-        
-        if (isObject) {
-            serializedObjectValue.objectReferenceValue = null;
-            return;
-        }
-        
-        if (defaultValue == null) return;
-        serializedValue.stringValue =
-            LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, propertyType);
+        propertyMetadata.SetDefaultAsValue();
+        propertyMetadata.modified = false;
+
+        // if (isArray) {
+        //     return;
+        // }
+        //
+        // if (isObject) {
+        //     serializedObjectValue.objectReferenceValue = null;
+        //     return;
+        // }
+        //
+        // if (defaultValue == null) {
+        //     switch (type) {
+        //         case PropertyType.Number:
+        //             numberValue = 0;
+        //             isModified = false;
+        //             break;
+        //         case PropertyType.String:
+        //             stringValue = "";
+        //             isModified = false;
+        //             break;
+        //         case PropertyType.Boolean:
+        //             boolValue = false;
+        //             isModified = false;
+        //             break;
+        //         case PropertyType.Enum when enumType != null:
+        //             enumValue = enumType.members[0];
+        //             isModified = false;
+        //             break;
+        //         case PropertyType.LayerMask:
+        //         case PropertyType.FlagEnum:
+        //             intValue = 0;
+        //             break;
+        //     }
+        //     return;
+        // }
+        //
+        // serializedValue.stringValue =
+        //     LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, propertyType);
     }
 }

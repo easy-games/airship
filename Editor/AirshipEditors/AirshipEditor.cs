@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Code.Luau;
+using Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
@@ -97,16 +98,17 @@ public abstract class AirshipEditor : ScriptableObject {
             
             reorderableList.onRemoveCallback = (ReorderableList list) => {
                 if (list.selectedIndices.Count == 1) {
-                    var deletedIndex = list.selectedIndices[0];
-                    list.Deselect(deletedIndex);
-                    objectRefs.DeleteArrayElementAtIndex(deletedIndex);
+                    var selected = list.selectedIndices[0];
+                    list.Deselect(selected);
+                    property.array.RemoveElementAtIndex(selected);
+                } else {
+                    property.array.PopElement();
                 }
-                
-                list.serializedProperty.DeleteArrayElementAtIndex(list.serializedProperty.arraySize - 1);
             };
             
             reorderableList.onAddCallback = (list) => {
-                list.serializedProperty.InsertArrayElementAtIndex(list.serializedProperty.arraySize);
+                // list.serializedProperty.InsertArrayElementAtIndex(list.serializedProperty.arraySize);
+                property.array.PushElement();
             };
         }
         
@@ -135,8 +137,10 @@ public abstract class AirshipEditor : ScriptableObject {
                 }
             }
         
+            //var prevBold = AirshipEditorInternals.GetBoldDefaultFont();
+            //AirshipEditorInternals.SetBoldDefaultFont(property.isModified);
             AirshipEditorGUI.PropertyField(new GUIContent(ObjectNames.NicifyVariableName(property.name)), property);
-        
+            // AirshipEditorInternals.SetBoldDefaultFont(prevBold);
         }
     }
 

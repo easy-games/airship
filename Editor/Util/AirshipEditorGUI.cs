@@ -187,7 +187,7 @@ public static partial class AirshipEditorGUI {
 
     public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
         var currentValue = property.objectReferenceValue;
-        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.ObjectSerializedType, true);
+        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.objectType, true);
         
         if (currentValue != nextValue) {
             property.serializedObjectValue.objectReferenceValue = nextValue;
@@ -201,7 +201,7 @@ public static partial class AirshipEditorGUI {
         if (!property.isObject) return null;
         
         var currentValue = property.serializedObjectValue.objectReferenceValue;
-        var nextValue = ObjectField(rect, label, currentValue, property.ObjectSerializedType, true);
+        var nextValue = ObjectField(rect, label, currentValue, property.objectType, true);
 
         if (currentValue != nextValue) {
             property.serializedObjectValue.objectReferenceValue = nextValue;
@@ -236,12 +236,92 @@ public static partial class AirshipEditorGUI {
         
         enabled = EditorGUI.BeginFoldoutHeaderGroup(new Rect(rect2) {width = rect2.width - 40}, enabled, content, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
         property.editor._foldouts[property.name] = enabled;
+
+        Event currentEvent = Event.current;
+        var headerRect = GUILayoutUtility.GetLastRect();
+        
+        switch (currentEvent.type) {
+            case EventType.DragUpdated or EventType.DragPerform
+                when property.array.elementType is AirshipSerializedValue.PropertyType.Object or AirshipSerializedValue.PropertyType.AirshipBehaviour: {
+                var refs = DragAndDrop.objectReferences;
+                
+                if (headerRect.Contains(currentEvent.mousePosition)) {
+                    var consume = false;
+
+                    foreach (var draggedObject in refs) {
+                        var objRef = draggedObject;
+                        
+                        if (property.array.elementType == AirshipSerializedValue.PropertyType.AirshipBehaviour) {
+                            var buildInfo = AirshipBuildInfo.Instance;
+                            var scriptPath = buildInfo.GetScriptPathByTypeName(property.array.elementObjectTypeString);
+
+                            switch (draggedObject) {
+                                case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
+                                    objRef = component;
+                                    consume = true;
+                                    break;
+                                case AirshipComponent:
+                                    continue;
+                                case GameObject go: {
+                                    var firstMatchingComponent = go.GetComponents<AirshipComponent>()
+                                        .FirstOrDefault(f => buildInfo.Inherits(f.script, scriptPath));
+                                    if (firstMatchingComponent != null) {
+                                        objRef = firstMatchingComponent;
+                                        consume = true;
+                                    }
+                                    break;
+                                }
+                                default:
+                                    objRef = null;
+                                    break;
+                            }
+
+                        } else if (property.array.elementType == AirshipSerializedValue.PropertyType.Object) {
+                            var objType = property.array.elementObjectType;
+                            if (objType == null) break;
+                            
+                            // If objType is not game object we need to parse the correct component
+                            var targetNotGameObject = objType != typeof(GameObject);
+                            if (targetNotGameObject && objRef is GameObject draggedGo && typeof(Component).IsAssignableFrom(objType)) {
+                                var comp = draggedGo.GetComponent(objType);
+                                if (!comp) {
+                                    consume = false;
+                                    break;
+                                }
+                                objRef = comp;
+                                consume = true;
+                            } else if (objRef.GetType().IsAssignableFrom(objType)) {
+                                consume = true;
+                            } else if (objRef is GameObject && objType == typeof(GameObject)) {
+                                consume = true;
+                            }
+
+                            if (!objType.IsInstanceOfType(objRef)) {
+                                break;
+                            }
+                        }
+                        
+                        if (objRef != null && consume && currentEvent.type == EventType.DragPerform) {
+                            property.array.PushElement(objRef);
+                        }
+                    }
+
+                    if (consume) {
+                        DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+
+
+                        
+                        currentEvent.Use();
+                    }
+                }
+                break;
+            }
+        }
         
         var rect = GUILayoutUtility.GetLastRect();
 
         var lastSize = property.arraySize;
         
-        GUI.SetNextControlName("arrayResize");
         var size = EditorGUI.IntField(
             new Rect(rect) { width = 30, x = rect.width - 15 }, 
             lastSize, 

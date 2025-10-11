@@ -100,41 +100,42 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
         }
 
-        if (!Application.isPlaying) {
-            // var customEditorType = binding.script != null ? 
-            //     AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name) ?? 
-            //     AirshipCustomEditors.GetEditorForFilePath(binding.script.assetPath) : null;
 
-            Type customEditorType = null;
-            if (binding.script != null && binding.metadata != null) {
-                customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+        Type customEditorType = null;
+        if (binding.script != null && binding.metadata != null) {
+            customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+        }
+        
+        if (customEditorType != null && binding.script != null) {
+            var metadata = serializedObject.FindProperty("metadata");
+            var metadataName = metadata.FindPropertyRelative("name");
+            
+            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
+                var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
+                editor.script = binding.script;
+                editor.target = binding;
+                editor.OnInspectorGUI();
+            }
+
+            if (binding.script != null && binding.script.m_metadata != null) {
+                if (ShouldReconcile(binding)) {
+                    binding.ReconcileMetadata(ReconcileSource.Inspector);
+                    serializedObject.ApplyModifiedProperties();
+                    serializedObject.Update();
+                }
+            
+                CheckDefaults(binding);
             }
             
-            if (customEditorType != null && binding.script != null) {
-                var metadata = serializedObject.FindProperty("metadata");
-                var metadataName = metadata.FindPropertyRelative("name");
-
-                if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                    var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
-                    editor.script = binding.script;
-                    editor.target = binding;
-                    editor.OnInspectorGUI();
-                }
-
-                if (binding.script != null && binding.script.m_metadata != null) {
-                    if (ShouldReconcile(binding)) {
-                        binding.ReconcileMetadata(ReconcileSource.Inspector);
-                        serializedObject.ApplyModifiedProperties();
-                        serializedObject.Update();
-                    }
-                
-                    CheckDefaults(binding);
-                }
-                
-                serializedObject.ApplyModifiedProperties();
-                return;
+            serializedObject.ApplyModifiedProperties();
+            
+            if (Application.isPlaying) {
+                var component = (AirshipComponent)target;
+                component.WriteChangedComponentProperties();
             }
+            return;
         }
+        
 
         DrawScriptBindingProperties(binding);
 
@@ -205,8 +206,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     }
     
     private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(int componentInstanceId, SerializedProperty arraySerializedProperty, string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
-        
-        
         Type objType = null;
         if (listType == AirshipComponentPropertyType.AirshipObject || listType == AirshipComponentPropertyType.AirshipComponent) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);

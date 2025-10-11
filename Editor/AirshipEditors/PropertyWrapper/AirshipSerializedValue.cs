@@ -73,7 +73,7 @@ public abstract class AirshipSerializedValue {
     public PropertyType type => GetTypeFromTypeString(serializedType.stringValue);
     public string typeString => serializedType.stringValue;
     [CanBeNull]
-    public Type ObjectSerializedType => isObject ? TypeReflection.GetTypeFromString(serializedObjectType.stringValue) : null;
+    public Type objectType => isObject ? TypeReflection.GetTypeFromString(serializedObjectType.stringValue) : null;
     
     [CanBeNull]
     public AirshipType airshipType => isAirshipType ? AirshipBuildInfo.Instance.GetTypeByName(serializedObjectType.stringValue) : null;
