@@ -71,6 +71,11 @@ namespace Editor.Accessories.Clothing {
 
         public async Task BuildAllPlatforms() {
             var st = Stopwatch.StartNew();
+
+            if (!AirshipPackagesWindow.VerifyBuildModules(true)) {
+                return;
+            }
+
             bool success = true;
 
             List<AirshipPlatform> platforms = new();
@@ -279,6 +284,7 @@ namespace Editor.Accessories.Clothing {
         /// <returns>Path to built bundle. Empty string if it failed.</returns>
         private async Task<string> BuildPlatform(AirshipPlatform platform, string airId) {
             var st = Stopwatch.StartNew();
+
             var manifest = (PlatformGearBundleManifest)this.target;
 
             var buildOutputFolder = "bundles/gear/";
@@ -340,7 +346,7 @@ namespace Editor.Accessories.Clothing {
                 CreateAssetBundles.buildingBundles = false;
                 AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
                 if (returnCode != ReturnCode.Success) {
-                    Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
+                    Debug.LogError("Failed to build asset bundles. ReturnCode: " + returnCode);
                     return null;
                 }
                 Debug.Log($"Finished building {platform} in {st.Elapsed.TotalSeconds} seconds.");
