@@ -764,7 +764,6 @@ public partial class LuauCore : MonoBehaviour {
             ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, propertyNameAtom);
         } catch (Exception e) {
             ret = LuauError(thread, $"{e.GetType()}: {e.Message}");
-            Debug.LogError(e);
         }
 
         return ret;
