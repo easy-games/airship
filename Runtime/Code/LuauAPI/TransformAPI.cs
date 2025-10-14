@@ -226,9 +226,10 @@ public class TransformAPI : BaseLuaAPIClass {
         return -1;
     }
 
-    private void GetAllChildren(ref List<Transform> children, Transform transform){
+    private void GetAllChildren(ref List<Transform> children, Transform transform) {
         children.Add(transform);
-        foreach(Transform child in transform){
+        for (var i = 0; i < transform.childCount; i++) {
+            var child = transform.GetChild(i);
             GetAllChildren(ref children, child);
         }
     }
