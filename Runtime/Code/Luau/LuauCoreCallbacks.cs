@@ -1071,8 +1071,7 @@ public partial class LuauCore : MonoBehaviour {
     /// </summary>
     /// <returns>True if successful, otherwise false if nothing was written.</returns>
     private static bool FastGetAndWriteValueProperty(IntPtr thread, object objectReference, PropertyGetReflectionCache cacheData) {
-        var propType = cacheData.propertyInfo.PropertyType;
-        if (propType.IsByRef) propType = propType.GetElementType();
+        var propType = cacheData.propertyType;
         
         if (IsOfType(propType, boolType)) {
             var boolValue = GetValue<bool>(objectReference, cacheData);
@@ -1817,9 +1816,10 @@ public partial class LuauCore : MonoBehaviour {
     private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo) {
         PropertyGetReflectionCache cacheData;
         if (propertyInfo != null) {
+            var propType = propertyInfo.PropertyType;
             cacheData = new PropertyGetReflectionCache {
                 objectType = objectType,
-                propertyType = propertyInfo.PropertyType,
+                propertyType = propType.IsByRef ? propType.GetElementType() : propType,
                 propertyInfo = propertyInfo,
                 IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
                     .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
