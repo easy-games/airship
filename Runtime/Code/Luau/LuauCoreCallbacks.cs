@@ -65,8 +65,9 @@ public partial class LuauCore : MonoBehaviour {
         /// </summary>
         public bool Exists;
         
-        public Type t;
-        [FormerlySerializedAs("pi")] public PropertyInfo propertyInfo;
+        public Type propertyType;
+        public Type objectType;
+        public PropertyInfo propertyInfo;
         public Delegate GetProperty;
         public bool HasGetPropertyFunc;
         public bool IsNativeClass;
@@ -729,7 +730,7 @@ public partial class LuauCore : MonoBehaviour {
             
                 cacheData.HasGetPropertyFunc = true;
                 cacheData.GetProperty = getter;
-                LuauCore.propertyGetCache[new PropertyCacheKey(instance.GetType(), cacheData.propertyInfo.Name)] = cacheData;
+                LuauCore.propertyGetCache[new PropertyCacheKey(cacheData.objectType, cacheData.propertyInfo.Name)] = cacheData;
             }
         }
             
@@ -763,6 +764,7 @@ public partial class LuauCore : MonoBehaviour {
             ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, propertyNameAtom);
         } catch (Exception e) {
             ret = LuauError(thread, $"{e.GetType()}: {e.Message}");
+            Debug.LogError(e);
         }
 
         return ret;
@@ -810,9 +812,14 @@ public partial class LuauCore : MonoBehaviour {
                 if (!ReflectionList.IsMemberAllowed(classType, cacheData.Value.propertyInfo, context)) {
                     return LuauError(thread, $"[Airship] Access denied when trying to read {staticClassName}.{propName}.");
                 }
+
+                // Fast, non-alloc write
+                if (FastGetAndWriteValueProperty(thread, null, cacheData.Value)) {
+                    return 1;
+                }
                 
                 System.Object value = cacheData.Value.propertyInfo.GetValue(null);
-                WritePropertyToThread(thread, value, cacheData.Value.t);
+                WritePropertyToThread(thread, value, cacheData.Value.propertyType);
                 return 1;
             }
 
@@ -888,7 +895,7 @@ public partial class LuauCore : MonoBehaviour {
             }
 
             if (cacheData.Value.Exists) {
-                var propertyType = cacheData.Value.t;
+                var propertyType = cacheData.Value.propertyType;
                 if (!ReflectionList.IsMemberAllowed(sourceType, cacheData.Value.propertyInfo, context)) {
                     return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
                 }
@@ -1801,7 +1808,8 @@ public partial class LuauCore : MonoBehaviour {
         PropertyGetReflectionCache cacheData;
         if (propertyInfo != null) {
             cacheData = new PropertyGetReflectionCache {
-                t = propertyInfo.PropertyType,
+                objectType = objectType,
+                propertyType = propertyInfo.PropertyType,
                 propertyInfo = propertyInfo,
                 IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
                     .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
