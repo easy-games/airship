@@ -72,10 +72,9 @@ namespace Editor.Accessories.Clothing {
         public async Task BuildAllPlatforms() {
             var st = Stopwatch.StartNew();
 
-            // Disabled because we are building only windows bundle now.
-            // if (!AirshipPackagesWindow.VerifyBuildModules(true)) {
-            //     return;
-            // }
+            if (!AirshipPackagesWindow.VerifyBuildModules(true)) {
+                return;
+            }
 
             bool success = true;
 
@@ -190,17 +189,8 @@ namespace Editor.Accessories.Clothing {
             }
 
             List<string> bundlePaths = new();
-            // foreach (var platform in platforms) {
-            //     var path = await this.BuildPlatform(platform, airId);
-            //     if (string.IsNullOrEmpty(path)) {
-            //         success = false;
-            //         return;
-            //     }
-            //
-            //     bundlePaths.Add(path);
-            // }
-            {
-                var path = await this.BuildPlatform(AirshipPlatform.Windows, airId);
+            foreach (var platform in platforms) {
+                var path = await this.BuildPlatform(platform, airId);
                 if (string.IsNullOrEmpty(path)) {
                     success = false;
                     return;
@@ -208,6 +198,15 @@ namespace Editor.Accessories.Clothing {
 
                 bundlePaths.Add(path);
             }
+            // {
+            //     var path = await this.BuildPlatform(AirshipPlatform.Windows, airId);
+            //     if (string.IsNullOrEmpty(path)) {
+            //         success = false;
+            //         return;
+            //     }
+            //
+            //     bundlePaths.Add(path);
+            // }
 
             if (!success) return;
 
@@ -216,8 +215,8 @@ namespace Editor.Accessories.Clothing {
             int bytesCount = 0;
             for (int i = 0; i < platforms.Count; i++) {
                 var platform = platforms[i];
-                // var buildOutputFile = bundlePaths[i];
-                var buildOutputFile = bundlePaths[0];
+                var buildOutputFile = bundlePaths[i];
+                // var buildOutputFile = bundlePaths[0];
 
                 // Update air asset
                 var bytes = await File.ReadAllBytesAsync(buildOutputFile);
