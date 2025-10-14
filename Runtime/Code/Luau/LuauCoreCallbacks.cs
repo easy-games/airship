@@ -1072,6 +1072,13 @@ public partial class LuauCore : MonoBehaviour {
     /// <returns>True if successful, otherwise false if nothing was written.</returns>
     private static bool FastGetAndWriteValueProperty(IntPtr thread, object objectReference, PropertyGetReflectionCache cacheData) {
         var propType = cacheData.propertyInfo.PropertyType;
+        if (propType.IsByRef) propType = propType.GetElementType();
+        
+        if (IsOfType(propType, boolType)) {
+            var boolValue = GetValue<bool>(objectReference, cacheData);
+            WritePropertyToThreadBoolean(thread, boolValue);
+            return true;
+        }
         if (IsOfType(propType, intType)) {
             var intValue = GetValue<int>(objectReference, cacheData);
             WritePropertyToThreadInt32(thread, intValue);
@@ -1102,6 +1109,11 @@ public partial class LuauCore : MonoBehaviour {
             WritePropertyToThreadQuaternion(thread, quatValue);
             return true;
         }
+        if (IsOfType(propType, rectType)) {
+            var rectValue = GetValue<Rect>(objectReference, cacheData);
+            WritePropertyToThreadRect(thread, rectValue);
+            return true;
+        }
         return false;
     }
 
@@ -1110,7 +1122,6 @@ public partial class LuauCore : MonoBehaviour {
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsOfType(Type type, Type ofType) {
-        if (type.IsByRef) return type == ofType.MakeByRefType();
         return type == ofType;
     }
     
