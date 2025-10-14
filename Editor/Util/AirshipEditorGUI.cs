@@ -101,8 +101,32 @@ public static partial class AirshipEditorGUI {
         return new Rect(rect.x + left, rect.y, right - left,  /* kTabButtonHeight */ TabButtonHeight);
     }
 
+    private static GUIStyle headingStyle;
+    private static Texture2D headerTextureBg;
+    
+    public static void SettingCategoryHeading(GUIContent label) {
+        if (headerTextureBg == null) {
+            headerTextureBg = new Texture2D(1, 1);
+            headerTextureBg.SetPixel(0, 0, new Color(56 / 255f, 56 / 255f, 56 / 255f));
+            headerTextureBg.Apply();
+        }
+        
+        if (headingStyle == null) {
+            headingStyle = new GUIStyle(EditorStyles.foldoutHeader) {
+                padding = new RectOffset(5, 5, 5 , 5),
+                margin = new RectOffset(0, 0, 10, 0),
+                // fixedHeight = 22,
+                normal = {
+                    background = headerTextureBg,
+                }
+            };
+        }
+        
+        EditorGUILayout.LabelField(label, headingStyle);
+    }
+
     public static int BeginTabs(int selectedIndex, GUIContent[] tabs) {
-        var rect = EditorGUILayout.BeginVertical(new GUIStyle("FrameBox"));
+        var rect = EditorGUILayout.BeginVertical(new GUIStyle("FrameBox") { padding = new RectOffset(10, 10, 10, 10)});
         GUILayoutUtility.GetRect(10, TabButtonHeight);
         
         var tabRects = new Rect[tabs.Length];
