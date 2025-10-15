@@ -36,10 +36,26 @@ namespace Code.Accessories.Clothing {
         /// </summary>
         public static Dictionary<string, PlatformGearBundleInfo> loadedPlatformGearBundles = new();
 
+        private static Dictionary<string, string> classIdToAirIdCache = new();
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void OnReload() {
             inProgressDownloads.Clear();
             loadedPlatformGearBundles.Clear();
+        }
+
+        public static async Task<PlatformGear> DownloadYielding(string classId) {
+            if (classIdToAirIdCache.TryGetValue(classId, out string airId)) {
+                return await DownloadYielding(classId, airId);
+            }
+
+            // Get airId from classId
+            {
+                var url = $"{AirshipPlatformUrl.contentService}/resource-id/{classId}";
+                airId = "test";
+            }
+
+            return await DownloadYielding(classId, airId);
         }
 
         public static async Task<PlatformGear> DownloadYielding(string classId, string airId) {
