@@ -18,7 +18,7 @@ namespace Code.Accessories.Clothing.Editor {
 
         [MenuItem("Airship/Download Platform Gear")]
         public static void ShowWindow() {
-            var window = GetWindow<PlatformGearDownloader>(true, "Download Clothing");
+            var window = GetWindow<PlatformGearDownloader>(true, "Download Platform Gear");
             window.minSize = new Vector2(360, 150);
             window.ShowUtility();
         }
@@ -28,23 +28,21 @@ namespace Code.Accessories.Clothing.Editor {
 
             using (new EditorGUI.DisabledScope(isDownloading)) {
                 EditorGUILayout.LabelField("Enter Gear Class ID", EditorStyles.boldLabel);
-                EditorGUILayout.BeginVertical();
-                EditorGUILayout.Space(6);
-                EditorGUILayout.EndVertical();
                 EditorGUILayout.LabelField("You can find this by right clicking clothing in the Avatar Editor.");
+                EditorGUILayout.Space(2);
                 classId = EditorGUILayout.TextField("Class ID:", classId);
             }
 
             GUILayout.Space(6);
 
             // Progress + status
-            var rect = GUILayoutUtility.GetRect(18, 20);
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.Space(6);
-            EditorGUI.ProgressBar(rect, progress, isDownloading ? status : "Ready");
-            GUILayout.Space(6);
-            GUILayout.EndHorizontal();
-            GUILayout.Space(2);
+            // var rect = GUILayoutUtility.GetRect(18, 20);
+            // EditorGUILayout.BeginHorizontal();
+            // GUILayout.Space(6);
+            // EditorGUI.ProgressBar(rect, progress, isDownloading ? status : "Ready");
+            // GUILayout.Space(6);
+            // GUILayout.EndHorizontal();
+            // GUILayout.Space(2);
             // EditorGUILayout.LabelField(isDownloading ? "Downloading..." : "Idle", EditorStyles.miniLabel);
 
             GUILayout.Space(8);
@@ -75,14 +73,20 @@ namespace Code.Accessories.Clothing.Editor {
             cts = new CancellationTokenSource();
 
             try {
-                var gear = await PlatformGear.DownloadYielding(classId);
-                this.SpawnClothing(gear);
-
-                status = "Complete";
-                progress = 1f;
-                Repaint();
-                EditorUtility.DisplayDialog("Airship", $"Clothing {classId} downloaded & spawned.", "OK");
-                Close(); // optional
+                var gear = await PlatformGear.DownloadYielding(classId, "1b2b7019-e89d-4c97-8186-cc8a72d28901");
+                if (gear == null) {
+                    status = "Error";
+                    progress = 0f;
+                    Repaint();
+                    Debug.LogError($"[Airship] Clothing download failed.");
+                    EditorUtility.DisplayDialog("Download Error", "Clothing was null.", "OK");
+                } else {
+                    this.SpawnClothing(gear);
+                    status = "Complete";
+                    progress = 1f;
+                    Repaint();
+                    // EditorUtility.DisplayDialog("Airship", $"Clothing {classId} downloaded & added to scene.", "OK");
+                }
             } catch (Exception ex) {
                 status = "Error";
                 progress = 0f;
@@ -107,15 +111,35 @@ namespace Code.Accessories.Clothing.Editor {
 
             var spawned = new List<GameObject>();
             foreach (var accessory in platformGear.accessoryPrefabs) {
-                var go = Instantiate(accessory);
-                spawned.Add(go.gameObject);
+                var acc = Instantiate(accessory);
+                spawned.Add(acc.gameObject);
+
+                if (acc.skinnedToCharacter) {
+                    var skinnedMeshRenderers = acc.gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+                    foreach (var smr in skinnedMeshRenderers) {
+                        foreach (var mat in smr.sharedMaterials) {
+                            if (!mat.shader.isSupported) {
+                                mat.shader = Shader.Find("Universal Render Pipeline/Lit");
+                            }
+                        }
+                    }
+                } else {
+                    var meshRenderers = acc.gameObject.GetComponentsInChildren<MeshRenderer>();
+                    foreach (var meshRenderer in meshRenderers) {
+                        foreach (var mat in meshRenderer.sharedMaterials) {
+                            if (!mat.shader.isSupported) {
+                                mat.shader = Shader.Find("Universal Render Pipeline/Lit");
+                            }
+                        }
+                    }
+                }
             }
 
             Selection.objects = spawned.ToArray();
             SceneView.lastActiveSceneView?.FrameSelected(); // zooms to them
 
             await Task.Yield();
-            Debug.Log($"[Airship] Spawned gear {classId}.");
+            Debug.Log($"<color=green>[Airship] Spawned gear {classId}.</color>");
         }
     }
 }

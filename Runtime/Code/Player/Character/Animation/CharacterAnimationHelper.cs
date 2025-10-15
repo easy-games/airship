@@ -20,8 +20,8 @@ namespace Code.Player.Character.NetworkedMovement {
         [SerializeField]
         public Animator animator;
 
-        [SerializeField] public NetworkAnimator? networkAnimator;
-        public AnimationEventListener? animationEvents;
+        [SerializeField] public NetworkAnimator networkAnimator;
+        public AnimationEventListener animationEvents;
 
         [Header("Variables")] public float minAirborneTime = .25f;
         public float particleMaxDistance = 25f;

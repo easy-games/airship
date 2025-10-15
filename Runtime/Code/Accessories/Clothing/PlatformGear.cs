@@ -40,8 +40,12 @@ namespace Code.Accessories.Clothing {
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void OnReload() {
+            // foreach (var bundle in loadedPlatformGearBundles) {
+            //     bundle.Value.assetBundle.Unload(true);
+            // }
+            // loadedPlatformGearBundles.Clear();
             inProgressDownloads.Clear();
-            loadedPlatformGearBundles.Clear();
+            classIdToAirIdCache.Clear();
         }
 
         public static async Task<PlatformGear> DownloadYielding(string classId) {
