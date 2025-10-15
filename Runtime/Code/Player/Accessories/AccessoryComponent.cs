@@ -53,6 +53,7 @@ namespace Code.Player.Accessories {
             UNUSED14 = 1 << 30,
         }
 
+
         void Start() {
             if (RunCore.IsClient() || Application.isEditor) {
                 var renderers = this.gameObject.GetComponentsInChildren<MeshRenderer>();
@@ -62,7 +63,7 @@ namespace Code.Player.Accessories {
                     }
                 }
             }
-            
+
             // foreach (var r in renderers) {
             //     foreach (var mat in r.sharedMaterials) {
             //         if (!mat.shader.isSupported) {
@@ -113,7 +114,7 @@ namespace Code.Player.Accessories {
                 return "NONE";
             }
             foreach (var data in BodyMaskInspectorDatas) {
-                if (data.bodyMask == (BodyMask)(1<<bit)) {
+                if (data.bodyMask == (BodyMask)(1 << bit)) {
                     return data.name;
                 }
             }
@@ -124,6 +125,7 @@ namespace Code.Player.Accessories {
         public AccessorySlot accessorySlot = AccessorySlot.RightHand;
         public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
+        public AccessoryCustomization customization;
 
         [SerializeField]
         public List<Mesh> meshLods = new();
@@ -191,18 +193,19 @@ namespace Code.Player.Accessories {
             return (int)accessorySlot;
         }
 
-        public void SetInstanceId(string id){
+        public void SetInstanceId(string id) {
             serverInstanceId = id;
             gameObject.GetComponent<AccessoryRandomizer>()?.Apply(id);
         }
 
-        public string GetServerInstanceId(){
+        public string GetServerInstanceId() {
             return serverInstanceId;
         }
 
         public bool HasFlag(BodyMask flag) {
             return (bodyMask & (uint)flag) != 0;
         }
+
     }
 }
  
