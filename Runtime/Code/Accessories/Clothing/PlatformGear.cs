@@ -44,6 +44,7 @@ namespace Code.Accessories.Clothing {
 
         public static async Task<PlatformGear> DownloadYielding(string classId, string airId) {
             var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatformUtil.GetLocalPlatform());
+            // var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatform.Windows);
             var url = $"{AirshipPlatformUrl.gameCdn}/airassets/{airId}/{platformString}";
 
             // Check for in-progress downloads

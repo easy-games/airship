@@ -210,6 +210,7 @@ namespace Luau {
             [typeof(float3)] = LuauContextAll,
             [typeof(SplineAnimate)] = LuauContextAll,
             [typeof(SplineContainer)] = LuauContextAll,
+            [typeof(AnimatorStateInfo)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
