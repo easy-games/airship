@@ -16,7 +16,7 @@ namespace Code.Accessories.Clothing.Editor {
         private string status = "Idle";
         private CancellationTokenSource cts;
 
-        [MenuItem("Airship/Download Platform Gear")]
+        [MenuItem("Airship/Download Platform Gear", false, 100)]
         public static void ShowWindow() {
             var window = GetWindow<PlatformGearDownloader>(true, "Download Platform Gear");
             window.minSize = new Vector2(360, 150);
@@ -73,7 +73,7 @@ namespace Code.Accessories.Clothing.Editor {
             cts = new CancellationTokenSource();
 
             try {
-                var gear = await PlatformGear.DownloadYielding(classId, "1b2b7019-e89d-4c97-8186-cc8a72d28901");
+                var gear = await PlatformGear.DownloadYielding(classId);
                 if (gear == null) {
                     status = "Error";
                     progress = 0f;

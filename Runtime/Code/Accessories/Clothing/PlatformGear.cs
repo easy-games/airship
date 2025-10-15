@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Bootstrap;
@@ -16,6 +17,20 @@ namespace Code.Accessories.Clothing {
             this.assetBundle = assetBundle;
             this.manifest = manifest;
         }
+    }
+
+    public class GearFetchResponse {
+        public GearDto gear;
+    }
+
+    public class GearDto {
+        public GearListingDto gear;
+    }
+
+    public class GearListingDto {
+        public string category;
+        public string subcategory;
+        public string[] airAssets;
     }
 
     /**
@@ -55,8 +70,16 @@ namespace Code.Accessories.Clothing {
 
             // Get airId from classId
             {
-                var url = $"{AirshipPlatformUrl.contentService}/resource-id/{classId}";
-                airId = "test";
+                var url = $"{AirshipPlatformUrl.contentService}/gear/class-id/{classId}";
+                var req = UnityWebRequest.Get(url);
+                await req.SendWebRequest();
+                if (req.result != UnityWebRequest.Result.Success) {
+                    throw new Exception(req.error);
+                }
+
+                var gearRes = JsonUtility.FromJson<GearFetchResponse>(req.downloadHandler.text);
+                Debug.Log("air ids: " + gearRes.gear.gear.airAssets);
+                airId = gearRes.gear.gear.airAssets[0];
             }
 
             return await DownloadYielding(classId, airId);
