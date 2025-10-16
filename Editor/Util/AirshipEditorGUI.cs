@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Code.Luau;
 using Editor.EditorInternal;
+using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
 using UnityEditorInternal;
@@ -282,7 +283,8 @@ public static partial class AirshipEditorGUI {
     public static int FlagEnumProperty(GUIContent label, AirshipSerializedValue value) => DoMaskField(null, label, value);
     public static int FlagEnumProperty(Rect rect, GUIContent label, AirshipSerializedValue value) => DoMaskField(rect, label, value);
     
-    public static AirshipComponent AirshipComponentProperty(GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator validator = null) {
+    public static AirshipComponent AirshipComponentProperty(
+        GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator validator = null) {
         return DoAirshipComponent(null, label, property, validator);
     }
     
@@ -448,8 +450,14 @@ public static partial class AirshipEditorGUI {
     /// </summary>
     /// <param name="label">The label to display before the property</param>
     /// <param name="value">The property to display</param>
+    /// <param name="includeChildren"></param>
     /// <returns>True if shown</returns>
     public static bool PropertyField(GUIContent label, AirshipSerializedValue value, bool includeChildren) {
+        if (value == null) {
+            EditorGUILayout.LabelField(new GUIContent(label), new GUIContent("(Missing property)"), EditorStyles.objectField);
+            return false;
+        }
+        
         switch (value.type) {
             case AirshipSerializedValue.PropertyType.String: {
                 StringProperty(label, value);
@@ -477,16 +485,7 @@ public static partial class AirshipEditorGUI {
                 break;
             }
             case AirshipSerializedValue.PropertyType.AirshipBehaviour: {
-                return AirshipComponentProperty(label, value, (component, property) => {
-                    if (component && property is AirshipSerializedProperty serializedProperty &&
-                        serializedProperty.editor.target is AirshipComponent parentBinding && component == parentBinding) {
-                        EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
-                                 "OK");
-                        return false;
-                    }
-
-                    return true;
-                }) != null;
+                return AirshipComponentProperty(label, value) != null;
             }
             // Arrays can only really be used with serialized property not serialized array, due to how we set this up
             case AirshipSerializedValue.PropertyType.Array when value is AirshipSerializedProperty property: {
@@ -518,7 +517,6 @@ public static partial class AirshipEditorGUI {
             }
             case AirshipSerializedValue.PropertyType.Rect: {
                 RectProperty(label, value);
-                EditorGUILayout.PropertyField(null);
                 break;
             }
             default: {
@@ -605,10 +603,15 @@ public static partial class AirshipEditorGUI {
         return false;
     }
     
-    public static bool PropertyField(GUIContent label, AirshipSerializedValue value) =>
+    public static bool PropertyField(GUIContent label, [CanBeNull] AirshipSerializedValue value) =>
         PropertyField(label, value, false);
 
-    public static bool PropertyField(AirshipSerializedValue property) {
+    public static bool PropertyField([CanBeNull] AirshipSerializedValue property) {
+        if (property == null) {
+            EditorGUILayout.LabelField(new GUIContent("Property"), new GUIContent("(Missing property)"), EditorStyles.objectField);
+            return false;
+        }
+        
         var name = ObjectNames.NicifyVariableName(property.serializedName.stringValue);
         return PropertyField(new GUIContent(name), property);
     }

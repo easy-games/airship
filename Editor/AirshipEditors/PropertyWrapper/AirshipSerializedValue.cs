@@ -72,6 +72,8 @@ public abstract class AirshipSerializedValue {
     internal SerializedProperty serializedObjectValue { get; set; }
     internal LuauMetadataProperty propertyMetadata { get; set; }
     
+    internal AirshipEditor editor { get; set; }
+    
     public string name => serializedName.stringValue;
     public bool isModified {
         get {

@@ -105,13 +105,14 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
 
             propertyMetadata = parentSerializedProperty.propertyMetadata;
             decorators = parentSerializedProperty.propertyMetadata.GetDecorators();
+
+            this.editor = parentSerializedProperty.editor;
         }
     }
     
     internal SerializedProperty serializedProperty;
     internal SerializedProperty serializedItems { get; set; }
     internal LuauMetadataProperty propertyMetadata { get; set; }
-    internal AirshipEditor editor { get; private set; }
 
     public bool isArray => serializedType.stringValue == "Array";
 

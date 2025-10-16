@@ -165,6 +165,8 @@ public abstract class AirshipEditor : ScriptableObject {
     public bool PropertyField(string label, string propertyName) => PropertyField(new GUIContent(label), propertyName);
     
     public virtual void OnInspectorGUI() {
+        EditorGUILayout.HelpBox("OnInspectorGUI has not been overridden", MessageType.Warning);
+        AirshipEditorGUI.HorizontalLine();
         this.DrawProperties();
     }
 }

@@ -25,6 +25,17 @@ public static class AirshipGUI {
 
 public static partial class AirshipEditorGUI {
     private static bool DoValidateProperty(Rect? rect, AirshipSerializedValue property, AirshipSerializedValue.PropertyType expectedType) {
+        if (property == null) {
+            if (rect.GetCustomRect(out var position)) {
+                EditorGUI.HelpBox(position, $"Expected {expectedType} got null", MessageType.Error);
+            } else {
+                EditorGUILayout.HelpBox($"Expected {expectedType} got null", MessageType.Error);
+            }
+            
+            GUIUtility.ExitGUI();
+            return false;
+        }
+        
         if (property.type != expectedType) {
             if (rect.GetCustomRect(out var position)) {
                 EditorGUI.HelpBox(position, $"Expected {expectedType} got {property.type}", MessageType.Error);
@@ -71,6 +82,8 @@ public static partial class AirshipEditorGUI {
     }
 
     private static Vector2 DoVector2Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Vector2);
+        
         var currentValue = property.vector2Value;
         Vector2 newValue;
         if (rect.GetCustomRect(out var position)) {
@@ -89,6 +102,8 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Vector3 DoVector3Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Vector3);
+        
         var currentValue = property.vector3Value;
         Vector3 newValue;
         if (rect.GetCustomRect(out var position)) {
@@ -107,6 +122,8 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Vector4 DoVector4Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Vector4);
+        
         var currentValue = property.vector4Value;
         Vector4 newValue;
         if (rect.GetCustomRect(out var position)) {
@@ -125,6 +142,8 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Rect DoRectField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Rect);
+        
         var currentValue = property.rectValue;
         Rect newValue;
         if (rect.GetCustomRect(out var position)) {
@@ -143,13 +162,42 @@ public static partial class AirshipEditorGUI {
     }
 
     public static Matrix4x4 DoMatrix4x4Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        var currentValue = property.matrix4x4Value;
-        Matrix4x4 newValue = default;
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Matrix4x4);
 
-        return newValue;
+        if (!property.editor._foldouts.TryGetValue(property.name, out bool open)) {
+            open = false;
+        }
+
+        var currentValue = property.matrix4x4Value;
+        open = EditorGUILayout.BeginFoldoutHeaderGroup(open, label);
+        var modified = false;
+        if (open) {
+            for (var i = 0; i < 4; i++) {
+                for (var j = 0; j < 4; j++) {
+                    var newValue = EditorGUILayout.FloatField($"E{i}{j}", currentValue[i, j]);
+                    // ReSharper disable once CompareOfFloatsByEqualityOperator
+                    if (newValue != currentValue[i, j])
+                    {
+                        currentValue[i, j] = newValue;
+                        modified = true;
+                    }
+                }
+            }
+        }
+
+        property.editor._foldouts[property.name] = open;
+
+        if (modified) {
+            property.matrix4x4Value = currentValue;
+            property.isModified = true;
+        }
+        
+        return default;
     }
     
     private static Quaternion DoQuaternionField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Quaternion);
+        
         var currentValue = property.quaternionValue.eulerAngles;
         Vector3 newValue;
         if (rect.GetCustomRect(out var position)) {
@@ -168,6 +216,8 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Color DoColorField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Color);
+        
         var currentValue = property.colorValue;
         Color nextValue;
 
@@ -207,6 +257,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static int DoLayerMaskField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.LayerMask);
         int currentValue = property.intValue;
 
         int nextValue;
@@ -226,8 +277,21 @@ public static partial class AirshipEditorGUI {
     }
 
     public delegate bool AirshipComponentPropertyValidator(AirshipComponent value, AirshipSerializedValue property);
+
+    private static bool DefaultValidator(AirshipComponent component, AirshipSerializedValue property) {
+        if (component && property is AirshipSerializedProperty serializedProperty &&
+            serializedProperty.editor.target is AirshipComponent parentBinding && component == parentBinding) {
+            EditorUtility.DisplayDialog("Invalid AirshipComponent reference",
+                "An AirshipComponent cannot reference itself!",
+                "OK");
+            return false;
+        }
+
+        return true;
+    }
     
     private static AirshipComponent DoAirshipComponent(Rect? rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator propertyValidator = null) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.AirshipBehaviour);
         if (!property.isAirshipType) return null;
         
         var currentValue = (AirshipComponent)property.serializedObjectValue.objectReferenceValue;
@@ -240,10 +304,11 @@ public static partial class AirshipEditorGUI {
             EditorGUILayout.HelpBox($"Cannot find script at path {property.serializedFileRef.stringValue}", MessageType.Error);
             return null;
         }
-                
+
+        if (propertyValidator == null) propertyValidator = DefaultValidator;
         var binding = rect.HasValue ? AirshipScriptGUI.AirshipBehaviourField(rect.Value, label, script, currentValue) : AirshipScriptGUI.AirshipBehaviourField(label, script, currentValue);
 
-        if (propertyValidator != null && !propertyValidator(binding, property)) {
+        if (!propertyValidator(binding, property)) {
             return binding;
         }
                 
@@ -257,6 +322,8 @@ public static partial class AirshipEditorGUI {
     }
 
     private static float DoNumberProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Number);
+        
         if (property.type != AirshipSerializedValue.PropertyType.Number) {
             EditorGUILayout.HelpBox($"Expected number property, got {property.type}", MessageType.Warning);
             return 0;
@@ -303,6 +370,8 @@ public static partial class AirshipEditorGUI {
     }
 
     private static bool DoBooleanProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Boolean);
+        
         var prevValue = property.boolValue;
         bool nextValue;
 
@@ -327,6 +396,8 @@ public static partial class AirshipEditorGUI {
     }
 
     private static string DoStringProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.String);
+        
         var prevValue = property.stringValue;
         string nextValue;
         
@@ -398,6 +469,8 @@ public static partial class AirshipEditorGUI {
     }
 
     private static int DoEnumProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Enum);
+        
         var typescriptEnum = property.enumType;
         if (typescriptEnum == null) return -1;
 
