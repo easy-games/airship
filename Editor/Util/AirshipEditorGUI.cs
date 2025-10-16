@@ -251,6 +251,12 @@ public static partial class AirshipEditorGUI {
     
     public static Matrix4x4 Matrix4x4Property(GUIContent label, AirshipSerializedValue property) =>
         DoMatrix4x4Field(null, label, property);
+    
+    public static AnimationCurve AnimationCurveProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoAnimationCurveField(null, label, property);
+    
+    public static AnimationCurve AnimationCurveProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoAnimationCurveField(rect, label, property);
 
     public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
         var currentValue = property.objectReferenceValue;
@@ -405,7 +411,7 @@ public static partial class AirshipEditorGUI {
             var prevElementHeight = AirshipGUI.arrayItemHeight;
 
             if (property.arraySize > 0) {
-            switch (property.array.elementType) {
+                switch (property.array.elementType) {
                     case AirshipSerializedValue.PropertyType.String:
                         var style = EditorStyles.textArea;
                         var textAreaMaxLines = 3;
@@ -433,7 +439,12 @@ public static partial class AirshipEditorGUI {
                         if (useTextArea) reorderableList.elementHeight = style.lineHeight * textAreaMaxLines;
                         if (displayTextAreaHorizontal == false) reorderableList.elementHeight += EditorGUIUtility.singleLineHeight;
                         break;
+                    case AirshipSerializedValue.PropertyType.Rect:
+                        reorderableList.elementHeight = EditorGUIUtility.singleLineHeight * 2 + 3;
+                        break;
                 }
+            } else {
+                reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
             }
             
             reorderableList.DoLayoutList();
@@ -519,6 +530,10 @@ public static partial class AirshipEditorGUI {
                 RectProperty(label, value);
                 break;
             }
+            case AirshipSerializedValue.PropertyType.AnimationCurve: {
+                AnimationCurveProperty(label, value);
+                break;
+            }
             default: {
                 EditorGUILayout.HelpBox($"{value.typeString} is not yet supported by PropertyFieldLayout!",
                     MessageType.Warning);
@@ -591,6 +606,10 @@ public static partial class AirshipEditorGUI {
             }
             case AirshipSerializedValue.PropertyType.Rect: {
                 RectProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.AnimationCurve: {
+                AnimationCurveProperty(rect, label, value);
                 break;
             }
             default: {

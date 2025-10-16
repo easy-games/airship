@@ -228,6 +228,17 @@ public abstract class AirshipSerializedValue {
             serializedValue.stringValue = JsonUtility.ToJson(value);
         }
     }
+
+    public AnimationCurve animationCurveValue {
+        get {
+            if (type != PropertyType.AnimationCurve) throw new InvalidCastException("Value is not an AnimationCurve");
+            return LuauMetadataPropertySerializer.DeserializeAnimationCurve(serializedValue.stringValue);
+        }
+        set {
+            if (type != PropertyType.AnimationCurve) throw new InvalidCastException("Value is not an AnimationCurve");
+            serializedValue.stringValue = LuauMetadataPropertySerializer.SerializeAnimationCurve(value);
+        }
+    }
     
     public Matrix4x4 matrix4x4Value {
         get {

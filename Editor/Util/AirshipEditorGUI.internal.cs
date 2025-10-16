@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using Code.Luau;
 using Luau;
+using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
 using UnityEngine;
 
@@ -192,7 +193,29 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
         
+        EditorGUILayout.EndFoldoutHeaderGroup();
+        
         return default;
+    }
+
+    private static AnimationCurve DoAnimationCurveField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.AnimationCurve);
+
+        var prevValue = property.animationCurveValue;
+        AnimationCurve nextValue;
+        
+        if (rect.GetCustomRect(out var position)) {
+            nextValue = EditorGUI.CurveField(position, label, prevValue);
+        } else {
+            nextValue = EditorGUILayout.CurveField(label, prevValue);
+        }
+
+        if (!nextValue.Equals(prevValue)) {
+            property.animationCurveValue = nextValue;
+            property.isModified = true;
+        }
+
+        return nextValue;
     }
     
     private static Quaternion DoQuaternionField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
