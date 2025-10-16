@@ -27,14 +27,43 @@ namespace Luau {
     
     public class AirshipType {
         public string Name { get; }
-        public string FilePath { get; }
+        public string RuntimePath { get; }
+        public string AssetPath => "Assets/" + RuntimePath.Replace(".lua", ".ts");
         public AirshipType[] BaseTypes { get; internal set; }
-
-        public string UniqueId => $"{FilePath.Replace(".lua", "")}@{Name}";
-        
+        public string UniqueId => $"{RuntimePath.Replace(".lua", "")}@{Name}";
+        public bool AirshipBehaviour { get; }
+        public AirshipScript Script => AssetDatabase.LoadAssetAtPath<AirshipScript>(AssetPath);
         public AirshipType(AirshipBehaviourMeta meta) {
             Name = meta.className;
-            FilePath = meta.filePath;
+            AirshipBehaviour = meta.component;
+            RuntimePath = meta.filePath;
+        }
+        
+        public static implicit operator AirshipType(string typeName) {
+            return GetType(typeName);
+        }
+
+        [CanBeNull]
+        public static AirshipType GetType(string typeName) => AirshipBuildInfo.Instance.GetTypeByName(typeName);
+
+        public override int GetHashCode() {
+            return UniqueId.GetHashCode();
+        }
+        
+        public static bool operator ==(AirshipType left, AirshipType right) {
+            var boxedLeft = (object)left;
+            var boxedRight = (object)right;
+            
+            if (boxedLeft == null && boxedRight == null) return true;
+            if (boxedLeft == null) return false;
+            if (boxedRight == null) return false;
+         
+            
+            return left!.UniqueId == right!.UniqueId;
+        }
+        
+        public static bool operator !=(AirshipType left, AirshipType right) {
+            return !(left == right);
         }
     }
     
@@ -191,7 +220,6 @@ namespace Luau {
         [CanBeNull]
         public AirshipType GetTypeByName(string typeName) {
             if (typeName == null) {
-                Debug.LogWarning("Attempt to get type with null typeName");
                 return null;
             }
             
@@ -216,7 +244,7 @@ namespace Luau {
                 type.BaseTypes = inheritance.ToArray();
                 return type;
             }
-
+            
             return null;
         }
         

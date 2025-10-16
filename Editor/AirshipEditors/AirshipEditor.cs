@@ -36,7 +36,7 @@ public abstract class AirshipEditor : ScriptableObject {
     }
     
     public AirshipSerializedObject serializedObject { get; internal set; }
-    public object target { get; internal set; }
+    public UnityEngine.Object target { get; internal set; }
     public AirshipScript script { get; internal set; }
 
     private void MatchReferenceArraySize(SerializedProperty targetArray, SerializedProperty referenceArray) {
@@ -157,6 +157,12 @@ public abstract class AirshipEditor : ScriptableObject {
     public bool PropertyField(string propertyName) {
         return AirshipEditorGUI.PropertyField(serializedObject.FindAirshipProperty(propertyName));
     }
+
+    public bool PropertyField(GUIContent label, string propertyName) {
+        return AirshipEditorGUI.PropertyField(label, serializedObject.FindAirshipProperty(propertyName));
+    }
+
+    public bool PropertyField(string label, string propertyName) => PropertyField(new GUIContent(label), propertyName);
     
     public virtual void OnInspectorGUI() {
         this.DrawProperties();

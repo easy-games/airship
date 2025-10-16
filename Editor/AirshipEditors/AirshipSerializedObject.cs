@@ -28,6 +28,9 @@ public class AirshipSerializedObject {
     internal LuauMetadata metadata { get; private set; }
     internal AirshipEditor editor { get; private set; }
 
+    public AirshipType airshipType => AirshipBuildInfo.Instance.GetTypeByName(serializedName.stringValue);
+    public AirshipComponent airshipComponent => (AirshipComponent)serializedObject.targetObject;
+
     internal void Update(AirshipEditor currentEditor, SerializedObject currentSerializedObject, LuauMetadata currentMetadata) {
         serializedObject = currentSerializedObject;
         editor = currentEditor;
@@ -84,5 +87,15 @@ public class AirshipSerializedObject {
     
     public static implicit operator SerializedObject(AirshipSerializedObject value) {
         return value.serializedObject;
+    }
+    
+    public static explicit operator AirshipSerializedObject(AirshipComponent component) {
+        var obj = new AirshipSerializedObject();
+        obj.Update(null, new SerializedObject(component), component.metadata);
+        return obj;
+    }
+
+    public void ApplyModifiedProperties() {
+        serializedObject.ApplyModifiedProperties();
     }
 }
