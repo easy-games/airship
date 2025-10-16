@@ -23,9 +23,11 @@ public static class AirshipCustomEditors {
         foreach (var editor in typeEditorAttributes) {
             var attr = editor.GetCustomAttributes<AirshipEditorAttribute>();
             foreach (var editorAttribute in attr) {
-                var pathType = AirshipBuildInfo.Instance.GetTypeByName(editorAttribute.TypeName);
+                var pathType = string.IsNullOrEmpty( editorAttribute.FilePath) ? 
+                    AirshipBuildInfo.Instance.GetTypeByName(editorAttribute.TypeName) :  
+                    AirshipBuildInfo.Instance.GetTypeByPathAndName(editorAttribute.FilePath, editorAttribute.TypeName);
                 if (pathType == null) {
-                    Debug.LogWarning($"Cannot find type {editorAttribute.TypeName} from types");
+                    Debug.LogWarning($"Failed to load custom inspector for type {editorAttribute.TypeName}, type is not found in project.");
                     continue;
                 }
                 

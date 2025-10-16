@@ -70,6 +70,121 @@ public static partial class AirshipEditorGUI {
         }
     }
 
+    private static Vector2 DoVector2Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.vector2Value;
+        Vector2 newValue;
+        if (rect.GetCustomRect(out var position)) {
+            newValue = EditorGUI.Vector2Field(position, label, currentValue);
+        } else {
+            newValue = EditorGUILayout.Vector2Field(label, currentValue);
+        }
+
+
+        if (currentValue != newValue) {
+            property.vector2Value = newValue;
+            property.isModified = true;
+        }
+        
+        return newValue;
+    }
+    
+    private static Vector3 DoVector3Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.vector3Value;
+        Vector3 newValue;
+        if (rect.GetCustomRect(out var position)) {
+            newValue = EditorGUI.Vector3Field(position, label, currentValue);
+        } else {
+            newValue = EditorGUILayout.Vector3Field(label, currentValue);
+        }
+
+
+        if (currentValue != newValue) {
+            property.vector3Value = newValue;
+            property.isModified = true;
+        }
+        
+        return newValue;
+    }
+    
+    private static Vector4 DoVector4Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.vector4Value;
+        Vector4 newValue;
+        if (rect.GetCustomRect(out var position)) {
+            newValue = EditorGUI.Vector4Field(position, label, currentValue);
+        } else {
+            newValue = EditorGUILayout.Vector4Field(label, currentValue);
+        }
+
+
+        if (currentValue != newValue) {
+            property.vector4Value = newValue;
+            property.isModified = true;
+        }
+        
+        return newValue;
+    }
+    
+    private static Rect DoRectField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.rectValue;
+        Rect newValue;
+        if (rect.GetCustomRect(out var position)) {
+            newValue = EditorGUI.RectField(position, label, currentValue);
+        } else {
+            newValue = EditorGUILayout.RectField(label, currentValue);
+        }
+
+
+        if (currentValue != newValue) {
+            property.rectValue = newValue;
+            property.isModified = true;
+        }
+        
+        return newValue;
+    }
+
+    public static Matrix4x4 DoMatrix4x4Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.matrix4x4Value;
+        Matrix4x4 newValue = default;
+
+        return newValue;
+    }
+    
+    private static Quaternion DoQuaternionField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.quaternionValue.eulerAngles;
+        Vector3 newValue;
+        if (rect.GetCustomRect(out var position)) {
+            newValue = EditorGUI.Vector3Field(position, label, currentValue);
+        } else {
+            newValue = EditorGUILayout.Vector3Field(label, currentValue);
+        }
+
+
+        if (currentValue != newValue) {
+            property.quaternionValue = Quaternion.Euler(newValue.x, newValue.x, newValue.z);
+            property.isModified = true;
+        }
+        
+        return Quaternion.Euler(newValue.x, newValue.x, newValue.z);
+    }
+    
+    private static Color DoColorField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.colorValue;
+        Color nextValue;
+
+        if (rect != null) {
+            nextValue = EditorGUI.ColorField(rect.Value, label, currentValue);
+        } else {
+            nextValue = EditorGUILayout.ColorField(label, currentValue);
+        }
+
+        if (currentValue != nextValue) {
+            property.colorValue = nextValue;
+            property.isModified = true;
+        }
+
+        return nextValue;
+    }
+
     private static int DoMaskField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
         DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.FlagEnum);
         

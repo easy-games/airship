@@ -209,6 +209,48 @@ public static partial class AirshipEditorGUI {
     public static int EnumProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
         DoEnumProperty(rect, label, property);
 
+    public static Color ColorProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoColorField(null, label, property);
+    
+    public static Color ColorProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoColorField(rect, label, property);
+
+    public static Vector2 Vector2Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoVector2Field(rect, label, property);
+    
+    public static Vector2 Vector2Property(GUIContent label, AirshipSerializedValue property) =>
+        DoVector2Field(null, label, property);
+    
+    public static Vector3 Vector3Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoVector3Field(rect, label, property);
+    
+    public static Vector3 Vector3Property(GUIContent label, AirshipSerializedValue property) =>
+        DoVector3Field(null, label, property);
+    
+    public static Vector4 Vector4Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoVector4Field(rect, label, property);
+    
+    public static Vector4 Vector4Property(GUIContent label, AirshipSerializedValue property) =>
+        DoVector4Field(null, label, property);
+    
+    public static Quaternion QuaternionProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoQuaternionField(rect, label, property);
+    
+    public static Quaternion QuaternionProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoQuaternionField(null, label, property);
+    
+    public static Matrix4x4 Matrix4x4Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoMatrix4x4Field(rect, label, property);
+    
+    public static Rect RectProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoRectField(null, label, property);
+    
+    public static Rect RectProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoRectField(rect, label, property);
+    
+    public static Matrix4x4 Matrix4x4Property(GUIContent label, AirshipSerializedValue property) =>
+        DoMatrix4x4Field(null, label, property);
+
     public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
         var currentValue = property.objectReferenceValue;
         var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.objectType, true);
@@ -248,12 +290,12 @@ public static partial class AirshipEditorGUI {
         return DoAirshipComponent(rect, label, property, validator);
     }
     
-    public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property) {
+    public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property, bool expanded = false) {
         if (!property.isArray) return false;
 
         bool enabled;
         if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
-            property.editor._foldouts.Add(property.name, false);
+            property.editor._foldouts.Add(property.name, expanded);
         }
 
         var rect2 = EditorGUILayout.GetControlRect(false, EditorStyles.foldoutHeader.fixedHeight);
@@ -398,6 +440,8 @@ public static partial class AirshipEditorGUI {
         EditorGUILayout.EndFoldoutHeaderGroup();
         return enabled;
     }
+
+
     
     /// <summary>
     /// Draws the given airship property value
@@ -405,18 +449,18 @@ public static partial class AirshipEditorGUI {
     /// <param name="label">The label to display before the property</param>
     /// <param name="value">The property to display</param>
     /// <returns>True if shown</returns>
-    public static bool PropertyField(GUIContent label, AirshipSerializedValue value) {
+    public static bool PropertyField(GUIContent label, AirshipSerializedValue value, bool includeChildren) {
         switch (value.type) {
             case AirshipSerializedValue.PropertyType.String: {
                 StringProperty(label, value);
-                return false;
+                break;
             }
             case AirshipSerializedValue.PropertyType.Boolean: {
                 return BooleanProperty(label, value);
             }
             case AirshipSerializedValue.PropertyType.Number: {
                 NumberProperty(label, value);
-                return false;
+                break;
             }
             case AirshipSerializedValue.PropertyType.Enum:
                 EnumProperty(label, value);
@@ -446,7 +490,36 @@ public static partial class AirshipEditorGUI {
             }
             // Arrays can only really be used with serialized property not serialized array, due to how we set this up
             case AirshipSerializedValue.PropertyType.Array when value is AirshipSerializedProperty property: {
-                return ArrayProperty(label, property);
+                return ArrayProperty(label, property, includeChildren);
+            }
+            case AirshipSerializedValue.PropertyType.Color: {
+                ColorProperty(label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Quaternion: {
+                QuaternionProperty(label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Vector2: {
+                Vector2Property(label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Vector3: {
+                Vector3Property(label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Vector4: {
+                Vector4Property(label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Matrix4x4: {
+                Matrix4x4Property(label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Rect: {
+                RectProperty(label, value);
+                EditorGUILayout.PropertyField(null);
+                break;
             }
             default: {
                 EditorGUILayout.HelpBox($"{value.typeString} is not yet supported by PropertyFieldLayout!",
@@ -494,6 +567,34 @@ public static partial class AirshipEditorGUI {
                 FlagEnumProperty(rect, label, value);
                 break;
             }
+            case AirshipSerializedValue.PropertyType.Color: {
+                ColorProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Quaternion: {
+                QuaternionProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Vector2: {
+                Vector2Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Vector3: {
+                Vector3Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Vector4: {
+                Vector4Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Matrix4x4: {
+                Matrix4x4Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedValue.PropertyType.Rect: {
+                RectProperty(rect, label, value);
+                break;
+            }
             default: {
                 EditorGUI.HelpBox(rect, $"{value.typeString} is not yet supported by PropertyField!",
                     MessageType.Warning);
@@ -503,6 +604,9 @@ public static partial class AirshipEditorGUI {
 
         return false;
     }
+    
+    public static bool PropertyField(GUIContent label, AirshipSerializedValue value) =>
+        PropertyField(label, value, false);
 
     public static bool PropertyField(AirshipSerializedValue property) {
         var name = ObjectNames.NicifyVariableName(property.serializedName.stringValue);

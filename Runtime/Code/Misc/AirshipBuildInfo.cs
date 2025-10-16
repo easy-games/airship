@@ -24,49 +24,7 @@ namespace Luau {
 
         private AirshipBehaviourMetaTop() { }
     }
-    
-    public class AirshipType {
-        public string Name { get; }
-        public string RuntimePath { get; }
-        public string AssetPath => "Assets/" + RuntimePath.Replace(".lua", ".ts");
-        public AirshipType[] BaseTypes { get; internal set; }
-        public string UniqueId => $"{RuntimePath.Replace(".lua", "")}@{Name}";
-        public bool AirshipBehaviour { get; }
-        public AirshipScript Script => AssetDatabase.LoadAssetAtPath<AirshipScript>(AssetPath);
-        public AirshipType(AirshipBehaviourMeta meta) {
-            Name = meta.className;
-            AirshipBehaviour = meta.component;
-            RuntimePath = meta.filePath;
-        }
-        
-        public static implicit operator AirshipType(string typeName) {
-            return GetType(typeName);
-        }
 
-        [CanBeNull]
-        public static AirshipType GetType(string typeName) => AirshipBuildInfo.Instance.GetTypeByName(typeName);
-
-        public override int GetHashCode() {
-            return UniqueId.GetHashCode();
-        }
-        
-        public static bool operator ==(AirshipType left, AirshipType right) {
-            var boxedLeft = (object)left;
-            var boxedRight = (object)right;
-            
-            if (boxedLeft == null && boxedRight == null) return true;
-            if (boxedLeft == null) return false;
-            if (boxedRight == null) return false;
-         
-            
-            return left!.UniqueId == right!.UniqueId;
-        }
-        
-        public static bool operator !=(AirshipType left, AirshipType right) {
-            return !(left == right);
-        }
-    }
-    
     /// <summary>
     /// Defines each AirshipBehaviour component class.
     /// </summary>
@@ -245,6 +203,41 @@ namespace Luau {
                 return type;
             }
             
+            return null;
+        }
+
+        [CanBeNull]
+        public AirshipType GetTypeByPathAndName(string filePath, string typeName) {
+            var pathWithoutExtension = filePath.Replace(Path.GetExtension(filePath), "");
+            var fullName = $"{pathWithoutExtension}@{typeName}";
+            if (_types.TryGetValue(fullName, out var type)) {
+                return type;
+            }
+            
+            Debug.Log($"GetTypeByPathAndName({filePath}, {typeName})");
+
+            foreach (var (metaTypeName, meta) in _classes) {
+                Debug.Log($"compare {"Assets/" + meta.filePath} to {pathWithoutExtension + ".lua"}");
+                if ("Assets/ " + meta.filePath == pathWithoutExtension + ".lua" && name == metaTypeName) {
+                    type = new AirshipType(meta);
+                    _types[fullName] = type;
+                    
+                    List<AirshipType> inheritance = new();
+                    foreach (var inherits in meta.extends) {
+                        if (_types.TryGetValue(inherits, out var inheritedType)) {
+                            inheritance.Add(inheritedType);
+                        } else if (_classes.TryGetValue(inherits, out var baseMeta)) {
+                            inheritedType = new AirshipType(baseMeta);
+                            _types.Add(inherits, inheritedType);
+                        }
+                    }
+
+                    type.BaseTypes = inheritance.ToArray();
+                    
+                    return type;
+                }
+            }
+
             return null;
         }
         

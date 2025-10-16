@@ -4,6 +4,7 @@ using System.Globalization;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
+using UnityEngine;
 
 public abstract class AirshipSerializedValue {
     public enum PropertyType {
@@ -18,6 +19,13 @@ public abstract class AirshipSerializedValue {
         Enum,
         FlagEnum,
         Array,
+        Color,
+        Quaternion,
+        Vector2,
+        Vector3,
+        Vector4,
+        Matrix4x4,
+        Rect
     }
 
     public static PropertyType GetTypeFromTypeString(string type) {
@@ -32,6 +40,13 @@ public abstract class AirshipSerializedValue {
             "FlagEnum" => PropertyType.FlagEnum,
             "IntEnum" or "StringEnum" => PropertyType.Enum,
             "Array" => PropertyType.Array,
+            "Color" => PropertyType.Color,
+            "Quaternion" => PropertyType.Quaternion,
+            "Vector2" => PropertyType.Vector2,
+            "Vector3" => PropertyType.Vector3,
+            "Vector4" => PropertyType.Vector4,
+            "Matrix4x4" => PropertyType.Matrix4x4,
+            "Rect" => PropertyType.Rect,
             _ => PropertyType.Unknown,
         };
     }
@@ -142,6 +157,85 @@ public abstract class AirshipSerializedValue {
         set {
             if (propertyType != AirshipComponentPropertyType.AirshipString) throw new InvalidCastException("Value is not a string");
             serializedValue.stringValue = value;
+        }
+    }
+
+    public Color colorValue {
+        get {
+            if (type != PropertyType.Color) throw new InvalidCastException("Value is not a Color");
+            return serializedValue.stringValue != "" ? JsonUtility.FromJson<Color>(serializedValue.stringValue) : default;
+        }
+        set {
+            if (type != PropertyType.Color) throw new InvalidCastException("Value is not a Color");
+            serializedValue.stringValue = JsonUtility.ToJson(value);
+        }
+    }
+
+    public Vector2 vector2Value {
+        get {
+            if (type != PropertyType.Vector2) throw new InvalidCastException("Value is not a Vector2");
+            return serializedValue.stringValue != "" ? JsonUtility.FromJson<Vector2>(serializedValue.stringValue) : default;
+        }
+        set {
+            if (type != PropertyType.Vector2) throw new InvalidCastException("Value is not a Vector2");
+            serializedValue.stringValue = JsonUtility.ToJson(value);
+        }
+    }
+    
+    public Vector3 vector3Value {
+        get {
+            if (type != PropertyType.Vector3) throw new InvalidCastException("Value is not a Vector3");
+            return serializedValue.stringValue != "" ? JsonUtility.FromJson<Vector3>(serializedValue.stringValue) : default;
+        }
+        set {
+            if (type != PropertyType.Vector3) throw new InvalidCastException("Value is not a Vector3");
+            serializedValue.stringValue = JsonUtility.ToJson(value);
+        }
+    }
+    
+    public Vector4 vector4Value {
+        get {
+            if (type != PropertyType.Vector4) throw new InvalidCastException("Value is not a Vector4");
+            return serializedValue.stringValue != "" ? JsonUtility.FromJson<Vector4>(serializedValue.stringValue) : default;
+        }
+        set {
+            if (type != PropertyType.Vector4) throw new InvalidCastException("Value is not a Vector4");
+            serializedValue.stringValue = JsonUtility.ToJson(value);
+        }
+    }
+
+    public Rect rectValue {
+        get {
+            if (type != PropertyType.Rect) throw new InvalidCastException("Value is not a Rect");
+            return LuauMetadataPropertySerializer.DeserializeRect(serializedValue.stringValue);
+        }
+        set {
+            if (type != PropertyType.Rect) throw new InvalidCastException("Value is not a Rect");
+            serializedValue.stringValue = LuauMetadataPropertySerializer.SerializeRect(value);
+        }
+    }
+
+    public Quaternion quaternionValue {
+        get {
+            if (type != PropertyType.Quaternion) throw new InvalidCastException("Value is not a Quaternion");
+            var value = serializedValue.stringValue;
+            return value == "" ? default : JsonUtility.FromJson<Quaternion>(value);
+        }
+        set {
+            if (type != PropertyType.Quaternion) throw new InvalidCastException("Value is not a Quaternion");
+            serializedValue.stringValue = JsonUtility.ToJson(value);
+        }
+    }
+    
+    public Matrix4x4 matrix4x4Value {
+        get {
+            if (type != PropertyType.Matrix4x4) throw new InvalidCastException("Value is not a Matrix4x4");
+            var value = serializedValue.stringValue;
+            return value == "" ? default : JsonUtility.FromJson<Matrix4x4>(value);
+        }
+        set {
+            if (type != PropertyType.Matrix4x4) throw new InvalidCastException("Value is not a Matrix4x4");
+            serializedValue.stringValue = JsonUtility.ToJson(value);
         }
     }
 
