@@ -773,7 +773,6 @@ public partial class LuauCore : MonoBehaviour {
             ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, propertyNameAtom);
         } catch (Exception e) {
             ret = LuauError(thread, $"{e.GetType()}: {e.Message}");
-            Debug.LogError(e);
         }
 
         return ret;
@@ -1904,15 +1903,19 @@ public partial class LuauCore : MonoBehaviour {
     /// Updates both the memberGetCache value and the fastMemberGetCache value
     /// </summary>
     private static void UpdateMemberGetCache(MemberGetCacheKey key, MemberGetReflectionCache value) {
-        var l1Key = key.GetHashCode() % fastMemberGetCacheSize;
-        if (l1Key < 0) l1Key += fastMemberGetCacheSize;
+        // If the method info exists add it to L1 cache (array index vs dictionary)
+        if (value.Exists) {
+            var l1Key = key.GetHashCode() % fastMemberGetCacheSize;
+            if (l1Key < 0) l1Key += fastMemberGetCacheSize;
+
+            fastMemberGetCacheKeys[l1Key] = new FastCacheEntry {
+                ObjectType = value.objectType,
+                MemberName = value.memberInfo.Name,
+                exists = true,
+            };
+            fastMemberGetCacheValues[l1Key] = value;
+        }
         
-        fastMemberGetCacheKeys[l1Key] = new FastCacheEntry {
-            ObjectType = value.objectType,
-            MemberName = value.memberInfo.Name,
-            exists = true,
-        };
-        fastMemberGetCacheValues[l1Key] = value;
         memberGetCache[key] = value;
     }
 
