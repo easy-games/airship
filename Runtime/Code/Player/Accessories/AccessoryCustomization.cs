@@ -9,30 +9,33 @@ public class AccessoryCustomization : MonoBehaviour {
         if (index < 0 || index >= customColors.Length) {
             return false;
         }
-        this.SetColorInternal(customColors[index], color);
+
+        ApplyColor(customColors[index], color);
         return true;
     }
 
     public bool SetColor(string key, Color color) {
-        var custom = SetValueInternal(key, color, customColors); 
-        if(custom != null){
-            SetColorInternal(custom, color);
+        var custom = GetValueInternal(key, customColors);
+        if (custom != null) {
+            ApplyColor(custom, color);
             return true;
         }
+
         return false;
     }
 
-    private void SetColorInternal(AccCustomValue<Color> custom, Color color) {
+    private void ApplyColor(AccCustomValue<Color> custom, Color color) {
         custom.currentValue = color;
         custom.ren.gameObject.GetComponent<MaterialColorURP>()?.SetColorOnAll(color);
     }
 
-    private AccCustomValue<T> SetValueInternal<T>(string key, T newValue, AccCustomValue<T>[] array) {
+    private AccCustomValue<T> GetValueInternal<T>(string key, AccCustomValue<T>[] array) {
         foreach (var item in array) {
             if (item.key == key) {
                 return item;
             }
         }
+
         return null;
     }
 }
@@ -41,6 +44,7 @@ public class AccessoryCustomization : MonoBehaviour {
 public class AccCustomValue<T> {
     public string key = "Primary";
     public T defaultValue;
+
     [HideInInspector]
     public T currentValue;
 
