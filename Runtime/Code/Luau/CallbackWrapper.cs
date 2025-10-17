@@ -105,7 +105,9 @@ namespace Luau
             {
                 if (thread.m_error) return;
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.BeginSample("EngineEvent." + this.methodName);
+#endif
                 WritePropertyToThread(this.thread, param0);
                 System.Int32 integer = (System.Int32)handle;
                 int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
@@ -113,7 +115,9 @@ namespace Luau
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
 
@@ -130,7 +134,9 @@ namespace Luau
                     return;
                 }
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.BeginSample("EngineEvent." + this.methodName);
+#endif
                 WritePropertyToThread(this.thread, param0);
                 WritePropertyToThread(this.thread, param1);
                 System.Int32 integer = (System.Int32)handle;
@@ -139,7 +145,9 @@ namespace Luau
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
 
@@ -153,7 +161,9 @@ namespace Luau
 
                 if (thread.m_error) return;
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.BeginSample("EngineEvent." + this.methodName);
+#endif
                 WritePropertyToThread(this.thread, param0);
                 WritePropertyToThread(this.thread, param1);
                 WritePropertyToThread(this.thread, param2);
@@ -163,7 +173,9 @@ namespace Luau
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
 
@@ -177,7 +189,9 @@ namespace Luau
 
                 if (thread.m_error) return;
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.BeginSample("EngineEvent." + this.methodName);
+#endif
                 WritePropertyToThread(this.thread, param0);
                 WritePropertyToThread(this.thread, param1);
                 WritePropertyToThread(this.thread, param2);
@@ -188,7 +202,9 @@ namespace Luau
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
     }
