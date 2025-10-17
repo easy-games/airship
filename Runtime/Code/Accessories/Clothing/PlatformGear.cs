@@ -30,6 +30,9 @@ namespace Code.Accessories.Clothing {
         public AccessoryComponent[] accessoryPrefabs;
         public AccessoryFace face;
 
+        public Color[] optionColors;
+        public int optionVariants = 1;
+
         public static Dictionary<string, Task<bool>> inProgressDownloads = new();
         /// <summary>
         /// AirId to asset bundle
