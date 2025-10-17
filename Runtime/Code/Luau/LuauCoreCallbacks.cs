@@ -15,6 +15,7 @@ using Assets.Luau;
 using Code.Luau;
 using Code.Luau.LuauAssembly;
 using Code.Luau.LuauAssembly.Protection;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Profiling;
@@ -57,30 +58,33 @@ public partial class LuauCore : MonoBehaviour {
         public Type Type;
         public string Traceback;
     }
-
-    private struct PropertyGetReflectionCache {
+    
+    private struct MemberGetReflectionCache {
         /// <summary>
         /// This is true if the property info exists for this type / prop combo. This
         /// is to avoid trying to look up the property info constantly if it doesn't exist.
         /// </summary>
         public bool Exists;
         
-        public Type propertyType;
+        public Type memberType;
         public Type objectType;
-        public PropertyInfo propertyInfo;
-        public Delegate GetProperty;
-        public bool HasGetPropertyFunc;
+        /// <summary>
+        /// Can either be a FieldInfo or PropertyInfo based on the type of member.
+        /// </summary>
+        public MemberInfo memberInfo;
+        public Delegate GetMember;
+        public bool HasGetMemberFunc;
         public bool IsNativeClass;
         public bool IsStruct;
     }
 
     // Hopefully faster dictionary comparison / hash time
-    private readonly struct PropertyCacheKey : IEquatable<PropertyCacheKey> {
+    private readonly struct MemberGetCacheKey : IEquatable<MemberGetCacheKey> {
         private readonly Type _type;
         private readonly string _propertyName;
         private readonly int _hashCode;
 
-        public PropertyCacheKey(Type type, string propertyName) {
+        public MemberGetCacheKey(Type type, string propertyName) {
             _type = type;
             _propertyName = propertyName;
             // Pre-compute hash code to avoid repeated calculations
@@ -91,12 +95,12 @@ public partial class LuauCore : MonoBehaviour {
             return _hashCode;
         }
 
-        public bool Equals(PropertyCacheKey other) {
-            return ReferenceEquals(_type, other._type) && string.Equals(_propertyName, other._propertyName);
+        public bool Equals(MemberGetCacheKey other) {
+            return _type == other._type && string.Equals(_propertyName, other._propertyName);
         }
     }
 
-    private class ReverseObjectKeyUpdater : IDisposable {
+    private struct ReverseObjectKeyUpdater : IDisposable {
         private object _instance;
         private int _instanceId;
         private bool _isValueType;
@@ -124,7 +128,7 @@ public partial class LuauCore : MonoBehaviour {
         public CallbackWrapper callbackWrapper;
     }
 
-    private static Dictionary<PropertyCacheKey, PropertyGetReflectionCache> propertyGetCache = new();
+    private static Dictionary<MemberGetCacheKey, MemberGetReflectionCache> memberGetCache = new();
     
     public static Dictionary<int, EventConnection> eventConnections = new();
     private static int eventIdCounter = 0;
@@ -266,15 +270,6 @@ public partial class LuauCore : MonoBehaviour {
         
         var propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         var type = (PODTYPE)typeInt;
-        
-        // Debug.Log("Setting property" + propName);
-        //LuauBinding binding = LuauCore.Instance.m_threads[thread];
-
-        //if (binding == null)
-        //{
-        //Debug.LogError("ERROR - setProperty thread " + thread + " did luaBinding get destroyed somehow while running it?");
-        //return 0;
-        //}
 
         object objectReference = null;
         Type sourceType = null;
@@ -314,34 +309,29 @@ public partial class LuauCore : MonoBehaviour {
             PropertyInfo property = null;
             FieldInfo field = null;
             
-            PropertyGetReflectionCache? cacheData;
-            if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
-                var propertyInfo = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
+            MemberGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetMemberCacheValue(sourceType, propName)).HasValue) {
+                MemberInfo memberInfo = null;
+                
+                // Try as property
+                memberInfo = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+                // Try as field
+                if (memberInfo == null) {
+                    if (classNameSize != 0) {
+                        memberInfo = sourceType.GetField(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+                    } else {
+                        memberInfo = LuauCore.CoreInstance.GetFieldInfoForType(sourceType, propName, propNameHash);
+                    }
+                }
+                
+                
+                cacheData = LuauCore.SetMemberCacheValue(sourceType, propName, memberInfo);
             }
 
             if (cacheData.Value.Exists) {
-                property = cacheData.Value.propertyInfo;
-            }
-            
-            // if (classNameSize != 0) {
-            //     property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-            // } else {
-            //     property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-            // }
-
-            if (property != null) {
-                t = property.PropertyType;
-            } else {
-                if (classNameSize != 0) {
-                    field = sourceType.GetField(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-                } else {
-                    field = LuauCore.CoreInstance.GetFieldInfoForType(sourceType, propName, propNameHash);
-                }
-                
-                if (field != null) {
-                    t = field.FieldType;
-                }
+                if (cacheData.Value.memberInfo is PropertyInfo pi) property = pi;
+                if (cacheData.Value.memberInfo is FieldInfo fi) field = fi;
+                t = cacheData.Value.memberType;
             }
 
             if (t == null) {
@@ -376,11 +366,7 @@ public partial class LuauCore : MonoBehaviour {
 
                 switch (type) {
                     case PODTYPE.POD_OBJECT: {
-                        int[] intData = new int[1];
-                        Marshal.Copy(propertyData, intData, 0, 1);
-                        int propertyInstanceId = intData[0];
-
-                        System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
+                        var propertyObjectRef = NewObjectFromPointer(propertyData, thread);
 
                         if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
                             if (
@@ -413,23 +399,19 @@ public partial class LuauCore : MonoBehaviour {
 
                     case PODTYPE.POD_VECTOR3: {
                         if (t.IsAssignableFrom(vector3Type)) {
+                            var v = NewVector3FromPointer(propertyData);
                             if (field != null) {
-                                Vector3 v = NewVector3FromPointer(propertyData);
-                                field.SetValue(objectReference, v);
+                                SetFieldValue<Vector3>(objectReference, v, field);
                             } else {
-                                Vector3 v = NewVector3FromPointer(propertyData);
                                 SetValue<Vector3>(objectReference, v, property);
                             }
                             return 0;
                         }
                         if (t.IsAssignableFrom(vector3IntType)) {
+                            var v = NewVector3FromPointer(propertyData);
                             if (field != null) {
-                                // Debug.Log(field);
-                                Vector3 v = NewVector3FromPointer(propertyData);
-                                field.SetValue(objectReference, Vector3Int.FloorToInt(v));
+                                SetFieldValue<Vector3Int>(objectReference, Vector3Int.FloorToInt(v), field);
                             } else {
-                                // Debug.Log(property);
-                                Vector3 v = NewVector3FromPointer(propertyData);
                                 SetValue<Vector3Int>(objectReference, Vector3Int.FloorToInt(v), property);
                             }
                             return 0;
@@ -438,12 +420,9 @@ public partial class LuauCore : MonoBehaviour {
                     }
                     case PODTYPE.POD_BOOL: {
                         if (t.IsAssignableFrom(boolType)) {
-                            int[] ints = new int[1];
-                            Marshal.Copy(propertyData, ints, 0, 1);
-                            bool val = ints[0] != 0;
-                            
+                            var val = NewBooleanFromPointer(propertyData);
                             if (field != null) {
-                                field.SetValue(objectReference, val);
+                                SetFieldValue<bool>(objectReference, val, field);
                             } else {
                                 SetValue<bool>(objectReference, val, property);
                             }
@@ -455,58 +434,62 @@ public partial class LuauCore : MonoBehaviour {
                     }
 
                     case PODTYPE.POD_DOUBLE: { // Also integers
-                        double[] doubles = new double[1];
-                        Marshal.Copy(propertyData, doubles, 0, 1);
+                        var doubleValue = NewDoubleFromPointer(propertyData);
 
                         if (t.IsAssignableFrom(doubleType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, (double)doubles[0]);
+                                SetFieldValue<double>(objectReference, doubleValue, field);
                             } else {
-                                SetValue<double>(objectReference, doubles[0], property);
+                                SetValue<double>(objectReference, doubleValue, property);
                             }
 
                             return 0;
                         } else if (t.IsAssignableFrom(ushortType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, (ushort) doubles[0]);
+                                SetFieldValue<ushort>(objectReference, (ushort)doubleValue, field);
                             } else {
-                                SetValue<ushort>(objectReference, (ushort) doubles[0], property);
+                                SetValue<ushort>(objectReference, (ushort)doubleValue, property);
                             }
 
                             return 0;
                         } else if (t.IsAssignableFrom(floatType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, (System.Single)doubles[0]);
+                                SetFieldValue<float>(objectReference, (float) doubleValue, field);
                             } else {
-                                SetValue<float>(objectReference, (System.Single) doubles[0], property);
+                                SetValue<float>(objectReference, (float) doubleValue, property);
                             }
+
                             return 0;
-                        } else if (t.IsAssignableFrom(intType) || t.BaseType == enumType || t.IsAssignableFrom(enumType) || t.IsAssignableFrom(byteType)) {
+                        } else if (t.IsAssignableFrom(intType) || t.BaseType == enumType ||
+                                   t.IsAssignableFrom(enumType) || t.IsAssignableFrom(byteType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, (int)doubles[0]);
+                                SetFieldValue<int>(objectReference, (int)doubleValue, field);
                             } else {
-                                SetValue<int>(objectReference, (int)doubles[0], property);
+                                SetValue<int>(objectReference, (int)doubleValue, property);
                             }
+
                             return 0;
                         } else if (t.IsAssignableFrom(uIntType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, unchecked((int)doubles[0]));
+                                SetFieldValue<uint>(objectReference, unchecked((uint)doubleValue), field);
                             } else {
-                                SetValue<uint>(objectReference, unchecked((uint) doubles[0]), property);
+                                SetValue<uint>(objectReference, unchecked((uint)doubleValue), property);
                             }
                         } else if (t.IsAssignableFrom(longType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, (long)doubles[0]);
+                                SetFieldValue<long>(objectReference, (long)doubleValue, field);
                             } else {
-                                SetValue<long>(objectReference, (long) doubles[0], property);
+                                SetValue<long>(objectReference, (long)doubleValue, property);
                             }
+
                             return 0;
                         } else if (t.IsAssignableFrom(uLongType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, (ulong)doubles[0]);
+                                SetFieldValue<ulong>(objectReference, (ulong)doubleValue, field);
                             } else {
-                                SetValue<ulong>(objectReference, (ulong) doubles[0], property);
+                                SetValue<ulong>(objectReference, (ulong)doubleValue, property);
                             }
+
                             return 0;
                         }
 
@@ -543,7 +526,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_RAY: {
                         if (t.IsAssignableFrom(rayType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewRayFromPointer(propertyData));
+                                SetFieldValue<Ray>(objectReference, NewRayFromPointer(propertyData), field);
                             } else {
                                 SetValue<Ray>(objectReference, NewRayFromPointer(propertyData), property);
                             }
@@ -555,7 +538,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_COLOR: {
                         if (t.IsAssignableFrom(colorType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewColorFromPointer(propertyData));
+                                SetFieldValue<Color>(objectReference, NewColorFromPointer(propertyData), field);
                             } else {
                                 SetValue<Color>(objectReference, NewColorFromPointer(propertyData), property);
                             }
@@ -567,7 +550,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_PLANE: {
                         if (t.IsAssignableFrom(planeType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewPlaneFromPointer(propertyData));
+                                SetFieldValue<Plane>(objectReference, NewPlaneFromPointer(propertyData), field);
                             } else {
                                 SetValue<Plane>(objectReference, NewPlaneFromPointer(propertyData), property);
                             }
@@ -579,7 +562,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_RECT: {
                         if (t.IsAssignableFrom(rectType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewRectFromPointer(propertyData));
+                                SetFieldValue<Rect>(objectReference, NewRectFromPointer(propertyData), field);
                             } else {
                                 SetValue<Rect>(objectReference, NewRectFromPointer(propertyData), property);
                             }
@@ -591,7 +574,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_QUATERNION: {
                         if (t.IsAssignableFrom(quaternionType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
+                                SetFieldValue<Quaternion>(objectReference, NewQuaternionFromPointer(propertyData), field);
                             } else {
                                 SetValue<Quaternion>(objectReference, NewQuaternionFromPointer(propertyData), property);
                             }
@@ -603,7 +586,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_VECTOR2: {
                         if (t.IsAssignableFrom(vector2Type)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewVector2FromPointer(propertyData));
+                                SetFieldValue<Vector2>(objectReference, NewVector2FromPointer(propertyData), field);
                             } else {
                                 SetValue<Vector2>(objectReference, NewVector2FromPointer(propertyData), property);
                             }
@@ -615,7 +598,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_VECTOR4: {
                         if (t.IsAssignableFrom(vector4Type)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewVector4FromPointer(propertyData));
+                                SetFieldValue<Vector4>(objectReference, NewVector4FromPointer(propertyData), field);
                             } else {
                                 SetValue<Vector4>(objectReference, NewVector4FromPointer(propertyData), property);
                             }
@@ -627,7 +610,7 @@ public partial class LuauCore : MonoBehaviour {
                     case PODTYPE.POD_MATRIX: {
                         if (t.IsAssignableFrom(matrixType)) {
                             if (field != null) {
-                                field.SetValue(objectReference, NewMatrixFromPointer(propertyData));
+                                SetFieldValue<Matrix4x4>(objectReference, NewMatrixFromPointer(propertyData), field);
                             } else {
                                 SetValue<Matrix4x4>(objectReference, NewMatrixFromPointer(propertyData), property);
                             }
@@ -707,16 +690,40 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    private static T GetValue<T>(object instance, PropertyGetReflectionCache cacheData) {
-        if (typeof(T) == typeof(object) || cacheData.IsNativeClass || cacheData.IsStruct) {
-            return (T) cacheData.propertyInfo.GetValue(instance);
+    private static unsafe T GetFieldValue<T>(object instance, FieldInfo fieldInfo) where T : unmanaged {
+        var addr = UnsafeUtility.PinGCObjectAndGetAddress(instance, out ulong handle);
+        try {
+            var offset = UnsafeUtility.GetFieldOffset(fieldInfo);
+            return *(T*)((byte*)addr + offset);
+        } finally {
+            UnsafeUtility.ReleaseGCObject(handle);
         }
+    }
     
-        if (!cacheData.HasGetPropertyFunc) {
-            var getMethod = cacheData.propertyInfo.GetGetMethod();
+    private static unsafe void SetFieldValue<T>(object instance, T value, FieldInfo fieldInfo) where T : unmanaged {
+        var addr = UnsafeUtility.PinGCObjectAndGetAddress(instance, out ulong handle);
+        try {
+            var offset = UnsafeUtility.GetFieldOffset(fieldInfo);
+            
+            *(T*)((byte*)addr + offset) = value;
+        } finally {
+            UnsafeUtility.ReleaseGCObject(handle);
+        }
+    }
+
+    private static T GetValue<T>(object instance, MemberGetReflectionCache cacheData) {
+        if (cacheData.memberInfo is not PropertyInfo propertyInfo) throw new Exception("Failed to GetValue: MemberInfo represents neither property nor field.");;
+        
+        if (typeof(T) == typeof(object) || cacheData.IsNativeClass || cacheData.IsStruct) {
+            var res = (T) propertyInfo.GetValue(instance);
+            return res;
+        }
+        
+        if (!cacheData.HasGetMemberFunc) {
+            MethodInfo getMethodInfo = propertyInfo.GetGetMethod();
 
             unsafe {
-                delegate*<object, T> funcPtr = (delegate*<object, T>)getMethod
+                delegate*<object, T> funcPtr = (delegate*<object, T>) getMethodInfo
                     .MethodHandle
                     .GetFunctionPointer()
                     .ToPointer();
@@ -728,13 +735,15 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 });
             
-                cacheData.HasGetPropertyFunc = true;
-                cacheData.GetProperty = getter;
-                LuauCore.propertyGetCache[new PropertyCacheKey(cacheData.objectType, cacheData.propertyInfo.Name)] = cacheData;
+                cacheData.HasGetMemberFunc = true;
+                cacheData.GetMember = getter;
+
+                var key = new MemberGetCacheKey(cacheData.objectType, cacheData.memberInfo.Name);
+                UpdateMemberGetCache(key, cacheData);
             }
         }
-            
-        return ((Getter<T>) cacheData.GetProperty)(instance);
+        var finalRes = ((Getter<T>) cacheData.GetMember)(instance);
+        return finalRes;
     }
     
     private static void SetValue<T>(object instance, T value, PropertyInfo pi) {
@@ -764,6 +773,7 @@ public partial class LuauCore : MonoBehaviour {
             ret = GetProperty(context, thread, instanceId, classNamePtr, classNameSize, propertyName, propertyNameLength, propertyNameAtom);
         } catch (Exception e) {
             ret = LuauError(thread, $"{e.GetType()}: {e.Message}");
+            Debug.LogError(e);
         }
 
         return ret;
@@ -790,25 +800,30 @@ public partial class LuauCore : MonoBehaviour {
             }
 
             // Get PropertyInfo from cache if possible -- otherwise put it in cache
-            PropertyGetReflectionCache? cacheData;
-            if (!(cacheData = LuauCore.GetPropertyCacheValue(classType, propName)).HasValue) {
-                PropertyInfo propertyInfo = null;
+            MemberGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetMemberCacheValue(classType, propName)).HasValue) {
+                MemberInfo memberInfo = null;
                 try {
-                    propertyInfo = classType.GetProperty(propName,
+                    memberInfo = classType.GetProperty(propName,
                         BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
                 } catch (AmbiguousMatchException) {
                     // If we get an ambiguous match we should use the type declared explicitly in this static class
                     // (rather than whatever inherited static is causing the ambiguity)
-                    propertyInfo = classType.GetProperty(propName,
+                    memberInfo = classType.GetProperty(propName,
                         BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
                 }
 
-                cacheData = LuauCore.SetPropertyCacheValue(classType, propName, propertyInfo);
+                if (memberInfo == null) {
+                    memberInfo = classType.GetField(propName,
+                        BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+                }
+
+                cacheData = LuauCore.SetMemberCacheValue(classType, propName, memberInfo);
             }
 
             // Try access as PropertyInfo
-            if (cacheData.Value.Exists) {
-                if (!ReflectionList.IsMemberAllowed(classType, cacheData.Value.propertyInfo, context)) {
+            if (cacheData.Value.Exists && cacheData.Value.memberInfo is PropertyInfo propInfo) {
+                if (!ReflectionList.IsMemberAllowed(classType, cacheData.Value.memberInfo, context)) {
                     return LuauError(thread, $"[Airship] Access denied when trying to read {staticClassName}.{propName}.");
                 }
 
@@ -817,8 +832,8 @@ public partial class LuauCore : MonoBehaviour {
                     return 1;
                 }
                 
-                System.Object value = cacheData.Value.propertyInfo.GetValue(null);
-                WritePropertyToThread(thread, value, cacheData.Value.propertyType);
+                System.Object value = propInfo.GetValue(null);
+                WritePropertyToThread(thread, value, cacheData.Value.memberType);
                 return 1;
             }
 
@@ -834,9 +849,7 @@ public partial class LuauCore : MonoBehaviour {
             }
 
             // Try access as FieldInfo
-            FieldInfo fieldInfo = classType.GetField(propName,
-                BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-            if (fieldInfo != null) {
+            if (cacheData.Value.Exists && cacheData.Value.memberInfo is FieldInfo fieldInfo) {
                 if (!ReflectionList.IsMemberAllowed(classType, fieldInfo, context)) {
                     return LuauError(thread, $"[Airship] Access denied when trying to read {staticClassName}.{propName}.");
                 }
@@ -887,15 +900,19 @@ public partial class LuauCore : MonoBehaviour {
             }
 
             // Get property info from cache if possible, otherwise set it
-            PropertyGetReflectionCache? cacheData;
-            if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue) {
-                var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
+            MemberGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetMemberCacheValue(sourceType, propName)).HasValue) {
+                MemberInfo memberInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+                if (memberInfo == null) {
+                    memberInfo = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
+                }
+                cacheData = LuauCore.SetMemberCacheValue(sourceType, propName, memberInfo);
             }
 
-            if (cacheData.Value.Exists) {
-                var propertyType = cacheData.Value.propertyType;
-                if (!ReflectionList.IsMemberAllowed(sourceType, cacheData.Value.propertyInfo, context)) {
+            // Handle as property
+            if (cacheData.Value.Exists && cacheData.Value.memberInfo is PropertyInfo) {
+                var propertyType = cacheData.Value.memberType;
+                if (!ReflectionList.IsMemberAllowed(sourceType, cacheData.Value.memberInfo, context)) {
                     return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
                 }
                 
@@ -987,7 +1004,7 @@ public partial class LuauCore : MonoBehaviour {
                 }
                 catch (Exception e) {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
-                    if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {
+                    if (!cacheData.Value.memberType.IsPrimitive) {
                         WritePropertyToThread(thread, null, null);
                         return 1;
                     }
@@ -1036,33 +1053,98 @@ public partial class LuauCore : MonoBehaviour {
                     return 1;
                 }
             }
-
-            // Get C# event:
-            var eventInfo = sourceType.GetRuntimeEvent(propName);
-            if (eventInfo != null) {
-                if (!ReflectionList.IsMemberAllowed(sourceType, eventInfo, context)) {
-                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
-                }
-                
-                return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
-                    eventInfo, false);
-            }
             
             // Get field:
-            var fieldInfo = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
-            if (fieldInfo != null) {
-                if (!ReflectionList.IsMemberAllowed(sourceType, fieldInfo, context)) {
-                    return LuauError(thread, $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+            var isDelegate = false;
+            if (cacheData.Value.Exists && cacheData.Value.memberInfo is FieldInfo fieldInfo) {
+                isDelegate = fieldInfo.FieldType.IsSubclassOf(typeof(Delegate));
+                if (!isDelegate) {
+                    if (!ReflectionList.IsMemberAllowed(sourceType, fieldInfo, context)) {
+                        return LuauError(thread,
+                            $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                    }
+                    
+                    // Fast, unsafe, and alloc-free field access (avoids boxing by accessing memory directly)
+                    if (FastGetAndWriteValueField(thread, objectReference, cacheData.Value)) {
+                        return 1;
+                    }
+                    
+                    Type t = fieldInfo.FieldType;
+                    System.Object value = fieldInfo.GetValue(objectReference);
+                    WritePropertyToThread(thread, value, t);
+                    return 1;
                 }
-                
-                Type t = fieldInfo.FieldType;
-                System.Object value = fieldInfo.GetValue(objectReference);
-                WritePropertyToThread(thread, value, t);
-                return 1;
+            }
+
+            // Get C# event:
+            if (isDelegate) {
+                var eventInfo = sourceType.GetRuntimeEvent(propName);
+                if (eventInfo != null) {
+                    if (!ReflectionList.IsMemberAllowed(sourceType, eventInfo, context)) {
+                        return LuauError(thread,
+                            $"[Airship] Access denied when trying to read {sourceType.Name}.{propName}.");
+                    }
+
+                    return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash,
+                        eventInfo, false);
+                }
             }
 
             return LuauError(thread, $"ERROR - ({sourceType.Name}).{propName} property/field not found");
         }
+    }
+
+    private static bool FastGetAndWriteValueField(IntPtr thread, object objectReference, MemberGetReflectionCache cacheData) {
+        if (cacheData.memberInfo is not FieldInfo fieldInfo) throw new Exception("FastGetAndWriteValueField must be called with FieldInfo.");
+        
+        var fieldType = cacheData.memberType;
+        
+        if (fieldType == intType) {
+            var intValue = GetFieldValue<int>(objectReference, fieldInfo);
+            WritePropertyToThreadInt32(thread, intValue);
+            return true;
+        }
+        if (fieldType == boolType) {
+            var boolValue = GetFieldValue<bool>(objectReference, fieldInfo);
+            WritePropertyToThreadBoolean(thread, boolValue);
+            return true;
+        }
+        if (fieldType == doubleType) {
+            var doubleValue = GetFieldValue<double>(objectReference, fieldInfo);
+            WritePropertyToThreadDouble(thread, doubleValue);
+            return true;
+        }
+        if (fieldType == floatType) {
+            var floatValue = GetFieldValue<float>(objectReference, fieldInfo);
+            WritePropertyToThreadSingle(thread, floatValue);
+            return true;
+        }
+        if (fieldType == byteType) {
+            var byteValue = GetFieldValue<byte>(objectReference, fieldInfo);
+            WritePropertyToThreadByte(thread, byteValue);
+            return true;
+        }
+        if (fieldType == vector3Type) {
+            var vecValue = GetFieldValue<Vector3>(objectReference, fieldInfo);
+            WritePropertyToThreadVector3(thread, vecValue);
+            return true;
+        }
+        if (fieldType == vector2Type) {
+            var vecValue = GetFieldValue<Vector2>(objectReference, fieldInfo);
+            WritePropertyToThreadVector2(thread, vecValue);
+            return true;
+        }
+        if (fieldType == quaternionType) {
+            var quatValue = GetFieldValue<Quaternion>(objectReference, fieldInfo);
+            WritePropertyToThreadQuaternion(thread, quatValue);
+            return true;
+        }
+        if (fieldType == rectType) {
+            var rectValue = GetFieldValue<Rect>(objectReference, fieldInfo);
+            WritePropertyToThreadRect(thread, rectValue);
+            return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -1070,8 +1152,8 @@ public partial class LuauCore : MonoBehaviour {
     /// because we avoid boxing (no heap allocations).
     /// </summary>
     /// <returns>True if successful, otherwise false if nothing was written.</returns>
-    private static bool FastGetAndWriteValueProperty(IntPtr thread, object objectReference, PropertyGetReflectionCache cacheData) {
-        var propType = cacheData.propertyType;
+    private static bool FastGetAndWriteValueProperty(IntPtr thread, object objectReference, MemberGetReflectionCache cacheData) {
+        var propType = cacheData.memberType;
         
         if (IsOfType(propType, boolType)) {
             var boolValue = GetValue<bool>(objectReference, cacheData);
@@ -1091,6 +1173,11 @@ public partial class LuauCore : MonoBehaviour {
         if (IsOfType(propType, floatType)) {
             var shortVal = GetValue<float>(objectReference, cacheData);
             WritePropertyToThreadSingle(thread, shortVal);
+            return true;
+        }
+        if (IsOfType(propType, byteType)) {
+            var byteVal = GetValue<byte>(objectReference, cacheData);
+            WritePropertyToThreadByte(thread, byteVal);
             return true;
         }
         if (IsOfType(propType, vector3Type)) {
@@ -1770,69 +1857,88 @@ public partial class LuauCore : MonoBehaviour {
     private struct FastCacheEntry {
         public bool exists;
         public Type ObjectType;
-        public string PropName;
+        public string MemberName;
     }
     
     // This is faster frequently it seems, but could be slow if we keep overwriting the same entry
     // It only speeds up dictionary get time.
-    private static int propGetFastCacheSize = 100;
-    private static FastCacheEntry[] fastPropGetCacheKeys = new FastCacheEntry[propGetFastCacheSize];
-    private static PropertyGetReflectionCache[] fastPropGetCacheValues = new PropertyGetReflectionCache[propGetFastCacheSize];
+    private static int fastMemberGetCacheSize = 1024;
+    private static FastCacheEntry[] fastMemberGetCacheKeys = new FastCacheEntry[fastMemberGetCacheSize];
+    private static MemberGetReflectionCache[] fastMemberGetCacheValues = new MemberGetReflectionCache[fastMemberGetCacheSize];
 
-    private static PropertyGetReflectionCache? GetPropertyCacheValue(Type objectType, string propName) {
+    private static MemberGetReflectionCache? GetMemberCacheValue(Type objectType, string propName) {
         // Avoid caching result of int field access of a dictionary (because this is a non-discrete
         // prop name and may flood look up table)
         if (typeof(IDictionary).IsAssignableFrom(objectType)) {
             if (int.TryParse(propName, out int keyInt)) {
-                return new PropertyGetReflectionCache {
+                return new MemberGetReflectionCache {
                     Exists = false,
                 };
             }
         }
         
-        var key = new PropertyCacheKey(objectType, propName);
-        var l1Key = key.GetHashCode() % propGetFastCacheSize;
-        if (l1Key < 0) l1Key += propGetFastCacheSize;
+        var key = new MemberGetCacheKey(objectType, propName);
+        var l1Key = key.GetHashCode() % fastMemberGetCacheSize;
+        if (l1Key < 0) l1Key += fastMemberGetCacheSize;
         
-        var fastEntry = fastPropGetCacheKeys[l1Key];
-        if (fastEntry.exists && fastEntry.ObjectType == objectType && fastEntry.PropName == propName) {
-            return fastPropGetCacheValues[l1Key];
+        var fastEntry = fastMemberGetCacheKeys[l1Key];
+        if (fastEntry.exists && fastEntry.ObjectType == objectType && fastEntry.MemberName == propName) {
+            return fastMemberGetCacheValues[l1Key];
         }
 
         // Note: only caching on type full name + prop name. Possible collision on assemblies
-        if (propertyGetCache.TryGetValue(key, out var data)) {
-            fastPropGetCacheKeys[l1Key] = new FastCacheEntry() {
+        if (memberGetCache.TryGetValue(key, out var data)) {
+            fastMemberGetCacheKeys[l1Key] = new FastCacheEntry() {
                 ObjectType = objectType,
-                PropName = propName,
+                MemberName = propName,
                 exists = true,
             };
-            fastPropGetCacheValues[l1Key] = data;
+            fastMemberGetCacheValues[l1Key] = data;
             return data;
         }
 
         return null;
     }
 
-    private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo) {
-        PropertyGetReflectionCache cacheData;
-        if (propertyInfo != null) {
-            var propType = propertyInfo.PropertyType;
-            cacheData = new PropertyGetReflectionCache {
+    /// <summary>
+    /// Updates both the memberGetCache value and the fastMemberGetCache value
+    /// </summary>
+    private static void UpdateMemberGetCache(MemberGetCacheKey key, MemberGetReflectionCache value) {
+        var l1Key = key.GetHashCode() % fastMemberGetCacheSize;
+        if (l1Key < 0) l1Key += fastMemberGetCacheSize;
+        
+        fastMemberGetCacheKeys[l1Key] = new FastCacheEntry {
+            ObjectType = value.objectType,
+            MemberName = value.memberInfo.Name,
+            exists = true,
+        };
+        fastMemberGetCacheValues[l1Key] = value;
+        memberGetCache[key] = value;
+    }
+
+    private static MemberGetReflectionCache SetMemberCacheValue(Type objectType, string propName, MemberInfo memberInfo) {
+        MemberGetReflectionCache cacheData;
+        Type memberType = null;
+        if (memberInfo is PropertyInfo pi) memberType = pi.PropertyType;
+        if (memberInfo is FieldInfo fi) memberType = fi.FieldType;
+        
+        if (memberInfo != null && memberType != null) {
+            cacheData = new MemberGetReflectionCache {
                 objectType = objectType,
-                propertyType = propType.IsByRef ? propType.GetElementType() : propType,
-                propertyInfo = propertyInfo,
-                IsNativeClass = propertyInfo.DeclaringType.GetCustomAttributes(false)
+                memberType = memberType.IsByRef ? memberType.GetElementType() : memberType,
+                memberInfo = memberInfo,
+                IsNativeClass = memberInfo.DeclaringType.GetCustomAttributes(false)
                     .Any(attr => attr.GetType().Name == "NativeClassAttribute"),
-                IsStruct = propertyInfo.DeclaringType.IsValueType && !propertyInfo.DeclaringType.IsPrimitive,
+                IsStruct = memberInfo.DeclaringType.IsValueType && !memberInfo.DeclaringType.IsPrimitive,
                 Exists = true,
             };
         } else {
-            cacheData = new PropertyGetReflectionCache {
+            cacheData = new MemberGetReflectionCache {
                 Exists = false,
             };
         }
 
-        LuauCore.propertyGetCache[new PropertyCacheKey(objectType, propName)] = cacheData;
+        UpdateMemberGetCache(new MemberGetCacheKey(objectType, propName), cacheData);
         return cacheData;
     }
     

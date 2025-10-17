@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Reflection;
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
 using System.Linq;
@@ -31,6 +32,12 @@ public partial class LuauCore : MonoBehaviour
 
     private static HashSet<string> referencedAssemblies = new();
     public static bool printReferenceAssemblies = false;
+
+    /// <summary>
+    /// Used to reduce allocations when parsing invocation parameters
+    /// parsedDataArrayPool[i] is an array of size i
+    /// </summary>
+    private static List<object[]> parsedDataArrayPool = new(10);
 
     public static event Action onSetupReflection;
 
@@ -131,6 +138,9 @@ public partial class LuauCore : MonoBehaviour
 
         typeMethodInfos.Clear();
         s_stringPool = new StringPool(1024 * 1024 * 5); //5mb
+        for (var i = parsedDataArrayPool.Count; i < 10; i++) {
+            parsedDataArrayPool.Add(new object[i]);
+        }
         extensionMethods = new();
 
         var stopwatch = Stopwatch.StartNew();
@@ -327,7 +337,7 @@ public partial class LuauCore : MonoBehaviour
 
             return 0;
         }
-        
+
         var success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, parameterIsTable, podObjects, false, out var parsedData);
         if (success == false) {
             ThreadDataManager.Error(thread);
@@ -439,6 +449,11 @@ public partial class LuauCore : MonoBehaviour
     // Called from WriteProperty
     public static unsafe void WritePropertyToThreadInt32(IntPtr thread, int value) {
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value), 0);
+    }
+    
+    public static unsafe void WritePropertyToThreadByte(IntPtr thread, byte value) {
+        int number = value;
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &number), 0);
     }
 
     public static unsafe void WritePropertyToThreadBoolean(IntPtr thread, bool value) {
@@ -921,7 +936,9 @@ public partial class LuauCore : MonoBehaviour
     private static bool ParseParameterData(IntPtr thread, int numParameters, Span<IntPtr> intPtrs, Span<int> podTypes, ParameterInfo[] methodParameters, Span<int> sizes, Span<int> isTable, Span<object> podObjects, bool usingAttachedContext, out object[] parsedData) {
         var numParametersIncludingContext = numParameters;
         if (usingAttachedContext) numParametersIncludingContext += 1;
-        parsedData = new object[methodParameters.Length];
+
+        var outLength = methodParameters.Length; 
+        parsedData = outLength < parsedDataArrayPool.Count ? parsedDataArrayPool[outLength] : new object[outLength];
 
         for (int i = 0; i < numParameters; i++) {
             var paramIndex = i;
@@ -953,61 +970,61 @@ public partial class LuauCore : MonoBehaviour
                     continue;
                 }
                 case PODTYPE.POD_DOUBLE: {
-                    double[] doubleData = new double[1];
-                    Marshal.Copy(intPtrs[i], doubleData, 0, 1);
+                    var doubleValue = NewDoubleFromPointer(intPtrs[i]);
                     if (sourceParamType.IsAssignableFrom(doubleType)) {
-                        parsedData[paramIndex] = doubleData[0];
+                        parsedData[paramIndex] = doubleValue;
                         continue;
                     }
+
                     if (sourceParamType.IsAssignableFrom(floatType)) {
-                        parsedData[paramIndex] = (System.Single)doubleData[0];
+                        parsedData[paramIndex] = (System.Single) doubleValue;
                         continue;
                     }
+
                     if (sourceParamType.IsAssignableFrom(byteType)) {
-                        parsedData[paramIndex] = (System.Byte)doubleData[0];
+                        parsedData[paramIndex] = (System.Byte) doubleValue;
                         continue;
                     }
 
                     if (sourceParamType.BaseType == enumType) {
                         if (Enum.GetUnderlyingType(sourceParamType) == byteType) {
-                            parsedData[paramIndex] = (System.Byte)doubleData[0];
+                            parsedData[paramIndex] = (System.Byte) doubleValue;
                         } else {
-                            parsedData[paramIndex] = (System.Int32)doubleData[0];
+                            parsedData[paramIndex] = (System.Int32) doubleValue;
                         }
+
                         continue;
                     }
+
                     if (sourceParamType.IsAssignableFrom(intType)) {
-                        parsedData[paramIndex] = (System.Int32)doubleData[0];
+                        parsedData[paramIndex] = (System.Int32) doubleValue;
                         continue;
                     }
+
                     if (sourceParamType.IsAssignableFrom(uIntType)) {
-                        parsedData[paramIndex] = (System.UInt32)doubleData[0];
+                        parsedData[paramIndex] = (System.UInt32) doubleValue;
                         continue;
                     }
+
                     if (sourceParamType.IsAssignableFrom(ushortType)) {
-                        parsedData[paramIndex] = (System.UInt16)doubleData[0];
+                        parsedData[paramIndex] = (System.UInt16) doubleValue;
                         continue;
                     }
+
                     if (sourceParamType.IsAssignableFrom(longType)) {
-                        parsedData[paramIndex] = (System.Int64)doubleData[0];
+                        parsedData[paramIndex] = (System.Int64) doubleValue;
                         continue;
                     }
+
                     if (sourceParamType.IsAssignableFrom(uLongType)) {
-                        parsedData[paramIndex] = (System.UInt64)doubleData[0];
+                        parsedData[paramIndex] = (System.UInt64) doubleValue;
                         continue;
                     }
 
                     break;
                 }
                 case PODTYPE.POD_BOOL: {
-                    double[] doubleData = new double[1];
-                    Marshal.Copy(intPtrs[i], doubleData, 0, 1);
-                    if (doubleData[0] == 0) {
-                        parsedData[paramIndex] = false;
-                    }else {
-                        parsedData[paramIndex] = true;
-                    }
-
+                    parsedData[paramIndex] = NewBooleanFromPointer(intPtrs[i]);
                     continue;
                 }
                 case PODTYPE.POD_VECTOR3: {
@@ -1594,15 +1611,21 @@ public partial class LuauCore : MonoBehaviour
         Marshal.Copy(data, DoubleData, 0, 1);
         return (float)DoubleData[0];
     }
+    
+    public static double NewDoubleFromPointer(IntPtr data) {
+        Marshal.Copy(data, DoubleData, 0, 1);
+        return (double)DoubleData[0];
+    }
 
     public static int NewInt32FromPointer(IntPtr data) {
         Marshal.Copy(data, DoubleData, 0, 1);
         return (int)DoubleData[0];
     }
 
+    private static readonly int[] BoolData = new int[1];
     public static bool NewBooleanFromPointer(IntPtr data) {
-        Marshal.Copy(data, DoubleData, 0, 1);
-        return DoubleData[0] != 0;
+        Marshal.Copy(data, BoolData, 0, 1);
+        return BoolData[0] != 0;
     }
 
     private static readonly float[] VectorData = new float[4];

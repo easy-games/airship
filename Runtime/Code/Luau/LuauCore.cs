@@ -205,7 +205,7 @@ public partial class LuauCore : MonoBehaviour {
         _taskId++;
         _completedTasks.Clear();
         eventConnections.Clear();
-        propertyGetCache.Clear();
+        memberGetCache.Clear();
         _propertySetterCache.Clear();
         WriteMethodFunctions.Clear();
         LuauProtection.CurrentContext = LuauContext.Game;
