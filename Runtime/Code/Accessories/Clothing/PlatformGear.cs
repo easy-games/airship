@@ -18,6 +18,19 @@ namespace Code.Accessories.Clothing {
         }
     }
 
+    [System.Serializable]
+    public class PlatformGearColor {
+        public string key = "Color";
+        public Color value = Color.white;
+        public PlatformGearColorScheme scheme = PlatformGearColorScheme.Clothes;
+    }
+
+    public enum PlatformGearColorScheme {
+        Skin,
+        Hair,
+        Clothes
+    }
+
     /**
      * Clothing exists on the backend and consists of one or many accessories.
      * Usually it's just one accessory (ie: a hat)
@@ -30,10 +43,13 @@ namespace Code.Accessories.Clothing {
         public AccessoryComponent[] accessoryPrefabs;
         public AccessoryFace face;
 
-        public Color[] optionColors;
-        public int optionVariants = 1;
+        [Header("Optional Customizations")]
+        public PlatformGearColor[] customizationColors;
+
+        public string[] customizationVariantNames = new string[] { "Default" };
 
         public static Dictionary<string, Task<bool>> inProgressDownloads = new();
+
         /// <summary>
         /// AirId to asset bundle
         /// </summary>
@@ -93,7 +109,7 @@ namespace Code.Accessories.Clothing {
                 return null;
             }
 
-            AssetBundle bundle = DownloadHandlerAssetBundle.GetContent(req);
+            var bundle = DownloadHandlerAssetBundle.GetContent(req);
             // Uncomment to list all assets inside the bundle.
             // foreach (var asset in bundle.GetAllAssetNames()) {
             //     Debug.Log("  - " + asset);
@@ -101,7 +117,7 @@ namespace Code.Accessories.Clothing {
             var manifestReq = bundle.LoadAssetAsync<PlatformGearBundleManifest>("gear bundle manifest");
 
             await manifestReq;
-            var manifest = (PlatformGearBundleManifest) manifestReq.asset;
+            var manifest = (PlatformGearBundleManifest)manifestReq.asset;
             loadedPlatformGearBundles[airId] = new PlatformGearBundleInfo(bundle, manifest);
             foreach (var clothing in manifest.gearList) {
                 if (clothing.classId == classId) {
@@ -114,5 +130,4 @@ namespace Code.Accessories.Clothing {
             return null;
         }
     }
-
 }

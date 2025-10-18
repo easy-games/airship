@@ -24,6 +24,7 @@ namespace Code.Player.Accessories {
             EARS = 1 << 4,
             UNUSED1 = 1 << 5,
             UNUSED2 = 1 << 6,
+
             //Row 1
             L_ARM_LOWER = 1 << 7,
             L_HAND = 1 << 8,
@@ -33,6 +34,7 @@ namespace Code.Player.Accessories {
             L_ARM_JOINTS = 1 << 12,
             UNUSED5 = 1 << 13,
             UNUSED6 = 1 << 14,
+
             //Row 2
             L_LEG_UPPER = 1 << 15,
             HIPS = 1 << 16,
@@ -42,6 +44,7 @@ namespace Code.Player.Accessories {
             L_LEG_JOINTS = 1 << 20,
             UNUSED9 = 1 << 21,
             UNUSED10 = 1 << 22,
+
             //Row 3
             L_LEG_LOWER = 1 << 23,
             L_FOOT = 1 << 24,
@@ -50,13 +53,13 @@ namespace Code.Player.Accessories {
             UNUSED11 = 1 << 27,
             UNUSED12 = 1 << 28,
             UNUSED13 = 1 << 29,
-            UNUSED14 = 1 << 30,
+            UNUSED14 = 1 << 30
         }
 
 
-        void Start() {
+        private void Start() {
             if (RunCore.IsClient() || Application.isEditor) {
-                var renderers = this.gameObject.GetComponentsInChildren<MeshRenderer>();
+                var renderers = gameObject.GetComponentsInChildren<MeshRenderer>();
                 foreach (var r in renderers) {
                     if (!r.sharedMaterial.shader.isSupported) {
                         r.sharedMaterial.shader = Shader.Find("Universal Render Pipeline/Lit");
@@ -76,7 +79,7 @@ namespace Code.Player.Accessories {
         public struct BodyMaskInspectorData {
             public BodyMaskInspectorData(BodyMask mask, string name) {
                 this.name = name;
-                this.bodyMask = mask;
+                bodyMask = mask;
             }
 
             public string name;
@@ -105,19 +108,20 @@ namespace Code.Player.Accessories {
             new(BodyMask.R_LEG_UPPER, "Right Leg Upper"),
             new(BodyMask.R_LEG_JOINTS, "Right Leg Joints"),
             new(BodyMask.R_LEG_LOWER, "Right Leg Lower"),
-            new(BodyMask.R_FOOT, "Right Foot"),
+            new(BodyMask.R_FOOT, "Right Foot")
         };
 
         public static string GetBodyMaskName(int bit) {
-
             if (bit == 0) {
                 return "NONE";
             }
+
             foreach (var data in BodyMaskInspectorDatas) {
                 if (data.bodyMask == (BodyMask)(1 << bit)) {
                     return data.name;
                 }
             }
+
             return "UNUSED";
         }
 
@@ -125,12 +129,17 @@ namespace Code.Player.Accessories {
         public AccessorySlot accessorySlot = AccessorySlot.RightHand;
         public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
-        public AccessoryCustomization customization;
+
+        [Header("Optional Customizations")]
+        public CustomAccSetter_Color colorSetter;
+
+        public CustomAccSetter_Variant variantSetter;
 
         [SerializeField]
         public List<Mesh> meshLods = new();
 
-        [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
+        [Tooltip(
+            "True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
         [Obsolete]
         public bool canMeshCombine = false;
 
@@ -141,42 +150,32 @@ namespace Code.Player.Accessories {
         [Header("Legacy IDs")]
         [HideFromTS]
         public string serverClassId;
+
         [HideFromTS]
         public string serverClassIdStaging;
+
         private string serverInstanceId;
 
         public Vector3 localPosition {
-            get {
-                return transform.localPosition;
-            }
-            set {
-                transform.localPosition = value;
-            }
+            get => transform.localPosition;
+            set => transform.localPosition = value;
         }
 
         public Quaternion localRotation {
-            get {
-                return transform.localRotation;
-            }
-            set {
-                transform.localRotation = value;
-            }
+            get => transform.localRotation;
+            set => transform.localRotation = value;
         }
 
         public Vector3 localScale {
-            get {
-                return transform.localScale;
-            }
-            set {
-                transform.localScale = value;
-            }
+            get => transform.localScale;
+            set => transform.localScale = value;
         }
 
         public string GetServerClassId() {
 #if AIRSHIP_STAGING
             return this.serverClassIdStaging;
 #else
-            return this.serverClassId;
+            return serverClassId;
 #endif
         }
 
@@ -205,7 +204,5 @@ namespace Code.Player.Accessories {
         public bool HasFlag(BodyMask flag) {
             return (bodyMask & (uint)flag) != 0;
         }
-
     }
 }
- 
