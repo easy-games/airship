@@ -16,7 +16,7 @@ public enum ReconcilerVersion {
     Version2,
 }
 
-public enum ComponentEditorVersion {
+public enum EditorInspectorMode {
     [InspectorName("Default")]
     Default,
     [InspectorName("Disabled")]
@@ -53,8 +53,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] internal bool useProjectReconcileOption = false;
     [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;
 
-   [SerializeField]
-    internal ComponentEditorVersion componentEditorVersion = ComponentEditorVersion.Default;
+    [SerializeField]
+    internal EditorInspectorMode editorInspectorMode = EditorInspectorMode.Default;
     
     #region LUAU OPTIONS
     [SerializeField] public bool promptIfLuauPluginChanged = true;

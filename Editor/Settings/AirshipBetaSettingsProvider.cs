@@ -11,13 +11,14 @@ namespace Editor.Settings {
         private void BetaCategoryBegin(GUIContent header, GUIContent desc = null) {
             EditorGUILayout.Space(10);
             AirshipEditorGUI.HorizontalLine();
+            
+            EditorGUILayout.BeginVertical(new GUIStyle() { padding = new RectOffset(10, 10, 10, 10)});
             GUILayout.Label(header, EditorStyles.whiteLargeLabel);
 
             if (desc != null) {
                 GUILayout.Label(desc, EditorStyles.label);
+                EditorGUILayout.Space(5);
             }
-            
-            EditorGUILayout.BeginVertical(new GUIStyle() { padding = new RectOffset(10, 10, 10, 10)});
         }
 
         private void BetaCategoryEnd() {
@@ -43,17 +44,17 @@ namespace Editor.Settings {
             BetaCategoryEnd();
             
             BetaCategoryBegin(
-                new GUIContent("AirshipComponent Inspectors V2"), 
+                new GUIContent("Airship Component Inspector Rework & Custom Inspectors"), 
                 new GUIContent("Changes how AirshipComponent properties are displayed in the editor, as well if custom editors are supported"));
             {
-                if (AirshipCustomEditors.editorVersion == ComponentEditorVersion.UseNewInspector) {
+                if (AirshipCustomEditors.EditorInspectorMode == EditorInspectorMode.UseNewInspector) {
                     EditorGUILayout.HelpBox("Using the new inspectors, please report any issues to @Vorlias on discord. Custom editor API is subject to change.", MessageType.Warning);
                     EditorGUILayout.Space(5);
                 }
                 
-                EditorIntegrationsConfig.instance.componentEditorVersion = (ComponentEditorVersion) EditorGUILayout.EnumPopup(
+                AirshipCustomEditors.EditorInspectorMode = (EditorInspectorMode) EditorGUILayout.EnumPopup(
                     new GUIContent("Use AirshipEditors", "Use the new Airship editor system which allows custom editors and the new property API"),
-                    EditorIntegrationsConfig.instance.componentEditorVersion);
+                    EditorIntegrationsConfig.instance.editorInspectorMode);
 
          
             }

@@ -15,11 +15,27 @@ public static class AirshipCustomEditors {
     
     private static Dictionary<int, AirshipEditor> editors = new();
 
-    internal static ComponentEditorVersion editorVersion {
+    internal const EditorInspectorMode DefaultInspectorMode = EditorInspectorMode.UseLegacyInspector;
+    internal static EditorInspectorMode EditorInspectorMode {
         get {
             var instance = EditorIntegrationsConfig.instance;
-            if (instance.componentEditorVersion == ComponentEditorVersion.Default) return ComponentEditorVersion.UseLegacyInspector;
-            return instance.componentEditorVersion;
+            if (instance.editorInspectorMode == EditorInspectorMode.Default) return DefaultInspectorMode;
+            return instance.editorInspectorMode;
+        }
+        set {
+            var instance = EditorIntegrationsConfig.instance;
+            if (value == instance.editorInspectorMode) return;
+            
+            if (value == EditorInspectorMode.UseLegacyInspector) {
+                editors.Clear();
+                airshipTypeToEditorTypes.Clear();
+            } else if (value == EditorInspectorMode.UseNewInspector || (value == EditorInspectorMode.Default &&
+                                                                        DefaultInspectorMode ==
+                                                                        EditorInspectorMode.UseNewInspector)) {
+                RegisterEditorsForRegisteredTypes();
+            }
+
+            instance.editorInspectorMode = value;
         }
     }
     
@@ -52,16 +68,6 @@ public static class AirshipCustomEditors {
     
     [InitializeOnLoadMethod]
     internal static void RegisterCustomEditors() {
-        var pathEditorAttributes = TypeCache.GetTypesWithAttribute<AirshipComponentEditorAttribute>();
-        foreach (var editor in pathEditorAttributes) {
-            var attr = editor.GetCustomAttributes<AirshipComponentEditorAttribute>();
-            foreach (var editorAttribute in attr) {
-                if (!AirshipCustomEditors.editorTypes.TryGetValue(editorAttribute.FilePath, out var _)) {
-                    AirshipCustomEditors.editorTypes.Add(editorAttribute.FilePath, editor);
-                }
-            }
-        }
-        
         RegisterEditorsForRegisteredTypes();
 
         EditorApplication.playModeStateChanged += change => {
@@ -72,7 +78,7 @@ public static class AirshipCustomEditors {
     }
     
     internal static Type GetEditorForTypeName(string typeName) {
-        if (editorVersion != ComponentEditorVersion.UseNewInspector) return null;
+        if (EditorInspectorMode != EditorInspectorMode.UseNewInspector) return null;
         
         var pathType = AirshipBuildInfo.Instance.GetTypeByName(typeName);
         if (pathType == null) return null;
@@ -85,7 +91,7 @@ public static class AirshipCustomEditors {
     }
     
     internal static Type GetEditorForFilePath(string filePath) {
-        if (editorVersion != ComponentEditorVersion.UseNewInspector) return null;
+        if (EditorInspectorMode != EditorInspectorMode.UseNewInspector) return null;
         
         if (editorTypes.TryGetValue(filePath, out var editorType)) {
             return editorType;

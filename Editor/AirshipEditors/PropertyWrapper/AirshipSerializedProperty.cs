@@ -2,6 +2,8 @@
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
+using UnityEditorInternal;
+using UnityEngine;
 using Object = UnityEngine.Object;
 
 public class AirshipSerializedProperty : AirshipSerializedValue {
@@ -19,7 +21,21 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         
         private readonly SerializedProperty serializedItems;
         private readonly SerializedProperty serializedObjects;
-        
+
+        public bool prefabOverride => serializedItems.prefabOverride || serializedObjects.prefabOverride;
+
+        internal void RevertPropertyOverride(InteractionMode interactionMode) {
+            if (!this.prefabOverride) return;
+            PrefabUtility.RevertPropertyOverride(this.serializedItems, interactionMode);
+            PrefabUtility.RevertPropertyOverride(this.serializedObjects, interactionMode);
+        }
+
+        internal void ApplyPropertyOverride(string assetPath, InteractionMode interactionMode) {
+            if (!this.prefabOverride) return;
+            PrefabUtility.ApplyPropertyOverride(this.serializedItems, assetPath, interactionMode);
+            PrefabUtility.ApplyPropertyOverride(this.serializedObjects, assetPath, interactionMode);
+        }
+
         public AirshipArray(AirshipSerializedProperty parentProperty, SerializedProperty serializedItems,
             SerializedProperty objectRefs) {
             this.property = parentProperty;
@@ -116,6 +132,13 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
 
     public bool isArray => serializedType.stringValue == "Array";
 
+    /// <summary>
+    /// Whether or not this property was modified in a prefab
+    /// </summary>
+    public virtual bool prefabOverride {
+        get => this.serializedValue.prefabOverride || this.serializedObjectValue.prefabOverride || (isArray && array.prefabOverride);
+    }
+    
     public int arraySize {
         get {
             return serializedItems.FindPropertyRelative("serializedItems").arraySize;
@@ -156,6 +179,29 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         serializedFileRef = serializedProperty.FindPropertyRelative("fileRef");
     }
 
+    internal Object prefab => PrefabUtility.GetPrefabInstanceHandle(serializedProperty.serializedObject.targetObject);
+    internal Object prefabInstanceRoot => PrefabUtility.GetNearestPrefabInstanceRoot(serializedProperty.serializedObject.targetObject);
+    
+    /// <summary>
+    /// Revert the override for this property
+    /// </summary>
+    /// <param name="interactionMode"></param>
+    internal void RevertPropertyOverride(InteractionMode interactionMode) {
+        if (!this.prefabOverride) return;
+
+        if (isArray) this.array.RevertPropertyOverride(interactionMode);
+        PrefabUtility.RevertPropertyOverride(this.serializedValue, interactionMode);
+        PrefabUtility.RevertPropertyOverride(this.serializedObjectValue, interactionMode);
+    }
+
+    internal void ApplyPropertyOverride(InteractionMode interactionMode) {
+        var assetPath =
+            PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(serializedProperty.serializedObject.targetObject);
+
+        if (isArray) this.array.ApplyPropertyOverride(assetPath, interactionMode);
+        PrefabUtility.ApplyPropertyOverride(this.serializedValue, assetPath, InteractionMode.UserAction);
+    }
+    
     internal void ResetToDefault() {
         // var defaultValue = propertyMetadata.defaultValue;
 

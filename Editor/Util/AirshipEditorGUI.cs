@@ -268,6 +268,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
         
+        DoPropertyEvents(null, property);
         return nextValue;
     }
     
@@ -282,6 +283,7 @@ public static partial class AirshipEditorGUI {
             property.serializedModified.boolValue = true;
         }
         
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
 
@@ -316,6 +318,8 @@ public static partial class AirshipEditorGUI {
 
         Event currentEvent = Event.current;
         var headerRect = GUILayoutUtility.GetLastRect();
+        
+        DoPropertyEvents(null, property);
         
         switch (currentEvent.type) {
             case EventType.DragUpdated or EventType.DragPerform

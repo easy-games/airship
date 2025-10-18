@@ -5,6 +5,7 @@ using Code.Luau;
 using Luau;
 using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
+using UnityEditor.Actions;
 using UnityEngine;
 
 public static class AirshipGUI {
@@ -61,19 +62,38 @@ public static partial class AirshipEditorGUI {
             case EventType.MouseDown: {
                 if (position.Contains(currentEvent.mousePosition) && currentEvent.button == 1 && property is AirshipSerializedProperty serializedProperty) {
                     GenericMenu menu = new GenericMenu();
-                    
-                    if (serializedProperty.isModified) {
-                        
-                        menu.AddItem(new GUIContent("Reset to Default"), false, () => {
-                            serializedProperty.ResetToDefault();
-                            serializedProperty.isModified = false;
 
-                            if (serializedProperty.editor.target is AirshipComponent component) {
-                                EditorUtility.SetDirty(component);
-                            }
+                    // if (serializedProperty.isModified) {
+                    //     
+                    //     menu.AddItem(new GUIContent("Reset to Default"), false, () => {
+                    //         serializedProperty.ResetToDefault();
+                    //         serializedProperty.isModified = false;
+                    //
+                    //         if (serializedProperty.editor.target is AirshipComponent component) {
+                    //             EditorUtility.SetDirty(component);
+                    //         }
+                    //     });
+                    // }
+
+                    if (serializedProperty.prefabOverride) {
+                        var test = L10n.Tr("Apply to Prefab '{0}'");
+                        menu.AddItem(new GUIContent(string.Format(test, serializedProperty.prefabInstanceRoot.name)), false, () => {
+                            // PrefabUtility.ApplyPropertyOverride();
+                            serializedProperty.ApplyPropertyOverride(InteractionMode.UserAction);
+                        });
+                        
+                        menu.AddItem(new GUIContent("Revert"), false, () => {
+                            serializedProperty.RevertPropertyOverride(InteractionMode.UserAction);
                         });
                     }
+                    //
                     
+                    if (AirshipClipboardUtility.CanCopy(property)) {
+                        menu.AddItem(new GUIContent("Copy"), false, () => {
+                            AirshipClipboardUtility.CopyValue(property);
+                        });
+                    }
+
                     menu.ShowAsContext();
                 }
 
@@ -99,6 +119,7 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
         
+        DoPropertyEvents(rect, property);
         return newValue;
     }
     
@@ -119,6 +140,7 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
         
+        DoPropertyEvents(rect, property);
         return newValue;
     }
     
@@ -139,6 +161,7 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
         
+        DoPropertyEvents(rect, property);
         return newValue;
     }
     
@@ -159,6 +182,7 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
         
+        DoPropertyEvents(rect, property);
         return newValue;
     }
 
@@ -215,6 +239,7 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
 
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
     
@@ -255,6 +280,7 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
 
+        DoPropertyEvents(rect, property);
         return nextValue;
     }
 

@@ -115,10 +115,12 @@ public abstract class AirshipEditor : ScriptableObject {
         return displayInfo;
     }
     
+    internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
+    
     /// <summary>
     /// Draw the default properties for this inspector
     /// </summary>
-    protected void DrawDefaultProperties() {
+    private void DrawDefaultProperties() {
         // Draw each property
         foreach (var property in serializedObject.GetProperties()) {
             if (property.HasDecorator("HideInInspector")) continue;
@@ -139,12 +141,67 @@ public abstract class AirshipEditor : ScriptableObject {
                     EditorGUILayout.Space(Convert.ToSingle(spacingParams[0].value));
                 }
             }
-        
-            //var prevBold = AirshipEditorInternals.GetBoldDefaultFont();
-            //AirshipEditorInternals.SetBoldDefaultFont(property.isModified);
+
+            var prevBold = AirshipEditorInternals.GetBoldDefaultFont();
+            if (property.prefabOverride) {
+                AirshipEditorInternals.SetBoldDefaultFont(true);
+            }
+            
             AirshipEditorGUI.PropertyField(new GUIContent(ObjectNames.NicifyVariableName(property.name)), property);
-            // AirshipEditorInternals.SetBoldDefaultFont(prevBold);
+
+            if (property.prefabOverride) {
+                var lastRect = GUILayoutUtility.GetLastRect();
+
+                var modifiedRect = lastRect;
+                modifiedRect.x = 1;
+                modifiedRect.width = 2;
+                Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
+            }
+            AirshipEditorInternals.SetBoldDefaultFont(prevBold);
         }
+    }
+
+    private void DrawScriptReference() {
+        EditorGUILayout.Space(5);
+        var scriptPath = script.assetPath;
+
+        GUI.enabled = false;
+        var newScript = EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
+        GUI.enabled = true;
+        
+        EditorGUILayout.Space(5);
+    }
+    
+#if AIRSHIP_INTERNAL
+    private void DrawInternalDebug() {
+        if (Application.isPlaying) {
+            var binding = (AirshipComponent)target;
+            if (binding == null) return;
+            
+            AirshipEditorGUI.HorizontalLine();
+            EditorGUILayout.BeginHorizontal();
+            {
+                EditorGUILayout.LabelField("GameObject Id", AirshipBehaviourRootV2.GetId(binding.gameObject).ToString());
+                EditorGUILayout.LabelField("Component Id", binding.GetAirshipComponentId().ToString());
+            }
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Context", binding.context.ToString());
+            EditorGUILayout.EndHorizontal();
+        }
+    }
+#endif
+    
+    /// <summary>
+    /// Draws the default inspector
+    /// </summary>
+    protected void DrawDefaultInspector() {
+        DrawScriptReference();
+        DrawDefaultProperties();
+#if AIRSHIP_INTERNAL
+        DrawInternalDebug();
+#endif
     }
 
     internal void OnEnable() {}

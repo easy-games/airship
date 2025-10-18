@@ -271,7 +271,7 @@ public abstract class AirshipSerializedValue {
             this.serializedValue.stringValue = enumType.memberType == TypeScriptEnumMemberType.Integer ? value.IntValue.ToString(CultureInfo.InvariantCulture) : value.StringValue;
         }
     }
-    
+
     public List<LuauMetadataDecoratorElement> decorators { get; protected set; }
     public bool TryGetDecorator(string targetDecoratorName, out List<LuauMetadataDecoratorValue> parameters) {
         if (decorators == null) {
