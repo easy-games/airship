@@ -210,34 +210,12 @@ public class AirshipSettingsProvider : SettingsProvider
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
 
-        EditorGUILayout.Space();
-        showBetaOptions = EditorGUILayout.BeginFoldoutHeaderGroup(showBetaOptions, "Betas");
-        if (showBetaOptions) {
-            EditorGUILayout.HelpBox("You should not touch these settings unless you know what you're doing. Opting into the betas is accepting you are testing these features.", MessageType.Warning);
-            
-            GUILayout.Label("Reconciler Changes", EditorStyles.boldLabel);
-            GUILayout.Label("Changes how AirshipComponent properties are updated in the Editor.", EditorStyles.label);
-            
-            EditorGUILayout.BeginHorizontal();
-            AirshipReconciliationService.ReconcilerVersion = (ReconcilerVersion) EditorGUILayout.EnumPopup(
-                new GUIContent("Reconciliation Type", "This is an experimental feature and subject to change: Changes how the properties on your components are reconciled (updated)"), 
-                EditorIntegrationsConfig.instance.useProjectReconcileOption ? EditorIntegrationsConfig.instance.projectReconcilerVersion : AirshipLocalArtifactDatabase.instance.reconcilerVersion);
-            EditorGUILayout.EndHorizontal();
-            
-            var result = EditorGUILayout.Popup(new GUIContent("Reconciliation Beta Target", "How to test this feature"), 
-                EditorIntegrationsConfig.instance.useProjectReconcileOption ? 1 : 0, new[] { "Local Instance (Only you)", "Project-wide (All users)" });
-            EditorIntegrationsConfig.instance.useProjectReconcileOption = result == 1;
-            
-            EditorIntegrationsConfig.instance.experimentalCustomEditor = EditorGUILayout.Toggle(
-                new GUIContent("Enable Custom Editors", "Use the new Airship editor system which allows custom editors and the new property API"),
-                EditorIntegrationsConfig.instance.experimentalCustomEditor);
-            
-            if (GUI.changed) {
-                AirshipLocalArtifactDatabase.instance.Modify();
-                EditorIntegrationsConfig.instance.Modify();
-            }
-        }
-        EditorGUILayout.EndFoldoutHeaderGroup();
+        // EditorGUILayout.Space();
+        // showBetaOptions = EditorGUILayout.BeginFoldoutHeaderGroup(showBetaOptions, "Betas");
+        // if (showBetaOptions) {
+        //
+        // }
+        // EditorGUILayout.EndFoldoutHeaderGroup();
 
 // #if AIRSHIP_INTERNAL
 //         EditorIntegrationsConfig.instance.alwaysDownloadPackages = EditorGUILayout.Toggle(

@@ -40,7 +40,7 @@ public class DefaultAirshipComponentEditor : AirshipEditor {
     
     public override void OnInspectorGUI() {
         DrawDefaultScriptHeader();
-        DrawProperties();
+        DrawDefaultProperties();
         
         #if AIRSHIP_INTERNAL
             DrawInternalDebug();

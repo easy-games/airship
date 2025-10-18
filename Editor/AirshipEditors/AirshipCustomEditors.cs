@@ -15,6 +15,14 @@ public static class AirshipCustomEditors {
     
     private static Dictionary<int, AirshipEditor> editors = new();
 
+    internal static ComponentEditorVersion editorVersion {
+        get {
+            var instance = EditorIntegrationsConfig.instance;
+            if (instance.componentEditorVersion == ComponentEditorVersion.Default) return ComponentEditorVersion.UseLegacyInspector;
+            return instance.componentEditorVersion;
+        }
+    }
+    
     internal static void RegisterEditorsForRegisteredTypes() {
         airshipTypeToEditorTypes.Clear();
         editors.Clear();
@@ -64,6 +72,8 @@ public static class AirshipCustomEditors {
     }
     
     internal static Type GetEditorForTypeName(string typeName) {
+        if (editorVersion != ComponentEditorVersion.UseNewInspector) return null;
+        
         var pathType = AirshipBuildInfo.Instance.GetTypeByName(typeName);
         if (pathType == null) return null;
         
@@ -71,15 +81,17 @@ public static class AirshipCustomEditors {
             return editorType;
         }
 
-        return EditorIntegrationsConfig.instance.experimentalCustomEditor ? typeof(DefaultAirshipComponentEditor) : null;
+        return typeof(DefaultAirshipComponentEditor);
     }
     
     internal static Type GetEditorForFilePath(string filePath) {
+        if (editorVersion != ComponentEditorVersion.UseNewInspector) return null;
+        
         if (editorTypes.TryGetValue(filePath, out var editorType)) {
             return editorType;
         }
 
-        return EditorIntegrationsConfig.instance.experimentalCustomEditor ? typeof(DefaultAirshipComponentEditor) : null;
+        return typeof(DefaultAirshipComponentEditor);
     }
 
     internal static bool TryGetEditor(AirshipComponent component, Type type, out AirshipEditor editor) {

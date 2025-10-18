@@ -115,7 +115,10 @@ public abstract class AirshipEditor : ScriptableObject {
         return displayInfo;
     }
     
-    protected void DrawProperties() {
+    /// <summary>
+    /// Draw the default properties for this inspector
+    /// </summary>
+    protected void DrawDefaultProperties() {
         // Draw each property
         foreach (var property in serializedObject.GetProperties()) {
             if (property.HasDecorator("HideInInspector")) continue;
@@ -165,8 +168,6 @@ public abstract class AirshipEditor : ScriptableObject {
     public bool PropertyField(string label, string propertyName) => PropertyField(new GUIContent(label), propertyName);
     
     public virtual void OnInspectorGUI() {
-        EditorGUILayout.HelpBox("OnInspectorGUI has not been overridden", MessageType.Warning);
-        AirshipEditorGUI.HorizontalLine();
-        this.DrawProperties();
+        EditorGUILayout.HelpBox($"Using custom inspector {GetType().Name} but OnInspectorGUI is not overloaded", MessageType.Warning);
     }
 }

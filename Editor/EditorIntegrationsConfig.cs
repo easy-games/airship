@@ -8,12 +8,21 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 public enum ReconcilerVersion {
-    [InspectorName("Default [Reconciler V2]")]
+    [InspectorName("Default")]
     Default,
-    [InspectorName("Legacy Reconciler")]
+    [InspectorName("Disabled")]
     Version1,
-    [InspectorName("Reconciler V2")]
+    [InspectorName("Enabled")]
     Version2,
+}
+
+public enum ComponentEditorVersion {
+    [InspectorName("Default")]
+    Default,
+    [InspectorName("Disabled")]
+    UseLegacyInspector,
+    [InspectorName("Enabled")]
+    UseNewInspector,
 }
 
 
@@ -43,6 +52,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
 
     [SerializeField] internal bool useProjectReconcileOption = false;
     [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;
+
+   [SerializeField]
+    internal ComponentEditorVersion componentEditorVersion = ComponentEditorVersion.Default;
     
     #region LUAU OPTIONS
     [SerializeField] public bool promptIfLuauPluginChanged = true;
@@ -75,7 +87,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";
-    public bool experimentalCustomEditor;
 
     public IReadOnlyList<string> TypeScriptBuildArgs {
         get {
