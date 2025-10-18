@@ -298,6 +298,8 @@ public static partial class AirshipEditorGUI {
         return DoAirshipComponent(rect, label, property, validator);
     }
     
+    private static int focusedIntValue;
+    
     public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property, bool expanded = false) {
         if (!property.isArray) return false;
 
@@ -395,16 +397,29 @@ public static partial class AirshipEditorGUI {
         var rect = GUILayoutUtility.GetLastRect();
 
         var lastSize = property.arraySize;
-        
+
+        var arrayName = property.name;
+        GUI.SetNextControlName(arrayName);
         var size = EditorGUI.IntField(
             new Rect(rect) { width = 30, x = rect.width - 15 }, 
             lastSize, 
             new GUIStyle(EditorStyles.numberField) { alignment = TextAnchor.MiddleCenter}
             );
 
-        if (size != lastSize && size >= 0) {
+        var modifyArraySize = false;
+        //Handle only updating array size on focus lost
+        if ((Event.current.isKey && Event.current.keyCode == KeyCode.Return &&
+             GUI.GetNameOfFocusedControl() == arrayName)) {
+            modifyArraySize = true;
+            size = focusedIntValue;
+        } else if (GUI.GetNameOfFocusedControl() == arrayName && size != lastSize) {
+            focusedIntValue = size;
+        }
+        
+        if (modifyArraySize && size != lastSize && size >= 0) {
             property.array.Resize(size);
         }
+
         
         if (enabled) {
             var reorderableList = property.editor.GetOrCreateArrayList(property);
