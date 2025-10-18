@@ -311,6 +311,10 @@ namespace Luau {
             return type == other.type && objectType == other.objectType;
         }
 
+        internal bool HasSameItemsTypesAs(LuauMetadataProperty other) {
+            return items.type == other.items.type && items.objectType == other.items.objectType;
+        }
+
         internal void ReconcileTypesWith(LuauMetadataProperty property) {
             // Check if we're changing object type to a type that contains the current type
             // (for example swapping from AudioClip to AudioResource)
@@ -337,13 +341,29 @@ namespace Luau {
             if (property.items == null) return false;
             if (items.type != property.items.type ||
                 items.objectType != property.items.objectType) {
+
+                var isPropChange = items.type != property.items.type;
+                var isObjectChange = items.objectType != property.items.objectType;
+                
+                if (isPropChange) {
+                    items.serializedItems = new string[] { };
+                    items.objectRefs = new UnityEngine.Object[] { };
+                    modified = false;
+                } else if (isObjectChange) {
+                    var scriptObjectType = TypeReflection.GetTypeFromString(property.items.objectType);
+                    
+                    // Check if we're changing object type to a type that contains the current type
+                    // (for example swapping from AudioClip to AudioResource
+                    // We'll also exclude null here
+                    items.objectRefs = items.objectRefs.Where(objectRef => {
+                        var componentObjectType = objectRef.GetType();
+                        return scriptObjectType.IsAssignableFrom(componentObjectType);
+                    }).ToArray();
+                    items.serializedItems = new string[items.objectRefs.Length];
+                }
+                
                 items.type = property.items.type;
                 items.objectType = property.items.objectType;
-                items.serializedItems = new string[property.items.serializedItems.Length];
-                items.serializedItems =
-                    property.items.serializedItems.Select(a => a).ToArray();
-                items.objectRefs =
-                    property.items.objectRefs.Select(a => a).ToArray();
             }
             
             items.fileRef = property.fileRef;
