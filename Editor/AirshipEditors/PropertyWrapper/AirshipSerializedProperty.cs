@@ -1,6 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
 using Luau;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -36,6 +37,34 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
             PrefabUtility.ApplyPropertyOverride(this.serializedObjects, assetPath, interactionMode);
         }
 
+        internal void ResetToDefault() {
+            var propertyMetadata = property.propertyMetadata;
+            var defaultArray = propertyMetadata.defaultValue as JArray;
+            if (defaultArray != null) {
+                string[] serializedElements = new string[defaultArray.Count];
+                var propertyType =
+                    LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(propertyMetadata.items
+                        .type, false);
+                
+                for (var i = 0; i < defaultArray.Count; i++) {
+                    var obj = defaultArray[i].Value<object>();
+                    serializedElements[i] =
+                        LuauMetadataPropertySerializer.SerializeAirshipProperty(obj, propertyType);
+                }
+
+                serializedItems.ClearArray();
+                serializedObjects.ClearArray();
+
+                serializedItems.arraySize = serializedElements.Length;
+                for (var i = 0; i < serializedElements.Length; i++) {
+                    var serializedElement = serializedElements[i];
+                    serializedItems.GetArrayElementAtIndex(i).stringValue = serializedElement;
+                }
+            } else {
+                serializedItems.ClearArray();
+            }
+        }
+        
         public AirshipArray(AirshipSerializedProperty parentProperty, SerializedProperty serializedItems,
             SerializedProperty objectRefs) {
             this.property = parentProperty;
@@ -135,7 +164,7 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
     /// <summary>
     /// Whether or not this property was modified in a prefab
     /// </summary>
-    public virtual bool prefabOverride {
+    public bool prefabOverride {
         get => this.serializedValue.prefabOverride || this.serializedObjectValue.prefabOverride || (isArray && array.prefabOverride);
     }
     
@@ -203,47 +232,12 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
     }
     
     internal void ResetToDefault() {
-        // var defaultValue = propertyMetadata.defaultValue;
-
+        if (isObject) serializedObjectValue.objectReferenceValue = null;
+        if (isArray) array.ResetToDefault();
+        
         propertyMetadata.SetDefaultAsValue();
         propertyMetadata.modified = false;
-
-        // if (isArray) {
-        //     return;
-        // }
-        //
-        // if (isObject) {
-        //     serializedObjectValue.objectReferenceValue = null;
-        //     return;
-        // }
-        //
-        // if (defaultValue == null) {
-        //     switch (type) {
-        //         case PropertyType.Number:
-        //             numberValue = 0;
-        //             isModified = false;
-        //             break;
-        //         case PropertyType.String:
-        //             stringValue = "";
-        //             isModified = false;
-        //             break;
-        //         case PropertyType.Boolean:
-        //             boolValue = false;
-        //             isModified = false;
-        //             break;
-        //         case PropertyType.Enum when enumType != null:
-        //             enumValue = enumType.members[0];
-        //             isModified = false;
-        //             break;
-        //         case PropertyType.LayerMask:
-        //         case PropertyType.FlagEnum:
-        //             intValue = 0;
-        //             break;
-        //     }
-        //     return;
-        // }
-        //
-        // serializedValue.stringValue =
-        //     LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, propertyType);
+        isModified = false;
+        serializedProperty.serializedObject.ApplyModifiedProperties();
     }
 }

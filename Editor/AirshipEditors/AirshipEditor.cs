@@ -214,6 +214,10 @@ public abstract class AirshipEditor : ScriptableObject {
         this._foldouts.Clear();
     }
 
+    public bool PropertyField(AirshipSerializedProperty property) {
+        return AirshipEditorGUI.PropertyField(property);
+    }
+    
     public bool PropertyField(string propertyName) {
         return AirshipEditorGUI.PropertyField(serializedObject.FindAirshipProperty(propertyName));
     }
@@ -227,4 +231,15 @@ public abstract class AirshipEditor : ScriptableObject {
     public virtual void OnInspectorGUI() {
         EditorGUILayout.HelpBox($"Using custom inspector {GetType().Name} but OnInspectorGUI is not overloaded", MessageType.Warning);
     }
+
+    /// <summary>
+    /// experimental
+    /// </summary>
+    public virtual void OnSceneGUI() {}
+
+    public virtual bool HasPreviewGUI() {
+        return false;
+    }
+    
+    public virtual void OnPreviewGUI(Rect r, GUIStyle background) {}
 }

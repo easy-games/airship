@@ -75,6 +75,7 @@ public static partial class AirshipEditorGUI {
                     //     });
                     // }
 
+                    var hasPrefabItems = false;
                     if (serializedProperty.prefabOverride) {
                         var test = L10n.Tr("Apply to Prefab '{0}'");
                         menu.AddItem(new GUIContent(string.Format(test, serializedProperty.prefabInstanceRoot.name)), false, () => {
@@ -85,10 +86,24 @@ public static partial class AirshipEditorGUI {
                         menu.AddItem(new GUIContent("Revert"), false, () => {
                             serializedProperty.RevertPropertyOverride(InteractionMode.UserAction);
                         });
+
+                        hasPrefabItems = true;
+                    } else if (serializedProperty.prefab == null && serializedProperty.isModified) {
+                        menu.AddItem(new GUIContent("Reset to Default"), false, () => {
+                            serializedProperty.ResetToDefault();
+                        });
+                        
+                        hasPrefabItems = true;
                     }
                     //
+
+
                     
                     if (AirshipClipboardUtility.CanCopy(property)) {
+                        if (hasPrefabItems) {
+                            menu.AddSeparator("");
+                        }
+                        
                         menu.AddItem(new GUIContent("Copy"), false, () => {
                             AirshipClipboardUtility.CopyValue(property);
                         });
@@ -260,6 +275,7 @@ public static partial class AirshipEditorGUI {
             property.isModified = true;
         }
         
+        DoPropertyEvents(rect, property);
         return Quaternion.Euler(newValue.x, newValue.x, newValue.z);
     }
     

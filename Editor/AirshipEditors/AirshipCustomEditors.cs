@@ -65,9 +65,28 @@ public static class AirshipCustomEditors {
         Debug.Log($"Registered {airshipTypeToEditorTypes.Count} custom editors");
 #endif
     }
+
+    [InitializeOnLoadMethod]
+    internal static void InitializeEditorSymbols() {
+        string currentDefines = PlayerSettings.GetScriptingDefineSymbols(
+            UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup));
+        
+        HashSet<string> defines = new HashSet<string>(currentDefines.Split(';')) {
+            "AIRSHIP_EDITOR_API"
+        };
+        string newDefines = string.Join(";", defines);
+        
+        if (newDefines != currentDefines) {
+            PlayerSettings.SetScriptingDefineSymbols(
+                UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup), newDefines);
+        }
+    }
     
     [InitializeOnLoadMethod]
     internal static void RegisterCustomEditors() {
+ 
+
+        
         RegisterEditorsForRegisteredTypes();
 
         EditorApplication.playModeStateChanged += change => {
@@ -165,6 +184,7 @@ public static class AirshipCustomEditors {
     
     internal static void DestroyEditor(int editorId) {
         if (editors.TryGetValue(editorId, out var editor)) {
+            Debug.LogFormat(LogType.Warning, LogOption.None, null, "Destroyed editor");
             Debug.Log($"Destroying editor {editorId}");
             editors.Remove(editorId);
             Object.DestroyImmediate(editor);

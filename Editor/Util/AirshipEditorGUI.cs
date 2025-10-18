@@ -104,8 +104,24 @@ public static partial class AirshipEditorGUI {
 
     private static GUIStyle headingStyle;
     private static Texture2D headerTextureBg;
+
+    public static void Heading(GUIContent content) {
+        EditorGUILayout.LabelField(content, new GUIStyle(EditorStyles.whiteBoldLabel) {
+            // alignment = TextAnchor.MiddleLeft,
+            // fontSize = 13,
+            padding = new RectOffset(0, 0, 0, 0)
+        });
+    }
+
+    public static void BeginGroup() {
+        EditorGUILayout.BeginVertical(new GUIStyle() { padding = new RectOffset(10, 10, 10, 10)});
+    }
+
+    public static void EndGroup() {
+        EditorGUILayout.EndVertical();
+    }
     
-    public static void SettingCategoryHeading(GUIContent label) {
+    internal static void SettingCategoryHeading(GUIContent label) {
         if (headerTextureBg == null) {
             headerTextureBg = new Texture2D(1, 1);
             headerTextureBg.SetPixel(0, 0, new Color(56 / 255f, 56 / 255f, 56 / 255f));

@@ -39,6 +39,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     /** Maps (game object id, prop name) to ArrayDisplayInfo object (for Array properties) */
     private Dictionary<(int componentInstanceId, string propertyName), ArrayDisplayInfo> _reorderableLists = new();
 
+    private AirshipEditor editor;
+    
     public void OnEnable() {
         var comp = (Component)serializedObject.targetObject;
         var metadata = serializedObject.FindProperty("metadata");
@@ -57,6 +59,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             
             if (customEditorType != null && AirshipCustomEditors.TryGetEditor(binding, customEditorType, out var editor)) {
                 editor.OnEnable();
+                this.editor = editor;
             }
         }
     }
@@ -87,7 +90,22 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     }
 
     private bool debugging = false;
-    
+
+    private void OnSceneGUI() {
+        if (!this.editor) return;
+        this.editor.OnSceneGUI();
+    }
+
+    public override void OnPreviewGUI(Rect r, GUIStyle background) {
+        if (!this.editor) return;
+        
+        this.editor.OnPreviewGUI(r, background);
+    }
+
+    public override bool HasPreviewGUI() {
+        return this.editor != null ? this.editor.HasPreviewGUI() : false;
+    }
+
     public override void OnInspectorGUI() {
         serializedObject.Update();
 
