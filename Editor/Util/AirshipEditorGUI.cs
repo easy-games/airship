@@ -658,16 +658,54 @@ public static partial class AirshipEditorGUI {
         return false;
     }
     
-    public static bool PropertyField(GUIContent label, [CanBeNull] AirshipSerializedValue value) =>
+    public static bool PropertyField(GUIContent label, AirshipSerializedValue value) =>
         PropertyField(label, value, false);
 
-    public static bool PropertyField([CanBeNull] AirshipSerializedValue property) {
+    
+    internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
+    private static AirshipSerializedProperty currentProperty;
+    private static bool prevBold;
+    
+    public static void BeginProperty(AirshipSerializedProperty property) {
+        prevBold = AirshipEditorInternals.GetBoldDefaultFont();
+        if (property.prefabOverride) {
+            AirshipEditorInternals.SetBoldDefaultFont(true);
+        }
+
+        currentProperty = property;
+    }
+
+    public static void EndProperty() {
+        var property = currentProperty;
+        if (property == null) return;
+        
+        if (property.prefabOverride) {
+            var lastRect = GUILayoutUtility.GetLastRect();
+
+            var modifiedRect = lastRect;
+            modifiedRect.x = 1;
+            modifiedRect.width = 2;
+            Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
+        }
+        AirshipEditorInternals.SetBoldDefaultFont(prevBold);
+    }
+    
+    public static bool PropertyField(AirshipSerializedValue property) {
         if (property == null) {
             EditorGUILayout.LabelField(new GUIContent("Property"), new GUIContent("(Missing property)"), EditorStyles.objectField);
             return false;
         }
+
+        string tooltip = "";
+        if (property.TryGetDecorator("Tooltip", out var tooltipParams)) {
+            tooltip = tooltipParams[0].value as string;
+        } else if (property.propertyMetadata != null) {
+            tooltip = property.propertyMetadata.Documentation;
+        }
         
         var name = ObjectNames.NicifyVariableName(property.serializedName.stringValue);
-        return PropertyField(new GUIContent(name), property);
+        var label = new GUIContent(name, tooltip);
+        
+        return PropertyField(label, property);
     }
 }

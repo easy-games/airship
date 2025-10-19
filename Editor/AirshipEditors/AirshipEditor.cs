@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
+
 /// <summary>
 /// Base class to derive custom property drawers from.
 /// </summary>
@@ -122,42 +123,62 @@ public abstract class AirshipEditor : ScriptableObject {
     /// </summary>
     private void DrawDefaultProperties() {
         // Draw each property
-        foreach (var property in serializedObject.GetProperties()) {
-            if (property.HasDecorator("HideInInspector")) continue;
+        properties: foreach (var property in serializedObject.GetProperties()) {
+            // if (property.HasDecorator("HideInInspector")) continue;
             
-            if (property.TryGetDecorator("Header", out var headerParams)) {
-                EditorGUILayout.Space();
-                var guiStyle = EditorStyles.boldLabel;
-                guiStyle.richText = true;
-                var title = headerParams[0].value as string;
-                EditorGUILayout.LabelField(title, guiStyle);
+            // if (property.TryGetDecorator("Header", out var headerParams)) {
+            //     EditorGUILayout.Space();
+            //     var guiStyle = EditorStyles.boldLabel;
+            //     guiStyle.richText = true;
+            //     var title = headerParams[0].value as string;
+            //     EditorGUILayout.LabelField(title, guiStyle);
+            // }
+            //
+            // if (property.TryGetDecorator("Spacing", out var spacingParams)) {
+            //     if (spacingParams.Count == 0) {
+            //         EditorGUILayout.Space();
+            //     }
+            //     else {
+            //         EditorGUILayout.Space(Convert.ToSingle(spacingParams[0].value));
+            //     }
+            // }
+
+            var shouldHideProperty = false;
+            foreach (var decorator in property.decorators) {
+                if (AirshipCustomEditors.GetDecorator(decorator, out var propertyDecorator)) {
+                    propertyDecorator.arguments = decorator.parameters.ToArray();
+                    propertyDecorator.property = property;
+                    propertyDecorator.serializedObject = serializedObject;
+                    
+                    if (!propertyDecorator.ShouldDrawProperty()) {
+                        shouldHideProperty = true;
+                        break;
+                    }
+                    
+                    propertyDecorator.OnBeforeInspectorGUI();
+                }
             }
 
-            if (property.TryGetDecorator("Spacing", out var spacingParams)) {
-                if (spacingParams.Count == 0) {
-                    EditorGUILayout.Space();
-                }
-                else {
-                    EditorGUILayout.Space(Convert.ToSingle(spacingParams[0].value));
-                }
-            }
-
-            var prevBold = AirshipEditorInternals.GetBoldDefaultFont();
-            if (property.prefabOverride) {
-                AirshipEditorInternals.SetBoldDefaultFont(true);
-            }
+            if (shouldHideProperty) continue;
             
+            // var prevBold = AirshipEditorInternals.GetBoldDefaultFont();
+            // if (property.prefabOverride) {
+            //     AirshipEditorInternals.SetBoldDefaultFont(true);
+            // }
+            
+            AirshipEditorGUI.BeginProperty(property);
             AirshipEditorGUI.PropertyField(new GUIContent(ObjectNames.NicifyVariableName(property.name)), property);
 
-            if (property.prefabOverride) {
-                var lastRect = GUILayoutUtility.GetLastRect();
-
-                var modifiedRect = lastRect;
-                modifiedRect.x = 1;
-                modifiedRect.width = 2;
-                Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
-            }
-            AirshipEditorInternals.SetBoldDefaultFont(prevBold);
+            // if (property.prefabOverride) {
+            //     var lastRect = GUILayoutUtility.GetLastRect();
+            //
+            //     var modifiedRect = lastRect;
+            //     modifiedRect.x = 1;
+            //     modifiedRect.width = 2;
+            //     Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
+            // }
+            // AirshipEditorInternals.SetBoldDefaultFont(prevBold);
+            AirshipEditorGUI.EndProperty();
         }
     }
 
@@ -215,15 +236,29 @@ public abstract class AirshipEditor : ScriptableObject {
     }
 
     public bool PropertyField(AirshipSerializedProperty property) {
-        return AirshipEditorGUI.PropertyField(property);
+        AirshipEditorGUI.BeginProperty(property);
+        var result = AirshipEditorGUI.PropertyField(property);
+        AirshipEditorGUI.EndProperty();
+        return result;
     }
     
     public bool PropertyField(string propertyName) {
-        return AirshipEditorGUI.PropertyField(serializedObject.FindAirshipProperty(propertyName));
+        var property = serializedObject.FindAirshipProperty(propertyName);
+        return PropertyField(property);
+    }
+
+    public void PropertyFields(params string[] propertyNames) {
+        foreach (var propertyName in propertyNames) {
+            PropertyField(serializedObject.FindAirshipProperty(propertyName));
+        }
     }
 
     public bool PropertyField(GUIContent label, string propertyName) {
-        return AirshipEditorGUI.PropertyField(label, serializedObject.FindAirshipProperty(propertyName));
+        var property = serializedObject.FindAirshipProperty(propertyName);
+        AirshipEditorGUI.BeginProperty(property);
+        var value =  AirshipEditorGUI.PropertyField(label, property);
+        AirshipEditorGUI.EndProperty();
+        return value;
     }
 
     public bool PropertyField(string label, string propertyName) => PropertyField(new GUIContent(label), propertyName);
@@ -231,15 +266,8 @@ public abstract class AirshipEditor : ScriptableObject {
     public virtual void OnInspectorGUI() {
         EditorGUILayout.HelpBox($"Using custom inspector {GetType().Name} but OnInspectorGUI is not overloaded", MessageType.Warning);
     }
-
-    /// <summary>
-    /// experimental
-    /// </summary>
-    public virtual void OnSceneGUI() {}
-
-    public virtual bool HasPreviewGUI() {
-        return false;
-    }
     
+    public virtual void OnSceneGUI() {}
+    public virtual bool HasPreviewGUI() => false;
     public virtual void OnPreviewGUI(Rect r, GUIStyle background) {}
 }

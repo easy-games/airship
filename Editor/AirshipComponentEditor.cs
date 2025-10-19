@@ -79,6 +79,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
                 editor.OnDisable();
             }
+
+            this.editor = null;
         }
     }
 
@@ -98,7 +100,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
     public override void OnPreviewGUI(Rect r, GUIStyle background) {
         if (!this.editor) return;
-        
         this.editor.OnPreviewGUI(r, background);
     }
 
@@ -106,19 +107,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         return this.editor != null ? this.editor.HasPreviewGUI() : false;
     }
 
-    public override void OnInspectorGUI() {
-        serializedObject.Update();
-
+    private bool OnAirshipInspectorGUI() {
         AirshipComponent binding = (AirshipComponent)target;
-
-        if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
-            if (binding.script == null) {
-                Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
-                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
-            }
-        }
-
-
+        
         Type customEditorType = null;
         if (binding.script != null && binding.metadata != null) {
             customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
@@ -151,6 +142,60 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 var component = (AirshipComponent)target;
                 component.WriteChangedComponentProperties();
             }
+            return true;
+        }
+
+        return false;
+    }
+
+    public override void OnInspectorGUI() {
+        serializedObject.Update();
+
+        AirshipComponent binding = (AirshipComponent)target;
+
+        if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
+            if (binding.script == null) {
+                Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
+                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
+            }
+        }
+        
+        // Type customEditorType = null;
+        // if (binding.script != null && binding.metadata != null) {
+        //     customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+        // }
+        //
+        // if (customEditorType != null && binding.script != null) {
+        //     var metadata = serializedObject.FindProperty("metadata");
+        //     var metadataName = metadata.FindPropertyRelative("name");
+        //     
+        //     if (!string.IsNullOrEmpty(metadataName.stringValue)) {
+        //         var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
+        //         editor.script = binding.script;
+        //         editor.target = binding;
+        //         editor.OnInspectorGUI();
+        //     }
+        //
+        //     if (binding.script != null && binding.script.m_metadata != null) {
+        //         if (ShouldReconcile(binding)) {
+        //             binding.ReconcileMetadata(ReconcileSource.Inspector);
+        //             serializedObject.ApplyModifiedProperties();
+        //             serializedObject.Update();
+        //         }
+        //     
+        //         CheckDefaults(binding);
+        //     }
+        //     
+        //     serializedObject.ApplyModifiedProperties();
+        //     
+        //     if (Application.isPlaying) {
+        //         var component = (AirshipComponent)target;
+        //         component.WriteChangedComponentProperties();
+        //     }
+        //     return;
+        // }
+
+        if (OnAirshipInspectorGUI()) {
             return;
         }
         

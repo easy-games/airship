@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using Editor.Typescript;
 using Luau;
 using UnityEditor;
 using UnityEngine;
@@ -11,10 +13,20 @@ using Object = UnityEngine.Object;
 /// </summary>
 public static class AirshipCustomEditors {
     private static Dictionary<string, Type> editorTypes = new();
-    private static Dictionary<AirshipType, Type> airshipTypeToEditorTypes = new();
+    private static Dictionary<string, Type> decoratorTypes = new();
+    private static Dictionary<AirshipType, CustomEditor> airshipTypeToEditor = new();
     
     private static Dictionary<int, AirshipEditor> editors = new();
 
+    internal class CustomEditor {
+        public Type Type { get; }
+        public CustomAirshipEditorAttribute Attribute { get; }
+        public CustomEditor(Type type, CustomAirshipEditorAttribute attribute) {
+            Type = type;
+            Attribute = attribute;
+        }
+    }
+    
     internal const EditorInspectorMode DefaultInspectorMode = EditorInspectorMode.UseLegacyInspector;
     internal static EditorInspectorMode EditorInspectorMode {
         get {
@@ -28,7 +40,7 @@ public static class AirshipCustomEditors {
             
             if (value == EditorInspectorMode.UseLegacyInspector) {
                 editors.Clear();
-                airshipTypeToEditorTypes.Clear();
+                airshipTypeToEditor.Clear();
             } else if (value == EditorInspectorMode.UseNewInspector || (value == EditorInspectorMode.Default &&
                                                                         DefaultInspectorMode ==
                                                                         EditorInspectorMode.UseNewInspector)) {
@@ -38,31 +50,74 @@ public static class AirshipCustomEditors {
             instance.editorInspectorMode = value;
         }
     }
+
+    private static void RegisterEditor(Type editorType, CustomAirshipEditorAttribute editorAttribute) {
+        var typeName = editorAttribute.TypeName;
+        var filePath = editorAttribute.FilePath;
+                
+        var pathType = string.IsNullOrEmpty(filePath) ? 
+            AirshipBuildInfo.Instance.GetTypeByName(typeName) :  
+            AirshipBuildInfo.Instance.GetTypeByPathAndName(filePath, typeName);
+                
+        if (pathType == null) {
+            Debug.LogWarning($"Failed to load custom inspector for type {typeName}, type is not found in project.");
+            return;
+        }
+                
+        if (!AirshipCustomEditors.airshipTypeToEditor.TryGetValue(pathType, out var _)) {
+            AirshipCustomEditors.airshipTypeToEditor.Add(pathType, new CustomEditor(editorType, editorAttribute));
+        }
+    }
     
     internal static void RegisterEditorsForRegisteredTypes() {
-        airshipTypeToEditorTypes.Clear();
+        airshipTypeToEditor.Clear();
+        decoratorTypes.Clear();
+        decoratorInstances.Clear();
         editors.Clear();
         
-        var typeEditorAttributes = TypeCache.GetTypesWithAttribute<AirshipEditorAttribute>();
-        foreach (var editor in typeEditorAttributes) {
-            var attr = editor.GetCustomAttributes<AirshipEditorAttribute>();
-            foreach (var editorAttribute in attr) {
-                var pathType = string.IsNullOrEmpty( editorAttribute.FilePath) ? 
-                    AirshipBuildInfo.Instance.GetTypeByName(editorAttribute.TypeName) :  
-                    AirshipBuildInfo.Instance.GetTypeByPathAndName(editorAttribute.FilePath, editorAttribute.TypeName);
-                if (pathType == null) {
-                    Debug.LogWarning($"Failed to load custom inspector for type {editorAttribute.TypeName}, type is not found in project.");
-                    continue;
-                }
-                
-                if (!AirshipCustomEditors.airshipTypeToEditorTypes.TryGetValue(pathType, out var _)) {
-                    AirshipCustomEditors.airshipTypeToEditorTypes.Add(pathType, editor);
-                }
+        var typeEditorAttributes = TypeCache.GetTypesWithAttribute<CustomAirshipEditorAttribute>();
+        
+        foreach (var editorType in typeEditorAttributes) {
+            var internalAttr = editorType.GetCustomAttribute<CustomAirshipCoreEditorAttribute>();
+            if (internalAttr != null) {
+                RegisterEditor(editorType, internalAttr);
+                continue;
+            }
+            
+            var attr = editorType.GetCustomAttribute<CustomAirshipEditorAttribute>();
+            RegisterEditor(editorType, attr);
+        }
+
+        var decoratorStatements = new List<IStatement>();
+
+        var decoratorAttributes = TypeCache.GetTypesWithAttribute<CustomAirshipDecoratorAttribute>();
+        foreach (var decoratorAttributeType in decoratorAttributes) {
+            var attr = decoratorAttributeType.GetCustomAttribute<CustomAirshipDecoratorAttribute>();
+            decoratorTypes.Add(attr.Name, decoratorAttributeType);
+            
+            var propertyDecorator = (AirshipPropertyDecorator)ScriptableObject.CreateInstance(decoratorAttributeType);
+            propertyDecorator.attribute = attr;
+            decoratorInstances.Add(decoratorAttributeType, propertyDecorator);
+
+            var decoratorParams = propertyDecorator.GetFunctionDeclaration();
+            if (decoratorParams != null) {
+                decoratorStatements.Add(new TsComment() { IsJsDoc = true, Text = $"Generated editor decorator '{attr.Name}' from {decoratorAttributeType.FullName}" });
+                decoratorStatements.Add(decoratorParams);
             }
         }
         
+        if (decoratorStatements.Count > 0) {
+            var sourceFile = new TsSourceFile() {
+                Statements = decoratorStatements.ToArray(),
+            };
+            
+            File.WriteAllText("Assets/decorators.d.ts", sourceFile.ToString());
+        } else if (File.Exists("Assets/decorators.d.ts")) {
+            File.Delete("Assets/decorators.d.ts");
+        }
+        
 #if AIRSHIP_INTERNAL
-        Debug.Log($"Registered {airshipTypeToEditorTypes.Count} custom editors");
+        Debug.Log($"Registered {airshipTypeToEditor.Count} custom editors, {decoratorTypes.Count} decorators.");
 #endif
     }
 
@@ -102,8 +157,8 @@ public static class AirshipCustomEditors {
         var pathType = AirshipBuildInfo.Instance.GetTypeByName(typeName);
         if (pathType == null) return null;
         
-        if (airshipTypeToEditorTypes.TryGetValue(pathType, out var editorType)) {
-            return editorType;
+        if (airshipTypeToEditor.TryGetValue(pathType, out var editorType)) {
+            return editorType.Type;
         }
 
         return typeof(DefaultAirshipComponentEditor);
@@ -162,6 +217,21 @@ public static class AirshipCustomEditors {
         
         // TODO: In future we'll support Serializable objects & ScriptableObjects through here too.
         return null;
+    }
+
+    private static Dictionary<Type, AirshipPropertyDecorator> decoratorInstances = new();
+    internal static bool GetDecorator(LuauMetadataDecoratorElement decorator, out AirshipPropertyDecorator propertyDecorator) {
+        if (decoratorTypes.TryGetValue(decorator.name, out var decoratorType)) {
+            if (!decoratorInstances.TryGetValue(decoratorType, out propertyDecorator)) {
+                propertyDecorator = (AirshipPropertyDecorator)ScriptableObject.CreateInstance(decoratorType);
+                decoratorInstances.Add(decoratorType, propertyDecorator);
+            }
+            
+            return true;
+        }
+
+        propertyDecorator = default;
+        return false;
     }
 
     /// <summary>
