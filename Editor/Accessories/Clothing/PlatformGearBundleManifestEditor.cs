@@ -198,6 +198,15 @@ namespace Editor.Accessories.Clothing {
 
                 bundlePaths.Add(path);
             }
+            // {
+            //     var path = await this.BuildPlatform(AirshipPlatform.Windows, airId);
+            //     if (string.IsNullOrEmpty(path)) {
+            //         success = false;
+            //         return;
+            //     }
+            //
+            //     bundlePaths.Add(path);
+            // }
 
             if (!success) return;
 
@@ -207,6 +216,7 @@ namespace Editor.Accessories.Clothing {
             for (int i = 0; i < platforms.Count; i++) {
                 var platform = platforms[i];
                 var buildOutputFile = bundlePaths[i];
+                // var buildOutputFile = bundlePaths[0];
 
                 // Update air asset
                 var bytes = await File.ReadAllBytesAsync(buildOutputFile);

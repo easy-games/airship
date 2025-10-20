@@ -43,7 +43,6 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPluginNative.ToStringCallback toStringCallback_holder;
     private LuauPluginNative.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
     private LuauPluginNative.GetUnityObjectName getUnityObjectNameCallback_holder;
-    
 
     private struct AwaitingTask {
 #if UNITY_EDITOR
@@ -167,43 +166,48 @@ public partial class LuauCore : MonoBehaviour {
     }
 #endif
 
-
-    //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.PrintCallback))]
-    static void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
+    private static void PrintCallback(LuauContext context, IntPtr thread, LuauLogLevel logLevel, int gameObjectId, IntPtr buffer, int length) {
         LuauProtection.CurrentContext = context;
         
-        var res = LuauCore.PtrToStringUTF8(buffer, length);
-        
+        var res = Marshal.PtrToStringUTF8(buffer, length);
+        UnityEngine.Object logContext = _coreInstance;
+
 #if UNITY_EDITOR
-        if (style == 1 || style == 2) {
-            if (res.Contains(".lua:")) {
+        // Only do link injection and context fetching in-editor (expensive, and useless outside of editor)
+
+        if (logLevel == LuauLogLevel.Warning || logLevel == LuauLogLevel.Error) {
+            if (res.Contains(".lua:", StringComparison.OrdinalIgnoreCase)) {
                 res = InjectAnchorLinkToLuaScript(res);
             }
         }
-#endif
 
-        UnityEngine.Object logContext = _coreInstance;
         if (gameObjectId >= 0) {
             var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
             if (obj is UnityEngine.Object unityObj) {
                 logContext = unityObj;
             }
         }
-
-        if (style == 1) {
-            Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, logContext, "{0}", res);
-        } else if (style == 2) {
-            // The STANDALONE here is just a test:
-#if UNITY_STANDALONE && !UNITY_EDITOR
-            Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, logContext, "{0}", "[ERROR] " + res);
-#else
-            Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, logContext, "{0}", res);
 #endif
-            //If it's an error, the thread is suspended
-            ThreadDataManager.Error(thread);
-        } else {
-            Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, logContext, "{0}", res);
+
+        switch (logLevel) {
+            case LuauLogLevel.Log:
+                Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, logContext, "{0}", res);
+                break;
+            case LuauLogLevel.Warning:
+                Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, logContext, "{0}", res);
+                break;
+            case LuauLogLevel.Error:
+#if UNITY_STANDALONE && !UNITY_EDITOR
+                // This is a temporary fix for a lag spike that happens in client builds. Errors cause a spike, but warnings do not.
+                Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, logContext, "{0}", "[ERROR] " + res);
+#else
+                Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, logContext, "{0}", res);
+#endif
+                ThreadDataManager.Error(thread);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, "Luau plugin provided unknown log level");
         }
     }
     

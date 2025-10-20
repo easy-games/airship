@@ -44,7 +44,7 @@ namespace Editor {
             return $"{gb:F2} GB [{bytes} bytes]";
         }
 
-        private static void OnBuild() {
+        public static void OnBuild() {
             PhysicsSetup.Setup();
         }
 
