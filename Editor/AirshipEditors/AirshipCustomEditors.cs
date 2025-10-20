@@ -30,6 +30,19 @@ public static class AirshipCustomEditors {
             AirshipType = airshipType;
         }
     }
+
+    internal static IEnumerable<CustomEditor> Editors {
+        get => airshipTypeToEditor.Values;
+    }
+
+    internal static IEnumerable<AirshipEditor> GetEditors(CustomEditor editor) {
+        var instances = new List<AirshipEditor>();
+        foreach (var instance in editors) {
+            if (instance.Value.GetType() == editor.EditorType) instances.Add(instance.Value);
+        }
+
+        return instances;
+    }
     
     internal const EditorInspectorMode DefaultInspectorMode = EditorInspectorMode.UseLegacyInspector;
     internal static EditorInspectorMode EditorInspectorMode {

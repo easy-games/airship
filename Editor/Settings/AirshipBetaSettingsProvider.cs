@@ -1,4 +1,5 @@
-﻿using Airship.Editor;
+﻿using System.Linq;
+using Airship.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,6 +25,9 @@ namespace Editor.Settings {
         private void BetaCategoryEnd() {
             EditorGUILayout.EndVertical();
         }
+
+        private Vector2 editorScroll;
+        private bool listEditors;
         
         public override void OnGUI(string searchContext) {
             EditorGUILayout.HelpBox("You should not touch these settings unless you know what you're doing. Opting into the betas is accepting you are testing these features.", MessageType.Warning);
@@ -56,7 +60,60 @@ namespace Editor.Settings {
                     new GUIContent("Use AirshipEditors", "Use the new Airship editor system which allows custom editors and the new property API"),
                     EditorIntegrationsConfig.instance.editorInspectorMode);
 
-         
+                if (AirshipCustomEditors.EditorInspectorMode == EditorInspectorMode.UseNewInspector) {
+
+                    listEditors = EditorGUILayout.BeginFoldoutHeaderGroup(listEditors, "Active Custom Editors");
+                    if (listEditors) {
+                        var codeStyle = new GUIStyle() {
+                            font = EditorGUIUtility.Load("Fonts/RobotoMono/RobotoMono-Regular.ttf") as Font,
+                            fontSize = 11,
+                            fontStyle = FontStyle.Normal,
+                            normal = new GUIStyleState() {
+                                textColor = new Color(0.8f, 0.8f, 0.8f)
+                            },
+                        };
+                        
+                        editorScroll = EditorGUILayout.BeginScrollView(editorScroll, GUILayout.MaxHeight(250));
+
+                        foreach (var editor in AirshipCustomEditors.Editors) {
+                            EditorGUILayout.BeginHorizontal(new GUIStyle("FrameBox")
+                                { margin = new RectOffset(5, 5, 5, 5) });
+                            {
+                                EditorGUILayout.BeginVertical(GUILayout.Width(20));
+                                EditorGUILayout.Space();
+                                GUI.enabled = false; // editor.EditorAttribute is not CustomAirshipCoreEditorAttribute;
+                                EditorGUILayout.Toggle(true, GUILayout.Width(20));
+                                GUI.enabled = true;
+                                EditorGUILayout.Space();
+                                EditorGUILayout.EndVertical();
+                            
+                                EditorGUILayout.BeginVertical();
+                                {
+                                    EditorGUILayout.LabelField(editor.AirshipType.UniqueId, new GUIStyle(codeStyle) {
+                                        fontStyle = FontStyle.Bold,
+                                        normal = new GUIStyleState() {
+                                            textColor = new Color(1, 1, 1)
+                                        },
+                                    });
+                                    EditorGUILayout.LabelField($"{editor.EditorType.FullName} ({editor.EditorType.Assembly.FullName})"
+                                        , codeStyle);
+
+               
+                                }
+                                EditorGUILayout.EndVertical();
+                                
+                                var editors = AirshipCustomEditors.GetEditors(editor);
+                                var count = editors.Count();
+                                
+                                EditorGUILayout.LabelField($"{count} editor{(count == 1 ? "" : "s")}", codeStyle);
+                            }
+                            EditorGUILayout.EndHorizontal();
+                        }
+                    
+                        EditorGUILayout.EndScrollView();
+                    }
+                    EditorGUILayout.EndFoldoutHeaderGroup();
+                }
             }
             BetaCategoryEnd();
             
