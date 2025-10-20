@@ -12,18 +12,22 @@ using Object = UnityEngine.Object;
 /// The custom editor namespace for the Airship Editor
 /// </summary>
 public static class AirshipCustomEditors {
-    private static Dictionary<string, Type> editorTypes = new();
+    // private static Dictionary<string, Type> editorTypes = new();
     private static Dictionary<string, Type> decoratorTypes = new();
     private static Dictionary<AirshipType, CustomEditor> airshipTypeToEditor = new();
+    // editors that need types assoc.
+    private static Dictionary<string, (Type, CustomAirshipEditorAttribute)> pendingEditors = new();
     
     private static Dictionary<int, AirshipEditor> editors = new();
 
     internal class CustomEditor {
-        public Type Type { get; }
-        public CustomAirshipEditorAttribute Attribute { get; }
-        public CustomEditor(Type type, CustomAirshipEditorAttribute attribute) {
-            Type = type;
-            Attribute = attribute;
+        public Type EditorType { get; }
+        public AirshipType AirshipType { get; }
+        public CustomAirshipEditorAttribute EditorAttribute { get; }
+        public CustomEditor(Type editorType, AirshipType airshipType, CustomAirshipEditorAttribute editorAttribute) {
+            EditorType = editorType;
+            EditorAttribute = editorAttribute;
+            AirshipType = airshipType;
         }
     }
     
@@ -50,8 +54,8 @@ public static class AirshipCustomEditors {
             instance.editorInspectorMode = value;
         }
     }
-
-    private static void RegisterEditor(Type editorType, CustomAirshipEditorAttribute editorAttribute) {
+    
+    private static bool RegisterEditor(Type editorType, CustomAirshipEditorAttribute editorAttribute) {
         var typeName = editorAttribute.TypeName;
         var filePath = editorAttribute.FilePath;
                 
@@ -60,13 +64,14 @@ public static class AirshipCustomEditors {
             AirshipBuildInfo.Instance.GetTypeByPathAndName(filePath, typeName);
                 
         if (pathType == null) {
-            Debug.LogWarning($"Failed to load custom inspector for type {typeName}, type is not found in project.");
-            return;
+            return false;
         }
                 
         if (!AirshipCustomEditors.airshipTypeToEditor.TryGetValue(pathType, out var _)) {
-            AirshipCustomEditors.airshipTypeToEditor.Add(pathType, new CustomEditor(editorType, editorAttribute));
+            AirshipCustomEditors.airshipTypeToEditor.Add(pathType, new CustomEditor(editorType, pathType, editorAttribute));
         }
+
+        return true;
     }
     
     internal static void RegisterEditorsForRegisteredTypes() {
@@ -74,7 +79,7 @@ public static class AirshipCustomEditors {
         decoratorTypes.Clear();
         decoratorInstances.Clear();
         editors.Clear();
-        
+
         var typeEditorAttributes = TypeCache.GetTypesWithAttribute<CustomAirshipEditorAttribute>();
         
         foreach (var editorType in typeEditorAttributes) {
@@ -139,9 +144,6 @@ public static class AirshipCustomEditors {
     
     [InitializeOnLoadMethod]
     internal static void RegisterCustomEditors() {
- 
-
-        
         RegisterEditorsForRegisteredTypes();
 
         EditorApplication.playModeStateChanged += change => {
@@ -158,21 +160,21 @@ public static class AirshipCustomEditors {
         if (pathType == null) return null;
         
         if (airshipTypeToEditor.TryGetValue(pathType, out var editorType)) {
-            return editorType.Type;
+            return editorType.EditorType;
         }
 
         return typeof(DefaultAirshipComponentEditor);
     }
     
-    internal static Type GetEditorForFilePath(string filePath) {
-        if (EditorInspectorMode != EditorInspectorMode.UseNewInspector) return null;
-        
-        if (editorTypes.TryGetValue(filePath, out var editorType)) {
-            return editorType;
-        }
-
-        return typeof(DefaultAirshipComponentEditor);
-    }
+    // internal static Type GetEditorForFilePath(string filePath) {
+    //     if (EditorInspectorMode != EditorInspectorMode.UseNewInspector) return null;
+    //     
+    //     if (editorTypes.TryGetValue(filePath, out var editorType)) {
+    //         return editorType;
+    //     }
+    //
+    //     return typeof(DefaultAirshipComponentEditor);
+    // }
 
     internal static bool TryGetEditor(AirshipComponent component, Type type, out AirshipEditor editor) {
         return editors.TryGetValue(component.GetInstanceID(), out editor);
@@ -255,7 +257,6 @@ public static class AirshipCustomEditors {
     internal static void DestroyEditor(int editorId) {
         if (editors.TryGetValue(editorId, out var editor)) {
             Debug.LogFormat(LogType.Warning, LogOption.None, null, "Destroyed editor");
-            Debug.Log($"Destroying editor {editorId}");
             editors.Remove(editorId);
             Object.DestroyImmediate(editor);
         }

@@ -328,6 +328,9 @@ namespace Airship.Editor {
         private static bool isRestoringErrors = false;
         private static bool invokedCrashEvent = false;
         
+        public delegate void CompilationEndedEvent(TypescriptCompilationResult compilationResult);
+        public static event CompilationEndedEvent FinishedCompilation;
+        
         private static void OnUpdate() {
             if (isRestoringErrors) return;
             int logCount = LogExtensions.GetLogCount();
@@ -347,12 +350,10 @@ namespace Airship.Editor {
                 invokedCrashEvent = false;
             }
 
-            // var shouldAutostart = !IsCompilerActive && !TypescriptCompilationService.Crashed &&
-            //                       ShouldCompilerBeRunning && !IsAwaitingRestart && !IsCompilerStoppedByUser && HasAllPackagesDownloaded();
-            //
-            // if (!shouldAutostart) return;
-            // TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
-            // EditorCoroutines.Execute(StartTypescriptRuntime());
+            if (TypescriptCompilationService.CompilationResult != null) {
+                FinishedCompilation?.Invoke(TypescriptCompilationService.CompilationResult);
+                TypescriptCompilationService.CompilationResult = null;
+            }
         }
     }
 }

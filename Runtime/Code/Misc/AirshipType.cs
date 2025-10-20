@@ -7,7 +7,6 @@ namespace Luau {
     public class AirshipType {
         [CanBeNull]
         public static AirshipType GetType(string typeName) => AirshipBuildInfo.Instance.GetTypeByName(typeName);
-        
         public string Name { get; }
         public string RuntimePath { get; }
         public string AssetPath => "Assets/" + RuntimePath.Replace(".lua", ".ts");
