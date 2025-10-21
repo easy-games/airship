@@ -78,7 +78,6 @@ namespace Code.Accessories.Clothing {
                 }
 
                 var gearRes = JsonUtility.FromJson<GearFetchResponse>(req.downloadHandler.text);
-                Debug.Log("air ids: " + gearRes.gear.gear.airAssets);
                 airId = gearRes.gear.gear.airAssets[0];
             }
 
