@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Bootstrap;
@@ -18,7 +19,24 @@ namespace Code.Accessories.Clothing {
         }
     }
 
-    [System.Serializable]
+    [Serializable]
+    public class GearFetchResponse {
+        public GearDto gear;
+    }
+
+    [Serializable]
+    public class GearDto {
+        public GearListingDto gear;
+    }
+
+    [Serializable]
+    public class GearListingDto {
+        public string category;
+        public string subcategory;
+        public string[] airAssets;
+    }
+
+    [Serializable]
     public class PlatformGearColor {
         public string key = "Color";
         public Color value = Color.white;
@@ -55,10 +73,38 @@ namespace Code.Accessories.Clothing {
         /// </summary>
         public static Dictionary<string, PlatformGearBundleInfo> loadedPlatformGearBundles = new();
 
+        private static Dictionary<string, string> classIdToAirIdCache = new();
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void OnReload() {
+            // foreach (var bundle in loadedPlatformGearBundles) {
+            //     bundle.Value.assetBundle.Unload(true);
+            // }
+            // loadedPlatformGearBundles.Clear();
             inProgressDownloads.Clear();
-            loadedPlatformGearBundles.Clear();
+            classIdToAirIdCache.Clear();
+        }
+
+        public static async Task<PlatformGear> DownloadYielding(string classId) {
+            if (classIdToAirIdCache.TryGetValue(classId, out string airId)) {
+                return await DownloadYielding(classId, airId);
+            }
+
+            // Get airId from classId
+            {
+                var url = $"{AirshipPlatformUrl.contentService}/gear/class-id/{classId}";
+                var req = UnityWebRequest.Get(url);
+                await req.SendWebRequest();
+                if (req.result != UnityWebRequest.Result.Success) {
+                    throw new Exception(req.error);
+                }
+
+                var gearRes = JsonUtility.FromJson<GearFetchResponse>(req.downloadHandler.text);
+                airId = gearRes.gear.gear.airAssets[0];
+                classIdToAirIdCache[classId] = airId;
+            }
+
+            return await DownloadYielding(classId, airId);
         }
 
         public static async Task<PlatformGear> DownloadYielding(string classId, string airId) {
