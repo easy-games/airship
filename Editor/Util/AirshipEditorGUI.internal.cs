@@ -416,12 +416,14 @@ public static partial class AirshipEditorGUI {
 
         if (property.TryGetDecorator("Min", out var minParams))
         {
-            nextValue = Convert.ToSingle(minParams[0].value, CultureInfo.InvariantCulture);
+            var min = Convert.ToSingle(minParams[0].value, CultureInfo.InvariantCulture);
+            nextValue = Math.Max(min, nextValue);
         }
         
         if (property.TryGetDecorator("Max", out var maxParams))
         {
-            nextValue = Convert.ToSingle(maxParams[0].value, CultureInfo.InvariantCulture);
+            var max = Convert.ToSingle(maxParams[0].value, CultureInfo.InvariantCulture);
+            nextValue = Math.Min(max, nextValue);
         }
 
         // ReSharper disable once CompareOfFloatsByEqualityOperator
