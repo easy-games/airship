@@ -207,10 +207,10 @@ public static partial class AirshipEditorGUI {
         return newValue;
     }
 
-    public static float NumberProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
-        DoNumberProperty(rect, label, property);
-    public static float NumberProperty(GUIContent label, AirshipSerializedValue property) =>
-        DoNumberProperty(null, label, property);
+    public static float NumberProperty(Rect rect, GUIContent label, AirshipSerializedValue property, bool integer = false) =>
+        DoNumberProperty(rect, label, property, integer);
+    public static float NumberProperty(GUIContent label, AirshipSerializedValue property, bool integer = false) =>
+        DoNumberProperty(null, label, property, integer);
 
     public static bool BooleanProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
         DoBooleanProperty(rect, label, property);

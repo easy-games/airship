@@ -386,7 +386,7 @@ public static partial class AirshipEditorGUI {
         return binding;
     }
 
-    private static float DoNumberProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+    private static float DoNumberProperty(Rect? rect, GUIContent label, AirshipSerializedValue property, bool integer) {
         DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Number);
         
         if (property.type != AirshipSerializedValue.PropertyType.Number) {
@@ -402,15 +402,15 @@ public static partial class AirshipEditorGUI {
             float max = Convert.ToSingle(rangeProps[1].value, CultureInfo.InvariantCulture);
 
             if (rect.GetCustomRect(out var position)) {
-                nextValue = EditorGUI.Slider(position, label, prevValue, min, max);
+                nextValue = integer ? EditorGUI.IntSlider(position, label, (int) prevValue, (int) min, (int) max) : EditorGUI.Slider(position, label, prevValue, min, max);
             } else {
-                nextValue = EditorGUILayout.Slider(label, prevValue, min, max);
+                nextValue = integer ? EditorGUILayout.IntSlider(label, (int)prevValue,(int) min,(int) max) : EditorGUILayout.Slider(label, prevValue, min, max);
             }
         } else {
             if (rect.GetCustomRect(out var position)) {
-                nextValue = EditorGUI.FloatField(position, label, prevValue);
+                nextValue = integer ? EditorGUI.IntField(position, label, (int) prevValue) : EditorGUI.FloatField(position, label, prevValue);
             } else {
-                nextValue = EditorGUILayout.FloatField(label, prevValue);
+                nextValue = integer ? EditorGUILayout.IntField(label, (int) prevValue) : EditorGUILayout.FloatField(label, prevValue);
             }
         }
 
