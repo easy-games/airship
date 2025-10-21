@@ -1,5 +1,4 @@
-// Assets/Editor/DownloadClothingWindow.cs
-
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -143,3 +142,4 @@ namespace Code.Accessories.Clothing.Editor {
         }
     }
 }
+#endif

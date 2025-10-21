@@ -19,14 +19,17 @@ namespace Code.Accessories.Clothing {
         }
     }
 
+    [Serializable]
     public class GearFetchResponse {
         public GearDto gear;
     }
 
+    [Serializable]
     public class GearDto {
         public GearListingDto gear;
     }
 
+    [Serializable]
     public class GearListingDto {
         public string category;
         public string subcategory;
@@ -79,6 +82,7 @@ namespace Code.Accessories.Clothing {
 
                 var gearRes = JsonUtility.FromJson<GearFetchResponse>(req.downloadHandler.text);
                 airId = gearRes.gear.gear.airAssets[0];
+                classIdToAirIdCache[classId] = airId;
             }
 
             return await DownloadYielding(classId, airId);
