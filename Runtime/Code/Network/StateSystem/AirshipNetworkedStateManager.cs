@@ -372,12 +372,7 @@ namespace Code.Network.StateSystem
 
         #region Top Level Event Functions
 
-        private void OnTick(object tickObj, object timeObj, object replayObj) {
-            if (tickObj is not int tick || timeObj is not double time || replayObj is not bool replay) {
-                Debug.LogWarning($"OnTick: Unexpected value in tick object.");
-                return;
-            }
-            
+        private void OnTick(int tick, double time, bool replay) {
             // We are in shared mode
             if (isServer && isClient)
             {

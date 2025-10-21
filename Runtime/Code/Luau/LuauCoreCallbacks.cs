@@ -1510,6 +1510,16 @@ public partial class LuauCore : MonoBehaviour {
                 string reflectionMethodName = "HandleEventDelayed" + eventInfoParams.Length.ToString();
                 MethodInfo method = callbackWrapper.GetType().GetMethod(reflectionMethodName);
 
+                // TODO: could be pooled to remove alloc
+                if (eventInfoParams.Length > 0) {
+                    var eventInfoParamTypes = new Type[eventInfoParams.Length];
+                    for (var i = 0; i < eventInfoParams.Length; i++) {
+                        eventInfoParamTypes[i] = eventInfoParams[i].ParameterType;
+                    }
+
+                    method = method.MakeGenericMethod(eventInfoParamTypes);
+                }
+
                 Delegate d = Delegate.CreateDelegate(eventInfo.EventHandlerType, callbackWrapper, method);
                 eventInfo.AddEventHandler(reflectionObject, d);
 

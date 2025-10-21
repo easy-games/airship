@@ -16,6 +16,7 @@ using Code.Luau.LuauAssembly;
 using UnityEngine;
 using Luau;
 using NUnit.Framework;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
@@ -434,6 +435,26 @@ public partial class LuauCore : MonoBehaviour
 
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_RAY, new IntPtr(rayData), 0); // 0, because we know how big an intPtr is
     }
+
+    public static unsafe void WritePropertyToThreadPlane(IntPtr thread, Plane plane) {
+        var planeData = stackalloc float[4];
+        planeData[0] = plane.normal.x;
+        planeData[1] = plane.normal.y;
+        planeData[2] = plane.normal.z;
+        planeData[3] = plane.distance;
+
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_PLANE, new IntPtr(planeData), 0); // 0, because we know how big an intPtr is
+    }
+    
+    public static unsafe void WritePropertyToThreadColor(IntPtr thread, Color color) {
+        var colorData = stackalloc float[4];
+        colorData[0] = color.r;
+        colorData[1] = color.g;
+        colorData[2] = color.b;
+        colorData[3] = color.a;
+
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_COLOR, new IntPtr(colorData), 0); // 0, because we know how big an intPtr is
+    }    
     
     // Called from WriteProperty
     public static unsafe void WritePropertyToThreadQuaternion(IntPtr thread, Quaternion quat) {
@@ -487,6 +508,28 @@ public partial class LuauCore : MonoBehaviour
         rectData[3] = rect.height;
 
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_RECT, new IntPtr(rectData), 0); // 0, because we know how big an intPtr is
+    }
+
+    public static unsafe void WritePropertyToThreadMatrix4x4(IntPtr thread, Matrix4x4 mat) {
+        var matData = stackalloc float[16];
+        matData[0] = mat.m00;
+        matData[1] = mat.m01;
+        matData[2] = mat.m02;
+        matData[3] = mat.m03;
+        matData[4] = mat.m10;
+        matData[5] = mat.m11;
+        matData[6] = mat.m12;
+        matData[7] = mat.m13;
+        matData[8] = mat.m20;
+        matData[9] = mat.m21;
+        matData[10] = mat.m22;
+        matData[11] = mat.m23;
+        matData[12] = mat.m30;
+        matData[13] = mat.m31;
+        matData[14] = mat.m32;
+        matData[15] = mat.m33;
+
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_MATRIX, new IntPtr(matData), 0); // 0, because we know how big an intPtr is
     }
     
     // Called from WriteProperty
@@ -548,9 +591,24 @@ public partial class LuauCore : MonoBehaviour
     }
 
     public static unsafe bool WritePropertyToThread(IntPtr thread, System.Object value, Type t) {
-        if (value == null) {
+        return WritePropertyToThread<object>(thread, value, t);
+    }
+
+    public static unsafe bool WritePropertyToThread<T>(IntPtr thread, T value, Type t = default) {
+        // Care to not box value types or use unsafe casting on boxed values
+        var isObjectOrBoxed = typeof(T) == typeof(object);
+        if (isObjectOrBoxed && value == null) {
             LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
             return true;
+        }
+
+        // Use generic if no type is specified
+        if (t == default) {
+            t = typeof(T);
+            
+            // If generic is object grab type from value. This is important for boxed values (which we should avoid,
+            // but this allows them to function).
+            if (t == typeof(object)) t = value.GetType();
         }
         
         // Handle arrays/lists/IEnumerables:
@@ -569,18 +627,22 @@ public partial class LuauCore : MonoBehaviour
             }
         }
 
-        if (t == stringType) {
-            WritePropertyToThreadString(thread, (string) value);
+        if (t == intType) {
+            var intValue = CastPossiblyBoxedValue<T, int>(ref value, isObjectOrBoxed);
+            // if (typeof(T) == intType) intValue = UnsafeUtility.As<T, int>(ref value);
+            // else if (value is int intVal) intValue = intVal; 
+            WritePropertyToThreadInt32(thread, intValue);
             return true;
         }
-
-        if (t == intType) {
-            WritePropertyToThreadInt32(thread, (int) value);
+        
+        if (t == stringType) {
+            var stringValue = CastPossiblyBoxedValue<T, string>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadString(thread, stringValue);
             return true;
         }
         
         if (t == luauBufferType) {
-            var buf = (LuauBuffer)value;
+            var buf = CastPossiblyBoxedValue<T, LuauBuffer>(ref value, isObjectOrBoxed);
             fixed (byte* bytesPtr = buf.Data) {
                 LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BUFFER, new IntPtr(bytesPtr), (ulong)buf.Data.Length);
             }
@@ -588,85 +650,83 @@ public partial class LuauCore : MonoBehaviour
         }
 
         if (t.IsEnum) {
-            System.Int32 integer = (System.Int32)value;
-            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
+            Int32 enumValue = Convert.ToInt32(value); // This requires boxing -- maybe there's a better alternative?
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &enumValue), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
         if (t == uIntType) {
-            UInt32 uintVal = (UInt32)value;
-            System.Int32 integer = unchecked((int)uintVal);
-            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
+            var uintValue = CastPossiblyBoxedValue<T, uint>(ref value, isObjectOrBoxed);
+            System.Int32 integer = unchecked((int) uintValue);
+            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &uintValue), 0); // 0, because we know how big an intPtr is
             return true;
         }
         
         if (t == byteType) {
-            byte byteVal = (byte)value;
-            System.Int32 integer = byteVal;
+            var byteValue = CastPossiblyBoxedValue<T, byte>(ref value, isObjectOrBoxed);
+            System.Int32 integer = byteValue;
             LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
             return true;
         }
         
         if (t == longType) {
-            Int64 intVal = (Int64)value;
-            System.Int32 integer = unchecked((int)intVal);
+            var longValue = CastPossiblyBoxedValue<T, long>(ref value, isObjectOrBoxed);
+            System.Int32 integer = unchecked((int) longValue);
             LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
         if (t == vector3Type) {
-            WritePropertyToThreadVector3(thread, (Vector3) value);
+            var vector3Value = CastPossiblyBoxedValue<T, Vector3>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadVector3(thread, vector3Value);
             return true;
         }
 
         if (t == vector3IntType) {
-            Vector3 vec = Vector3Int.FloorToInt((Vector3Int)value);
+            var vector3IntValue = CastPossiblyBoxedValue<T, Vector3Int>(ref value, isObjectOrBoxed);
+            Vector3 vec = Vector3Int.FloorToInt((Vector3Int)vector3IntValue);
             LuauPlugin.PushVector3ToThread(thread, vec.x, vec.y, vec.z);
             return true;
         }
 
         if (t == boolType) {
-            WritePropertyToThreadBoolean(thread, (bool) value);
+            var boolValue = CastPossiblyBoxedValue<T, bool>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadBoolean(thread, boolValue);
             return true;
         }
 
         if (t == doubleType) {
-            WritePropertyToThreadDouble(thread, (double) value);
+            var doubleValue = CastPossiblyBoxedValue<T, double>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadDouble(thread, doubleValue);
             return true;
         }
 
         if (t == floatType) {
-            WritePropertyToThreadSingle(thread, (float) value);
+            var floatValue = CastPossiblyBoxedValue<T, float>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadSingle(thread, floatValue);
             return true;
         }
 
         if (t == ushortType) {
-            double number = (ushort)value;
+            double number = (double) CastPossiblyBoxedValue<T, ushort>(ref value, isObjectOrBoxed);
             LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &number), 0); // 0, because we know how big an intPtr is
             return true;
         }
 
         if (t == rayType) {
-            WritePropertyToThreadRay(thread, (Ray) value);
-
+            var rayValue = CastPossiblyBoxedValue<T, Ray>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadRay(thread, rayValue);
             return true;
         }
 
         if (t == colorType) {
-            var color = (Color)value;
-            var colorData = stackalloc float[4];
-            colorData[0] = color.r;
-            colorData[1] = color.g;
-            colorData[2] = color.b;
-            colorData[3] = color.a;
-
-            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_COLOR, new IntPtr(colorData), 0); // 0, because we know how big an intPtr is
+            var colorValue = CastPossiblyBoxedValue<T, Color>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadColor(thread, colorValue);
             return true;
         }
 
         if (t == binaryBlobType) {
-            var blob = (BinaryBlob)value;
-
+            var blob = CastPossiblyBoxedValue<T, BinaryBlob>(ref value, isObjectOrBoxed);
             fixed (byte* dataPtr = blob.Data) {
                 LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, new IntPtr(dataPtr), (ulong)blob.DataSize);
             }
@@ -675,65 +735,44 @@ public partial class LuauCore : MonoBehaviour
         }
 
         if (t == quaternionType) {
-            WritePropertyToThreadQuaternion(thread, (Quaternion) value);
+            var quaternionValue = CastPossiblyBoxedValue<T, Quaternion>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadQuaternion(thread, quaternionValue);
             return true;
         }
 
         if (t == vector2Type) {
-            WritePropertyToThreadVector2(thread, (Vector2) value);
+            var vector2Value = CastPossiblyBoxedValue<T, Vector2>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadVector2(thread, vector2Value);
             return true;
         }
 
         if (t == vector2IntType) {
-            WritePropertyToThreadVector2(thread, (Vector2Int) value);
+            var vector2IntValue = CastPossiblyBoxedValue<T, Vector2Int>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadVector2(thread, vector2IntValue);
             return true;
         }
 
         if (t == vector4Type) {
-            WritePropertyToThreadVector4(thread, (Vector4) value);
+            var vector4Value = CastPossiblyBoxedValue<T, Vector4>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadVector4(thread, vector4Value);
             return true;
         }
 
         if (t == planeType) {
-            var plane = (Plane)value;
-            var planeData = stackalloc float[4];
-            planeData[0] = plane.normal.x;
-            planeData[1] = plane.normal.y;
-            planeData[2] = plane.normal.z;
-            planeData[3] = plane.distance;
-
-            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_PLANE, new IntPtr(planeData), 0); // 0, because we know how big an intPtr is
-
+            var planeValue = CastPossiblyBoxedValue<T, Plane>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadPlane(thread, planeValue);
             return true;
         }
 
         if (t == rectType) {
-            WritePropertyToThreadRect(thread, (Rect) value);
+            var rectValue = CastPossiblyBoxedValue<T, Rect>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadRect(thread, rectValue);
             return true;
         }
 
         if (t == matrixType) {
-            var mat = (Matrix4x4)value;
-            var matData = stackalloc float[16];
-            matData[0] = mat.m00;
-            matData[1] = mat.m01;
-            matData[2] = mat.m02;
-            matData[3] = mat.m03;
-            matData[4] = mat.m10;
-            matData[5] = mat.m11;
-            matData[6] = mat.m12;
-            matData[7] = mat.m13;
-            matData[8] = mat.m20;
-            matData[9] = mat.m21;
-            matData[10] = mat.m22;
-            matData[11] = mat.m23;
-            matData[12] = mat.m30;
-            matData[13] = mat.m31;
-            matData[14] = mat.m32;
-            matData[15] = mat.m33;
-
-            LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_MATRIX, new IntPtr(matData), 0); // 0, because we know how big an intPtr is
-
+            var matrixValue = CastPossiblyBoxedValue<T, Matrix4x4>(ref value, isObjectOrBoxed);
+            WritePropertyToThreadMatrix4x4(thread, matrixValue);
             return true;
         }
 
@@ -746,6 +785,15 @@ public partial class LuauCore : MonoBehaviour
         ThreadDataManager.Error(thread);
         Debug.LogError("Attempted to write parameter of type " + t.ToString() + " and can't currently handle it.");
         return false;
+    }
+
+    private static T CastPossiblyBoxedValue<U, T>(ref U value, bool isBoxed) {
+        // If we're boxed we can use ".. is .." syntax without additional allocations 
+        if (isBoxed && value is T boxCast) {
+            return boxCast;
+        }
+        // This will break if value is boxed as we're casting the reference to the value type (for example int&)
+        return UnsafeUtility.As<U, T>(ref value);
     }
 
     private static bool ParseTableParameter(IntPtr thread, PODTYPE podType, Type sourceParamType, int size, int idx, out object value) {
