@@ -291,7 +291,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyTransformAnchor),
             typeof(EasyAxis),
             typeof(WorldSpaceCanvasScaler),
-            
+            typeof(AccessoryCustomization),
+            typeof(AccessoryCustomizationGear),
+
             typeof(VibrationManager),
             typeof(VibrationFeedbackType),
 

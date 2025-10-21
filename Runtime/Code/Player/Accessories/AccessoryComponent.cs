@@ -179,6 +179,35 @@ namespace Code.Player.Accessories {
 #endif
         }
 
+        public void Customize(int variant, string[] colorsHex) {
+            if (variantSetter) { }
+
+            var newColor = Color.black;
+            if (colorSetter) {
+                for (var i = 0; i < colorsHex.Length; i++) {
+                    if (ColorUtility.TryParseHtmlString(colorsHex[i], out newColor)) {
+                        colorSetter.SetColor(i, newColor);
+                    }
+                }
+            } else {
+                var setters = gameObject.GetComponentsInChildren<MaterialColorURP>();
+                foreach (var set in setters) {
+                    var colorLength = colorsHex.Length;
+                    if (colorLength == 1) {
+                        if (ColorUtility.TryParseHtmlString(colorsHex[0], out newColor)) {
+                            set.SetColorOnAll(newColor);
+                        }
+                    } else if (colorLength > 1) {
+                        for (var i = 0; i < colorLength; i++) {
+                            if (ColorUtility.TryParseHtmlString(colorsHex[i], out newColor)) {
+                                set.SetColor(i, newColor);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public void Copy(AccessoryComponent other) {
             transform.localPosition = other.transform.localPosition;
             transform.localRotation = other.transform.localRotation;

@@ -6,6 +6,7 @@ using Airship;
 using Code.Platform.Server;
 using Code.Platform.Shared;
 using Code.Player.Accessories;
+using Newtonsoft.Json;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
@@ -37,6 +38,8 @@ public class AccessoryBuilder : MonoBehaviour {
     private readonly Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new();
 
     private static readonly int FaceBaseMapTexture = Shader.PropertyToID("_BaseMap");
+    private AccessoryCustomization customization;
+    private Dictionary<AccessorySlot, AccessoryCustomizationGear> customizationMap = new();
 
     //EVENTS
     /// <summary>
@@ -295,6 +298,10 @@ public class AccessoryBuilder : MonoBehaviour {
 
             RemoveBySlot(accessoryTemplate.accessorySlot);
 
+            // Load customizations
+            AccessoryCustomizationGear customData = null;
+            customizationMap.TryGetValue(accessoryTemplate.accessorySlot, out customData);
+
             var lods = new List<ActiveAccessory>();
             for (var lodLevel = 0; lodLevel < lodCount; lodLevel++) {
                 if (lodLevel - 1 >= accessoryTemplate.meshLods.Count) {
@@ -305,6 +312,7 @@ public class AccessoryBuilder : MonoBehaviour {
                 if (!accessoryTemplate.skinnedToCharacter && lodLevel > 0) {
                     continue;
                 }
+
 
                 MeshRenderer[] meshRenderers;
                 SkinnedMeshRenderer[] skinnedMeshRenderers;
@@ -387,6 +395,10 @@ public class AccessoryBuilder : MonoBehaviour {
                     // They are cleaned up because each lod is added
                     // to the lods list in LOD0 active accessory.
                     lods.Add(activeAccessory);
+                }
+
+                if (customData != null) {
+                    activeAccessory.AccessoryComponent.Customize(customData.variant, customData.colors);
                 }
             }
 
@@ -673,6 +685,51 @@ public class AccessoryBuilder : MonoBehaviour {
     public void SetCreateOverlayMeshOnCombine(bool on) {
         if (meshCombiner) {
             meshCombiner.createOverlayMesh = on;
+        }
+    }
+
+
+    public AccessoryCustomization SetCustomization(string json) {
+        if (string.IsNullOrEmpty(json)) {
+            return null;
+        }
+
+        try {
+            customization = JsonConvert.DeserializeObject<AccessoryCustomization>(json);
+
+            if (customization != null) {
+                //Map accessory slot to the customization
+                customizationMap.Clear();
+                for (var i = 0; i < customization.platformCustomGear.Length; i++) {
+                    for (var j = 0; j < customization.platformCustomGear[i].slots.Length; j++) {
+                        customizationMap.Add((AccessorySlot)customization.platformCustomGear[i].slots[j],
+                            customization.platformCustomGear[i]);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Debug.LogError("Error parsing customization: " + e.Message);
+        }
+
+        return customization;
+    }
+
+    public AccessoryCustomization GetCustomization() {
+        return customization;
+    }
+
+    public void SetCustomColor(AccessorySlot slot, int colorIndex, string colorHex) {
+        var acc = GetActiveAccessoryBySlot(slot);
+        if (acc?.AccessoryComponent.colorSetter != null) {
+            var newColor = Color.magenta;
+            if (ColorUtility.TryParseHtmlString(colorHex, out newColor)) {
+                acc.AccessoryComponent.colorSetter.SetColor(colorIndex, newColor);
+                if (customizationMap.TryGetValue(slot, out var gear)) {
+                    gear.colors[colorIndex] = colorHex;
+                } else {
+                    Debug.LogError("Trying to customize color that is not an option on this slot");
+                }
+            }
         }
     }
 
