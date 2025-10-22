@@ -364,17 +364,24 @@ public partial class LuauCore : MonoBehaviour {
                     }
                 }
                 
-                if (isTable != 0 && t.IsArray) {
-                    var success = ParseTableParameter(thread, type, t, (int)propertyDataSize, -1, out var value);
-                    if (!success) {
-                        return LuauError(thread, $"Value of type {type} not valid table type");
+                if (isTable != 0) {
+                    if (t.IsArray) {
+                        if (!ParseTableParameter(thread, type, t, (int)propertyDataSize, -1, out var value)) {
+                            return LuauError(thread, $"Luau table of type {type} cannot be parsed into C# array of type {t}");
+                        }
+                        if (field != null) {
+                            field.SetValue(objectReference, value);
+                        } else {
+                            property.SetValue(objectReference, value);
+                        }
+                        return 0;
                     }
-                    if (field != null) {
-                        field.SetValue(objectReference, value);
-                    } else {
-                        property.SetValue(objectReference, value);
+                    
+                    if (t.IsClass || (t.IsValueType && !t.IsPrimitive)) {
+                        return LuauError(thread, $"Parsing Luau table into C# {(t.IsClass ? "class" : "struct")} {t} is currently not supported");
                     }
-                    return 0;
+                    
+                    return LuauError(thread, $"Cannot parse Luau table into type {t}");
                 }
 
                 switch (type) {
