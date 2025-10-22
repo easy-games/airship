@@ -700,10 +700,11 @@ public class AccessoryBuilder : MonoBehaviour {
             if (customization != null) {
                 //Map accessory slot to the customization
                 customizationMap.Clear();
+                var slot = AccessorySlot.Root;
                 for (var i = 0; i < customization.platformCustomGear.Length; i++) {
                     for (var j = 0; j < customization.platformCustomGear[i].slots.Length; j++) {
-                        customizationMap.Add((AccessorySlot)customization.platformCustomGear[i].slots[j],
-                            customization.platformCustomGear[i]);
+                        slot = (AccessorySlot)customization.platformCustomGear[i].slots[j];
+                        customizationMap[slot] = customization.platformCustomGear[i];
                     }
                 }
             }

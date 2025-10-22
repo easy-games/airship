@@ -182,6 +182,10 @@ namespace Code.Player.Accessories {
         public void Customize(int variant, string[] colorsHex) {
             if (variantSetter) { }
 
+            if (colorsHex.Length == 0) {
+                return;
+            }
+
             var newColor = Color.black;
             if (colorSetter) {
                 for (var i = 0; i < colorsHex.Length; i++) {
