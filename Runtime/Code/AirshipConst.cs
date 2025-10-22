@@ -10,6 +10,7 @@ namespace Code {
         public static readonly IReadOnlyList<string> playerFlags = new string[] {
             "SkipLoading",
             "LagCompCheckIdIsInt",
+            "PlatformGearDownloadClassId",
         };
 
 
