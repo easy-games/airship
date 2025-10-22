@@ -1,5 +1,5 @@
 ﻿using System;
-using Editor.Typescript;
+using TypescriptAst;
 using Luau;
 using UnityEngine;
 

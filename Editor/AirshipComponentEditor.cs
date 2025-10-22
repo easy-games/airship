@@ -55,9 +55,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         AirshipComponent binding = (AirshipComponent)target;
         if (binding.script != null && binding.metadata != null) {
-            var customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
             
-            if (customEditorType != null && AirshipCustomEditors.TryGetEditor(binding, customEditorType, out var editor)) {
+            if (customEditorType != null && AirshipCustomEditors.TryGetEditorForComponent(binding, customEditorType, out var editor)) {
                 editor.OnEnable();
                 this.editor = editor;
             }
@@ -73,10 +73,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         AirshipComponent binding = (AirshipComponent)target;
         if (binding.script != null && binding.metadata != null) {
-            var customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
-            
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
             if (customEditorType != null) {
-                var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
+                var editor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
                 editor.OnDisable();
             }
 
@@ -86,24 +85,25 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
     private void OnDestroy() {
         AirshipComponent binding = (AirshipComponent)target;
-        if (binding.script != null && binding.metadata != null && !binding) {
-            AirshipCustomEditors.DestroyEditor(binding.GetInstanceID());
-        }
+        AirshipCustomEditors.DestroyEditor(binding);
     }
 
     private bool debugging = false;
 
     private void OnSceneGUI() {
+        if (!AirshipCustomEditors.UseNewInspector) return;
         if (!this.editor) return;
         this.editor.OnSceneGUI();
     }
 
     public override void OnPreviewGUI(Rect r, GUIStyle background) {
+        if (!AirshipCustomEditors.UseNewInspector) return;
         if (!this.editor) return;
         this.editor.OnPreviewGUI(r, background);
     }
 
     public override bool HasPreviewGUI() {
+        if (!AirshipCustomEditors.UseNewInspector) return false;
         return this.editor != null ? this.editor.HasPreviewGUI() : false;
     }
 
@@ -114,7 +114,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         Type customEditorType = null;
         if (binding.script != null && binding.metadata != null) {
-            customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
+            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
         }
         
         if (customEditorType != null && binding.script != null) {
@@ -122,7 +122,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var metadataName = metadata.FindPropertyRelative("name");
             
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
+                var editor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
                 editor.script = binding.script;
                 editor.target = binding;
                 editor.OnInspectorGUI();

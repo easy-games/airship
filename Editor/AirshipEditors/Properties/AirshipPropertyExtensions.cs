@@ -8,33 +8,6 @@ using UnityEditor;
 using UnityEngine;
 
 public static class AirshipPropertyExtensions {
-    // public static string GetString(this AirshipSerializedValue value) {
-    //     if (value.type == AirshipSerializedValue.PropertyType.String) return value.stringValue;
-    //     return null;
-    // }
-    //
-    // public static float GetNumber(this AirshipSerializedValue value) {
-    //     if (value.type == AirshipSerializedValue.PropertyType.Number) return value.numberValue;
-    //     return 0;
-    // }
-    //
-    // public static Quaternion GetQuaternion(this AirshipSerializedValue value) =>
-    //     value.type == AirshipSerializedValue.PropertyType.Vector2
-    //         ? value.quaternionValue
-    //         : throw new InvalidCastException($"Cannot cast {value.type} to Quaternion");
-    //
-    // public static Vector2 GetVector2(this AirshipSerializedValue value) =>
-    //     value.type == AirshipSerializedValue.PropertyType.Vector2 ? value.vector2Value : throw new InvalidCastException($"Cannot cast {value.type} to Vector2");
-    //
-    // public static Vector3 GetVector3(this AirshipSerializedValue value) =>
-    //     value.type == AirshipSerializedValue.PropertyType.Vector3 ? value.vector3Value : throw new InvalidCastException($"Cannot cast {value.type} to Vector3");
-    //
-    // public static Vector4 GetVector4(this AirshipSerializedValue value) =>
-    //     value.type == AirshipSerializedValue.PropertyType.Vector4 ? value.vector4Value : throw new InvalidCastException($"Cannot cast {value.type} to Vector4");
-    //
-    // public static Rect GetRect(this AirshipSerializedValue value) =>
-    //     value.type == AirshipSerializedValue.PropertyType.Rect ? value.rectValue : throw new InvalidCastException($"Cannot cast {value.type} to Rect");
-    //
     public static UnityEngine.Object GetObject(this AirshipSerializedValue value) {
         if (value.type is AirshipSerializedValue.PropertyType.AirshipBehaviour or AirshipSerializedValue.PropertyType.Object) return value.objectReferenceValue;
         return null;

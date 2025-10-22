@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Editor.Typescript {
+namespace TypescriptAst {
     public class TsExpressionStatement : IStatement {
         public SyntaxKind SyntaxKind => SyntaxKind.ExpressionStatement;
         public IExpression Expression { get; set; }

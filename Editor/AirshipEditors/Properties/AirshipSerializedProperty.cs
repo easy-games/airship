@@ -7,6 +7,10 @@ using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
+/// <summary>
+/// AirshipSerializedProperty and AirshipSerializedObject are classes for editing properties on airship objects in a completely generic way
+/// that automatically handles undo, multi-object editing and Prefab overrides.
+/// </summary>
 public class AirshipSerializedProperty : AirshipSerializedValue {
     public class AirshipArray {
         public AirshipSerializedProperty property { get; }

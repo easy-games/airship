@@ -19,12 +19,6 @@ namespace Editor {
             airshipBuild.data = AirshipBuildData.FromJsonData(data);
             ctx.AddObjectToAsset("build", airshipBuild);
             ctx.SetMainObject(airshipBuild);
-
-            // if (AirshipBuildInfo.PrimaryAssetPath == ctx.assetPath) {
-            //     EditorApplication.delayCall += () => {
-            //         AirshipCustomEditors.RegisterCustomEditors2();
-            //     };
-            // }
         }
     }
 

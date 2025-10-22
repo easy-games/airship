@@ -20,6 +20,10 @@ public class AirshipReorderableArrayList : ReorderableList {
         displayHeader, displayAddButton, displayRemoveButton) {}
 }
 
+/// <summary>
+/// AirshipSerializedProperty and AirshipSerializedObject are classes for editing properties on airship objects in a completely generic way
+/// that automatically handles undo, multi-object editing and Prefab overrides.
+/// </summary>
 public class AirshipSerializedObject {
     internal Dictionary<string, AirshipSerializedProperty> _propertyCache = new();
     internal SerializedObject serializedObject;

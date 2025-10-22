@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection.Emit;
 using Unity.VisualScripting;
 
-namespace Editor.Typescript {
+namespace TypescriptAst {
     public class RenderState {
         public int Indent { get; set; }
 

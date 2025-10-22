@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Editor.Typescript {
+namespace TypescriptAst {
     public class TsArrayTypeNode : ITypeNode {
         public SyntaxKind SyntaxKind => SyntaxKind.ArrayType;
         public ITypeNode ElementType { get; set; }

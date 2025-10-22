@@ -646,54 +646,54 @@ public static partial class AirshipEditorGUI {
 
         return false;
     }
-    
-    public static bool PropertyField(GUIContent label, AirshipSerializedValue value) =>
-        PropertyField(label, value, false);
 
-    
+    public static bool PropertyField(GUIContent label, AirshipSerializedValue value) {
+        if (value is AirshipSerializedProperty serializedProperty) {
+            return PropertyField(label, serializedProperty);
+        } else {
+            return PropertyField(label, value, false);
+        }
+    }
+
+    /// <summary>
+    /// Make a field for the given Airship Serialized Property with a custom label and tooltip
+    /// </summary>
+    /// <param name="label">The custom label for this property</param>
+    /// <param name="serializedProperty">The property</param>
+    /// <returns></returns>
+    public static bool PropertyField(GUIContent label, AirshipSerializedProperty serializedProperty) {
+        BeginSerializedProperty(serializedProperty);
+        var res = PropertyField(label, serializedProperty, false);
+        EndSerializedProperty();
+        return res;
+    }
+
+
     internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
     private static AirshipSerializedProperty currentProperty;
     private static bool prevBold;
     
-    public static void BeginProperty(AirshipSerializedProperty property) {
-        prevBold = AirshipEditorInternals.GetBoldDefaultFont();
-        if (property.prefabOverride) {
-            AirshipEditorInternals.SetBoldDefaultFont(true);
-        }
-
-        currentProperty = property;
-    }
-
-    public static void EndProperty() {
-        var property = currentProperty;
-        if (property == null) return;
-
-        var lastRect = GUILayoutUtility.GetLastRect();
-        if (property.prefabOverride) {
-            var modifiedRect = lastRect;
-            modifiedRect.x = 1;
-            modifiedRect.width = 2;
-            Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
-        }
-        AirshipEditorInternals.SetBoldDefaultFont(prevBold);
-    }
-    
-    public static bool PropertyField(AirshipSerializedValue property) {
+    /// <summary>
+    /// Make a field for the given Airship Serialized Property
+    /// </summary>
+    /// <param name="property">The property to draw the field for</param>
+    /// <returns></returns>
+    public static bool PropertyField(AirshipSerializedProperty property) {
         if (property == null) {
             EditorGUILayout.LabelField(new GUIContent("Property"), new GUIContent("(Missing property)"), EditorStyles.objectField);
             return false;
         }
 
+        var content = new GUIContent(ObjectNames.NicifyVariableName(property.name));
+        
         string tooltip = "";
         if (property.TryGetDecorator("Tooltip", out var tooltipParams)) {
             tooltip = tooltipParams[0].value as string;
         } else if (property.propertyMetadata != null) {
             tooltip = property.propertyMetadata.Documentation;
         }
-        
-        var name = ObjectNames.NicifyVariableName(property.serializedName.stringValue);
-        var label = new GUIContent(name, tooltip);
-        
-        return PropertyField(label, property);
+
+        if (!string.IsNullOrEmpty(tooltip)) content.tooltip = tooltip;
+        return PropertyField(content, property);
     }
 }

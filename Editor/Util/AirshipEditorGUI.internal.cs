@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using Code.Luau;
+using Editor.EditorInternal;
 using Luau;
 using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
@@ -26,12 +27,15 @@ public static class AirshipGUI {
 }
 
 public static partial class AirshipEditorGUI {
+    /// <summary>
+    /// Handle property validation for the given serialized value
+    /// </summary>
     private static bool DoValidateProperty(Rect? rect, AirshipSerializedValue property, AirshipSerializedValue.PropertyType expectedType) {
         if (property == null) {
             if (rect.GetCustomRect(out var position)) {
-                EditorGUI.HelpBox(position, $"Expected {expectedType} got null", MessageType.Error);
+                EditorGUI.HelpBox(position, $"Expected property with type {expectedType}, but got null. Make sure the property is defined in TypeScript as public or with @SerializeField().", MessageType.Error);
             } else {
-                EditorGUILayout.HelpBox($"Expected {expectedType} got null", MessageType.Error);
+                EditorGUILayout.HelpBox($"Expected property with type {expectedType}, but got null. Make sure the property is defined in TypeScript as public or with @SerializeField().", MessageType.Error);
             }
             
             GUIUtility.ExitGUI();
@@ -40,9 +44,9 @@ public static partial class AirshipEditorGUI {
         
         if (property.type != expectedType) {
             if (rect.GetCustomRect(out var position)) {
-                EditorGUI.HelpBox(position, $"Expected {expectedType} got {property.type}", MessageType.Error);
+                EditorGUI.HelpBox(position, $"{property.name}: expected type of {expectedType}, but property is of type {property.type}", MessageType.Error);
             } else {
-                EditorGUILayout.HelpBox($"Expected {expectedType} got {property.type}", MessageType.Error);
+                EditorGUILayout.HelpBox($"{property.name}: expected type of {expectedType}, but property is of type {property.type}", MessageType.Error);
             }
             
             GUIUtility.ExitGUI();
@@ -52,6 +56,9 @@ public static partial class AirshipEditorGUI {
         return true;
     }
 
+    /// <summary>
+    /// Handle the property events such as right click on the given serialized value
+    /// </summary>
     private static void DoPropertyEvents(Rect? rect, AirshipSerializedValue property) {
         Rect position;
         if (!rect.GetCustomRect(out position)) position = GUILayoutUtility.GetLastRect();
@@ -62,19 +69,7 @@ public static partial class AirshipEditorGUI {
             case EventType.MouseDown: {
                 if (position.Contains(currentEvent.mousePosition) && currentEvent.button == 1 && property is AirshipSerializedProperty serializedProperty) {
                     GenericMenu menu = new GenericMenu();
-
-                    // if (serializedProperty.isModified) {
-                    //     
-                    //     menu.AddItem(new GUIContent("Reset to Default"), false, () => {
-                    //         serializedProperty.ResetToDefault();
-                    //         serializedProperty.isModified = false;
-                    //
-                    //         if (serializedProperty.editor.target is AirshipComponent component) {
-                    //             EditorUtility.SetDirty(component);
-                    //         }
-                    //     });
-                    // }
-
+                    
                     var hasPrefabItems = false;
                     if (serializedProperty.prefabOverride) {
                         var test = L10n.Tr("Apply to Prefab '{0}'");
@@ -87,27 +82,24 @@ public static partial class AirshipEditorGUI {
                             serializedProperty.RevertPropertyOverride(InteractionMode.UserAction);
                         });
 
-                        hasPrefabItems = true;
+                        // hasPrefabItems = true;
                     } else if (serializedProperty.prefab == null && serializedProperty.isModified) {
                         menu.AddItem(new GUIContent("Reset to Default"), false, () => {
                             serializedProperty.ResetToDefault();
                         });
                         
-                        hasPrefabItems = true;
+                        // hasPrefabItems = true;
                     }
-                    //
-
-
-                    
-                    if (AirshipClipboardUtility.CanCopy(property)) {
-                        if (hasPrefabItems) {
-                            menu.AddSeparator("");
-                        }
-                        
-                        menu.AddItem(new GUIContent("Copy"), false, () => {
-                            AirshipClipboardUtility.CopyValue(property);
-                        });
-                    }
+  
+                    // if (AirshipClipboardUtility.CanCopy(property)) {
+                    //     if (hasPrefabItems) {
+                    //         menu.AddSeparator("");
+                    //     }
+                    //     
+                    //     menu.AddItem(new GUIContent("Copy"), false, () => {
+                    //         AirshipClipboardUtility.CopyValue(property);
+                    //     });
+                    // }
 
                     menu.ShowAsContext();
                 }
@@ -631,5 +623,38 @@ public static partial class AirshipEditorGUI {
             default:
                 return -1;
         }
+    }
+
+    /// <summary>
+    /// Marks the beginning of a serialized property
+    /// 
+    /// Will modify the property appearance based on state, make sure
+    /// to add a matching 'EndSerializedProperty()' call
+    /// </summary>
+    /// <param name="property"></param>
+    internal static void BeginSerializedProperty(AirshipSerializedProperty property) {
+        prevBold = AirshipEditorInternals.GetBoldDefaultFont();
+        if (property.prefabOverride) {
+            AirshipEditorInternals.SetBoldDefaultFont(true);
+        }
+
+        currentProperty = property;
+    }
+
+    /// <summary>
+    /// Marks the end of the serialized property
+    /// </summary>
+    internal static void EndSerializedProperty() {
+        var property = currentProperty;
+        if (property == null) return;
+
+        var lastRect = GUILayoutUtility.GetLastRect();
+        if (property.prefabOverride) {
+            var modifiedRect = lastRect;
+            modifiedRect.x = 1;
+            modifiedRect.width = 2;
+            Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
+        }
+        AirshipEditorInternals.SetBoldDefaultFont(prevBold);
     }
 }

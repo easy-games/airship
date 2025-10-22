@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Editor.Typescript
+namespace TypescriptAst
 {
     public class TsEnumMember : IExpression {
         public SyntaxKind SyntaxKind => SyntaxKind.EnumMember;

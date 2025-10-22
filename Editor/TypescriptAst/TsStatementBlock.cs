@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Editor.Typescript {
+namespace TypescriptAst {
     public class TsStatementBlock : IBody {
         public SyntaxKind SyntaxKind => SyntaxKind.Block;
         public IStatement Statement { get; set; }

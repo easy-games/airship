@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Editor.Typescript;
+using TypescriptAst;
 
 /// <summary>
 /// Types supported by metadata decorators in Airship TS

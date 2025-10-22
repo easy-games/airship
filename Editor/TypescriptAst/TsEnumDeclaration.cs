@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Editor.Typescript
+namespace TypescriptAst
 {
     public class TsEnumDeclaration : IStatement {
         public SyntaxKind SyntaxKind => SyntaxKind.EnumDeclaration;

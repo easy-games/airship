@@ -1,4 +1,4 @@
-﻿namespace Editor.Typescript {
+﻿namespace TypescriptAst {
     public static class TsExtensions {
         public static TsBlock ToBlock(this IStatement[] statements) {
             return new TsBlock() { Statements = statements };

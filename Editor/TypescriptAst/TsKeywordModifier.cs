@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Editor.Typescript {
+namespace TypescriptAst {
     public class TsKeywordModifier : IModifier {
         public SyntaxKind SyntaxKind { get; }
 

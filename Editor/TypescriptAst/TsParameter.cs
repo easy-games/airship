@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Editor.Typescript {
+namespace TypescriptAst {
     public class TsParameter : IRenderableTsNode {
         public SyntaxKind SyntaxKind => SyntaxKind.Parameter;
         public TsIdentifier Name { get; set; }
