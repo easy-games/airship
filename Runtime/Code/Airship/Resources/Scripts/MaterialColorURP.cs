@@ -11,21 +11,19 @@ using UnityEngine;
 [LuauAPI]
 [RequireComponent(typeof(Renderer))]
 public class MaterialColorURP : MonoBehaviour {
-
     [Serializable]
     public class ColorSetting {
         public Color baseColor = Color.white;
 
         [NonSerialized]
-        public String reference = "";
+        public string reference = "";
 
         public ColorSetting(Color baseColor) {
             this.baseColor = baseColor;
         }
 
         public void CopyFrom(ColorSetting otherSettings) {
-            this.baseColor = otherSettings.baseColor;
-
+            baseColor = otherSettings.baseColor;
         }
     }
 
@@ -42,8 +40,8 @@ public class MaterialColorURP : MonoBehaviour {
     private Renderer ren;
 
     public void EditorFirstTimeSetup() {
-        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
-            ColorSetting setting = colorSettings[i];
+        for (var i = 0; i < ren.sharedMaterials.Length; i++) {
+            var setting = colorSettings[i];
             var material = ren.sharedMaterials[i];
             if (material == null) {
                 continue;
@@ -61,23 +59,25 @@ public class MaterialColorURP : MonoBehaviour {
         if (!enabled) {
             return;
         }
-        #if UNITY_EDITOR
-                if (Application.isPlaying) {
-                    DoUpdate();
-                } else {
-                    EditorApplication.delayCall += () => {
-                        if (this != null) DoUpdate();
-                    };
-                }
-        #else
+#if UNITY_EDITOR
+        if (Application.isPlaying) {
             DoUpdate();
-        #endif
+        } else {
+            EditorApplication.delayCall += () => {
+                if (this != null) {
+                    DoUpdate();
+                }
+            };
+        }
+#else
+        DoUpdate();
+#endif
     }
 
     private void OnEnable() {
         DoUpdate();
     }
-    
+
     private void OnDisable() {
         if (ren == null) {
             return;
@@ -85,51 +85,55 @@ public class MaterialColorURP : MonoBehaviour {
 
         //Destroy all the property blocks
         foreach (var colorSetting in colorSettings) {
-            for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+            for (var i = 0; i < ren.sharedMaterials.Length; i++) {
                 ren.SetPropertyBlock(null, i);
             }
         }
-
     }
-    
-    public void SetColor(int indx, Color newColor) {
-        colorSettings[indx].baseColor = newColor;
+
+    public void SetColor(int index, Color newColor) {
+        if (index < 0 || index >= colorSettings.Count) {
+            return;
+        }
+
+        colorSettings[index].baseColor = newColor;
         DoUpdate();
     }
 
     public void CopyFrom(MaterialColorURP other) {
-        this.RefreshVariables();
-        for (int i = 0; i < other.colorSettings.Count; i++) {
-            this.colorSettings[i].baseColor = other.colorSettings[i].baseColor;
+        RefreshVariables();
+        for (var i = 0; i < other.colorSettings.Count; i++) {
+            colorSettings[i].baseColor = other.colorSettings[i].baseColor;
         }
-        this.DoUpdate();
+
+        DoUpdate();
     }
 
-    public void SetColorOnAll(Color newColor){
+    public void SetColorOnAll(Color newColor) {
         foreach (var colorSetting in colorSettings) {
             colorSetting.baseColor = newColor;
         }
+
         DoUpdate();
     }
 
     public ColorSetting GetColorSettingByMaterial(Material mat) {
-        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+        for (var i = 0; i < ren.sharedMaterials.Length; i++) {
             if (ren.sharedMaterials[i] == mat) {
                 return colorSettings[i];
             }
         }
 
         return null;
-
     }
 
     public void InitializeColorsFromCurrentMaterials() {
-        if (this.ren == null) {
-            this.ren = GetComponent<Renderer>();
+        if (ren == null) {
+            ren = GetComponent<Renderer>();
         }
 
-        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
-            ColorSetting setting = colorSettings[i];
+        for (var i = 0; i < ren.sharedMaterials.Length; i++) {
+            var setting = colorSettings[i];
             var material = ren.sharedMaterials[i];
             if (material == null) {
                 continue;
@@ -144,8 +148,8 @@ public class MaterialColorURP : MonoBehaviour {
 
 
     public void DoUpdate() {
-        if (this.ren == null) {
-            this.ren = GetComponent<Renderer>();
+        if (ren == null) {
+            ren = GetComponent<Renderer>();
         }
 
         RefreshVariables();
@@ -154,36 +158,36 @@ public class MaterialColorURP : MonoBehaviour {
         while (cachedBlocks.Count < ren.sharedMaterials.Length) {
             cachedBlocks.Add(new MaterialPropertyBlock());
         }
+
         //Also shrink it
         while (cachedBlocks.Count > ren.sharedMaterials.Length) {
             cachedBlocks.RemoveAt(cachedBlocks.Count - 1);
         }
 
-        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+        for (var i = 0; i < ren.sharedMaterials.Length; i++) {
             ren.SetPropertyBlock(null, i);
         }
 
-        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
-            Material mat = ren.sharedMaterials[i];
+        for (var i = 0; i < ren.sharedMaterials.Length; i++) {
+            var mat = ren.sharedMaterials[i];
             if (mat == null) {
                 continue;
             }
 
-            ColorSetting setting = colorSettings[i];
+            var setting = colorSettings[i];
 
 #if UNITY_EDITOR
             if (setting.reference == null || setting.reference == "") {
                 setting.reference = mat.name;
             }
-#endif             
+#endif
 
-            MaterialPropertyBlock block = cachedBlocks[i];
+            var block = cachedBlocks[i];
             ren.GetPropertyBlock(block, i);
 
-            block.SetColor("_BaseColor", (setting.baseColor));
+            block.SetColor("_BaseColor", setting.baseColor);
 
             ren.SetPropertyBlock(block, i);
-
         }
     }
 
@@ -192,10 +196,11 @@ public class MaterialColorURP : MonoBehaviour {
         // Loop through each material assigned to the renderer on this gameObject
         // match the colorSettings to materials
         if (colorSettings.Count < ren.sharedMaterials.Length) {
-            for (int i = colorSettings.Count; i < ren.sharedMaterials.Length; i++) {
+            for (var i = colorSettings.Count; i < ren.sharedMaterials.Length; i++) {
                 colorSettings.Add(new ColorSetting(Color.white));
             }
         }
+
         if (colorSettings.Count > ren.sharedMaterials.Length) {
             colorSettings.RemoveRange(ren.sharedMaterials.Length, colorSettings.Count - ren.sharedMaterials.Length);
         }
@@ -209,20 +214,19 @@ public class MaterialColorURP : MonoBehaviour {
 }
 
 #if UNITY_EDITOR
-
 // Editor for MaterialColor
 [CustomEditor(typeof(MaterialColorURP))]
 [CanEditMultipleObjects]
-public class MaterialColorURPEditor : UnityEditor.Editor {
+public class MaterialColorURPEditor : Editor {
     public override void OnInspectorGUI() {
         if (targets.Length == 1) {
             //single object
             //Draw a drawer full of ColorSettings
-            MaterialColorURP targetObj = (MaterialColorURP)targets[0];
+            var targetObj = (MaterialColorURP)targets[0];
             Undo.RecordObject(targetObj, "Edit Material Color");
 
-            int i = 0;
-            foreach (MaterialColorURP.ColorSetting setting in ((MaterialColorURP)targetObj).colorSettings) {
+            var i = 0;
+            foreach (var setting in ((MaterialColorURP)targetObj).colorSettings) {
                 EditorGUILayout.LabelField("Material Element " + i + " (" + setting.reference + ")");
 
                 //Gamma Color Picker
@@ -233,6 +237,7 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 i++;
             }
+
             //Call a validate
             if (GUI.changed) {
                 EditorUtility.SetDirty(targetObj);
@@ -243,7 +248,7 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
         if (targets.Length > 1) {
             Undo.RecordObject(target, "Edit Material Color");
 
-            int max = 0;
+            var max = 0;
             foreach (MaterialColorURP targetObj in targets) {
                 Undo.RecordObject(targetObj, "Edit Material Color");
                 if (targetObj.colorSettings.Count > max) {
@@ -251,12 +256,12 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
                 }
             }
 
-            List<MaterialColorURP.ColorSetting> originalValues = new List<MaterialColorURP.ColorSetting>();
+            var originalValues = new List<MaterialColorURP.ColorSetting>();
 
-            for (int i = 0; i < max; i++) {
-                bool first = true;
+            for (var i = 0; i < max; i++) {
+                var first = true;
 
-                int numItems = 0;
+                var numItems = 0;
                 List<string> names = new();
 
 
@@ -264,6 +269,7 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
                     if (targetObj.colorSettings.Count <= i) {
                         continue;
                     }
+
                     numItems += 1;
                     names.Add(targetObj.gameObject.name);
                 }
@@ -281,24 +287,24 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
 
                         EditorGUILayout.LabelField("Multiple Objects (" + numItems + ") at index " + i);
                         //Display all the names in a list
-                        foreach (string name in names) {
+                        foreach (var name in names) {
                             EditorGUILayout.LabelField(name);
                         }
 
                         first = false;
 
-                        MaterialColorURP.ColorSetting setting = targetObj.colorSettings[i];
+                        var setting = targetObj.colorSettings[i];
 
                         setting.baseColor = EditorGUILayout.ColorField("Base Color", setting.baseColor);
 
                         //dividing line
                         EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
                     }
                 }
             }
+
             if (GUI.changed) {
-                for (int i = 0; i < max; i++) {
+                for (var i = 0; i < max; i++) {
                     MaterialColorURP hostObject = null;
                     foreach (MaterialColorURP targetObj in targets) {
                         if (targetObj.colorSettings.Count <= i) {
@@ -309,25 +315,22 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
                             hostObject = targetObj;
 
                             //Compare to the original value, if its the same as it was, we break out and dont set any of the others
-                            MaterialColorURP.ColorSetting originalValue = originalValues[i];
-                            MaterialColorURP.ColorSetting newValue = targetObj.colorSettings[i];
+                            var originalValue = originalValues[i];
+                            var newValue = targetObj.colorSettings[i];
 
                             if (originalValue.baseColor == newValue.baseColor) {
                                 break;
                             }
-                        }
-                        else {
-                            MaterialColorURP.ColorSetting setting = targetObj.colorSettings[i];
-                            MaterialColorURP.ColorSetting hostSetting = hostObject.colorSettings[i];
+                        } else {
+                            var setting = targetObj.colorSettings[i];
+                            var hostSetting = hostObject.colorSettings[i];
 
                             setting.baseColor = hostSetting.baseColor;
-
                         }
                     }
                 }
 
                 foreach (MaterialColorURP targetObj in targets) {
-
                     EditorUtility.SetDirty(targetObj);
                     targetObj.DoUpdate();
                 }
