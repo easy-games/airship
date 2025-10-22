@@ -712,13 +712,18 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static unsafe void SetFieldValue<T>(object instance, T value, FieldInfo fieldInfo) where T : unmanaged {
-        var addr = UnsafeUtility.PinGCObjectAndGetAddress(instance, out ulong handle);
-        try {
-            var offset = UnsafeUtility.GetFieldOffset(fieldInfo);
-            
-            *(T*)((byte*)addr + offset) = value;
-        } finally {
-            UnsafeUtility.ReleaseGCObject(handle);
+        if (fieldInfo.IsStatic) {
+            // Not sure how to do non-alloc static field sets, so just use reflection for now
+            // (these are relatively rare anyways)
+            fieldInfo.SetValue(null, value);
+        } else {
+            var addr = UnsafeUtility.PinGCObjectAndGetAddress(instance, out ulong handle);
+            try {
+                var offset = UnsafeUtility.GetFieldOffset(fieldInfo);
+                *(T*)((byte*)addr + offset) = value;
+            } finally {
+                UnsafeUtility.ReleaseGCObject(handle);
+            }
         }
     }
 
