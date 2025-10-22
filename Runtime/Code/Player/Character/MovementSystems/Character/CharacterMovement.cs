@@ -1264,10 +1264,10 @@ namespace Code.Player.Character.MovementSystems.Character {
                         true);
 
                 float i = 0;
-                var label = "ForwardHitCounts: " + forwardHits.Length + "\n";
+                // var label = "ForwardHitCounts: " + forwardHits.Length + "\n";
                 var forcedCount = 0;
                 foreach (var forwardHitResult in forwardHits) {
-                    label += "Hit " + i + " Point: " + forwardHitResult.point + " Normal: " + forwardHitResult.normal;
+                    // label += "Hit " + i + " Point: " + forwardHitResult.point + " Normal: " + forwardHitResult.normal;
                     //Check if this is a valid wall and not something behind a surface
                     var forwardHit = forwardHitResult;
                     var checkPoint = transform.position + new Vector3(0, characterHalfExtents.y, 0);
@@ -1281,7 +1281,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     //Valid result from BoxCastAll but not a hit we want to use (happens on corners of voxels sometimes)
                     if (forwardHitResult.distance == 0) {
                         forwardHit.point = checkPoint + forwardVector;
-                        label += " ZEROED HIT POINT";
+                        // label += " ZEROED HIT POINT";
                     }
 
                     var checkDir = (forwardHit.point - checkPoint).normalized;
@@ -1376,7 +1376,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     //     newVelocity.x = 0;
                     //     newVelocity.z = 0;
                     // }
-                    label += "\n";
+                    // label += "\n";
                 }
 
                 if (forwardHits.Length > 0) {

@@ -13,14 +13,14 @@ public class PhysicsAPI : BaseLuaAPIClass
 
     private int WriteRaycastResultToThread(IntPtr thread, bool success, RaycastHit hitInfo) {
         if (success) {
-            LuauCore.WritePropertyToThread(thread, true, typeof(bool));
-            LuauCore.WritePropertyToThread(thread, hitInfo.point, typeof(Vector3));
-            LuauCore.WritePropertyToThread(thread, hitInfo.normal, typeof(Vector3));
-            LuauCore.WritePropertyToThread(thread, hitInfo.collider, typeof(UnityEngine.Object));
+            LuauCore.WritePropertyToThreadBoolean(thread, true);
+            LuauCore.WritePropertyToThreadVector3(thread, hitInfo.point);
+            LuauCore.WritePropertyToThreadVector3(thread, hitInfo.normal);
+            LuauCore.WritePropertyToThreadObject(thread, hitInfo.collider);
             return 4;
         }
         else {
-            LuauCore.WritePropertyToThread(thread, false, typeof(bool));
+            LuauCore.WritePropertyToThreadBoolean(thread, false);
             return 1;
         }
     }

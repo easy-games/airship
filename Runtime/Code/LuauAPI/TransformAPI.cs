@@ -6,6 +6,8 @@ using UnityEngine;
 
 [LuauAPI]
 public class TransformAPI : BaseLuaAPIClass {
+    private List<Transform> reusedChildrenList = new List<Transform>(10);
+    
     public override Type GetAPIType() {
         return typeof(Transform);
     }
@@ -215,21 +217,29 @@ public class TransformAPI : BaseLuaAPIClass {
             return 0;
         }
         
-        if(methodName == "GetDescendants") {
+        if (methodName == "GetDescendants") {
             Transform transform = (Transform)targetObject;
-            var children = new List<Transform>();
-            GetAllChildren(ref children, transform);
-            LuauCore.WritePropertyToThread(thread, children.ToArray<Transform>(), typeof(Transform[]));
-            return 1;            
+            
+            var count = 0;
+            GetAllChildren(transform, ref count);
+            LuauCore.WriteArrayToThread(thread, reusedChildrenList, typeof(Transform), count);
+            return 1;
         }
         
         return -1;
     }
 
-    private void GetAllChildren(ref List<Transform> children, Transform transform){
-        children.Add(transform);
-        foreach(Transform child in transform){
-            GetAllChildren(ref children, child);
+    private void GetAllChildren(Transform transform, ref int numChildren) {
+        if (numChildren < reusedChildrenList.Count) {
+            reusedChildrenList[numChildren] = transform;
+        } else {
+            reusedChildrenList.Add(transform);
+        }
+        numChildren++;
+        
+        for (var i = 0; i < transform.childCount; i++) {
+            var child = transform.GetChild(i);
+            GetAllChildren(child, ref numChildren);
         }
     }
 }

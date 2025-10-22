@@ -372,12 +372,7 @@ namespace Code.Network.StateSystem
 
         #region Top Level Event Functions
 
-        private void OnTick(object tickObj, object timeObj, object replayObj) {
-            if (tickObj is not int tick || timeObj is not double time || replayObj is not bool replay) {
-                Debug.LogWarning($"OnTick: Unexpected value in tick object.");
-                return;
-            }
-            
+        private void OnTick(int tick, double time, bool replay) {
             // We are in shared mode
             if (isServer && isClient)
             {
@@ -458,42 +453,36 @@ namespace Code.Network.StateSystem
             }
         }
 
-        private void OnSetSnapshot(object objTick)
-        {
-            if (objTick is int tick) {
-                // we are in shared mode
-                if (isClient && isServer) {
-                    this.AuthClientSetSnapshot(tick);
-                    return;
-                }
-
-                // We are the client and we are authoritative.
-                if (isClient && isOwned && !serverAuth) {
-                    this.AuthClientSetSnapshot(tick);
-                }
-
-                // We are the server, and we are the authority.
-                if (isServer && serverAuth) {
-                    this.AuthServerSetSnapshot(tick);
-                }
-
-                // We are the server, but the client is authoritative.
-                if (isServer && !serverAuth) {
-                    this.NonAuthServerSetSnapshot(tick);
-                }
-
-                // We are the client and the server is authoritative.
-                if (isClient && isOwned && serverAuth) {
-                    this.NonAuthClientSetSnapshot(tick);
-                }
-
-                // We are an observing client
-                if (isClient && !isOwned) {
-                    this.ObservingClientSetSnapshot(tick);
-                }
+        private void OnSetSnapshot(int tick) {
+            // we are in shared mode
+            if (isClient && isServer) {
+                this.AuthClientSetSnapshot(tick);
+                return;
             }
-            else {
-                Debug.LogWarning($"OnSetSnapshot: Unexpected value in tick object.");
+
+            // We are the client and we are authoritative.
+            if (isClient && isOwned && !serverAuth) {
+                this.AuthClientSetSnapshot(tick);
+            }
+
+            // We are the server, and we are the authority.
+            if (isServer && serverAuth) {
+                this.AuthServerSetSnapshot(tick);
+            }
+
+            // We are the server, but the client is authoritative.
+            if (isServer && !serverAuth) {
+                this.NonAuthServerSetSnapshot(tick);
+            }
+
+            // We are the client and the server is authoritative.
+            if (isClient && isOwned && serverAuth) {
+                this.NonAuthClientSetSnapshot(tick);
+            }
+
+            // We are an observing client
+            if (isClient && !isOwned) {
+                this.ObservingClientSetSnapshot(tick);
             }
         }
 
