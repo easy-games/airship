@@ -191,26 +191,15 @@ public static partial class AirshipEditorGUI {
         EditorGUILayout.EndVertical();
     }
 
-    public static string StringProperty(Rect rect, AirshipSerializedValue property) {
-        if (property.type != AirshipSerializedValue.PropertyType.String) {
-            EditorGUILayout.HelpBox("Expected string", MessageType.Error);
-            return "";
-        }
-
-        string currentValue = property.stringValue;
-        string newValue = EditorGUI.TextField(rect, currentValue);
-
-        if (newValue != currentValue) {
-            property.stringValue = newValue;
-        }
-        
-        return newValue;
-    }
-
     public static float NumberProperty(Rect rect, GUIContent label, AirshipSerializedValue property, bool integer = false) =>
-        DoNumberProperty(rect, label, property, integer);
+        DoNumberProperty(rect, label, property);
     public static float NumberProperty(GUIContent label, AirshipSerializedValue property, bool integer = false) =>
-        DoNumberProperty(null, label, property, integer);
+        DoNumberProperty(null, label, property);
+    
+    public static int IntProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoIntProperty(rect, label, property);
+    public static int IntProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoIntProperty(null, label, property);
 
     public static bool BooleanProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
         DoBooleanProperty(rect, label, property);
@@ -678,10 +667,9 @@ public static partial class AirshipEditorGUI {
     public static void EndProperty() {
         var property = currentProperty;
         if (property == null) return;
-        
-        if (property.prefabOverride) {
-            var lastRect = GUILayoutUtility.GetLastRect();
 
+        var lastRect = GUILayoutUtility.GetLastRect();
+        if (property.prefabOverride) {
             var modifiedRect = lastRect;
             modifiedRect.x = 1;
             modifiedRect.width = 2;

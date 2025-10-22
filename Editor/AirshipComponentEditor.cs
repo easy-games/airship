@@ -108,6 +108,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     }
 
     private bool OnAirshipInspectorGUI() {
+        if (!AirshipCustomEditors.UseNewInspector) return false;
+        
         AirshipComponent binding = (AirshipComponent)target;
         
         Type customEditorType = null;
@@ -160,45 +162,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             }
         }
         
-        // Type customEditorType = null;
-        // if (binding.script != null && binding.metadata != null) {
-        //     customEditorType = AirshipCustomEditors.GetEditorForTypeName(binding.metadata.name);
-        // }
-        //
-        // if (customEditorType != null && binding.script != null) {
-        //     var metadata = serializedObject.FindProperty("metadata");
-        //     var metadataName = metadata.FindPropertyRelative("name");
-        //     
-        //     if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-        //         var editor = AirshipCustomEditors.GetEditor(binding, customEditorType, serializedObject);
-        //         editor.script = binding.script;
-        //         editor.target = binding;
-        //         editor.OnInspectorGUI();
-        //     }
-        //
-        //     if (binding.script != null && binding.script.m_metadata != null) {
-        //         if (ShouldReconcile(binding)) {
-        //             binding.ReconcileMetadata(ReconcileSource.Inspector);
-        //             serializedObject.ApplyModifiedProperties();
-        //             serializedObject.Update();
-        //         }
-        //     
-        //         CheckDefaults(binding);
-        //     }
-        //     
-        //     serializedObject.ApplyModifiedProperties();
-        //     
-        //     if (Application.isPlaying) {
-        //         var component = (AirshipComponent)target;
-        //         component.WriteChangedComponentProperties();
-        //     }
-        //     return;
-        // }
-
-        if (OnAirshipInspectorGUI()) {
-            return;
-        }
-        
+        // Run new inspector system
+        if (OnAirshipInspectorGUI()) return;
 
         DrawScriptBindingProperties(binding);
 

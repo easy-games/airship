@@ -31,10 +31,14 @@ public static class AirshipCustomEditors {
         }
     }
 
-    internal static IEnumerable<CustomEditor> Editors {
+    internal static IEnumerable<CustomEditor> CustomEditors {
         get => airshipTypeToEditor.Values;
     }
 
+    internal static IEnumerable<AirshipEditor> AllEditors {
+        get => editors.Values;
+    }
+    
     internal static IEnumerable<AirshipEditor> GetEditors(CustomEditor editor) {
         var instances = new List<AirshipEditor>();
         foreach (var instance in editors) {
@@ -43,17 +47,18 @@ public static class AirshipCustomEditors {
 
         return instances;
     }
-    
+
+    internal const string inspectorModeKey = "AirshipBetaInspectorMode";
     internal const EditorInspectorMode DefaultInspectorMode = EditorInspectorMode.UseLegacyInspector;
-    internal static EditorInspectorMode EditorInspectorMode {
+
+    internal static EditorInspectorMode UserInspectorMode {
         get {
-            var instance = EditorIntegrationsConfig.instance;
-            if (instance.editorInspectorMode == EditorInspectorMode.Default) return DefaultInspectorMode;
-            return instance.editorInspectorMode;
+            var value = (EditorInspectorMode) EditorPrefs.GetInt(inspectorModeKey, (int) EditorInspectorMode.Default);
+            return value;
         }
         set {
-            var instance = EditorIntegrationsConfig.instance;
-            if (value == instance.editorInspectorMode) return;
+            var current = (EditorInspectorMode) EditorPrefs.GetInt(inspectorModeKey, (int) EditorInspectorMode.Default);
+            if (value == current) return;
             
             if (value == EditorInspectorMode.UseLegacyInspector) {
                 editors.Clear();
@@ -63,8 +68,16 @@ public static class AirshipCustomEditors {
                                                                         EditorInspectorMode.UseNewInspector)) {
                 RegisterEditorsForRegisteredTypes();
             }
+            
+            EditorPrefs.SetInt(inspectorModeKey, (int) value);
+        }
+    }
 
-            instance.editorInspectorMode = value;
+    internal static bool UseNewInspector {
+        get {
+            var inspector = UserInspectorMode;
+            if (inspector == EditorInspectorMode.Default) inspector = DefaultInspectorMode;
+            return inspector == EditorInspectorMode.UseNewInspector;
         }
     }
     
@@ -167,7 +180,7 @@ public static class AirshipCustomEditors {
     }
     
     internal static Type GetEditorForTypeName(string typeName) {
-        if (EditorInspectorMode != EditorInspectorMode.UseNewInspector) return null;
+        if (!UseNewInspector) return null;
         
         var pathType = AirshipBuildInfo.Instance.GetTypeByName(typeName);
         if (pathType == null) return null;

@@ -139,14 +139,16 @@ public abstract class AirshipSerializedValue {
     public int intValue {
         get {
             if (propertyType != AirshipComponentPropertyType.AirshipLayerMask 
-                && propertyType != AirshipComponentPropertyType.AirshipInt) throw new InvalidCastException("Value is not an integer");
+                && propertyType != AirshipComponentPropertyType.AirshipInt 
+                && propertyType != AirshipComponentPropertyType.AirshipFloat) throw new InvalidCastException("Value is not castable to integer");
             int.TryParse(serializedValue.stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture,
                 out var currentValue);
             return currentValue;
         }
         set {
             if (propertyType != AirshipComponentPropertyType.AirshipLayerMask 
-                && propertyType != AirshipComponentPropertyType.AirshipInt) throw new InvalidCastException("Value is not an integer");
+                && propertyType != AirshipComponentPropertyType.AirshipInt
+                && propertyType != AirshipComponentPropertyType.AirshipFloat) throw new InvalidCastException("Value is not castable to integer");
             serializedValue.stringValue = value.ToString(CultureInfo.InvariantCulture);
         }
     }

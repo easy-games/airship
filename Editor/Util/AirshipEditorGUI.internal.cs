@@ -386,7 +386,7 @@ public static partial class AirshipEditorGUI {
         return binding;
     }
 
-    private static float DoNumberProperty(Rect? rect, GUIContent label, AirshipSerializedValue property, bool integer) {
+    private static float DoNumberProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
         DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Number);
         
         if (property.type != AirshipSerializedValue.PropertyType.Number) {
@@ -402,15 +402,15 @@ public static partial class AirshipEditorGUI {
             float max = Convert.ToSingle(rangeProps[1].value, CultureInfo.InvariantCulture);
 
             if (rect.GetCustomRect(out var position)) {
-                nextValue = integer ? EditorGUI.IntSlider(position, label, (int) prevValue, (int) min, (int) max) : EditorGUI.Slider(position, label, prevValue, min, max);
+                nextValue = EditorGUI.Slider(position, label, prevValue, min, max);
             } else {
-                nextValue = integer ? EditorGUILayout.IntSlider(label, (int)prevValue,(int) min,(int) max) : EditorGUILayout.Slider(label, prevValue, min, max);
+                nextValue = EditorGUILayout.Slider(label, prevValue, min, max);
             }
         } else {
             if (rect.GetCustomRect(out var position)) {
-                nextValue = integer ? EditorGUI.IntField(position, label, (int) prevValue) : EditorGUI.FloatField(position, label, prevValue);
+                nextValue = EditorGUI.FloatField(position, label, prevValue);
             } else {
-                nextValue = integer ? EditorGUILayout.IntField(label, (int) prevValue) : EditorGUILayout.FloatField(label, prevValue);
+                nextValue = EditorGUILayout.FloatField(label, prevValue);
             }
         }
 
@@ -436,6 +436,56 @@ public static partial class AirshipEditorGUI {
         return nextValue;
     }
 
+    private static int DoIntProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Number);
+        
+        if (property.type != AirshipSerializedValue.PropertyType.Number) {
+            EditorGUILayout.HelpBox($"Expected number property, got {property.type}", MessageType.Warning);
+            return 0;
+        }
+        
+        var prevValue = property.intValue;
+        int nextValue;
+
+        if (property.TryGetDecorator("Range", out var rangeProps) && rangeProps.Count >= 2) {
+            int min = Convert.ToInt32(rangeProps[0].value, CultureInfo.InvariantCulture);
+            int max = Convert.ToInt32(rangeProps[1].value, CultureInfo.InvariantCulture);
+
+            if (rect.GetCustomRect(out var position)) {
+                nextValue = EditorGUI.IntSlider(position, label, prevValue, min, max);
+            } else {
+                nextValue = EditorGUILayout.IntSlider(label, prevValue, min, max);
+            }
+        } else {
+            if (rect.GetCustomRect(out var position)) {
+                nextValue = EditorGUI.IntField(position, label, prevValue);
+            } else {
+                nextValue = EditorGUILayout.IntField(label, prevValue);
+            }
+        }
+
+        if (property.TryGetDecorator("Min", out var minParams))
+        {
+            var min = Convert.ToInt32(minParams[0].value, CultureInfo.InvariantCulture);
+            nextValue = Math.Max(min, nextValue);
+        }
+        
+        if (property.TryGetDecorator("Max", out var maxParams))
+        {
+            var max = Convert.ToInt32(maxParams[0].value, CultureInfo.InvariantCulture);
+            nextValue = Math.Min(max, nextValue);
+        }
+
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (prevValue != nextValue) {
+            property.intValue = nextValue;
+            property.serializedModified.boolValue = true;
+        }
+        
+        DoPropertyEvents(rect, property);
+        return nextValue;
+    }
+    
     private static bool DoBooleanProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
         DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Boolean);
         

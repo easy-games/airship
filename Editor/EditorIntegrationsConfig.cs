@@ -52,9 +52,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
 
     [SerializeField] internal bool useProjectReconcileOption = false;
     [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;
-
-    [SerializeField]
-    internal EditorInspectorMode editorInspectorMode = EditorInspectorMode.Default;
     
     #region LUAU OPTIONS
     [SerializeField] public bool promptIfLuauPluginChanged = true;
