@@ -27,7 +27,7 @@ namespace Editor.Settings {
         }
 
         private Vector2 editorScroll;
-        private bool listEditors;
+        private bool listEditors = true;
 
         private int tab = 0;
         
@@ -40,7 +40,7 @@ namespace Editor.Settings {
             
             if (this.tab == 0) {
                 BetaCategoryBegin(
-                    new GUIContent("Airship Component Inspector Rework & Custom Inspectors (User)"), 
+                    new GUIContent("Airship Component Inspector Rework & Custom Inspectors"), 
                     new GUIContent("Changes how AirshipComponent properties are displayed in the editor, as well if custom editors are supported"));
                 {
       
@@ -54,7 +54,7 @@ namespace Editor.Settings {
                         EditorGUILayout.Space(5);
                         
                         
-                        listEditors = EditorGUILayout.BeginFoldoutHeaderGroup(listEditors, "Active Custom Editors");
+                        listEditors = EditorGUILayout.BeginFoldoutHeaderGroup(listEditors, "Active Editors");
                         if (listEditors) {
                             var codeStyle = new GUIStyle() {
                                 font = EditorGUIUtility.Load("Fonts/RobotoMono/RobotoMono-Regular.ttf") as Font,
@@ -77,9 +77,7 @@ namespace Editor.Settings {
                                 {
                                     EditorGUILayout.BeginVertical(GUILayout.Width(20));
                                     EditorGUILayout.Space();
-                                    GUI.enabled = false; // editor.EditorAttribute is not CustomAirshipCoreEditorAttribute;
-                                    EditorGUILayout.Toggle(true, GUILayout.Width(20));
-                                    GUI.enabled = true;
+ 
                                     EditorGUILayout.Space();
                                     EditorGUILayout.EndVertical();
                                 

@@ -20,7 +20,8 @@ internal static class AirshipObjectGUIInternal {
         bool allowSceneObjects,
         GUIStyle style,
         GUIStyle buttonStyle,
-        ObjectSelectAction onRequestSelectObject
+        ObjectSelectAction onRequestSelectObject,
+        bool valid
         ) {
 
         var visualType = EditorGUI.ObjectFieldVisualType.IconAndText;
@@ -162,7 +163,8 @@ internal static class AirshipObjectGUIInternal {
         GUIStyle style,
         GUIStyle buttonStyle, 
         Action<Object> onObjectSelectorClosed = null,
-        Action<Object> onObjectSelectedUpdated = null) {
+        Action<Object> onObjectSelectedUpdated = null, 
+        bool required = false) {
         
         var controlId = GUIUtility.GetControlID(id, FocusType.Keyboard, position);
         position = EditorGUI.PrefixLabel(position, controlId, label);
@@ -173,7 +175,7 @@ internal static class AirshipObjectGUIInternal {
         }
 
         var result = DoCustomObjectField(position, dropRect, controlId, obj, objBeingEdited, objType, validator, allowSceneObjects,
-            style, buttonStyle, ShowObjectSelector);
+            style, buttonStyle, ShowObjectSelector, valid: required ? obj != null : true);
 
         var current = Event.current;
         var commandName = current.commandName;

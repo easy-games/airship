@@ -8,7 +8,7 @@ using UnityEngine;
 public class AirshipReorderableArrayList : ReorderableList {
     public AirshipReorderableArrayList(
         AirshipSerializedObject serializedObject, 
-        AirshipSerializedProperty.AirshipArray property,
+        AirshipSerializedArray property,
         bool draggable = true,
         bool displayHeader = false,
         bool displayAddButton = true,
@@ -37,6 +37,7 @@ public class AirshipSerializedObject {
     public AirshipComponent airshipComponent => (AirshipComponent)serializedObject.targetObject;
 
     internal void Update(AirshipEditor currentEditor, SerializedObject currentSerializedObject, LuauMetadata currentMetadata) {
+        _propertyCache.Clear();
         serializedObject = currentSerializedObject;
         editor = currentEditor;
         metadata = currentMetadata;

@@ -9,7 +9,7 @@ using UnityEngine;
 
 public static class AirshipPropertyExtensions {
     public static UnityEngine.Object GetObject(this AirshipSerializedValue value) {
-        if (value.type is AirshipSerializedValue.PropertyType.AirshipBehaviour or AirshipSerializedValue.PropertyType.Object) return value.objectReferenceValue;
+        if (value.type is AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.Object) return value.objectReferenceValue;
         return null;
     }
 

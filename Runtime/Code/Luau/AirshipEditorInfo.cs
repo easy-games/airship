@@ -11,9 +11,13 @@ using UnityEditor;
 
 [Serializable]
 public class TyperScriptEnumMember {
-    public string Name;
-    public string StringValue;
-    public int IntValue;
+    [SerializeField] internal string Name;
+    [SerializeField] internal string StringValue;
+    [SerializeField] internal int IntValue;
+
+    public string name => Name;
+    public string stringValue => StringValue;
+    public int intValue => IntValue;
 }
 
 public enum TypeScriptEnumMemberType {
@@ -64,6 +68,10 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
         get {
             return members.Find(f => f.IntValue == index);
         }
+    }
+    
+    public TyperScriptEnumMember this[string value] {
+        get => members.Find(f => f.Name == value || f.StringValue == value);
     }
 
     public bool isFlagLike { get; private set; }

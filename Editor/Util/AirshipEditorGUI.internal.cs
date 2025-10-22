@@ -9,28 +9,11 @@ using UnityEditor;
 using UnityEditor.Actions;
 using UnityEngine;
 
-public static class AirshipGUI {
-    internal static bool GetCustomRect(this Rect? inRect, out Rect rect) {
-        if (inRect.HasValue && inRect.Value != Rect.zero) {
-            rect = inRect.Value;
-            return true;
-        }
-
-        rect = default;
-        return false;
-    }
-
-    /// <summary>
-    /// The height of the array items
-    /// </summary>
-    public static float arrayItemHeight { get; internal set; } = EditorGUIUtility.singleLineHeight;
-}
-
 public static partial class AirshipEditorGUI {
     /// <summary>
     /// Handle property validation for the given serialized value
     /// </summary>
-    private static bool DoValidateProperty(Rect? rect, AirshipSerializedValue property, AirshipSerializedValue.PropertyType expectedType) {
+    private static bool DoValidateProperty(Rect? rect, AirshipSerializedValue property, AirshipSerializedType expectedType) {
         if (property == null) {
             if (rect.GetCustomRect(out var position)) {
                 EditorGUI.HelpBox(position, $"Expected property with type {expectedType}, but got null. Make sure the property is defined in TypeScript as public or with @SerializeField().", MessageType.Error);
@@ -110,7 +93,7 @@ public static partial class AirshipEditorGUI {
     }
 
     private static Vector2 DoVector2Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Vector2);
+        DoValidateProperty(rect, property, AirshipSerializedType.Vector2);
         
         var currentValue = property.vector2Value;
         Vector2 newValue;
@@ -131,7 +114,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Vector3 DoVector3Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Vector3);
+        DoValidateProperty(rect, property, AirshipSerializedType.Vector3);
         
         var currentValue = property.vector3Value;
         Vector3 newValue;
@@ -152,7 +135,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Vector4 DoVector4Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Vector4);
+        DoValidateProperty(rect, property, AirshipSerializedType.Vector4);
         
         var currentValue = property.vector4Value;
         Vector4 newValue;
@@ -173,7 +156,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Rect DoRectField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Rect);
+        DoValidateProperty(rect, property, AirshipSerializedType.Rect);
         
         var currentValue = property.rectValue;
         Rect newValue;
@@ -194,7 +177,7 @@ public static partial class AirshipEditorGUI {
     }
 
     public static Matrix4x4 DoMatrix4x4Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Matrix4x4);
+        DoValidateProperty(rect, property, AirshipSerializedType.Matrix4x4);
 
         if (!property.editor._foldouts.TryGetValue(property.name, out bool open)) {
             open = false;
@@ -230,7 +213,7 @@ public static partial class AirshipEditorGUI {
     }
 
     private static AnimationCurve DoAnimationCurveField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.AnimationCurve);
+        DoValidateProperty(rect, property, AirshipSerializedType.AnimationCurve);
 
         var prevValue = property.animationCurveValue;
         AnimationCurve nextValue;
@@ -251,7 +234,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Quaternion DoQuaternionField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Quaternion);
+        DoValidateProperty(rect, property, AirshipSerializedType.Quaternion);
         
         var currentValue = property.quaternionValue.eulerAngles;
         Vector3 newValue;
@@ -272,7 +255,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static Color DoColorField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Color);
+        DoValidateProperty(rect, property, AirshipSerializedType.Color);
         
         var currentValue = property.colorValue;
         Color nextValue;
@@ -293,7 +276,7 @@ public static partial class AirshipEditorGUI {
     }
 
     private static int DoMaskField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.FlagEnum);
+        DoValidateProperty(rect, property, AirshipSerializedType.FlagEnum);
         
         int currentValue = property.intValue;
 
@@ -314,7 +297,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static int DoLayerMaskField(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.LayerMask);
+        DoValidateProperty(rect, property, AirshipSerializedType.LayerMask);
         int currentValue = property.intValue;
 
         int nextValue;
@@ -348,7 +331,7 @@ public static partial class AirshipEditorGUI {
     }
     
     private static AirshipComponent DoAirshipComponent(Rect? rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator propertyValidator = null) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.AirshipBehaviour);
+        DoValidateProperty(rect, property, AirshipSerializedType.AirshipBehaviour);
         if (!property.isAirshipType) return null;
         
         var currentValue = (AirshipComponent)property.serializedObjectValue.objectReferenceValue;
@@ -379,9 +362,9 @@ public static partial class AirshipEditorGUI {
     }
 
     private static float DoNumberProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Number);
+        DoValidateProperty(rect, property, AirshipSerializedType.Number);
         
-        if (property.type != AirshipSerializedValue.PropertyType.Number) {
+        if (property.type != AirshipSerializedType.Number) {
             EditorGUILayout.HelpBox($"Expected number property, got {property.type}", MessageType.Warning);
             return 0;
         }
@@ -429,9 +412,9 @@ public static partial class AirshipEditorGUI {
     }
 
     private static int DoIntProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Number);
+        DoValidateProperty(rect, property, AirshipSerializedType.Number);
         
-        if (property.type != AirshipSerializedValue.PropertyType.Number) {
+        if (property.type != AirshipSerializedType.Number) {
             EditorGUILayout.HelpBox($"Expected number property, got {property.type}", MessageType.Warning);
             return 0;
         }
@@ -479,12 +462,12 @@ public static partial class AirshipEditorGUI {
     }
     
     private static bool DoBooleanProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Boolean);
+        DoValidateProperty(rect, property, AirshipSerializedType.Boolean);
         
         var prevValue = property.boolValue;
         bool nextValue;
 
-        if (property.type != AirshipSerializedValue.PropertyType.Boolean) {
+        if (property.type != AirshipSerializedType.Boolean) {
             EditorGUILayout.HelpBox($"Expected string property, got {property.type}", MessageType.Warning);
             return false;
         }
@@ -505,12 +488,12 @@ public static partial class AirshipEditorGUI {
     }
 
     private static string DoStringProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.String);
+        DoValidateProperty(rect, property, AirshipSerializedType.String);
         
         var prevValue = property.stringValue;
         string nextValue;
         
-        if (property.type != AirshipSerializedValue.PropertyType.String) {
+        if (property.type != AirshipSerializedType.String) {
             EditorGUILayout.HelpBox($"Expected string property, got {property.type}", MessageType.Warning);
             return null;
         }
@@ -578,7 +561,7 @@ public static partial class AirshipEditorGUI {
     }
 
     private static int DoEnumProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
-        DoValidateProperty(rect, property, AirshipSerializedValue.PropertyType.Enum);
+        DoValidateProperty(rect, property, AirshipSerializedType.Enum);
         
         var typescriptEnum = property.enumType;
         if (typescriptEnum == null) return -1;
@@ -625,6 +608,11 @@ public static partial class AirshipEditorGUI {
         }
     }
 
+    internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
+    internal static Color k_InvalidMarginDarkThemeColor = new(1, 0f, 0);
+    private static AirshipSerializedProperty currentProperty;
+    private static bool prevBold;
+    
     /// <summary>
     /// Marks the beginning of a serialized property
     /// 
@@ -655,6 +643,51 @@ public static partial class AirshipEditorGUI {
             modifiedRect.width = 2;
             Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_LiveModifiedMarginDarkThemeColor);
         }
+
+        if (!property.valid) {
+            var modifiedRect = lastRect;
+            modifiedRect.x = property.prefabOverride ? 6 : 1;
+            modifiedRect.width = 2;
+            Graphics.DrawTexture(modifiedRect, EditorGUIUtility.whiteTexture, new Rect(), 0, 0, 0, 0, k_InvalidMarginDarkThemeColor);
+        }
+        
         AirshipEditorInternals.SetBoldDefaultFont(prevBold);
+    }
+    
+    private static GUIStyle s_TabOnlyOne;
+    private static GUIStyle s_TabFirst;
+    private static GUIStyle s_TabMiddle;
+    private static GUIStyle s_TabLast;
+    private static GUIStyle s_tabsFrameBox;
+    
+    private static Rect GetTabRect(Rect rect, int tabIndex, int tabCount, out GUIStyle tabStyle) {
+        if (s_TabOnlyOne == null)
+        {
+            s_TabOnlyOne = "Tab onlyOne";
+            s_TabFirst = "Tab first";
+            s_TabMiddle = "Tab middle";
+            s_TabLast = "Tab last";
+        }
+            
+            
+        tabStyle = s_TabMiddle;
+        if (tabCount == 1)
+        {
+            tabStyle = s_TabOnlyOne;
+        }
+        else if (tabIndex == 0)
+        {
+            tabStyle = s_TabFirst;
+        }
+        else if (tabIndex == (tabCount - 1))
+        {
+            tabStyle = s_TabLast;
+        }
+            
+            
+        float tabWidth = rect.width / tabCount;
+        int left = Mathf.RoundToInt(tabIndex * tabWidth);
+        int right = Mathf.RoundToInt((tabIndex + 1) * tabWidth);
+        return new Rect(rect.x + left, rect.y, right - left,  /* kTabButtonHeight */ TabButtonHeight);
     }
 }

@@ -1,170 +1,22 @@
-﻿using System;
-using JetBrains.Annotations;
-using Luau;
-using Newtonsoft.Json.Linq;
+﻿using Luau;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
+
 
 /// <summary>
 /// AirshipSerializedProperty and AirshipSerializedObject are classes for editing properties on airship objects in a completely generic way
 /// that automatically handles undo, multi-object editing and Prefab overrides.
 /// </summary>
 public class AirshipSerializedProperty : AirshipSerializedValue {
-    public class AirshipArray {
-        public AirshipSerializedProperty property { get; }
-        public PropertyType elementType =>
-            GetTypeFromTypeString(property.serializedItems.FindPropertyRelative("type").stringValue);
-
-        public string elementObjectTypeString => property.serializedItems.FindPropertyRelative("objectType").stringValue;
-        
-        [CanBeNull]
-        public Type elementObjectType => TypeReflection.GetTypeFromString(property.serializedItems.FindPropertyRelative("objectType").stringValue);
-        [CanBeNull]
-        public AirshipType elementAirshipType => AirshipBuildInfo.Instance.GetTypeByName(property.serializedItems.FindPropertyRelative("objectType").stringValue);
-        
-        private readonly SerializedProperty serializedItems;
-        private readonly SerializedProperty serializedObjects;
-
-        public bool prefabOverride => serializedItems.prefabOverride || serializedObjects.prefabOverride;
-
-        internal void RevertPropertyOverride(InteractionMode interactionMode) {
-            if (!this.prefabOverride) return;
-            PrefabUtility.RevertPropertyOverride(this.serializedItems, interactionMode);
-            PrefabUtility.RevertPropertyOverride(this.serializedObjects, interactionMode);
-        }
-
-        internal void ApplyPropertyOverride(string assetPath, InteractionMode interactionMode) {
-            if (!this.prefabOverride) return;
-            PrefabUtility.ApplyPropertyOverride(this.serializedItems, assetPath, interactionMode);
-            PrefabUtility.ApplyPropertyOverride(this.serializedObjects, assetPath, interactionMode);
-        }
-
-        internal void ResetToDefault() {
-            var propertyMetadata = property.propertyMetadata;
-            var defaultArray = propertyMetadata.defaultValue as JArray;
-            if (defaultArray != null) {
-                string[] serializedElements = new string[defaultArray.Count];
-                var propertyType =
-                    LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(propertyMetadata.items
-                        .type, false);
-                
-                for (var i = 0; i < defaultArray.Count; i++) {
-                    var obj = defaultArray[i].Value<object>();
-                    serializedElements[i] =
-                        LuauMetadataPropertySerializer.SerializeAirshipProperty(obj, propertyType);
-                }
-
-                serializedItems.ClearArray();
-                serializedObjects.ClearArray();
-
-                serializedItems.arraySize = serializedElements.Length;
-                for (var i = 0; i < serializedElements.Length; i++) {
-                    var serializedElement = serializedElements[i];
-                    serializedItems.GetArrayElementAtIndex(i).stringValue = serializedElement;
-                }
-            } else {
-                serializedItems.ClearArray();
-            }
-        }
-        
-        public AirshipArray(AirshipSerializedProperty parentProperty, SerializedProperty serializedItems,
-            SerializedProperty objectRefs) {
-            this.property = parentProperty;
-            this.serializedItems = serializedItems;
-            this.serializedObjects = objectRefs;
-        }
-
-        public int size {
-            get {
-                return this.serializedItems.arraySize;
-            }
-        }
-
-        public AirshipArrayItem PushElement() {
-            int index = this.serializedItems.arraySize;
-            this.serializedItems.InsertArrayElementAtIndex(index);
-            this.serializedObjects.InsertArrayElementAtIndex(index);
-            return GetElementAtIndex(index);
-        }
-        
-        public AirshipArrayItem PushElement(Object obj) {
-            if (this.elementType == PropertyType.Object) {
-                var element = PushElement();
-                element.objectReferenceValue = obj;
-                return element;
-            } else if (this.elementType == PropertyType.AirshipBehaviour && obj is AirshipComponent component) {
-                var element = PushElement();
-                element.objectReferenceValue = component;
-                return element;
-            }
-
-            return null;
-        }
-        
-        public AirshipArrayItem GetElementAtIndex(int index) {
-            var value = this.serializedItems.GetArrayElementAtIndex(index);
-            var obj = this.serializedObjects.GetArrayElementAtIndex(index);
-            return new AirshipArrayItem(property, index, value, obj);
-        }
-
-        public void PopElement() {
-            var last = this.serializedItems.arraySize - 1;
-            this.serializedItems.DeleteArrayElementAtIndex(last);
-            this.serializedObjects.DeleteArrayElementAtIndex(last);
-        }
-
-        public void RemoveElementAtIndex(int index) {
-            this.serializedItems.DeleteArrayElementAtIndex(index);
-            this.serializedObjects.DeleteArrayElementAtIndex(index);
-        }
-
-        public void MoveArrayElement(int srcIndex, int dstIndex) {
-            this.serializedItems.MoveArrayElement(srcIndex, dstIndex);
-            this.serializedObjects.MoveArrayElement(srcIndex, dstIndex);
-        }
-
-        public void Resize(int newSize) {
-            this.serializedItems.arraySize = newSize;
-            this.serializedObjects.arraySize = newSize;
-        }
-
-        public static implicit operator SerializedProperty(AirshipArray array) {
-            if (array.elementType is PropertyType.Object or PropertyType.AirshipBehaviour) {
-                return array.serializedObjects;
-            } else {
-                return array.serializedItems;
-            }
-        }
-    }
-    
-    public class AirshipArrayItem : AirshipSerializedValue {
-        public AirshipArrayItem(AirshipSerializedProperty parentSerializedProperty, int index, SerializedProperty valueProperty, SerializedProperty objectValueProperty) {
-            serializedModified = parentSerializedProperty.serializedModified;
-
-            serializedType = parentSerializedProperty.serializedItems.FindPropertyRelative("type");
-            serializedObjectType = parentSerializedProperty.serializedItems.FindPropertyRelative("objectType");
-        
-            serializedObjectValue = objectValueProperty;
-            serializedValue = valueProperty;
-
-            serializedFileRef = parentSerializedProperty.serializedFileRef;
-            serializedRef = parentSerializedProperty.serializedRef;
-
-            propertyMetadata = parentSerializedProperty.propertyMetadata;
-            decorators = parentSerializedProperty.propertyMetadata.GetDecorators();
-
-            this.editor = parentSerializedProperty.editor;
-        }
-    }
-    
     internal SerializedProperty serializedProperty;
     internal SerializedProperty serializedItems { get; set; }
     internal LuauMetadataProperty propertyMetadata { get; set; }
 
     public bool isArray => serializedType.stringValue == "Array";
-
+    internal bool valid { get; set; } = true;
+    
     /// <summary>
     /// Whether or not this property was modified in a prefab
     /// </summary>
@@ -172,16 +24,25 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         get => this.serializedValue.prefabOverride || this.serializedObjectValue.prefabOverride || (isArray && array.prefabOverride);
     }
     
+    /// <summary>
+    /// If this property is an array, will have the size of the items in the array
+    /// </summary>
     public int arraySize {
         get {
+            if (!isArray) return 0;
             return serializedItems.FindPropertyRelative("serializedItems").arraySize;
         }
     }
 
-    public AirshipArray array {
+    /// <summary>
+    /// If the property is an array, will return the serialized array
+    /// </summary>
+    public AirshipSerializedArray array {
         get {
+            if (!isArray) return null;
+            
             UpdateProperty();
-            return new AirshipArray(
+            return new AirshipSerializedArray(
                 this, 
                 serializedItems.FindPropertyRelative("serializedItems"), 
                 serializedItems.FindPropertyRelative("objectRefs"));

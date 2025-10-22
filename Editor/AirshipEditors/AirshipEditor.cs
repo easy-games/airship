@@ -103,7 +103,7 @@ public abstract class AirshipEditor : ScriptableObject {
                     list.Deselect(selected);
                     property.array.RemoveElementAtIndex(selected);
                 } else {
-                    property.array.PopElement();
+                    property.array.RemoveElementAtEnd();
                 }
             };
             

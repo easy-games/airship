@@ -122,10 +122,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var metadataName = metadata.FindPropertyRelative("name");
             
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                var editor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
-                editor.script = binding.script;
-                editor.target = binding;
-                editor.OnInspectorGUI();
+                var componentEditor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
+                if (this.editor == null) this.editor = componentEditor;
+                componentEditor.script = binding.script;
+                componentEditor.target = binding;
+                componentEditor.OnInspectorGUI();
             }
 
             if (binding.script != null && binding.script.m_metadata != null) {
@@ -948,7 +949,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
 
                 if (objectType == typeof(Sprite) || objectType == typeof(Texture2D)) {
-                    var objNew = AirshipEditorGUI.ObjectField(rect, new GUIContent(label), objOld, objectType, true);
+                    var objNew = AirshipEditorGUI.ObjectField(rect, new GUIContent(label), objOld, objectType, true, false);
                     if (objOld != objNew) {
                         objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
                         arrayModified.boolValue = true;
@@ -1373,7 +1374,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         UnityEngine.Object newObject;
         if (t == typeof(Sprite) || t == typeof(Texture2D)) {
-            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true);
+            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true, false);
         } else {
             newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
         }
