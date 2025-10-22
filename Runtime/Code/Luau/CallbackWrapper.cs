@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Profiling;
 
 namespace Luau
 {
     public class CallbackWrapper {
-        public LuauContext context;
+        /// <summary>
+        /// The LuauContext that this callback was created in (and will fire in). This is only relevant if
+        /// validateContext is true (used for stuff like network events where we don't want protected broadcasts
+        /// to be listened to in game context).
+        /// </summary>
+        public LuauContext callbackContext;
         public int handle;
         public int luauRef;
         public IntPtr thread;
@@ -28,7 +34,7 @@ namespace Luau
         }
 
         public CallbackWrapper(LuauContext context, IntPtr thread, string methodName, int handle, bool validateContext) {
-            this.context = context;
+            this.callbackContext = context;
             this.thread = thread;
             this.methodName = methodName;
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
@@ -85,17 +91,13 @@ namespace Luau
             }
         }
 
-        private bool IsBlockedByInvalidContext(object param0) {
+        private bool IsBlockedByInvalidContext(LuauContext callContext) {
             if (!validateContext) return false;
-            if (param0 is null) return false;
-            if (param0 is not LuauContext lc) return false;
-            var isBlocked = lc != context;
-            // if (isBlocked) Debug.Log("Blocked by invalid context: lc=" + lc + " context=" + context + " mn=" + methodName);
-            return isBlocked;
+            return callContext != callbackContext;
         }
         
         unsafe public void HandleEventDelayed1<A>(A param0) {
-            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(param0)) return;
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 1;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
@@ -123,7 +125,7 @@ namespace Luau
 
 
         unsafe public void HandleEventDelayed2<A, B>(A param0, B param1) {
-            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(param0)) return;
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 2;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
@@ -154,7 +156,7 @@ namespace Luau
         }
 
         unsafe public void HandleEventDelayed3<A, B, C>(A param0, B param1, C param2) {
-            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(param0)) return;
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 3;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
@@ -184,7 +186,7 @@ namespace Luau
         }
 
         unsafe public void HandleEventDelayed4<A, B, C, D>(A param0, B param1, C param2, D param3) {
-            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(param0)) return;
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 4;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);

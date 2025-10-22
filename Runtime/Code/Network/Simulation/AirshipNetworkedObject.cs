@@ -65,18 +65,14 @@ namespace Code.Network.Simulation
             this.history.Add(tick, snapshot);
         }
 
-        private void SetSnapshot(object objTick)
-        {
-            if (objTick is int tick) {
-                var snapshot = this.history.Get(tick);
-                if (this.rb != null) {
-                    this.rb.position = snapshot.position;
-                    this.rb.rotation = snapshot.rotation;
-                } else {
-                    this.transform.position = snapshot.position;
-                    this.transform.rotation = snapshot.rotation;
-                }
-               
+        private void SetSnapshot(int tick) {
+            var snapshot = this.history.Get(tick);
+            if (this.rb != null) {
+                this.rb.position = snapshot.position;
+                this.rb.rotation = snapshot.rotation;
+            } else {
+                this.transform.position = snapshot.position;
+                this.transform.rotation = snapshot.rotation;
             }
         }
 

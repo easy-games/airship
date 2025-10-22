@@ -82,7 +82,7 @@ namespace Code.Network.Simulation
          * time. Components should expect a PerformTick() call sometime after this
          * function completes.
          */
-        public event Action<object> OnSetSnapshot;
+        public event Action<int> OnSetSnapshot;
 
         /**
          * This action notifies listeners that we are performing a lag compensation check.
@@ -126,7 +126,7 @@ namespace Code.Network.Simulation
          * Fired when a tick leaves local history and will never be referenced again. You can use this
          * event to clean up any data that is no longer required.
          */
-        public event Action<object> OnHistoryLifetimeReached;
+        public event Action<int> OnHistoryLifetimeReached;
         
         /**
         * Fired when lag compensated checks should occur. ID of check is passed as the event parameter.
