@@ -144,6 +144,7 @@ namespace Code.Network.Simulation
         private bool isActive = false;
         private List<int> previousTicks = new List<int>();
         private List<double> previousTimes = new();
+        private int lastLagCompensationRequestId = 0;
         private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
 
@@ -302,11 +303,10 @@ namespace Code.Network.Simulation
         /**
          * Schedules lag compensation for the provided ID. Used by TS to call ScheduleLagCompensation for a player in the Player.ts file.
          */
-        public string RequestLagCompensationCheck(int connectionId)
+        public int RequestLagCompensationCheck(int connectionId)
         {
-            if (NetworkServer.connections.TryGetValue(connectionId, out var connection))
-            {
-                string uniqueId = Guid.NewGuid().ToString();
+            if (NetworkServer.connections.TryGetValue(connectionId, out var connection)) {
+                int uniqueId = ++lastLagCompensationRequestId;
                 this.ScheduleLagCompensation(connection, () => {
                     this.OnLagCompensationRequestCheck?.Invoke(uniqueId);
                 }, () =>
@@ -316,7 +316,7 @@ namespace Code.Network.Simulation
                 return uniqueId;
             }
 
-            return "";
+            return -1;
         }
 
         /**

@@ -9,6 +9,8 @@ namespace Code {
         public const int playerVersion = 20;
         public static readonly IReadOnlyList<string> playerFlags = new string[] {
             "SkipLoading",
+            "LagCompCheckIdIsInt",
+            "PlatformGearDownloadClassId",
         };
 
 
