@@ -8,7 +8,7 @@ using NativePlugins;
 #endif
 
 public static class LuauPluginNative {
-	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
+	public delegate void PrintCallback(LuauContext context, IntPtr thread, LuauLogLevel style, int gameObjectId, IntPtr buffer, int length);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom);
 	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, int propertyNameAtom, int type, IntPtr propertyData, ulong propertySize, byte isTable);
 	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int methodNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield);
@@ -172,6 +172,9 @@ public static class LuauPluginNative {
 	
 	internal delegate IntPtr GetDebugTraceDelegate(IntPtr thread, ref int result);
 	[NativeDelegate] internal static GetDebugTraceDelegate GetDebugTrace;
+	
+	internal delegate IntPtr GetTracebackDelegate(IntPtr thread, out IntPtr strPtr);
+	[NativeDelegate] internal static GetTracebackDelegate GetTraceback;
 	
 	internal delegate IntPtr RunTaskSchedulerDelegate(LuauContext context, float now, float unscaledNow);
 	[NativeDelegate] internal static RunTaskSchedulerDelegate RunTaskScheduler;
@@ -591,6 +594,13 @@ public static class LuauPluginNative {
 	[DllImport("LuauPlugin")]
 #endif
 	internal static extern IntPtr GetDebugTrace(IntPtr thread, ref int result);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern IntPtr GetTraceback(IntPtr thread, out IntPtr strPtr);
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]

@@ -202,9 +202,12 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static void ResetStaticFields() {
-        _awaitingTasks.Clear();
+        _taskId++;
+        _completedTasks.Clear();
         eventConnections.Clear();
-        propertyGetCache.Clear();
+        memberGetCache.Clear();
+        fastMemberGetCacheKeys.AsSpan().Clear();
+        fastMemberGetCacheValues.AsSpan().Clear();
         _propertySetterCache.Clear();
         WriteMethodFunctions.Clear();
         LuauProtection.CurrentContext = LuauContext.Game;
@@ -302,9 +305,9 @@ public partial class LuauCore : MonoBehaviour {
         // }
         // runBuffer.Clear();
 
-        Profiler.BeginSample("TryResumeAsyncTasks");
+        Profiler.BeginSample("ResumeCompletedTasks");
         try {
-            TryResumeAsyncTasks();
+            ResumeCompletedTasks();
         } catch (Exception err) {
             Debug.LogError(err);
         } finally {

@@ -57,9 +57,12 @@ namespace Code.Quality {
         private bool capturingFrameTimings = false;
         private float captureFrameTimingsUntilTime = 0;
 
+        private float gameSessionStartTime;
+
         private ITransactionTracer tracer;
 
         private void Start() {
+            this.gameSessionStartTime = Time.unscaledTime;
             this.StartCapture();
         }
 
@@ -126,6 +129,8 @@ namespace Code.Quality {
                 this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg);
                 this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg);
                 this.tracer.SetData("frame_health", frameHealth == FrameHealth.Ok ? "ok" : "unhealthy");
+                this.tracer.SetMeasurement("game_session_duration", Time.unscaledTime - this.gameSessionStartTime);
+                this.tracer.SetData("sceneName", SceneManager.GetActiveScene().name);
                 this.tracer.Finish(SpanStatus.Ok);
                 this.tracer = null;
             }

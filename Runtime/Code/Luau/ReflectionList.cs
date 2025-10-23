@@ -177,6 +177,7 @@ namespace Luau {
             [typeof(Animation)] = LuauContextAll,
             [typeof(AnimationCurve)] = LuauContextAll,
             [typeof(RuntimeAnimatorController)] = LuauContextAll,
+            [typeof(AnimatorControllerParameter)] = LuauContextAll,
             [typeof(AnimationClip)] = LuauContextAll,
             // Audio
             [typeof(AudioClip)] = LuauContextAll,
@@ -209,6 +210,7 @@ namespace Luau {
             [typeof(float3)] = LuauContextAll,
             [typeof(SplineAnimate)] = LuauContextAll,
             [typeof(SplineContainer)] = LuauContextAll,
+            [typeof(AnimatorStateInfo)] = LuauContextAll,
 
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,

@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace Editor.Quality {
     [InitializeOnLoad]
@@ -34,9 +35,12 @@ namespace Editor.Quality {
             // Not super necessary, so if we notice animation issues on mobile we can increase this.
             QualitySettings.skinWeights = SkinWeights.TwoBones;
 
-            QualitySettings.renderPipeline =
-                AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
-                    "Packages/gg.easy.airship/URP/AirshipMobileURPAsset.asset");
+            var pipeline = (UniversalRenderPipelineAsset) AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
+                "Packages/gg.easy.airship/URP/AirshipMobileURPAsset.asset");
+            QualitySettings.renderPipeline = pipeline;
+
+            pipeline.shadowCascadeCount = 2;
+            pipeline.cascade4Split = new Vector3(0.067f, 0.2f, 0.467f);
         }
 
         private static void ConfigureForNormal() {
@@ -44,9 +48,13 @@ namespace Editor.Quality {
 
             QualitySettings.skinWeights = SkinWeights.FourBones;
 
-            QualitySettings.renderPipeline =
-                AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
-                    "Packages/gg.easy.airship/URP/AirshipURPAsset.asset");
+            var pipeline = (UniversalRenderPipelineAsset) AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
+                "Packages/gg.easy.airship/URP/AirshipURPAsset.asset");
+
+            QualitySettings.renderPipeline = pipeline;
+
+            pipeline.shadowCascadeCount = 2;
+            pipeline.cascade4Split = new Vector3(0.067f, 0.2f, 0.467f);
         }
 
         private static void SwapToQualityLevel(string name) {

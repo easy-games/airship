@@ -16,9 +16,9 @@ namespace Code.Bootstrap {
     public class AirshipPlatformUtil {
         public static AirshipPlatform[] livePlatforms = new[]
         {
-            AirshipPlatform.iOS,
-            AirshipPlatform.Mac,
             AirshipPlatform.Windows,
+            AirshipPlatform.Mac,
+            AirshipPlatform.iOS,
             AirshipPlatform.Linux,
             AirshipPlatform.Android,
         };

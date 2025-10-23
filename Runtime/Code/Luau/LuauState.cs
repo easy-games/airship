@@ -61,11 +61,15 @@ namespace Luau {
 
         public static void UpdateAll() {
             foreach (var (_, state) in StatesPerContext) {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.BeginSample($"Update{Enum.GetName(typeof(LuauContext), state.Context)}");
+#endif
                 try {
                     state.OnUpdate();
                 } finally {
-                    Profiler.EndSample();   
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                    Profiler.EndSample();
+#endif
                 }
             }
         }

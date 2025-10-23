@@ -5,6 +5,7 @@ using Code.Player;
 using Mirror;
 using Tayx.Graphy.Resim;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 
 namespace Code.Network.Simulation
@@ -81,7 +82,7 @@ namespace Code.Network.Simulation
          * time. Components should expect a PerformTick() call sometime after this
          * function completes.
          */
-        public event Action<object> OnSetSnapshot;
+        public event Action<int> OnSetSnapshot;
 
         /**
          * This action notifies listeners that we are performing a lag compensation check.
@@ -112,7 +113,7 @@ namespace Code.Network.Simulation
         /// -time - unscaled time of the tick
         /// -replay - if this is a replay of a tick
         /// </summary>
-        public event Action<object, object, object> OnTick;
+        public event Action<int, double, bool> OnTick;
 
         /**
          * Informs all watching components that the simulation tick has been performed
@@ -125,7 +126,7 @@ namespace Code.Network.Simulation
          * Fired when a tick leaves local history and will never be referenced again. You can use this
          * event to clean up any data that is no longer required.
          */
-        public event Action<object> OnHistoryLifetimeReached;
+        public event Action<int> OnHistoryLifetimeReached;
         
         /**
         * Fired when lag compensated checks should occur. ID of check is passed as the event parameter.
@@ -143,6 +144,7 @@ namespace Code.Network.Simulation
         private bool isActive = false;
         private List<int> previousTicks = new List<int>();
         private List<double> previousTimes = new();
+        private int lastLagCompensationRequestId = 0;
         private Dictionary<NetworkConnectionToClient, List<LagCompensationRequest>> lagCompensationRequests = new();
         private Queue<ResimulationRequest> resimulationRequests = new();
 
@@ -223,9 +225,10 @@ namespace Code.Network.Simulation
                     // commandBufferTime is the additional time we queue commands locally on the server before processing them
                     var commandBufferTime = (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f));
                     OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt / 2f, entry.Key.bufferTime + commandBufferTime);
-                    foreach (var request in entry.Value)
-                    {
-                        request.check();
+                    
+                    var requests = entry.Value;
+                    for (var i = 0; i < requests.Count; i++) {
+                        requests[i].check();
                     }
                 }
                 catch (Exception e)
@@ -300,11 +303,10 @@ namespace Code.Network.Simulation
         /**
          * Schedules lag compensation for the provided ID. Used by TS to call ScheduleLagCompensation for a player in the Player.ts file.
          */
-        public string RequestLagCompensationCheck(int connectionId)
+        public int RequestLagCompensationCheck(int connectionId)
         {
-            if (NetworkServer.connections.TryGetValue(connectionId, out var connection))
-            {
-                string uniqueId = Guid.NewGuid().ToString();
+            if (NetworkServer.connections.TryGetValue(connectionId, out var connection)) {
+                int uniqueId = ++lastLagCompensationRequestId;
                 this.ScheduleLagCompensation(connection, () => {
                     this.OnLagCompensationRequestCheck?.Invoke(uniqueId);
                 }, () =>
@@ -314,7 +316,7 @@ namespace Code.Network.Simulation
                 return uniqueId;
             }
 
-            return "";
+            return -1;
         }
 
         /**
