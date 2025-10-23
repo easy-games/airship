@@ -630,6 +630,34 @@ public partial class VoxelWorld : MonoBehaviour {
         }
         return value.GetVoxelColorAt(posi);
     }
+    
+    [HideFromTS]
+    public uint GetVoxelColorUIntAt(Vector3 pos) {
+        var posi = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posi);
+        if (!chunks.TryGetValue(chunkKey, out var value)) {
+            return 0;
+        }
+        return value.GetVoxelColorUIntAt(posi);
+    }
+    
+    [HideFromTS]
+    public static uint Color32ToUInt(Color32 col) {
+        var res = (uint)col.r << 24;
+        res |= (uint)col.g << 16;
+        res |= (uint)col.b << 8;
+        res |= (uint)col.a;
+        return res;
+    }
+    
+    [HideFromTS]
+    public static Color32 UIntToColor32(uint col) {
+        var r = (byte)((col & 0xFF000000) >> 24);
+        var g = (byte)((col & 0x00FF0000) >> 16);
+        var b = (byte)((col & 0x0000FF00) >> 8);
+        var a = (byte)(col & 0x000000FF);
+        return new Color32(r, g, b, a);
+    }
 
     public void DirtyMesh(Vector3Int voxel, bool dirtyCollisions, bool priority = false) {
         Chunk chunk = GetChunkByVoxel(voxel);

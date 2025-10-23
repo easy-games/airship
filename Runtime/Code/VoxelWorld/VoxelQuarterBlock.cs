@@ -56,7 +56,7 @@ namespace VoxelWorldStuff {
         }
         
 
-        private static bool QuarterBlocskEmitSingleBlock(VoxelBlocks.BlockDefinition block, TemporaryMeshData meshData, VoxelWorld world, Vector2 damageUv, Color32 col) {
+        private static bool QuarterBlocskEmitSingleBlock(VoxelBlocks.BlockDefinition block, TemporaryMeshData meshData, VoxelWorld world, Vector2 damageUv, uint col) {
 
             Vector3 origin = new Vector3(-0.5f,-0.5f,-0.5f);
             int flip = 0;
@@ -76,7 +76,7 @@ namespace VoxelWorldStuff {
             return true;
         }
 
-        private static bool QuarterBlocksPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, Color32 col, Vector3 scale, int flip) {
+        private static bool QuarterBlocksPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, uint col, Vector3 scale, int flip) {
             if (block.meshContexts.Count == 0) {
                 return false;
             }
