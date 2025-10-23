@@ -1074,7 +1074,8 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private void RegenerateMissingChunkGeometry() {
         float regenerateMissingChunkGeometryStartTime = Time.realtimeSinceStartup;
-        int maxChunksToUpdateVar = maxActiveThreads;
+        // This can be high, we're mainly throttling on max time variables
+        int maxChunksToUpdateVar = maxActiveThreads * 4;
 
         // Sort chunks
         List<Chunk> chunksThatNeedThreadKickoff = new();
@@ -1103,37 +1104,51 @@ public partial class VoxelWorld : MonoBehaviour {
             forward = camTransform.rotation * Vector3.forward;
             camPos = camTransform.position - forward * (chunkSize >> 1);
         }
-
-        var cos50Deg = 0.6427;
         
         if (maxChunksToUpdateVar > 0 && chunksThatNeedThreadKickoff.Count > 0) {
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
 
-            chunksThatNeedThreadKickoff.Sort((a, b) => {
-                var aDist = (a.chunkKey - focusPositionChunkKey).magnitude;
-                var bDist = (b.chunkKey - focusPositionChunkKey).magnitude;
-                // If chunk is beyond 55 degrees of view from camera then treat it as much (250 blocks) further
-                // in terms of priority
-                if (forward != Vector3.zero) {
-                    if (Vector3.Dot(forward, (((a.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) aDist += (250f / chunkSize);
-                    if (Vector3.Dot(forward, (((b.chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < cos50Deg) bDist += (250f / chunkSize);
+            Profiler.BeginSample("Sort");
+            var chunksToKickOffNow = new Chunk[maxChunksToUpdateVar];
+            // Load with 8 chunks
+            for (var i = 0; i < maxChunksToUpdateVar && i < chunksThatNeedThreadKickoff.Count; i++) {
+                chunksToKickOffNow[i] = chunksThatNeedThreadKickoff[i];
+            }
+            // Loop over all chunks and keep replacing with best available chunk
+            // This is random and definitely not a true sort function but should be good enough & fast
+            if (chunksThatNeedThreadKickoff.Count > maxChunksToUpdateVar) {
+                var replaceIndex = 0;
+                var compareAgainstOrder =
+                    GetChunkRenderOrder(chunksToKickOffNow[replaceIndex], camPos, forward, focusPositionChunkKey);
+                for (var i = maxChunksToUpdateVar; i < chunksThatNeedThreadKickoff.Count; i++) {
+                    var chunk = chunksThatNeedThreadKickoff[i];
+                    var chunkOrder = GetChunkRenderOrder(chunk, camPos, forward, focusPositionChunkKey);
+                    // If this chunk is earlier in order replace and continue
+                    if (chunkOrder < compareAgainstOrder) {
+                        chunksToKickOffNow[replaceIndex] = chunk;
+                        compareAgainstOrder = chunkOrder;
+                        replaceIndex = (replaceIndex + 1) % maxChunksToUpdateVar;
+                    }
                 }
-                
-                return aDist.CompareTo(bDist);
-            });
+            }
+
+
+            // chunksThatNeedThreadKickoff.Sort((a, b) => {
+            //     
+            // });
+            Profiler.EndSample();
 
             float startTime = Time.realtimeSinceStartup;
 
-            foreach (var chunk in chunksThatNeedThreadKickoff) {
-                if (maxChunksToUpdateVar <= 0) {
-                    break;
-                }
-
+            for (var i = 0; i < math.min(chunksThatNeedThreadKickoff.Count, maxChunksToUpdateVar); i++) {
+                var chunk = chunksToKickOffNow[i];
+                
+                Profiler.BeginSample("MainThreadUpdate");
                 bool didUpdate = chunk.MainthreadUpdateMesh(this);
+                Profiler.EndSample();
 
                 if (didUpdate) {
                     updateCounter++;
-                    maxChunksToUpdateVar -= 1;
 
                     int elapsedTime = (int)((Time.realtimeSinceStartup - startTime) * 1000);
                     if (elapsedTime > maxMainThreadThreadKickoffMillisecondsPerFrame) {
@@ -1191,6 +1206,21 @@ public partial class VoxelWorld : MonoBehaviour {
         if (elapsedTimeInMs > 17) {
             //Debug.Log("Slow voxelworld frame update:" + elapsedTimeInMs + "ms");
         }
+    }
+
+    private const double Cos65Deg = 0.422;
+    /// <summary>
+    /// Returns the render order for a chunk with lower values representing highest priority chunks
+    /// </summary>
+    private float GetChunkRenderOrder(Chunk chunk, Vector3 camPos, Vector3 forward, Vector3 focusPositionChunkKey) {
+        var chunkKey = chunk.chunkKey;
+        var dist = (chunkKey - focusPositionChunkKey).magnitude;
+        // If chunk is beyond 55 degrees of view from camera then treat it as much (250 blocks) further
+        // in terms of priority
+        if (forward != Vector3.zero) {
+            if (Vector3.Dot(forward, (((chunkKey + Vector3.one * 0.5f) * chunkSize) - camPos).normalized) < Cos65Deg) dist += (250f / chunkSize);
+        }
+        return dist;
     }
 
     public void FullWorldUpdate() {
