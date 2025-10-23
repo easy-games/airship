@@ -121,14 +121,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var metadata = serializedObject.FindProperty("metadata");
             var metadataName = metadata.FindPropertyRelative("name");
             
-            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                var componentEditor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
-                if (this.editor == null) this.editor = componentEditor;
-                componentEditor.script = binding.script;
-                componentEditor.target = binding;
-                componentEditor.OnInspectorGUI();
-            }
-
             if (binding.script != null && binding.script.m_metadata != null) {
                 if (ShouldReconcile(binding)) {
                     binding.ReconcileMetadata(ReconcileSource.Inspector);
@@ -137,6 +129,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 }
             
                 CheckDefaults(binding);
+            }
+            
+            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
+                var componentEditor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
+                if (this.editor == null) this.editor = componentEditor;
+                componentEditor.script = binding.script;
+                componentEditor.target = binding;
+                componentEditor.OnInspectorGUI();
             }
             
             serializedObject.ApplyModifiedProperties();
@@ -151,21 +151,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         return false;
     }
 
-    public override void OnInspectorGUI() {
-        serializedObject.Update();
-
+    private void OnAirshipLegacyInspectorGUI() {
         AirshipComponent binding = (AirshipComponent)target;
-
-        if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
-            if (binding.script == null) {
-                Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
-                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
-            }
-        }
-        
-        // Run new inspector system
-        if (OnAirshipInspectorGUI()) return;
-
         DrawScriptBindingProperties(binding);
 
         if (binding.script != null && binding.script.m_metadata != null) {
@@ -203,6 +190,23 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 #endif
         
         serializedObject.ApplyModifiedProperties();
+    }
+
+    public override void OnInspectorGUI() {
+        serializedObject.Update();
+
+        AirshipComponent binding = (AirshipComponent)target;
+
+        if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
+            if (binding.script == null) {
+                Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
+                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
+            }
+        }
+        
+        if (!OnAirshipInspectorGUI()) {
+            OnAirshipLegacyInspectorGUI();
+        }
     }
 
 
