@@ -50,8 +50,8 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             chunkPositions.Add(pos);
         }
 
-        TargetWriteChunksRpc(connection, chunkPositions.ToArray(), chunks.ToArray());
-        TargetFinishedSendingWorldRpc(connection);
+        RpcWriteChunks(connection, chunkPositions.ToArray(), chunks.ToArray());
+        RpcFinishedSendingWorld(connection);
     }
 
     private IEnumerator SlowlySendChunks(NetworkConnection conn, List<Vector3Int> skipChunks) {
@@ -71,7 +71,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             sentPositions.Add(pos);
 
             if (i % chunksPerFrame == 0) {
-                TargetWriteChunksRpc(conn, packetPositions.ToArray(), packetChunks.ToArray());
+                RpcWriteChunks(conn, packetPositions.ToArray(), packetChunks.ToArray());
                 packetPositions.Clear();
                 packetChunks.Clear();
                 yield return null;
@@ -92,7 +92,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         replicationTimer.Start();
         // print($"VoxelWorldNetworker.OnStartClient. Spawned on net after {this.spawnTimer.ElapsedMilliseconds}ms");
         // world.FullWorldUpdate();
-        
+
         if (RunCore.IsClient()) {
             ClientSendReadyWhenAble();
         }
@@ -104,19 +104,19 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
     //Voxel Changes write to all clients
     [ClientRpc]
-    public void TargetWriteVoxelRpc(Vector3Int pos, VoxelData voxel) {
+    public void RpcWriteVoxel(Vector3Int pos, ushort voxel) {
         world.WriteVoxelAt(pos, voxel, true);
     }
 
     [ClientRpc]
-    public void TargetWriteVoxelGroupRpc(Vector3[] positions, double[] nums, bool priority) {
+    public void RpcWriteVoxelGroup(Vector3[] positions, double[] nums, bool priority) {
         world.WriteVoxelGroupAt(positions, nums, priority);
     }
 
     //Sending chunks happens to specific clients when they initialize
     [TargetRpc]
-    public void TargetWriteChunksRpc(NetworkConnection conn, Vector3Int[] positions, Chunk[] chunks) {
-        Profiler.BeginSample("TargetWriteChunkRpc");
+    public void RpcWriteChunks(NetworkConnection conn, Vector3Int[] positions, Chunk[] chunks) {
+        Profiler.BeginSample("TargetWriteChunkRpcRpcWriteChunks");
         for (var i = 0; i < positions.Length; i++) {
             world.WriteChunkAt(positions[i], chunks[i]);
         }
@@ -125,9 +125,9 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     }
 
     [TargetRpc]
-    public void TargetFinishedSendingWorldRpc(NetworkConnection conn) {
+    public void RpcFinishedSendingWorld(NetworkConnection conn) {
         world.renderingDisabled = false;
-        Profiler.BeginSample("FinishedSendingWorldRpc.RegenMeshes");
+        Profiler.BeginSample("RpcFinishedSendingWorld.RegenMeshes");
         world.RegenerateAllMeshes();
         Profiler.EndSample();
         world.InvokeOnFinishedReplicatingChunksFromServer();
