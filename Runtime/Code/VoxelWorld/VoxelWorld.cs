@@ -1131,11 +1131,6 @@ public partial class VoxelWorld : MonoBehaviour {
                     }
                 }
             }
-
-
-            // chunksThatNeedThreadKickoff.Sort((a, b) => {
-            //     
-            // });
             Profiler.EndSample();
 
             float startTime = Time.realtimeSinceStartup;
