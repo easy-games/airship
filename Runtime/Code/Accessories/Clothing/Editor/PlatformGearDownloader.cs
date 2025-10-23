@@ -81,6 +81,7 @@ namespace Code.Accessories.Clothing.Editor {
                     EditorUtility.DisplayDialog("Download Error", "Clothing was null.", "OK");
                 } else {
                     this.SpawnClothing(gear);
+                    // PlatformGear.UnloadAssetBundle(gear.classId);
                     status = "Complete";
                     progress = 1f;
                     Repaint();

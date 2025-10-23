@@ -19,11 +19,11 @@ namespace Assets.Luau.Network {
     public class Net : MonoBehaviour {
 	    private const bool RequireAuth = false;
 	    
-        public delegate void BroadcastFromServerAction(object context, BinaryBlob blob);
+        public delegate void BroadcastFromServerAction(LuauContext context, BinaryBlob blob);
         [AttachContext]
         public event BroadcastFromServerAction broadcastFromServerAction;
 		
-        public delegate void BroadcastFromClientAction(object context, object clientId, BinaryBlob blob);
+        public delegate void BroadcastFromClientAction(LuauContext context, int clientId, BinaryBlob blob);
         [AttachContext]
         public event BroadcastFromClientAction broadcastFromClientAction;
 
@@ -100,7 +100,7 @@ namespace Assets.Luau.Network {
 		    }
 
 		    var targetContext = msg.FromProtectedContext ? LuauContext.Protected : LuauContext.Game;
-		    broadcastFromClientAction?.Invoke((object) targetContext, (object)conn.connectionId, msg.Blob);
+		    broadcastFromClientAction?.Invoke(targetContext, conn.connectionId, msg.Blob);
 		}
 
 		private void OnBroadcastFromServer(NetBroadcast msg) {

@@ -77,12 +77,26 @@ namespace Code.Accessories.Clothing {
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void OnReload() {
-            // foreach (var bundle in loadedPlatformGearBundles) {
-            //     bundle.Value.assetBundle.Unload(true);
-            // }
-            // loadedPlatformGearBundles.Clear();
+            foreach (var bundle in loadedPlatformGearBundles) {
+                if (bundle.Value.assetBundle != null) {
+                    bundle.Value.assetBundle.Unload(true);
+                }
+            }
+            loadedPlatformGearBundles.Clear();
             inProgressDownloads.Clear();
             classIdToAirIdCache.Clear();
+        }
+
+        public static void UnloadAssetBundle(string classId) {
+            if (Application.isPlaying) {
+                throw new Exception("PlatformGear.UnloadAssetBundle cannot be called during play mode.");
+            }
+            if (classIdToAirIdCache.TryGetValue(classId, out var airId)) {
+                if (loadedPlatformGearBundles.TryGetValue(airId, out var bundle)) {
+                    bundle.assetBundle.Unload(true);
+                    loadedPlatformGearBundles.Remove(airId);
+                }
+            }
         }
 
         public static async Task<PlatformGear> DownloadYielding(string classId) {

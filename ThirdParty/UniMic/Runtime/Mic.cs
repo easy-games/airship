@@ -43,28 +43,12 @@ namespace Adrenak.UniMic {
         /// </summary>
         public AudioClip AudioClip { get; private set; }
 
-        /// <summary>
-        /// List of all the available Mic devices
-        /// </summary>
-        public List<string> Devices => Microphone.devices.ToList();
-
-        /// <summary>
-        /// Index of the current Mic device in m_Devices
-        /// </summary>
-        public int CurrentDeviceIndex { get; private set; } = -1;
-
         [CanBeNull] public Coroutine readAudioCoroutine;
 
         /// <summary>
         /// Gets the name of the Mic device currently in use
         /// </summary>
-        public string CurrentDeviceName {
-            get {
-                if (CurrentDeviceIndex < 0 || CurrentDeviceIndex >= Microphone.devices.Length)
-                    return string.Empty;
-                return Devices[CurrentDeviceIndex];
-            }
-        }
+        public string CurrentDeviceName = "";
 
         int m_SampleCount = 0;
         #endregion
@@ -132,18 +116,12 @@ namespace Adrenak.UniMic {
             return Instance;
         }
 
-        void Awake() {
-            if (Devices.Count > 0)
-                CurrentDeviceIndex = 0;
-        }
-
         /// <summary>
         /// Sets a Mic device for Recording
         /// </summary>
-        /// <param name="index">The index of the Mic device. Refer to <see cref="Devices"/> for available devices</param>
-        public void SetDeviceIndex(int index) {
+        public void SetCurrentDevice(string deviceName) {
             Microphone.End(CurrentDeviceName);
-            CurrentDeviceIndex = index;
+            CurrentDeviceName = deviceName;
             if (IsRecording)
                 StartRecording(Frequency, SampleDurationMS);
         }
@@ -237,14 +215,5 @@ namespace Adrenak.UniMic {
 
         [Obsolete("UpdateDevices method is no longer needed. Devices property is now always up to date")]
         public void UpdateDevices() { }
-
-        /// <summary>
-        /// Changes to a Mic device for Recording
-        /// </summary>
-        /// <param name="index">The index of the Mic device. Refer to <see cref="Devices"/></param>
-        [Obsolete("ChangeDevice may go away in the future. Use SetDeviceIndex instead", false)]
-        public void ChangeDevice(int index) {
-            SetDeviceIndex(index);
-        }
     }
 }
