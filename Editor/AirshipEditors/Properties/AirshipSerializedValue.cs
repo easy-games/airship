@@ -252,27 +252,18 @@ public abstract class AirshipSerializedValue {
         }
     }
 
-    public TyperScriptEnumMember enumValue {
+    public TypeScriptEnumMember enumValue {
         get {
             if (enumType == null) return null;
-            if (enumType.memberType == TypeScriptEnumMemberType.Integer) {
-                if (int.TryParse(serializedValue.stringValue, out var intValue)) {
-                    return enumType.members.Find(f => f.IntValue == intValue);
-                }
-
-                return enumType.members[0];
-            } else {
-                var strValue = serializedValue.stringValue;
-                return enumType.members.Find(f => f.StringValue == strValue) ?? enumType.members[0];
-            }
+            return enumType.Deserialize(serializedValue.stringValue);
         }
         set {
             if (enumType == null) throw new InvalidCastException("Invalid cast");
-            this.serializedValue.stringValue = enumType.memberType == TypeScriptEnumMemberType.Integer ? value.IntValue.ToString(CultureInfo.InvariantCulture) : value.StringValue;
+            serializedValue.stringValue = enumType.Serialize(value);
         }
     }
     
-    public IReadOnlyList<LuauMetadataDecoratorElement> decorators { get; protected set; }
+    public IEnumerable<LuauMetadataDecoratorElement> decorators { get; protected set; }
 
     public bool TryGetDecorator(string targetDecoratorName, out List<LuauMetadataDecoratorValue> parameters) {
         if (decorators == null) {

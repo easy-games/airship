@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
@@ -10,7 +11,7 @@ using UnityEditor;
 #endif
 
 [Serializable]
-public class TyperScriptEnumMember {
+public class TypeScriptEnumMember {
     [SerializeField] internal string Name;
     [SerializeField] internal string StringValue;
     [SerializeField] internal int IntValue;
@@ -27,15 +28,61 @@ public enum TypeScriptEnumMemberType {
 
 [Serializable]
 public class TypeScriptEnum : ISerializationCallbackReceiver {
-    public string id;
-    public TypeScriptEnumMemberType memberType;
-    public List<TyperScriptEnumMember> members;
+    [FormerlySerializedAs("id")] [SerializeField] private string _id;
+    [FormerlySerializedAs("memberType")] [SerializeField] private TypeScriptEnumMemberType _memberType;
+    [FormerlySerializedAs("members")] [SerializeField] private List<TypeScriptEnumMember> _members;
+    public string id => _id;
+    public TypeScriptEnumMemberType memberType => _memberType;
+    public IReadOnlyList<TypeScriptEnumMember> members => _members;
 
+    internal TypeScriptEnum(string id, TypeScriptEnumMemberType memberType, List<TypeScriptEnumMember> members) {
+        _id = id;
+        _memberType = memberType;
+        _members = members;
+    }
+    
+    internal string Serialize(TypeScriptEnumMember value) {
+        return memberType switch {
+            TypeScriptEnumMemberType.Integer => value.intValue.ToString(CultureInfo.InvariantCulture),
+            TypeScriptEnumMemberType.String => value.stringValue,
+            _ => throw new ArgumentOutOfRangeException(nameof(memberType), memberType, null)
+        };
+    }
+
+    internal TypeScriptEnumMember Deserialize(string value) {
+        switch (memberType) {
+            case TypeScriptEnumMemberType.Integer: {
+                if (int.TryParse(value, out var intValue)) {
+                    return GetMemberByValue(intValue) ?? defaultValue;
+                }
+
+                return defaultValue;
+            }
+            case TypeScriptEnumMemberType.String:
+                return GetMemberByValueOrDefault(value);
+        }
+
+        return defaultValue;
+    }
+    
     public void OnAfterDeserialize() {
-        if (memberType != TypeScriptEnumMemberType.Integer) return;
+        keys = new string[_members.Count];
+        for (var i = 0; i < _members.Count; i++) {
+            var member = _members[i];
+            keys[i] = member.name;
+        }
         
-        isFlagLike = members.Count > 0;
-        foreach (var value in members) {
+#if UNITY_EDITOR
+        keysNicified = new string[_members.Count];
+        for (var i = 0; i < _members.Count; i++) {
+            keysNicified[i] = ObjectNames.NicifyVariableName(keys[i]);
+        }
+#endif
+        
+        if (_memberType != TypeScriptEnumMemberType.Integer) return;
+        
+        isFlagLike = _members.Count > 0;
+        foreach (var value in _members) {
             if (value.IntValue == 0 || value.IntValue == -1) continue;
             var log2 = Math.Log(Math.Abs(value.IntValue), 2);
             if (log2 % 1 != 0) {
@@ -45,40 +92,30 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
         }
     }
 
-    public void OnBeforeSerialize() {
-        
-    }
+    public void OnBeforeSerialize() {}
 
     public int IndexOf(string stringValue) {
-        return this.members.FindIndex(item => item.StringValue == stringValue);
+        return this._members.FindIndex(item => item.StringValue == stringValue);
     }
 
-    public string[] keys => members.Select(member => member.Name).ToArray();
-    public string[] keysNicified {
-        get {
-#if UNITY_EDITOR
-            return members.Select(member => ObjectNames.NicifyVariableName(member.Name)).ToArray();
-#else
-            return keys;
-#endif
-        }
-    }
+    public string[] keys { get; private set; }
+    public string[] keysNicified { get; private set; }
 
-    public TyperScriptEnumMember this[int index] {
+    public TypeScriptEnumMember this[int index] {
         get {
-            return members.Find(f => f.IntValue == index);
+            return _members.Find(f => f.IntValue == index);
         }
     }
     
-    public TyperScriptEnumMember this[string value] {
-        get => members.Find(f => f.Name == value || f.StringValue == value);
+    public TypeScriptEnumMember this[string value] {
+        get => _members.Find(f => f.Name == value || f.StringValue == value);
     }
 
     public bool isFlagLike { get; private set; }
     private string[] _flags;
     public string[] flagNames {
         get {
-            if (memberType != TypeScriptEnumMemberType.Integer ) return new string[] {};
+            if (_memberType != TypeScriptEnumMemberType.Integer ) return new string[] {};
             // if (_flags != null) return _flags;
             
             var maxIndex = 0;
@@ -99,6 +136,38 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
             return flagArray;
         }
     }
+    
+    [CanBeNull]
+    public TypeScriptEnumMember GetMemberByName(string name) {
+        foreach (var member in members) {
+            if (member.name == name) return member;
+        }
+
+        return null;
+    }
+    
+    [CanBeNull]
+    public TypeScriptEnumMember GetMemberByValue(int value) {
+        foreach (var member in members) {
+            if (member.intValue == value) return member;
+        }
+
+        return null;
+    }
+    
+    [CanBeNull]
+    public TypeScriptEnumMember GetMemberByValue(string value) {
+        foreach (var member in members) {
+            if (member.stringValue == value) return member;
+        }
+
+        return null;
+    }
+
+    public TypeScriptEnumMember GetMemberByValueOrDefault(int value) => GetMemberByValue(value) ?? defaultValue;
+    public TypeScriptEnumMember GetMemberByValueOrDefault(string value) => GetMemberByValue(value) ?? defaultValue;
+
+    public TypeScriptEnumMember defaultValue => members[0];
 }
 
 public class EditorMetadataJson {
@@ -125,24 +194,20 @@ public class EditorMetadata {
 
     public EditorMetadata(EditorMetadataJson json) {
         foreach (var enumeration in json.enumerations) {
-            List<TyperScriptEnumMember> members = new();
+            List<TypeScriptEnumMember> members = new();
             TypeScriptEnumMemberType type = TypeScriptEnumMemberType.Integer;
 
             foreach (var member in enumeration.Value) {
                 type = member.Value is Int64 ? TypeScriptEnumMemberType.Integer : TypeScriptEnumMemberType.String;
 
-                members.Add(new TyperScriptEnumMember() {
+                members.Add(new TypeScriptEnumMember() {
                     Name = member.Key,
                     IntValue = member.Value is Int64 intValue ? (int)intValue : 0,
                     StringValue = member.Value as string ?? "",
                 });
             }
 
-            typescriptEnums.Add(new TypeScriptEnum() {
-                id = enumeration.Key,
-                memberType = type,
-                members = members,
-            });
+            typescriptEnums.Add(new TypeScriptEnum(enumeration.Key, type, members));
         }
 
         this.typescriptPackageId = json.id ?? "";
@@ -167,6 +232,17 @@ public static class AirshipEditorInfoExtensions {
         }
 
         return null;
+    }
+
+    [Obsolete]
+    public static int FindIndex(this IReadOnlyList<TypeScriptEnumMember> members,
+        Func<TypeScriptEnumMember, bool> predicate) {
+
+        for (var i = 0; i < members.Count; i++) {
+            if (predicate(members[i])) return i;
+        }
+
+        return -1;
     }
 }
 
