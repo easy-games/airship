@@ -22,16 +22,24 @@ public partial class VoxelWorld : MonoBehaviour {
     /// If enabled all quarter blocks will be replaced with default cube voxels
     /// </summary>
     public bool useSimplifiedVoxels = false;
+
     public const bool runThreaded = true; //Turn off if you suspect threading problems
     public const int chunkSize = 16; //fixed size
     public const int maxActiveThreads = 8;
-    public const int maxMainThreadMeshMillisecondsPerFrame = 8; //Dont spend more than 10ms per frame on uploading meshes to GPU or rebuilding collision
-    public const int maxMainThreadThreadKickoffMillisecondsPerFrame = 4; //Dont spent more than 4ms on the main thread kicking off threads
+
+    public const int
+        maxMainThreadMeshMillisecondsPerFrame
+            = 8; //Dont spend more than 10ms per frame on uploading meshes to GPU or rebuilding collision
+
+    public const int
+        maxMainThreadThreadKickoffMillisecondsPerFrame
+            = 4; //Dont spent more than 4ms on the main thread kicking off threads
+
     public const bool showDebugBounds = false;
 
     [NonSerialized]
     internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
-    
+
     [NonSerialized]
     public bool doVisuals = true; //Turn on for headless servers
 
@@ -117,17 +125,17 @@ public partial class VoxelWorld : MonoBehaviour {
     public float lodTransitionSpeed = 1;
 
     //Texture atlas/block definitions    
-    [HideInInspector] 
+    [HideInInspector]
     public VoxelBlocks voxelBlocks;
-    
-    [NonSerialized] 
+
+    [NonSerialized]
     public int selectedBlockIndex = 1;
 
     //For the editor
-    [NonSerialized] 
+    [NonSerialized]
     public ushort highlightedBlock = 0;
-    
-    [NonSerialized] 
+
+    [NonSerialized]
     public Vector3Int highlightedBlockPos = new();
 
     [NonSerialized]
@@ -666,6 +674,35 @@ public partial class VoxelWorld : MonoBehaviour {
         return value.GetVoxelColorAt(posi);
     }
 
+    [HideFromTS]
+    public uint GetVoxelColorUIntAt(Vector3 pos) {
+        var posi = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posi);
+        if (!chunks.TryGetValue(chunkKey, out var value)) {
+            return 0;
+        }
+
+        return value.GetVoxelColorUIntAt(posi);
+    }
+
+    [HideFromTS]
+    public static uint Color32ToUInt(Color32 col) {
+        var res = (uint)col.r << 24;
+        res |= (uint)col.g << 16;
+        res |= (uint)col.b << 8;
+        res |= (uint)col.a;
+        return res;
+    }
+
+    [HideFromTS]
+    public static Color32 UIntToColor32(uint col) {
+        var r = (byte)((col & 0xFF000000) >> 24);
+        var g = (byte)((col & 0x00FF0000) >> 16);
+        var b = (byte)((col & 0x0000FF00) >> 8);
+        var a = (byte)(col & 0x000000FF);
+        return new Color32(r, g, b, a);
+    }
+
     public void DirtyMesh(Vector3Int voxel, bool dirtyCollisions, bool priority = false) {
         var chunk = GetChunkByVoxel(voxel);
         if (chunk != null) {
@@ -1098,7 +1135,8 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private void RegenerateMissingChunkGeometry() {
         var regenerateMissingChunkGeometryStartTime = Time.realtimeSinceStartup;
-        var maxChunksToUpdateVar = maxActiveThreads;
+        // This can be high, we're mainly throttling on max time variables
+        var maxChunksToUpdateVar = maxActiveThreads * 4;
 
         // Sort chunks
         List<Chunk> chunksThatNeedThreadKickoff = new();
@@ -1131,30 +1169,35 @@ public partial class VoxelWorld : MonoBehaviour {
             camPos = camTransform.position - forward * (chunkSize >> 1);
         }
 
-        var cos50Deg = 0.6427;
-
         if (maxChunksToUpdateVar > 0 && chunksThatNeedThreadKickoff.Count > 0) {
             var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
 
-            chunksThatNeedThreadKickoff.Sort((a, b) => {
-                var aDist = (a.chunkKey - focusPositionChunkKey).magnitude;
-                var bDist = (b.chunkKey - focusPositionChunkKey).magnitude;
-                // If chunk is beyond 55 degrees of view from camera then treat it as much (250 blocks) further
-                // in terms of priority
-                if (forward != Vector3.zero) {
-                    if (Vector3.Dot(forward, ((a.chunkKey + Vector3.one * 0.5f) * chunkSize - camPos).normalized) <
-                        cos50Deg) {
-                        aDist += 250f / chunkSize;
-                    }
+            Profiler.BeginSample("Sort");
+            var chunksToKickOffNow = new Chunk[maxChunksToUpdateVar];
+            // Load with 8 chunks
+            for (var i = 0; i < maxChunksToUpdateVar && i < chunksThatNeedThreadKickoff.Count; i++) {
+                chunksToKickOffNow[i] = chunksThatNeedThreadKickoff[i];
+            }
 
-                    if (Vector3.Dot(forward, ((b.chunkKey + Vector3.one * 0.5f) * chunkSize - camPos).normalized) <
-                        cos50Deg) {
-                        bDist += 250f / chunkSize;
+            // Loop over all chunks and keep replacing with best available chunk
+            // This is random and definitely not a true sort function but should be good enough & fast
+            if (chunksThatNeedThreadKickoff.Count > maxChunksToUpdateVar) {
+                var replaceIndex = 0;
+                var compareAgainstOrder =
+                    GetChunkRenderOrder(chunksToKickOffNow[replaceIndex], camPos, forward, focusPositionChunkKey);
+                for (var i = maxChunksToUpdateVar; i < chunksThatNeedThreadKickoff.Count; i++) {
+                    var chunk = chunksThatNeedThreadKickoff[i];
+                    var chunkOrder = GetChunkRenderOrder(chunk, camPos, forward, focusPositionChunkKey);
+                    // If this chunk is earlier in order replace and continue
+                    if (chunkOrder < compareAgainstOrder) {
+                        chunksToKickOffNow[replaceIndex] = chunk;
+                        compareAgainstOrder = chunkOrder;
+                        replaceIndex = (replaceIndex + 1) % maxChunksToUpdateVar;
                     }
                 }
+            }
 
-                return aDist.CompareTo(bDist);
-            });
+            Profiler.EndSample();
 
             var startTime = Time.realtimeSinceStartup;
 
@@ -1167,7 +1210,6 @@ public partial class VoxelWorld : MonoBehaviour {
 
                 if (didUpdate) {
                     updateCounter++;
-                    maxChunksToUpdateVar -= 1;
 
                     var elapsedTime = (int)((Time.realtimeSinceStartup - startTime) * 1000);
                     if (elapsedTime > maxMainThreadThreadKickoffMillisecondsPerFrame) {
@@ -1229,6 +1271,25 @@ public partial class VoxelWorld : MonoBehaviour {
         if (elapsedTimeInMs > 17) {
             //Debug.Log("Slow voxelworld frame update:" + elapsedTimeInMs + "ms");
         }
+    }
+
+    private const double Cos65Deg = 0.422;
+
+    /// <summary>
+    /// Returns the render order for a chunk with lower values representing highest priority chunks
+    /// </summary>
+    private float GetChunkRenderOrder(Chunk chunk, Vector3 camPos, Vector3 forward, Vector3 focusPositionChunkKey) {
+        var chunkKey = chunk.chunkKey;
+        var dist = (chunkKey - focusPositionChunkKey).magnitude;
+        // If chunk is beyond 55 degrees of view from camera then treat it as much (250 blocks) further
+        // in terms of priority
+        if (forward != Vector3.zero) {
+            if (Vector3.Dot(forward, ((chunkKey + Vector3.one * 0.5f) * chunkSize - camPos).normalized) < Cos65Deg) {
+                dist += 250f / chunkSize;
+            }
+        }
+
+        return dist;
     }
 
     public void FullWorldUpdate() {

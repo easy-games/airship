@@ -481,6 +481,18 @@ public static class CreateAssetBundles {
 		return true;
 	}
 
+#if UNITY_EDITOR
+	[MenuItem("Airship/Set Quality/Normal", false, 1901)]
+	static void MenuSetQualityLevel() {
+		CreateAssetBundles.SwapToQualityLevel("Normal");
+	}
+
+	[MenuItem("Airship/Set Quality/Low", false, 1902)]
+	static void MenuSetQualityLevelLow() {
+		CreateAssetBundles.SwapToQualityLevel("Low");
+	}
+#endif
+
 	public static void SwapToQualityLevel(string name) {
 #if UNITY_EDITOR
 		if (name == "Low") {
