@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Numerics;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using Vector3 = UnityEngine.Vector3;
 
@@ -47,18 +48,19 @@ namespace VoxelWorldStuff {
             
 
         }
-            
-        public static void MakeCollision(Chunk src)
-        {
-            
+
+        private static bool[] used = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
+        public static void MakeCollision(Chunk src) {
             GameObject obj = src.GetGameObject();
             if (obj == null)
             {
                 return;
             }
 
-            //allocate new bytes
-            bool[] used = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
+            // Clear used array
+            unsafe {
+                fixed (bool* usedPtr = used) UnsafeUtility.MemSet(usedPtr, 0, used.Length);
+            }
 
             List<CollisionDescriptor> collisions = new List<CollisionDescriptor>();
             
