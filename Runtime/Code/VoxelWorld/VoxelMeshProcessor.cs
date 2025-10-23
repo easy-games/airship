@@ -15,6 +15,7 @@ using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine.Rendering;
 using Quaternion = UnityEngine.Quaternion;
@@ -76,7 +77,7 @@ namespace VoxelWorldStuff {
         const int paddedChunkSize = chunkSize + 2;
 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        NativeArray<Color32> readOnlyColor = new (paddedChunkSize * paddedChunkSize * paddedChunkSize, Allocator.Domain);
+        NativeArray<uint> readOnlyColor = new (paddedChunkSize * paddedChunkSize * paddedChunkSize, Allocator.Domain);
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         public Dictionary<ushort, float> readOnlyDamageMap = new();
         
@@ -136,7 +137,7 @@ namespace VoxelWorldStuff {
         struct ParallelColorJob : IJobParallelFor {
             [ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Vector3> Vertices;
             [ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<byte> IsColored;
-            [ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Color32> ReadonlyColor;
+            [ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<uint> ReadonlyColor;
             [ReadOnly] [NativeDisableParallelForRestriction] public Vector3 ChunkKey;
             public NativeArray<Color32> Colors;
             
@@ -178,7 +179,10 @@ namespace VoxelWorldStuff {
                             var weight = 1.5f - dist;
                             weightTotal += weight;
 
-                            neighborColors[neighborCount] = ReadonlyColor[readonlyVoxelKey];
+                            var col = ReadonlyColor[readonlyVoxelKey];
+                            if (col != 0) {
+                                neighborColors[neighborCount] = VoxelWorld.UIntToColor32(col);
+                            }
                             neighborWeights[neighborCount] = weight;
                             neighborCount++;
                         }
@@ -717,18 +721,22 @@ namespace VoxelWorldStuff {
                 var srcColor = chunk.color.AsSpan();
                 //Main block
                 Profiler.BeginSample("MainBlock");
-                for (int z = 0; z < chunkSize; z++) {
-                    for (int y = 0; y < chunkSize; y++) {
-                        for (int x = 0; x < chunkSize; x++) {
-                            int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
-                            readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
-                            readOnlyColor[index] = chunk.GetLocalColorAt(x, y, z);
+                unsafe {
+                    var destColorPtr = (uint*) readOnlyColor.GetUnsafePtr();
+                    fixed (ushort* destVoxelsPtr = readOnlyVoxel)
+                    fixed (ushort* srcVoxelsPtr = chunk.readWriteVoxel)
+                    fixed (uint* srcColorPtr = chunk.color)
+                        for (int z = 0; z < chunkSize; z++) {
+                            int startIndex = (1) + (1) * paddedChunkSize +
+                                             (z + 1) * paddedChunkSize * paddedChunkSize;
+                            int srcIndex = z * chunkSize * chunkSize;
+                            UnsafeUtility.MemCpyStride(destVoxelsPtr + startIndex, sizeof(ushort) * paddedChunkSize,
+                                srcVoxelsPtr + srcIndex, sizeof(ushort) * chunkSize, sizeof(ushort) * chunkSize, chunkSize);
+                            UnsafeUtility.MemCpyStride(destColorPtr + startIndex, sizeof(uint) * paddedChunkSize,
+                                srcColorPtr + srcIndex, sizeof(uint) * chunkSize, sizeof(uint) * chunkSize, chunkSize);
                         }
-                        int startIndex = (1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
-                        int srcIndex = y * chunkSize + z * chunkSize * chunkSize;
-                        srcVoxels.Slice(srcIndex, chunkSize).CopyTo(readOnlyVoxel.AsSpan(startIndex, chunkSize));
-                    }
                 }
+
                 Profiler.EndSample();
 
                 //xPlane
@@ -748,13 +756,13 @@ namespace VoxelWorldStuff {
                         if (y > 0 && z > 0 && y < paddedChunkSize - 1 && z < paddedChunkSize - 1) {
                             if (x0Chunk != null) {
                                 readOnlyVoxel[x0Index] = x0Chunk.readWriteVoxel[chunkSize - 1 + (y - 1) * chunkSize + (z - 1) * chunkSize * chunkSize];
-                                readOnlyColor[x0Index] = x0Chunk.GetLocalColorAt(chunkSize - 1, y - 1, z - 1);
+                                readOnlyColor[x0Index] = x0Chunk.GetLocalColorUIntAt(chunkSize - 1, y - 1, z - 1);
                             }
 
                             if (x1Chunk != null) {
                                 readOnlyVoxel[x1Index] =
                                     x1Chunk.readWriteVoxel[(y - 1) * chunkSize + (z - 1) * chunkSize * chunkSize];
-                                readOnlyColor[x1Index] = x1Chunk.GetLocalColorAt(0, y - 1, z - 1);
+                                readOnlyColor[x1Index] = x1Chunk.GetLocalColorUIntAt(0, y - 1, z - 1);
                             }
                         } else {
                             var x0WorldPos = new Vector3Int(chunk.bottomLeftInt.x + x0 - 1,
@@ -766,8 +774,8 @@ namespace VoxelWorldStuff {
                                 chunk.world.ReadVoxelAtInternal(x0WorldPos);
                             readOnlyVoxel[x1Index] =
                                 chunk.world.ReadVoxelAtInternal(x1WorldPos);
-                            readOnlyColor[x0Index] = chunk.world.GetVoxelColorAt(x0WorldPos);
-                            readOnlyColor[x1Index] = chunk.world.GetVoxelColorAt(x1WorldPos);
+                            readOnlyColor[x0Index] = chunk.world.GetVoxelColorUIntAt(x0WorldPos);
+                            readOnlyColor[x1Index] = chunk.world.GetVoxelColorUIntAt(x1WorldPos);
                         }
                     }
                 }
@@ -790,17 +798,17 @@ namespace VoxelWorldStuff {
                         if (z > 0 && z < paddedChunkSize - 1) {
                             if (y0Chunk != null) {
                                 readOnlyVoxel[y0Index] = y0Chunk.readWriteVoxel[x - 1 + (chunkSize - 1) * chunkSize + (z - 1) * chunkSize * chunkSize];
-                                readOnlyColor[y0Index] = y0Chunk.GetLocalColorAt(x - 1, chunkSize - 1, z - 1);
+                                readOnlyColor[y0Index] = y0Chunk.GetLocalColorUIntAt(x - 1, chunkSize - 1, z - 1);
                             }
                             if (y1Chunk != null) {
                                 readOnlyVoxel[y1Index] = y1Chunk.readWriteVoxel[x - 1 + (z - 1) * chunkSize * chunkSize];
-                                readOnlyColor[y1Index] = y1Chunk.GetLocalColorAt(x - 1, 0, z - 1);
+                                readOnlyColor[y1Index] = y1Chunk.GetLocalColorUIntAt(x - 1, 0, z - 1);
                             }
                         } else {
                             readOnlyVoxel[y0Index] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
                             readOnlyVoxel[y1Index] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
-                            readOnlyColor[y0Index] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
-                            readOnlyColor[y1Index] = chunk.world.GetVoxelColorAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                            readOnlyColor[y0Index] = chunk.world.GetVoxelColorUIntAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
+                            readOnlyColor[y1Index] = chunk.world.GetVoxelColorUIntAt(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
                         }
                     }
                 }
@@ -824,10 +832,10 @@ namespace VoxelWorldStuff {
 
                     for (int x = 1; x < paddedChunkSize - 1; x++) {
                         if (z0Chunk != null) {
-                            readOnlyColor[z0StartIndex + x] = z0Chunk.GetLocalColorAt(x - 1, y - 1, chunkSize - 1);
+                            readOnlyColor[z0StartIndex + x] = z0Chunk.GetLocalColorUIntAt(x - 1, y - 1, chunkSize - 1);
                         }
                         if (z1Chunk != null) {
-                            readOnlyColor[z1StartIndex + x] = z1Chunk.GetLocalColorAt(x - 1, y - 1, 0);
+                            readOnlyColor[z1StartIndex + x] = z1Chunk.GetLocalColorUIntAt(x - 1, y - 1, 0);
                         }
                     }
                 }
@@ -891,7 +899,7 @@ namespace VoxelWorldStuff {
             return (byte)(Mathf.Lerp(left, right, a) * 255.0f);
         }
 
-        private static int EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv, Color32 col, float[] lerps = null, Vector3 scale = default) {
+        private static int EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, int rot, int flip, Vector2 damageUv, uint col, float[] lerps = null, Vector3 scale = default) {
             if (scale.magnitude == 0) scale = Vector3.one;
             if (mesh == null) {
                 return 0;
@@ -970,8 +978,7 @@ namespace VoxelWorldStuff {
 
             // Prepare transformed vertices
 
-            var isColored = col.r != 0 || col.g != 0 || col.b != 0 || col.a != 0; 
-     
+            var isColored = col != 0; 
             for (int i = 0; i < count; i++) {
                 Vector3 srcVec = sourceVertices[i];
                 var scaledOffset = -(Vector3.one - scale) / 2;
@@ -1334,7 +1341,7 @@ namespace VoxelWorldStuff {
                         // If we are doing an lod write use a detail mesh instead of temporaryMeshData
                         // (this is for the lod variant of quarter blocks for example)
                         var faceMeshData = lodOffset > 0 ? detailMeshData[lodOffset] : temporaryMeshData; 
-                        var isColored = voxelColor.r != 0 || voxelColor.g != 0 || voxelColor.b != 0 || voxelColor.a != 0;
+                        var isColored = voxelColor != 0;
                         for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
                             if (handledBlockFaces[faceIndex].Contains(localVoxelKey)) continue;
                             
@@ -1780,7 +1787,7 @@ namespace VoxelWorldStuff {
             
             float damage = 0;
             var damageUv = new Vector2(damage, 0);
-            var col = new Color32();
+            uint col = 0;
             
             if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterBlocks) {
                 QuarterBlocskEmitSingleBlock(block, meshData, world, damageUv, col);
@@ -1864,7 +1871,7 @@ namespace VoxelWorldStuff {
             return obj;
         }
         
-        private static bool ContextPlacePipeBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, Color32 col) {
+        private static bool ContextPlacePipeBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin, Vector2 damageUv, uint col) {
             //get surrounding data
             VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];
             VoxelData voxDown = readOnlyVoxel[localVoxelKey - paddedChunkSize];
