@@ -314,11 +314,11 @@ namespace Airship.Editor {
             var prefix = $"<color=#8e8e8e>TS</color>";
             
             foreach (var problem in TypescriptProjectsService.Project.ProblemItems) {
-                if (problem is TypescriptFileDiagnosticItem diagnosticItem) {
-                    var diagnosticString = ConsoleFormatting.GetProblemItemString(diagnosticItem);
+                if (problem is not TypescriptFileDiagnosticItem diagnosticItem) continue;
+                var diagnosticString = ConsoleFormatting.GetProblemItemString(diagnosticItem);
+                if (diagnosticItem.ProblemType is TypescriptProblemType.Error or TypescriptProblemType.Fatal) {
                     Debug.LogError($"{prefix} {diagnosticString}");
                 }
-                   
             }
 
             isRestoringErrors = false;
