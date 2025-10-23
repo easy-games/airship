@@ -530,9 +530,11 @@ public class Deploy {
 			Debug.Log("<color=#77f777>Finished publish! Your game is live.</color> ");
 		}
 
+		CreateAssetBundles.SwapToQualityLevel("Normal");
+
 		if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
 	}
-	
+
 	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform, bool absolutePath = false) {
 		var uploadInfo = new UploadInfo();
 		if (platform.HasValue) uploadInfo.platform = platform.Value;
