@@ -212,7 +212,7 @@ namespace Editor {
         }
 
         public static void BuildIOSClient(bool development, bool staging) {
-#if UNITY_EDITOR_OSX
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
