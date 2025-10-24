@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Code.Accessories.Clothing;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -179,7 +180,7 @@ namespace Code.Player.Accessories {
 #endif
         }
 
-        public void Customize(int variant, string[] colorsHex) {
+        public void Customize(int variant, OutfitCustomizationColor[] colorsHex) {
             if (variantSetter) { }
 
             if (colorsHex.Length == 0) {
@@ -187,10 +188,11 @@ namespace Code.Player.Accessories {
             }
 
             var newColor = Color.black;
+            Debug.Log("First colorsHex: " + colorsHex[0]);
             if (colorSetter) {
                 for (var i = 0; i < colorsHex.Length; i++) {
-                    if (ColorUtility.TryParseHtmlString(colorsHex[i], out newColor)) {
-                        colorSetter.SetColor(i, newColor);
+                    if (ColorUtility.TryParseHtmlString(colorsHex[i].colorHex, out newColor)) {
+                        colorSetter.SetColor(colorsHex[i].key, newColor);
                     }
                 }
             } else {
@@ -198,12 +200,12 @@ namespace Code.Player.Accessories {
                 foreach (var set in setters) {
                     var colorLength = colorsHex.Length;
                     if (colorLength == 1) {
-                        if (ColorUtility.TryParseHtmlString(colorsHex[0], out newColor)) {
+                        if (ColorUtility.TryParseHtmlString(colorsHex[0].colorHex, out newColor)) {
                             set.SetColorOnAll(newColor);
                         }
                     } else if (colorLength > 1) {
                         for (var i = 0; i < colorLength; i++) {
-                            if (ColorUtility.TryParseHtmlString(colorsHex[i], out newColor)) {
+                            if (ColorUtility.TryParseHtmlString(colorsHex[i].colorHex, out newColor)) {
                                 set.SetColor(i, newColor);
                             }
                         }

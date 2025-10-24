@@ -38,8 +38,8 @@ public class AccessoryBuilder : MonoBehaviour {
     private readonly Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new();
 
     private static readonly int FaceBaseMapTexture = Shader.PropertyToID("_BaseMap");
-    private AccessoryCustomization customization;
-    private Dictionary<AccessorySlot, AccessoryCustomizationGear> customizationMap = new();
+    private OutfitCustomization customization;
+    private Dictionary<AccessorySlot, OutfitCustomizationGear> customizationMap = new();
 
     //EVENTS
     /// <summary>
@@ -299,7 +299,7 @@ public class AccessoryBuilder : MonoBehaviour {
             RemoveBySlot(accessoryTemplate.accessorySlot);
 
             // Load customizations
-            AccessoryCustomizationGear customData = null;
+            OutfitCustomizationGear customData = null;
             customizationMap.TryGetValue(accessoryTemplate.accessorySlot, out customData);
 
             var lods = new List<ActiveAccessory>();
@@ -689,13 +689,18 @@ public class AccessoryBuilder : MonoBehaviour {
     }
 
 
-    public AccessoryCustomization SetCustomization(string json) {
+    /// <summary>
+    /// TS Outfit loader calls this with the metaData from the outfit 
+    /// </summary>
+    /// <param name="json">Meta data block of outfit customization</param>
+    /// <returns></returns>
+    public OutfitCustomization SetCustomization(string json) {
         if (string.IsNullOrEmpty(json)) {
             return null;
         }
 
         try {
-            customization = JsonConvert.DeserializeObject<AccessoryCustomization>(json);
+            customization = JsonConvert.DeserializeObject<OutfitCustomization>(json);
 
             if (customization != null) {
                 //Map accessory slot to the customization
@@ -715,18 +720,25 @@ public class AccessoryBuilder : MonoBehaviour {
         return customization;
     }
 
-    public AccessoryCustomization GetCustomization() {
+    public OutfitCustomization GetCustomization() {
         return customization;
     }
 
-    public void SetCustomColor(AccessorySlot slot, int colorIndex, string colorHex) {
+    public void SetCustomColor(AccessorySlot slot, string colorKey, string colorHex) {
         var acc = GetActiveAccessoryBySlot(slot);
         if (acc?.AccessoryComponent.colorSetter != null) {
             var newColor = Color.magenta;
             if (ColorUtility.TryParseHtmlString(colorHex, out newColor)) {
-                acc.AccessoryComponent.colorSetter.SetColor(colorIndex, newColor);
+                //Apply the new color
+                acc.AccessoryComponent.colorSetter.SetColor(colorKey, newColor);
                 if (customizationMap.TryGetValue(slot, out var gear)) {
-                    gear.colors[colorIndex] = colorHex;
+                    //Save the hex value into the gear data
+                    for (var i = 0; i < gear.colors.Length; i++) {
+                        if (gear.colors[i].key == colorKey) {
+                            gear.colors[i].colorHex = colorHex;
+                            break;
+                        }
+                    }
                 } else {
                     Debug.LogError("Trying to customize color that is not an option on this slot");
                 }

@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -57,16 +56,14 @@ using UnityEngine.InputSystem;
 using UnityEngine.Splines;
 using TouchPhase = UnityEngine.TouchPhase;
 
-public class TypeGenerator : MonoBehaviour
-{
+public class TypeGenerator : MonoBehaviour {
 #if AIRSHIP_INTERNAL
     [MenuItem("Airship/TypeScript/Generate Types", false, 2000)]
 #endif
     private static void GenerateTypes() {
         print("Generating types...");
 
-        List<Type> types = new()
-        {
+        List<Type> types = new() {
             typeof(RaycastHit),
             typeof(Physics),
             typeof(Physics2D),
@@ -163,7 +160,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterRig),
             typeof(AccessoryFace),
             typeof(AvatarAccessoryCollection),
-            typeof(ContactPoint), 
+            typeof(ContactPoint),
             typeof(ContactPoint2D),
             typeof(SystemInfo),
             typeof(CanvasScaler),
@@ -259,7 +256,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
             typeof(Touchscreen),
-            
+
             // Splines
             typeof(BezierCurve),
             typeof(BezierKnot),
@@ -291,35 +288,32 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyTransformAnchor),
             typeof(EasyAxis),
             typeof(WorldSpaceCanvasScaler),
-            typeof(AccessoryCustomization),
-            typeof(AccessoryCustomizationGear),
+            typeof(OutfitCustomization),
+            typeof(OutfitCustomizationGear),
 
             typeof(VibrationManager),
             typeof(VibrationFeedbackType),
 
 
-            
             // Steam
             typeof(AirshipSteamFriendInfo),
-            
+
             // Editor stuff
-            typeof(EditorPrefs),
+            typeof(EditorPrefs)
         };
 
         // TwoBoneIKConstraint ik;
         // ik.data.hint = null;
 
         // Completely ignores these types (both declarations and usages in other types)
-        string[] skipTypePatterns =
-        {
+        string[] skipTypePatterns = {
             @"^System\.*",
-            "ILogger",
+            "ILogger"
             // "UnityEngine.Vector3Int"
         };
 
         // Skips class declaration but still parses use in parameters.
-        string[] skipClassDeclarationPatterns =
-        {
+        string[] skipClassDeclarationPatterns = {
             "^UnityEngine.Physics$",
             "UnityEngine.Vector2",
             "UnityEngine.Vector3",
@@ -376,33 +370,30 @@ public class TypeGenerator : MonoBehaviour
             "\\.InternalCameraScreenshotRecorder$",
             "\\.OcclusionCam$",
             "\\.AirshipUniVoiceNetwork$",
-            "\\.ServerConsole$",
+            "\\.ServerConsole$"
         };
-        
-        var options = new TypeScriptOptions
-        {
+
+        var options = new TypeScriptOptions {
             ShouldGenerateMethod = (info, definition) => true,
             UseInterfaceForClasses = type => true,
             SkipTypePatterns = skipTypePatterns,
             SkipClassDeclarationPatterns = skipClassDeclarationPatterns,
-            TypeRenamer = type =>
-            {
+            TypeRenamer = type => {
                 if (type == "Vector3Int") {
                     return "Vector3";
                 }
+
                 type = type.Replace("*", "");
 
-                if (type.Contains("$1"))
-                {
+                if (type.Contains("$1")) {
                     print(type);
                     type = type.Substring(0, type.IndexOf("$1"));
                 }
 
                 if (type.Contains("[,")) {
-                    type = Regex.Replace(type, @"\[(,+)\]", match =>
-                    {
-                        int commaCount = match.Groups[1].Value.Length;
-                        int dimensions = commaCount + 1;
+                    type = Regex.Replace(type, @"\[(,+)\]", match => {
+                        var commaCount = match.Groups[1].Value.Length;
+                        var dimensions = commaCount + 1;
                         return string.Concat(Enumerable.Repeat("[]", dimensions));
                     });
                 }
@@ -422,13 +413,10 @@ public class TypeGenerator : MonoBehaviour
         var task = File.WriteAllTextAsync(tsDir, ts);
         print("Saving generated types...");
 
-        try
-        {
+        try {
             task.Wait();
             print("Finished saving Generated.d.ts!");
-        }
-        catch (AggregateException e)
-        {
+        } catch (AggregateException e) {
             Debug.LogException(e);
         }
     }
