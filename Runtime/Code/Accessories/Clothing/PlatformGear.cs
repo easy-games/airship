@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Code.Bootstrap;
 using Code.Platform.Shared;
 using Code.Player.Accessories;
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Serialization;
@@ -103,6 +104,7 @@ namespace Code.Accessories.Clothing {
         }
 
         public static async Task<PlatformGear> DownloadYielding(string classId, string airId) {
+            // Debug.Log($"Downloading classId={classId} airId={airId}");
             var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatformUtil.GetLocalPlatform());
             // var platformString = AirshipPlatformUtil.GetStringName(AirshipPlatform.Windows);
             var url = $"{AirshipPlatformUrl.gameCdn}/airassets/{airId}/{platformString}";
@@ -113,17 +115,33 @@ namespace Code.Accessories.Clothing {
                 await task;
             }
 
-            // Check if we already loaded an asset bundle that contains this clothing piece.
-            if (loadedPlatformGearBundles.TryGetValue(airId, out var loadedBundleInfo)) {
-                foreach (var clothing in loadedBundleInfo.manifest.gearList) {
-                    if (clothing.classId == classId) {
-                        return clothing;
+            bool TryGetAlreadyLoadedGear(out PlatformGear gear) {
+                // Check if we already loaded an asset bundle that contains this clothing piece.
+                if (loadedPlatformGearBundles.TryGetValue(airId, out var loadedBundleInfo)) {
+                    foreach (var clothing in loadedBundleInfo.manifest.gearList) {
+                        if (clothing.classId == classId) {
+                            gear = clothing;
+                            return true;
+                        }
                     }
                 }
+
+                gear = null;
+                return false;
+            }
+
+            if (TryGetAlreadyLoadedGear(out var gear)) {
+                return gear;
+            }
+            // If we have a bundle key but the above TryGetAlreadyLoadedGear failed,
+            // it means the asset bundle didn't actually contain the gear.
+            // In this case, we should fail.
+            if (loadedPlatformGearBundles.ContainsKey(airId)) {
+                throw new Exception($"Gear bundle did not contain desired gear. airId={airId}, classId={classId}");
             }
 
             var inProgressTask = new TaskCompletionSource<bool>();
-            inProgressDownloads.TryAdd(airId, inProgressTask.Task);
+            inProgressDownloads[airId] = inProgressTask.Task;
 
             // Get latest hash
             Hash128 hash;
@@ -145,9 +163,13 @@ namespace Code.Accessories.Clothing {
             await req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success) {
-                Debug.LogError("Failed to download clothing bundle.");
+                Debug.LogError("Failed to download clothing bundle: " + req.error);
                 inProgressTask.SetResult(false);
                 return null;
+            }
+
+            if (TryGetAlreadyLoadedGear(out gear)) {
+                return gear;
             }
 
             AssetBundle bundle = DownloadHandlerAssetBundle.GetContent(req);
