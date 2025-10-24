@@ -236,6 +236,7 @@ namespace Editor.Accessories.Clothing {
                 await updateReq.SendWebRequest();
                 if (updateReq.result != UnityWebRequest.Result.Success) {
                     Debug.LogError("Failed to update air asset: " + updateReq.downloadHandler.text);
+                    EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                     return;
                 }
                 var updateData = JsonUtility.FromJson<AirAssetCreateResponse>(updateReq.downloadHandler.text);
@@ -256,6 +257,7 @@ namespace Editor.Accessories.Clothing {
                     if (putReq.result != UnityWebRequest.Result.Success) {
                         Debug.LogError(putReq.error);
                         Debug.LogError(putReq.downloadHandler.text);
+                        EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                         return;
                     }
                 }
@@ -280,9 +282,12 @@ namespace Editor.Accessories.Clothing {
                 await req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success) {
                     Debug.LogError($"patch classId. url: {url}, response: {req.downloadHandler.text}, authToken: {InternalHttpManager.editorAuthToken}");
+                    EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                     return;
                 }
             }
+
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
 
             Debug.Log($"<color=green>Finished building {bundlePaths.Count} asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color> File size: " + AirshipEditorUtil.GetFileSizeText(bytesCount));
         }
