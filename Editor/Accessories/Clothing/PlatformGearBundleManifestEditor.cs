@@ -26,8 +26,13 @@ namespace Editor.Accessories.Clothing {
         private static string easyOrgId = "6b62d6e3-9d74-449c-aeac-b4feed2012b1";
         private bool skipBuild = false;
 
+        private static void Print(string message) {
+            Debug.Log("GearBundle: " + message);
+        }
+
         [MenuItem("Airship/Internal/Publish All Platform Gear")]
         public static async void PublishAllPlatformGearBundles() {
+            Print("Publishing All Platform Gear");
             List<PlatformGearBundleManifest> gearBundles = new();
 
             // Get all asset GUIDs
@@ -71,8 +76,10 @@ namespace Editor.Accessories.Clothing {
 
         public async Task BuildAllPlatforms() {
             var st = Stopwatch.StartNew();
+            
 
             if (!AirshipPackagesWindow.VerifyBuildModules(true)) {
+                Debug.LogError("Missing build modules. Cannot publish platform gear");
                 return;
             }
 
@@ -84,6 +91,7 @@ namespace Editor.Accessories.Clothing {
 
             // ********************************* //
             var manifest = (PlatformGearBundleManifest)this.target;
+            Print("Building all platforms for gear: " + manifest.name);
 
             (string category, string subcategory) GetGearCategory(PlatformGear gear) {
                 string category = "Clothing";
@@ -100,6 +108,7 @@ namespace Editor.Accessories.Clothing {
 
             // Pre-build check: Make sure all gear accessory LOD's are in the right folder
             foreach (var gear in manifest.gearList) {
+                Print("Checking gear: " + gear.name);
                 if (gear.accessoryPrefabs != null) {
                     foreach (var accessory in gear.accessoryPrefabs) {
                         foreach (var mesh in accessory.meshLods) {
@@ -193,6 +202,7 @@ namespace Editor.Accessories.Clothing {
                 var path = await this.BuildPlatform(platform, airId);
                 if (string.IsNullOrEmpty(path)) {
                     success = false;
+                    Debug.LogError("Unable to build gear bundle for platform: " + path);
                     return;
                 }
 
