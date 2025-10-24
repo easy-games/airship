@@ -57,14 +57,19 @@ using Object = UnityEngine.Object;
         /// </summary>
         // [InitializeOnLoad]
         public static class TypescriptCompilationService {
+
+            
             private const int ExitCodeKill = 137;
             private const string TsCompilerService = "Compiling Scripts";
+
+  
             
             /// <summary>
             /// True if the compiler is running in watch mode
             /// </summary>
             public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
             public static bool Crashed { get; private set; }
+            [CanBeNull] internal static TypescriptCompilationResult CompilationResult;
 
             /// <summary>
             /// The last DateTime the compiler compiled files
@@ -228,7 +233,6 @@ using Object = UnityEngine.Object;
                     return;
                 }
 
-                var artifacts = AirshipLocalArtifactDatabase.instance;
                 var modifiedDatabase = false;
                 
                 try {
@@ -236,24 +240,7 @@ using Object = UnityEngine.Object;
                     var compileFileList = CompiledFileQueue.ToArray();
                     
                     foreach (var file in compileFileList) {
-                        // var outFileHash = TypescriptProjectsService.Project.GetOutputFileHash(file);
-                        //
-                        // if (artifacts.TryGetScriptAssetDataFromPath(PosixPath.ToPosix(file), out var data)) {
-                        //     if (string.IsNullOrEmpty(outFileHash) || string.IsNullOrEmpty(data.metadata.compiledHash) || outFileHash != data.metadata.compiledHash) {
-                        //         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                        //         data.metadata.compiledHash = outFileHash;
-                        //         modifiedDatabase = true;
-                        //     }
-                        // }
-                        // else {
-                        //     var scriptData = artifacts.GetOrCreateScriptAssetData(AssetDatabase.LoadAssetAtPath<AirshipScript>(file));
-                        //     scriptData.metadata = new TypescriptCompilerMetadata() {
-                        //         compiledHash = outFileHash
-                        //     };
-                            
-                            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                        //     modifiedDatabase = true;
-                        // }
+                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                     }
                     
                     AssetDatabase.Refresh();
@@ -261,9 +248,6 @@ using Object = UnityEngine.Object;
                     Debug.LogException(ex);
                 } finally {
                     AssetDatabase.StopAssetEditing();
-                    if (modifiedDatabase) {
-                        artifacts.Modify();
-                    }
                 }
                 
                 EditorApplication.update -= ReimportCompiledFiles;
@@ -271,6 +255,10 @@ using Object = UnityEngine.Object;
                 
                 IsImportingFiles = false;
                 AirshipReconciliationService.StopScriptUpdates();
+                
+                AssetDatabase.ImportAsset(AirshipBuildInfo.PrimaryAssetPath, ImportAssetOptions.Default);
+                AirshipCustomEditors.RegisterEditorsForRegisteredTypes();
+                
                 CompiledFileQueue.Clear();
             }
 
@@ -335,9 +323,18 @@ using Object = UnityEngine.Object;
                 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs, nodeJsArgs));
                 TypescriptLogService.Log(TypescriptLogLevel.Information, "Started compiler services.");
-                
+
+                TypescriptServices.FinishedCompilation += OnPostInitialCompilation;
                 TypescriptServices.IsCompilerStoppedByUser = false;
                 IsStartingUp = false;
+            }
+
+            private static void OnPostInitialCompilation(TypescriptCompilationResult result) {
+                if (!result.InitialCompilation) return;
+                
+                Debug.Log("Running post compilation step");
+                AirshipCustomEditors.RegisterEditorsForRegisteredTypes();
+                TypescriptServices.FinishedCompilation -= OnPostInitialCompilation;
             }
             
             internal static void StopCompilers() {
@@ -642,7 +639,6 @@ using Object = UnityEngine.Object;
                         LastCompiled = DateTime.Now;
                     }
                     else if (jsonData.Event == CompilerEventType.FinishedCompile) {
-                        // AssetDatabase.StopAssetEditing();
                         Progress.Finish(project.ProgressId);
 
                         if (project.CompilationState.CompiledFileCount > 0) {
@@ -660,6 +656,13 @@ using Object = UnityEngine.Object;
 
                         IsCompilingFiles = false;
                         LastCompiled = DateTime.Now;
+                     
+                        CompilationResult = new TypescriptCompilationResult() {
+                            CompiledFileCount = project.CompilationState.CompiledFileCount,
+                            InitialCompilation = project.CompilationState.RequiresInitialCompile,
+                        };
+                        
+                        project.CompilationState.RequiresInitialCompile = false;
                     }
                     else if (jsonData.Event == CompilerEventType.CompiledFile) {
                         var arguments = jsonData.Arguments.ToObject<CompiledFileEvent>();

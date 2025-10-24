@@ -101,10 +101,6 @@ namespace Airship.Editor {
         /// </summary>
         /// <param name="component"></param>
         internal static bool ReconcileComponent(AirshipComponent component) {
-            // if (string.IsNullOrEmpty(component.guid)) {
-            //     component.guid = Guid.NewGuid().ToString();
-            // }
-            
 #if AIRSHIP_DEBUG
             var additions = new HashSet<string>();
             var deletions = new HashSet<string>();
@@ -141,10 +137,14 @@ namespace Airship.Editor {
                 else {
                     if (!componentProperty.HasSameTypesAs(scriptProperty)) {
                         componentProperty.ReconcileTypesWith(scriptProperty);
-                        componentProperty.ReconcileItemsWith(scriptProperty);
+                        // componentProperty.ReconcileItemsWith(scriptProperty);
 #if AIRSHIP_DEBUG
                         modifications.Add(componentProperty.name);
 #endif
+                    }
+
+                    if (!componentProperty.HasSameItemsTypesAs(scriptProperty)) {
+                        componentProperty.ReconcileItemsWith(scriptProperty);
                     }
                 }
                 

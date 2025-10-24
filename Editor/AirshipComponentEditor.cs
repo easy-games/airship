@@ -39,6 +39,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     /** Maps (game object id, prop name) to ArrayDisplayInfo object (for Array properties) */
     private Dictionary<(int componentInstanceId, string propertyName), ArrayDisplayInfo> _reorderableLists = new();
 
+    private AirshipEditor editor;
+    
     public void OnEnable() {
         var comp = (Component)serializedObject.targetObject;
         var metadata = serializedObject.FindProperty("metadata");
@@ -50,6 +52,16 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             var listPropType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(arrayType, false);
             GetOrCreateArrayDisplayInfo(comp.GetInstanceID(), serializedProperty, serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
         }
+        
+        AirshipComponent binding = (AirshipComponent)target;
+        if (binding.script != null && binding.metadata != null) {
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            
+            if (customEditorType != null && AirshipCustomEditors.TryGetEditorForComponent(binding, customEditorType, out var editor)) {
+                editor.OnEnable();
+                this.editor = editor;
+            }
+        }
     }
 
     private void OnDisable() {
@@ -58,24 +70,89 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         
         var componentInstanceId = comp.GetInstanceID();
         _componentSeenArrayProps.Remove(componentInstanceId);
+        
+        AirshipComponent binding = (AirshipComponent)target;
+        if (binding.script != null && binding.metadata != null) {
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            if (customEditorType != null) {
+                var editor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
+                editor.OnDisable();
+            }
+
+            this.editor = null;
+        }
+    }
+
+    private void OnDestroy() {
+        AirshipComponent binding = (AirshipComponent)target;
+        AirshipCustomEditors.DestroyEditor(binding);
     }
 
     private bool debugging = false;
-    
-    public override void OnInspectorGUI() {
-        serializedObject.Update();
 
+    private void OnSceneGUI() {
+        if (!AirshipCustomEditors.UseNewInspector) return;
+        if (!this.editor) return;
+        this.editor.OnSceneGUI();
+    }
+
+    public override void OnPreviewGUI(Rect r, GUIStyle background) {
+        if (!AirshipCustomEditors.UseNewInspector) return;
+        if (!this.editor) return;
+        this.editor.OnPreviewGUI(r, background);
+    }
+
+    public override bool HasPreviewGUI() {
+        if (!AirshipCustomEditors.UseNewInspector) return false;
+        return this.editor != null ? this.editor.HasPreviewGUI() : false;
+    }
+
+    private bool OnAirshipInspectorGUI() {
+        if (!AirshipCustomEditors.UseNewInspector) return false;
+        
         AirshipComponent binding = (AirshipComponent)target;
-
-        if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
-            // Debug.Log("Setting Script File from Path: " + binding.scriptPath);
-            // binding.SetScriptFromPath(binding.scriptPath, LuauContext.Game);
-            if (binding.script == null) {
-                Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
-                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
+        
+        Type customEditorType = null;
+        if (binding.script != null && binding.metadata != null) {
+            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+        }
+        
+        if (customEditorType != null && binding.script != null) {
+            var metadata = serializedObject.FindProperty("metadata");
+            var metadataName = metadata.FindPropertyRelative("name");
+            
+            if (binding.script != null && binding.script.m_metadata != null) {
+                if (ShouldReconcile(binding)) {
+                    binding.ReconcileMetadata(ReconcileSource.Inspector);
+                    serializedObject.ApplyModifiedProperties();
+                    serializedObject.Update();
+                }
+            
+                CheckDefaults(binding);
             }
+            
+            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
+                var componentEditor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
+                if (this.editor == null) this.editor = componentEditor;
+                componentEditor.script = binding.script;
+                componentEditor.target = binding;
+                componentEditor.OnInspectorGUI();
+            }
+            
+            serializedObject.ApplyModifiedProperties();
+            
+            if (Application.isPlaying) {
+                var component = (AirshipComponent)target;
+                component.WriteChangedComponentProperties();
+            }
+            return true;
         }
 
+        return false;
+    }
+
+    private void OnAirshipLegacyInspectorGUI() {
+        AirshipComponent binding = (AirshipComponent)target;
         DrawScriptBindingProperties(binding);
 
         if (binding.script != null && binding.script.m_metadata != null) {
@@ -115,6 +192,23 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         serializedObject.ApplyModifiedProperties();
     }
 
+    public override void OnInspectorGUI() {
+        serializedObject.Update();
+
+        AirshipComponent binding = (AirshipComponent)target;
+
+        if (binding.script == null && !string.IsNullOrEmpty(binding.scriptPath)) {
+            if (binding.script == null) {
+                Debug.LogWarning($"Failed to load script asset: {binding.scriptPath}");
+                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.scriptPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
+            }
+        }
+        
+        if (!OnAirshipInspectorGUI()) {
+            OnAirshipLegacyInspectorGUI();
+        }
+    }
+
 
     private Dictionary<int, HashSet<string>> _componentSeenArrayProps = new();
     private void CleanupOrphanedArrayDisplayInfos(int componentInstanceId) {
@@ -145,8 +239,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
     }
     
     private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(int componentInstanceId, SerializedProperty arraySerializedProperty, string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
-        
-        
         Type objType = null;
         if (listType == AirshipComponentPropertyType.AirshipObject || listType == AirshipComponentPropertyType.AirshipComponent) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
@@ -861,7 +953,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
 
                 if (objectType == typeof(Sprite) || objectType == typeof(Texture2D)) {
-                    var objNew = AirshipEditorGUI.ObjectField(rect, new GUIContent(label), objOld, objectType, true);
+                    var objNew = AirshipEditorGUI.ObjectField(rect, new GUIContent(label), objOld, objectType, true, false);
                     if (objOld != objNew) {
                         objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
                         arrayModified.boolValue = true;
@@ -1286,7 +1378,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
 
         UnityEngine.Object newObject;
         if (t == typeof(Sprite) || t == typeof(Texture2D)) {
-            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true);
+            newObject = AirshipEditorGUI.ObjectFieldLayout(guiContent, currentObject, t, true, false);
         } else {
             newObject = EditorGUILayout.ObjectField(guiContent, currentObject, t, true);
         }

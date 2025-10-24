@@ -58,6 +58,8 @@ namespace Editor {
             }
         }
         
+        public Texture2D icon;
+        
         [MenuItem("Airship/TypeScript/Reimport Scripts")]
         public static void ReimportAllTypescript() {
             ReimportAllLuau();
@@ -126,17 +128,23 @@ namespace Editor {
                     typescriptIconPath = IconFail;
                 }
 
-                Texture2D icon;
+                Texture2D assetIcon;
                 if (airshipScript.m_metadata?.displayIcon != null && hasCompiled) {
-                    icon = airshipScript.m_metadata.displayIcon;
+                    assetIcon = airshipScript.m_metadata.displayIcon;
                 }
                 else {
-                    icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+                    if (this.icon != null) {
+                        assetIcon = this.icon;
+                        if (airshipScript.m_metadata != null)
+                            airshipScript.m_metadata.displayIcon = this.icon;
+                    } else {
+                        assetIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+                    }
                 }
 
                 airshipScript.typescriptWasCompiled = hasCompiled;
                 airshipScript.compiledFileHash = project.GetOutputFileHash(assetPath);
-                ctx.AddObjectToAsset(fileName, airshipScript, icon);
+                ctx.AddObjectToAsset(fileName, airshipScript, assetIcon);
                 ctx.SetMainObject(airshipScript);
                 
                 if (AirshipReconciliationService.ReconcilerVersion == ReconcilerVersion.Version2 && airshipScript.airshipBehaviour) {
