@@ -9,7 +9,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
+#if UNITY_EDITOR_OSX
 using UnityEditor.OSXStandalone;
 #endif
 
@@ -212,13 +212,12 @@ namespace Editor {
         }
 
         public static void BuildIOSClient(bool development, bool staging) {
-#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
+#if AIRSHIP_PLAYER
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
             CreateAssetBundles.SwapToQualityLevel("Low");
 
-            UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
