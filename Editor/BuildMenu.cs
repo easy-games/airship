@@ -9,7 +9,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-#if UNITY_EDITOR_OSX
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
 using UnityEditor.OSXStandalone;
 #endif
 
