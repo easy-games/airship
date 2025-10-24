@@ -233,6 +233,10 @@ namespace Code.Luau {
             
             return value;
         }
+        
+        public static AirshipComponent AirshipBehaviourField(Rect r, GUIContent content, AirshipScript script, AirshipComponent airshipComponent) {
+            return AirshipBehaviourField(r, content, script, airshipComponent, null);
+        }
 
         internal static AirshipComponent AirshipBehaviourField(GUIContent content, AirshipScript script, SerializedProperty property) {
             var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
