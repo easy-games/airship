@@ -314,11 +314,11 @@ namespace Airship.Editor {
             var prefix = $"<color=#8e8e8e>TS</color>";
             
             foreach (var problem in TypescriptProjectsService.Project.ProblemItems) {
-                if (problem is TypescriptFileDiagnosticItem diagnosticItem) {
-                    var diagnosticString = ConsoleFormatting.GetProblemItemString(diagnosticItem);
+                if (problem is not TypescriptFileDiagnosticItem diagnosticItem) continue;
+                var diagnosticString = ConsoleFormatting.GetProblemItemString(diagnosticItem);
+                if (diagnosticItem.ProblemType is TypescriptProblemType.Error or TypescriptProblemType.Fatal) {
                     Debug.LogError($"{prefix} {diagnosticString}");
                 }
-                   
             }
 
             isRestoringErrors = false;
@@ -327,6 +327,9 @@ namespace Airship.Editor {
         private static int prevLogCount = 0;
         private static bool isRestoringErrors = false;
         private static bool invokedCrashEvent = false;
+        
+        public delegate void CompilationEndedEvent(TypescriptCompilationResult compilationResult);
+        public static event CompilationEndedEvent FinishedCompilation;
         
         private static void OnUpdate() {
             if (isRestoringErrors) return;
@@ -347,12 +350,10 @@ namespace Airship.Editor {
                 invokedCrashEvent = false;
             }
 
-            // var shouldAutostart = !IsCompilerActive && !TypescriptCompilationService.Crashed &&
-            //                       ShouldCompilerBeRunning && !IsAwaitingRestart && !IsCompilerStoppedByUser && HasAllPackagesDownloaded();
-            //
-            // if (!shouldAutostart) return;
-            // TypescriptLogService.LogWarning("Found compiler inactive, doing an automatic restart");
-            // EditorCoroutines.Execute(StartTypescriptRuntime());
+            if (TypescriptCompilationService.CompilationResult != null) {
+                FinishedCompilation?.Invoke(TypescriptCompilationService.CompilationResult);
+                TypescriptCompilationService.CompilationResult = null;
+            }
         }
     }
 }
