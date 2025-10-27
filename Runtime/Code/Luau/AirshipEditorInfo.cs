@@ -72,13 +72,6 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
             keys[i] = member.name;
         }
         
-#if UNITY_EDITOR
-        keysNicified = new string[_members.Count];
-        for (var i = 0; i < _members.Count; i++) {
-            keysNicified[i] = ObjectNames.NicifyVariableName(keys[i]);
-        }
-#endif
-        
         if (_memberType != TypeScriptEnumMemberType.Integer) return;
         
         isFlagLike = _members.Count > 0;
@@ -99,7 +92,8 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
     }
 
     public string[] keys { get; private set; }
-    public string[] keysNicified { get; private set; }
+
+    private string[] _keysNicified;
 
     public TypeScriptEnumMember this[int index] {
         get {

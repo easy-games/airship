@@ -36,6 +36,26 @@ public class AirshipSerializedObject {
     public AirshipType airshipType => AirshipBuildInfo.Instance.GetTypeByName(serializedName.stringValue);
     public AirshipComponent airshipComponent => (AirshipComponent)serializedObject.targetObject;
 
+    internal AirshipSerializedObject() {}
+    public AirshipSerializedObject(AirshipComponent component) => Update(null, new SerializedObject(component), component.metadata);
+    
+    [CanBeNull]
+    internal AirshipSerializedObject prefabAsset {
+        get {
+            if (PrefabUtility.IsPartOfPrefabInstance(serializedObject.targetObject)) {
+                var obj = new AirshipSerializedObject();
+                var original = (AirshipComponent) PrefabUtility.GetCorrespondingObjectFromOriginalSource(serializedObject.targetObject);
+                var serObj =
+                    new SerializedObject(original);
+                
+                obj.Update(this.editor, serObj, original.metadata);
+                return obj;
+            } else {
+                return null;
+            }
+        }
+    }
+    
     internal void Update(AirshipEditor currentEditor, SerializedObject currentSerializedObject, LuauMetadata currentMetadata) {
         _propertyCache.Clear();
         serializedObject = currentSerializedObject;

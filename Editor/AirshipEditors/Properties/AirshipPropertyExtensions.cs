@@ -80,10 +80,40 @@ public static class AirshipPropertyExtensions {
     /// <param name="type">The component type</param>
     /// <returns></returns>
     public static AirshipComponent[] GetAirshipComponents(this GameObject gameObject, AirshipType type) {
-        List<AirshipComponent> components = new List<AirshipComponent>();
+        var components = new List<AirshipComponent>();
         
         if (type == null) return null;
         foreach (var airshipComponent in gameObject.GetComponents<AirshipComponent>()) {
+            var componentType = airshipComponent.GetAirshipType();
+            if (componentType == null) continue; 
+            
+            if (airshipComponent.GetAirshipType() == type) {
+                components.Add(airshipComponent);
+            }
+        }
+
+        return components.ToArray();
+    }
+    
+    public static AirshipComponent GetAirshipComponentInChildren(this GameObject gameObject, AirshipType type) {
+        if (type == null) return null;
+        foreach (var airshipComponent in gameObject.GetComponentsInChildren<AirshipComponent>()) {
+            var componentType = airshipComponent.GetAirshipType();
+            if (componentType == null) continue; 
+            
+            if (airshipComponent.GetAirshipType() == type) {
+                return airshipComponent;
+            }
+        }
+
+        return null;
+    }
+    
+    public static AirshipComponent[] GetAirshipComponentsInChildren(this GameObject gameObject, AirshipType type) {
+        var components = new List<AirshipComponent>();
+        
+        if (type == null) return null;
+        foreach (var airshipComponent in gameObject.GetComponentsInChildren<AirshipComponent>()) {
             var componentType = airshipComponent.GetAirshipType();
             if (componentType == null) continue; 
             

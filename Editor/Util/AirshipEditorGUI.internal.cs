@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using Code.Luau;
 using Editor.EditorInternal;
+using JetBrains.Annotations;
 using Luau;
 using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
@@ -572,9 +573,9 @@ public static partial class AirshipEditorGUI {
                 int nextValue;
             
                 if (rect.GetCustomRect(out var position)) {
-                    nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keysNicified.Select(v => new GUIContent(v)).ToArray());
+                    nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 } else {
-                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keysNicified);
+                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 }
             
                 if (prevValue != nextValue) {
@@ -590,9 +591,9 @@ public static partial class AirshipEditorGUI {
                 int nextValue;
             
                 if (rect.GetCustomRect(out var position)) {
-                    nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keysNicified.Select(v => new GUIContent(v)).ToArray());
+                    nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 } else {
-                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keysNicified);
+                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 }
             
                 if (prevValue != nextValue) {
@@ -620,9 +621,9 @@ public static partial class AirshipEditorGUI {
     /// to add a matching 'EndSerializedProperty()' call
     /// </summary>
     /// <param name="property"></param>
-    internal static void BeginSerializedProperty(AirshipSerializedProperty property) {
+    internal static void BeginSerializedProperty([CanBeNull] AirshipSerializedProperty property) {
         prevBold = AirshipEditorInternals.GetBoldDefaultFont();
-        if (property.prefabOverride) {
+        if (property != null && property is { prefabOverride: true }) {
             AirshipEditorInternals.SetBoldDefaultFont(true);
         }
 
