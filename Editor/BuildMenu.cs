@@ -295,6 +295,23 @@ namespace Editor {
                 AndroidEnvironment.Staging => "airship-staging",
                 _ => throw new ArgumentOutOfRangeException(nameof(environment), environment, null)
             };
+
+            Dictionary<string, string> envOptions = GetValidatedOptions();
+            if (envOptions.TryGetValue("androidKeystoreName", out string keystoreName) &&
+                !string.IsNullOrEmpty(keystoreName))
+            {
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = keystoreName;
+            }
+            if (envOptions.TryGetValue("androidKeystorePass", out string keystorePass) &&
+                !string.IsNullOrEmpty(keystorePass))
+                PlayerSettings.Android.keystorePass = keystorePass;
+            if (envOptions.TryGetValue("androidKeyaliasName", out string keyaliasName) &&
+                !string.IsNullOrEmpty(keyaliasName))
+                PlayerSettings.Android.keyaliasName = keyaliasName;
+            if (envOptions.TryGetValue("androidKeyaliasPass", out string keyaliasPass) &&
+                !string.IsNullOrEmpty(keyaliasPass))
+                PlayerSettings.Android.keyaliasPass = keyaliasPass;
             
             var editorBuildScenes = new List<EditorBuildSettingsScene>();
             foreach (var sceneName in scenes) {
@@ -497,6 +514,67 @@ namespace Editor {
             CreateAssetBundles.AddAllGameBundleScenes();
 #endif
         }
+
+        // From Game CI example
+        private static Dictionary<string, string> GetValidatedOptions() {
+            ParseCommandLineArguments(out Dictionary<string, string> validatedOptions);
+
+            if (!validatedOptions.TryGetValue("projectPath", out string _))
+            {
+                Console.WriteLine("Missing argument -projectPath");
+                EditorApplication.Exit(110);
+            }
+
+            if (validatedOptions.TryGetValue("buildTarget", out var buildTarget))
+            {
+                if (!Enum.IsDefined(typeof(BuildTarget), buildTarget ?? string.Empty))
+                {
+                    Console.WriteLine($"{buildTarget} is not a defined {nameof(BuildTarget)}");
+                    EditorApplication.Exit(121);
+                }
+            }
+            else if (!validatedOptions.TryGetValue("activeBuildProfile", out string _))
+            {
+                Console.WriteLine("Missing argument -buildTarget or -activeBuildProfile");
+                EditorApplication.Exit(120);
+            }
+
+            if (!validatedOptions.TryGetValue("customBuildPath", out string _))
+            {
+                Console.WriteLine("Missing argument -customBuildPath");
+                EditorApplication.Exit(130);
+            }
+
+            return validatedOptions;
+        }
+        
+        private static readonly string[] Secrets =
+            {"androidKeystorePass", "androidKeyaliasName", "androidKeyaliasPass"};
+
+        private static void ParseCommandLineArguments(out Dictionary<string, string> providedArguments)  {
+            providedArguments = new Dictionary<string, string>();
+            string[] args = Environment.GetCommandLineArgs();
+
+            // Extract flags with optional values
+            for (int current = 0, next = 1; current < args.Length; current++, next++)
+            {
+                // Parse flag
+                bool isFlag = args[current].StartsWith("-");
+                if (!isFlag) continue;
+                string flag = args[current].TrimStart('-');
+
+                // Parse optional value
+                bool flagHasValue = next < args.Length && !args[next].StartsWith("-");
+                string value = flagHasValue ? args[next].TrimStart('-') : "";
+                bool secret = Secrets.Contains(flag);
+                string displayValue = secret ? "*HIDDEN*" : "\"" + value + "\"";
+
+                // Assign
+                Console.WriteLine($"Found flag \"{flag}\" with value {displayValue}.");
+                providedArguments.Add(flag, value);
+            }
+        }
+        
     }
 }
 #endif
