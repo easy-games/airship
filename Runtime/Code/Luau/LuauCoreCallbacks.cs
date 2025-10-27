@@ -486,6 +486,8 @@ public partial class LuauCore : MonoBehaviour {
                             } else {
                                 SetPropertyValue<uint>(objectReference, unchecked((uint)doubleValue), property);
                             }
+
+                            return 0;
                         } else if (t.IsAssignableFrom(longType)) {
                             if (field != null) {
                                 SetFieldValue<long>(objectReference, (long)doubleValue, field);
