@@ -472,6 +472,16 @@ public partial class LuauCore : MonoBehaviour
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &value), 0);
     }
     
+    public static unsafe void WritePropertyToThreadInt16(IntPtr thread, short value) {
+        int number = value;
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &number), 0);
+    }
+    
+    public static unsafe void WritePropertyToThreadUInt16(IntPtr thread, ushort value) {
+        int number = value;
+        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &number), 0);
+    }
+    
     public static unsafe void WritePropertyToThreadByte(IntPtr thread, byte value) {
         int number = value;
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &number), 0);
@@ -494,9 +504,14 @@ public partial class LuauCore : MonoBehaviour
     }
 
     public static unsafe void WritePropertyToThreadString(IntPtr thread, string value) {
+        if (value == null) {
+            LuauPluginNative.LuaPushNil(thread);
+            return;
+        }
+        
         var strPtr = Marshal.StringToCoTaskMemUTF8(value);
         var strLen = Encoding.UTF8.GetByteCount(value);
-        LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_STRING, strPtr, (ulong)strLen);
+        LuauPluginNative.LuaPushString(thread, strPtr, strLen);
         Marshal.FreeCoTaskMem(strPtr);
     }
 
@@ -1693,6 +1708,10 @@ public partial class LuauCore : MonoBehaviour
     public static Vector3 NewVector3FromPointer(IntPtr data) {
         Marshal.Copy(data, VectorData, 0, 3);
         return new Vector3(VectorData[0], VectorData[1], VectorData[2]);
+    }
+
+    public static string NewStringFromPointer(IntPtr data, int size) {
+        return PtrToStringUTF8(data, size);
     }
 
     public static BinaryBlob NewBinaryBlobFromPointer(IntPtr data) {
