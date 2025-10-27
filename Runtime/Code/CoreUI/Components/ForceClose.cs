@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using ElRaccoone.Tweens;
 using ElRaccoone.Tweens.Core;
 using TMPro;
@@ -6,6 +7,8 @@ using UnityEngine;
 
 namespace Code.CoreUI.Components {
     public class ForceClose : MonoBehaviour {
+        const float HideTweenDuration = 0.2f;
+        
         public RectTransform container;
         public RectTransform fill;
         public TMP_Text text;
@@ -13,16 +16,29 @@ namespace Code.CoreUI.Components {
 
         [NonSerialized] private float holdTime = 0f;
         [NonSerialized] private ITween tween;
+        [NonSerialized] private Coroutine hidingCoroutine;
         [NonSerialized] private bool isShown = false;
         [NonSerialized] private bool disconnected = false;
+        [NonSerialized] private GameObject containerGameObject;
+
+        private void Awake() {
+            containerGameObject = container.gameObject;
+            
+            containerGameObject.SetActive(false);
+        }
 
         private void Update() {
             if (Input.GetKey(KeyCode.Escape)) {
                 if (!this.isShown && this.holdTime >= 0.5f) {
                     this.isShown = true;
+                    this.containerGameObject.SetActive(true);
                     if (this.tween != null) {
                         this.tween.Cancel();
                         this.tween = null;
+                    }
+                    if (hidingCoroutine != null) {
+                        StopCoroutine(hidingCoroutine);
+                        hidingCoroutine = null;
                     }
 
                     this.tween = NativeTween.AnchoredPositionY(this.container, -10f, 0.18f).SetEaseBounceOut();
@@ -46,7 +62,17 @@ namespace Code.CoreUI.Components {
             // not holding escape
             if (this.isShown) {
                 this.isShown = false;
-                this.tween = NativeTween.AnchoredPositionY(this.container, 71f, 0.2f).SetEaseQuadOut();
+                this.tween = NativeTween.AnchoredPositionY(this.container, 71f, HideTweenDuration).SetEaseQuadOut();
+                hidingCoroutine = StartCoroutine(DelayHide(HideTweenDuration));
+            }
+        }
+
+        private IEnumerator DelayHide(float delay) {
+            yield return new WaitForSeconds(delay);
+
+            if (!this.isShown) {
+                if (containerGameObject != null) containerGameObject.SetActive(false);
+                hidingCoroutine = null;
             }
         }
     }
