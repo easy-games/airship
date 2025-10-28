@@ -4,15 +4,15 @@
 [LuauAPI]
 [System.Serializable]
 public class OutfitCustomization {
-    public OutfitCustomizationGear[] platformCustomGear;
+    public OutfitCustomizationSlot[]  platformCustomSlots = new OutfitCustomizationSlot[0];
 }
 
 [LuauAPI]
 [System.Serializable]
-public class OutfitCustomizationGear {
-    public int[] slots;
+public class OutfitCustomizationSlot {
+    public int slot = 0;
     public int variant = 0;
-    public OutfitCustomizationColor[] colors;
+    public OutfitCustomizationColor[] colors = new OutfitCustomizationColor[0];
 }
 
 [LuauAPI]

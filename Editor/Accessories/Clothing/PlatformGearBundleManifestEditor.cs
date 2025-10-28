@@ -208,17 +208,6 @@ namespace Editor.Accessories.Clothing {
 
                 bundlePaths.Add(path);
             }
-            // {
-            //     var path = await this.BuildPlatform(AirshipPlatform.Windows, airId);
-            //     if (string.IsNullOrEmpty(path)) {
-            //         success = false;
-            //         return;
-            //     }
-            //
-            //     bundlePaths.Add(path);
-            // }
-
-            if (!success) return;
 
             // ******************** //
 

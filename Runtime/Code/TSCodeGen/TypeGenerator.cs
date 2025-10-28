@@ -289,7 +289,7 @@ public class TypeGenerator : MonoBehaviour {
             typeof(EasyAxis),
             typeof(WorldSpaceCanvasScaler),
             typeof(OutfitCustomization),
-            typeof(OutfitCustomizationGear),
+            typeof(OutfitCustomizationSlot),
 
             typeof(VibrationManager),
             typeof(VibrationFeedbackType),
