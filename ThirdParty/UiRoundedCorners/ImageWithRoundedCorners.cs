@@ -42,10 +42,18 @@ namespace Nobi.UiRoundedCorners {
 			image = null;
 		}
 
+		protected override void OnTransformParentChanged() {
+			base.OnTransformParentChanged();
+			if (Application.isPlaying && !RunCore.IsClient()) return;
+			
+			SetupCanvasShaderChannels();
+		}
+
 		private void OnEnable() {
 			base.OnEnable();
-			
 			if (Application.isPlaying && !RunCore.IsClient()) return;
+
+			SetupCanvasShaderChannels();
 
             //You can only add either ImageWithRoundedCorners or ImageWithIndependentRoundedCorners
             //It will replace the other component when added into the object.
@@ -58,6 +66,14 @@ namespace Nobi.UiRoundedCorners {
 
             Validate();
 			Refresh();
+		}
+
+		private void SetupCanvasShaderChannels() {
+			var canvas = GetComponentInParent<Canvas>();
+			if (canvas != null && (canvas.additionalShaderChannels & AdditionalCanvasShaderChannels.TexCoord1) == 0) {
+				// TexCoord1 required for sending UV1 to shaders
+				canvas.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1;
+			}
 		}
 
 		private void OnRectTransformDimensionsChange() {
