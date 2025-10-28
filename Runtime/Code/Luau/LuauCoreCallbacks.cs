@@ -141,7 +141,7 @@ public partial class LuauCore : MonoBehaviour {
         printCallback_holder = PrintCallback;
         getPropertyCallback_holder = GetPropertySafeCallback;
         setPropertyCallback_holder = SetPropertySafeCallback;
-        callMethodCallback_holder = CallMethodCallback;
+        callMethodCallback_holder = CallMethodSafeCallback;
         objectGCCallback_holder = ObjectGcCallback;
         requireCallback_holder = RequireCallback;
         constructorCallback_holder = ConstructorCallback;
@@ -486,6 +486,8 @@ public partial class LuauCore : MonoBehaviour {
                             } else {
                                 SetPropertyValue<uint>(objectReference, unchecked((uint)doubleValue), property);
                             }
+
+                            return 0;
                         } else if (t.IsAssignableFrom(longType)) {
                             if (field != null) {
                                 SetFieldValue<long>(objectReference, (long)doubleValue, field);
@@ -1361,10 +1363,25 @@ public partial class LuauCore : MonoBehaviour {
     private static int[] _parameterIsTable = new int[MaxParameters];
     private static Dictionary<string, int> callCount = new Dictionary<string, int>();
     private static int numCalls = 0;
-    
-    // When a lua object wants to call a method
+
     [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.CallMethodCallback))]
-    static unsafe int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int methodNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
+    static unsafe int CallMethodSafeCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr,
+        int classNameSize, IntPtr methodNamePtr, int methodNameLength, int methodNameAtom, int numParameters,
+        IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable,
+        IntPtr shouldYield) {
+        int ret;
+        try {
+            ret = CallMethod(context, thread, instanceId, classNamePtr, classNameSize, methodNamePtr,
+                methodNameLength, methodNameAtom, numParameters, firstParameterType, firstParameterData,
+                firstParameterSize, firstParameterIsTable, shouldYield);
+        } catch (Exception e) {
+            ret = LuauError(thread, e.Message);
+        }
+        return ret;
+    }
+
+    // When a lua object wants to call a method
+    static unsafe int CallMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int methodNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable, IntPtr shouldYield) {
         LuauProtection.CurrentContext = context;
         Marshal.WriteInt32(shouldYield, 0);
         if (!IsReady) {
