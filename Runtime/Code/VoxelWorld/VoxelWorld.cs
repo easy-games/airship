@@ -1263,6 +1263,9 @@ public partial class VoxelWorld : MonoBehaviour {
             if (!hasDirtyChunk) {
                 loadingStatus = LoadingStatus.Loaded;
                 OnFinishedLoading?.Invoke();
+                
+                // TODO this might not be the best location to be static batching
+                StaticBatchingUtility.Combine(gameObject);
             }
         }
 

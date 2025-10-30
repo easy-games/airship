@@ -670,6 +670,7 @@ namespace VoxelWorldStuff {
                     obj.transform.localPosition = Vector3.zero;
                     obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                     obj.name = "Chunk";
+                    obj.isStatic = true;
 
                     renderer = obj.AddComponent<MeshRenderer>();
                 }
@@ -730,6 +731,7 @@ namespace VoxelWorldStuff {
                         obj.transform.localPosition = Vector3.zero;
                         obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
+                        obj.isStatic = true;
                     }
                     
                     // Copy prefabs to new chunk (so we don't destroy them)
