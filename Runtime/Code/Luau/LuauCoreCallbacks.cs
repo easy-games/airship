@@ -740,6 +740,11 @@ public partial class LuauCore : MonoBehaviour {
         if (!cacheData.HasGetMemberFunc) {
             MethodInfo getMethodInfo = propertyInfo.GetGetMethod();
 
+            if (getMethodInfo.IsStatic) {
+                var res = (T) propertyInfo.GetValue(instance);
+                return res;
+            }
+
             unsafe {
                 delegate*<object, T> funcPtr = (delegate*<object, T>) getMethodInfo
                     .MethodHandle
