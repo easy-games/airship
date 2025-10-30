@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 
 #if UNITY_EDITOR
+using Code.Airship.Resources.Scripts.Editor;
 using UnityEditor;
 #endif
 
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
 [LuauAPI]
@@ -29,6 +31,11 @@ public class MaterialColorURP : MonoBehaviour {
         }
     }
 
+    private const string GeneratedMaterialPath = "Assets/GeneratedColor";
+    private const string MaterialColorReferenceFilename = "MaterialColorReferences.asset";
+
+    private static MaterialColorReferences materialColorReferences;
+
     [SerializeField]
     public List<ColorSetting> colorSettings = new();
 
@@ -39,8 +46,36 @@ public class MaterialColorURP : MonoBehaviour {
     [NonSerialized]
     private List<MaterialPropertyBlock> cachedBlocks = new();
 
-    private Renderer ren;
+    public string globalIdentifier {
+        get {
+            // TODO
+            // This doesn't work... there is an issue where getting the GlobalObjectId doesn't return in
+            // prefab stage view. It is possible that it is an issue with whether the prefab is saved.
+            // Anyway, that would be needed to support properly referenced object -> material color
+            // TODO
+            if (string.IsNullOrEmpty(_globalIdentifier)) {
+                // It seems like while in prefab view we can't use GetGlobalObjectIdSlow. But we should be
+                // able to get prefab GUID & component id in prefab.
+                if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(this, out string guid, out long localId)) {
+                    _globalIdentifier = $"p:{guid}-{localId}";
+                } else {
+                    var id = GlobalObjectId.GetGlobalObjectIdSlow(this);
+                    if (id.identifierType == 0) {
+                        Debug.LogError("Unable to generate component reference identifier", this);
+                    }
+                    _globalIdentifier = id.ToString();
+                }
+            }
 
+            return _globalIdentifier;
+        }
+    }
+    /// <summary>
+    /// Cached because this is slow to access
+    /// </summary>
+    [NonSerialized] private string _globalIdentifier;
+
+    private Renderer ren;
     public void EditorFirstTimeSetup() {
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             ColorSetting setting = colorSettings[i];
@@ -147,9 +182,104 @@ public class MaterialColorURP : MonoBehaviour {
         if (this.ren == null) {
             this.ren = GetComponent<Renderer>();
         }
-
+        
         RefreshVariables();
+        SetupMaterialPropertyBlocks();
 
+        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+            Material mat = ren.sharedMaterials[i];
+            if (mat == null) continue;
+            if (!mat.HasProperty("_BaseColor")) continue;
+
+            ColorSetting setting = colorSettings[i];
+            if (mat.GetColor("_BaseColor") == setting.baseColor) continue;
+
+#if UNITY_EDITOR
+            if (setting.reference == null || setting.reference == "") {
+                setting.reference = mat.name;
+            }
+#endif
+
+            var usesInstancing = mat.enableInstancing;
+
+            // If this material supports GPU instancing then we color it using MaterialPropertyBlocks.
+            // Otherwise we create a new material instance so SRP batching will work (SRP batching breaks with MPBs)
+            if (usesInstancing) {
+                MaterialPropertyBlock block = cachedBlocks[i];
+                ren.GetPropertyBlock(block, i);
+
+                block.SetColor("_BaseColor", (setting.baseColor));
+
+                ren.SetPropertyBlock(block, i);
+                continue;
+            }
+
+            // var materialInstance = new Material(ren.sharedMaterials[i]);
+
+            // Save asset (and delete old asset)
+            Material materialInstance = null;
+            var materialName = $"{mat.shader.name.Replace("/", "_")} ({setting.baseColor})";
+            if (!Application.isPlaying) {
+#if UNITY_EDITOR
+                // During edit time check for cached material in generated materials folder
+                CheckGeneratedFolderSetup();
+                
+                var previousMaterial = ren.sharedMaterials[i];
+                var assetPath =
+                    $"{GeneratedMaterialPath}/{materialName}.mat";
+                if ((materialInstance = AssetDatabase.LoadAssetAtPath<Material>(assetPath)) == null) {
+                    materialInstance = new Material(ren.sharedMaterials[i]);
+                    materialInstance.name = $"{materialName}";
+                    materialInstance.SetColor("_BaseColor", setting.baseColor);
+                    
+                    AssetDatabase.CreateAsset(materialInstance, assetPath);
+                    AssetDatabase.SaveAssets();
+                }
+                materialColorReferences.Reference(materialInstance, globalIdentifier);
+                
+                // Dereference after creating material copy
+                var previousMaterialPath = AssetDatabase.GetAssetPath(previousMaterial);
+                if (previousMaterialPath.Contains(GeneratedMaterialPath)) {
+                    ren.sharedMaterials[i] = null;
+                    materialColorReferences.Dereference(previousMaterial, globalIdentifier);
+                }
+#endif
+            } else {
+                // At runtime always generated a new material if needed
+                materialInstance = new Material(ren.sharedMaterials[i]);
+                materialInstance.name = $"{materialName}";
+                materialInstance.SetColor("_BaseColor", setting.baseColor);
+            }
+            
+            var materials = ren.sharedMaterials;
+            materials[i] = materialInstance;
+            ren.sharedMaterials = materials; 
+            
+#if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                // Mark renderer as dirty to save instanced material
+                EditorUtility.SetDirty(ren);
+            }
+#endif
+        }
+    }
+
+    private void CheckGeneratedFolderSetup() {
+#if UNITY_EDITOR
+        if (!AssetDatabase.IsValidFolder(GeneratedMaterialPath)) {
+            AssetDatabase.CreateFolder("Assets", GeneratedMaterialPath.Split("Assets/")[1]);
+        }
+
+        var referencePath = $"{GeneratedMaterialPath}/{MaterialColorReferenceFilename}";
+        if (!(materialColorReferences = AssetDatabase.LoadAssetAtPath<MaterialColorReferences>(referencePath))) {
+            materialColorReferences = ScriptableObject.CreateInstance<MaterialColorReferences>();
+            AssetDatabase.CreateAsset(materialColorReferences, referencePath);
+            AssetDatabase.SaveAssetIfDirty(materialColorReferences);
+        }
+#endif
+    }
+
+    private void SetupMaterialPropertyBlocks() {
         //Make sure cachedBlocks is the same size as ren.shadredMAterials
         while (cachedBlocks.Count < ren.sharedMaterials.Length) {
             cachedBlocks.Add(new MaterialPropertyBlock());
@@ -161,29 +291,6 @@ public class MaterialColorURP : MonoBehaviour {
 
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             ren.SetPropertyBlock(null, i);
-        }
-
-        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
-            Material mat = ren.sharedMaterials[i];
-            if (mat == null) {
-                continue;
-            }
-
-            ColorSetting setting = colorSettings[i];
-
-#if UNITY_EDITOR
-            if (setting.reference == null || setting.reference == "") {
-                setting.reference = mat.name;
-            }
-#endif             
-
-            MaterialPropertyBlock block = cachedBlocks[i];
-            ren.GetPropertyBlock(block, i);
-
-            block.SetColor("_BaseColor", (setting.baseColor));
-
-            ren.SetPropertyBlock(block, i);
-
         }
     }
 
@@ -235,8 +342,8 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
             }
             //Call a validate
             if (GUI.changed) {
-                EditorUtility.SetDirty(targetObj);
                 ((MaterialColorURP)targetObj).DoUpdate();
+                EditorUtility.SetDirty(targetObj);
             }
         }
 
@@ -327,7 +434,6 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
                 }
 
                 foreach (MaterialColorURP targetObj in targets) {
-
                     EditorUtility.SetDirty(targetObj);
                     targetObj.DoUpdate();
                 }
