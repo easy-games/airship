@@ -463,7 +463,7 @@ namespace UnityMeshSimplifier
             // Simplify the mesh if necessary
             if (level.Quality < 1f)
             {
-                mesh = SimplifyMesh(mesh, level.Quality, simplificationOptions);
+                mesh = SimplifyMesh(mesh, levelIndex, level.Quality, simplificationOptions);
 
 #if UNITY_EDITOR
                 SaveLODMeshAsset(mesh, gameObject.name, renderer.name, levelIndex, mesh.name, saveAssetsPath);
@@ -607,7 +607,7 @@ namespace UnityMeshSimplifier
             }
         }
 
-        private static Mesh SimplifyMesh(Mesh mesh, float quality, in SimplificationOptions options)
+        private static Mesh SimplifyMesh(Mesh mesh, int levelIndex, float quality, in SimplificationOptions options)
         {
             var meshSimplifier = new MeshSimplifier();
             meshSimplifier.SimplificationOptions = options;
@@ -615,6 +615,7 @@ namespace UnityMeshSimplifier
             meshSimplifier.SimplifyMesh(quality);
 
             var simplifiedMesh = meshSimplifier.ToMesh();
+            simplifiedMesh.name = $"{mesh.name} LOD{levelIndex}";
             simplifiedMesh.bindposes = mesh.bindposes;
             return simplifiedMesh;
         }

@@ -86,12 +86,23 @@ namespace Nobi.UiRoundedCorners {
 
 		public void Validate() {
 			if (material == null) {
-				var shader = Shader.Find("UI/RoundedCorners/RoundedCorners");
-				if (shader == null) return;
-				
-				material = new Material(shader) {
-					// hideFlags = HideFlags.DontSave
-				};
+#if UNITY_EDITOR
+				var premadeMaterial =
+					AssetDatabase.LoadAssetAtPath<Material>(
+						"Packages/gg.easy.airship/ThirdParty/UiRoundedCorners/RoundedCorners.mat");
+				if (premadeMaterial != null) material = premadeMaterial;
+#endif
+
+				// If we're not using the premade material (which we should be) then create a new material
+				// instance (this will dirty scene).
+				if (material == null) {
+					var shader = Shader.Find("UI/RoundedCorners/RoundedCorners");
+					if (shader == null) return;
+
+					material = new Material(shader) {
+						// hideFlags = HideFlags.DontSave
+					};
+				}
 			}
 
 			if (image == null) {
