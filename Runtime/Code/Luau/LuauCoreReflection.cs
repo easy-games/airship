@@ -570,13 +570,13 @@ public partial class LuauCore : MonoBehaviour
             // Use foreach for any other enumerable
             var i = 0;
             foreach (var value in array) {
+                if (knownSize >= 0 && i >= knownSize) break;
                 i++; // Increment first, because Lua tables start at index 1.
                 if (!WritePropertyToThread(thread, value, t)) {
                     LuauPluginRaw.Pop(thread, 1); // Pop the new table off the stack
                     return false;
                 }
                 LuauPluginRaw.RawSetI(thread, -2, i);
-                if (knownSize >= 0 && i >= knownSize) break;
             }   
         }
 
