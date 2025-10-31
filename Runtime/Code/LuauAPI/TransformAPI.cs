@@ -221,7 +221,12 @@ public class TransformAPI : BaseLuaAPIClass {
             Transform transform = (Transform)targetObject;
             
             var count = 0;
-            GetAllChildren(transform, ref count);
+            GetAllChildren(transform, ref count, excludeRoot: true);
+            
+            if (count < reusedChildrenList.Count) {
+                reusedChildrenList.RemoveRange(count, reusedChildrenList.Count - count);
+            }
+            
             LuauCore.WriteArrayToThread(thread, reusedChildrenList, typeof(Transform), count);
             return 1;
         }
@@ -229,17 +234,19 @@ public class TransformAPI : BaseLuaAPIClass {
         return -1;
     }
 
-    private void GetAllChildren(Transform transform, ref int numChildren) {
-        if (numChildren < reusedChildrenList.Count) {
-            reusedChildrenList[numChildren] = transform;
-        } else {
-            reusedChildrenList.Add(transform);
+    private void GetAllChildren(Transform transform, ref int numChildren, bool excludeRoot = false) {
+        if (!excludeRoot) {
+            if (numChildren < reusedChildrenList.Count) {
+                reusedChildrenList[numChildren] = transform;
+            } else {
+                reusedChildrenList.Add(transform);
+            }
+            numChildren++;
         }
-        numChildren++;
         
         for (var i = 0; i < transform.childCount; i++) {
             var child = transform.GetChild(i);
-            GetAllChildren(child, ref numChildren);
+            GetAllChildren(child, ref numChildren, excludeRoot: false);
         }
     }
 }
