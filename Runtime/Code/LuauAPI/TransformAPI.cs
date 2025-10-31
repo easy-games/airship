@@ -223,10 +223,6 @@ public class TransformAPI : BaseLuaAPIClass {
             var count = 0;
             GetAllChildren(transform, ref count, excludeRoot: true);
             
-            if (count < reusedChildrenList.Count) {
-                reusedChildrenList.RemoveRange(count, reusedChildrenList.Count - count);
-            }
-            
             LuauCore.WriteArrayToThread(thread, reusedChildrenList, typeof(Transform), count);
             return 1;
         }
