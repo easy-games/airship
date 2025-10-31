@@ -120,9 +120,11 @@ namespace Code.Luau {
                             var view = SearchService.ShowPicker(
                                 searchContext,
                                 (item, b) => {
-                                    var obj = item.ToObject<AirshipComponent>();
+                                    var obj = item != null ? item.ToObject<AirshipComponent>() : null;
                                     if (obj != null) {
                                         onObjectSelected?.Invoke(obj);
+                                    } else {
+                                        onObjectSelected?.Invoke(null);
                                     }
 
                                     GUI.changed = true;
@@ -135,10 +137,10 @@ namespace Code.Luau {
                                 },
                                 item => {
                                     var itemScriptBinding = item.ToObject<AirshipComponent>();
-                                    return itemScriptBinding != null && IsBindableAsComponent(itemScriptBinding, script);
-                                }, null, script.m_metadata?.displayName ?? "AirshipBehaviour");
+                                    return itemScriptBinding == null || itemScriptBinding != null && IsBindableAsComponent(itemScriptBinding, script);
+                                }, null, script.m_metadata?.displayName ?? "AirshipBehaviour", flags: SearchFlags.NoIndexing);
                             view.SetSearchText($"h:t:AirshipComponent airshipcomponent.script=\"{script.assetPath}\""); // #m_fileFullPath={script.m_path}
-
+                            
                             evt.Use();
                             GUIUtility.ExitGUI();
                         }
@@ -224,11 +226,12 @@ namespace Code.Luau {
                 binding => {
                     if (property != null) {
                         property.objectReferenceValue = binding;
+                        property.serializedObject.ApplyModifiedProperties();
                     }
                 },
                 () => {
-                    Debug.Log("Remove object " + property.objectReferenceValue);
                     property.objectReferenceValue = null;
+                    property.serializedObject.ApplyModifiedProperties();
                 });
             
             return value;
