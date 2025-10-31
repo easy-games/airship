@@ -54,6 +54,10 @@ public class MaterialColorURP : MonoBehaviour {
         }
     }
 
+    public Material[] GetSharedMaterials() {
+        return ren.sharedMaterials;
+    }
+
     // Called when the color is changed in the inspector
     private void OnValidate() {
         if (!enabled) {
@@ -224,6 +228,27 @@ public class MaterialColorURPEditor : Editor {
             //Draw a drawer full of ColorSettings
             var targetObj = (MaterialColorURP)targets[0];
             Undo.RecordObject(targetObj, "Edit Material Color");
+
+            var hasInstancedMaterials = false;
+            foreach (var material in targetObj.GetSharedMaterials()) {
+                if (material == null) {
+                    continue;
+                }
+
+                if (material.enableInstancing) {
+                    hasInstancedMaterials = true;
+                    break;
+                }
+            }
+
+            // Recommend removing this component. It is only good to use for GPU instancing because Material Property
+            // Blocks can cause performance hit in URP with SRP batcher.
+            if (!hasInstancedMaterials) {
+                var helpMsg = "Material variants with different colors is more performant. If you want many " +
+                              "differently colored objects consider using GPU instancing alongside this component.";
+                EditorGUILayout.HelpBox(helpMsg, MessageType.Warning,
+                    true);
+            }
 
             var i = 0;
             foreach (var setting in ((MaterialColorURP)targetObj).colorSettings) {
