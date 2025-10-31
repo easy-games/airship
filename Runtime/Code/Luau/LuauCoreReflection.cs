@@ -552,12 +552,13 @@ public partial class LuauCore : MonoBehaviour
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_DOUBLE, new IntPtr(value: &value), 0);
     }
 
-    public static bool WriteArrayToThread(IntPtr thread, IEnumerable array, Type t, int knownSize = 0) {
-        LuauPluginRaw.NewTable(thread, knownSize);
+    public static bool WriteArrayToThread(IntPtr thread, IEnumerable array, Type t, int knownSize = -1) {
+        LuauPluginRaw.NewTable(thread, knownSize >= 0 ? knownSize : 0);
 
         if (array is IList list) {
             // For lists use regular for loop to avoid enumerable allocation
-            for (var i = 0; i < list.Count; i++) {
+            int count = knownSize >= 0 ? knownSize : list.Count;
+            for (var i = 0; i < count; i++) {
                 var value = list[i];
                 if (!WritePropertyToThread(thread, value, t)) {
                     LuauPluginRaw.Pop(thread, 1); // Pop the new table off the stack
@@ -569,6 +570,7 @@ public partial class LuauCore : MonoBehaviour
             // Use foreach for any other enumerable
             var i = 0;
             foreach (var value in array) {
+                if (knownSize >= 0 && i >= knownSize) break;
                 i++; // Increment first, because Lua tables start at index 1.
                 if (!WritePropertyToThread(thread, value, t)) {
                     LuauPluginRaw.Pop(thread, 1); // Pop the new table off the stack
