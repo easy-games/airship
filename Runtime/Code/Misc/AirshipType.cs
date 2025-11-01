@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using JetBrains.Annotations;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -31,7 +32,12 @@ namespace Luau {
     /// <summary>
     /// Represents an Airship Type
     /// </summary>
-    public class AirshipType {
+    public sealed class AirshipType {
+        /// <summary>
+        /// Query an Airship type by name
+        /// </summary>
+        /// <param name="typeName">The name of the type to get</param>
+        /// <returns>The type, or null if not found</returns>
         [CanBeNull]
         public static AirshipType GetType(string typeName) => AirshipBuildInfo.Instance.GetTypeByName(typeName);
         
@@ -60,14 +66,18 @@ namespace Luau {
         /// </summary>
         public AirshipDeclarationType DeclarationType { get; }
 
+        /// <summary>
+        /// Returns whether or not this type can be assigned from the given base type
+        /// </summary>
+        /// <param name="baseType"></param>
+        /// <returns></returns>
         public bool IsAssignableFrom(AirshipType baseType) {
-            return baseType == this ||  BaseTypes.Contains(baseType);
-        }
-
-        public bool IsAncestorOfType(AirshipType other) {
-            return other.BaseTypes.Contains(this);
+            return this == baseType || BaseTypes.Contains(baseType);
         }
         
+        /// <summary>
+        /// The script declaring this type
+        /// </summary>
         public AirshipScript Script {
             get {
 #if UNITY_EDITOR
@@ -78,13 +88,13 @@ namespace Luau {
             }
         }
 
-        public AirshipType(AirshipBehaviourMeta meta) {
+        internal AirshipType(AirshipBehaviourMeta meta) {
             Name = meta.className;
             DeclarationType = meta.component ? AirshipDeclarationType.AirshipBehaviour : AirshipDeclarationType.Unknown;
             RuntimePath = meta.filePath;
         }
         
-        public AirshipType(TypeScriptEnum @enum) {
+        internal AirshipType(TypeScriptEnum @enum) {
             var name = @enum.id.Split("@").Last();
             var path = string.Join("@", @enum.id.Split("@")[0..^2]);
             
@@ -101,7 +111,7 @@ namespace Luau {
             return UniqueId.GetHashCode();
         }
         
-        protected bool Equals(AirshipType other) {
+        private bool Equals(AirshipType other) {
             return UniqueId == other.UniqueId;
         }
 

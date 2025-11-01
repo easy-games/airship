@@ -63,6 +63,10 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
     private TabView _tabView;
     private TwoPaneSplitView _splitView;
 
+    private Label assetDetailsIcon;
+    private Label assetDetailsText;
+    private Label assetDetailsPath;
+
     internal ComponentItemInfo SelectedComponentItem;
     internal bool cancelled;
 
@@ -87,20 +91,24 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
         Init();
 
         _searchField = new ToolbarSearchField();
+        _searchField.AddToClassList("component-search-field");
         _searchField.RegisterValueChangedCallback(SearchFilterChanged);
         _searchField.style.flexGrow = 1;
         _searchField.style.maxHeight = 16;
-        _searchField.style.width = Length.Percent(100f);
-        _searchField.style.marginRight = 50;
+        _searchField.style.width = Length.Auto();
+         _searchField.style.marginRight = 4;
         rootVisualElement.Add(_searchField);
 
         _splitView = new TwoPaneSplitView(1, 100, TwoPaneSplitViewOrientation.Vertical);
         {
             _tabView = new TabView();
+            
             {
                 var sceneTab = new Tab("Scene");
                 {
-                    sceneTab.style.marginTop = 5;
+                    sceneTab.AddToClassList("tab-view");
+                    sceneTab.style.paddingTop = 5;
+                    sceneTab.style.flexGrow = 1;
                     _listView = new ListView(_filteredItems, 16, MakeItem, BindItem);
                     _listView.selectionChanged += ItemSelectionChanged;
                     _listView.itemsChosen += ItemsChosen;
@@ -113,8 +121,27 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
             _splitView.Add(_tabView);
             
             var details = new VisualElement();
+            {
+                details.AddToClassList("details-pane");
+                assetDetailsIcon = new Label();
+                assetDetailsIcon.AddToClassList("asset-details-icon");
+
+                assetDetailsText = new Label();
+                assetDetailsText.AddToClassList("asset-details-text");
+
+                assetDetailsPath = new Label();
+                assetDetailsPath.AddToClassList("asset-details-path");
+
+                var assetInnerDetails = new VisualElement();
+                assetInnerDetails.AddToClassList("asset-details-inner");
+                assetInnerDetails.Add(assetDetailsText);
+                assetInnerDetails.Add(assetDetailsPath);
+                
+                details.Add(assetDetailsIcon);
+                details.Add(assetInnerDetails);
+            }
             _splitView.Add(details);
-            _splitView.CollapseChild(1);
+            // _splitView.CollapseChild(1);
         }
         rootVisualElement.Add(_splitView);
         
@@ -126,9 +153,33 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
         } else if (_context.allowNoneSelection) {
             _listView.selectedIndex = 0;
         }
+        
+        
 
-        rootVisualElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/gg.easy.airship/Editor/StyleSheets/AirshipSelectorWindow.dark.uss"));
+        rootVisualElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/gg.easy.airship/Editor/StyleSheets/AirshipSelectorWindow.uss"));
+        if (EditorGUIUtility.isProSkin) {
+            rootVisualElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/gg.easy.airship/Editor/StyleSheets/AirshipSelectorWindow.dark.uss"));
+        }
+        
         FinishInit();
+    }
+
+    private void UpdateSelection(ComponentItemInfo info) {
+        if (info.component == null) {
+            assetDetailsIcon.style.backgroundImage = null;
+            assetDetailsPath.text = "None";
+            assetDetailsText.text = "(No Component)";
+        } else {
+            if (info.component.metadata.displayIcon != null) {
+                assetDetailsIcon.style.backgroundImage = info.component.metadata.displayIcon;
+            } else {
+                assetDetailsIcon.style.backgroundImage = AirshipComponentDropdown.AssetIcon;
+            }
+            
+            
+            assetDetailsPath.text = info.component.script.assetPath;
+            assetDetailsText.text = info.gameObject.GetFullName(); 
+        }
     }
 
     private void FinishInit() {
@@ -141,6 +192,7 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
 
     private void ItemSelectionChanged(IEnumerable<object> obj) {
         SelectedComponentItem = obj.FirstOrDefault() as ComponentItemInfo;
+        UpdateSelection(SelectedComponentItem);
         _selectionChangedEvent?.Invoke(SelectedComponentItem?.component);
     }
 
@@ -204,6 +256,7 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
         var window = CreateInstance<AirshipComponentSelectorWindow>();
         window.titleContent = new GUIContent($"Select {ObjectNames.NicifyVariableName(selectionContext.componentType.Name)}");
         instance = window;
+        
         window.ShowAuxWindow();
     }
     

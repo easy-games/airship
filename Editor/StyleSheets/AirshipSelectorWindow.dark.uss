@@ -2,3 +2,14 @@
     background-color: #2C5D87;
     color: #fff;
 }
+
+.unity-tab-view {
+    background-color: #333333;
+}
+
+.details-pane {
+    background-color: #282828;
+    flex-direction: row;
+    align-items: center;
+}
+

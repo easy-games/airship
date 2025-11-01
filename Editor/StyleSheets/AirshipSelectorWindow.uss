@@ -1,0 +1,17 @@
+.asset-details-icon {
+    width: 64px;
+    height: 64px;
+    align-self: center;
+}
+
+.asset-details-inner {
+    margin-left: 10px;
+}
+
+.asset-details-path {
+    color: #aeaeae;
+}
+
+.component-search-field {
+    margin-right: 50px;
+}

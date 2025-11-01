@@ -7,7 +7,7 @@ using Mono.WebBrowser;
 using UnityEditor;
 using UnityEngine;
 
-public static class AirshipPropertyExtensions {
+public static class AirshipEditorExtensions {
     public static UnityEngine.Object GetObject(this AirshipSerializedValue value) {
         if (value.type is AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.Object) return value.objectReferenceValue;
         return null;
@@ -26,6 +26,21 @@ public static class AirshipPropertyExtensions {
         if (component.script == null) return null;
         if (component.script.m_metadata == null) return null;
         return AirshipBuildInfo.Instance.GetTypeByName(component.script.m_metadata.name);
+    }
+
+    private static IEnumerable<string> GetPathParts(Transform transform) {
+        var parent = transform;
+        while (parent != null) {
+            yield return parent.name;
+            parent = parent.transform.parent;
+        }
+    }
+
+    internal static string GetFullName(this GameObject gameObject) {
+        var parts = new List<string>();
+        parts.AddRange(GetPathParts(gameObject.transform));
+        parts.Reverse();
+        return "/" + string.Join("/", parts);
     }
 
     public static string NicifyName(this AirshipType type) {
