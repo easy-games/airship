@@ -1,0 +1,4 @@
+.unity-collection-view__item--selected {
+    background-color: #2C5D87;
+    color: #fff;
+}

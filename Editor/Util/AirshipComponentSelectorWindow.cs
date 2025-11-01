@@ -4,9 +4,11 @@ using System.Linq;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEditor.SearchService;
 using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 using Action = Unity.Plastic.Newtonsoft.Json.Serialization.Action;
 using Object = UnityEngine.Object;
@@ -14,10 +16,12 @@ using Object = UnityEngine.Object;
 internal class AirshipComponentSelectionContext {
     public AirshipType componentType { get; }
     public AirshipComponent currentObject { get; set; }
+    public Object objectBeingEdited { get; }
     public bool allowNoneSelection { get; }
 
-    public AirshipComponentSelectionContext(AirshipType type, AirshipComponent selected, bool allowNone = true) {
+    public AirshipComponentSelectionContext(Object editingObject, AirshipType type, AirshipComponent selected, bool allowNone = true) {
         currentObject = selected;
+        objectBeingEdited = editingObject;
         componentType = type;
         allowNoneSelection = allowNone;
     }
@@ -32,14 +36,13 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
     }
 
     static IEnumerable<ComponentItemInfo> FetchInSceneByType([CanBeNull] AirshipType filterType) {
-        var components =
-            Object.FindObjectsByType<AirshipComponent>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID);
-
+        var stage = StageUtility.GetCurrentStage(); // the current "stage" is the current scene thingy
+        var components = stage.FindComponentsOfType<AirshipComponent>();
         foreach (var component in components) {
             if (filterType != null && !component.GetAirshipType().IsAssignableFrom(filterType)) continue;
-            
+
             yield return new ComponentItemInfo() {
-                instanceId =  component.GetInstanceID(),
+                instanceId = component.GetInstanceID(),
                 component = component,
                 gameObject = component.gameObject,
                 globalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(component),
@@ -57,6 +60,8 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
 
     private ToolbarSearchField _searchField;
     private ListView _listView;
+    private TabView _tabView;
+    private TwoPaneSplitView _splitView;
 
     internal ComponentItemInfo SelectedComponentItem;
     internal bool cancelled;
@@ -86,15 +91,33 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
         _searchField.style.flexGrow = 1;
         _searchField.style.maxHeight = 16;
         _searchField.style.width = Length.Percent(100f);
-        _searchField.style.marginRight = 4;
+        _searchField.style.marginRight = 50;
         rootVisualElement.Add(_searchField);
 
-        _listView = new ListView(_filteredItems, 16, MakeItem, BindItem);
-        _listView.selectionChanged += ItemSelectionChanged;
-        _listView.itemsChosen += ItemsChosen;
-        _listView.style.flexGrow = 1;
-        rootVisualElement.Add(_listView);
-
+        _splitView = new TwoPaneSplitView(1, 100, TwoPaneSplitViewOrientation.Vertical);
+        {
+            _tabView = new TabView();
+            {
+                var sceneTab = new Tab("Scene");
+                {
+                    sceneTab.style.marginTop = 5;
+                    _listView = new ListView(_filteredItems, 16, MakeItem, BindItem);
+                    _listView.selectionChanged += ItemSelectionChanged;
+                    _listView.itemsChosen += ItemsChosen;
+                    _listView.style.flexGrow = 1;
+                    sceneTab.Add(_listView);
+                }
+                _tabView.Add(sceneTab);
+            }
+    
+            _splitView.Add(_tabView);
+            
+            var details = new VisualElement();
+            _splitView.Add(details);
+            _splitView.CollapseChild(1);
+        }
+        rootVisualElement.Add(_splitView);
+        
         if (_context.currentObject != null) {
             var currentSelectedId = _context.currentObject.GetInstanceID();
             var selectedIndex = _filteredItems.FindIndex(item => item.instanceId == currentSelectedId);
@@ -104,6 +127,7 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
             _listView.selectedIndex = 0;
         }
 
+        rootVisualElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/gg.easy.airship/Editor/StyleSheets/AirshipSelectorWindow.dark.uss"));
         FinishInit();
     }
 

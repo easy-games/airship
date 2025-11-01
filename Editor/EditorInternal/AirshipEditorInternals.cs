@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 namespace Editor.EditorInternal {
     public class AirshipEditorInternals {
@@ -29,6 +31,10 @@ namespace Editor.EditorInternal {
             Action<UnityEngine.Object> onObjectSelectedUpdated = null,
             bool showNoneItem = true) {
             ObjectSelector.get.Show(obj, requiredType, objectBeingEdited, allowSceneObjects, allowedInstanceIDs, onObjectSelectorClosed, onObjectSelectedUpdated);
+        }
+
+        internal static Scene GetObjectScene() {
+            return default;
         }
 
         internal static UnityEngine.Object DoCustomObjectField(Rect position, GUIContent label,

@@ -35,7 +35,8 @@ public class AirshipSerializedObject {
 
     public AirshipType airshipType => AirshipBuildInfo.Instance.GetTypeByName(serializedName.stringValue);
     public AirshipComponent airshipComponent => (AirshipComponent)serializedObject.targetObject;
-
+    public UnityEngine.Object targetObject => serializedObject.targetObject;
+    
     internal AirshipSerializedObject() {}
     public AirshipSerializedObject(AirshipComponent component) => Update(null, new SerializedObject(component), component.metadata);
     
@@ -79,7 +80,7 @@ public class AirshipSerializedObject {
             if (propertyName == targetPropertyName) {
                 var propertyMetadata = metadata.FindProperty(targetPropertyName);
                
-                var airshipProperty = new AirshipSerializedProperty(property, propertyMetadata, this.editor);
+                var airshipProperty = new AirshipSerializedProperty(this, property, propertyMetadata, this.editor);
                 // _propertyCache.Add(targetPropertyName, airshipProperty);
                 return airshipProperty;
             }
@@ -100,7 +101,7 @@ public class AirshipSerializedObject {
             if (bindingPropertyIndex == -1) continue;
             var bindingProperty = metadata.properties[bindingPropertyIndex];
             
-            propertyList.Add(new AirshipSerializedProperty(property, bindingProperty, editor));
+            propertyList.Add(new AirshipSerializedProperty(this, property, bindingProperty, editor));
             indexDictionary.Add(bindingProperty.name, bindingPropertyIndex);
         }
 

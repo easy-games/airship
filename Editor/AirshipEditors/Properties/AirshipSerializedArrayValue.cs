@@ -1,6 +1,8 @@
 ﻿using UnityEditor;
 
 public class AirshipSerializedArrayValue : AirshipSerializedValue {
+    
+    
     public AirshipSerializedArrayValue(AirshipSerializedProperty parentSerializedProperty, int index, SerializedProperty valueProperty, SerializedProperty objectValueProperty) {
         serializedModified = parentSerializedProperty.serializedModified;
 
@@ -17,5 +19,7 @@ public class AirshipSerializedArrayValue : AirshipSerializedValue {
         decorators = parentSerializedProperty.propertyMetadata.GetDecorators();
 
         this.editor = parentSerializedProperty.editor;
+
+        serializedObject = parentSerializedProperty.serializedObject;
     }
 }
