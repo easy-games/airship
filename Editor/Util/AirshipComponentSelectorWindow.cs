@@ -14,29 +14,31 @@ using Object = UnityEngine.Object;
 internal class AirshipComponentSelectionContext {
     public AirshipType componentType { get; }
     public AirshipComponent currentObject { get; set; }
+    public bool allowNoneSelection { get; }
 
-    public AirshipComponentSelectionContext(AirshipType type, AirshipComponent selected) {
+    public AirshipComponentSelectionContext(AirshipType type, AirshipComponent selected, bool allowNone = true) {
         currentObject = selected;
         componentType = type;
+        allowNoneSelection = allowNone;
     }
 }
 
 internal class AirshipComponentSelectorWindow : EditorWindow {
-    internal class ItemInfo {
+    internal class ComponentItemInfo  {
         public int instanceId;
         public GameObject gameObject;
         public AirshipComponent component;
         public GlobalObjectId globalObjectId;
     }
 
-    static IEnumerable<ItemInfo> FetchInSceneByType([CanBeNull] AirshipType filterType) {
+    static IEnumerable<ComponentItemInfo> FetchInSceneByType([CanBeNull] AirshipType filterType) {
         var components =
             Object.FindObjectsByType<AirshipComponent>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID);
 
         foreach (var component in components) {
             if (filterType != null && !component.GetAirshipType().IsAssignableFrom(filterType)) continue;
             
-            yield return new ItemInfo() {
+            yield return new ComponentItemInfo() {
                 instanceId =  component.GetInstanceID(),
                 component = component,
                 gameObject = component.gameObject,
@@ -48,15 +50,15 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
     private static AirshipComponentSelectionContext _context;
     private static Action<AirshipComponent> _selectionChangedEvent;
     private static Action<AirshipComponent> _selectionClosedEvent;
-    private static List<ItemInfo> _allItems;
-    private static List<ItemInfo> _filteredItems;
+    private static List<ComponentItemInfo> _allItems;
+    private static List<ComponentItemInfo> _filteredItems;
     
     internal static AirshipComponentSelectorWindow instance { get; private set; }
 
     private ToolbarSearchField _searchField;
     private ListView _listView;
 
-    internal ItemInfo selectedItem;
+    internal ComponentItemInfo SelectedComponentItem;
     internal bool cancelled;
 
     private string _searchText;
@@ -72,7 +74,7 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
         _filteredItems.Clear();
         _filteredItems.AddRange(
             _allItems.Where(item => string.IsNullOrEmpty(searchText) || 
-                                    item.gameObject.name.IndexOf(searchText, StringComparison.InvariantCultureIgnoreCase) >= 0));
+                                    (item.gameObject == null || item.gameObject.name.IndexOf(searchText, StringComparison.InvariantCultureIgnoreCase) >= 0)));
         _listView.Rebuild();
     }
 
@@ -98,6 +100,8 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
             var selectedIndex = _filteredItems.FindIndex(item => item.instanceId == currentSelectedId);
             if (selectedIndex >= 0)
                 _listView.selectedIndex = selectedIndex;
+        } else if (_context.allowNoneSelection) {
+            _listView.selectedIndex = 0;
         }
 
         FinishInit();
@@ -112,14 +116,14 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
     }
 
     private void ItemSelectionChanged(IEnumerable<object> obj) {
-        selectedItem = obj.FirstOrDefault() as ItemInfo;
-        _selectionChangedEvent?.Invoke(selectedItem?.component);
+        SelectedComponentItem = obj.FirstOrDefault() as ComponentItemInfo;
+        _selectionChangedEvent?.Invoke(SelectedComponentItem?.component);
     }
 
     private void ItemsChosen(IEnumerable<object> obj) {
-        selectedItem = obj.FirstOrDefault() as ItemInfo;
+        SelectedComponentItem = obj.FirstOrDefault() as ComponentItemInfo;
         cancelled = false;
-        _selectionClosedEvent?.Invoke(selectedItem?.component);
+        _selectionClosedEvent?.Invoke(SelectedComponentItem?.component);
         Close();
     }
 
@@ -127,15 +131,22 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
         if (index < 0 || index >= _filteredItems.Count)
             return;
         
-        var txt = listItem.Q<Label>("AssetText");
+
         var target = _filteredItems[index];
+
+        var label = listItem.Q<Label>("AssetText");
+        if (target.component != null) {
+            label.text = target.gameObject.name + " [" + target.component.GetAirshipType().NicifyName() + "]";
         
-        txt.text = target.gameObject.name + " [" + target.component.GetAirshipType().NicifyName() + "]";
-        
-        var icon = listItem.Q<Label>("Icon");
-        if (PrefabUtility.IsPartOfPrefabInstance(target.gameObject)) {
-            icon.style.backgroundImage =
-                new StyleBackground(EditorGUIUtility.IconContent("d_Prefab Icon").image as Texture2D);
+            var icon = listItem.Q<Label>("Icon");
+            if (PrefabUtility.IsPartOfPrefabInstance(target.gameObject)) {
+                icon.style.backgroundImage =
+                    new StyleBackground(EditorGUIUtility.IconContent("d_Prefab Icon").image as Texture2D);
+            }          
+        } else {
+            label.text = "None";
+            var icon = listItem.Q<Label>("Icon");
+            icon.style.backgroundImage = null;
         }
     }
 
@@ -174,9 +185,12 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
     
     void Init() {
         _searchText = "";
-        _allItems = new List<ItemInfo>();
-        _filteredItems = new List<ItemInfo>();
+        _allItems = new List<ComponentItemInfo>();
+        _filteredItems = new List<ComponentItemInfo>();
         
+        if (_context.allowNoneSelection) {
+            _allItems.Add(new ComponentItemInfo());
+        }
         _allItems.AddRange(FetchInSceneByType(_context.componentType));
         _filteredItems.AddRange(_allItems);
     }
