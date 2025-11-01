@@ -116,30 +116,34 @@ namespace Code.Luau {
                         if (GUI.enabled) {
                             GUIUtility.keyboardControl = id;
 
-                            var searchContext = SearchService.CreateContext(string.Empty);
-                            var view = SearchService.ShowPicker(
-                                searchContext,
-                                (item, b) => {
-                                    var obj = item != null ? item.ToObject<AirshipComponent>() : null;
-                                    if (obj != null) {
-                                        onObjectSelected?.Invoke(obj);
-                                    } else {
-                                        onObjectSelected?.Invoke(null);
-                                    }
-
-                                    GUI.changed = true;
-                                },
-                                item => {
-                                    var obj = item.ToObject<AirshipComponent>();
-                                    if (obj != null) {
-                                        EditorGUIUtility.PingObject(obj);
-                                    }
-                                },
-                                item => {
-                                    var itemScriptBinding = item.ToObject<AirshipComponent>();
-                                    return itemScriptBinding == null || itemScriptBinding != null && IsBindableAsComponent(itemScriptBinding, script);
-                                }, null, script.m_metadata?.displayName ?? "AirshipBehaviour", flags: SearchFlags.NoIndexing);
-                            view.SetSearchText($"h:t:AirshipComponent airshipcomponent.script=\"{script.assetPath}\""); // #m_fileFullPath={script.m_path}
+                            // var searchContext = SearchService.CreateContext(string.Empty);
+                            // var view = SearchService.ShowPicker(
+                            //     searchContext,
+                            //     (item, b) => {
+                            //         var obj = item != null ? item.ToObject<AirshipComponent>() : null;
+                            //         if (obj != null) {
+                            //             onObjectSelected?.Invoke(obj);
+                            //         } else {
+                            //             onObjectSelected?.Invoke(null);
+                            //         }
+                            //
+                            //         GUI.changed = true;
+                            //     },
+                            //     item => {
+                            //         var obj = item.ToObject<AirshipComponent>();
+                            //         if (obj != null) {
+                            //             EditorGUIUtility.PingObject(obj);
+                            //         }
+                            //     },
+                            //     item => {
+                            //         var itemScriptBinding = item.ToObject<AirshipComponent>();
+                            //         return itemScriptBinding == null || itemScriptBinding != null && IsBindableAsComponent(itemScriptBinding, script);
+                            //     }, null, script.m_metadata?.displayName ?? "AirshipBehaviour", flags: SearchFlags.NoIndexing);
+                            // view.SetSearchText($"h:t:AirshipComponent airshipcomponent.script=\"{script.assetPath}\""); // #m_fileFullPath={script.m_path}
+                            //
+                            
+                            var context = new AirshipComponentSelectionContext(script.GetComponentType(), obj as AirshipComponent);
+                            AirshipComponentSelectorWindow.Show(context, null, onObjectSelected);
                             
                             evt.Use();
                             GUIUtility.ExitGUI();

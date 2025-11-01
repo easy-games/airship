@@ -59,7 +59,7 @@ namespace TypescriptAst {
         public SyntaxKind SyntaxKind { get; }
     }
 
-    public struct TsSourceFile : IRenderableTsNode {
+    public class TsSourceFile : IRenderableTsNode {
         public IStatement[] Statements { get; set; }
 
         public void Render(RenderState renderState, StringWriter writer)
@@ -68,6 +68,10 @@ namespace TypescriptAst {
                 statement.Render(renderState, writer);
                 writer.WriteLine();
             }
+        }
+        
+        public TsSourceFile(params IStatement[] statements) {
+            this.Statements = statements;
         }
 
         public override string ToString() {

@@ -27,6 +27,25 @@ public static class AirshipPropertyExtensions {
         if (component.script.m_metadata == null) return null;
         return AirshipBuildInfo.Instance.GetTypeByName(component.script.m_metadata.name);
     }
+
+    public static string NicifyName(this AirshipType type) {
+        return ObjectNames.NicifyVariableName(type.Name);
+    }
+    
+    /// <summary>
+    /// Grab the type of component of the given airship script, or null if no component attached to the script
+    /// </summary>
+    /// <param name="script"></param>
+    /// <returns></returns>
+    [CanBeNull]
+    public static AirshipType GetComponentType(this AirshipScript script) {
+        // TODO: Get types by path
+        if (script.m_metadata != null) {
+            return AirshipBuildInfo.Instance.GetTypeByPathAndName(script.assetPath, script.m_metadata.name);
+        }
+        
+        return null;
+    }
     
     /// <summary>
     /// Add the given AirshipBehaviour to the GameObject
@@ -40,7 +59,7 @@ public static class AirshipPropertyExtensions {
             throw new InvalidCastException("Cannot add invalid type");
         }
         
-        if (!type.AirshipBehaviour) return null;
+        if (type.DeclarationType != AirshipDeclarationType.AirshipBehaviour) return null;
         
         var airshipScript = type.Script;
         if (airshipScript == null) throw new InvalidCastException($"Found type without script - {type.UniqueId}");
@@ -60,7 +79,7 @@ public static class AirshipPropertyExtensions {
     [CanBeNull]
     public static AirshipComponent GetAirshipComponent(this GameObject gameObject, AirshipType type) {
         if (type == null) return null;
-        if (!type.AirshipBehaviour) return null;
+        if (type.DeclarationType != AirshipDeclarationType.AirshipBehaviour) return null;
         
         foreach (var airshipComponent in gameObject.GetComponents<AirshipComponent>()) {
             var componentType = airshipComponent.GetAirshipType();

@@ -35,6 +35,8 @@ namespace Luau {
         public string filePath;
         public List<string> extends;
 
+        public string assetPath => "Assets/" + filePath.Replace(".lua", ".ts");
+        
         public AirshipType _typeCache;
         private AirshipBehaviourMeta() {}
     }
@@ -174,7 +176,7 @@ namespace Luau {
 
         private Dictionary<string, string> scriptPathByTypeNameCache = new();
         private Dictionary<(string childPath, string parentPath), bool> inheritanceCheckCache = new();
-
+        
         [CanBeNull]
         public AirshipType GetTypeByName(string typeName) {
             if (typeName == null) {
@@ -208,17 +210,26 @@ namespace Luau {
 
         [CanBeNull]
         public AirshipType GetTypeByPathAndName(string filePath, string typeName) {
+            var existingTypeName = GetTypeByName(typeName);
+            if (existingTypeName != null && existingTypeName.AssetPath == filePath) {
+                return existingTypeName;
+            }
+
+            if (!filePath.StartsWith("Assets/")) {
+                filePath = "Assets/" + filePath;
+            }
+           
             var pathWithoutExtension = filePath.Replace(Path.GetExtension(filePath), "");
             var fullName = $"{pathWithoutExtension}@{typeName}";
             if (_types.TryGetValue(fullName, out var type)) {
                 return type;
             }
             
-            Debug.Log($"GetTypeByPathAndName({filePath}, {typeName})");
-
             foreach (var (metaTypeName, meta) in _classes) {
-                Debug.Log($"compare {"Assets/" + meta.filePath} to {pathWithoutExtension + ".lua"}");
-                if ("Assets/ " + meta.filePath == pathWithoutExtension + ".lua" && name == metaTypeName) {
+                var metaAssetPath = "Assets/" + meta.filePath;
+                var fullFilePath = pathWithoutExtension + ".lua";
+                
+                if (metaAssetPath == fullFilePath  && typeName == metaTypeName) {
                     type = new AirshipType(meta);
                     _types[fullName] = type;
                     
@@ -238,6 +249,7 @@ namespace Luau {
                 }
             }
 
+            Debug.LogWarning($"Could not find type {typeName} in {pathWithoutExtension} - target was {filePath}@{typeName}");
             return null;
         }
         
