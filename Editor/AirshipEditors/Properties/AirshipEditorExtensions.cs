@@ -28,6 +28,17 @@ public static class AirshipEditorExtensions {
         return AirshipBuildInfo.Instance.GetTypeByName(component.script.m_metadata.name);
     }
 
+    public static AirshipType GetAirshipType(this AirshipSerializedLuauObject luauObject) {
+        if (luauObject.metadata == null) return null;
+        return AirshipBuildInfo.Instance.GetTypeByName(luauObject.metadata.name);
+    }
+
+    public static AirshipType GetAirshipType(this AirshipScriptableObject scriptableObject) {
+        if (scriptableObject.script == null) return null;
+        if (scriptableObject.script.m_metadata == null) return null;
+        return AirshipBuildInfo.Instance.GetTypeByName(scriptableObject.script.m_metadata.name);
+    }
+
     private static IEnumerable<string> GetPathParts(Transform transform) {
         var parent = transform;
         while (parent != null) {

@@ -95,6 +95,10 @@ namespace Airship.Editor {
                 component.ReconcileMetadata(ReconcileSource.ForceReconcile, script.m_metadata);
             }
         }
+
+        // internal static bool Reconcile(AirshipScriptableObject scriptableObject) {
+        //     
+        // }
         
         /// <summary>
         /// Reconcile the component

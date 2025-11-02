@@ -297,6 +297,23 @@ public static class AirshipCustomEditors {
 
         return null;
     }
+
+    public static AirshipEditor GetEditor(AirshipSerializedLuauObject luauObject) {
+        return null;
+    }
+    
+    public static AirshipEditor GetEditor(AirshipScriptableObject scriptableObject) {
+        if (scriptableObject != null && scriptableObject.script != null) {
+            var airshipType = scriptableObject.GetAirshipType();
+            
+            var serializedObject = new AirshipSerializedObject();
+            serializedObject.Update(null, new SerializedObject(scriptableObject), serializedObject.metadata);
+            
+            // return GetComponentEditorForType(airshipType, serializedObject, serializedObject);
+        }
+
+        return null;
+    }
     
     #endregion
     

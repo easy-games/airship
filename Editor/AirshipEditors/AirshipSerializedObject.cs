@@ -39,6 +39,8 @@ public class AirshipSerializedObject {
     
     internal AirshipSerializedObject() {}
     public AirshipSerializedObject(AirshipComponent component) => Update(null, new SerializedObject(component), component.metadata);
+    public AirshipSerializedObject(AirshipScriptableObject scriptableObject) =>
+        Update(null, new SerializedObject(scriptableObject), scriptableObject.metadata);
     
     [CanBeNull]
     internal AirshipSerializedObject prefabAsset {
