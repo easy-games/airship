@@ -11,6 +11,8 @@ public class AirshipSerializedLuauObject : ScriptableObject {
 
 #if UNITY_EDITOR
     public void Reconcile(LuauMetadata otherMetadata) {
+        if (otherMetadata == null) return;
+        if (metadata == null) return;
         if (metadata.properties == null) metadata.properties = new List<LuauMetadataProperty>();
         metadata.name = otherMetadata.name;
         

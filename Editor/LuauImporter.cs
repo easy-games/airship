@@ -152,7 +152,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter {
                     subAsset.m_metadata = scriptMetadata.behaviour;
                 } else if (scriptMetadata.scriptable != null) {
                     subAsset.scriptType = AirshipScriptType.ScriptableObject;
-                    subAsset.m_metadata = scriptMetadata.behaviour;
+                    subAsset.m_metadata = scriptMetadata.scriptable;
                 } else {
                     subAsset.scriptType = AirshipScriptType.Script;
                 }

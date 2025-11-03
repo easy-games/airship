@@ -27,16 +27,24 @@ namespace Luau {
         private AirshipBehaviourMetaTop() { }
     }
 
+    public enum AirshipBehaviourMetaType {
+        AirshipBehaviour,
+        AirshipScriptableObject,
+        Serializable,
+    }
+    
     /// <summary>
     /// Defines each AirshipBehaviour component class.
     /// </summary>
     [Serializable]
     public class AirshipBehaviourMeta {
         public string className;
+        [Obsolete]
         public bool component;
         public string filePath;
         public List<string> extends;
-
+        public AirshipBehaviourMetaType type;
+        
         public string assetPath => "Assets/" + filePath.Replace(".lua", ".ts");
         
         public AirshipType _typeCache;

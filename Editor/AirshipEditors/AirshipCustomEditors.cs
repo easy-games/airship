@@ -211,8 +211,15 @@ public static class AirshipCustomEditors {
         if (airshipTypeToCustomEditor.TryGetValue(pathType, out var editorType)) {
             return editorType.EditorType;
         }
-
-        return typeof(DefaultAirshipComponentEditor);
+        
+        return pathType.DeclarationType switch {
+            AirshipDeclarationType.Unknown => null,
+            AirshipDeclarationType.AirshipBehaviour => typeof(DefaultAirshipComponentEditor),
+            AirshipDeclarationType.Enum => null,
+            AirshipDeclarationType.AirshipScriptableObject => typeof(DefaultAirshipScriptableObjectEditor),
+            AirshipDeclarationType.SerializableClass => typeof(DefaultAirshipSerializableObjectEditor),
+            _ => null
+        };
     }
 
     internal static bool TryGetEditorForComponent(AirshipComponent component, Type type, out AirshipEditor editor) {
@@ -229,6 +236,34 @@ public static class AirshipCustomEditors {
         editor = (AirshipEditor) ScriptableObject.CreateInstance(type);
         editor.serializedObject ??= new AirshipSerializedObject();
         editor.serializedObject.Update(editor, serializedObject, component.script.m_metadata);
+        instanceToAirshipEditor.Add(component.GetInstanceID(), editor);
+        return editor;
+    }
+    
+    internal static AirshipEditor GetEditorForClass(AirshipSerializedLuauObject component, Type type, SerializedObject serializedObject) {
+        if (instanceToAirshipEditor.TryGetValue(component.GetInstanceID(), out var editor)) {
+            editor.serializedObject ??= new AirshipSerializedObject();
+            editor.serializedObject.Update(editor, serializedObject, component.metadata);
+            return editor;
+        }
+
+        editor = (AirshipEditor) ScriptableObject.CreateInstance(type);
+        editor.serializedObject ??= new AirshipSerializedObject();
+        editor.serializedObject.Update(editor, serializedObject, component.metadata);
+        instanceToAirshipEditor.Add(component.GetInstanceID(), editor);
+        return editor;
+    }
+    
+    internal static AirshipEditor GetEditorForScriptableObject(AirshipScriptableObject component, Type type, SerializedObject serializedObject) {
+        if (instanceToAirshipEditor.TryGetValue(component.GetInstanceID(), out var editor)) {
+            editor.serializedObject ??= new AirshipSerializedObject();
+            editor.serializedObject.Update(editor, serializedObject, component.metadata);
+            return editor;
+        }
+
+        editor = (AirshipEditor) ScriptableObject.CreateInstance(type);
+        editor.serializedObject ??= new AirshipSerializedObject();
+        editor.serializedObject.Update(editor, serializedObject, component.metadata);
         instanceToAirshipEditor.Add(component.GetInstanceID(), editor);
         return editor;
     }

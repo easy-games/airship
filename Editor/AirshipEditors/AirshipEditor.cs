@@ -121,7 +121,7 @@ public abstract class AirshipEditor : ScriptableObject {
     /// <summary>
     /// Draw the default properties for this inspector
     /// </summary>
-    private void DrawDefaultProperties() {
+    protected void DrawDefaultProperties() {
         // Draw each property
         foreach (var property in serializedObject.GetProperties()) {
             var shouldHideProperty = false;

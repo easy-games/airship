@@ -65,6 +65,10 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
                 componentMetadata.properties.Remove(componentProperty);
             }
         }
+
+        if (serializedObject.hasModifiedProperties) {
+            serializedObject.ApplyModifiedProperties();
+        }
     }
     
     private void OnValidate() {
@@ -72,51 +76,60 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
     }
 
     public override void OnInspectorGUI() {
-        Reconcile();
-        if (!AirshipCustomEditors.UseNewInspector) return;
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         
         Type customEditorType = null;
         if (binding.script != null && binding.metadata != null) {
-            // customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
         }
 
+        var script = binding.script;
+        EditorGUILayout.Space(5);
+
+        GUI.enabled = script == null || script.scriptType != AirshipScriptType.ScriptableObject;
+        var newScript = (AirshipScript) EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
+        GUI.enabled = true;
+
+        if (newScript != script) {
+            binding.script = newScript;
+        }
+              
+        EditorGUILayout.Space(5);
+        
+        if (!AirshipCustomEditors.UseNewInspector) {
+            EditorGUILayout.HelpBox("AirshipScriptableObject requires the new Editor API to be enabled", MessageType.Warning);
+            return;
+        }
+
+        if (script == null) return;
+        
+        if (script.scriptType != AirshipScriptType.ScriptableObject) {
+            EditorGUILayout.HelpBox("Script is not a ScriptableObject", MessageType.Warning);
+            return;
+        }
+        
+        Reconcile();
+        
         if (customEditorType != null && binding.script != null) {
             var metadata = serializedObject.FindProperty("metadata");
             var metadataName = metadata.FindPropertyRelative("name");
             
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                // var componentEditor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
-                // if (this.editor == null) this.editor = componentEditor;
-                // componentEditor.script = binding.script;
-                // componentEditor.target = binding;
-                // componentEditor.OnInspectorGUI();
-
+                var componentEditor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
+                if (this.editor == null) this.editor = componentEditor;
+                componentEditor.script = binding.script;
+                componentEditor.target = binding;
+                componentEditor.OnInspectorGUI();
+                serializedObject.ApplyModifiedProperties();
+                
+                serializedObject.Update();
+            } else {
+                EditorGUILayout.HelpBox("Could not find custom inspector", MessageType.Warning);
             }
             
-            serializedObject.ApplyModifiedProperties();
+ 
         } else {
-            var script = binding.script;
-            
-            EditorGUILayout.Space(5);
-
-            GUI.enabled = script == null;
-            var newScript = (AirshipScript) EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
-            GUI.enabled = true;
-
-            if (newScript != script) {
-                binding.script = newScript;
-            }
-            
-            EditorGUILayout.Space(5);
-            
-            var obj = new AirshipSerializedObject(binding);
-            var properties = obj.GetProperties();
-            foreach (var property in properties) {
-                AirshipEditorGUI.PropertyField(property);
-            }
-            
-            obj.ApplyModifiedProperties();
+            EditorGUILayout.HelpBox("Could not find custom inspector", MessageType.Warning);
         }
     }
 }

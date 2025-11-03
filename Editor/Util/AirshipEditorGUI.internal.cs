@@ -371,13 +371,29 @@ public static partial class AirshipEditorGUI {
                         var referenceMetadata = refType.GetMetadataForType();
                         serializedLuauObject.Reconcile(referenceMetadata);
                         
-                        var obj = new AirshipSerializedObject(serializedLuauObject);
-                        obj.editor = property.editor;
-                        
-                        foreach (var prop in obj.GetProperties()) {
-                            AirshipEditorGUI.PropertyField(prop);
+                        Type customEditorType = null;
+                        if (serializedLuauObject.metadata != null) {
+                            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(serializedLuauObject.metadata.name);
                         }
-                        obj.ApplyModifiedProperties();
+
+                        if (customEditorType != null) {
+                            var serializedObject = new SerializedObject(serializedLuauObject);
+                            var componentEditor = AirshipCustomEditors.GetEditorForClass(serializedLuauObject, customEditorType,
+                                serializedObject);
+                            
+                            componentEditor.script = refType.Script;
+                            componentEditor.target = serializedLuauObject;
+                            componentEditor.OnInspectorGUI();
+                            serializedObject.ApplyModifiedProperties();
+                        } else {
+                            var obj = new AirshipSerializedObject(serializedLuauObject);
+                            obj.editor = property.editor;
+                        
+                            foreach (var prop in obj.GetProperties()) {
+                                AirshipEditorGUI.PropertyField(prop);
+                            }
+                            obj.ApplyModifiedProperties();
+                        }
                     }
                 }
             }

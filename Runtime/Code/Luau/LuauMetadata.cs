@@ -718,6 +718,13 @@ namespace Luau {
                 }
             }
 
+            if (metadata.scriptable != null) {
+                // Set default values:
+                foreach (var property in metadata.scriptable.properties) {
+                    property.SetDefaultAsValue();
+                }
+            }
+
             if (metadata.serializables != null) {
                 foreach (var serializable in metadata.serializables) {
                     foreach (var property in serializable.properties) {

@@ -13,3 +13,20 @@ public class DefaultAirshipComponentEditor : AirshipEditor {
         DrawDefaultInspector();
     }
 }
+
+/// <summary>
+/// The default editor for airship components
+/// </summary>
+public class DefaultAirshipScriptableObjectEditor : AirshipEditor {
+    public override void OnInspectorGUI() {
+        EditorGUILayout.LabelField("Experimental");
+        // By default we just draw the default inspector here.
+        DrawDefaultProperties();
+    }
+}
+
+public class DefaultAirshipSerializableObjectEditor : AirshipEditor {
+    public override void OnInspectorGUI() {
+        DrawDefaultProperties();
+    }
+}
