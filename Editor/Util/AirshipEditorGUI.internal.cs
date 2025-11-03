@@ -332,7 +332,7 @@ public static partial class AirshipEditorGUI {
         return true;
     }
 
-    private static void DoAirshipSerializedClassObject(Rect? rect, GUIContent label, AirshipSerializedValue property, bool expanded = false) {
+    private static void DoAirshipSerializedClassObject(Rect? rect, GUIContent label, AirshipSerializedValue property, bool expanded = true) {
         // AirshipSerializedLuauObject
         DoValidateProperty(rect, property, AirshipSerializedType.SerializedClass);
 
@@ -349,70 +349,99 @@ public static partial class AirshipEditorGUI {
             // enabled = EditorGUI.BeginFoldoutHeaderGroup(position, label, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
             // property.editor._foldouts[property.name] = enabled;
         } else {
-            enabled = EditorGUILayout.BeginFoldoutHeaderGroup(enabled, label);
-            if (enabled) {
-                if (property.objectReferenceValue == null) {
-                    if (GUILayout.Button("Create")) {
-                        var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
-                        newInstance.fileRef = property.airshipType.AssetPath;
-                        newInstance.type = property.airshipType.Name;
-                        property.objectReferenceValue = newInstance;
-                        property.serializedObject.ApplyModifiedProperties();
-                        GUIUtility.ExitGUI();
+            var targetObject = property.serializedObject.targetObject;
+            var isMainAsset = AssetDatabase.IsMainAsset(targetObject);
+            var isSubAsset = AssetDatabase.IsSubAsset(targetObject);
+            
+            if (property.objectReferenceValue != null && !isSubAsset) {
+                var foldoutRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                enabled = EditorGUI.Foldout(foldoutRect, enabled, label);
+                
+                if (GUI.Button(new Rect(foldoutRect) { width = 20, x = foldoutRect.xMin + foldoutRect.width - 20 }, "X")) {
+                    if (AssetDatabase.IsMainAsset(targetObject)) {
+                        AssetDatabase.RemoveObjectFromAsset(property.objectReferenceValue);
                     }
+                
+                    property.objectReferenceValue = null;
                 }
+                
+                if (enabled) {
+                    // if (property.objectReferenceValue == null) {
+                    //     if (GUILayout.Button("Create")) {
+                    //         var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
+                    //         newInstance.fileRef = property.airshipType.AssetPath;
+                    //         newInstance.type = property.airshipType.Name;
+                    //        
+                    //
+                    //        
+                    //         if (AssetDatabase.IsMainAsset(targetObject) || AssetDatabase.IsSubAsset(targetObject)) {
+                    //             newInstance.name = property.name;
+                    //             AssetDatabase.AddObjectToAsset(newInstance, targetObject);
+                    //         }
+                    //         
+                    //         property.objectReferenceValue = newInstance;
+                    //         property.serializedObject.ApplyModifiedProperties();
+                    //         property.serializedObject.serializedObject.Update();
+                    //     }
+                    // }
 
-                if (property.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
-                    var refType = AirshipBuildInfo.Instance.GetTypeByPathAndName(serializedLuauObject.fileRef,
-                        serializedLuauObject.type);
-                    if (refType == null) {
-                        EditorGUILayout.HelpBox("Type non-existant", MessageType.Info);
-                    } else {
-                        var referenceMetadata = refType.GetMetadataForType();
-                        serializedLuauObject.Reconcile(referenceMetadata);
-                        
-                        Type customEditorType = null;
-                        if (serializedLuauObject.metadata != null) {
-                            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(serializedLuauObject.metadata.name);
-                        }
-
-                        if (customEditorType != null) {
-                            var serializedObject = new SerializedObject(serializedLuauObject);
-                            var componentEditor = AirshipCustomEditors.GetEditorForClass(serializedLuauObject, customEditorType,
-                                serializedObject);
-                            
-                            componentEditor.script = refType.Script;
-                            componentEditor.target = serializedLuauObject;
-                            componentEditor.OnInspectorGUI();
-                            serializedObject.ApplyModifiedProperties();
+                    if (property.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
+                        var refType = AirshipBuildInfo.Instance.GetTypeByPathAndName(serializedLuauObject.fileRef,
+                            serializedLuauObject.type);
+                        if (refType == null) {
+                            EditorGUILayout.HelpBox("Type non-existant", MessageType.Info);
                         } else {
-                            var obj = new AirshipSerializedObject(serializedLuauObject);
-                            obj.editor = property.editor;
-                        
-                            foreach (var prop in obj.GetProperties()) {
-                                AirshipEditorGUI.PropertyField(prop);
+                            var referenceMetadata = refType.GetMetadataForType();
+                            serializedLuauObject.Reconcile(referenceMetadata);
+                            
+                            Type customEditorType = null;
+                            if (serializedLuauObject.metadata != null) {
+                                customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(serializedLuauObject.metadata.name);
                             }
-                            obj.ApplyModifiedProperties();
+
+                            if (customEditorType != null) {
+                                var serializedObject = new SerializedObject(serializedLuauObject);
+                                var componentEditor = AirshipCustomEditors.GetEditorForClass(serializedLuauObject, customEditorType,
+                                    serializedObject);
+                                
+                                componentEditor.script = refType.Script;
+                                componentEditor.target = serializedLuauObject;
+                                componentEditor.OnInspectorGUI();
+                                serializedObject.ApplyModifiedProperties();
+                            } else {
+                                var obj = new AirshipSerializedObject(serializedLuauObject);
+                                obj.editor = property.editor;
+                            
+                                foreach (var prop in obj.GetProperties()) {
+                                    AirshipEditorGUI.PropertyField(prop);
+                                }
+                                obj.ApplyModifiedProperties();
+                            }
                         }
                     }
                 }
+                property.editor._foldouts[property.name] = enabled; 
+            } else if (!isSubAsset) {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PrefixLabel(label);
+                if (GUILayout.Button("Instantiate")) {
+                    var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
+                    newInstance.fileRef = property.airshipType.AssetPath;
+                    newInstance.type = property.airshipType.Name;
+                    
+                    
+                    
+                    if (AssetDatabase.IsMainAsset(targetObject) || AssetDatabase.IsSubAsset(targetObject)) {
+                        newInstance.name = property.name;
+                        AssetDatabase.AddObjectToAsset(newInstance, targetObject);
+                    }
+                    
+                    property.objectReferenceValue = newInstance;
+                    property.serializedObject.ApplyModifiedProperties();
+                    property.serializedObject.serializedObject.Update();      
+                }
+                EditorGUILayout.EndHorizontal();
             }
-            EditorGUILayout.EndFoldoutHeaderGroup();
-            property.editor._foldouts[property.name] = enabled; 
-            
-            // var obj = new AirshipSerializedObject(property.objectReferenceValue as AirshipSerializedLuauObject);
-            // foreach (var prop in obj.GetProperties()) {
-            //     AirshipEditorGUI.PropertyField(prop);
-            // }
-            // //
-            // obj.ApplyModifiedProperties();
-            
-            
-
-
-
-            // EditorGUILayout.LabelField(label);
-            // EditorGUILayout.LabelField(property.airshipType?.Name);
         }
     }
     

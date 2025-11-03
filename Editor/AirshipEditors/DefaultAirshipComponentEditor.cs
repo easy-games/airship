@@ -19,14 +19,14 @@ public class DefaultAirshipComponentEditor : AirshipEditor {
 /// </summary>
 public class DefaultAirshipScriptableObjectEditor : AirshipEditor {
     public override void OnInspectorGUI() {
-        EditorGUILayout.LabelField("Experimental");
-        // By default we just draw the default inspector here.
+        EditorGUILayout.HelpBox("Scriptable Objects are experimental and subject to change", MessageType.Warning);
         DrawDefaultProperties();
     }
 }
 
 public class DefaultAirshipSerializableObjectEditor : AirshipEditor {
     public override void OnInspectorGUI() {
+        EditorGUILayout.HelpBox("Serializable Classes are experimental and subject to change", MessageType.Warning);
         DrawDefaultProperties();
     }
 }

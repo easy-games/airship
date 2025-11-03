@@ -102,6 +102,20 @@ public abstract class AirshipSerializedValue {
     public AirshipComponentPropertyType propertyType =>
         LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(serializedType.stringValue, false);
 
+    public AirshipSerializedProperty FindAirshipPropertyRelative(string targetPropertyName) {
+        if (!isObject) return null;
+        
+        if (serializedObjectValue.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
+            var obj = new AirshipSerializedObject(serializedLuauObject);
+            return obj.FindAirshipProperty(targetPropertyName);
+        } else if (serializedObjectValue.objectReferenceValue is AirshipComponent component) {
+            var obj = new AirshipSerializedObject(component);
+            return obj.FindAirshipProperty(targetPropertyName);
+        }
+        
+        return null;
+    }
+    
     public UnityEngine.Object objectReferenceValue {
         get => isObject || isAirshipType ? serializedObjectValue.objectReferenceValue : null;
         set {

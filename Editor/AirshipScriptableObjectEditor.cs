@@ -6,6 +6,29 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
+[CustomEditor(typeof(AirshipSerializedLuauObject))]
+public class AirshipSerializedLuauObjectEditor : UnityEditor.Editor {
+    private AirshipEditor editor;
+    public override void OnInspectorGUI() {
+        AirshipSerializedLuauObject binding = (AirshipSerializedLuauObject)target;
+        
+        Type customEditorType = null;
+        if (binding.metadata != null) {
+            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+        }
+        
+        if (customEditorType != null) {
+            var componentEditor = AirshipCustomEditors.GetEditorForScriptableClass(binding, customEditorType, serializedObject);
+            if (this.editor == null) this.editor = componentEditor;
+            componentEditor.script = binding.GetAirshipType().Script;
+            componentEditor.target = binding;
+            componentEditor.OnInspectorGUI();
+            
+            serializedObject.ApplyModifiedProperties();
+            serializedObject.Update();
+        }
+    }
+}
 
 [CustomEditor(typeof(AirshipScriptableObject))]
 public class AirshipScriptableObjectEditor : UnityEditor.Editor {
@@ -111,23 +134,14 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         Reconcile();
         
         if (customEditorType != null && binding.script != null) {
-            var metadata = serializedObject.FindProperty("metadata");
-            var metadataName = metadata.FindPropertyRelative("name");
+            var componentEditor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
+            if (this.editor == null) this.editor = componentEditor;
+            componentEditor.script = binding.script;
+            componentEditor.target = binding;
+            componentEditor.OnInspectorGUI();
             
-            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
-                var componentEditor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
-                if (this.editor == null) this.editor = componentEditor;
-                componentEditor.script = binding.script;
-                componentEditor.target = binding;
-                componentEditor.OnInspectorGUI();
-                serializedObject.ApplyModifiedProperties();
-                
-                serializedObject.Update();
-            } else {
-                EditorGUILayout.HelpBox("Could not find custom inspector", MessageType.Warning);
-            }
-            
- 
+            serializedObject.ApplyModifiedProperties();
+            serializedObject.Update();
         } else {
             EditorGUILayout.HelpBox("Could not find custom inspector", MessageType.Warning);
         }

@@ -5,7 +5,9 @@ using UnityEditor;
 using UnityEngine;
 
 
-[CreateAssetMenu(menuName = "Create AirshipScriptableObject", fileName = "AirshipScriptableObject", order = 0)]
+#if AIRSHIP_INTERNAL
+[CreateAssetMenu(menuName = "Airship/Scriptable Object", fileName = "AirshipScriptableObject", order = 0)]
+#endif
 public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackReceiver {
     public AirshipScript script;
 #if !AIRSHIP_INTERNAL
