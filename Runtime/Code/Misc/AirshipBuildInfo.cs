@@ -20,6 +20,8 @@ namespace Luau {
         // ReSharper disable once CollectionNeverUpdated.Global
         // ReSharper disable once UnassignedField.Global
         public Dictionary<string, AirshipBehaviourMeta> behaviours;
+        public Dictionary<string, AirshipBehaviourMeta> scriptables;
+        public Dictionary<string, AirshipBehaviourMeta> serializables;
         public Dictionary<string, string[]> extends;
 
         private AirshipBehaviourMetaTop() { }
@@ -53,6 +55,9 @@ namespace Luau {
     [Serializable]
     public class AirshipBuildData {
         public List<AirshipBehaviourMeta> airshipBehaviourMetas;
+        public List<AirshipBehaviourMeta> airshipScriptableObjectMetas;
+        public List<AirshipBehaviourMeta> airshipSerializableMetas;
+        
         public List<AirshipExtendsMeta> airshipExtendsMetas;
         
         /// <summary>
@@ -70,6 +75,20 @@ namespace Luau {
                 pair.Value.className = pair.Key;
                 pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
                 airshipBehaviourMetas.Add(pair.Value);
+            }
+            
+            airshipScriptableObjectMetas = new List<AirshipBehaviourMeta>(metaTop.scriptables.Count);
+            foreach (var pair in metaTop.scriptables) {
+                pair.Value.className = pair.Key;
+                pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                airshipScriptableObjectMetas.Add(pair.Value);
+            }
+            
+            airshipSerializableMetas = new List<AirshipBehaviourMeta>(metaTop.serializables.Count);
+            foreach (var pair in metaTop.serializables) {
+                pair.Value.className = pair.Key;
+                pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                airshipSerializableMetas.Add(pair.Value);
             }
 
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
@@ -156,6 +175,14 @@ namespace Luau {
 
         private void Init() {
             foreach (var meta in data.airshipBehaviourMetas) {
+                _classes.TryAdd(meta.className, meta);
+            }
+            
+            foreach (var meta in data.airshipSerializableMetas) {
+                _classes.TryAdd(meta.className, meta);
+            }
+            
+            foreach (var meta in data.airshipScriptableObjectMetas) {
                 _classes.TryAdd(meta.className, meta);
             }
         }

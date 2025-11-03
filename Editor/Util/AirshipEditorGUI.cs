@@ -537,6 +537,10 @@ public static partial class AirshipEditorGUI {
                 AnimationCurveProperty(label, value);
                 break;
             }
+            case AirshipSerializedType.SerializedClass: {
+                DoAirshipSerializedClassObject(null, label, value);
+                break;
+            }
             default: {
                 EditorGUILayout.HelpBox($"{value.typeString} is not yet supported by PropertyFieldLayout!",
                     MessageType.Warning);
@@ -613,6 +617,9 @@ public static partial class AirshipEditorGUI {
             }
             case AirshipSerializedType.AnimationCurve: {
                 AnimationCurveProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.SerializedClass: {
                 break;
             }
             default: {

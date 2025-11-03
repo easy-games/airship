@@ -28,7 +28,9 @@ namespace Luau {
         AirshipArray,
         AirshipPod,
         AirshipComponent,
-        AirshipLayerMask
+        AirshipLayerMask,
+        AirshipScriptableObject,
+        AirshipClassObject,
     }
     
     [Serializable]
@@ -556,6 +558,22 @@ namespace Luau {
                     }
                     break;
                 }
+                case AirshipComponentPropertyType.AirshipScriptableObject: {
+                    // TODO implement
+                    propType = AirshipComponentPropertyType.AirshipNil;
+                    obj = -1; // Reference to null
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipClassObject: {
+                    // TODO implement
+                    if (objectRef is AirshipSerializedLuauObject serializedObject) {
+                    } else {
+                        propType = AirshipComponentPropertyType.AirshipNil;
+                        obj = -1; // Reference to null
+                    }
+
+                    break;
+                }
                 case AirshipComponentPropertyType.AirshipComponent: {
                     if (objectRef is AirshipComponent scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
@@ -650,6 +668,11 @@ namespace Luau {
             if (type is "AirshipBehaviour" or "object") {
                 serializedObject = null;
             }
+
+            // if (type == "AirshipSerializableObject") {
+            //     var instance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
+            //     serializedObject = instance;
+            // }
             
             if (defaultValue == null) return;
             
@@ -657,6 +680,63 @@ namespace Luau {
         }
     }
 
+    [Serializable]
+    public class AirshipScriptMetadata {
+        [SerializeReference]
+        public LuauMetadata behaviour;
+        [SerializeReference]
+        public LuauMetadata scriptable;
+        [SerializeReference]
+        public LuauMetadata[] serializables;
+
+        public static bool ParseScriptMetadata(string json, out AirshipScriptMetadata metadata) {
+            metadata = JsonConvert.DeserializeObject<AirshipScriptMetadata>(json);
+
+            if (metadata.behaviour != null) {
+#if UNITY_EDITOR
+                var airshipComponentMenu = metadata.behaviour.FindClassDecorator("AirshipComponentMenu");
+                if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out var componentPath)) {
+                    var value = componentPath.Split("/");
+                    metadata.behaviour.displayName = ObjectNames.NicifyVariableName(value.Last());
+                }
+                else {
+                    metadata.behaviour.displayName = ObjectNames.NicifyVariableName(metadata.behaviour.name);
+                }
+
+                var airshipIcon = metadata.behaviour.FindClassDecorator("AirshipComponentIcon");
+                if (airshipIcon != null && airshipIcon.parameters[0].TryGetString(out var airshipIconPath)) {
+                    metadata.behaviour.displayIcon = File.Exists(airshipIconPath) ? AssetDatabase.LoadAssetAtPath<Texture2D>(airshipIconPath) : null;
+                }
+                else {
+                    metadata.behaviour.displayIcon = null;
+                }
+#endif
+                
+                // Set default values:
+                foreach (var property in metadata.behaviour.properties) {
+                    property.SetDefaultAsValue();
+                }
+            }
+
+            if (metadata.serializables != null) {
+                foreach (var serializable in metadata.serializables) {
+                    foreach (var property in serializable.properties) {
+                        property.SetDefaultAsValue();
+                    }
+                }
+            }
+            
+            return metadata.behaviour != null || metadata.scriptable != null || metadata.serializables != null;
+        }
+        
+        public static AirshipScriptMetadata FromJson(string json) {
+            var metadata = JsonConvert.DeserializeObject<AirshipScriptMetadata>(json);
+            return metadata;
+        }
+
+        public bool hasExports => behaviour != null || scriptable != null || serializables != null;
+    }
+    
     [Serializable]
     public class LuauMetadata {
         public string name;

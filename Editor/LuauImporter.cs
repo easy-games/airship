@@ -144,17 +144,39 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter {
         var metadataFilepath = $"{assetPath}.json~";
         if (File.Exists(metadataFilepath)) {
             var json = File.ReadAllText(metadataFilepath);
-            var (metadata, err) = LuauMetadata.FromJson(json);
+            
+            if (AirshipScriptMetadata.ParseScriptMetadata(json, out var scriptMetadata)) {
+                if (scriptMetadata.behaviour != null) {
+                    subAsset.airshipBehaviour = true;
+                    subAsset.scriptType = AirshipScriptType.Behaviour;
+                    subAsset.m_metadata = scriptMetadata.behaviour;
+                } else if (scriptMetadata.scriptable != null) {
+                    subAsset.scriptType = AirshipScriptType.ScriptableObject;
+                    subAsset.m_metadata = scriptMetadata.behaviour;
+                } else {
+                    subAsset.scriptType = AirshipScriptType.Script;
+                }
 
-            if (metadata != null) {
-                subAsset.m_metadata = metadata;
-                subAsset.airshipBehaviour = true;
-            }
+                if (scriptMetadata.serializables != null) {
+                    subAsset.m_serializables = new LuauMetadata[scriptMetadata.serializables.Length];
+                    for (var i = 0; i < subAsset.m_serializables.Length; i++) {
+                        subAsset.m_serializables[i] = scriptMetadata.serializables[i];
+                    }
+                }
+            } else {
+                // Legacy fallback
+                var (metadata, err) = LuauMetadata.FromJson(json);
 
-            if (err != null) {
-                compileSuccess = false;
-                compileErrMessage = err;
-                ctx.LogImportError($"Failed to compile {ctx.assetPath}: {err}");
+                if (metadata != null) {
+                    subAsset.m_metadata = metadata;
+                    subAsset.airshipBehaviour = true;
+                }
+
+                if (err != null) {
+                    compileSuccess = false;
+                    compileErrMessage = err;
+                    ctx.LogImportError($"Failed to compile {ctx.assetPath}: {err}");
+                }
             }
         }
 

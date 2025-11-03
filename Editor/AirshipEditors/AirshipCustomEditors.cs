@@ -233,6 +233,11 @@ public static class AirshipCustomEditors {
         return editor;
     }
 
+    // internal static AirshipEditor GetEditorForSerializedClass(AirshipSerializedLuauObject serializedLuauObject,
+    //     Type type, SerializedObject serializedObject) {
+    //     
+    // }
+
 
     internal static AirshipEditor GetComponentEditorForType(AirshipType airshipType, AirshipComponent component, AirshipSerializedObject serializedObject) {
         if (airshipType.DeclarationType != AirshipDeclarationType.AirshipBehaviour) return null;

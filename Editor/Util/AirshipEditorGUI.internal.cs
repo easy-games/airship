@@ -9,6 +9,7 @@ using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
 using UnityEditor.Actions;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public static partial class AirshipEditorGUI {
     /// <summary>
@@ -329,6 +330,74 @@ public static partial class AirshipEditorGUI {
         }
 
         return true;
+    }
+
+    private static void DoAirshipSerializedClassObject(Rect? rect, GUIContent label, AirshipSerializedValue property, bool expanded = false) {
+        // AirshipSerializedLuauObject
+        DoValidateProperty(rect, property, AirshipSerializedType.SerializedClass);
+
+        if (property == null || property.editor == null) {
+            return;
+        }
+        
+        bool enabled;
+        if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
+            property.editor._foldouts.Add(property.name, expanded);
+        }
+        
+        if (rect.GetCustomRect(out var position)) {
+            // enabled = EditorGUI.BeginFoldoutHeaderGroup(position, label, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
+            // property.editor._foldouts[property.name] = enabled;
+        } else {
+            enabled = EditorGUILayout.BeginFoldoutHeaderGroup(enabled, label);
+            if (enabled) {
+                if (property.objectReferenceValue == null) {
+                    if (GUILayout.Button("Create")) {
+                        var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
+                        newInstance.fileRef = property.airshipType.AssetPath;
+                        newInstance.type = property.airshipType.Name;
+                        property.objectReferenceValue = newInstance;
+                        property.serializedObject.ApplyModifiedProperties();
+                        GUIUtility.ExitGUI();
+                    }
+                }
+
+                if (property.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
+                    var refType = AirshipBuildInfo.Instance.GetTypeByPathAndName(serializedLuauObject.fileRef,
+                        serializedLuauObject.type);
+                    if (refType == null) {
+                        EditorGUILayout.HelpBox("Type non-existant", MessageType.Info);
+                    } else {
+                        var referenceMetadata = refType.GetMetadataForType();
+                        serializedLuauObject.Reconcile(referenceMetadata);
+                        
+                        var obj = new AirshipSerializedObject(serializedLuauObject);
+                        obj.editor = property.editor;
+                        
+                        foreach (var prop in obj.GetProperties()) {
+                            AirshipEditorGUI.PropertyField(prop);
+                        }
+                        obj.ApplyModifiedProperties();
+                    }
+                }
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+            property.editor._foldouts[property.name] = enabled; 
+            
+            // var obj = new AirshipSerializedObject(property.objectReferenceValue as AirshipSerializedLuauObject);
+            // foreach (var prop in obj.GetProperties()) {
+            //     AirshipEditorGUI.PropertyField(prop);
+            // }
+            // //
+            // obj.ApplyModifiedProperties();
+            
+            
+
+
+
+            // EditorGUILayout.LabelField(label);
+            // EditorGUILayout.LabelField(property.airshipType?.Name);
+        }
     }
     
     private static AirshipComponent DoAirshipComponent(Rect? rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator propertyValidator = null) {

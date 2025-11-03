@@ -19,7 +19,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     public void OnAfterDeserialize() {
         if (script == null) {
-            metadata = default;
+            // metadata = default;
         } else if (script.m_metadata != null) {
             Debug.Log("should reconcile");
             Reconcile();

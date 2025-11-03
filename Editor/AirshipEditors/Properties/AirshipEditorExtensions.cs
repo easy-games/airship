@@ -33,6 +33,21 @@ public static class AirshipEditorExtensions {
         return AirshipBuildInfo.Instance.GetTypeByName(luauObject.metadata.name);
     }
 
+    public static LuauMetadata GetMetadataForType(this AirshipType type) {
+        var script = type.Script;
+        if (script == null) return null;
+        if (script.m_metadata != null && script.m_metadata.name == type.Name) return script.m_metadata;
+        if (script.m_serializables != null) {
+            foreach (var serializable in script.m_serializables) {
+                if (serializable.name == type.Name) {
+                    return serializable;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public static AirshipType GetAirshipType(this AirshipScriptableObject scriptableObject) {
         if (scriptableObject.script == null) return null;
         if (scriptableObject.script.m_metadata == null) return null;

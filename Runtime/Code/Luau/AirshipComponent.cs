@@ -98,7 +98,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	public IntPtr thread;
 	[NonSerialized] public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
-#if !AIRSHIP_DEBUG
+#if !AIRSHIP_INTERNAL
 	[HideInInspector]
 #endif
 	[FormerlySerializedAs("m_metadata")]  public LuauMetadata metadata = new();
