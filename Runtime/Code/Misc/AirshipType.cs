@@ -1,18 +1,83 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using System.Linq;
+using JetBrains.Annotations;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 namespace Luau {
-    public class AirshipType {
+    public enum AirshipDeclarationType {
+        Unknown,
+        /// <summary>
+        /// An AirshipBehaviour class
+        /// </summary>
+        AirshipBehaviour,
+        /// <summary>
+        /// An enum
+        /// </summary>
+        Enum,
+        /// <summary>
+        /// An AirshipScriptableObject class
+        /// </summary>
+        [Obsolete] // not yet impl
+        AirshipScriptableObject,
+        /// <summary>
+        /// A class that is @Serializable()
+        /// </summary>
+        [Obsolete] // not yet impl
+        SerializableClass,
+    }
+    
+    /// <summary>
+    /// Represents an Airship Type
+    /// </summary>
+    public sealed class AirshipType {
+        /// <summary>
+        /// Query an Airship type by name
+        /// </summary>
+        /// <param name="typeName">The name of the type to get</param>
+        /// <returns>The type, or null if not found</returns>
         [CanBeNull]
         public static AirshipType GetType(string typeName) => AirshipBuildInfo.Instance.GetTypeByName(typeName);
+        
+        /// <summary>
+        /// The name of this type
+        /// </summary>
         public string Name { get; }
+        /// <summary>
+        /// The file path of this type at runtime (will be a relative path Lua file)
+        /// </summary>
         public string RuntimePath { get; }
+        /// <summary>
+        /// The TypeScript file path of this type (will be a TypeScript file in Assets)
+        /// </summary>
         public string AssetPath => "Assets/" + RuntimePath.Replace(".lua", ".ts");
+        /// <summary>
+        /// The types this Type inherits
+        /// </summary>
         public AirshipType[] BaseTypes { get; internal set; }
+        /// <summary>
+        /// A unique identifier for this type
+        /// </summary>
         public string UniqueId => $"{RuntimePath.Replace(".lua", "")}@{Name}";
-        public bool AirshipBehaviour { get; }
+        /// <summary>
+        /// What this type is declared as
+        /// </summary>
+        public AirshipDeclarationType DeclarationType { get; }
+
+        /// <summary>
+        /// Returns whether or not this type can be assigned from the given base type
+        /// </summary>
+        /// <param name="baseType"></param>
+        /// <returns></returns>
+        public bool IsAssignableFrom(AirshipType baseType) {
+            return this == baseType || BaseTypes.Contains(baseType);
+        }
+        
+        /// <summary>
+        /// The script declaring this type
+        /// </summary>
         public AirshipScript Script {
             get {
 #if UNITY_EDITOR
@@ -23,10 +88,19 @@ namespace Luau {
             }
         }
 
-        public AirshipType(AirshipBehaviourMeta meta) {
+        internal AirshipType(AirshipBehaviourMeta meta) {
             Name = meta.className;
-            AirshipBehaviour = meta.component;
+            DeclarationType = meta.component ? AirshipDeclarationType.AirshipBehaviour : AirshipDeclarationType.Unknown;
             RuntimePath = meta.filePath;
+        }
+        
+        internal AirshipType(TypeScriptEnum @enum) {
+            var name = @enum.id.Split("@").Last();
+            var path = string.Join("@", @enum.id.Split("@")[0..^2]);
+            
+            Name = name;
+            DeclarationType = AirshipDeclarationType.Enum;
+            RuntimePath = path + ".lua";
         }
         
         public static implicit operator AirshipType(string typeName) {
@@ -37,7 +111,7 @@ namespace Luau {
             return UniqueId.GetHashCode();
         }
         
-        protected bool Equals(AirshipType other) {
+        private bool Equals(AirshipType other) {
             return UniqueId == other.UniqueId;
         }
 
