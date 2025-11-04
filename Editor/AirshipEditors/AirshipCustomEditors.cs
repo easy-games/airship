@@ -235,7 +235,7 @@ public static class AirshipCustomEditors {
 
 
     internal static AirshipEditor GetComponentEditorForType(AirshipType airshipType, AirshipComponent component, AirshipSerializedObject serializedObject) {
-        if (!airshipType.AirshipBehaviour) return null;
+        if (airshipType.DeclarationType != AirshipDeclarationType.AirshipBehaviour) return null;
         var editorType = AirshipCustomEditors.GetEditorTypeForTypeName(airshipType.Name);
         var editor = AirshipCustomEditors.GetEditorForComponent(component, editorType, serializedObject);
         return editor;

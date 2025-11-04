@@ -97,6 +97,7 @@ namespace VoxelWorldStuff {
         /// Reference to voxel world this chunk belongs to.
         /// </summary>
         public VoxelWorld world;
+        private GameObject worldGameObject;
 
         public Vector3Int bottomLeftInt;
         public Bounds bounds;
@@ -164,6 +165,7 @@ namespace VoxelWorldStuff {
 
         public void SetWorld(VoxelWorld world) {
             this.world = world;
+            worldGameObject = world.gameObject;
             parent = world.chunksFolder.gameObject;
         }
 
@@ -663,13 +665,16 @@ namespace VoxelWorldStuff {
 
                 if (obj == null) {
                     obj = newChunk;
-                    obj.layer = world.gameObject.layer;
+                    obj.layer = worldGameObject.layer;
                     obj.transform.parent = parent.transform;
                     obj.transform.localRotation = Quaternion.identity;
                     obj.transform.localScale = Vector3.one;
                     obj.transform.localPosition = Vector3.zero;
                     obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                     obj.name = "Chunk";
+                    // Don't think it matters if VoxelWorld moves (like BW lobby windmill) because all children
+                    // are static
+                    obj.isStatic = true;
 
                     renderer = obj.AddComponent<MeshRenderer>();
                 }
@@ -723,13 +728,16 @@ namespace VoxelWorldStuff {
 
                     if (obj == null) {
                         obj = new GameObject();
-                        obj.layer = world.gameObject.layer;
+                        obj.layer = worldGameObject.layer;
                         obj.transform.parent = parent.transform;
                         obj.transform.localRotation = Quaternion.identity;
                         obj.transform.localScale = Vector3.one;
                         obj.transform.localPosition = Vector3.zero;
                         obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
+                        // Don't think it matters if VoxelWorld moves (like BW lobby windmill) because all children
+                        // are static
+                        obj.isStatic = true;
                     }
                     
                     // Copy prefabs to new chunk (so we don't destroy them)

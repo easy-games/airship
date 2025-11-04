@@ -1,8 +1,10 @@
 #if UNITY_EDITOR
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using ShadowResolution = UnityEngine.Rendering.Universal.ShadowResolution;
 
 namespace Editor.Quality {
     [InitializeOnLoad]
@@ -35,12 +37,42 @@ namespace Editor.Quality {
             // Not super necessary, so if we notice animation issues on mobile we can increase this.
             QualitySettings.skinWeights = SkinWeights.TwoBones;
 
-            var pipeline = (UniversalRenderPipelineAsset) AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
+            var pipelineAsset = (UniversalRenderPipelineAsset) AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(
                 "Packages/gg.easy.airship/URP/AirshipMobileURPAsset.asset");
-            QualitySettings.renderPipeline = pipeline;
+            QualitySettings.renderPipeline = pipelineAsset;
 
-            pipeline.shadowCascadeCount = 2;
-            pipeline.cascade4Split = new Vector3(0.067f, 0.2f, 0.467f);
+            // HDR
+            // HDR is slightly more expensive (I believe using halfs rather than bytes per channel)
+            // On even semi-modern mobile GPUs this is not a problem and allows us to support effects like
+            // bloom.
+            pipelineAsset.supportsHDR = true;
+            pipelineAsset.colorGradingMode = ColorGradingMode.HighDynamicRange;
+            
+            // SHADOWS
+            // Lower resolution texture looks good with soft shadows
+            pipelineAsset.mainLightShadowmapResolution = (int) ShadowResolution._512;
+            
+            // Fewer shadow cascades reduce draw call count
+            pipelineAsset.shadowCascadeCount = 1;
+            pipelineAsset.cascadeBorder = 0.65f;
+
+            // Soft shadows are slightly more expensive but @ medium quality
+            // with lower res shadow textures they seem okay (and actually might increase
+            // performance over higher resolution shadow texture)
+            
+            // (Not accessible so set through serialized object)
+            // m_SoftShadowsSupported: 1
+            // m_SoftShadowQuality: 2
+            var so = new SerializedObject(pipelineAsset);
+            var supportedProp = so.FindProperty("m_SoftShadowsSupported");
+            var qualityProp = so.FindProperty("m_SoftShadowQuality");
+            if (supportedProp != null && qualityProp != null) {
+                supportedProp.boolValue = true;
+                qualityProp.intValue = (int) SoftShadowQuality.Medium;
+                so.ApplyModifiedProperties();
+            } else {
+                Debug.LogWarning("[Airship] Couldn't find shadow properties when setting up low quality mode.");
+            }
         }
 
         private static void ConfigureForNormal() {

@@ -49,12 +49,13 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         }
     }
     
-    public AirshipSerializedProperty(SerializedProperty property, LuauMetadataProperty metadata, AirshipEditor editor) {
+    public AirshipSerializedProperty(AirshipSerializedObject serializedObject, SerializedProperty property, LuauMetadataProperty metadata, AirshipEditor editor) {
         serializedProperty = property;
         UpdateProperty();
         propertyMetadata = metadata;
         decorators = metadata.GetDecorators();
         this.editor = editor;
+        this.serializedObject = serializedObject;
     }
     
     internal void UpdateProperty() {

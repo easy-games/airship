@@ -35,7 +35,28 @@ public class AirshipSerializedObject {
 
     public AirshipType airshipType => AirshipBuildInfo.Instance.GetTypeByName(serializedName.stringValue);
     public AirshipComponent airshipComponent => (AirshipComponent)serializedObject.targetObject;
-
+    public UnityEngine.Object targetObject => serializedObject.targetObject;
+    
+    internal AirshipSerializedObject() {}
+    public AirshipSerializedObject(AirshipComponent component) => Update(null, new SerializedObject(component), component.metadata);
+    
+    [CanBeNull]
+    internal AirshipSerializedObject prefabAsset {
+        get {
+            if (PrefabUtility.IsPartOfPrefabInstance(serializedObject.targetObject)) {
+                var obj = new AirshipSerializedObject();
+                var original = (AirshipComponent) PrefabUtility.GetCorrespondingObjectFromOriginalSource(serializedObject.targetObject);
+                var serObj =
+                    new SerializedObject(original);
+                
+                obj.Update(this.editor, serObj, original.metadata);
+                return obj;
+            } else {
+                return null;
+            }
+        }
+    }
+    
     internal void Update(AirshipEditor currentEditor, SerializedObject currentSerializedObject, LuauMetadata currentMetadata) {
         _propertyCache.Clear();
         serializedObject = currentSerializedObject;
@@ -59,7 +80,7 @@ public class AirshipSerializedObject {
             if (propertyName == targetPropertyName) {
                 var propertyMetadata = metadata.FindProperty(targetPropertyName);
                
-                var airshipProperty = new AirshipSerializedProperty(property, propertyMetadata, this.editor);
+                var airshipProperty = new AirshipSerializedProperty(this, property, propertyMetadata, this.editor);
                 // _propertyCache.Add(targetPropertyName, airshipProperty);
                 return airshipProperty;
             }
@@ -80,7 +101,7 @@ public class AirshipSerializedObject {
             if (bindingPropertyIndex == -1) continue;
             var bindingProperty = metadata.properties[bindingPropertyIndex];
             
-            propertyList.Add(new AirshipSerializedProperty(property, bindingProperty, editor));
+            propertyList.Add(new AirshipSerializedProperty(this, property, bindingProperty, editor));
             indexDictionary.Add(bindingProperty.name, bindingPropertyIndex);
         }
 
