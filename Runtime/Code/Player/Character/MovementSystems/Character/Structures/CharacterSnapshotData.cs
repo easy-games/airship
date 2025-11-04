@@ -248,8 +248,16 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write((ushort)(other.lastProcessedCommand - lastProcessedCommand)); // same with commands (~1 processed per tick)
             writer.Write(changedMask);
             if (boolsChanged) writer.Write(newBools);
-            if (positionChanged) writer.Write(other.position);
-            if (velocityChanged) writer.Write(other.velocity);
+            if (positionChanged) {
+                writer.Write(NetworkSerializationUtil.CompressToInt(other.position.x));
+                writer.Write(NetworkSerializationUtil.CompressToInt(other.position.y));
+                writer.Write(NetworkSerializationUtil.CompressToInt(other.position.z));
+            }
+            if (velocityChanged) {
+                writer.Write(NetworkSerializationUtil.CompressToInt(other.velocity.x));
+                writer.Write(NetworkSerializationUtil.CompressToInt(other.velocity.y));
+                writer.Write(NetworkSerializationUtil.CompressToInt(other.velocity.z));
+            }
             if (lookVectorChanged) {
                 writer.Write(NetworkSerializationUtil.CompressToShort(other.lookVector.x));
                 writer.Write(NetworkSerializationUtil.CompressToShort(other.lookVector.y));
@@ -317,8 +325,20 @@ namespace Code.Player.Character.MovementSystems.Character
                 snapshot.prevStepUp = BitUtil.GetBit(bools, 6);
                 snapshot.isGrounded = BitUtil.GetBit(bools, 7);
             }
-            if (BitUtil.GetBit(changedMask, 1)) snapshot.position = reader.Read<Vector3>();
-            if (BitUtil.GetBit(changedMask, 2)) snapshot.velocity = reader.Read<Vector3>();
+            if (BitUtil.GetBit(changedMask, 1)) {
+                snapshot.position = new Vector3(
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>())
+                );
+            }
+            if (BitUtil.GetBit(changedMask, 2)) {
+                snapshot.velocity = new Vector3(
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>())
+                );
+            }
             if (BitUtil.GetBit(changedMask, 3)) {
                 snapshot.lookVector = new Vector3(
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
@@ -364,9 +384,14 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(bools);
             writer.Write(this.tick);
             writer.Write(this.lastProcessedCommand);
-            
-            // We don't include position and velocity because we send the full value for those instead of a diff. The 
-            // floating point representation of those numbers also makes it challenging to get a consistent CRC.
+
+            // Position and velocity are quantized to ensure deterministic CRC across platforms
+            writer.Write(NetworkSerializationUtil.CompressToInt(this.position.x));
+            writer.Write(NetworkSerializationUtil.CompressToInt(this.position.y));
+            writer.Write(NetworkSerializationUtil.CompressToInt(this.position.z));
+            writer.Write(NetworkSerializationUtil.CompressToInt(this.velocity.x));
+            writer.Write(NetworkSerializationUtil.CompressToInt(this.velocity.y));
+            writer.Write(NetworkSerializationUtil.CompressToInt(this.velocity.z));
 
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.y));
@@ -415,8 +440,12 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(value.time);
             writer.Write(value.tick);
             writer.Write(value.lastProcessedCommand);
-            writer.Write(value.position);
-            writer.Write(value.velocity);
+            writer.Write(NetworkSerializationUtil.CompressToInt(value.position.x));
+            writer.Write(NetworkSerializationUtil.CompressToInt(value.position.y));
+            writer.Write(NetworkSerializationUtil.CompressToInt(value.position.z));
+            writer.Write(NetworkSerializationUtil.CompressToInt(value.velocity.x));
+            writer.Write(NetworkSerializationUtil.CompressToInt(value.velocity.y));
+            writer.Write(NetworkSerializationUtil.CompressToInt(value.velocity.z));
             writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.y));
             writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.z));
@@ -449,8 +478,14 @@ namespace Code.Player.Character.MovementSystems.Character
                 time = reader.Read<double>(),
                 tick = reader.Read<int>(),
                 lastProcessedCommand = reader.Read<int>(),
-                position = reader.Read<Vector3>(),
-                velocity = reader.Read<Vector3>(),
+                position = new Vector3(
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>())),
+                velocity = new Vector3(
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>()),
+                    NetworkSerializationUtil.DecompressInt(reader.Read<int>())),
                 lookVector = new Vector3(
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 

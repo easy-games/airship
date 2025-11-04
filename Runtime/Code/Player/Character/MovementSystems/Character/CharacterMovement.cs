@@ -3,6 +3,7 @@ using Assets.Luau;
 using Code.Network.Simulation;
 using Code.Network.StateSystem;
 using Code.Player.Character.NetworkedMovement;
+using Code.Util;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -1411,7 +1412,11 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
-            rb.linearVelocity = newVelocity;
+
+            // Quantize velocity and position to network precision to ensure deterministic physics across platforms
+            rb.linearVelocity = NetworkSerializationUtil.QuantizeVector3(newVelocity);
+            rb.position = NetworkSerializationUtil.QuantizeVector3(rb.position);
+
             // Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
             //     Color.green, 5);
 
@@ -1819,7 +1824,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
-            rb.MovePosition(position);
+            rb.MovePosition(NetworkSerializationUtil.QuantizeVector3(position));
         }
 
         public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
@@ -1836,7 +1841,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
-            rb.MovePosition(position);
+            rb.MovePosition(NetworkSerializationUtil.QuantizeVector3(position));
             SetLookVectorAndNotifyLuau(lookVector);
         }
 
@@ -1904,7 +1909,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 return;
             }
 
-            rb.linearVelocity = velocity;
+            rb.linearVelocity = NetworkSerializationUtil.QuantizeVector3(velocity);
         }
 
         // TODO: check if we should have this or make people use movement.currentMoveState.velocity
