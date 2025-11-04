@@ -883,6 +883,8 @@ public partial class VoxelWorld : MonoBehaviour {
     public void RegenerateAllMeshes() {
         Profiler.BeginSample("RegenerateAllMeshes");
 
+        loadingStatus = LoadingStatus.Loading;
+
         // Force a mesh update
         foreach (var (_, chunk) in chunks) {
             chunk.SetGeometryDirty(true);
@@ -1265,7 +1267,7 @@ public partial class VoxelWorld : MonoBehaviour {
                 OnFinishedLoading?.Invoke();
                 
                 // TODO this might not be the best location to be static batching
-                StaticBatchingUtility.Combine(gameObject);
+                StaticBatchingUtility.Combine(chunksFolder);
             }
         }
 
