@@ -487,13 +487,16 @@ using Object = UnityEngine.Object;
                             File.Delete(project.BuildInfoPath);
                         }
                     }
+
+                    var publish = (compileFlags & TypeScriptCompileFlags.Publishing) != 0;
+                    var codePublish = publish && (compileFlags & TypeScriptCompileFlags.CodeOnlyPublish) != 0;
                     
                     var buildArguments = new TypescriptCompilerBuildArguments() {
                         Project = project.Directory,
                         Package = project.TsConfig.airship.PackageFolderPath,
                         Json = true,
-                        SkipPackages = (compileFlags & TypeScriptCompileFlags.SkipPackages) != 0,
-                        Publishing = (compileFlags & TypeScriptCompileFlags.Publishing) != 0,
+                        CodeOnlyPublish = codePublish,
+                        Publishing = publish,
                         Incremental = (compileFlags & TypeScriptCompileFlags.Incremental) != 0,
                         Verbose = (compileFlags & TypeScriptCompileFlags.Verbose) != 0 || EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
@@ -828,7 +831,7 @@ using Object = UnityEngine.Object;
             FullClean = 1 << 0,
             Setup = 1 << 1,
             DisplayProgressBar = 1 << 2,
-            SkipPackages = 1 << 3,
+            CodeOnlyPublish = 1 << 3,
             Incremental = 1 << 4,
             Verbose = 1 << 5,
             Publishing = 1 << 6,
