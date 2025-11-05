@@ -392,13 +392,12 @@ public class AccessoryBuilder : MonoBehaviour {
                     // to the lods list in LOD0 active accessory.
                     lods.Add(activeAccessory);
                 }
-                
+
 
                 // Load customizations
                 foreach (var slot in customization.platformCustomSlots) {
                     if (slot.slot == (int)accessoryTemplate.accessorySlot) {
                         //Found custom data
-                        Debug.Log("Acc setting custom slot: " + slot.slot);
                         activeAccessory.AccessoryComponent.Customize(slot.variant, slot.colors);
                         break;
                     }
@@ -700,20 +699,19 @@ public class AccessoryBuilder : MonoBehaviour {
     public OutfitCustomization SetCustomization(OutfitCustomization customData) {
         if (customData == null) {
             customization = new OutfitCustomization();
-            print("Making new outfitCustomization");
         } else {
             customization = customData;
         }
+
         return customization;
     }
 
     public OutfitCustomization GetCustomization() {
-        print("Getting customization");
-        for (var i = 0; i < customization.platformCustomSlots.Length; i++) {
-            for (var j = 0; j < customization.platformCustomSlots[i].colors.Length; j++) {
-                print("Getting color: " + customization.platformCustomSlots[i].colors[j].colorHex);
-            }
-        }
+        // for (var i = 0; i < customization.platformCustomSlots.Length; i++) {
+        //     for (var j = 0; j < customization.platformCustomSlots[i].colors.Length; j++) {
+        //         print("Getting color: " + customization.platformCustomSlots[i].colors[j].colorHex);
+        //     }
+        // }
         return customization;
     }
 
@@ -723,12 +721,12 @@ public class AccessoryBuilder : MonoBehaviour {
 
     public void SetCustomColor(AccessorySlot slot, string colorKey, string colorHex) {
         if (customization == null) {
-            print("Making new outfitCustomization while setting");
             customization = new OutfitCustomization();
         }
+
         var acc = GetActiveAccessoryBySlot(slot);
         if (acc?.AccessoryComponent != null) {
-            print("Setting color: " + colorKey + ": " + colorHex + " to slot: " + slot);
+            // print("Setting color: " + colorKey + ": " + colorHex + " to slot: " + slot);
             var newColor = Color.magenta;
             OutfitCustomizationSlot accSlot = null;
             // Make sure its a valid color
@@ -751,43 +749,38 @@ public class AccessoryBuilder : MonoBehaviour {
                             if (accSlot != null) {
                                 break;
                             }
-                        
+
                             // Need to add this key
                             if (customSlot.colors == null || customSlot.colors.Length == 0) {
-                                print("Creating new color array");
                                 customSlot.colors = new OutfitCustomizationColor[0];
                             } else {
-                                print("Appending new color to array");
-                                customSlot.colors = customSlot.colors.Append(new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex }).ToArray();
-                                print("Color array size: " + customSlot.colors.Length);
+                                customSlot.colors = customSlot.colors.Append(new OutfitCustomizationColor()
+                                    { key = colorKey, colorHex = colorHex }).ToArray();
                             }
-                            
+
                             accSlot = customSlot;
                             break;
                         }
                     }
 
                     if (accSlot == null) {
-                        //Need to add new slot data
-                        customization.platformCustomSlots = customization.platformCustomSlots.Append(new OutfitCustomizationSlot() {
-                            variant = 0, slot = (int)slot,
-                            colors = new [] {
-                                new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex }
-                            }
-                        }) as OutfitCustomizationSlot[];
-                        print("Appending to array");
+                        // Need to add new slot data
+                        customization.platformCustomSlots = customization.platformCustomSlots.Append(
+                            new OutfitCustomizationSlot() {
+                                variant = 0, slot = (int)slot,
+                                colors = new[] {
+                                    new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex }
+                                }
+                            }) as OutfitCustomizationSlot[];
                     }
                 } else {
-                    accSlot = new() {
+                    accSlot = new OutfitCustomizationSlot {
                         slot = (int)slot,
                         colors = new[] { new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex } }
                     };
-                    customization.platformCustomSlots = new [] { accSlot };
-                    print("Creating new slot array");
+                    customization.platformCustomSlots = new[] { accSlot };
                 }
-                
-                print("Setting acc Customization");
-                
+
                 acc.AccessoryComponent.Customize(accSlot.variant, accSlot.colors);
             } else {
                 Debug.LogError("Unable to parse color: " + colorHex);
