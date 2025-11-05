@@ -16,6 +16,7 @@ using UnityEditor;
 #endif
 
 //Singleton
+[ExecuteAlways]
 public partial class LuauCore : MonoBehaviour {
 #if UNITY_EDITOR
     [InitializeOnLoad]
@@ -104,7 +105,11 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private void CheckSetup() {
-        if (initialized) return;
+        Debug.Log("LUAU CORE CHECK SETUP");
+        if (initialized) {
+            Debug.Log("LUAU CORE ALREADY INITIALIZED");
+            return;
+        }
 
         initialized = true;
 
@@ -129,6 +134,7 @@ public partial class LuauCore : MonoBehaviour {
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
         var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
+        Debug.Log("LUAU CORE STARTUP");
         LuauPlugin.InitializePrintCallback(printCallback_holder);
         LuauPlugin.InitializeComponentCallbacks(componentSetEnabledCallback_holder);
         LuauPlugin.Startup(
@@ -237,6 +243,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private void Awake() {
+        Debug.Log("LUAU CORE AWAKE");
         if (_coreInstance != null) {
             // Ensure only one CoreInstance exists
             Destroy(gameObject);
@@ -244,17 +251,24 @@ public partial class LuauCore : MonoBehaviour {
         }
         
         _coreInstance = this;
-        DontDestroyOnLoad(gameObject);
+        if (Application.isPlaying) {
+            DontDestroyOnLoad(gameObject);
+        }
         s_shutdown = false;
         CheckSetup();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetOnReload() {
+        Debug.Log($"LUAU CORE RESET RELOAD (APPLICATION PLAYING: {Application.isPlaying})");
         ResetStaticFields();
         _coreInstance = null;
         LuauPlugin.SubsystemRegistration();
         Application.quitting -= Quit;
+
+        if (!Application.isPlaying) {
+            
+        }
     }
 
 #if UNITY_EDITOR
@@ -264,6 +278,7 @@ public partial class LuauCore : MonoBehaviour {
 #endif
 
     private void Start() {
+        Debug.Log("LUAU CORE START");
         Application.quitting += Quit;
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
         StartCoroutine(PrintReferenceAssemblies());

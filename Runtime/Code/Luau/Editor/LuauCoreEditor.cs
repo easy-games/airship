@@ -34,7 +34,6 @@ namespace Code.Luau.Editor {
 			// and then logging an error if still missing
 			if (!luauCorePrefab) {
 				if (alertIfMissing) {
-					Debug.LogError("[Airship] Could not find LuauCore prefab to instantiate.");
 					return;
 				}
 				EditorApplication.delayCall += () => {

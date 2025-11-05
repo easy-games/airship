@@ -106,6 +106,9 @@ namespace Luau {
                     var coreGo = GameObject.Find("AirshipCore");
                     if (!coreGo) {
                         coreGo = new GameObject("AirshipCore");
+                        if (!Application.isPlaying) {
+                            coreGo.hideFlags = HideFlags.HideAndDontSave;
+                        }
                     }
 
                     var modulesFolder = GameObject.Find("LuauModules");
@@ -136,6 +139,7 @@ namespace Luau {
                 _luauModulesFolder = null;
                 _luauCoreModulesFolder = null;
             }
+            
             Active = true;
         }
 

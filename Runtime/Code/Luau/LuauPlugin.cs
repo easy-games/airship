@@ -136,6 +136,7 @@ public static class LuauPlugin {
     }
     
 	public static bool Startup(LuauPluginNative.LuauPluginStartup pluginStartup) {
+		Debug.Log("[LUAU PLUGIN] Startup");
         ThreadSafetyCheck();
         return LuauPluginNative.Startup(pluginStartup);
     }
@@ -147,6 +148,7 @@ public static class LuauPlugin {
 	}
 
 	public static void SubsystemRegistration() {
+		Debug.Log("[LUAU PLUGIN] SubsystemRegistration");
 #if !UNITY_EDITOR // The SubsystemRegistration call is done automatically within LuauPluginNative at editor time
 		ThreadSafetyCheck();
 		LuauPluginNative.SubsystemRegistration();
@@ -203,6 +205,7 @@ public static class LuauPlugin {
     }
 	
 	public static void Shutdown() {
+		Debug.Log("[LUAU PLUGIN] Shutdown");
 		ThreadSafetyCheck();
 		LuauPluginNative.Shutdown();
 	}

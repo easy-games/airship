@@ -106,7 +106,17 @@ public class LuauScript : MonoBehaviour {
 		if (!forceContext && gameObject.scene.name is "CoreScene" or "MainMenu" && ElevateToProtectedWithinCoreScene) {
 			context = LuauContext.Protected;
 		}
-		
+
+		if (Application.isPlaying || script != null) {
+			LoadAndExecuteInternal();
+		}
+	}
+
+	internal void LoadAndExecuteInternal() {
+		if (thread != IntPtr.Zero) {
+			LuauPlugin.DestroyThread(thread);
+			thread = IntPtr.Zero;
+		}
 		thread = LoadAndExecuteScript(gameObject, context, LuauScriptCacheMode.NotCached, script, out var status);
 	}
 

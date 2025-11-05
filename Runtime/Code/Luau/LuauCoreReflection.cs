@@ -119,19 +119,21 @@ public partial class LuauCore : MonoBehaviour
 
     private static void SetupReflection() {
 #if UNITY_EDITOR
-        DevConsole.AddCommand(Command.Create(
-            "assemblies",
-            "",
-            "Toggles tracking and printing of used assemblies. Only works in editor.",
-            () => {
-                printReferenceAssemblies = !printReferenceAssemblies;
-                if (printReferenceAssemblies) {
-                    DevConsole.Log("Enabled assembly tracking.");
-                } else {
-                    DevConsole.Log("Disabled assembly tracking.");
+        if (Application.isPlaying) {
+            DevConsole.AddCommand(Command.Create(
+                "assemblies",
+                "",
+                "Toggles tracking and printing of used assemblies. Only works in editor.",
+                () => {
+                    printReferenceAssemblies = !printReferenceAssemblies;
+                    if (printReferenceAssemblies) {
+                        DevConsole.Log("Enabled assembly tracking.");
+                    } else {
+                        DevConsole.Log("Disabled assembly tracking.");
+                    }
                 }
-            }
-        ));
+            ));
+        }
 #endif
 
         if (didReflectionSetup) return;
