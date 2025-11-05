@@ -565,6 +565,9 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipScriptableObject: {
+                    if (objectRef is AirshipScriptableObject scriptableObject) {
+                    }
+
                     // TODO implement
                     propType = AirshipComponentPropertyType.AirshipNil;
                     obj = -1; // Reference to null

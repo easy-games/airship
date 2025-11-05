@@ -26,6 +26,7 @@ public enum AirshipSerializedType {
     Matrix4x4,
     Rect,
     SerializedClass,
+    AirshipScriptableObject
 }
 
 public abstract class AirshipSerializedValue {
@@ -49,6 +50,7 @@ public abstract class AirshipSerializedValue {
             "Matrix4x4" => AirshipSerializedType.Matrix4x4,
             "Rect" => AirshipSerializedType.Rect,
             "AirshipSerializableObject" => AirshipSerializedType.SerializedClass,
+            "AirshipScriptableObject" => AirshipSerializedType.AirshipScriptableObject,
             _ => AirshipSerializedType.Unknown,
         };
     }
@@ -87,7 +89,7 @@ public abstract class AirshipSerializedValue {
         }
     }
     
-    public bool isAirshipType => serializedType.stringValue is "AirshipBehaviour" or "AirshipSerializableObject";
+    public bool isAirshipType => serializedType.stringValue is "AirshipBehaviour" or "AirshipSerializableObject" or "AirshipScriptableObject";
     public bool isEnum => serializedType.stringValue is "IntEnum" or "StringEnum" or "FlagEnum";
     public bool isObject => serializedType.stringValue == "object";
     public AirshipSerializedType type => GetTypeFromTypeString(serializedType.stringValue);

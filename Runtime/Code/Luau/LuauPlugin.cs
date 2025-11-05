@@ -225,6 +225,18 @@ public static class LuauPlugin {
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void CreateScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.CreateScriptableObject(context, thread, unityInstanceId));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void RemoveScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.RemoveScriptableObject(context, thread, unityInstanceId));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void RemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.RemoveAirshipComponent(context, thread, unityInstanceId, componentId));

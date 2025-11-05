@@ -444,6 +444,38 @@ public static partial class AirshipEditorGUI {
             }
         }
     }
+
+    private static AirshipScriptableObject DoAirshipScriptableObject(Rect? rect, GUIContent label,
+        AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedType.AirshipScriptableObject);
+        if (!property.isAirshipType) return null;
+        
+        var currentValue = (AirshipScriptableObject)property.serializedObjectValue.objectReferenceValue;
+        if (property.serializedFileRef == null) return null;
+        
+        var fileRefStr = "Assets/" + property.serializedFileRef.stringValue.Replace("\\", "/");
+        var script = AirshipScript.GetBinaryFileFromPath(fileRefStr);
+        if (script == null) {
+            EditorGUILayout.HelpBox($"Cannot find script at path {property.serializedFileRef.stringValue}", MessageType.Error);
+            return null;
+        }
+        
+        AirshipScriptableObject binding;
+        if (rect.HasValue) {
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(rect.Value, label, null, script, currentValue, null);
+        } else {
+            var r = EditorGUILayout.GetControlRect(false, UnityEditor.Search.ObjectField.singleLineHeight);
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(r, label, null, script, currentValue, null);
+        }
+        
+        if (binding != currentValue) {
+            property.serializedObjectValue.objectReferenceValue = binding;
+            property.serializedModified.boolValue = true;
+        }
+
+        DoPropertyEvents(rect, property);
+        return binding;
+    }
     
     private static AirshipComponent DoAirshipComponent(Rect? rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator propertyValidator = null) {
         DoValidateProperty(rect, property, AirshipSerializedType.AirshipBehaviour);

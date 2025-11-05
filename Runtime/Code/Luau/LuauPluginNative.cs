@@ -80,6 +80,12 @@ public static class LuauPluginNative {
 	internal delegate IntPtr PrewarmAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId);
 	[NativeDelegate] internal static PrewarmAirshipComponentDelegate PrewarmAirshipComponent;
 	
+	internal delegate IntPtr CreateScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId);
+	[NativeDelegate] internal static CreateScriptableObjectDelegate CreateScriptableObject;
+	
+	internal delegate IntPtr RemoveScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId);
+	[NativeDelegate] internal static RemoveScriptableObjectDelegate RemoveScriptableObject;
+	
 	internal delegate IntPtr RemoveAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
 	[NativeDelegate] internal static RemoveAirshipComponentDelegate RemoveAirshipComponent;
 	

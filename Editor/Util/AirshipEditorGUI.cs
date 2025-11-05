@@ -541,6 +541,10 @@ public static partial class AirshipEditorGUI {
                 DoAirshipSerializedClassObject(null, label, value);
                 break;
             }
+            case AirshipSerializedType.AirshipScriptableObject: {
+                DoAirshipScriptableObject(null, label, value);
+                break;
+            }
             default: {
                 EditorGUILayout.HelpBox($"{value.typeString} is not yet supported by PropertyFieldLayout!",
                     MessageType.Warning);

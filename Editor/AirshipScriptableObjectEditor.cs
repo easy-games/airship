@@ -101,6 +101,10 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
     public override void OnInspectorGUI() {
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         
+        binding.ReconcileMetadata(ReconcileSource.Inspector);
+        serializedObject.ApplyModifiedProperties();
+        serializedObject.Update();
+        
         Type customEditorType = null;
         if (binding.script != null && binding.metadata != null) {
             customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);

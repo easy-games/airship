@@ -43,18 +43,18 @@ internal enum ReconcileSource {
 	ForceReconcile,
 }
 
-internal class AirshipReconcileEventData {
+internal class AirshipComponentReconcileEventData {
 	public AirshipComponent Component { get; }
 	public bool ShouldReconcile { get; set; } = true;
 	public bool UseLegacyReconcile { get; set; } = true;
 	public ReconcileSource ReconcileSource { get; }
 
-	public AirshipReconcileEventData(AirshipComponent component, ReconcileSource source) {
+	public AirshipComponentReconcileEventData(AirshipComponent component, ReconcileSource source) {
 		Component = component;
 		ReconcileSource = source;
 	}
 }
-internal delegate void ReconcileAirshipComponent(AirshipReconcileEventData data);
+internal delegate void ReconcileAirshipComponent(AirshipComponentReconcileEventData data);
 
 [AddComponentMenu("Airship/Airship Component")]
 [HelpURL("https://docs.airship.gg/typescript/airshipbehaviour")]
@@ -537,7 +537,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 
 	    metadata.name = targetMetadata.name;
 	    
-	    var eventData = new AirshipReconcileEventData(this, reconcileSource);
+	    var eventData = new AirshipComponentReconcileEventData(this, reconcileSource);
 	    Reconcile?.Invoke(eventData);
 #endif
     }

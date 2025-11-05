@@ -52,8 +52,11 @@ namespace Airship.Editor {
         [InitializeOnLoadMethod]
         internal static void OnLoad() {
             AirshipComponent.Reconcile += OnComponentReconcile;
+            AirshipScriptableObject.Reconcile += OnScriptableObjectReconcile;
         }
- 
+
+
+
         internal static void StartScriptUpdates() {}
 
         internal static void StopScriptUpdates() {
@@ -96,36 +99,16 @@ namespace Airship.Editor {
             }
         }
 
-        // internal static bool Reconcile(AirshipScriptableObject scriptableObject) {
-        //     
-        // }
-        
-        /// <summary>
-        /// Reconcile the component
-        /// </summary>
-        /// <param name="component"></param>
-        internal static bool ReconcileComponent(AirshipComponent component) {
+        internal static bool ReconcileMetadata(LuauMetadata componentMetadata, LuauMetadata scriptMetadata) { 
+            if (scriptMetadata == null) return false;
+            componentMetadata.name = scriptMetadata.name;
+            componentMetadata.decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
+            
 #if AIRSHIP_DEBUG
             var additions = new HashSet<string>();
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
-            if (component.script == null) {
-                Debug.LogWarning("no script");
-                return false;
-            }
-            if (component.script.m_metadata == null) {
-                Debug.LogWarning("no metadata");
-                return false;
-            }
-            
-            
-            var scriptMetadata = component.script.m_metadata;
-            var componentMetadata = component.metadata;
-
-            if (scriptMetadata == null) return false;
-            componentMetadata.name = scriptMetadata.name;
-            componentMetadata.decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
             
             // Add missing properties
             foreach (var scriptProperty in scriptMetadata.properties) {
@@ -198,6 +181,42 @@ namespace Airship.Editor {
                 }
             }
 #endif
+            return true;
+        }
+
+        internal static bool ReconcileScriptableObject(AirshipScriptableObject scriptableObject) {
+            if (scriptableObject.script == null) {
+                return false;
+            }
+            if (scriptableObject.script.m_metadata == null) {
+                return false;
+            }
+            
+            var scriptMetadata = scriptableObject.script.m_metadata;
+            var componentMetadata = scriptableObject.metadata;
+
+            return ReconcileMetadata(componentMetadata, scriptMetadata);
+        }
+        
+        /// <summary>
+        /// Reconcile the component
+        /// </summary>
+        /// <param name="component"></param>
+        internal static bool ReconcileComponent(AirshipComponent component) {
+            if (component.script == null) {
+                Debug.LogWarning("no script");
+                return false;
+            }
+            if (component.script.m_metadata == null) {
+                Debug.LogWarning("no metadata");
+                return false;
+            }
+            
+            
+            var scriptMetadata = component.script.m_metadata;
+            var componentMetadata = component.metadata;
+
+            ReconcileMetadata(componentMetadata, scriptMetadata);
             
             // Add required components
             var requireComponents = scriptMetadata.FindClassDecorators("RequireComponent");
@@ -415,15 +434,23 @@ namespace Airship.Editor {
             return true;
         }
 
-        private static IEnumerator OnDeferComponentReconcile(AirshipReconcileEventData eventData) {
+        private static IEnumerator OnDeferComponentReconcile(AirshipComponentReconcileEventData eventData) {
             yield return new WaitForEndOfFrame();
             OnComponentReconcile(eventData);
+        }
+        
+        
+        private static void OnScriptableObjectReconcile(AirshipScriptableObjectReconcileEventData data) {
+#if AIRSHIP_INTERNAL
+            Debug.Log($"Reconciling ScriptableObject {AssetDatabase.GetAssetPath(data.ScriptableObject)}");
+#endif
+            ReconcileScriptableObject(data.ScriptableObject);
         }
         
         /// <summary>
         /// Callback for when a component is requesting reconciliation
         /// </summary>
-        private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
+        private static void OnComponentReconcile(AirshipComponentReconcileEventData eventData) {
             // Components must have guids
             if (string.IsNullOrEmpty(eventData.Component.guid)) eventData.Component.guid = Guid.NewGuid().ToString();
 
