@@ -85,18 +85,22 @@ namespace Luau {
                 airshipBehaviourMetas.Add(pair.Value);
             }
             
-            airshipScriptableObjectMetas = new List<AirshipBehaviourMeta>(metaTop.scriptables.Count);
-            foreach (var pair in metaTop.scriptables) {
-                pair.Value.className = pair.Key;
-                pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
-                airshipScriptableObjectMetas.Add(pair.Value);
+            if (metaTop.scriptables != null) {
+                airshipScriptableObjectMetas = new List<AirshipBehaviourMeta>(metaTop.scriptables.Count);
+                foreach (var pair in metaTop.scriptables) {
+                    pair.Value.className = pair.Key;
+                    pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                    airshipScriptableObjectMetas.Add(pair.Value);
+                }
             }
-            
-            airshipSerializableMetas = new List<AirshipBehaviourMeta>(metaTop.serializables.Count);
-            foreach (var pair in metaTop.serializables) {
-                pair.Value.className = pair.Key;
-                pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
-                airshipSerializableMetas.Add(pair.Value);
+
+            if (metaTop.serializables != null) {
+                airshipSerializableMetas = new List<AirshipBehaviourMeta>(metaTop.serializables.Count);
+                foreach (var pair in metaTop.serializables) {
+                    pair.Value.className = pair.Key;
+                    pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                    airshipSerializableMetas.Add(pair.Value);
+                }
             }
 
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
@@ -372,4 +376,5 @@ namespace Luau {
             return meta.filePath;
         }
     }
+    
 }
