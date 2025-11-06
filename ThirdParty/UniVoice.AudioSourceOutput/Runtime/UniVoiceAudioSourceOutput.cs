@@ -20,9 +20,11 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
 
         Dictionary<int, Status> segments = new Dictionary<int, Status>();
         int GetSegmentCountByStatus(Status status) {
-            var matches = segments.Where(x => x.Value == status);
-            if (matches == null) return 0;
-            return matches.Count();
+            var matches = 0;
+            foreach (var segmentStatus in segments.Values) {
+                if (segmentStatus == status) matches++;
+            }
+            return matches;
         }
 
         public AudioSource AudioSource { get; private set; }

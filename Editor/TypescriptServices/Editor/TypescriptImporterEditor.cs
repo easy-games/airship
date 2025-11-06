@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Editor;
+using Editor.EditorInternal;
 using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;
@@ -38,7 +39,13 @@ namespace Airship.Editor {
         }
 
         public override void OnInspectorGUI() {
-            // base.OnInspectorGUI();
+            var iconProperty = serializedObject.FindProperty("icon");
+            EditorGUILayout.PropertyField(iconProperty);
+            
+            if (GUI.changed) {
+                serializedObject.ApplyModifiedProperties();
+            }
+            
             this.ApplyRevertGUI();
         }
 
@@ -47,7 +54,13 @@ namespace Airship.Editor {
         protected override void OnHeaderGUI() {
             var rect = EditorGUILayout.GetControlRect(false, 50, "IN BigTitle");
             
-            if (!AssetIcon) {
+            var serializedImporter = new SerializedObject(importer);
+
+            var iconProperty = serializedImporter.FindProperty("icon");
+            var icon = (Texture2D)iconProperty.objectReferenceValue;
+            if (icon != null) {
+                AssetIcon = icon;
+            } else {
                 AssetIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconAsset);
             }
             
@@ -77,7 +90,6 @@ namespace Airship.Editor {
                 GUILayout.EndVertical();
             }
             GUILayout.EndHorizontal();
-            // base.OnHeaderGUI();
         }
     }
 

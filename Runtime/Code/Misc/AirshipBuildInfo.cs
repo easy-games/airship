@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -23,7 +24,7 @@ namespace Luau {
 
         private AirshipBehaviourMetaTop() { }
     }
-    
+
     /// <summary>
     /// Defines each AirshipBehaviour component class.
     /// </summary>
@@ -34,6 +35,9 @@ namespace Luau {
         public string filePath;
         public List<string> extends;
 
+        public string assetPath => "Assets/" + filePath.Replace(".lua", ".ts");
+        
+        public AirshipType _typeCache;
         private AirshipBehaviourMeta() {}
     }
     
@@ -99,7 +103,8 @@ namespace Luau {
         private static AirshipBuildInfo _instance = null;
         
         public AirshipBuildData data;
-
+        
+        private readonly Dictionary<string, AirshipType> _types = new();
         private readonly Dictionary<string, AirshipBehaviourMeta> _classes = new();
 
 #if UNITY_EDITOR
@@ -171,6 +176,82 @@ namespace Luau {
 
         private Dictionary<string, string> scriptPathByTypeNameCache = new();
         private Dictionary<(string childPath, string parentPath), bool> inheritanceCheckCache = new();
+        
+        [CanBeNull]
+        public AirshipType GetTypeByName(string typeName) {
+            if (typeName == null) {
+                return null;
+            }
+            
+            if (_types.TryGetValue(typeName, out var type)) {
+                return type;
+            }
+
+            if (_classes.TryGetValue(typeName, out var meta)) {
+                type = new AirshipType(meta);
+                _types[typeName] = type;
+
+                List<AirshipType> inheritance = new();
+                foreach (var inherits in meta.extends) {
+                    if (_types.TryGetValue(inherits, out var inheritedType)) {
+                        inheritance.Add(inheritedType);
+                    } else if (_classes.TryGetValue(inherits, out var baseMeta)) {
+                        inheritedType = new AirshipType(baseMeta);
+                        _types.Add(inherits, inheritedType);
+                    }
+                }
+
+                type.BaseTypes = inheritance.ToArray();
+                return type;
+            }
+            
+            return null;
+        }
+
+        [CanBeNull]
+        public AirshipType GetTypeByPathAndName(string filePath, string typeName) {
+            var existingTypeName = GetTypeByName(typeName);
+            if (existingTypeName != null && existingTypeName.AssetPath == filePath) {
+                return existingTypeName;
+            }
+
+            if (!filePath.StartsWith("Assets/")) {
+                filePath = "Assets/" + filePath;
+            }
+           
+            var pathWithoutExtension = filePath.Replace(Path.GetExtension(filePath), "");
+            var fullName = $"{pathWithoutExtension}@{typeName}";
+            if (_types.TryGetValue(fullName, out var type)) {
+                return type;
+            }
+            
+            foreach (var (metaTypeName, meta) in _classes) {
+                var metaAssetPath = "Assets/" + meta.filePath;
+                var fullFilePath = pathWithoutExtension + ".lua";
+                
+                if (metaAssetPath == fullFilePath  && typeName == metaTypeName) {
+                    type = new AirshipType(meta);
+                    _types[fullName] = type;
+                    
+                    List<AirshipType> inheritance = new();
+                    foreach (var inherits in meta.extends) {
+                        if (_types.TryGetValue(inherits, out var inheritedType)) {
+                            inheritance.Add(inheritedType);
+                        } else if (_classes.TryGetValue(inherits, out var baseMeta)) {
+                            inheritedType = new AirshipType(baseMeta);
+                            _types.Add(inherits, inheritedType);
+                        }
+                    }
+
+                    type.BaseTypes = inheritance.ToArray();
+                    
+                    return type;
+                }
+            }
+
+            Debug.LogWarning($"Could not find type {typeName} in {pathWithoutExtension} - target was {filePath}@{typeName}");
+            return null;
+        }
         
         [CanBeNull]
         public string GetScriptPathByTypeName(string typeName) {

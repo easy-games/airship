@@ -1,11 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
+using Code.Luau;
 using Editor.EditorInternal;
+using JetBrains.Annotations;
+using Luau;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
-public static class AirshipEditorGUI {
+public static partial class AirshipEditorGUI {
     public static void HorizontalLine(Color color = default, int thickness = 1, int padding = 10, int margin = 0)
     {
         color = color != default ? color : Color.grey;
@@ -47,57 +53,76 @@ public static class AirshipEditorGUI {
         }
     }
 
+    internal static bool ValidateProperty(AirshipSerializedProperty serializedProperty, Func<AirshipSerializedProperty, bool> validate) {
+        serializedProperty.valid = validate(serializedProperty);
+        return serializedProperty.valid;
+    }
+    
     public static UnityEngine.Object ObjectField(Rect rect, GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
-        allowSceneObjects) {
+        allowSceneObjects, bool requiresReference) {
         return AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_objectFieldHash".GetHashCode(), currentValue, null,
-            type, null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle);
+            type, null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle, required: requiresReference);
     }
 
     public static UnityEngine.Object ObjectFieldLayout(GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
-        allowSceneObjects) {
+        allowSceneObjects, bool requiresReference) {
         var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
-        return ObjectField(rect, label, currentValue, type, allowSceneObjects);
+        return ObjectField(rect, label, currentValue, type, allowSceneObjects, requiresReference);
     }
 
     private const int TabButtonHeight = 22;
     
-    private static GUIStyle s_TabOnlyOne;
-    private static GUIStyle s_TabFirst;
-    private static GUIStyle s_TabMiddle;
-    private static GUIStyle s_TabLast;
-    private static Rect GetTabRect(Rect rect, int tabIndex, int tabCount, out GUIStyle tabStyle) {
-        if (s_TabOnlyOne == null)
-        {
-            s_TabOnlyOne = "Tab onlyOne";
-            s_TabFirst = "Tab first";
-            s_TabMiddle = "Tab middle";
-            s_TabLast = "Tab last";
-        }
-            
-            
-        tabStyle = s_TabMiddle;
-        if (tabCount == 1)
-        {
-            tabStyle = s_TabOnlyOne;
-        }
-        else if (tabIndex == 0)
-        {
-            tabStyle = s_TabFirst;
-        }
-        else if (tabIndex == (tabCount - 1))
-        {
-            tabStyle = s_TabLast;
-        }
-            
-            
-        float tabWidth = rect.width / tabCount;
-        int left = Mathf.RoundToInt(tabIndex * tabWidth);
-        int right = Mathf.RoundToInt((tabIndex + 1) * tabWidth);
-        return new Rect(rect.x + left, rect.y, right - left,  /* kTabButtonHeight */ TabButtonHeight);
+
+
+
+    private static GUIStyle headingStyle;
+    private static Texture2D headerTextureBg;
+
+    public static void Heading(GUIContent content) {
+        EditorGUILayout.LabelField(content, new GUIStyle(EditorStyles.whiteBoldLabel) {
+            // alignment = TextAnchor.MiddleLeft,
+            // fontSize = 13,
+            padding = new RectOffset(0, 0, 0, 0)
+        });
     }
 
-    internal static int BeginTabs(int selectedIndex, GUIContent[] tabs) {
-        var rect = EditorGUILayout.BeginVertical(new GUIStyle("FrameBox"));
+    public static void BeginGroup(GUIContent label) {
+        HorizontalLine(new Color(70 / 255f, 70 / 255f, 70 / 255f));
+        EditorGUILayout.BeginVertical(new GUIStyle() { padding = new RectOffset(5, 5, 5, 5)});
+        if (label != null) AirshipEditorGUI.Heading(label);
+    }
+
+    public static void EndGroup() {
+        EditorGUILayout.EndVertical();
+    }
+    
+    internal static void SettingCategoryHeading(GUIContent label) {
+        if (headerTextureBg == null) {
+            headerTextureBg = new Texture2D(1, 1);
+            headerTextureBg.SetPixel(0, 0, new Color(56 / 255f, 56 / 255f, 56 / 255f));
+            headerTextureBg.Apply();
+        }
+        
+        if (headingStyle == null) {
+            headingStyle = new GUIStyle(EditorStyles.foldoutHeader) {
+                padding = new RectOffset(5, 5, 5 , 5),
+                margin = new RectOffset(0, 0, 10, 0),
+                // fixedHeight = 22,
+                normal = {
+                    background = headerTextureBg,
+                }
+            };
+        }
+        
+        EditorGUILayout.LabelField(label, headingStyle);
+    }
+    
+    public static int BeginTabs(int selectedIndex, GUIContent[] tabs) {
+        if (s_tabsFrameBox == null) {
+            s_tabsFrameBox = new GUIStyle("FrameBox") { padding = new RectOffset(10, 10, 10, 10) };
+        }
+        
+        var rect = EditorGUILayout.BeginVertical(s_tabsFrameBox);
         GUILayoutUtility.GetRect(10, TabButtonHeight);
         
         var tabRects = new Rect[tabs.Length];
@@ -116,7 +141,7 @@ public static class AirshipEditorGUI {
         return selectedIndex;
     }
 
-    internal static void EndTabs() {
+    public static void EndTabs() {
         EditorGUILayout.EndVertical();
     }
     
@@ -140,8 +165,515 @@ public static class AirshipEditorGUI {
 
     internal static void EndSettingGroup() {
         EditorGUI.indentLevel--;
-        
         EditorGUILayout.Space();
         EditorGUILayout.EndVertical();
     }
+
+    public static float NumberProperty(Rect rect, GUIContent label, AirshipSerializedValue property, bool integer = false) =>
+        DoNumberProperty(rect, label, property);
+    public static float NumberProperty(GUIContent label, AirshipSerializedValue property, bool integer = false) =>
+        DoNumberProperty(null, label, property);
+    
+    public static int IntProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoIntProperty(rect, label, property);
+    public static int IntProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoIntProperty(null, label, property);
+
+    public static bool BooleanProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoBooleanProperty(rect, label, property);
+    
+    public static bool BooleanProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoBooleanProperty(null, label, property);
+
+    public static string StringProperty(GUIContent label, AirshipSerializedValue property) => DoStringProperty(null, label, property);
+    public static string StringProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoStringProperty(rect, label, property);
+
+    public static int EnumProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoEnumProperty(null, label, property);
+    public static int EnumProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoEnumProperty(rect, label, property);
+
+    public static Color ColorProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoColorField(null, label, property);
+    
+    public static Color ColorProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoColorField(rect, label, property);
+
+    public static Vector2 Vector2Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoVector2Field(rect, label, property);
+    
+    public static Vector2 Vector2Property(GUIContent label, AirshipSerializedValue property) =>
+        DoVector2Field(null, label, property);
+    
+    public static Vector3 Vector3Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoVector3Field(rect, label, property);
+    
+    public static Vector3 Vector3Property(GUIContent label, AirshipSerializedValue property) =>
+        DoVector3Field(null, label, property);
+    
+    public static Vector4 Vector4Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoVector4Field(rect, label, property);
+    
+    public static Vector4 Vector4Property(GUIContent label, AirshipSerializedValue property) =>
+        DoVector4Field(null, label, property);
+    
+    public static Quaternion QuaternionProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoQuaternionField(rect, label, property);
+    
+    public static Quaternion QuaternionProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoQuaternionField(null, label, property);
+    
+    public static Matrix4x4 Matrix4x4Property(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoMatrix4x4Field(rect, label, property);
+    
+    public static Rect RectProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoRectField(null, label, property);
+    
+    public static Rect RectProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoRectField(rect, label, property);
+    
+    public static Matrix4x4 Matrix4x4Property(GUIContent label, AirshipSerializedValue property) =>
+        DoMatrix4x4Field(null, label, property);
+    
+    public static AnimationCurve AnimationCurveProperty(GUIContent label, AirshipSerializedValue property) =>
+        DoAnimationCurveField(null, label, property);
+    
+    public static AnimationCurve AnimationCurveProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
+        DoAnimationCurveField(rect, label, property);
+
+    public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
+        var currentValue = property.objectReferenceValue;
+        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.objectType, true, false);
+        
+        if (currentValue != nextValue) {
+            property.serializedObjectValue.objectReferenceValue = nextValue;
+            property.serializedModified.boolValue = true;
+        }
+        
+        DoPropertyEvents(null, property);
+        return nextValue;
+    }
+    
+    public static UnityEngine.Object ObjectProperty(Rect rect, GUIContent label, AirshipSerializedValue property) {
+        if (!property.isObject) return null;
+        
+        var currentValue = property.serializedObjectValue.objectReferenceValue;
+        var nextValue = ObjectField(rect, label, currentValue, property.objectType, true, false);
+
+        if (currentValue != nextValue) {
+            property.serializedObjectValue.objectReferenceValue = nextValue;
+            property.serializedModified.boolValue = true;
+        }
+        
+        DoPropertyEvents(rect, property);
+        return nextValue;
+    }
+
+    public static int LayerMaskProperty(Rect rect, GUIContent label, AirshipSerializedValue value) => DoLayerMaskField(rect, label, value);
+    public static int LayerMaskProperty(GUIContent label, AirshipSerializedValue value) => DoLayerMaskField(null, label, value);
+    public static int FlagEnumProperty(GUIContent label, AirshipSerializedValue value) => DoMaskField(null, label, value);
+    public static int FlagEnumProperty(Rect rect, GUIContent label, AirshipSerializedValue value) => DoMaskField(rect, label, value);
+    
+    public static AirshipComponent AirshipComponentProperty(
+        GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator validator = null) {
+        return DoAirshipComponent(null, label, property, validator);
+    }
+    
+    public static AirshipComponent AirshipComponentProperty(Rect rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator validator = null) {
+        return DoAirshipComponent(rect, label, property, validator);
+    }
+    
+    private static int focusedIntValue;
+    
+    public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property, bool expanded = false) {
+        if (!property.isArray) return false;
+
+        bool enabled;
+        if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
+            property.editor._foldouts.Add(property.name, expanded);
+        }
+
+        var rect2 = EditorGUILayout.GetControlRect(false, EditorStyles.foldoutHeader.fixedHeight);
+        
+        enabled = EditorGUI.BeginFoldoutHeaderGroup(new Rect(rect2) {width = rect2.width - 40}, enabled, content, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
+        property.editor._foldouts[property.name] = enabled;
+
+        Event currentEvent = Event.current;
+        var headerRect = GUILayoutUtility.GetLastRect();
+        
+        DoPropertyEvents(null, property);
+        
+        switch (currentEvent.type) {
+            case EventType.DragUpdated or EventType.DragPerform
+                when property.array.elementType is AirshipSerializedType.Object or AirshipSerializedType.AirshipBehaviour: {
+                var refs = DragAndDrop.objectReferences;
+                
+                if (headerRect.Contains(currentEvent.mousePosition)) {
+                    var consume = false;
+
+                    foreach (var draggedObject in refs) {
+                        var objRef = draggedObject;
+                        
+                        if (property.array.elementType == AirshipSerializedType.AirshipBehaviour) {
+                            var buildInfo = AirshipBuildInfo.Instance;
+                            var scriptPath = buildInfo.GetScriptPathByTypeName(property.array.elementObjectTypeString);
+
+                            switch (draggedObject) {
+                                case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
+                                    objRef = component;
+                                    consume = true;
+                                    break;
+                                case AirshipComponent:
+                                    continue;
+                                case GameObject go: {
+                                    var firstMatchingComponent = go.GetComponents<AirshipComponent>()
+                                        .FirstOrDefault(f => buildInfo.Inherits(f.script, scriptPath));
+                                    if (firstMatchingComponent != null) {
+                                        objRef = firstMatchingComponent;
+                                        consume = true;
+                                    }
+                                    break;
+                                }
+                                default:
+                                    objRef = null;
+                                    break;
+                            }
+
+                        } else if (property.array.elementType == AirshipSerializedType.Object) {
+                            var objType = property.array.elementObjectType;
+                            if (objType == null) break;
+                            
+                            // If objType is not game object we need to parse the correct component
+                            var targetNotGameObject = objType != typeof(GameObject);
+                            if (targetNotGameObject && objRef is GameObject draggedGo && typeof(Component).IsAssignableFrom(objType)) {
+                                var comp = draggedGo.GetComponent(objType);
+                                if (!comp) {
+                                    consume = false;
+                                    break;
+                                }
+                                objRef = comp;
+                                consume = true;
+                            } else if (objRef.GetType().IsAssignableFrom(objType)) {
+                                consume = true;
+                            } else if (objRef is GameObject && objType == typeof(GameObject)) {
+                                consume = true;
+                            }
+
+                            if (!objType.IsInstanceOfType(objRef)) {
+                                break;
+                            }
+                        }
+                        
+                        if (objRef != null && consume && currentEvent.type == EventType.DragPerform) {
+                            property.array.InsertLastElement(objRef);
+                        }
+                    }
+
+                    if (consume) {
+                        DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+
+
+                        
+                        currentEvent.Use();
+                    }
+                }
+                break;
+            }
+        }
+        
+        var rect = GUILayoutUtility.GetLastRect();
+
+        var lastSize = property.arraySize;
+
+        var arrayName = property.name;
+        GUI.SetNextControlName(arrayName);
+        var size = EditorGUI.IntField(
+            new Rect(rect) { width = 30, x = rect.width - 15 }, 
+            lastSize, 
+            new GUIStyle(EditorStyles.numberField) { alignment = TextAnchor.MiddleCenter}
+            );
+
+        var modifyArraySize = false;
+        //Handle only updating array size on focus lost
+        if ((Event.current.isKey && Event.current.keyCode == KeyCode.Return &&
+             GUI.GetNameOfFocusedControl() == arrayName)) {
+            modifyArraySize = true;
+            size = focusedIntValue;
+        } else if (GUI.GetNameOfFocusedControl() == arrayName && size != lastSize) {
+            focusedIntValue = size;
+        }
+        
+        if (modifyArraySize && size != lastSize && size >= 0) {
+            property.array.ResizeArray(size);
+        }
+
+        
+        if (enabled) {
+            var reorderableList = property.editor.GetOrCreateArrayList(property);
+            var prevElementHeight = AirshipGUI.arrayItemHeight;
+
+            if (property.arraySize > 0) {
+                switch (property.array.elementType) {
+                    case AirshipSerializedType.String:
+                        var style = EditorStyles.textArea;
+                        var textAreaMaxLines = 3;
+                        var useTextArea = false;
+                        var displayTextAreaHorizontal = true;
+                        var displayFixedHeight = false;
+                        
+                        if (property.TryGetDecorator("Multiline", out var multilineParams)) {
+                            if (multilineParams.Count > 0) textAreaMaxLines = int.Parse(multilineParams[0].serializedValue);
+                            useTextArea = true;
+                            displayFixedHeight = true;
+                        }
+                        
+                        if (property.TryGetDecorator("TextArea", out _)) {
+                            useTextArea = true;
+                            displayTextAreaHorizontal = false;
+                            displayFixedHeight = false;
+                        }
+
+                        if (displayFixedHeight) {
+                            var maxHeight = style.lineHeight * textAreaMaxLines;
+                            style.fixedHeight = maxHeight;
+                        }
+
+                        if (useTextArea) reorderableList.elementHeight = style.lineHeight * textAreaMaxLines;
+                        if (displayTextAreaHorizontal == false) reorderableList.elementHeight += EditorGUIUtility.singleLineHeight;
+                        break;
+                    case AirshipSerializedType.Rect:
+                        reorderableList.elementHeight = EditorGUIUtility.singleLineHeight * 2 + 3;
+                        break;
+                }
+            } else {
+                reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
+            }
+            
+            reorderableList.DoLayoutList();
+            AirshipGUI.arrayItemHeight = prevElementHeight;
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+        return enabled;
+    }
+
+
+    
+    /// <summary>
+    /// Draws the given airship property value
+    /// </summary>
+    /// <param name="label">The label to display before the property</param>
+    /// <param name="value">The property to display</param>
+    /// <param name="includeChildren"></param>
+    /// <returns>True if shown</returns>
+    public static bool PropertyField(GUIContent label, AirshipSerializedValue value, bool includeChildren) {
+        if (value == null) {
+            EditorGUILayout.LabelField(new GUIContent(label), new GUIContent("(Missing property)"), EditorStyles.objectField);
+            return false;
+        }
+        
+        switch (value.type) {
+            case AirshipSerializedType.String: {
+                StringProperty(label, value);
+                break;
+            }
+            case AirshipSerializedType.Boolean: {
+                return BooleanProperty(label, value);
+            }
+            case AirshipSerializedType.Number: {
+                NumberProperty(label, value);
+                break;
+            }
+            case AirshipSerializedType.Enum:
+                EnumProperty(label, value);
+                break;
+            case AirshipSerializedType.FlagEnum:
+                FlagEnumProperty(label, value);
+                break;
+            case AirshipSerializedType.LayerMask: {
+                LayerMaskProperty(label, value);
+                break;
+            }
+            case AirshipSerializedType.Object: {
+                ObjectProperty(label, value);
+                break;
+            }
+            case AirshipSerializedType.AirshipBehaviour: {
+                return AirshipComponentProperty(label, value) != null;
+            }
+            // Arrays can only really be used with serialized property not serialized array, due to how we set this up
+            case AirshipSerializedType.Array when value is AirshipSerializedProperty property: {
+                return ArrayProperty(label, property, includeChildren);
+            }
+            case AirshipSerializedType.Color: {
+                ColorProperty(label, value);
+                break;
+            }
+            case AirshipSerializedType.Quaternion: {
+                QuaternionProperty(label, value);
+                break;
+            }
+            case AirshipSerializedType.Vector2: {
+                Vector2Property(label, value);
+                break;
+            }
+            case AirshipSerializedType.Vector3: {
+                Vector3Property(label, value);
+                break;
+            }
+            case AirshipSerializedType.Vector4: {
+                Vector4Property(label, value);
+                break;
+            }
+            case AirshipSerializedType.Matrix4x4: {
+                Matrix4x4Property(label, value);
+                break;
+            }
+            case AirshipSerializedType.Rect: {
+                RectProperty(label, value);
+                break;
+            }
+            case AirshipSerializedType.AnimationCurve: {
+                AnimationCurveProperty(label, value);
+                break;
+            }
+            default: {
+                EditorGUILayout.HelpBox($"{value.typeString} is not yet supported by PropertyFieldLayout!",
+                    MessageType.Warning);
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Draw a property field using a preset Rect for the size/position
+    /// </summary>
+    public static bool PropertyField(Rect rect, GUIContent label, AirshipSerializedValue value) {
+        switch (value.type) {
+            case AirshipSerializedType.Object: {
+                ObjectProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.String: {
+                StringProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.LayerMask: {
+                LayerMaskProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.AirshipBehaviour: {
+                return AirshipComponentProperty(rect, label, value) != null;
+            }
+            case AirshipSerializedType.Number: {
+                NumberProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Boolean: {
+                BooleanProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Enum: {
+                EnumProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.FlagEnum: {
+                FlagEnumProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Color: {
+                ColorProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Quaternion: {
+                QuaternionProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Vector2: {
+                Vector2Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Vector3: {
+                Vector3Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Vector4: {
+                Vector4Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Matrix4x4: {
+                Matrix4x4Property(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.Rect: {
+                RectProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.AnimationCurve: {
+                AnimationCurveProperty(rect, label, value);
+                break;
+            }
+            default: {
+                EditorGUI.HelpBox(rect, $"{value.typeString} is not yet supported by PropertyField!",
+                    MessageType.Warning);
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    public static bool PropertyField(GUIContent label, AirshipSerializedValue value) {
+        if (value is AirshipSerializedProperty serializedProperty) {
+            return PropertyField(label, serializedProperty);
+        } else {
+            return PropertyField(label, value, false);
+        }
+    }
+
+    /// <summary>
+    /// Make a field for the given Airship Serialized Property with a custom label and tooltip
+    /// </summary>
+    /// <param name="label">The custom label for this property</param>
+    /// <param name="serializedProperty">The property</param>
+    /// <returns></returns>
+    public static bool PropertyField(GUIContent label, AirshipSerializedProperty serializedProperty) {
+        BeginSerializedProperty(serializedProperty);
+        var res = PropertyField(label, serializedProperty, false);
+        EndSerializedProperty();
+        return res;
+    }
+    
+    /// <summary>
+    /// Make a field for the given Airship Serialized Property
+    /// </summary>
+    /// <param name="property">The property to draw the field for</param>
+    /// <returns></returns>
+    public static bool PropertyField(AirshipSerializedProperty property) {
+        if (property == null) {
+            EditorGUILayout.LabelField(new GUIContent("Property"), new GUIContent("(Missing property)"), EditorStyles.objectField);
+            return false;
+        }
+
+        var content = new GUIContent(ObjectNames.NicifyVariableName(property.name));
+        
+        string tooltip = "";
+        if (property.TryGetDecorator("Tooltip", out var tooltipParams)) {
+            tooltip = tooltipParams[0].value as string;
+        } else if (property.propertyMetadata != null) {
+            tooltip = property.propertyMetadata.Documentation;
+        }
+
+        if (!string.IsNullOrEmpty(tooltip)) content.tooltip = tooltip;
+        return PropertyField(content, property);
+    }
+
+    /// <summary>
+    /// Makes the property have the appropriate 
+    /// </summary>
+    /// <param name="property"></param>
+    public static void BeginProperty(AirshipSerializedProperty property) => BeginSerializedProperty(property);
+    public static void EndProperty() => EndSerializedProperty();
 }

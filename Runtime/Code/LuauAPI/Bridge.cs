@@ -363,17 +363,20 @@ public static class Bridge {
 
     [LuauAPI(LuauContext.Protected)]
     public static string[] GetMicDevices() {
-        return Mic.Instance.Devices.ToArray();
+        return Microphone.devices;
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static void SetMicDeviceIndex(int i) {
-        Mic.Instance.SetDeviceIndex(i);
+        var devices = Microphone.devices;
+        if (i < 0 || i >= devices.Length)
+            throw new ArgumentOutOfRangeException($"Microphone index {i} is out of range (devices.Length = {devices.Length})");
+        Mic.Instance.SetCurrentDevice(Microphone.devices[i]);
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static int GetCurrentMicDeviceIndex() {
-        return Mic.Instance.CurrentDeviceIndex;
+        return Array.IndexOf(Microphone.devices, Mic.Instance.CurrentDeviceName);
     }
 
     [LuauAPI(LuauContext.Protected)]

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 namespace Editor.EditorInternal {
     public class AirshipEditorInternals {
@@ -15,8 +18,23 @@ namespace Editor.EditorInternal {
             return EditorGUIUtility.GetBoldDefaultFont();
         }
 
-        internal static void ShowObjectSelector(UnityEngine.Object obj, Type objectTypes, UnityEngine.Object objBeingEdited, bool allowSceneObjects) {
-            ObjectSelector.get.Show(obj, objectTypes,objBeingEdited, allowSceneObjects);
+        // internal static void ShowObjectSelector(UnityEngine.Object obj, Type objectTypes, UnityEngine.Object objBeingEdited, bool allowSceneObjects) {
+        //     ObjectSelector.get.Show(obj, objectTypes,objBeingEdited, allowSceneObjects);
+        // }
+
+        internal static void ShowObjectSelector(UnityEngine.Object obj,
+            System.Type requiredType,
+            UnityEngine.Object objectBeingEdited,
+            bool allowSceneObjects,
+            List<int> allowedInstanceIDs = null,
+            Action<UnityEngine.Object> onObjectSelectorClosed = null,
+            Action<UnityEngine.Object> onObjectSelectedUpdated = null,
+            bool showNoneItem = true) {
+            ObjectSelector.get.Show(obj, requiredType, objectBeingEdited, allowSceneObjects, allowedInstanceIDs, onObjectSelectorClosed, onObjectSelectedUpdated);
+        }
+
+        internal static Scene GetObjectScene() {
+            return default;
         }
 
         internal static UnityEngine.Object DoCustomObjectField(Rect position, GUIContent label,

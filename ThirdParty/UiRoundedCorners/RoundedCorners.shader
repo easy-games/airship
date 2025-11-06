@@ -10,10 +10,6 @@ Shader "UI/RoundedCorners/RoundedCorners" {
         [HideInInspector] _StencilReadMask ("Stencil Read Mask", Float) = 255
         [HideInInspector] _ColorMask ("Color Mask", Float) = 15
         [HideInInspector] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
-        
-        // Definition in Properties section is required to Mask works properly
-        _WidthHeightRadius ("WidthHeightRadius", Vector) = (0,0,0,0)
-        // ---
     }
     
     SubShader {
@@ -53,16 +49,11 @@ Shader "UI/RoundedCorners/RoundedCorners" {
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
 
-            float4 _WidthHeightRadius;
             sampler2D _MainTex;
             fixed4 _TextureSampleAdd;
             float4 _ClipRect;
-            int _UIVertexColorAlwaysGammaSpace;
 
             fixed4 frag (v2f i) : SV_Target {
-                if (_UIVertexColorAlwaysGammaSpace != 0) {
-                    i.color = float4(UIGammaToLinear(i.color.rgb), i.color.a);   
-                }
                 half4 color = (tex2D(_MainTex, i.uv) + _TextureSampleAdd) * i.color;
                 #ifdef UNITY_UI_CLIP_RECT
                 color.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
@@ -76,7 +67,7 @@ Shader "UI/RoundedCorners/RoundedCorners" {
                     return color;
                 }
 
-                float alpha = CalcAlpha(i.uv, _WidthHeightRadius.xy, _WidthHeightRadius.z);
+                float alpha = CalcAlpha(i.uv, i.uv1.xy, i.uv1.z);
 
                 #ifdef UNITY_UI_ALPHACLIP
                 clip(alpha - 0.001);

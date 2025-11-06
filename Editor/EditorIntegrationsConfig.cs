@@ -8,12 +8,21 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 public enum ReconcilerVersion {
-    [InspectorName("Default [Reconciler V2]")]
+    [InspectorName("Default")]
     Default,
-    [InspectorName("Legacy Reconciler")]
+    [InspectorName("Disabled")]
     Version1,
-    [InspectorName("Reconciler V2")]
+    [InspectorName("Enabled")]
     Version2,
+}
+
+public enum EditorInspectorMode {
+    [InspectorName("Default")]
+    Default,
+    [InspectorName("Disabled")]
+    UseLegacyInspector,
+    [InspectorName("Enabled")]
+    UseNewInspector,
 }
 
 
