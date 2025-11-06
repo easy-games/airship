@@ -52,10 +52,10 @@ namespace Code.Bootstrap {
                         writer.WriteBytes(compressedBytes, 0, compressedSize);
                         
                         compressedFileCache.Add(cacheId, new CachedCompressedFile(compressedBytes, compressedSize));
+                        Profiler.EndSample();
                     }
                     
                     writer.WriteBool(file.airshipBehaviour);
-                    Profiler.EndSample();
                 }
             }
             Profiler.EndSample();
