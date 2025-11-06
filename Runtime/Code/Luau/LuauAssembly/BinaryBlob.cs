@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Mirror;
 using Code.Util;
 using Code.Zstd;
+using UnityEngine;
 
 namespace Assets.Luau {
     [Serializable]
@@ -98,7 +99,7 @@ namespace Assets.Luau {
             NetworkWriterPool.Return(writer);
             NetworkWriterPool.Return(changedByteWriter);
             
-            // Debug.Log($"Final diff is {bytes.Length} bytes");
+            // Debug.Log($"Final diff is {bytes.Length} bytes. Base data was {Data.Length}, new data was {other.Data.Length}. Change bytes: {changeBytes.Length}, Change data: {newByteValues.Length}");
             return bytes;
         }
 
