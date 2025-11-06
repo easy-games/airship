@@ -217,9 +217,9 @@ namespace Code.Player.Character.MovementSystems.Character
             
             // Flag for if we are sending a full snapshot or just a diff. Sometimes a diff is bigger if
             // all bytes have changed.
-            bool fullCustomData = customData == null;
+            bool fullCustomData = customData == null; // Always send full custom data if base data is null
             byte[] customDataDiff = null;
-            if (!fullCustomData) {
+            if (!fullCustomData && other.customData != null) { // If base data is !null and our new data is !null, generate the diff and see if we should use it.
                 customDataDiff = customData.CreateDiff(other.customData);
                 fullCustomData = customDataDiff.Length > other.customData.Data.Length;
             }
@@ -256,7 +256,7 @@ namespace Code.Player.Character.MovementSystems.Character
             // We are cheating here by only writing bytes at the end if we have custom data. We can do this because we know the expected size
             // of the above bytes and we know that a diff packet will only contain one diff. If we were to pass multiple diffs in a single packet,
             // we could not do this optimization since there would be no way to know where the next packet starts.
-            if (fullCustomData) {
+            if (fullCustomData && other.customData != null) { // If we should send the full new data, send it, but only if we actually have data. null custom data shouldn't be sent.
                 writer.WriteBytes(other.customData.Data, 0, other.customData.Data.Length);
             } else {
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
