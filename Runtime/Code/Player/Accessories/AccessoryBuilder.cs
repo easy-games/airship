@@ -1,16 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Airship;
-using Code.Platform.Server;
-using Code.Platform.Shared;
 using Code.Player.Accessories;
 using Newtonsoft.Json;
-using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.Profiling;
 
 [LuauAPI]
@@ -398,7 +392,8 @@ public class AccessoryBuilder : MonoBehaviour {
                 foreach (var slot in customization.platformCustomSlots) {
                     if (slot.slot == (int)accessoryTemplate.accessorySlot) {
                         //Found custom data
-                        activeAccessory.AccessoryComponent.Customize(slot.variant, slot.colors);
+                        activeAccessory.AccessoryComponent.CustomizeVariant(slot.variant);
+                        activeAccessory.AccessoryComponent.CustomizeColors(slot.colors);
                         break;
                     }
                 }
@@ -738,8 +733,7 @@ public class AccessoryBuilder : MonoBehaviour {
                             // Does this slot have this color key?
                             foreach (var color in customSlot.colors) {
                                 if (color.key == colorKey) {
-                                    // Overwrite this key
-                                    print("Overwriting key");
+                                    // Set this slots color on an existing key
                                     color.colorHex = colorHex;
                                     accSlot = customSlot;
                                     break;
@@ -765,28 +759,75 @@ public class AccessoryBuilder : MonoBehaviour {
 
                     if (accSlot == null) {
                         // Need to add new slot data
-                        customization.platformCustomSlots = customization.platformCustomSlots.Append(
-                            new OutfitCustomizationSlot() {
-                                variant = 0, slot = (int)slot,
-                                colors = new[] {
-                                    new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex }
-                                }
-                            }) as OutfitCustomizationSlot[];
+                        accSlot = new OutfitCustomizationSlot() {
+                            variant = 0, slot = (int)slot,
+                            colors = new[] {
+                                new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex }
+                            }
+                        };
+                        customization.platformCustomSlots = customization.platformCustomSlots.Append(accSlot)  as OutfitCustomizationSlot[];
                     }
                 } else {
                     accSlot = new OutfitCustomizationSlot {
                         slot = (int)slot,
+                        variant = 0,
                         colors = new[] { new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex } }
                     };
                     customization.platformCustomSlots = new[] { accSlot };
                 }
 
-                acc.AccessoryComponent.Customize(accSlot.variant, accSlot.colors);
+                acc.AccessoryComponent.CustomizeColors(accSlot.colors);
             } else {
                 Debug.LogError("Unable to parse color: " + colorHex);
             }
         } else {
             Debug.LogError("Trying to set color on slot that isn't used: " + slot);
+        }
+    }
+
+    public void SetCustomVariant(AccessorySlot slot, int variantIndex) {
+        if (customization == null) {
+            customization = new OutfitCustomization();
+        }
+
+        var acc = GetActiveAccessoryBySlot(slot);
+        if (acc?.AccessoryComponent != null) {
+            // print("Setting color: " + colorKey + ": " + colorHex + " to slot: " + slot);
+            var newColor = Color.magenta;
+            OutfitCustomizationSlot accSlot = null;
+            // Make sure its a valid color
+            if (customization.platformCustomSlots != null) {
+                // See if we need to overwrite existing slot data
+                foreach (var customSlot in customization.platformCustomSlots) {
+                    if (customSlot.slot == (int)slot) {
+                        // Set the existing slots variant
+                        customSlot.variant = variantIndex;
+                        accSlot = customSlot;
+                        break;
+                    }
+                }
+
+                if (accSlot == null) {
+                    // Need to append new slot data
+                    accSlot = new OutfitCustomizationSlot() {
+                        slot = (int)slot,
+                        variant = variantIndex,
+                        colors = Array.Empty<OutfitCustomizationColor>()
+                    };
+                    customization.platformCustomSlots = customization.platformCustomSlots.Append(accSlot) as OutfitCustomizationSlot[];
+                }
+            } else {
+                accSlot = new OutfitCustomizationSlot {
+                    slot = (int)slot,
+                    variant = variantIndex,
+                    colors = Array.Empty<OutfitCustomizationColor>()
+                };
+                customization.platformCustomSlots = new[] { accSlot };
+            }
+
+            acc.AccessoryComponent.CustomizeVariant(accSlot.variant);
+        } else {
+            Debug.LogError("Trying to set variant on slot that isn't used: " + slot);
         }
     }
 

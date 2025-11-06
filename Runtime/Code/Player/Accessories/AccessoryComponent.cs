@@ -180,15 +180,18 @@ namespace Code.Player.Accessories {
 #endif
         }
 
-        public void Customize(int variant, OutfitCustomizationColor[] colorsHex) {
-            if (variantSetter) { }
+        public void CustomizeVariant(int variantIndex) {
+            if (variantSetter) {
+                variantSetter.Set(variantIndex);
+            }
+        }
 
+        public void CustomizeColors(OutfitCustomizationColor[] colorsHex) {
             if (colorsHex.Length == 0) {
                 return;
             }
 
             var newColor = Color.black;
-            Debug.Log("First colorsHex: " + colorsHex[0]);
             if (colorSetter) {
                 for (var i = 0; i < colorsHex.Length; i++) {
                     if (ColorUtility.TryParseHtmlString(colorsHex[i].colorHex, out newColor)) {
