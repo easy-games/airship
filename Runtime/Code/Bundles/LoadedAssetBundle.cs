@@ -14,11 +14,10 @@ public class LoadedAssetBundle {
 	/// Example: "shared/resources"
 	/// </summary>
 	public string assetBundleFile;
-	public LoadedAssetBundle(AirshipPackage airshipPackage, string bundleFolder, AssetBundle assetBundle, ushort netCollectionId) {
+	public LoadedAssetBundle(AirshipPackage airshipPackage, string bundleFolder, AssetBundle assetBundle) {
 		this.airshipPackage = airshipPackage;
 		this.bundleId = this.airshipPackage.id.ToLower();
 		this.assetBundleFile = bundleFolder.ToLower();
 		this.assetBundle = assetBundle;
-		this.netCollectionId = netCollectionId;
 	}
 }
