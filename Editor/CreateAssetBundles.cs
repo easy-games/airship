@@ -197,7 +197,11 @@ public static class CreateAssetBundles {
 						assetGuids.AddRange(urpGuids);
 					});
 
+
 					if (!compileURPShaders) {
+						// This adds a reference to Core's URP shaders which will prevent them from being duplicated
+						// in the game's bundle. Note that these URP shaders are hardcoded to not compile in the Scriptable
+						// Build Pipeline source in this scenario.
 						Debug.Log("Adding URP assets to CoreMaterials bundle.");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
@@ -480,6 +484,18 @@ public static class CreateAssetBundles {
 
 		return true;
 	}
+
+#if UNITY_EDITOR
+	[MenuItem("Airship/Set Quality/Normal", false, 1901)]
+	static void MenuSetQualityLevel() {
+		CreateAssetBundles.SwapToQualityLevel("Normal");
+	}
+
+	[MenuItem("Airship/Set Quality/Low", false, 1902)]
+	static void MenuSetQualityLevelLow() {
+		CreateAssetBundles.SwapToQualityLevel("Low");
+	}
+#endif
 
 	public static void SwapToQualityLevel(string name) {
 #if UNITY_EDITOR

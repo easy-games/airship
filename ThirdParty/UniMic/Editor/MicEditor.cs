@@ -20,8 +20,8 @@ namespace Adrenak.UniMic {
 			if (EditorGUILayout.DropdownButton(new GUIContent(mic.CurrentDeviceName), FocusType.Keyboard)) {
 				var menu = new GenericMenu();
 
-				foreach (var device in mic.Devices)
-					menu.AddItem(new GUIContent(device), mic.Devices[mic.CurrentDeviceIndex] == device,
+				foreach (var device in Microphone.devices)
+					menu.AddItem(new GUIContent(device), mic.CurrentDeviceName == device,
 						OnDeviceSelected, device);
 
 				menu.ShowAsContext();
@@ -31,12 +31,11 @@ namespace Adrenak.UniMic {
 
 			// Display a button to reset to the system's default mic
 			if (GUILayout.Button("Switch to System's Default Device"))
-				mic.SetDeviceIndex(0);
+				mic.SetCurrentDevice(null); // Null or empty string represents default mic
 
 			if (showInfo = EditorGUILayout.BeginFoldoutHeaderGroup(showInfo, "Debug Info")) {
 				GUI.enabled = false;
 
-				EditorGUILayout.IntField("Device Index", mic.CurrentDeviceIndex);
 				EditorGUILayout.LabelField("Device Name", mic.CurrentDeviceName);
 
 				EditorGUILayout.Toggle("Is Recording", mic.IsRecording);
@@ -52,7 +51,7 @@ namespace Adrenak.UniMic {
 			var device = (string)device_;
 			var mic = (Mic)target;
 
-			mic.SetDeviceIndex(mic.Devices.FindIndex(x => x == device));
+			mic.SetCurrentDevice(device);
 		}
 	}
 }

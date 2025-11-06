@@ -22,17 +22,6 @@ namespace Adrenak.UniVoice.UniMicInput {
         public int SegmentRate => 1000 / Mic.Instance.SampleDurationMS;
 
         public UniVoiceUniMicInput(int deviceIndex = 0, int frequency = 16000, int sampleLen = 100) {
-            if (Mic.Instance.Devices.Count > 0) {
-                // Mic.Instance.Frequency = frequency;
-                // Mic.Instance.SampleDurationMS = sampleLen;
-                // Mic.Instance.Sample = new float[Frequency / 1000 * sampleLen * Mic.Instance.AudioClip.channels];
-                // Mic.Instance.SetDeviceIndex(deviceIndex);
-                // Mic.Instance.StartRecording(frequency, sampleLen);
-            } else {
-                // Debug.Log("No mic devices found. Unable to start recording.");
-            }
-
-            // Debug.unityLogger.Log(TAG, "Start recording.");
             Mic.Instance.OnSampleReady += Mic_OnSampleReady;
         }
 

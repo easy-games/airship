@@ -97,6 +97,7 @@ namespace VoxelWorldStuff {
         /// Reference to voxel world this chunk belongs to.
         /// </summary>
         public VoxelWorld world;
+        private GameObject worldGameObject;
 
         public Vector3Int bottomLeftInt;
         public Bounds bounds;
@@ -164,6 +165,7 @@ namespace VoxelWorldStuff {
 
         public void SetWorld(VoxelWorld world) {
             this.world = world;
+            worldGameObject = world.gameObject;
             parent = world.chunksFolder.gameObject;
         }
 
@@ -533,26 +535,16 @@ namespace VoxelWorldStuff {
             return readWriteVoxel[key];
         }
 
-        private uint Color32ToUInt(Color32 col) {
-            var res = (uint)col.r << 24;
-            res |= (uint)col.g << 16;
-            res |= (uint)col.b << 8;
-            res |= (uint)col.a;
-            return res;
-        }
-
         public Color32 GetVoxelColorAt(Vector3Int worldPos) {
             var key = WorldPosToVoxelIndex(worldPos);
             var col = color[key];
-            return UIntToColor32(col);
+            return VoxelWorld.UIntToColor32(col);
         }
 
-        private Color32 UIntToColor32(uint col) {
-            var r = (byte)((col & 0xFF000000) >> 24);
-            var g = (byte)((col & 0x00FF0000) >> 16);
-            var b = (byte)((col & 0x0000FF00) >> 8);
-            var a = (byte)(col & 0x000000FF);
-            return new Color32(r, g, b, a);
+        [HideFromTS]
+        public uint GetVoxelColorUIntAt(Vector3Int worldPos) {
+            var key = WorldPosToVoxelIndex(worldPos);
+            return color[key];
         }
 
         public void WriteVoxelColor(Vector3Int worldPos, Color32 col) {
@@ -562,7 +554,7 @@ namespace VoxelWorldStuff {
                 return;
             }
 
-            color[key] = Color32ToUInt(col);
+            color[key] = VoxelWorld.Color32ToUInt(col);
         }
 
         public void WriteVoxelDamage(Vector3Int worldPos, float dmg) {
@@ -610,7 +602,15 @@ namespace VoxelWorldStuff {
                 return default;
             }
 
-            return UIntToColor32(col);
+            return VoxelWorld.UIntToColor32(col);
+        }
+        
+        [HideFromTS]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public uint GetLocalColorUIntAt(int localX, int localY, int localZ) {
+            var key = GetLocalPositionKey(localX, localY, localZ);
+            var col = color[key];
+            return col;
         }
 
         public void Clear() {
@@ -665,13 +665,16 @@ namespace VoxelWorldStuff {
 
                 if (obj == null) {
                     obj = newChunk;
-                    obj.layer = world.gameObject.layer;
+                    obj.layer = worldGameObject.layer;
                     obj.transform.parent = parent.transform;
                     obj.transform.localRotation = Quaternion.identity;
                     obj.transform.localScale = Vector3.one;
                     obj.transform.localPosition = Vector3.zero;
                     obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                     obj.name = "Chunk";
+                    // Don't think it matters if VoxelWorld moves (like BW lobby windmill) because all children
+                    // are static
+                    obj.isStatic = true;
 
                     renderer = obj.AddComponent<MeshRenderer>();
                 }
@@ -725,13 +728,16 @@ namespace VoxelWorldStuff {
 
                     if (obj == null) {
                         obj = new GameObject();
-                        obj.layer = world.gameObject.layer;
+                        obj.layer = worldGameObject.layer;
                         obj.transform.parent = parent.transform;
                         obj.transform.localRotation = Quaternion.identity;
                         obj.transform.localScale = Vector3.one;
                         obj.transform.localPosition = Vector3.zero;
                         obj.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         obj.name = "Chunk";
+                        // Don't think it matters if VoxelWorld moves (like BW lobby windmill) because all children
+                        // are static
+                        obj.isStatic = true;
                     }
                     
                     // Copy prefabs to new chunk (so we don't destroy them)

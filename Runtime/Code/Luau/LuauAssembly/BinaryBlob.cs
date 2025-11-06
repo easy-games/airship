@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Mirror;
 using Code.Util;
@@ -42,7 +43,8 @@ namespace Assets.Luau {
         }
 
         public bool Equals(BinaryBlob other) {
-            return this.DataSize == other?.DataSize;
+            if (DataSize != other?.DataSize) return false;
+            return Data.SequenceEqual(other.Data);
         }
 
         /// <summary>

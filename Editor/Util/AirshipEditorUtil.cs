@@ -55,24 +55,29 @@ public class AirshipEditorUtil {
     [MenuItem("Airship/Reimport All Prefabs")]
     public static void ReimportPrefabs() {
         string[] prefabGUIDs = AssetDatabase.FindAssets("t:Prefab");
+        
+        AssetDatabase.StartAssetEditing();
+        try {
+            int total = prefabGUIDs.Length;
+            int counter = 0;
+            for (int i = 0; i < total; i++) {
+                string path = AssetDatabase.GUIDToAssetPath(prefabGUIDs[i]);
+                if (
+                    path.Contains("Assets/Polygon Arsenal") ||
+                    path.Contains("Assets/Hovl")
+                    // path.Contains("Assets/Raygeas")
+                ) {
+                    continue;
+                }
 
-        int total = prefabGUIDs.Length;
-        int counter = 0;
-        for (int i = 0; i < total; i++) {
-            string path = AssetDatabase.GUIDToAssetPath(prefabGUIDs[i]);
-            if (
-                path.Contains("Assets/Polygon Arsenal") ||
-                path.Contains("Assets/Hovl")
-                // path.Contains("Assets/Raygeas")
-            ) {
-                continue;
+                EditorUtility.DisplayProgressBar("Reimporting Prefabs", path, (float)i / total);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                counter++;
             }
-            EditorUtility.DisplayProgressBar("Reimporting Prefabs", path, (float)i / total);
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            counter++;
+            Debug.Log($"Reimported {counter} prefabs.");
+        } finally {
+            AssetDatabase.StopAssetEditing();
+            EditorUtility.ClearProgressBar();
         }
-
-        EditorUtility.ClearProgressBar();
-        Debug.Log($"Reimported {counter} prefabs.");
     }
 }

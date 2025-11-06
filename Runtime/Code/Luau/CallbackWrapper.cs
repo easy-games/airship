@@ -1,16 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Profiling;
 
 namespace Luau
 {
     public class CallbackWrapper {
-        public LuauContext context;
+        /// <summary>
+        /// The LuauContext that this callback was created in (and will fire in). This is only relevant if
+        /// validateContext is true (used for stuff like network events where we don't want protected broadcasts
+        /// to be listened to in game context).
+        /// </summary>
+        public LuauContext callbackContext;
         public int handle;
         public int luauRef;
         public IntPtr thread;
         public string methodName;
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+        private string profilerTagName;
+#endif
         /// <summary>
         /// If true we will not send an event if the first variable (context) doesn't match the creation context
         /// </summary>
@@ -25,9 +34,12 @@ namespace Luau
         }
 
         public CallbackWrapper(LuauContext context, IntPtr thread, string methodName, int handle, bool validateContext) {
-            this.context = context;
+            this.callbackContext = context;
             this.thread = thread;
             this.methodName = methodName;
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+            profilerTagName = $"EngineEvent.{methodName}";
+#endif
             this.handle = handle;
             this.validateContext = validateContext;
 
@@ -55,18 +67,6 @@ namespace Luau
             
         }
 
-        static void WritePropertyToThread(IntPtr thread, object parameter)
-        {
-            if (parameter == null)
-            {
-                LuauCore.WritePropertyToThread(thread, null, null);
-            }
-            else
-            {
-                LuauCore.WritePropertyToThread(thread, parameter, parameter.GetType());
-            }
-        }
-
 
         unsafe public void HandleEventDelayed0()
         {
@@ -76,28 +76,28 @@ namespace Luau
             {
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("HandleEventDelayed0 " + this.methodName);
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                Profiler.BeginSample(profilerTagName);
+#endif
                 System.Int32 integer = (System.Int32)handle;
                 int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
 
-        private bool IsBlockedByInvalidContext(object param0) {
+        private bool IsBlockedByInvalidContext(LuauContext callContext) {
             if (!validateContext) return false;
-            if (param0 is null) return false;
-            if (param0 is not LuauContext lc) return false;
-            var isBlocked = lc != context;
-            // if (isBlocked) Debug.Log("Blocked by invalid context: lc=" + lc + " context=" + context + " mn=" + methodName);
-            return isBlocked;
+            return callContext != callbackContext;
         }
         
-        unsafe public void HandleEventDelayed1(object param0) {
-            if (IsBlockedByInvalidContext(param0)) return;
+        unsafe public void HandleEventDelayed1<A>(A param0) {
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 1;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
@@ -105,21 +105,27 @@ namespace Luau
             {
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("EngineEvent." + this.methodName);
-                WritePropertyToThread(this.thread, param0);
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                Profiler.BeginSample(profilerTagName);
+#endif
+                Profiler.BeginSample("WriteProperties");
+                LuauCore.WritePropertyToThread(this.thread, param0);
+                Profiler.EndSample();
                 System.Int32 integer = (System.Int32)handle;
                 int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
 
 
-        unsafe public void HandleEventDelayed2(object param0, object param1) {
-            if (IsBlockedByInvalidContext(param0)) return;
+        unsafe public void HandleEventDelayed2<A, B>(A param0, B param1) {
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 2;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
@@ -130,21 +136,27 @@ namespace Luau
                     return;
                 }
 
-                Profiler.BeginSample("EngineEvent." + this.methodName);
-                WritePropertyToThread(this.thread, param0);
-                WritePropertyToThread(this.thread, param1);
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                Profiler.BeginSample(profilerTagName);
+#endif
+                Profiler.BeginSample("WriteProperties");
+                LuauCore.WritePropertyToThread<A>(this.thread, param0);
+                LuauCore.WritePropertyToThread<B>(this.thread, param1);
+                Profiler.EndSample();
                 System.Int32 integer = (System.Int32)handle;
                 int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
 
-        unsafe public void HandleEventDelayed3(object param0, object param1, object param2) {
-            if (IsBlockedByInvalidContext(param0)) return;
+        unsafe public void HandleEventDelayed3<A, B, C>(A param0, B param1, C param2) {
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 3;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
@@ -153,22 +165,28 @@ namespace Luau
 
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("EngineEvent." + this.methodName);
-                WritePropertyToThread(this.thread, param0);
-                WritePropertyToThread(this.thread, param1);
-                WritePropertyToThread(this.thread, param2);
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                Profiler.BeginSample(profilerTagName);
+#endif
+                Profiler.BeginSample("WriteProperties");
+                LuauCore.WritePropertyToThread<A>(this.thread, param0);
+                LuauCore.WritePropertyToThread<B>(this.thread, param1);
+                LuauCore.WritePropertyToThread<C>(this.thread, param2);
+                Profiler.EndSample();
                 System.Int32 integer = (System.Int32)handle;
                 int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
 
-        unsafe public void HandleEventDelayed4(object param0, object param1, object param2, object param3) {
-            if (IsBlockedByInvalidContext(param0)) return;
+        unsafe public void HandleEventDelayed4<A, B, C, D>(A param0, B param1, C param2, D param3) {
+            if (typeof(A) == typeof(LuauContext) && IsBlockedByInvalidContext(UnsafeUtility.As<A, LuauContext>(ref param0))) return;
             
             int numParameters = 4;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
@@ -177,18 +195,24 @@ namespace Luau
 
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("EngineEvent." + this.methodName);
-                WritePropertyToThread(this.thread, param0);
-                WritePropertyToThread(this.thread, param1);
-                WritePropertyToThread(this.thread, param2);
-                WritePropertyToThread(this.thread, param3);
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                Profiler.BeginSample(profilerTagName);
+#endif
+                Profiler.BeginSample("WriteProperties");
+                LuauCore.WritePropertyToThread<A>(this.thread, param0);
+                LuauCore.WritePropertyToThread<B>(this.thread, param1);
+                LuauCore.WritePropertyToThread<C>(this.thread, param2);
+                LuauCore.WritePropertyToThread<D>(this.thread, param3);
+                Profiler.EndSample();
                 System.Int32 integer = (System.Int32)handle;
                 int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(this.thread);
                 }
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Profiler.EndSample();
+#endif
             }
         }
     }
