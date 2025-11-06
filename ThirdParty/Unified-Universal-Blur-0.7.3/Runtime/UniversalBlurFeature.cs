@@ -69,7 +69,7 @@ namespace Unified.UniversalBlur.Runtime
         {
             if (!TrySetShadersAndMaterials())
             {
-                Debug.LogErrorFormat("{0}.AddRenderPasses(): Missing material. {1} render pass will not be added.", GetType().Name, name);
+                // Debug.LogErrorFormat("{0}.AddRenderPasses(): Missing material. {1} render pass will not be added.", GetType().Name, name);
                 return;
             }
             
