@@ -30,9 +30,9 @@ namespace Airship.Editor {
         public bool Json { get; set; }
 
         /// <summary>
-        /// Tells the compiler to ignore compiling packages (will be faster, but more prone to bugs)
+        /// Tell the compiler this is a code-only publish
         /// </summary>
-        public bool SkipPackages { get; set; }
+        public bool CodeOnlyPublish { get; set; }
 
         /// <summary>
         /// Flag to enable incremental mode
@@ -90,8 +90,8 @@ namespace Airship.Editor {
                 args.Add("--publish");
             }
 
-            if (SkipPackages) {
-                args.Add("--skipPackages");
+            if (Publishing && CodeOnlyPublish) {
+                args.Add("--codePublish");
             }
             
             return string.Join(" ", args);
