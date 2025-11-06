@@ -217,8 +217,12 @@ namespace Code.Player.Character.MovementSystems.Character
             
             // Flag for if we are sending a full snapshot or just a diff. Sometimes a diff is bigger if
             // all bytes have changed.
-            var customDataDiff = customData.CreateDiff(other.customData);
-            bool fullCustomData = customDataDiff.Length > other.customData.Data.Length;
+            bool fullCustomData = customData == null;
+            byte[] customDataDiff = null;
+            if (!fullCustomData) {
+                customDataDiff = customData.CreateDiff(other.customData);
+                fullCustomData = customDataDiff.Length > other.customData.Data.Length;
+            }
             
             // Set the changed mask to reflect changed fields
             byte changedMask = 0;
