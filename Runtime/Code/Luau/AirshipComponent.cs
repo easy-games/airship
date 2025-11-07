@@ -56,10 +56,14 @@ internal class AirshipComponentReconcileEventData {
 }
 internal delegate void ReconcileAirshipComponent(AirshipComponentReconcileEventData data);
 
+interface IComponentInitializableDependency {
+	public void Init();
+}
+
 [AddComponentMenu("Airship/Airship Component")]
 [HelpURL("https://docs.airship.gg/typescript/airshipbehaviour")]
 [LuauAPI(LuauContext.Protected)]
-public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
+public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IComponentInitializableDependency {
 	internal static bool UsePostCompileReconciliation { get; set; } = true;
 	private const bool ElevateToProtectedWithinCoreScene = true;
 	
@@ -424,9 +428,11 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		var argObjId = ThreadDataManager.AddObjectReference(thread, obj);
 		LuauPlugin.UpdateCollisionAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, argObjId);
 	}
-
-	private IReadOnlyList<AirshipComponent> GetDependencies() {
-		List<AirshipComponent> dependencies = new();
+	
+	
+	
+	private IReadOnlyList<IComponentInitializableDependency> GetDependencies() {
+		List<IComponentInitializableDependency> dependencies = new();
 		
 		foreach (var property in metadata.properties) {
 			if (property.ComponentType == AirshipComponentPropertyType.AirshipComponent) {
@@ -438,6 +444,18 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 				foreach (var arrayItem in property.items.objectRefs) {
 					if (arrayItem != null) {
 						dependencies.Add(arrayItem as AirshipComponent);
+					}
+				}
+			} else if (property.ComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+				var obj = property.serializedObject;
+				if (obj == null) continue;
+				dependencies.Add(obj as AirshipScriptableObject);
+			} else if (property.ComponentType == AirshipComponentPropertyType.AirshipArray &&
+			           property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+				if (property.items.objectRefs == null) continue;
+				foreach (var arrayItem in property.items.objectRefs) {
+					if (arrayItem != null) {
+						dependencies.Add(arrayItem as AirshipScriptableObject);
 					}
 				}
 			}

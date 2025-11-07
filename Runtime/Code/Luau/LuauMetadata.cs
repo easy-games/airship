@@ -104,6 +104,17 @@ namespace Luau {
             return component;
         }
     }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    internal class AirshipScriptableObjectRef {
+        public int unityInstanceId;
+
+        public AirshipScriptableObjectRef() {}
+
+        public AirshipScriptableObjectRef(int unityInstanceId) {
+            this.unityInstanceId = unityInstanceId;
+        }
+    }
     
     // This must match up with the C++ version of the struct
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
@@ -566,11 +577,13 @@ namespace Luau {
                 }
                 case AirshipComponentPropertyType.AirshipScriptableObject: {
                     if (objectRef is AirshipScriptableObject scriptableObject) {
+                        var instanceId = AirshipScriptableObjectRoot.GetIdFromScriptableObject(scriptableObject);
+                        obj = new AirshipScriptableObjectRef(instanceId);
+                        Debug.Log($"** Should be getting id {instanceId}");
+                    } else {
+                        propType = AirshipComponentPropertyType.AirshipNil;
+                        obj = -1; // Reference to null
                     }
-
-                    // TODO implement
-                    propType = AirshipComponentPropertyType.AirshipNil;
-                    obj = -1; // Reference to null
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipClassObject: {

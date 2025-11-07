@@ -306,6 +306,10 @@ public partial class LuauCore : MonoBehaviour
                 var ptr = parameterDataPtrs[j];
                 var componentRef = Marshal.PtrToStructure<AirshipComponentRef>(ptr);
                 UnrolledPodObjects[j] = componentRef.AsUnityComponent();
+            } else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_SCRIPTABLE_OBJECT) {
+                var ptr = parameterDataPtrs[j];
+                var componentRef = Marshal.PtrToStructure<AirshipScriptableObject>(ptr);
+                UnrolledPodObjects[j] = AirshipScriptableObjectRoot.GetScriptableObjectFromId(componentRef.scriptableObjectId);
             } else {
                 UnrolledPodObjects[j] = null;
             }

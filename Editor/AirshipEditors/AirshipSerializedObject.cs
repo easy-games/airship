@@ -107,7 +107,6 @@ public class AirshipSerializedObject {
             if (bindingPropertyIndex == -1) continue;
             var bindingProperty = metadata.properties[bindingPropertyIndex];
             
-            Debug.Log($"property {bindingPropertyIndex} {propertyName}");
             propertyList.Add(new AirshipSerializedProperty(this, property, bindingProperty, editor));
             indexDictionary.Add(bindingProperty.name, bindingPropertyIndex);
         }
@@ -115,8 +114,6 @@ public class AirshipSerializedObject {
         propertyList.Sort((p1, p2) => {
             return indexDictionary[p1.name] > indexDictionary[p2.name] ? 1 : -1;
         });
-        
-        Debug.Log($"Should be {string.Join(", ",  propertyList.Select(v => v.name))}");
         
         return propertyList;
     }
