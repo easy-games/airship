@@ -126,10 +126,10 @@ namespace Code.Network.StateSystem
         protected Action<Diff> OnClientReceiveDiff;
         protected Action<int> OnServerReceiveFullSnapshotRequest;
         protected Action<State> OnServerReceiveSnapshot;
-        protected Action<Input> OnServerReceiveInput;
+        protected Action<Input[]> OnServerReceiveInput;
 
         // Functions to be implemented by subclass that perform networking actions
-        public abstract void SendClientInputToServer(Input input);
+        public abstract void SendClientInputToServer(Input[] input);
         public abstract void SendClientSnapshotToServer(State snapshot);
 
         /// <summary>
@@ -257,14 +257,15 @@ namespace Code.Network.StateSystem
                             (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime))));
                     if (commands.Length > 0) {
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
+                        this.SendClientInputToServer(commands);
                     }
                     
                     // print($"Sending {commands.Length} cmds to the server");
 
-                    // We make multiple calls so that Mirror can batch the commands efficiently.
-                    foreach (var command in commands) {
-                        this.SendClientInputToServer(command);
-                    }
+                    // // We make multiple calls so that Mirror can batch the commands efficiently.
+                    // foreach (var command in commands) {
+                    //     this.SendClientInputToServer(command);
+                    // }
                 }
 
                 // We are an authoritative client and should send our latest state
@@ -1218,9 +1219,13 @@ namespace Code.Network.StateSystem
             this.serverCommandBuffer.Add(command.commandNumber, command);
         }
 
-        private void ServerReceiveInputCommand(Input command)
+        private void ServerReceiveInputCommand(Input[] commands)
         {
-            ProcessClientInputOnServer(command);
+            foreach (var command in commands)
+            {
+                ProcessClientInputOnServer(command);
+            }
+         
         }
 
         private void ServerReceiveSnapshot(State snapshot)
