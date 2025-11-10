@@ -29,18 +29,25 @@ internal enum MetadataChangeState {
 
 internal enum ReconcileSource {
 	/// <summary>
-	/// When the component is calling 'OnValidate'
+	/// When the component or scriptable object is calling 'OnValidate'
 	/// </summary>
 	ComponentValidate,
 	/// <summary>
-	/// When the component properties are changed in the inspector
+	/// When the component or scriptable object properties are changed in the inspector
 	/// </summary>
 	Inspector,
 	/// <summary>
 	/// When the compiler is in the post-compile import state
 	/// </summary>
 	PostCompile,
+	/// <summary>
+	/// A forced reconcile
+	/// </summary>
 	ForceReconcile,
+	/// <summary>
+	/// When an AirshipScriptableObject is deserialized
+	/// </summary>
+	Deserialization,
 }
 
 internal class AirshipComponentReconcileEventData {

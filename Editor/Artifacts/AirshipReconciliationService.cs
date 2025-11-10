@@ -186,8 +186,15 @@ namespace Airship.Editor {
 
         internal static bool ReconcileScriptableObject(AirshipScriptableObject scriptableObject) {
             if (scriptableObject.script == null) {
+                scriptableObject.metadata = default;
                 return false;
             }
+
+            if (scriptableObject.script.scriptType != AirshipScriptType.ScriptableObject) {
+                scriptableObject.metadata = default;
+                return false;
+            }
+            
             if (scriptableObject.script.m_metadata == null) {
                 return false;
             }
@@ -441,9 +448,6 @@ namespace Airship.Editor {
         
         
         private static void OnScriptableObjectReconcile(AirshipScriptableObjectReconcileEventData data) {
-#if AIRSHIP_INTERNAL
-            Debug.Log($"Reconciling ScriptableObject {AssetDatabase.GetAssetPath(data.ScriptableObject)}");
-#endif
             ReconcileScriptableObject(data.ScriptableObject);
         }
         

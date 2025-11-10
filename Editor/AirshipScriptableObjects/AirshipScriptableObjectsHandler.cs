@@ -5,7 +5,7 @@
         [InitializeOnLoadMethod]
         public static void Load() {
             EditorApplication.playModeStateChanged += change => {
-                if (change == PlayModeStateChange.ExitingPlayMode) {
+                if (change == PlayModeStateChange.ExitingPlayMode || change == PlayModeStateChange.EnteredPlayMode) {
                     var scriptableObjects = AssetDatabase.FindAssets($"t:{typeof(AirshipScriptableObject)}");
                     foreach (var guid in scriptableObjects) {
                         var path = AssetDatabase.GUIDToAssetPath(guid);

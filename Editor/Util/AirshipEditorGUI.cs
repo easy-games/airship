@@ -10,6 +10,7 @@ using Luau;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public static partial class AirshipEditorGUI {
     public static void HorizontalLine(Color color = default, int thickness = 1, int padding = 10, int margin = 0)
@@ -63,6 +64,51 @@ public static partial class AirshipEditorGUI {
         return AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_objectFieldHash".GetHashCode(), currentValue, null,
             type, null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle, required: requiresReference);
     }
+
+    public static T ObjectField<T>(Rect rect, GUIContent label, T obj, bool allowSceneObjects, bool requiresReference) where T : UnityEngine.Object {
+        return (T) ObjectField(rect, label, obj, typeof(T), allowSceneObjects, requiresReference);
+    }
+
+    internal enum ScriptExportType {
+        Any,
+        ScriptableObject,
+        AirshipBehaviour,
+    }
+    
+    internal static AirshipScript AirshipScriptField(Rect rect, GUIContent label, AirshipScript script, 
+        Action<AirshipScript> onScriptSelected, ScriptExportType scriptExportType = ScriptExportType.Any, bool allowNone = true) {
+        switch (scriptExportType) {
+            case ScriptExportType.ScriptableObject:
+                int id = GUIUtility.GetControlID("_airshipScriptableObjectScriptFieldHash".GetHashCode(), FocusType.Keyboard, rect);
+                rect = EditorGUI.PrefixLabel(rect, id, label);
+                
+                AirshipObjectGUIInternal.DoCustomObjectField(rect, rect, id, script, null, typeof(AirshipScript), null,
+                    false, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle, (o, types) => {
+                        var selection = new AirshipScriptSelectionContext(AirshipScriptType.ScriptableObject, null, script, allowNone);
+                        AirshipScriptSelectorWindow.Show(selection, null, onScriptSelected);
+                    }, false);
+                
+                return null;
+            default:
+                return (AirshipScript) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_scriptFieldHash".GetHashCode(), script,
+                    null, typeof(AirshipScript), null, false, nonClippingObjectField,
+                    AirshipObjectGUIInternal.objectFieldButtonStyle);
+        }
+        
+
+    }
+
+    private static Object ValidateScriptableObject(Object[] references, Type objtype, SerializedProperty property, AirshipObjectGUIInternal.UnityObjectFieldValidatorOptions options) {
+        if (references.Length != 1) return null;
+        var obj = references[0];
+
+        if (obj is AirshipScript script && script.scriptType == AirshipScriptType.ScriptableObject) {
+            return script;
+        }
+        
+        return null;
+    }
+
 
     public static UnityEngine.Object ObjectFieldLayout(GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
         allowSceneObjects, bool requiresReference) {

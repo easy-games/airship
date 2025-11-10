@@ -711,6 +711,10 @@ namespace Luau {
         [SerializeReference]
         public LuauMetadata[] serializables;
 
+        public bool isComponent => behaviour != null && scriptable == null;
+        public bool isScriptableObject => scriptable != null && behaviour == null;
+        public bool hasScriptableClasses => serializables != null;
+
         public static bool ParseScriptMetadata(string json, out AirshipScriptMetadata metadata) {
             metadata = JsonConvert.DeserializeObject<AirshipScriptMetadata>(json);
 

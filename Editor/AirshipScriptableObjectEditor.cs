@@ -99,6 +99,8 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
     }
 
     public override void OnInspectorGUI() {
+        
+        
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         
         binding.ReconcileMetadata(ReconcileSource.Inspector);
@@ -112,16 +114,17 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
 
         var script = binding.script;
         EditorGUILayout.Space(5);
+        
+        // var newScript = (AirshipScript) EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
 
-        GUI.enabled = script == null || script.scriptType != AirshipScriptType.ScriptableObject;
-        var newScript = (AirshipScript) EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
+        GUI.enabled = script == null;
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+        AirshipEditorGUI.AirshipScriptField(rect, new GUIContent("Script"), script, OnScriptSelectionChanged, AirshipEditorGUI.ScriptExportType.ScriptableObject);
         GUI.enabled = true;
-
-        if (newScript != script) {
-            binding.script = newScript;
-        }
-              
+        
         EditorGUILayout.Space(5);
+        
+ 
         
         if (!AirshipCustomEditors.UseNewInspector) {
             EditorGUILayout.HelpBox("AirshipScriptableObject requires the new Editor API to be enabled", MessageType.Warning);
@@ -135,8 +138,6 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
             return;
         }
         
-        Reconcile();
-        
         if (customEditorType != null && binding.script != null) {
             var componentEditor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
             if (this.editor == null) this.editor = componentEditor;
@@ -149,6 +150,12 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         } else {
             EditorGUILayout.HelpBox("Could not find custom inspector", MessageType.Warning);
         }
+    }
+
+    private void OnScriptSelectionChanged(AirshipScript targetScript) {
+        serializedObject.FindProperty("script").objectReferenceValue = targetScript;
+        serializedObject.ApplyModifiedProperties();
+        serializedObject.Update();
     }
 }
 #endif

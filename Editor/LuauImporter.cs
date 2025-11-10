@@ -84,6 +84,18 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter {
         Debug.Log($"Total Luau bytecode size: {EditorUtility.FormatBytes(byteCounter)}");
     }
 
+    protected AirshipScriptMetadata GetScriptMetadata(string metadataFilepath = null) {
+        metadataFilepath ??= $"{assetPath}.json~";
+        if (File.Exists(metadataFilepath)) {
+            var json = File.ReadAllText(metadataFilepath);
+            if (AirshipScriptMetadata.ParseScriptMetadata(json, out var scriptMetadata)) {
+                return scriptMetadata;
+            }
+        }
+
+        return null;
+    }
+    
     protected (string fileName, LuauCompiler.CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, AirshipScript subAsset, string assetPath) {
         ClearStopOfCompilationCoroutine();
 

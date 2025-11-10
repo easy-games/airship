@@ -47,15 +47,16 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
 
     public void OnAfterDeserialize() {
-        if (script == null || script.scriptType != AirshipScriptType.ScriptableObject) {
+        Debug.Log("OnAfterDeserialize");
+        
+        if (script == null) {
             metadata = default;
         } else if (script.m_metadata != null) {
-            this.ReconcileMetadata(ReconcileSource.ForceReconcile);
+            this.ReconcileMetadata(ReconcileSource.Deserialization);
         }
     }
 
     public void Init() {
-        Debug.Log("SerializableObject init");
         if (!initialized) CreateScriptableObject();
     }
 
@@ -90,6 +91,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     private void CreateScriptableObject() {
         if (script == null) return;
+        Debug.Log($"** create scriptable object {script.scriptType}; {script.assetPath} - {script.m_metadata} {metadata}");
+        
         Debug.Log("Create Scriptable Object Thread");
         
         thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.Cached, script, out var status);
@@ -188,7 +191,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         return;
 #endif
         
-        var targetMetadata = script.m_metadata;
+        var targetMetadata = script != null ? script.m_metadata : null;
         if (script == null || targetMetadata == null || targetMetadata.name == "") {
             return;
         }
