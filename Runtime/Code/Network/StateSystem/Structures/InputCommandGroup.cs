@@ -37,7 +37,6 @@ namespace Code.Network.StateSystem.Structures {
                 lastInput = inputs[i];
             }
 
-            Debug.Log($"Retrieved {inputs.Length} inputs from group. Diff size was {diffs?.Length}");
             return inputs;
         }
     }

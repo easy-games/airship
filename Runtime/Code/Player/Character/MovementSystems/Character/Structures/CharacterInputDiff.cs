@@ -47,7 +47,6 @@ namespace Code.Player.Character.MovementSystems.Character {
             
             CharacterInputDiff[] diffs = new CharacterInputDiff[reader.Read<byte>()];
             for (var i = 0; i < diffs.Length; i++) {
-                Debug.Log($"Reading {i}/{diffs.Length}");
                 diffs[i] = ReadEntry(reader);
             }
             return diffs;

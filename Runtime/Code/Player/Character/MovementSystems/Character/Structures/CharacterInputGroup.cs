@@ -10,8 +10,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
     public static class CharacterInputGroupSerializer {
         public static void WriteCharacterInputGroup(this NetworkWriter writer, CharacterInputGroup inputGroup) {
-            Debug.Log($"Serializing group {inputGroup.baseInput.commandNumber} with {inputGroup.diffs.Length}");
-            // Diffs are encoded first because baseInput is read as if it is the last entry (it reads all remaining bytes as custom data)
+            // Diffs are encoded first because baseInput is read as if it is the last/only entry (it reads all remaining bytes as custom data)
             writer.Write(inputGroup.diffs);
             writer.Write(inputGroup.baseInput);
         }
