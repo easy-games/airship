@@ -117,10 +117,15 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         
         // var newScript = (AirshipScript) EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
 
-        GUI.enabled = script == null;
-        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
-        AirshipEditorGUI.AirshipScriptField(rect, new GUIContent("Script"), script, OnScriptSelectionChanged, AirshipEditorGUI.ScriptExportType.ScriptableObject);
-        GUI.enabled = true;
+        if (script != null) {
+            GUI.enabled = script == null;
+            EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), false);
+            GUI.enabled = true;
+        } else {
+            var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+            AirshipEditorGUI.AirshipScriptField(rect, new GUIContent("Script"), script, OnScriptSelectionChanged, AirshipEditorGUI.ScriptExportType.ScriptableObject);
+        }
+
         
         EditorGUILayout.Space(5);
         

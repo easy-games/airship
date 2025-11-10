@@ -47,8 +47,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
 
     public void OnAfterDeserialize() {
-        Debug.Log("OnAfterDeserialize");
-        
         if (script == null) {
             metadata = default;
         } else if (script.m_metadata != null) {
@@ -76,9 +74,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (!Application.isPlaying) {
             initialized = false;
         }
-        
-        Debug.Log("ScriptableObject disable");
-        // TODO: Method call?
     }
 
     private void OnDestroy() {
@@ -91,9 +86,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     private void CreateScriptableObject() {
         if (script == null) return;
-        Debug.Log($"** create scriptable object {script.scriptType}; {script.assetPath} - {script.m_metadata} {metadata}");
-        
-        Debug.Log("Create Scriptable Object Thread");
         
         thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.Cached, script, out var status);
         if (status != 0) {
@@ -108,16 +100,24 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
         
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
-        Debug.Log($"** Creating scriptable object {name} with id {id}");
-        
+
         LuauPlugin.CreateScriptableObject(context, thread, id);
         InitializeScriptableObject();
         initialized = true;
         scriptableObjectId = id;
     }
 
+    private IReadOnlyList<IComponentInitializableDependency> GetDependencies() {
+        // right now we can only initialize scriptable objects, anyway.
+        return metadata.GetRuntimePropertyDependencies(PropertyDependencyFilterFlags.AirshipScriptableObject);
+    }
+    
     private void InitializeScriptableObject() {
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
+
+        foreach (var dependency in GetDependencies()) {
+            dependency.Init();
+        }
         
         if (metadata != null) {
             var properties = metadata.properties;
@@ -165,11 +165,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             }
             InitGcHandles.Clear();
             InitStringPtrs.Clear();
-        } else {
-            Debug.LogWarning($"** Metadata is missing for {name} at id {id}");
         }
-        
-        Debug.Log($"** ScriptableObject {name} initialized at id {id}");
     }
     
     private void Awake() {

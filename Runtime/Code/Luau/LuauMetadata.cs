@@ -33,6 +33,14 @@ namespace Luau {
         AirshipClassObject,
     }
     
+    [Flags]
+    public enum PropertyDependencyFilterFlags {
+        None = 0,
+        AirshipComponent = 1 << 0,
+        AirshipScriptableObject = 1 << 1,
+        All = -1,
+    }
+    
     [Serializable]
     public class LuauMetadataArrayProperty {
         // From JSON
@@ -823,7 +831,44 @@ namespace Luau {
             
             return (metadata, null);
         }
+
         
+        internal IReadOnlyList<IComponentInitializableDependency> GetRuntimePropertyDependencies(PropertyDependencyFilterFlags filterFlags = PropertyDependencyFilterFlags.All) {
+            List<IComponentInitializableDependency> dependencies = new();
+
+            var includeComponents = (filterFlags & PropertyDependencyFilterFlags.AirshipComponent) != 0;
+            var includeScriptableObjects = (filterFlags & PropertyDependencyFilterFlags.AirshipScriptableObject) != 0;
+            
+            foreach (var property in properties) {
+                if (includeComponents && property.ComponentType == AirshipComponentPropertyType.AirshipComponent) {
+                    var obj = property.serializedObject;
+                    if (obj == null) continue;
+                    dependencies.Add(obj as AirshipComponent);
+                } else if (includeComponents && property.ComponentType == AirshipComponentPropertyType.AirshipArray && property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipComponent) {
+                    if (property.items.objectRefs == null) continue;
+                    foreach (var arrayItem in property.items.objectRefs) {
+                        if (arrayItem != null) {
+                            dependencies.Add(arrayItem as AirshipComponent);
+                        }
+                    }
+                } else if (includeScriptableObjects && property.ComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+                    var obj = property.serializedObject;
+                    if (obj == null) continue;
+                    dependencies.Add(obj as AirshipScriptableObject);
+                } else if (includeScriptableObjects && property.ComponentType == AirshipComponentPropertyType.AirshipArray &&
+                           property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+                    if (property.items.objectRefs == null) continue;
+                    foreach (var arrayItem in property.items.objectRefs) {
+                        if (arrayItem != null) {
+                            dependencies.Add(arrayItem as AirshipScriptableObject);
+                        }
+                    }
+                }
+            }
+
+            return dependencies;
+        }
+
         public LuauMetadataDecoratorElement FindClassDecorator(string decoratorName) {
             foreach (var property in decorators) {
                 if (property.name == decoratorName) {

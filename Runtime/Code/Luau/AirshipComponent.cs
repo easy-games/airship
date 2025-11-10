@@ -439,36 +439,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IComponentIniti
 	
 	
 	private IReadOnlyList<IComponentInitializableDependency> GetDependencies() {
-		List<IComponentInitializableDependency> dependencies = new();
-		
-		foreach (var property in metadata.properties) {
-			if (property.ComponentType == AirshipComponentPropertyType.AirshipComponent) {
-				var obj = property.serializedObject;
-				if (obj == null) continue;
-				dependencies.Add(obj as AirshipComponent);
-			} else if (property.ComponentType == AirshipComponentPropertyType.AirshipArray && property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipComponent) {
-				if (property.items.objectRefs == null) continue;
-				foreach (var arrayItem in property.items.objectRefs) {
-					if (arrayItem != null) {
-						dependencies.Add(arrayItem as AirshipComponent);
-					}
-				}
-			} else if (property.ComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
-				var obj = property.serializedObject;
-				if (obj == null) continue;
-				dependencies.Add(obj as AirshipScriptableObject);
-			} else if (property.ComponentType == AirshipComponentPropertyType.AirshipArray &&
-			           property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
-				if (property.items.objectRefs == null) continue;
-				foreach (var arrayItem in property.items.objectRefs) {
-					if (arrayItem != null) {
-						dependencies.Add(arrayItem as AirshipScriptableObject);
-					}
-				}
-			}
-		}
-
-		return dependencies;
+		return metadata.GetRuntimePropertyDependencies();
 	}
 
 	private bool HasAirshipMethod(AirshipComponentUpdateType updateType) {
