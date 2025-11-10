@@ -26,7 +26,7 @@ public class DefaultAirshipScriptableObjectEditor : AirshipEditor {
 
 public class DefaultAirshipSerializableObjectEditor : AirshipEditor {
     public override void OnInspectorGUI() {
-        EditorGUILayout.HelpBox("Serializable Classes are experimental and subject to change", MessageType.Warning);
+        EditorGUILayout.HelpBox("Serializable Class Objects are not yet supported at Runtime", MessageType.Error);
         DrawDefaultProperties();
     }
 }

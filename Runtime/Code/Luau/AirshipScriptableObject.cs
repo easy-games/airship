@@ -82,6 +82,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
 
     private void CreateScriptableObject() {
+        if (!Application.isPlaying) return;
         if (script == null) return;
         
         thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.Cached, script, out var status);

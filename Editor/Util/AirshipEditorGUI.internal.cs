@@ -332,6 +332,23 @@ public static partial class AirshipEditorGUI {
         return true;
     }
 
+    private static void AddLuauObjectToProperty(AirshipSerializedValue property, Object targetObject) {
+        var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
+        newInstance.fileRef = property.airshipType.AssetPath;
+        newInstance.type = property.airshipType.Name;
+                    
+                    
+                    
+        if (AssetDatabase.IsMainAsset(targetObject) || AssetDatabase.IsSubAsset(targetObject)) {
+            newInstance.name = property.name + ":" + GUID.Generate().ToString();
+            AssetDatabase.AddObjectToAsset(newInstance, targetObject);
+        }
+                    
+        property.objectReferenceValue = newInstance;
+        property.serializedObject.ApplyModifiedProperties();
+        property.serializedObject.serializedObject.Update();      
+    }
+
     private static void DoAirshipSerializedClassObject(Rect? rect, GUIContent label, AirshipSerializedValue property, bool expanded = true) {
         // AirshipSerializedLuauObject
         DoValidateProperty(rect, property, AirshipSerializedType.SerializedClass);
@@ -352,6 +369,10 @@ public static partial class AirshipEditorGUI {
             var targetObject = property.serializedObject.targetObject;
             var isMainAsset = AssetDatabase.IsMainAsset(targetObject);
             var isSubAsset = AssetDatabase.IsSubAsset(targetObject);
+
+            // if (property.objectReferenceValue == null) {
+            //     AddLuauObjectToProperty(property, targetObject);
+            // }
             
             if (property.objectReferenceValue != null && !isSubAsset) {
                 var foldoutRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
@@ -366,25 +387,6 @@ public static partial class AirshipEditorGUI {
                 }
                 
                 if (enabled) {
-                    // if (property.objectReferenceValue == null) {
-                    //     if (GUILayout.Button("Create")) {
-                    //         var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
-                    //         newInstance.fileRef = property.airshipType.AssetPath;
-                    //         newInstance.type = property.airshipType.Name;
-                    //        
-                    //
-                    //        
-                    //         if (AssetDatabase.IsMainAsset(targetObject) || AssetDatabase.IsSubAsset(targetObject)) {
-                    //             newInstance.name = property.name;
-                    //             AssetDatabase.AddObjectToAsset(newInstance, targetObject);
-                    //         }
-                    //         
-                    //         property.objectReferenceValue = newInstance;
-                    //         property.serializedObject.ApplyModifiedProperties();
-                    //         property.serializedObject.serializedObject.Update();
-                    //     }
-                    // }
-
                     if (property.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
                         var refType = AirshipBuildInfo.Instance.GetTypeByPathAndName(serializedLuauObject.fileRef,
                             serializedLuauObject.type);
@@ -424,21 +426,8 @@ public static partial class AirshipEditorGUI {
             } else if (!isSubAsset) {
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.PrefixLabel(label);
-                if (GUILayout.Button("Instantiate")) {
-                    var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
-                    newInstance.fileRef = property.airshipType.AssetPath;
-                    newInstance.type = property.airshipType.Name;
-                    
-                    
-                    
-                    if (AssetDatabase.IsMainAsset(targetObject) || AssetDatabase.IsSubAsset(targetObject)) {
-                        newInstance.name = property.name;
-                        AssetDatabase.AddObjectToAsset(newInstance, targetObject);
-                    }
-                    
-                    property.objectReferenceValue = newInstance;
-                    property.serializedObject.ApplyModifiedProperties();
-                    property.serializedObject.serializedObject.Update();      
+                if (GUILayout.Button($"Add {ObjectNames.NicifyVariableName(property.airshipType.Name)}")) {
+                    AddLuauObjectToProperty(property, targetObject);
                 }
                 EditorGUILayout.EndHorizontal();
             }

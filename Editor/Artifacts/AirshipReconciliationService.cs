@@ -10,6 +10,7 @@ using Mirror.SimpleWeb;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Airship.Editor {
     internal enum ReconcileStatus {
@@ -159,6 +160,14 @@ namespace Airship.Editor {
 #if AIRSHIP_DEBUG
                     deletions.Add(componentProperty.name);
 #endif
+                    if (componentProperty.serializedObject is AirshipSerializedLuauObject serializedLuauObject) {
+                        if (AssetDatabase.IsSubAsset(serializedLuauObject)) {
+                            AssetDatabase.RemoveObjectFromAsset(serializedLuauObject);
+                        }
+                        
+                        Debug.Log($"Should have removed serialized object ref {AssetDatabase.IsSubAsset(serializedLuauObject)}");
+                    }
+                    
                     componentMetadata.properties.Remove(componentProperty);
                 }
             }

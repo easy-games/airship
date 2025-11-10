@@ -10,30 +10,6 @@ using UnityEditor.AssetImporters;
 using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
 
-[CustomEditor(typeof(AirshipSerializedLuauObject))]
-public class AirshipSerializedLuauObjectEditor : UnityEditor.Editor {
-    private AirshipEditor editor;
-    public override void OnInspectorGUI() {
-        AirshipSerializedLuauObject binding = (AirshipSerializedLuauObject)target;
-        
-        Type customEditorType = null;
-        if (binding.metadata != null) {
-            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
-        }
-        
-        if (customEditorType != null) {
-            var componentEditor = AirshipCustomEditors.GetEditorForScriptableClass(binding, customEditorType, serializedObject);
-            if (this.editor == null) this.editor = componentEditor;
-            componentEditor.script = binding.GetAirshipType().Script;
-            componentEditor.target = binding;
-            componentEditor.OnInspectorGUI();
-            
-            serializedObject.ApplyModifiedProperties();
-            serializedObject.Update();
-        }
-    }
-}
-
 internal class DoCreateScriptableObject : EndNameEditAction {
     public AirshipScript script;
     public override void Action(int instanceId, string pathName, string resourceFile) {
