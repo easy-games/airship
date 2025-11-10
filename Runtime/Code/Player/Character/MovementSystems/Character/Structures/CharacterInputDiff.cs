@@ -35,7 +35,10 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
         
         public static void WriteCharacterInputDiffArray(this NetworkWriter writer, CharacterInputDiff[] diffArray) {
-            if (diffArray == null) return;
+            if (diffArray == null) {
+                writer.WriteByte(0);
+                return;
+            }
             writer.Write<byte>((byte) diffArray.Length);
             foreach (var diff in diffArray) {
                 WriteEntry(writer, diff);
@@ -43,8 +46,6 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
         
         public static CharacterInputDiff[] ReadCharacterInputDiffArray(this NetworkReader reader) {
-            if (reader.Remaining == 0) return null;
-            
             CharacterInputDiff[] diffs = new CharacterInputDiff[reader.Read<byte>()];
             for (var i = 0; i < diffs.Length; i++) {
                 diffs[i] = ReadEntry(reader);
