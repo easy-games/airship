@@ -332,8 +332,11 @@ using Object = UnityEngine.Object;
             private static void OnPostInitialCompilation(TypescriptCompilationResult result) {
                 if (!result.InitialCompilation) return;
                 
-                Debug.Log("Running post compilation step");
+             
                 AirshipCustomEditors.RegisterEditorsForRegisteredTypes();
+                AirshipCustomMenus.instance.RegisterMenus();
+                AirshipCustomMenus.instance.Save();
+                
                 TypescriptServices.FinishedCompilation -= OnPostInitialCompilation;
             }
             

@@ -225,6 +225,11 @@ public static class AirshipCustomEditors {
     internal static bool TryGetEditorForComponent(AirshipComponent component, Type type, out AirshipEditor editor) {
         return instanceToAirshipEditor.TryGetValue(component.GetInstanceID(), out editor);
     }
+
+    internal static bool TryGetEditorForScriptableObject(AirshipScriptableObject scriptableObject, Type type,
+        out AirshipEditor editor) {
+        return instanceToAirshipEditor.TryGetValue(scriptableObject.GetInstanceID(), out editor);
+    }
     
     internal static AirshipEditor GetEditorForComponent(AirshipComponent component, Type type, SerializedObject serializedObject) {
         if (instanceToAirshipEditor.TryGetValue(component.GetInstanceID(), out var editor)) {

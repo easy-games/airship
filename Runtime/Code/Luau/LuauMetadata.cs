@@ -833,8 +833,8 @@ namespace Luau {
         }
 
         
-        internal IReadOnlyList<IComponentInitializableDependency> GetRuntimePropertyDependencies(PropertyDependencyFilterFlags filterFlags = PropertyDependencyFilterFlags.All) {
-            List<IComponentInitializableDependency> dependencies = new();
+        internal IReadOnlyList<IAirshipRuntimeReferenceDependency> GetRuntimePropertyDependencies(PropertyDependencyFilterFlags filterFlags = PropertyDependencyFilterFlags.All) {
+            List<IAirshipRuntimeReferenceDependency> dependencies = new();
 
             var includeComponents = (filterFlags & PropertyDependencyFilterFlags.AirshipComponent) != 0;
             var includeScriptableObjects = (filterFlags & PropertyDependencyFilterFlags.AirshipScriptableObject) != 0;

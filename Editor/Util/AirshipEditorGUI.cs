@@ -669,6 +669,10 @@ public static partial class AirshipEditorGUI {
                 AnimationCurveProperty(rect, label, value);
                 break;
             }
+            case AirshipSerializedType.AirshipScriptableObject: {
+                DoAirshipScriptableObject(rect, label, value);
+                break;
+            }
             case AirshipSerializedType.SerializedClass: {
                 break;
             }

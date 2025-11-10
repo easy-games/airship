@@ -20,10 +20,7 @@ internal class AirshipScriptableObjectReconcileEventData {
 }
 internal delegate void ReconcileAirshipScriptableObject(AirshipScriptableObjectReconcileEventData data);
 
-#if AIRSHIP_INTERNAL
-[CreateAssetMenu(menuName = "Airship/Scriptable Object", fileName = "AirshipScriptableObject", order = 0)]
-#endif
-public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackReceiver, IComponentInitializableDependency {
+public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackReceiver, IAirshipRuntimeReferenceDependency {
     private static readonly List<GCHandle> InitGcHandles = new();
     private static readonly List<IntPtr> InitStringPtrs = new();
     
@@ -107,8 +104,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         scriptableObjectId = id;
     }
 
-    private IReadOnlyList<IComponentInitializableDependency> GetDependencies() {
-        // right now we can only initialize scriptable objects, anyway.
+    private IReadOnlyList<IAirshipRuntimeReferenceDependency> GetDependencies() {
+        // right now we can only initialize scriptable objects with scriptable objects, anyway.
+        // in future we might have some "loose references" for referencing prefab components - right now, no.
         return metadata.GetRuntimePropertyDependencies(PropertyDependencyFilterFlags.AirshipScriptableObject);
     }
     

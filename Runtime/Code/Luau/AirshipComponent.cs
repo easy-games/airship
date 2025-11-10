@@ -63,14 +63,10 @@ internal class AirshipComponentReconcileEventData {
 }
 internal delegate void ReconcileAirshipComponent(AirshipComponentReconcileEventData data);
 
-interface IComponentInitializableDependency {
-	public void Init();
-}
-
 [AddComponentMenu("Airship/Airship Component")]
 [HelpURL("https://docs.airship.gg/typescript/airshipbehaviour")]
 [LuauAPI(LuauContext.Protected)]
-public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IComponentInitializableDependency {
+public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IAirshipRuntimeReferenceDependency {
 	internal static bool UsePostCompileReconciliation { get; set; } = true;
 	private const bool ElevateToProtectedWithinCoreScene = true;
 	
@@ -438,7 +434,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IComponentIniti
 	
 	
 	
-	private IReadOnlyList<IComponentInitializableDependency> GetDependencies() {
+	private IReadOnlyList<IAirshipRuntimeReferenceDependency> GetDependencies() {
 		return metadata.GetRuntimePropertyDependencies();
 	}
 

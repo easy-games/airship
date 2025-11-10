@@ -1,9 +1,13 @@
 ﻿#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.IO;
+using Editor.EditorInternal;
+using Editor.Util;
 using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;
+using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
 
 [CustomEditor(typeof(AirshipSerializedLuauObject))]
@@ -30,77 +34,84 @@ public class AirshipSerializedLuauObjectEditor : UnityEditor.Editor {
     }
 }
 
+internal class DoCreateScriptableObject : EndNameEditAction {
+    public AirshipScript script;
+    public override void Action(int instanceId, string pathName, string resourceFile) {
+        var scriptableObject = ScriptableObject.CreateInstance<AirshipScriptableObject>();
+        scriptableObject.script = script;
+        AssetDatabase.CreateAsset(scriptableObject, pathName);
+        ProjectWindowUtil.ShowCreatedAsset(scriptableObject);
+    }
+}
+
 [CustomEditor(typeof(AirshipScriptableObject))]
 public class AirshipScriptableObjectEditor : UnityEditor.Editor {
+    internal static string TemplatePath => "Packages/gg.easy.airship/Editor/Templates";
+    internal static string AirshipScriptableObjectTemplate => PosixPath.Join(TemplatePath, "AirshipScriptableObject.asset.txt");
+    
     private AirshipEditor editor;
 
-    public void Reconcile() {
-        var scriptableObject = (AirshipScriptableObject)target;
-        var script = scriptableObject.script;
-        
-        if (script == null) return;
-        if (script.m_metadata == null) return;
-        
-        var scriptMetadata = script.m_metadata;
-        var componentMetadata = scriptableObject.metadata;
-
-        if (scriptMetadata == null) return;
-        componentMetadata.name = scriptMetadata.name;
-
-        foreach (var scriptProperty in scriptMetadata.properties) {
-            var componentProperty = componentMetadata.FindProperty(scriptProperty.name);
-            if (componentProperty == null) {
-                var element = scriptProperty.Clone();
-                componentMetadata.properties.Add(element);
-                componentProperty = element;
-            } else {
-                if (!componentProperty.HasSameTypesAs(scriptProperty)) {
-                    componentProperty.ReconcileTypesWith(scriptProperty);
-                }
-                
-                if (!componentProperty.HasSameItemsTypesAs(scriptProperty)) {
-                    componentProperty.ReconcileItemsWith(scriptProperty);
-                }
+    public const string CreateScriptableObjectMenu = "Assets/Create/Airship/Airship Scriptable Object Asset...";
+    
+    [InitializeOnLoadMethod]
+    internal static void Init() {
+#if AIRSHIP_INTERNAL
+        EditorApplication.delayCall += () => {
+            if (!AirshipEditorInternals.HasUnityMenuItem(CreateScriptableObjectMenu)) {
+                AirshipEditorInternals.AddUnityMenuItem(
+                    CreateScriptableObjectMenu, 
+                    "", false, 50, 
+                    CreateScriptableObjectPrompt, () => true);
             }
-            
-            componentProperty.fileRef = scriptProperty.fileRef;
-            componentProperty.refPath = scriptProperty.refPath;
-        }
-        
-        List<LuauMetadataProperty> propertiesToRemove = null;
-        var seenProperties = new HashSet<string>();
-        foreach (var componentProperty in componentMetadata.properties) {
-            var scriptProperty = scriptMetadata.FindProperty(componentProperty.name);
-                
-            if (scriptProperty == null || seenProperties.Contains(componentProperty.name)) {
-                if (propertiesToRemove == null) {
-                    propertiesToRemove = new List<LuauMetadataProperty>();
-                }
-                propertiesToRemove.Add(componentProperty);
-            }
-                
-            seenProperties.Add(componentProperty.name);
-        }
-        
-        
-        if (propertiesToRemove != null) {
-            foreach (var componentProperty in propertiesToRemove) {
-                componentMetadata.properties.Remove(componentProperty);
-            }
-        }
-
-        if (serializedObject.hasModifiedProperties) {
-            serializedObject.ApplyModifiedProperties();
-        }
+        };
+#endif
     }
     
-    private void OnValidate() {
-       
+    internal static void CreateScriptableObjectPrompt() {
+        var context = new AirshipScriptSelectionContext(AirshipScriptType.ScriptableObject, null, null, false);
+        AirshipScriptSelectorWindow.Show(context, null, (script) => {
+            if (script == null) return;
+            CreateAirshipScriptableObject(script, Path.GetFileNameWithoutExtension(script.assetPath) + ".asset");
+        });
+    }
+
+    internal static void CreateAirshipScriptableObject(AirshipScript script, string defaultFileName) {
+        var scriptable = ScriptableObject.CreateInstance<AirshipScriptableObject>();
+        scriptable.script = script;
+        
+        var createInstance = ScriptableObject.CreateInstance<DoCreateScriptableObject>();
+        createInstance.script = script;
+            
+        ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, 
+            createInstance, defaultFileName, null, "");
+    }
+
+    private void OnEnable() {
+        AirshipScriptableObject binding = (AirshipScriptableObject)target;
+        if (binding.script != null && binding.metadata != null) {
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            
+            if (customEditorType != null && AirshipCustomEditors.TryGetEditorForScriptableObject(binding, customEditorType, out var editor)) {
+                editor.OnEnable();
+                this.editor = editor;
+            }
+        }
+    }
+
+    private void OnDisable() {
+        AirshipScriptableObject binding = (AirshipScriptableObject)target;
+        if (binding.script != null && binding.metadata != null) {
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            if (customEditorType != null) {
+                var editor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
+                editor.OnDisable();
+            }
+
+            this.editor = null;
+        }
     }
 
     public override void OnInspectorGUI() {
-        
-        
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         
         binding.ReconcileMetadata(ReconcileSource.Inspector);
