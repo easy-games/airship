@@ -65,17 +65,21 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     private void OnEnable() {
         if (!Application.isPlaying) initialized = false;
         if (!initialized) CreateScriptableObject();
+        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
     }
 
     private void OnDisable() {
         if (!Application.isPlaying) {
             initialized = false;
         }
+        
+        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDisabled);
     }
 
     private void OnDestroy() {
         if (!Application.isPlaying || script == null) return;
 
+        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDestroy);
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
         LuauPlugin.RemoveScriptableObject(context, thread, id);
         AirshipScriptableObjectRoot.CleanIdOnDestroy(this);
@@ -105,6 +109,11 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         scriptableObjectId = id;
     }
 
+    private void InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType updateType) {
+        if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+        // LuauPlugin.UpdateIndividualScriptableObject(context, thread, AirshipScriptableObjectRoot.GetIdFromScriptableObject(this), updateType);
+    }
+    
     private IReadOnlyList<IAirshipRuntimeReferenceDependency> GetDependencies() {
         // right now we can only initialize scriptable objects with scriptable objects, anyway.
         // in future we might have some "loose references" for referencing prefab components - right now, no.
@@ -164,12 +173,15 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             }
             InitGcHandles.Clear();
             InitStringPtrs.Clear();
+            
+            InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipAwake);
         }
     }
     
     private void Awake() {
         if (!Application.isPlaying || script == null) return;
         CreateScriptableObject();
+        
     }
 
     private void Reset() {

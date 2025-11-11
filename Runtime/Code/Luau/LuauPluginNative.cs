@@ -89,6 +89,9 @@ public static class LuauPluginNative {
 	internal unsafe delegate IntPtr InitializeAirshipScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId, LuauMetadataPropertyMarshalDto* props, int nProps);
 	[NativeDelegate] internal static InitializeAirshipScriptableObjectDelegate InitializeScriptableObject;
 	
+	internal delegate IntPtr UpdateIndividualAirshipScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int updateType);
+	[NativeDelegate] internal static UpdateIndividualAirshipScriptableObjectDelegate UpdateIndividualScriptableObject;
+	
 	internal delegate IntPtr RemoveAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
 	[NativeDelegate] internal static RemoveAirshipComponentDelegate RemoveAirshipComponent;
 	

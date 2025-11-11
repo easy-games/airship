@@ -42,4 +42,12 @@ namespace Luau {
             }
         }
     }
+    
+    // Matches same enum order in AirshipComponent.h plugin file
+    public enum AirshipScriptableObjectUpdateType {
+        AirshipEnabled,
+        AirshipDisabled,
+        AirshipAwake,
+        AirshipDestroy,
+    }
 }
