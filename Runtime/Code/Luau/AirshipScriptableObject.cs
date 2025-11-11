@@ -89,7 +89,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (!Application.isPlaying) return;
         if (script == null) return;
         
-        thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.Cached, script, out var status);
+        thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.NotCached, script, out var status);
         if (status != 0) {
             thread = IntPtr.Zero;
             if (status == 1) {
@@ -111,7 +111,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     private void InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType updateType) {
         if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
-        // LuauPlugin.UpdateIndividualScriptableObject(context, thread, AirshipScriptableObjectRoot.GetIdFromScriptableObject(this), updateType);
+        LuauPlugin.UpdateIndividualScriptableObject(context, thread, AirshipScriptableObjectRoot.GetIdFromScriptableObject(this), updateType);
     }
     
     private IReadOnlyList<IAirshipRuntimeReferenceDependency> GetDependencies() {

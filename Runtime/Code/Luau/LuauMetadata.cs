@@ -133,6 +133,13 @@ namespace Luau {
     
     // This must match up with the C++ version of the struct
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataAirshipScriptableObjectRefContainerDto {
+        public IntPtr value;
+        public int valueType;
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public struct LuauMetadataArrayValueContainerDto {
         // Defaults of ValueContainer
         public IntPtr value;
@@ -479,6 +486,13 @@ namespace Luau {
                 
                 if (componentType == AirshipComponentPropertyType.AirshipComponent) {
                     return new LuauMetadataAirshipComponentRefContainerDto() {
+                        value = valuePtr,
+                        valueType = (int) componentType,
+                    };
+                }
+                
+                if (componentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+                    return new LuauMetadataAirshipScriptableObjectRefContainerDto() {
                         value = valuePtr,
                         valueType = (int) componentType,
                     };
