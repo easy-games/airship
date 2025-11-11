@@ -197,7 +197,11 @@ public static class CreateAssetBundles {
 						assetGuids.AddRange(urpGuids);
 					});
 
+
 					if (!compileURPShaders) {
+						// This adds a reference to Core's URP shaders which will prevent them from being duplicated
+						// in the game's bundle. Note that these URP shaders are hardcoded to not compile in the Scriptable
+						// Build Pipeline source in this scenario.
 						Debug.Log("Adding URP assets to CoreMaterials bundle.");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
 						addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");

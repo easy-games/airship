@@ -305,82 +305,36 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// 0 is reserved for player prefab
 		this.networkCollectionIdCounter = 1;
 
-		// sort packages by load order
-		List<List<IEnumerator>> loadLists = new(2);
-		for (int i = 0; i < loadLists.Capacity; i++) {
-			loadLists.Add(new());
-		}
-
-		List<IEnumerator> GetLoadList(AirshipPackage package) {
-			// // Load core first because packages may depend them
-			// if (package.id == "@Easy/CoreMaterials" || package.id == "@Easy/Core") {
-			// 	return loadLists[0];
-			// }
-
-			// All packages first
-			if (package.packageType == AirshipPackageType.Package) {
-				return loadLists[0];
-			}
-
-			// Games go last
-			return loadLists[1];
-		}
+		List<IEnumerator> loadList = new List<IEnumerator>();
 
 		// Find packages to load
 		AssetBridge.useBundles = useUnityAssetBundles;
 		if (useUnityAssetBundles) {
-			// Resources
+			// Create a list of tasks that load each game & package asset bundle 
 			foreach (var package in packages) {
-				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
-				this.networkCollectionIdCounter++;
-			}
-			// foreach (var package in packages) {
-			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
-			// 	this.networkCollectionIdCounter++;
-			// }
-			foreach (var package in packages) {
+				loadList.Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources"));
 				if (RunCore.IsServer()) {
-					GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/resources", this.networkCollectionIdCounter));
+					loadList.Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/resources"));
 				}
-				this.networkCollectionIdCounter++;
+				loadList.Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/scenes"));
 			}
-
-			// Scenes
-			foreach (var package in packages) {
-				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/scenes", this.networkCollectionIdCounter));
-				this.networkCollectionIdCounter++;
-			}
-			// foreach (var package in packages) {
-			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
-			// 	this.networkCollectionIdCounter++;
-			// }
-			// foreach (var package in packages) {
-			// 	if (RunCore.IsServer()) {
-			// 		GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
-			// 	}
-			// 	this.networkCollectionIdCounter++;
-			// }
-
-#if AIRSHIP_PLAYER || true
-			try {
-				// Debug.Log("Scanning network prefabs...");
-				Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
-				int i = 1;
-				foreach (var pair in NetworkClient.prefabs) {
-					if (pair.Value != null) {
-						Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
-						i++;
-					}
+			
+			// Load asset bundles
+			// We are OK to load all asset bundles at the same time. Asset dependencies are only relevant
+			// when we actually load assets from a bundle, at which point all dependant assets need to be
+			// in loaded asset bundles.
+			Debug.Log("Loading asset bundles...");
+			yield return this.WaitAll(loadList.GetEnumerator());
+			
+			// Load all network prefab collections once all asset bundles have loaded
+			var doNetworkPrefabLoading = !RunCore.IsClient() || NetworkClient.isConnected; // Don't load in menu
+			if (doNetworkPrefabLoading) {
+				foreach (var bundleInfo in this.loadedAssetBundles.Values) {
+					bundleInfo.netCollectionId = networkCollectionIdCounter++;
+					yield return networkNetworkPrefabLoader.RegisterNetworkObjects(bundleInfo.assetBundle,
+						bundleInfo.netCollectionId);
 				}
-			} catch (Exception e) {
-				Debug.LogException(e);
 			}
-#endif
-
-			Debug.Log("Loading packages...");
-			yield return this.WaitAll(loadLists[0].ToArray());
-			Debug.Log("Loading game...");
-			yield return this.WaitAll(loadLists[1].ToArray());
 
 			if (!disableCoreMaterialsBundle) {
 				foreach (var ao in this.extraBundleLoadRequests) {
@@ -548,29 +502,12 @@ public class SystemRoot : Singleton<SystemRoot> {
 		return package.id + "_" + assetBundleFile;
 	}
 
-	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
-		// ReSharper disable once ReplaceWithSingleAssignment.True
-		bool doNetworkPrefabLoading = true;
-		// check if client is in the main menu
-		if (!NetworkClient.isConnected && RunCore.IsClient()) {
-			doNetworkPrefabLoading = false;
-		}
-
-		string assetBundleId = GetLoadedAssetBundleKey(airshipPackage, assetBundleFile);
-		if (this.loadedAssetBundles.ContainsKey(assetBundleId)) {
-			// Debug.Log($"AssetBundle \"{assetBundleId}\" was already loaded. Skipping load.");
-			var existingBundle = this.loadedAssetBundles[assetBundleId];
-			if (doNetworkPrefabLoading) {
-				existingBundle.netCollectionId = netCollectionId;
-				yield return networkNetworkPrefabLoader.RegisterNetworkObjects(existingBundle.assetBundle, netCollectionId);
-			}
-			yield break;
-		}
-
-		string bundleFilePath = Path.Join(airshipPackage.GetPersistentDataDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
+	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile) {
+		var assetBundleId = GetLoadedAssetBundleKey(airshipPackage, assetBundleFile);
+		var bundleFilePath = Path.Join(airshipPackage.GetPersistentDataDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
+		if (loadedAssetBundles.ContainsKey(assetBundleId)) yield break;
 
 		if (!File.Exists(bundleFilePath) || !File.Exists(bundleFilePath + "_downloadSuccess.txt")) {
-			// Debug.Log($"Bundle file did not exist \"{bundleFilePath}\". skipping.");
 			yield break;
 		}
 
@@ -601,12 +538,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Debug.Log("");
 #endif
 
-		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle, netCollectionId);
+		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
-
-		if (doNetworkPrefabLoading) { // InstanceFinder.IsOffline && RunCore.IsClient()
-			yield return networkNetworkPrefabLoader.RegisterNetworkObjects(assetBundle, netCollectionId);
-		}
 	}
 
 	private void RegisterCommands() {
