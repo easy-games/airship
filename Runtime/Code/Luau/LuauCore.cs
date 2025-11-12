@@ -320,13 +320,10 @@ public partial class LuauCore : MonoBehaviour {
         // }
         // runBuffer.Clear();
 
-        Profiler.BeginSample("ResumeCompletedTasks");
         try {
             ResumeCompletedTasks();
         } catch (Exception err) {
             Debug.LogError(err);
-        } finally {
-            Profiler.EndSample();
         }
 
         //Run all pending callbacks

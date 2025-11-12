@@ -25,15 +25,19 @@ public partial class VoxelWorld : MonoBehaviour {
 
     public const bool runThreaded = true; //Turn off if you suspect threading problems
     public const int chunkSize = 16; //fixed size
-    public const int maxActiveThreads = 8;
 
     public const int
         maxMainThreadMeshMillisecondsPerFrame
-            = 8; //Dont spend more than 10ms per frame on uploading meshes to GPU or rebuilding collision
+            = 10; //Dont spend more than 10ms per frame on uploading meshes to GPU or rebuilding collision
 
     public const int
         maxMainThreadThreadKickoffMillisecondsPerFrame
             = 4; //Dont spent more than 4ms on the main thread kicking off threads
+
+    /// <summary>
+    /// Max MS per frame across both maxMainThreadMeshMillisecondsPerFrame & maxMainThreadThreadKickoffMillisecondsPerFrame
+    /// </summary>
+    public const int maxMainThreadMillisecondsPerFrame = 10;
 
     public const bool showDebugBounds = false;
 
@@ -1138,7 +1142,7 @@ public partial class VoxelWorld : MonoBehaviour {
     private void RegenerateMissingChunkGeometry() {
         var regenerateMissingChunkGeometryStartTime = Time.realtimeSinceStartup;
         // This can be high, we're mainly throttling on max time variables
-        var maxChunksToUpdateVar = maxActiveThreads * 4;
+        var maxChunksToUpdateVar = Mathf.Max(1, SystemInfo.processorCount - 2);
 
         // Sort chunks
         List<Chunk> chunksThatNeedThreadKickoff = new();
@@ -1151,83 +1155,9 @@ public partial class VoxelWorld : MonoBehaviour {
                 chunksThatNeedThreadKickoff.Add(chunkPair.Value);
             }
         }
-
-        Profiler.BeginSample("ThreadKickoff");
-        // Kickoff threads, sorted by closest to camera
-        var currentlyUpdatingChunks = GetNumProcessingMeshChunks();
-        maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
-        var updateCounter = 0;
-
-        Camera relevantFocusCamera = null;
-        if (useCameraAsFocusPosition) {
-            relevantFocusCamera = focusCamera;
-        }
-
-        var forward = Vector3.zero;
-        var camPos = Vector3.zero;
-        if (relevantFocusCamera) {
-            var camTransform = relevantFocusCamera.transform;
-            forward = camTransform.rotation * Vector3.forward;
-            camPos = camTransform.position - forward * (chunkSize >> 1);
-        }
-
-        if (maxChunksToUpdateVar > 0 && chunksThatNeedThreadKickoff.Count > 0) {
-            var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
-
-            Profiler.BeginSample("Sort");
-            var chunksToKickOffNow = new Chunk[maxChunksToUpdateVar];
-            // Load with 8 chunks
-            for (var i = 0; i < maxChunksToUpdateVar && i < chunksThatNeedThreadKickoff.Count; i++) {
-                chunksToKickOffNow[i] = chunksThatNeedThreadKickoff[i];
-            }
-
-            // Loop over all chunks and keep replacing with best available chunk
-            // This is random and definitely not a true sort function but should be good enough & fast
-            if (chunksThatNeedThreadKickoff.Count > maxChunksToUpdateVar) {
-                var replaceIndex = 0;
-                var compareAgainstOrder =
-                    GetChunkRenderOrder(chunksToKickOffNow[replaceIndex], camPos, forward, focusPositionChunkKey);
-                for (var i = maxChunksToUpdateVar; i < chunksThatNeedThreadKickoff.Count; i++) {
-                    var chunk = chunksThatNeedThreadKickoff[i];
-                    var chunkOrder = GetChunkRenderOrder(chunk, camPos, forward, focusPositionChunkKey);
-                    // If this chunk is earlier in order replace and continue
-                    if (chunkOrder < compareAgainstOrder) {
-                        chunksToKickOffNow[replaceIndex] = chunk;
-                        compareAgainstOrder = chunkOrder;
-                        replaceIndex = (replaceIndex + 1) % maxChunksToUpdateVar;
-                    }
-                }
-            }
-
-            Profiler.EndSample();
-
-            var startTime = Time.realtimeSinceStartup;
-
-            foreach (var chunk in chunksThatNeedThreadKickoff) {
-                if (maxChunksToUpdateVar <= 0) {
-                    break;
-                }
-
-                var didUpdate = chunk.MainthreadUpdateMesh(this);
-
-                if (didUpdate) {
-                    updateCounter++;
-
-                    var elapsedTime = (int)((Time.realtimeSinceStartup - startTime) * 1000);
-                    if (elapsedTime > maxMainThreadThreadKickoffMillisecondsPerFrame) {
-                        //Debug.Log("ThreadKickoff Timedout after " + elapsedTime + "ms");
-                        break;
-                    }
-                }
-            }
-        }
-
-        Profiler.EndSample();
-
-        Profiler.BeginSample("MainthreadUpdateMeshs");
+        
+        Profiler.BeginSample("BuildAndFinalizeChunkMeshes");
         // Kickoff mainthread mesh copies, sorted by closest to camera
-        maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
-
         if (chunksThatNeedMeshUpdates.Count > 0) {
             var startTime = Time.realtimeSinceStartup;
             var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
@@ -1238,19 +1168,42 @@ public partial class VoxelWorld : MonoBehaviour {
 
             foreach (var chunk in chunksThatNeedMeshUpdates) {
                 chunk.MainthreadUpdateMesh(this);
+                
+                // Make sure total time spent regenerating chunk geometry is okay
+                var totalElapsedTime = (int)((Time.realtimeSinceStartup - regenerateMissingChunkGeometryStartTime) * 1000);
+                if (totalElapsedTime > maxMainThreadMillisecondsPerFrame) {
+                    break;
+                }
 
                 var elapsedTime = (int)((Time.realtimeSinceStartup - startTime) * 1000);
                 if (elapsedTime > maxMainThreadMeshMillisecondsPerFrame) {
-                    //Debug.Log("MainthreadUpdateMeshs Timedout after " + elapsedTime + "ms");
                     break;
                 }
             }
         }
-
         Profiler.EndSample();
-        if (updateCounter > 0) {
-            //Debug.Log("Updated:" + updateCounter);
+        
+        Profiler.BeginSample("ChunkThreadKickoff");
+        var currentlyUpdatingChunks = GetNumProcessingMeshChunks();
+        maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
+        
+        var chunkKickoffStartTime = Time.realtimeSinceStartup;
+        // Kickoff new chunk threads until we've run out of time (or logical processors)
+        foreach (var _ in StartChunkUpdateThread(chunksThatNeedThreadKickoff, maxChunksToUpdateVar)) {
+            // Make sure chunk kickoff time is okay
+            var elapsedTime = (int)((Time.realtimeSinceStartup - chunkKickoffStartTime) * 1000);
+            if (elapsedTime > maxMainThreadThreadKickoffMillisecondsPerFrame) {
+                break;
+            }
+            
+            // Make sure total time spent regenerating chunk geometry is okay
+            var totalElapsedTime = (int)((Time.realtimeSinceStartup - regenerateMissingChunkGeometryStartTime) * 1000);
+            if (totalElapsedTime > maxMainThreadMillisecondsPerFrame) {
+                break;
+            }
         }
+        Profiler.EndSample();
+
 
         if (loadingStatus == LoadingStatus.Loading) {
             var hasDirtyChunk = false;
@@ -1275,6 +1228,66 @@ public partial class VoxelWorld : MonoBehaviour {
         var elapsedTimeInMs = (regenerateMissingChunkGeometryEndTime - regenerateMissingChunkGeometryStartTime) * 1000;
         if (elapsedTimeInMs > 17) {
             //Debug.Log("Slow voxelworld frame update:" + elapsedTimeInMs + "ms");
+        }
+    }
+
+    private IEnumerable<int> StartChunkUpdateThread(List<Chunk> chunksThatNeedThreadKickoff, int maxChunksToUpdate) {
+        Camera relevantFocusCamera = null;
+        if (useCameraAsFocusPosition) {
+            relevantFocusCamera = focusCamera;
+        }
+        
+        var forward = Vector3.zero;
+        var camPos = Vector3.zero;
+        if (relevantFocusCamera) {
+            var camTransform = relevantFocusCamera.transform;
+            forward = camTransform.rotation * Vector3.forward;
+            camPos = camTransform.position - forward * (chunkSize >> 1);
+        }
+        
+        if (maxChunksToUpdate > 0 && chunksThatNeedThreadKickoff.Count > 0) {
+            var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
+
+            Profiler.BeginSample("Sort");
+            var chunksToKickOffNow = new Chunk[maxChunksToUpdate];
+            // Load with 8 chunks
+            for (var i = 0; i < maxChunksToUpdate && i < chunksThatNeedThreadKickoff.Count; i++) {
+                chunksToKickOffNow[i] = chunksThatNeedThreadKickoff[i];
+            }
+
+            // Loop over all chunks and keep replacing with best available chunk
+            // This is random and definitely not a true sort function but should be good enough & fast
+            if (chunksThatNeedThreadKickoff.Count > maxChunksToUpdate) {
+                var replaceIndex = 0;
+                var compareAgainstOrder =
+                    GetChunkRenderOrder(chunksToKickOffNow[replaceIndex], camPos, forward, focusPositionChunkKey);
+                for (var i = maxChunksToUpdate; i < chunksThatNeedThreadKickoff.Count; i++) {
+                    var chunk = chunksThatNeedThreadKickoff[i];
+                    var chunkOrder = GetChunkRenderOrder(chunk, camPos, forward, focusPositionChunkKey);
+                    // If this chunk is earlier in order replace and continue
+                    if (chunkOrder < compareAgainstOrder) {
+                        chunksToKickOffNow[replaceIndex] = chunk;
+                        compareAgainstOrder = chunkOrder;
+                        replaceIndex = (replaceIndex + 1) % maxChunksToUpdate;
+                    }
+                }
+            }
+
+            Profiler.EndSample();
+
+            var updatedChunks = 0;
+            foreach (var chunk in chunksThatNeedThreadKickoff) {
+                if (maxChunksToUpdate-- <= 0) {
+                    break;
+                }
+
+                var didUpdate = chunk.MainthreadUpdateMesh(this);
+
+                if (didUpdate) {
+                    updatedChunks++;
+                    yield return updatedChunks;
+                }
+            }
         }
     }
 

@@ -19,6 +19,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine.Rendering;
 using Quaternion = UnityEngine.Quaternion;
+using ThreadPriority = System.Threading.ThreadPriority;
 using Vector2 = UnityEngine.Vector2;
 using Vector3 = UnityEngine.Vector3;
 
@@ -1156,6 +1157,9 @@ namespace VoxelWorldStuff {
         }
 
         private void ThreadedUpdateFullMeshWrapper(System.Object worldObj) {
+            // Slightly deprio mesh building threads so they don't interrupt main thread
+            Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+            
             try {
                 Profiler.BeginThreadProfiling("VoxelWorld", "ThreadedUpdateFullMesh");
                 Profiler.BeginSample("UpdateMesh");

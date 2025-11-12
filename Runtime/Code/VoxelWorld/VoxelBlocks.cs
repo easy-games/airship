@@ -344,6 +344,9 @@ public class VoxelBlocks : MonoBehaviour {
 
     public BlockDefinition GetBlock(BlockId index) {
         var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
+        if (ix >= loadedBlocks.Count) {
+            throw new ArgumentOutOfRangeException($"[Airship VW] Could not find block index {ix}. Number of loaded blocks is {loadedBlocks.Count}. VoxelBlocks loaded={loadedTask.Task.IsCompleted}.");
+        }
         return loadedBlocks[ix];
     }
 

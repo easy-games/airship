@@ -355,11 +355,17 @@ namespace Luau {
                     // Check if we're changing object type to a type that contains the current type
                     // (for example swapping from AudioClip to AudioResource
                     // We'll also exclude null here
-                    items.objectRefs = items.objectRefs.Where(objectRef => {
-                        var componentObjectType = objectRef.GetType();
-                        return scriptObjectType.IsAssignableFrom(componentObjectType);
-                    }).ToArray();
-                    items.serializedItems = new string[items.objectRefs.Length];
+                    if (scriptObjectType != null) {
+                        items.objectRefs = items.objectRefs.Where(objectRef => {
+                            var componentObjectType = objectRef.GetType();
+                            return scriptObjectType.IsAssignableFrom(componentObjectType);
+                        }).ToArray();
+                        items.serializedItems = new string[items.objectRefs.Length];
+                    } else {
+                        // This will be the case for Airship Behaviors whose type doesn't exist in C#
+                        items.objectRefs = Array.Empty<UnityEngine.Object>();
+                        items.serializedItems = Array.Empty<string>();
+                    }
                 }
                 
                 items.type = property.items.type;

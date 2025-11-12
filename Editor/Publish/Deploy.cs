@@ -33,6 +33,12 @@ public class UploadInfo {
 }
 
 public class Deploy {
+	enum DeployAuthType {
+		None,
+		DeployKey,
+		EditorAuthToken,
+	}
+	
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 	private static GameDto activeDeployTarget;
 	public const ulong MAX_UPLOAD_KB = 500_000;
@@ -88,8 +94,20 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
+	private static string GetDeployKey(DeployAuthType authType) {
+		switch (authType) {
+			case DeployAuthType.DeployKey:
+				return AuthConfig.instance.deployKey;
+			case DeployAuthType.EditorAuthToken:
+				return InternalHttpManager.editorAuthToken;
+			case DeployAuthType.None:
+				return null;
+		}
+		throw new Exception($"[Airship] Unknown auth type: {authType}");
+	}
+
 	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true, bool dontUpload = false) {
-		var possibleKeys = new List<string>() { AuthConfig.instance.deployKey, InternalHttpManager.editorAuthToken };
+		var possibleKeys = new List<string> { GetDeployKey(DeployAuthType.DeployKey), GetDeployKey(DeployAuthType.EditorAuthToken) };
 		possibleKeys.RemoveAll(string.IsNullOrEmpty);
 		if (possibleKeys.Count == 0) {
 			Debug.LogError("[Airship]: You aren't signed in. You can sign in by going to Airship->Sign in");
@@ -171,7 +189,7 @@ public class Deploy {
 		} else if (useSplitCodeBundle) {
 			var compileFlags = TypeScriptCompileFlags.Publishing 
 			                   | TypeScriptCompileFlags.DisplayProgressBar 
-			                   | TypeScriptCompileFlags.SkipPackages 
+			                   | TypeScriptCompileFlags.CodeOnlyPublish 
 			                   | TypeScriptCompileFlags.SkipReimportQueue; // skipping packages in the bg
 			
 			TypescriptCompilationService.BuildTypescript(compileFlags);
@@ -185,7 +203,7 @@ public class Deploy {
 
 		// Create deployment
 		DeploymentDto deploymentDto = null;
-		string devKey = null;
+		var deployAuthType = DeployAuthType.None;
 		{
 			List<string> platformStrings = new();
 			platformStrings.Add("Mac");
@@ -195,8 +213,12 @@ public class Deploy {
 				platformStrings.Add("Android");
 			}
 			var packageSlugs = gameConfig.packages.Select((p) => p.id);
-			for (int i = 0; i < possibleKeys.Count; i++) {
-				devKey = possibleKeys[i];
+			var authTypes = Enum.GetValues(typeof(DeployAuthType)).Cast<DeployAuthType>().ToList();
+			for (var i = 0; i < authTypes.Count; i++) {
+				deployAuthType = authTypes[i];
+				var key = GetDeployKey(deployAuthType);
+				if (string.IsNullOrEmpty(key)) continue;
+				
 				using UnityWebRequest req = UnityWebRequest.Post(
 					$"{AirshipPlatformUrl.deploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
 						new CreateGameDeploymentDto() {
@@ -208,7 +230,7 @@ public class Deploy {
 							packageSlugs = packageSlugs.ToArray(),
 							platforms = platformStrings.ToArray(),
 						}), "application/json");
-				req.SetRequestHeader("Authorization", "Bearer " + devKey);
+				req.SetRequestHeader("Authorization", "Bearer " + key);
 				yield return req.SendWebRequest();
 				while (!req.isDone) {
 					yield return null;
@@ -230,7 +252,7 @@ public class Deploy {
 		}
 		
 		// We shouldn't get here. It will fail above.
-		if (deploymentDto == null || devKey == null) {
+		if (deploymentDto == null || deployAuthType == DeployAuthType.None) {
 			Debug.LogError("No valid authorization.");
 			yield break;
 		}
@@ -250,21 +272,21 @@ public class Deploy {
 				paths.Add(path);
 			}
 			
-			var airshipBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
-			foreach (var guid in airshipBuildInfoGuids) {
-				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-				paths.Add(path);
-			}
+			// var airshipBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+			// foreach (var guid in airshipBuildInfoGuids) {
+			// 	var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+			// 	paths.Add(path);
+			// }
 
 			if (File.Exists(codeZipPath)) {
 				File.Delete(codeZipPath);
 			}
 			var codeZip = new ZipFile();
 			foreach (var path in paths) {
-				if (path.EndsWith(".asbuildinfo")) {
-					codeZip.AddEntry(path, File.ReadAllBytes(path));
-					continue;
-				}
+				// if (path.EndsWith(".asbuildinfo")) {
+				// 	codeZip.AddEntry(path, File.ReadAllBytes(path));
+				// 	continue;
+				// }
 
 				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
 				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
@@ -455,60 +477,7 @@ public class Deploy {
 		Debug.Log($"Completed upload{sizeSnippet}. Finalizing publish...");
 
 		// Complete deployment
-		{
-			List<string> uploadedFileIds = new();
-			uploadedFileIds.Add("Mac_shared_resources");
-			uploadedFileIds.Add("Mac_shared_scenes");
-			uploadedFileIds.Add("Windows_shared_resources");
-			uploadedFileIds.Add("Windows_shared_scenes");
-			if (gameConfig.supportsMobile) {
-				uploadedFileIds.Add("iOS_shared_resources");
-				uploadedFileIds.Add("iOS_shared_scenes");
-				uploadedFileIds.Add("Android_shared_resources");
-				uploadedFileIds.Add("Android_shared_scenes");
-			}
-
-			int attemptNum = 0;
-			while (attemptNum < 5) {
-				// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
-				UnityWebRequest req = UnityWebRequest.Post(
-					$"{AirshipPlatformUrl.deploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
-						new CompleteGameDeploymentDto() {
-							gameId = gameConfig.gameId,
-							gameVersionId = deploymentDto.version.gameVersionId,
-							uploadedFileIds = uploadedFileIds.ToArray(),
-						}), "application/json");
-				req.SetRequestHeader("Authorization", "Bearer " + devKey);
-				yield return req.SendWebRequest();
-				while (!req.isDone) {
-					yield return null;
-				}
-
-				if (req.result == UnityWebRequest.Result.Success) {
-					break;
-				} else {
-					Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
-					if (req.responseCode == 400) {
-						// don't retry on 400
-						yield break;
-					}
-
-                    if (attemptNum == 4) {
-	                    // Out of retry attempts so we end it here.
-                    	yield break;
-                    }
-
-                    // Wait one second and try again.
-                    int waitTime = 1;
-                    if (attemptNum >= 3) {
-	                    waitTime = 3;
-                    }
-                    Debug.Log($"Retrying in {waitTime}s...");
-                    attemptNum++;
-                    yield return new WaitForSeconds(waitTime);
-				}
-			}
-		}
+		yield return CompleteDeployment(gameConfig, deploymentDto.version.gameVersionId, GetDeployKey(deployAuthType));
 
 		// Switch back to starting build target
 		EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
@@ -644,6 +613,63 @@ public class Deploy {
 				continue;
 			}
 			yield return null;
+		}
+	}
+
+	private static IEnumerator CompleteDeployment(GameConfig gameConfig, string gameVersionId, string devKey) {
+		{
+			List<string> uploadedFileIds = new();
+			uploadedFileIds.Add("Mac_shared_resources");
+			uploadedFileIds.Add("Mac_shared_scenes");
+			uploadedFileIds.Add("Windows_shared_resources");
+			uploadedFileIds.Add("Windows_shared_scenes");
+			if (gameConfig.supportsMobile) {
+				uploadedFileIds.Add("iOS_shared_resources");
+				uploadedFileIds.Add("iOS_shared_scenes");
+				uploadedFileIds.Add("Android_shared_resources");
+				uploadedFileIds.Add("Android_shared_scenes");
+			}
+
+			int attemptNum = 0;
+			while (attemptNum < 5) {
+				// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
+				UnityWebRequest req = UnityWebRequest.Post(
+					$"{AirshipPlatformUrl.deploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
+						new CompleteGameDeploymentDto() {
+							gameId = gameConfig.gameId,
+							gameVersionId = gameVersionId,
+							uploadedFileIds = uploadedFileIds.ToArray(),
+						}), "application/json");
+				req.SetRequestHeader("Authorization", "Bearer " + devKey);
+				yield return req.SendWebRequest();
+				while (!req.isDone) {
+					yield return null;
+				}
+
+				if (req.result == UnityWebRequest.Result.Success) {
+					break;
+				} else {
+					Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
+					if (req.responseCode == 400) {
+						// don't retry on 400
+						yield break;
+					}
+
+					if (attemptNum == 4) {
+						// Out of retry attempts so we end it here.
+						yield break;
+					}
+
+					// Wait one second and try again.
+					int waitTime = 1;
+					if (attemptNum >= 3) {
+						waitTime = 3;
+					}
+					Debug.Log($"Retrying in {waitTime}s...");
+					attemptNum++;
+					yield return new WaitForSeconds(waitTime);
+				}
+			}
 		}
 	}
 
