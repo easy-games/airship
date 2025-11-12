@@ -476,12 +476,6 @@ public class AccessoryBuilder : MonoBehaviour {
                 var activeAccessory = pair.Value;
                 var accessoryComponent = pair.Value.AccessoryComponent;
 
-                if (!accessoryComponent.skinnedToCharacter)
-                    //Debug.Log("Skipping: " + acc.name);
-                {
-                    continue;
-                }
-
                 // Map static objects to bones
                 // if (!accessoryComponent.skinnedToCharacter) {
                 // var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
@@ -494,7 +488,16 @@ public class AccessoryBuilder : MonoBehaviour {
                 // boneMap.positionOffset = acc.transform.localPosition;
                 // }
 
-                meshCombiner.AddSourceReference(activeAccessory);
+                Debug.Log("Addinng accessory: " + activeAccessory.AccessoryComponent.gameObject.name);
+                meshCombiner.AddSourceReference(activeAccessory, accessoryComponent.skinnedToCharacter);
+
+
+                if (!accessoryComponent.skinnedToCharacter)
+                    //Debug.Log("Skipping: " + acc.name);
+                {
+                    // Currently static renderers are not combined into the final mesh
+                    continue;
+                }
 
                 {
                     var bodyMesh = firstPerson ? rig.viewmodelArmsMesh : rig.bodyMesh;
@@ -765,7 +768,8 @@ public class AccessoryBuilder : MonoBehaviour {
                                 new OutfitCustomizationColor() { key = colorKey, colorHex = colorHex }
                             }
                         };
-                        customization.platformCustomSlots = customization.platformCustomSlots.Append(accSlot)  as OutfitCustomizationSlot[];
+                        customization.platformCustomSlots
+                            = customization.platformCustomSlots.Append(accSlot) as OutfitCustomizationSlot[];
                     }
                 } else {
                     accSlot = new OutfitCustomizationSlot {
@@ -814,7 +818,8 @@ public class AccessoryBuilder : MonoBehaviour {
                         variant = variantIndex,
                         colors = Array.Empty<OutfitCustomizationColor>()
                     };
-                    customization.platformCustomSlots = customization.platformCustomSlots.Append(accSlot) as OutfitCustomizationSlot[];
+                    customization.platformCustomSlots
+                        = customization.platformCustomSlots.Append(accSlot) as OutfitCustomizationSlot[];
                 }
             } else {
                 accSlot = new OutfitCustomizationSlot {
