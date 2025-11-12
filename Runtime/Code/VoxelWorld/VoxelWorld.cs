@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -117,6 +118,10 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
     //[HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
     //[HideInInspector][NonSerialized] public List<WorldSaveFile.WorldPosition> worldPositions = new();
+
+    // Tracks which chunks are currently being processed for mesh generation.  Dictionary will need to be updated
+    // if we need to add another code path that sets a chunk as processing or nulls it.
+    private ConcurrentDictionary<Vector3Int, byte> processingMeshChunks = new();
 
     //Detail meshes (grass etc)
     [NonSerialized]
@@ -816,6 +821,7 @@ public partial class VoxelWorld : MonoBehaviour {
         //this.blocks.Load(this.GetBlockDefinesContents());
 
         chunks.Clear();
+        processingMeshChunks.Clear();
 
         DeleteChildGameObjects(gameObject);
 
@@ -972,6 +978,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         PrepareVoxelWorldGameObject();
         loadingStatus = LoadingStatus.Loading;
+        processingMeshChunks.Clear();
 
         voxelBlocks.Reload(useSimplifiedVoxels);
 
@@ -997,6 +1004,7 @@ public partial class VoxelWorld : MonoBehaviour {
         PrepareVoxelWorldGameObject();
 
         chunks.Clear();
+        processingMeshChunks.Clear();
 
         DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
@@ -1039,6 +1047,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         DeleteChildGameObjects(gameObject);
         PrepareVoxelWorldGameObject();
+        processingMeshChunks.Clear();
 
         voxelBlocks.Reload(useSimplifiedVoxels);
 
@@ -1392,15 +1401,16 @@ public partial class VoxelWorld : MonoBehaviour {
         return Vector3Int.zero;
     }
 
-    public int GetNumProcessingMeshChunks() {
-        var counter = 0;
-        foreach (var chunk in chunks) {
-            if (chunk.Value.Busy()) {
-                counter++;
-            }
-        }
+    internal void MarkChunkAsProcessing(Vector3Int chunkKey) {
+        processingMeshChunks.TryAdd(chunkKey, 0);
+    }
 
-        return counter;
+    internal void RemoveChunkFromProcessing(Vector3Int chunkKey) {
+        processingMeshChunks.TryRemove(chunkKey, out _);
+    }
+
+    public int GetNumProcessingMeshChunks() {
+        return processingMeshChunks.Count;
     }
 
     public struct Vector3IntEqualityComparer : IEqualityComparer<Vector3Int> {

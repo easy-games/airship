@@ -25,8 +25,6 @@ namespace Code.Player.Character.MovementSystems.Character
         public Vector3 velocity;
         public Vector3 lookVector;
         
-        public float currentSpeed;
-        public float speedModifier = 1; // Not used yet
         public byte jumpCount;
         public CharacterState state = CharacterState.Idle;
         // > 0 means it is possible to jump. Value is the number of ticks they have left until they can no longer jump. byte.MaxValue when grounded.
@@ -60,8 +58,6 @@ namespace Code.Player.Character.MovementSystems.Character
             var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
             var positionEqual = (this.position - other.position).sqrMagnitude < vectorTolerance;
             var velocityEqual =  (this.velocity - other.velocity).sqrMagnitude < vectorTolerance;
-            var currentSpeedEqual = Math.Round(this.currentSpeed, 2) == Math.Round(other.currentSpeed, 2);
-            var speedModifierEqual = NetworkSerializationUtil.CompressToUshort(this.speedModifier) == NetworkSerializationUtil.CompressToUshort(other.speedModifier);
             var inputDisabledEqual = inputDisabled == other.inputDisabled;
             var isFlyingEqual = isFlying == other.isFlying;
             var isSprintingEqual = isSprinting == other.isSprinting;
@@ -108,8 +104,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 lastProcessedCommandEqual &&
                 positionEqual &&
                 velocityEqual &&
-                currentSpeedEqual &&
-                speedModifierEqual &&
                 inputDisabledEqual &&
                 isFlyingEqual &&
                 isSprintingEqual &&
@@ -140,8 +134,6 @@ namespace Code.Player.Character.MovementSystems.Character
             this.lastProcessedCommand = copySnapshot.lastProcessedCommand;
             this.position = copySnapshot.position;
             this.velocity = copySnapshot.velocity;
-            this.currentSpeed = copySnapshot.currentSpeed;
-            this.speedModifier = copySnapshot.speedModifier;
             this.canJump = copySnapshot.canJump;
             this.state = copySnapshot.state;
             this.isGrounded = copySnapshot.isGrounded;
@@ -165,8 +157,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 $"LastProcessedCommand: {lastProcessedCommand}\n" +
                 $"Position: {position}\n" +
                 $"Velocity: {velocity}\n" +
-                $"CurrentSpeed: {currentSpeed}\n" +
-                $"SpeedModifier: {speedModifier} ({NetworkSerializationUtil.CompressToUshort(speedModifier)})\n" +
                 $"CanJump: {canJump}\n" +
                 $"State: {state}\n" +
                 $"IsGrounded: {isGrounded}\n" +
@@ -191,8 +181,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 lastProcessedCommand = lastProcessedCommand,
                 position = position,
                 velocity = velocity,
-                currentSpeed = currentSpeed,
-                speedModifier = speedModifier,
                 canJump = canJump,
                 state = state, 
                 isGrounded = isGrounded,
@@ -223,23 +211,29 @@ namespace Code.Player.Character.MovementSystems.Character
             bool positionChanged = this.position != other.position;
             bool velocityChanged = this.velocity != other.velocity;
             bool lookVectorChanged = this.lookVector != other.lookVector;
-            bool speedChanged = this.currentSpeed != other.currentSpeed;
-            bool modifierChanged = this.speedModifier != other.speedModifier;
             bool jumpCountChanged = this.jumpCount != other.jumpCount;
             bool stateChanged = this.state != other.state;
             bool canJumpChanged = this.canJump != other.canJump;
             
+            // Flag for if we are sending a full snapshot or just a diff. Sometimes a diff is bigger if
+            // all bytes have changed.
+            bool fullCustomData = customData == null; // Always send full custom data if base data is null
+            byte[] customDataDiff = null;
+            if (!fullCustomData && other.customData != null) { // If base data is !null and our new data is !null, generate the diff and see if we should use it.
+                customDataDiff = customData.CreateDiff(other.customData);
+                fullCustomData = customDataDiff.Length > other.customData.Data.Length;
+            }
+            
             // Set the changed mask to reflect changed fields
-            short changedMask = 0;
+            byte changedMask = 0;
             if (boolsChanged) BitUtil.SetBit(ref changedMask, 0, true);
             if (positionChanged) BitUtil.SetBit(ref changedMask, 1, true);
             if (velocityChanged) BitUtil.SetBit(ref changedMask, 2, true);
             if (lookVectorChanged) BitUtil.SetBit(ref changedMask, 3, true);
-            if (speedChanged) BitUtil.SetBit(ref changedMask, 4, true);
-            if (modifierChanged) BitUtil.SetBit(ref changedMask, 5, true);
-            if (jumpCountChanged) BitUtil.SetBit(ref changedMask, 6, true);
-            if (stateChanged) BitUtil.SetBit(ref changedMask, 7, true);
-            if (canJumpChanged) BitUtil.SetBit(ref changedMask, 8, true);
+            if (jumpCountChanged) BitUtil.SetBit(ref changedMask, 4, true);
+            if (stateChanged) BitUtil.SetBit(ref changedMask, 5, true);
+            if (canJumpChanged) BitUtil.SetBit(ref changedMask, 6, true);
+            if (fullCustomData) BitUtil.SetBit(ref changedMask, 7, true);
 
             // Write only changed fields
             var writer = NetworkWriterPool.Get();
@@ -255,8 +249,6 @@ namespace Code.Player.Character.MovementSystems.Character
                 writer.Write(NetworkSerializationUtil.CompressToShort(other.lookVector.y));
                 writer.Write(NetworkSerializationUtil.CompressToShort(other.lookVector.z));
             }
-            if (speedChanged) writer.Write(other.currentSpeed);
-            if (modifierChanged) writer.Write(NetworkSerializationUtil.CompressToUshort(other.speedModifier));
             if (jumpCountChanged) writer.Write(other.jumpCount);
             if (stateChanged) writer.Write((byte)other.state);
             if (canJumpChanged) writer.Write(other.canJump);
@@ -264,11 +256,12 @@ namespace Code.Player.Character.MovementSystems.Character
             // We are cheating here by only writing bytes at the end if we have custom data. We can do this because we know the expected size
             // of the above bytes and we know that a diff packet will only contain one diff. If we were to pass multiple diffs in a single packet,
             // we could not do this optimization since there would be no way to know where the next packet starts.
-            if (customData != null) {
-                var customDataDiff = customData.CreateDiff(other.customData);
+            if (fullCustomData && other.customData != null) { // If we should send the full new data, send it, but only if we actually have data. null custom data shouldn't be sent.
+                writer.WriteBytes(other.customData.Data, 0, other.customData.Data.Length);
+            } else {
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
-
+            
             var dataArray = writer.ToArray();
             NetworkWriterPool.Return(writer);
             
@@ -304,7 +297,7 @@ namespace Code.Player.Character.MovementSystems.Character
             snapshot.time = time + NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
             snapshot.tick = tick + reader.Read<ushort>();
             snapshot.lastProcessedCommand = lastProcessedCommand + reader.Read<ushort>();
-            var changedMask = reader.Read<short>();
+            var changedMask = reader.Read<byte>();
 
             if (BitUtil.GetBit(changedMask, 0)) {
                 byte bools = reader.Read<byte>();
@@ -326,15 +319,19 @@ namespace Code.Player.Character.MovementSystems.Character
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>())
                 );
             }
-            if (BitUtil.GetBit(changedMask, 4)) snapshot.currentSpeed = reader.Read<float>();
-            if (BitUtil.GetBit(changedMask, 5)) snapshot.speedModifier = NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>());
-            if (BitUtil.GetBit(changedMask, 6)) snapshot.jumpCount = reader.Read<byte>();
-            if (BitUtil.GetBit(changedMask, 7)) snapshot.state = (CharacterState)reader.Read<byte>();
-            if (BitUtil.GetBit(changedMask, 8)) snapshot.canJump = reader.Read<byte>();
+            if (BitUtil.GetBit(changedMask, 4)) snapshot.jumpCount = reader.Read<byte>();
+            if (BitUtil.GetBit(changedMask, 5)) snapshot.state = (CharacterState)reader.Read<byte>();
+            if (BitUtil.GetBit(changedMask, 6)) snapshot.canJump = reader.Read<byte>();
+            var fullCustomData = BitUtil.GetBit(changedMask, 7);
             
             if (reader.Remaining != 0) {
-                var cDataDiff = reader.ReadBytes(reader.Remaining);
-                snapshot.customData = customData.ApplyDiff(cDataDiff);
+                var cData = reader.ReadBytes(reader.Remaining);
+                // If bit is set, the diff is actually just the full data.
+                if (fullCustomData) {
+                    snapshot.customData = new BinaryBlob(cData);
+                } else {
+                    snapshot.customData = customData.ApplyDiff(cData);
+                }
             }
             else {
                 snapshot.customData = null;
@@ -371,9 +368,6 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.y));
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.z));
-            writer.Write(Math.Round(this.currentSpeed, 2));
-            // This makes our max speed modifier 65.535 with a 0.001 precision.
-            writer.Write(NetworkSerializationUtil.CompressToUshort(this.speedModifier));
             writer.Write(this.canJump);
             writer.Write((byte) this.state);
             writer.Write(this.jumpCount);
@@ -420,9 +414,6 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.x));
             writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.y));
             writer.Write(NetworkSerializationUtil.CompressToShort(value.lookVector.z));
-            writer.Write(value.currentSpeed);
-            // This makes our max speed modifier 65.535 with a 0.001 precision.
-            writer.Write(NetworkSerializationUtil.CompressToUshort(value.speedModifier));
             writer.Write(value.canJump);
             writer.Write((byte) value.state);
             writer.Write(value.jumpCount);
@@ -455,8 +446,6 @@ namespace Code.Player.Character.MovementSystems.Character
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>())),
-                currentSpeed = reader.Read<float>(),
-                speedModifier = NetworkSerializationUtil.DecompressUShort(reader.Read<ushort>()),
                 canJump = reader.Read<byte>(),
                 state = (CharacterState) reader.Read<byte>(),
                 jumpCount = reader.Read<byte>(),

@@ -1,4 +1,5 @@
 using System;
+using Code.Network.StateSystem.Structures;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -19,6 +20,14 @@ namespace Code.Player.Character.Net
         
         public virtual object Clone()
         {
+            throw new NotImplementedException("Subclasses should implement this method.");
+        }
+
+        public virtual InputCommandDiff CreateDiff<TInput>(TInput input) where TInput : InputCommand {
+            throw new NotImplementedException("Subclasses should implement this method.");
+        }
+
+        public virtual InputCommand ApplyDiff(InputCommandDiff commandDiff) {
             throw new NotImplementedException("Subclasses should implement this method.");
         }
     }
