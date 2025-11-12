@@ -799,23 +799,24 @@ namespace Code.Player.Character.MovementSystems.Character {
             // Find speed
             //Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
             var currentAcc = 0f;
+            var currentSpeed = 0f;
             if (tryingToSprint) {
-                currentMoveSnapshot.currentSpeed = movementSettings.sprintSpeed;
+                currentSpeed = movementSettings.sprintSpeed;
                 currentAcc = movementSettings.sprintAccelerationForce;
             } else {
-                currentMoveSnapshot.currentSpeed = movementSettings.speed;
+                currentSpeed = movementSettings.speed;
                 currentAcc = movementSettings.accelerationForce;
             }
 
             if (currentMoveSnapshot.state == CharacterState.Crouching) {
-                currentMoveSnapshot.currentSpeed *= movementSettings.crouchSpeedMultiplier;
+                currentSpeed *= movementSettings.crouchSpeedMultiplier;
                 currentAcc *= movementSettings.crouchSpeedMultiplier;
             }
 
             if (currentMoveSnapshot.isFlying) {
-                currentMoveSnapshot.currentSpeed *= movementSettings.flySpeedMultiplier;
+                currentSpeed *= movementSettings.flySpeedMultiplier;
             } else if (inAir) {
-                currentMoveSnapshot.currentSpeed *= movementSettings.airSpeedMultiplier;
+                currentSpeed *= movementSettings.airSpeedMultiplier;
             }
 
             //Apply speed
@@ -837,7 +838,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                             draggedHorizontal.z);
                     } else {
                         //Keep moving in the direction
-                        var targetVelocity = normalizedMoveDir * currentMoveSnapshot.currentSpeed;
+                        var targetVelocity = normalizedMoveDir * currentSpeed;
                         var maxDelta = movementSettings.airInputAcceleration * Time.deltaTime;
 
                         var velocityDiff = targetVelocity - currentMoveSnapshot.velocity;
@@ -855,7 +856,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                         characterMoveVelocity.y = 0;
                     }
                 } else {
-                    characterMoveVelocity *= currentMoveSnapshot.currentSpeed;
+                    characterMoveVelocity *= currentSpeed;
                 }
             }
 
@@ -875,7 +876,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 tryingToMove) {
                 var parallelDot = 1 - Mathf.Abs(Mathf.Clamp01(rawMoveDot));
                 //print("DOT: " + parallelDot);
-                newVelocity += -Vector3.ClampMagnitude(flatVelocity, currentMoveSnapshot.currentSpeed) * parallelDot *
+                newVelocity += -Vector3.ClampMagnitude(flatVelocity, currentSpeed) * parallelDot *
                                movementSettings.accelerationTurnFriction;
             }
 
@@ -989,16 +990,16 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             if (currentMoveSnapshot.isFlying) {
-                newVelocity.x = command.moveDir.x * currentMoveSnapshot.currentSpeed;
-                newVelocity.z = command.moveDir.z * currentMoveSnapshot.currentSpeed;
+                newVelocity.x = command.moveDir.x * currentSpeed;
+                newVelocity.z = command.moveDir.z * currentSpeed;
             } else if (!isImpulsing &&
                        !currentMoveSnapshot.airborneFromImpulse && //Not impulsing AND under our max speed
                        flatVelMagnitude < (movementSettings.useAccelerationMovement
-                           ? currentMoveSnapshot.currentSpeed
-                           : Mathf.Max(movementSettings.sprintSpeed, currentMoveSnapshot.currentSpeed) + 1)) {
+                           ? currentSpeed
+                           : Mathf.Max(movementSettings.sprintSpeed, currentSpeed) + 1)) {
                 if (movementSettings.useAccelerationMovement) {
                     newVelocity += Vector3.ClampMagnitude(characterMoveVelocity,
-                        currentMoveSnapshot.currentSpeed - flatVelMagnitude);
+                        currentSpeed - flatVelMagnitude);
                 } else {
                     // if(Mathf.Abs(characterMoveVelocity.x) > Mathf.Abs(newVelocity.x)){
                     // 	newVelocity.x = characterMoveVelocity.x;
@@ -1008,7 +1009,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     // }
 
                     //If our current flat velocity is less then our intended velocity we can use our move velocity
-                    if (flatVelMagnitude <= currentMoveSnapshot.currentSpeed) {
+                    if (flatVelMagnitude <= currentSpeed) {
                         //Snap velocity to our target move velocity
                         newVelocity.x = characterMoveVelocity.x;
                         newVelocity.z = characterMoveVelocity.z;
@@ -1031,7 +1032,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     var addedForce = groundedState == CharacterState.Sprinting
                         ? movementSettings.sprintAccelerationForce
                         : movementSettings.accelerationForce;
-                    if (flatVelMagnitude + addedForce < currentMoveSnapshot.currentSpeed) {
+                    if (flatVelMagnitude + addedForce < currentSpeed) {
                         forwardMod = 1;
                     }
 
