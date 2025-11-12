@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using Assets.Code.Luau;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
@@ -50,9 +51,33 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             this.ReconcileMetadata(ReconcileSource.Deserialization);
         }
     }
-
+    
     public void Init() {
-        if (!initialized) CreateScriptableObject();
+        if (!Application.isPlaying) return;
+        if (initialized) return;
+        
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+		// Grab the script from code.zip at runtime
+		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(LuaFilePath.ToLower());
+		if (runtimeScript) {
+			script = runtimeScript;
+		}
+		else {
+			var isPackage = scriptPath.StartsWith("Assets/AirshipPackage");
+			if (script == null) {
+				var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
+				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) - {suggestion}", gameObject);
+			}
+			else {
+				Debug.LogError($"Could not find compiled script in code archive '{script.m_path.ToLower()}' for GameObject {gameObject.name} (Missing Runtime Script Code)", gameObject);
+			}
+			return;
+		}
+#endif
+        
+        // Invoke startup scripts if they haven't been executed yet
+        ScriptingEntryPoint.InvokeOnLuauStartup();
+        CreateScriptableObject();
     }
 
     internal void Unload() {
@@ -84,12 +109,19 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         LuauPlugin.RemoveScriptableObject(context, thread, id);
         AirshipScriptableObjectRoot.CleanIdOnDestroy(this);
     }
+    
+    private void OnLuauReset(LuauContext ctx) {
+        if (ctx == context) {
+            thread = IntPtr.Zero;
+            LuauCore.onResetInstance -= OnLuauReset;
+        }
+    }
 
     private void CreateScriptableObject() {
         if (!Application.isPlaying) return;
         if (script == null) return;
         
-        thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.NotCached, script, out var status);
+        thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.Cached, script, out var status);
         if (status != 0) {
             thread = IntPtr.Zero;
             if (status == 1) {
@@ -103,6 +135,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
 
+        LuauCore.onResetInstance += OnLuauReset;
         LuauPlugin.CreateScriptableObject(context, thread, id);
         InitializeScriptableObject();
         initialized = true;
@@ -179,9 +212,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
     
     private void Awake() {
-        if (!Application.isPlaying || script == null) return;
-        CreateScriptableObject();
-        
+        // if (!Application.isPlaying || script == null) return;
+        // CreateScriptableObject();
+        Init();
     }
 
     private void Reset() {

@@ -308,8 +308,8 @@ public partial class LuauCore : MonoBehaviour
                 UnrolledPodObjects[j] = componentRef.AsUnityComponent();
             } else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_SCRIPTABLE_OBJECT) {
                 var ptr = parameterDataPtrs[j];
-                var componentRef = Marshal.PtrToStructure<AirshipScriptableObject>(ptr);
-                UnrolledPodObjects[j] = AirshipScriptableObjectRoot.GetScriptableObjectFromId(componentRef.scriptableObjectId);
+                var componentRef = Marshal.PtrToStructure<AirshipScriptableObjectRef>(ptr);
+                UnrolledPodObjects[j] = AirshipScriptableObjectRoot.GetScriptableObjectFromId(componentRef.unityInstanceId);
             } else {
                 UnrolledPodObjects[j] = null;
             }
@@ -1051,6 +1051,11 @@ public partial class LuauCore : MonoBehaviour
                     parsedData[paramIndex] = objectRef;
                     continue;
                 }
+                case PODTYPE.POD_AIRSHIP_SCRIPTABLE_OBJECT: {
+                    var objectRef = podObjects[paramIndex] as AirshipScriptableObject;
+                    parsedData[paramIndex] = objectRef;
+                    continue;
+                }
                 case PODTYPE.POD_DOUBLE: {
                     var doubleValue = NewDoubleFromPointer(intPtrs[i]);
                     if (sourceParamType.IsAssignableFrom(doubleType)) {
@@ -1459,6 +1464,7 @@ public partial class LuauCore : MonoBehaviour
             switch (paramType) {
                 case PODTYPE.POD_NULL:
                     continue;
+                case PODTYPE.POD_AIRSHIP_SCRIPTABLE_OBJECT:
                 case PODTYPE.POD_AIRSHIP_COMPONENT:
                     if (sourceParamType.IsAssignableFrom(componentType)) {
                         continue;
