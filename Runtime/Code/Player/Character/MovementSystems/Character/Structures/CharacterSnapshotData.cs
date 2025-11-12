@@ -215,6 +215,15 @@ namespace Code.Player.Character.MovementSystems.Character
             bool stateChanged = this.state != other.state;
             bool canJumpChanged = this.canJump != other.canJump;
             
+            // Flag for if we are sending a full snapshot or just a diff. Sometimes a diff is bigger if
+            // all bytes have changed.
+            bool fullCustomData = customData == null; // Always send full custom data if base data is null
+            byte[] customDataDiff = null;
+            if (!fullCustomData && other.customData != null) { // If base data is !null and our new data is !null, generate the diff and see if we should use it.
+                customDataDiff = customData.CreateDiff(other.customData);
+                fullCustomData = customDataDiff.Length > other.customData.Data.Length;
+            }
+            
             // Set the changed mask to reflect changed fields
             byte changedMask = 0;
             if (boolsChanged) BitUtil.SetBit(ref changedMask, 0, true);
@@ -224,6 +233,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (jumpCountChanged) BitUtil.SetBit(ref changedMask, 4, true);
             if (stateChanged) BitUtil.SetBit(ref changedMask, 5, true);
             if (canJumpChanged) BitUtil.SetBit(ref changedMask, 6, true);
+            if (fullCustomData) BitUtil.SetBit(ref changedMask, 7, true);
 
             // Write only changed fields
             var writer = NetworkWriterPool.Get();
@@ -246,11 +256,12 @@ namespace Code.Player.Character.MovementSystems.Character
             // We are cheating here by only writing bytes at the end if we have custom data. We can do this because we know the expected size
             // of the above bytes and we know that a diff packet will only contain one diff. If we were to pass multiple diffs in a single packet,
             // we could not do this optimization since there would be no way to know where the next packet starts.
-            if (customData != null) {
-                var customDataDiff = customData.CreateDiff(other.customData);
+            if (fullCustomData && other.customData != null) { // If we should send the full new data, send it, but only if we actually have data. null custom data shouldn't be sent.
+                writer.WriteBytes(other.customData.Data, 0, other.customData.Data.Length);
+            } else {
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
-
+            
             var dataArray = writer.ToArray();
             NetworkWriterPool.Return(writer);
             
@@ -311,10 +322,16 @@ namespace Code.Player.Character.MovementSystems.Character
             if (BitUtil.GetBit(changedMask, 4)) snapshot.jumpCount = reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 5)) snapshot.state = (CharacterState)reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 6)) snapshot.canJump = reader.Read<byte>();
+            var fullCustomData = BitUtil.GetBit(changedMask, 7);
             
             if (reader.Remaining != 0) {
-                var cDataDiff = reader.ReadBytes(reader.Remaining);
-                snapshot.customData = customData.ApplyDiff(cDataDiff);
+                var cData = reader.ReadBytes(reader.Remaining);
+                // If bit is set, the diff is actually just the full data.
+                if (fullCustomData) {
+                    snapshot.customData = new BinaryBlob(cData);
+                } else {
+                    snapshot.customData = customData.ApplyDiff(cData);
+                }
             }
             else {
                 snapshot.customData = null;
