@@ -7,9 +7,8 @@ namespace Code.Player.Character.MovementSystems.Character
     [LuauAPI]
     public class CharacterNetworkedStateManager: AirshipNetworkedStateManager<CharacterMovement, CharacterSnapshotData, CharacterStateDiff, CharacterInputData>
     {
-        public override void SendClientInputToServer(CharacterInputData input)
-        {
-            this.CmdClientInputToServer(input);
+        public override void SendClientInputToServer(CharacterInputData[] inputs) {
+            this.CmdClientInputToServer( new CharacterInputGroup(inputs));
         }
 
         public override void SendClientSnapshotToServer(CharacterSnapshotData snapshot)
@@ -43,9 +42,9 @@ namespace Code.Player.Character.MovementSystems.Character
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void CmdClientInputToServer(CharacterInputData input)
-        {
-            this.OnServerReceiveInput?.Invoke(input);
+        private void CmdClientInputToServer(CharacterInputGroup inputGroup) {
+            var inputs = inputGroup.RetrieveInputs();
+            this.OnServerReceiveInput?.Invoke(inputs);
         }
 
         [Command(channel = Channels.Unreliable)]

@@ -1,3 +1,4 @@
+using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror;
 
@@ -6,9 +7,10 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
     public class TestNetworkedStateManager: AirshipNetworkedStateManager<TestMovement, TestMovementState, TestMovementDiff, TestMovementInput>
     {
         
-        public override void SendClientInputToServer(TestMovementInput input)
+        public override void SendClientInputToServer(TestMovementInput[] inputs)
         {
-            this.RpcClientInputToServer(input);
+           var inputGroup = new TestMovementInputGroup(inputs);
+           this.RpcClientInputToServer(inputGroup);
         }
 
         public override void SendClientSnapshotToServer(TestMovementState snapshot)
@@ -41,9 +43,9 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
         }
 
         [Command(channel = Channels.Unreliable)]
-        private void RpcClientInputToServer(TestMovementInput input)
-        {
-            this.OnServerReceiveInput?.Invoke(input);
+        private void RpcClientInputToServer(TestMovementInputGroup inputGroup) {
+            var inputs = inputGroup.RetrieveInputs();
+            this.OnServerReceiveInput?.Invoke(inputs);
         }
 
         [Command(channel = Channels.Unreliable)]
