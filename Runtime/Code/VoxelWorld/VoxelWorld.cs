@@ -1405,7 +1405,7 @@ public partial class VoxelWorld : MonoBehaviour {
         processingMeshChunks.TryAdd(chunkKey, 0);
     }
 
-    internal void MarkChunkAsFinishedProcessing(Vector3Int chunkKey) {
+    internal void RemoveChunkFromProcessing(Vector3Int chunkKey) {
         processingMeshChunks.TryRemove(chunkKey, out _);
     }
 
