@@ -174,10 +174,6 @@ namespace VoxelWorldStuff {
             if (dirty && priority) {
                 geometryDirtyPriorityUpdate = true;
             }
-
-            if (dirty && meshProcessor == null) {
-                world?.RemoveChunkFromProcessing(chunkKey);
-            }
         }
 
         public void SetCollisionDirty(bool dirty) {
@@ -890,7 +886,6 @@ namespace VoxelWorldStuff {
                 Profiler.BeginSample("FinalizeMesh");
                 meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, shadowRenderer, world);
                 meshProcessor = null; //clear it
-                world.RemoveChunkFromProcessing(chunkKey);
                 Profiler.EndSample();
 
                 if (lodSystem != null) {
@@ -921,7 +916,6 @@ namespace VoxelWorldStuff {
 
             //Update everything
             meshProcessor = new MeshProcessor(this);
-            world.MarkChunkAsProcessing(chunkKey);
 
             //Note this is not cleared while there is still a processing mesh (earlier in this method) because it makes sure the mesh always captures new updates
             geometryDirty = false;
