@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
+using Editor.Publish.Callback;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
@@ -344,9 +345,7 @@ public static class CreateAssetBundles {
 					addressableNames = addressableNames
 				};
 				builds.Add(build);
-			} else {
-				if (assetBundleName != "shared/resources") continue;
-
+			} else if (assetBundleName == "shared/resources") {
 				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToHashSet();
 				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
 					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
@@ -416,14 +415,6 @@ public static class CreateAssetBundles {
 		buildParams.BundleCompression = BuildCompression.LZ4;
 		var buildContent = new BundleBuildContent(builds);
 
-		// Debug.Log("Additional files:");
-		// foreach (var pair in buildContent.AdditionalFiles) {
-		// 	Debug.Log(pair.Key + ":");
-		// 	foreach (var p in pair.Value) {
-		// 		Debug.Log("  - " + p.fileAlias);
-		// 	}
-		// }
-
 		ContentPipeline.BuildCallbacks.PostPackingCallback = (parameters, data, arg3) => {
 			return ReturnCode.Success;
 		};
@@ -431,6 +422,9 @@ public static class CreateAssetBundles {
 		AirshipPackagesWindow.buildingPackageId = "game";
 		buildingBundles = true;
 		AirshipScriptableBuildPipelineConfig.buildingGameBundles = true;
+		// Allow other logic to hook into pre build game bundles (used for setting up scriptable shader
+		// scripting based on target).
+		BuildAirshipGameBundleProcessor.InvokePreBuildGameBundle(buildTarget);
 		ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
 		buildingBundles = false;
 		AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
