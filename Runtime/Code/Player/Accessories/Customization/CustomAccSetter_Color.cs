@@ -1,14 +1,35 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class CustomAccSetter_Color : MonoBehaviour {
+    public Renderer[] colorMaskRens;
     public ColorGroup[] colorGroups;
 
     public void SetColor(string key, Color newColor) {
+        int groupI = 0;
         foreach (var group in colorGroups) {
             if (group.key == key) {
                 group.SetColor(newColor);
+                if (groupI < 3) {
+                    foreach (var ren in colorMaskRens) {
+                        ren.material.SetColor(GetColorKey(groupI), newColor);
+                    }
+                }
             }
+
+            groupI++;
+        }
+    }
+
+    private string GetColorKey(int index) {
+        switch (index) {
+            case 0:
+                return "_BaseColor";
+            case 1:
+                return "_BaseColor2";
+            case 2:
+                return "_BaseColor3";
+            default:
+                return "_BaseColor";
         }
     }
 }

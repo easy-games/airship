@@ -6,6 +6,8 @@ public class CustomAccSetter_Variant : MonoBehaviour {
     public Renderer[] affectedRenderers;
 
     [Header("Variables")]
+    public string shaderPath = "Universal Render Pipeline/Lit";
+
     public VariantGroup[] variants;
 
     public void Set(int variantIndex) {
@@ -13,7 +15,7 @@ public class CustomAccSetter_Variant : MonoBehaviour {
         if (num > 0 && num > variantIndex) {
             var variant = variants[variantIndex];
             if (variant.customMat && !variant.customMat.shader.isSupported) {
-                variant.customMat.shader = Shader.Find("Universal Render Pipeline/Lit");
+                variant.customMat.shader = Shader.Find(shaderPath);
             }
 
             foreach (var ren in affectedRenderers) {

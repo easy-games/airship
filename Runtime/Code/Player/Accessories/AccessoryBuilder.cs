@@ -489,7 +489,7 @@ public class AccessoryBuilder : MonoBehaviour {
                 // }
 
                 Debug.Log("Addinng accessory: " + activeAccessory.AccessoryComponent.gameObject.name);
-                meshCombiner.AddSourceReference(activeAccessory, accessoryComponent.skinnedToCharacter);
+                meshCombiner.AddSourceReference(activeAccessory);
 
 
                 if (!accessoryComponent.skinnedToCharacter)
