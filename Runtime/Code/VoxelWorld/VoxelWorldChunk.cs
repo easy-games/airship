@@ -174,6 +174,10 @@ namespace VoxelWorldStuff {
             if (dirty && priority) {
                 geometryDirtyPriorityUpdate = true;
             }
+
+            if (dirty && meshProcessor == null) {
+                world?.RemoveChunkFromProcessing(chunkKey);
+            }
         }
 
         public void SetCollisionDirty(bool dirty) {
@@ -886,7 +890,7 @@ namespace VoxelWorldStuff {
                 Profiler.BeginSample("FinalizeMesh");
                 meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, shadowRenderer, world);
                 meshProcessor = null; //clear it
-                world.MarkChunkAsFinishedProcessing(chunkKey);
+                world.RemoveChunkFromProcessing(chunkKey);
                 Profiler.EndSample();
 
                 if (lodSystem != null) {
