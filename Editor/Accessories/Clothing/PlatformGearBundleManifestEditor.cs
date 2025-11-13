@@ -23,7 +23,13 @@ namespace Editor.Accessories.Clothing {
     [CustomEditor(typeof(PlatformGearBundleManifest))]
     [CanEditMultipleObjects]
     public class PlatformGearBundleManifestEditor : UnityEditor.Editor {
+#if AIRSHIP_STAGING
+        private static string easyOrgId = "6536df9f3843ac629cf3b8b1";
+        private static string defaultImageId = "b5f260d4-2678-4255-b9bd-9136dd3edf36";
+#else
         private static string easyOrgId = "6b62d6e3-9d74-449c-aeac-b4feed2012b1";
+        private static string defaultImageId = "64351892-40d4-409b-ab3a-501818213b50";
+#endif
         private bool skipBuild = false;
 
         private static void Print(string message) {
@@ -149,7 +155,7 @@ namespace Editor.Accessories.Clothing {
                 // Create a new class id
                 var data = JsonUtility.ToJson(new GearCreateRequest() {
                     name = gear.name,
-                    imageId = "64351892-40d4-409b-ab3a-501818213b50",
+                    imageId = defaultImageId,
                     description = "Clothing",
                     airAssets = new string[] { },
                     category = category,
