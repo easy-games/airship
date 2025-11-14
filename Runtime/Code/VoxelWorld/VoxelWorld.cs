@@ -1249,19 +1249,19 @@ public partial class VoxelWorld : MonoBehaviour {
             var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
 
             Profiler.BeginSample("Sort");
-            var chunksToKickOffNow = new Chunk[maxChunksToUpdate];
-            // Load with 8 chunks
-            for (var i = 0; i < maxChunksToUpdate && i < chunksThatNeedThreadKickoff.Count; i++) {
+            var numChunksToKickOff = Mathf.Min(maxChunksToUpdate, chunksThatNeedThreadKickoff.Count);
+            var chunksToKickOffNow = new Chunk[numChunksToKickOff];
+            for (var i = 0; i < numChunksToKickOff; i++) {
                 chunksToKickOffNow[i] = chunksThatNeedThreadKickoff[i];
             }
 
             // Loop over all chunks and keep replacing with best available chunk
             // This is random and definitely not a true sort function but should be good enough & fast
-            if (chunksThatNeedThreadKickoff.Count > maxChunksToUpdate) {
+            if (chunksThatNeedThreadKickoff.Count > numChunksToKickOff) {
                 var replaceIndex = 0;
                 var compareAgainstOrder =
                     GetChunkRenderOrder(chunksToKickOffNow[replaceIndex], camPos, forward, focusPositionChunkKey);
-                for (var i = maxChunksToUpdate; i < chunksThatNeedThreadKickoff.Count; i++) {
+                for (var i = numChunksToKickOff; i < chunksThatNeedThreadKickoff.Count; i++) {
                     var chunk = chunksThatNeedThreadKickoff[i];
                     var chunkOrder = GetChunkRenderOrder(chunk, camPos, forward, focusPositionChunkKey);
                     // If this chunk is earlier in order replace and continue
@@ -1276,7 +1276,7 @@ public partial class VoxelWorld : MonoBehaviour {
             Profiler.EndSample();
 
             var updatedChunks = 0;
-            foreach (var chunk in chunksThatNeedThreadKickoff) {
+            foreach (var chunk in chunksToKickOffNow) {
                 if (maxChunksToUpdate-- <= 0) {
                     break;
                 }
