@@ -183,6 +183,9 @@ namespace Code.Player.Accessories {
         public void CustomizeVariant(int variantIndex) {
             if (variantSetter) {
                 variantSetter.Set(variantIndex);
+                if (colorSetter) {
+                    colorSetter.Refresh();
+                }
             }
         }
 

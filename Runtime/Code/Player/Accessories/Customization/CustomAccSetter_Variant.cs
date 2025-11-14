@@ -14,9 +14,7 @@ public class CustomAccSetter_Variant : MonoBehaviour {
         var num = variants.Length;
         if (num > 0 && num > variantIndex) {
             var variant = variants[variantIndex];
-            if (variant.customMat && !variant.customMat.shader.isSupported) {
-                variant.customMat.shader = Shader.Find(shaderPath);
-            }
+            variant.customMat.shader = Shader.Find(shaderPath);
 
             foreach (var ren in affectedRenderers) {
                 // // Set a custom Mesh

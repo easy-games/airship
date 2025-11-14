@@ -1,10 +1,18 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class CustomAccSetter_Color : MonoBehaviour {
     public Renderer[] colorMaskRens;
     public ColorGroup[] colorGroups;
 
+    private Dictionary<string, Color> currentColors = new Dictionary<string, Color>();
+
     public void SetColor(string key, Color newColor) {
+        currentColors[key] = newColor;
+        SetColorInternal(key, newColor);
+    }
+    
+    private void SetColorInternal(string key, Color newColor) {
         int groupI = 0;
         foreach (var group in colorGroups) {
             if (group.key == key) {
@@ -17,6 +25,12 @@ public class CustomAccSetter_Color : MonoBehaviour {
             }
 
             groupI++;
+        }
+    }
+
+    public void Refresh() {
+        foreach (var kvp in currentColors) {
+            SetColorInternal(kvp.Key, kvp.Value);
         }
     }
 

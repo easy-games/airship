@@ -389,8 +389,9 @@ public class AccessoryBuilder : MonoBehaviour {
 
 
                 // Load customizations
+                activeAccessory.AccessoryComponent.CustomizeVariant(0);
                 foreach (var slot in customization.platformCustomSlots) {
-                    if (slot.slot == (int)accessoryTemplate.accessorySlot) {
+                    if (slot.slot == (int)activeAccessory.AccessoryComponent.accessorySlot) {
                         //Found custom data
                         activeAccessory.AccessoryComponent.CustomizeVariant(slot.variant);
                         activeAccessory.AccessoryComponent.CustomizeColors(slot.colors);
