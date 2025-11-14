@@ -269,6 +269,12 @@ public static class LuauPlugin {
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void PushScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.PushScriptableObject(context, thread, unityInstanceId));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void PushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.PushAirshipComponents(context, thread, unityInstanceId, componentIds, componentIds.Length, appendToTable));

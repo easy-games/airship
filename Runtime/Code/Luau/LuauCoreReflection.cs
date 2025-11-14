@@ -592,6 +592,17 @@ public partial class LuauCore : MonoBehaviour
             LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
             return;
         }
+
+        if (value is AirshipScriptableObject scriptableObject) {
+            if (scriptableObject.script == null) {
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+                return;
+            }
+            
+            if (!scriptableObject.initialized) scriptableObject.Init();
+            LuauPlugin.PushScriptableObject(LuauContext.Game, thread, scriptableObject.instanceId);
+            return;
+        }
         
         /*
          * Unity sometimes returns a dummy object instead of "null" for nice console prints.

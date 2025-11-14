@@ -22,6 +22,7 @@ internal class AirshipScriptableObjectReconcileEventData {
 }
 internal delegate void ReconcileAirshipScriptableObject(AirshipScriptableObjectReconcileEventData data);
 
+[LuauAPI(LuauContext.Protected, ContextOverrideMask = (int) LuauContext.Game, ContextOverrideList = new []{ "CreateInstance", "IsInstance" })]
 public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackReceiver, IAirshipRuntimeReferenceDependency {
     private static readonly List<GCHandle> InitGcHandles = new();
     private static readonly List<IntPtr> InitStringPtrs = new();
@@ -39,7 +40,32 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 #endif
     public LuauMetadata metadata;
     public bool initialized { get; private set; }
-    public int scriptableObjectId { get; private set; } = -1;
+    public int instanceId { get; private set; } = -1;
+
+    public static bool IsInstance(object obj) {
+        return obj is AirshipScriptableObject; //
+    }
+    
+    public static AirshipScriptableObject CreateInstance(string luaRequirePath) {
+        if (luaRequirePath == null) return null;
+        AirshipScript runtimeScript;
+
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+        scriptPath = scriptPath + ".lua";
+        runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(scriptPath.ToLower());
+#else
+        runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + luaRequirePath + ".ts");
+#endif
+        if (runtimeScript == null) {
+            throw new ArgumentException($"{luaRequirePath} is not a valid script path", nameof(luaRequirePath));
+        }
+        
+        var asset = ScriptableObject.CreateInstance<AirshipScriptableObject>();
+        asset.script = runtimeScript;
+        asset.metadata = runtimeScript.m_metadata;
+        if (!asset.initialized) asset.Init();
+        return asset;
+    }
     
     public void OnBeforeSerialize() {
         
@@ -54,7 +80,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
     
     public void Init() {
-        return;
         if (!Application.isPlaying) return;
         if (initialized) return;
         
@@ -76,41 +101,35 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 			return;
 		}
 #endif
-        
-        // Invoke startup scripts if they haven't been executed yet
-        // ScriptingEntryPoint.InvokeOnLuauStartup();
         CreateScriptableObject();
     }
 
     internal void Unload() {
         this.initialized = false;
-        this.scriptableObjectId = -1;
+        this.instanceId = -1;
         this.thread = IntPtr.Zero;
         this.context = LuauContext.Game;
     }
 
-    // private void OnEnable() {
-    //     if (!Application.isPlaying) initialized = false;
-    //     if (!initialized) CreateScriptableObject();
-    //     if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
-    // }
-    //
-    // private void OnDisable() {
-    //     if (!Application.isPlaying) {
-    //         initialized = false;
-    //     }
-    //     
-    //     if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDisabled);
-    // }
-    //
-    // private void OnDestroy() {
-    //     if (!Application.isPlaying || script == null) return;
-    //
-    //     if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDestroy);
-    //     int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
-    //     LuauPlugin.RemoveScriptableObject(context, thread, id);
-    //     AirshipScriptableObjectRoot.CleanIdOnDestroy(this);
-    // }
+    private void OnEnable() {
+        if (!Application.isPlaying) initialized = false;
+        if (!initialized) CreateScriptableObject();
+        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
+    }
+    
+    private void OnDisable() {
+        if (!initialized) return;
+        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDisabled);
+    }
+    
+    private void OnDestroy() {
+        if (!Application.isPlaying || script == null) return;
+    
+        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDestroy);
+        int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
+        LuauPlugin.RemoveScriptableObject(context, thread, id);
+        AirshipScriptableObjectRoot.CleanIdOnDestroy(this);
+    }
     
     private void OnLuauReset(LuauContext ctx) {
         if (ctx == context) {
@@ -139,9 +158,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
         LuauCore.onResetInstance += OnLuauReset;
         LuauPlugin.CreateScriptableObject(context, thread, id);
-        InitializeScriptableObject();
+        AwakeScriptableObject();
         initialized = true;
-        scriptableObjectId = id;
+        instanceId = id;
     }
 
     private void InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType updateType) {
@@ -155,7 +174,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         return metadata.GetRuntimePropertyDependencies(PropertyDependencyFilterFlags.AirshipScriptableObject);
     }
     
-    private void InitializeScriptableObject() {
+    private void AwakeScriptableObject() {
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
 
         foreach (var dependency in GetDependencies()) {
@@ -216,11 +235,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         }
     }
     
-    // private void Awake() {
-    //     // if (!Application.isPlaying || script == null) return;
-    //     // CreateScriptableObject();
-    //     Init();
-    // }
+    private void Awake() {
+        Init();
+    }
 
     private void Reset() {
         // TODO: Reset values to defaults
