@@ -191,6 +191,54 @@ namespace Luau {
         // From JSON:
         public string name;
         public List<LuauMetadataDecoratorValue> parameters = new();
+        
+        [CanBeNull]
+        public string GetParameterAsString(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            return parameters[index].value as string;
+        }
+
+        public int? GetParameterAsInt(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            var serializedValue = parameters[index].serializedValue;
+            if (int.TryParse(serializedValue, out var value)) {
+                return value;
+            } else {
+                return null;
+            }
+        }
+        
+        public float? GetParameterAsFloat(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            var serializedValue = parameters[index].serializedValue;
+            if (float.TryParse(serializedValue, out var value)) {
+                return value;
+            } else {
+                return null;
+            }
+        }
+        
+        public bool? GetParameterAsBool(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            var serializedValue = parameters[index].serializedValue;
+            if (bool.TryParse(serializedValue, out var value)) {
+                return value;
+            } else {
+                return null;
+            }
+        }
     }
     
     [Serializable]

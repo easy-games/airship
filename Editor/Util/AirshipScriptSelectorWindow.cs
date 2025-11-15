@@ -42,19 +42,6 @@ internal class AirshipScriptSelectorWindow : EditorWindow {
                 };
             }
         }
-
-        // var stage = StageUtility.GetCurrentStage(); // the current "stage" is the current scene thingy
-        // var components = stage.FindComponentsOfType<AirshipComponent>();
-        // foreach (var component in components) {
-        //     if (filterType != null && !component.GetAirshipType().IsAssignableFrom(filterType)) continue;
-        //
-        //     yield return new ComponentItemInfo() {
-        //         instanceId = component.GetInstanceID(),
-        //         component = component,
-        //         gameObject = component.gameObject,
-        //         globalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(component),
-        //     };
-        // }
     }
     
     private static AirshipScriptSelectionContext _context;

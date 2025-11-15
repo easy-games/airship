@@ -139,11 +139,14 @@ namespace Code.Luau {
                         if (GUI.enabled) {
                             GUIUtility.keyboardControl = id;
 
-                            // var componentType = script.GetComponentType();
-                            // if (componentType != null) {
-                            //     var context = new AirshipComponentSelectionContext(objectBeingEdited, componentType, obj as AirshipScriptableObject);
-                            //     AirshipComponentSelectorWindow.Show(context, null, onObjectSelected);
-                            // }
+                            var componentType = script.GetComponentType();
+                            if (componentType != null) {
+                                Debug.Log($"should show window for {componentType.Name}");
+                                AirshipScriptableObjectSelector.Show(
+                                    new AirshipScriptableObjectSelector.SelectorContext(objectBeingEdited, componentType, obj as AirshipScriptableObject), 
+                                    null, onObjectSelected);
+                            }
+                            
                             evt.Use();
                             GUIUtility.ExitGUI();
                         }
@@ -192,9 +195,23 @@ namespace Code.Luau {
                     if (displayIcon) {
                         temp.image = displayIcon;
                     }
+
+                    if (airshipScriptableObject && (airshipScriptableObject.script == null || airshipScriptableObject.script != script)) {
+                        var width = 1;
+                        EditorGUI.DrawRect(new Rect(position) {
+                            x = position.x - width,
+                            width = position.width + width * 2,
+                            y = position.y - width,
+                            height = position.height + width * 2,
+                        }, Color.red);
+                        AirshipEditorGUI.nonClippingObjectFieldError.Draw(position, temp, id, DragAndDrop.activeControlID == id,
+                            position.Contains(Event.current.mousePosition));
+                    } else {
+                        (obj != null ? AirshipEditorGUI.nonClippingObjectField : AirshipEditorGUI.nonClippingObjectFieldNone).Draw(position, temp, id, DragAndDrop.activeControlID == id,
+                            position.Contains(Event.current.mousePosition));
+                    }
                     
-                    AirshipEditorGUI.nonClippingObjectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
-                        position.Contains(Event.current.mousePosition));
+                   
 
                     buttonStyle.Draw(buttonRect, GUIContent.none, id, DragAndDrop.activeControlID == id,
                         buttonRect.Contains(Event.current.mousePosition));
@@ -350,7 +367,7 @@ namespace Code.Luau {
                         temp.image = displayIcon;
                     }
                     
-                    AirshipEditorGUI.nonClippingObjectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
+                    (obj != null ? AirshipEditorGUI.nonClippingObjectField  : AirshipEditorGUI.nonClippingObjectFieldNone ).Draw(position, temp, id, DragAndDrop.activeControlID == id,
                         position.Contains(Event.current.mousePosition));
 
 

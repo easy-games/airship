@@ -53,6 +53,50 @@ public static partial class AirshipEditorGUI {
             return _nonClippingObjectField;
         }
     }
+    
+    private static GUIStyle _nonClippingObjectFieldError;
+    internal static GUIStyle nonClippingObjectFieldError {
+        get {
+            if (_nonClippingObjectFieldError == null) {
+                _nonClippingObjectFieldError = new GUIStyle(EditorStyles.objectField) {
+                    imagePosition = ImagePosition.TextOnly,
+                    clipping = TextClipping.Ellipsis,
+                    normal = new GUIStyleState() {
+                        textColor = new Color(1, 0.2f, 0.2f),
+                    },
+                    hover = new GUIStyleState() {
+                        textColor = new Color(1, 0.2f, 0.2f),
+                    },
+                    fontStyle = FontStyle.Italic
+                };
+            }
+
+            return _nonClippingObjectFieldError;
+        }
+    }
+    
+    private static GUIStyle _nonClippingObjectFieldNone;
+    internal static GUIStyle nonClippingObjectFieldNone {
+        get {
+            if (_nonClippingObjectFieldNone == null) {
+                _nonClippingObjectFieldNone = new GUIStyle(EditorStyles.objectField) {
+                    imagePosition = ImagePosition.TextOnly,
+                    clipping = TextClipping.Ellipsis,
+                    normal = new GUIStyleState() {
+                        textColor = new Color(0.6f, 0.6f, 0.6f),
+                    },
+                    hover = new GUIStyleState() {
+                        textColor = new Color(0.6f, 0.6f, 0.6f),
+                    },
+                    focused = new GUIStyleState() {
+                        textColor = new Color(0.6f, 0.6f, 0.6f),
+                    },
+                };
+            }
+
+            return _nonClippingObjectFieldNone;
+        }
+    }
 
     internal static bool ValidateProperty(AirshipSerializedProperty serializedProperty, Func<AirshipSerializedProperty, bool> validate) {
         serializedProperty.valid = validate(serializedProperty);

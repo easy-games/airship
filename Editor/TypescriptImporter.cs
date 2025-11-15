@@ -163,12 +163,19 @@ namespace Editor {
                 if (airshipScript.scriptType == AirshipScriptType.ScriptableObject) {
                     var decorator = airshipScript.m_metadata?.FindClassDecorator("CreateAssetMenu");
                     if (decorator != null) {
-                        var filePath = decorator.parameters[0];
-                        var menuItem = decorator.parameters[1];
-                        int priority = 0;
-                        if (decorator.parameters.Count > 2) priority = (int) decorator.parameters[2].value;
+                        string menuItem = decorator.GetParameterAsString(0);
+                        if (string.IsNullOrEmpty(menuItem)) {
+                            menuItem = $"Assets/Create/{ObjectNames.NicifyVariableName(airshipScript.m_metadata.name)}";
+                        }
+
+                        string assetFileName = decorator.GetParameterAsString(1);
+                        if (string.IsNullOrEmpty(assetFileName)) {
+                            assetFileName = $"{airshipScript.m_metadata.name}.asset";
+                        }
                         
-                        AirshipCustomMenus.instance.AddCreateAssetMenu(airshipScript.assetPath, filePath.value as string, menuItem.value as string, priority);
+                        var priority = decorator.GetParameterAsInt(2) ?? 0;
+                        
+                        AirshipCustomMenus.instance.AddCreateAssetMenu(airshipScript.assetPath, assetFileName, menuItem, priority);
                     }
                 }
             }
