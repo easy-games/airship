@@ -19,7 +19,6 @@ public class DefaultAirshipComponentEditor : AirshipEditor {
 /// </summary>
 public class DefaultAirshipScriptableObjectEditor : AirshipEditor {
     public override void OnInspectorGUI() {
-        EditorGUILayout.HelpBox("Scriptable Objects are experimental and subject to change", MessageType.Warning);
         DrawDefaultProperties();
     }
 }

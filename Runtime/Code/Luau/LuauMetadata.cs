@@ -413,6 +413,11 @@ namespace Luau {
             }
         }
 
+        internal bool ReconcileDecorators(LuauMetadataProperty property) {
+            property.decorators = new List<LuauMetadataDecoratorElement>(property.decorators);
+            return true;
+        }
+
         internal bool ReconcileItemsWith(LuauMetadataProperty property) {
             if (property.items == null) return false;
             if (items.type != property.items.type ||
@@ -649,7 +654,6 @@ namespace Luau {
                     if (objectRef is AirshipScriptableObject scriptableObject) {
                         var instanceId = AirshipScriptableObjectRoot.GetIdFromScriptableObject(scriptableObject);
                         obj = new AirshipScriptableObjectRef(instanceId);
-                        Debug.Log($"** Should be getting id {instanceId}");
                     } else {
                         propType = AirshipComponentPropertyType.AirshipNil;
                         obj = -1; // Reference to null
@@ -955,9 +959,8 @@ namespace Luau {
             return null;
         }
 
-        [Obsolete("Use FindProperty - the <T> argument is not used")]
-        public LuauMetadataProperty FindProperty<T>(string propertyName) {
-            return FindProperty(propertyName);
+        public int FindPropertyIndex(string propertyName) {
+            return properties.FindIndex(f => f.name == propertyName);
         }
     }
 }

@@ -10,7 +10,13 @@ namespace Luau {
         private static readonly Dictionary<int, AirshipScriptableObject> IdToScriptableObject = new();
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetOnLoad() {
+        public static void ResetOnLoad() {
+#if AIRSHIP_PLAYER
+            foreach (var (_, scriptableObject) in IdToScriptableObject) {
+                Object.Destroy(scriptableObject);
+            }
+#endif
+            
             _idGen = 0;
             ScriptableObjectToId.Clear();
             IdToScriptableObject.Clear();

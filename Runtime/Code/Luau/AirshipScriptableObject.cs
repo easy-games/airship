@@ -40,10 +40,10 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 #endif
     public LuauMetadata metadata;
     public bool initialized { get; private set; }
-    public int instanceId { get; private set; } = -1;
+    public int instanceId { get; private set; } = 0;
 
     public static bool IsInstance(object obj) {
-        return obj is AirshipScriptableObject; //
+        return obj is AirshipScriptableObject;
     }
     
     public static AirshipScriptableObject CreateInstance(string luaRequirePath) {
@@ -67,9 +67,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         return asset;
     }
     
-    public void OnBeforeSerialize() {
-        
-    }
+    public void OnBeforeSerialize() {}
 
     public void OnAfterDeserialize() {
         if (script == null) {
@@ -106,7 +104,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     internal void Unload() {
         this.initialized = false;
-        this.instanceId = -1;
+        this.instanceId = 0;
         this.thread = IntPtr.Zero;
         this.context = LuauContext.Game;
     }
@@ -123,12 +121,20 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
     
     private void OnDestroy() {
-        if (!Application.isPlaying || script == null) return;
+        if (!initialized) return;
+        
+        LuauCore.onResetInstance -= OnLuauReset;
+        if (thread == IntPtr.Zero) return;
     
         if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDestroy);
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
         LuauPlugin.RemoveScriptableObject(context, thread, id);
         AirshipScriptableObjectRoot.CleanIdOnDestroy(this);
+        if (LuauState.IsContextActive(context)) {
+            LuauPlugin.UnpinThread(thread);
+            LuauPlugin.DestroyThread(thread);
+        }
+        thread = IntPtr.Zero;
     }
     
     private void OnLuauReset(LuauContext ctx) {
@@ -230,7 +236,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             
             InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipAwake);
 #if AIRSHIP_INTERNAL
-            Debug.Log($"Started AirshipScriptableObject with id {id} ('{name}') at assetPath {script.assetPath}");
+            Debug.Log($"Started AirshipScriptableObject with id {id} at assetPath {script.assetPath}");
 #endif
         }
     }

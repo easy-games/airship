@@ -138,6 +138,8 @@ namespace Airship.Editor {
                 
                 componentProperty.fileRef = scriptProperty.fileRef;
                 componentProperty.refPath = scriptProperty.refPath;
+                
+                componentProperty.ReconcileDecorators(scriptProperty);
             }
             
             List<LuauMetadataProperty> propertiesToRemove = null;

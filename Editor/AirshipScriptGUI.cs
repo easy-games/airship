@@ -141,10 +141,9 @@ namespace Code.Luau {
 
                             var componentType = script.GetComponentType();
                             if (componentType != null) {
-                                Debug.Log($"should show window for {componentType.Name}");
                                 AirshipScriptableObjectSelector.Show(
                                     new AirshipScriptableObjectSelector.SelectorContext(objectBeingEdited, componentType, obj as AirshipScriptableObject), 
-                                    null, onObjectSelected);
+                                    onObjectSelected, onObjectSelected);
                             }
                             
                             evt.Use();
@@ -316,7 +315,7 @@ namespace Code.Luau {
                             var componentType = script.GetComponentType();
                             if (componentType != null) {
                                 var context = new AirshipComponentSelectionContext(objectBeingEdited, componentType, obj as AirshipComponent);
-                                AirshipComponentSelectorWindow.Show(context, null, onObjectSelected);
+                                AirshipComponentSelectorWindow.Show(context, onObjectSelected, onObjectSelected);
                             }
                             evt.Use();
                             GUIUtility.ExitGUI();

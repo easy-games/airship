@@ -101,8 +101,6 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
 
         var script = binding.script;
         EditorGUILayout.Space(5);
-        
-        // var newScript = (AirshipScript) EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
 
         if (script != null) {
             GUI.enabled = script == null;
@@ -112,11 +110,8 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
             var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
             AirshipEditorGUI.AirshipScriptField(rect, new GUIContent("Script"), script, OnScriptSelectionChanged, AirshipEditorGUI.ScriptExportType.ScriptableObject);
         }
-
         
         EditorGUILayout.Space(5);
-        
- 
         
         if (!AirshipCustomEditors.UseNewInspector) {
             EditorGUILayout.HelpBox("AirshipScriptableObject requires the new Editor API to be enabled", MessageType.Warning);

@@ -8,6 +8,27 @@ using Object = UnityEngine.Object;
 
 namespace Airship.Editor {
     public static class AirshipScriptContextMenus {
+        [MenuItem("CONTEXT/" + nameof(AirshipScriptableObject) + "/Edit Script")]
+        public static void EditScriptableObject(MenuCommand command) {
+            var binding = command.context as AirshipScriptableObject;
+            if (binding == null || binding.metadata == null) return;
+
+            TypescriptProjectsService.OpenFileInEditor(binding.script.assetPath);
+        }
+        
+        [MenuItem("CONTEXT/" + nameof(AirshipScriptableObject) + "/Reset")]
+        public static void ResetScriptableObject(MenuCommand command) {
+            var binding = command.context as AirshipScriptableObject;
+            if (binding == null || binding.metadata == null) return;
+            foreach (var property in binding.metadata.properties.Where(property => property.modified)) {
+                property.SetDefaultAsValue();
+                property.modified = false;
+            }
+
+            AirshipReconciliationService.ReconcileScriptableObject(binding);
+            EditorUtility.SetDirty(binding);
+        }
+        
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Reset", priority = 0)]
         public static void Test(MenuCommand command) {
             var binding = command.context as AirshipComponent;
@@ -20,8 +41,7 @@ namespace Airship.Editor {
             EditorUtility.SetDirty(binding);
         }
         
-        
-        
+
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Edit Script")]
         public static void EditScript(MenuCommand command) {
             var binding = command.context as AirshipComponent;

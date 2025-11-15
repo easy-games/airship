@@ -165,7 +165,9 @@ namespace Editor {
                     if (decorator != null) {
                         string menuItem = decorator.GetParameterAsString(0);
                         if (string.IsNullOrEmpty(menuItem)) {
-                            menuItem = $"Assets/Create/{ObjectNames.NicifyVariableName(airshipScript.m_metadata.name)}";
+                            menuItem = $"Assets/Create/Scriptable Objects/{ObjectNames.NicifyVariableName(airshipScript.m_metadata.name)}";
+                        } else {
+                            menuItem = $"Assets/Create/{menuItem}";
                         }
 
                         string assetFileName = decorator.GetParameterAsString(1);

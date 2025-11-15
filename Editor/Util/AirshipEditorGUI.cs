@@ -138,8 +138,6 @@ public static partial class AirshipEditorGUI {
                     null, typeof(AirshipScript), null, false, nonClippingObjectField,
                     AirshipObjectGUIInternal.objectFieldButtonStyle);
         }
-        
-
     }
 
     private static Object ValidateScriptableObject(Object[] references, Type objtype, SerializedProperty property, AirshipObjectGUIInternal.UnityObjectFieldValidatorOptions options) {
