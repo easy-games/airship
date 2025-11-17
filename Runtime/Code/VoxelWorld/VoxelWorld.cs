@@ -44,8 +44,10 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
 
-    [NonSerialized]
-    public bool doVisuals = true; //Turn on for headless servers
+    public bool doVisuals {
+        get => RunCore.IsClient() ||
+               (Application.isEditor && VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView);
+    } //Turn on for headless servers
 
     public Vector3 focusPosition {
         get {
@@ -1052,7 +1054,6 @@ public partial class VoxelWorld : MonoBehaviour {
             _focusCamera = mainCam;
         }
 
-        doVisuals = RunCore.IsClient() || Application.isEditor;
         PrepareVoxelWorldGameObject();
     }
 
@@ -1162,9 +1163,11 @@ public partial class VoxelWorld : MonoBehaviour {
             var startTime = Time.realtimeSinceStartup;
             var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
 
-            chunksThatNeedMeshUpdates.Sort((x, y) =>
-                (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey)
-                    .magnitude));
+            if (RunCore.IsClient()) {
+                chunksThatNeedMeshUpdates.Sort((x, y) =>
+                    (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey)
+                        .magnitude));
+            }
 
             foreach (var chunk in chunksThatNeedMeshUpdates) {
                 chunk.MainthreadUpdateMesh(this);
@@ -1277,10 +1280,6 @@ public partial class VoxelWorld : MonoBehaviour {
 
             var updatedChunks = 0;
             foreach (var chunk in chunksToKickOffNow) {
-                if (maxChunksToUpdate-- <= 0) {
-                    break;
-                }
-
                 var didUpdate = chunk.MainthreadUpdateMesh(this);
 
                 if (didUpdate) {
