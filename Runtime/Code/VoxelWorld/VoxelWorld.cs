@@ -1260,7 +1260,8 @@ public partial class VoxelWorld : MonoBehaviour {
 
             // Loop over all chunks and keep replacing with best available chunk
             // This is random and definitely not a true sort function but should be good enough & fast
-            if (chunksThatNeedThreadKickoff.Count > numChunksToKickOff) {
+            // (this is only useful on client where focal point matters)
+            if (RunCore.IsClient() && chunksThatNeedThreadKickoff.Count > numChunksToKickOff) {
                 var replaceIndex = 0;
                 var compareAgainstOrder =
                     GetChunkRenderOrder(chunksToKickOffNow[replaceIndex], camPos, forward, focusPositionChunkKey);
