@@ -174,10 +174,6 @@ namespace VoxelWorldStuff {
             if (dirty && priority) {
                 geometryDirtyPriorityUpdate = true;
             }
-
-            if (dirty && meshProcessor == null) {
-                world?.RemoveChunkFromProcessing(chunkKey);
-            }
         }
 
         public void SetCollisionDirty(bool dirty) {

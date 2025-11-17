@@ -117,6 +117,8 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     [TargetRpc]
     public void RpcWriteChunks(NetworkConnection conn, Vector3Int[] positions, Chunk[] chunks) {
         Profiler.BeginSample("TargetWriteChunkRpcRpcWriteChunks");
+        // Needed for shared mode to ensure that processed chunks do not stay in the HashSet after replication.
+        world.ClearProcessingMeshChunks();
         for (var i = 0; i < positions.Length; i++) {
             world.WriteChunkAt(positions[i], chunks[i]);
         }

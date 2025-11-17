@@ -821,7 +821,7 @@ public partial class VoxelWorld : MonoBehaviour {
         //this.blocks.Load(this.GetBlockDefinesContents());
 
         chunks.Clear();
-        processingMeshChunks.Clear();
+        ClearProcessingMeshChunks();
 
         DeleteChildGameObjects(gameObject);
 
@@ -978,7 +978,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         PrepareVoxelWorldGameObject();
         loadingStatus = LoadingStatus.Loading;
-        processingMeshChunks.Clear();
+        ClearProcessingMeshChunks();
 
         voxelBlocks.Reload(useSimplifiedVoxels);
 
@@ -1004,7 +1004,7 @@ public partial class VoxelWorld : MonoBehaviour {
         PrepareVoxelWorldGameObject();
 
         chunks.Clear();
-        processingMeshChunks.Clear();
+        ClearProcessingMeshChunks();
 
         DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
@@ -1047,7 +1047,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         DeleteChildGameObjects(gameObject);
         PrepareVoxelWorldGameObject();
-        processingMeshChunks.Clear();
+        ClearProcessingMeshChunks();
 
         voxelBlocks.Reload(useSimplifiedVoxels);
 
@@ -1407,6 +1407,10 @@ public partial class VoxelWorld : MonoBehaviour {
 
     internal void RemoveChunkFromProcessing(Vector3Int chunkKey) {
         processingMeshChunks.Remove(chunkKey);
+    }
+
+    internal void ClearProcessingMeshChunks() {
+        processingMeshChunks.Clear();
     }
 
     public int GetNumProcessingMeshChunks() {
