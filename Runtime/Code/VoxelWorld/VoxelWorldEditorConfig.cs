@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -9,3 +10,4 @@ public class VoxelWorldEditorConfig : ScriptableSingleton<VoxelWorldEditorConfig
         Save(true);
     }
 }
+#endif

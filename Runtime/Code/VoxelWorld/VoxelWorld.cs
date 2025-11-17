@@ -45,8 +45,11 @@ public partial class VoxelWorld : MonoBehaviour {
     internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
 
     public bool doVisuals {
-        get => RunCore.IsClient() ||
-               (Application.isEditor && VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView);
+        get => RunCore.IsClient()
+#if UNITY_EDITOR
+               || VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView
+#endif
+               ;
     } //Turn on for headless servers
 
     public Vector3 focusPosition {
