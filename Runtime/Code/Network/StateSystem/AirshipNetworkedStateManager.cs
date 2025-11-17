@@ -70,8 +70,8 @@ namespace Code.Network.StateSystem
         private int serverCommandBufferMaxSize = 0;
 
         // How many commands we should generally have in the command buffer
-        private int serverCommandBufferTargetSize = 0;
         private int serverCommandCatchUpRequired = 0;
+        private ExponentialMovingAverage serverCommandInputGroupSize;
 
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
@@ -201,10 +201,7 @@ namespace Code.Network.StateSystem
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
             // This value is refreshed in auth server tick
             this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
-            // must convert send interval to scaled time because fixedDeltaTime is scaled
-            // This value is refreshed in auth server tick
-            this.serverCommandBufferTargetSize =Math.Min(this.serverCommandBufferMaxSize,
-                (int)Math.Ceiling(NetworkServer.sendInterval * bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
+            this.serverCommandInputGroupSize = new ExponentialMovingAverage(NetworkServer.sendRate);
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -348,22 +345,20 @@ namespace Code.Network.StateSystem
             // We check this in Update so that we have finished processing all required fixedUpdates before checking
             // if we are behind. Next time fixed update runs, we will process the additional amount we need to catch up.
             if (isServer && serverAuth) {
-                if (serverCommandBuffer.Count > serverCommandBufferTargetSize) {
-                    serverCommandCatchUpRequired = serverCommandBuffer.Count - serverCommandBufferTargetSize;
-                    // print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}");
-                }
-                else {
+                if (serverCommandBuffer.Count > this.serverCommandInputGroupSize.Value) {
+                    serverCommandCatchUpRequired = serverCommandBuffer.Count - (int) Math.Round(this.serverCommandInputGroupSize.Value);
+                    // print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandInputGroupSize.Value)} target");
+                } else {
                     serverCommandCatchUpRequired = 0;
                 }
             }
             
             // Same as above, but for client authoritative systems
             if (isServer && !serverAuth) {
-                if (serverReceivedStateBuffer.Count > serverCommandBufferTargetSize) {
-                    serverCommandCatchUpRequired = serverReceivedStateBuffer.Count - serverCommandBufferTargetSize;
+                if (serverReceivedStateBuffer.Count > this.serverCommandInputGroupSize.Value) {
+                    serverCommandCatchUpRequired = serverReceivedStateBuffer.Count - (int) Math.Round(this.serverCommandInputGroupSize.Value);
                     // print($"State catchup required for {this.name}: {serverCommandCatchUpRequired}");
-                }
-                else {
+                } else {
                     serverCommandCatchUpRequired = 0;
                 }
             }
@@ -543,9 +538,6 @@ namespace Code.Network.StateSystem
             
             // We must recalculate target size if the timescale has changed.
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
-            this.serverCommandBufferTargetSize =
-                Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkServer.sendInterval * this.bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
             // Optimal max is when we will start processing extra commands.
             // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize}");
 
@@ -554,7 +546,7 @@ namespace Code.Network.StateSystem
             {
                 var dropCount = 0;
                 
-                while (serverCommandCatchUpRequired > 0 && dropCount < this.serverCommandBufferTargetSize)
+                while (serverCommandCatchUpRequired > 0 && dropCount < (int) Math.Round(this.serverCommandInputGroupSize.Value))
                 {
                     this.serverCommandBuffer.RemoveAt(0);
                     dropCount++;
@@ -585,8 +577,8 @@ namespace Code.Network.StateSystem
 
                     // Check if that command is in sequence. If we have a gap of commands, we will fill it with the last
                     // processed command up to the maxServerCommandPrediction size.
-                    // this.maxServerCommandPrediction * (1f / this.clientInputRate / Time.fixedDeltaTime)) is the number of
-                    // commands contained in a single input message
+                    // this.maxServerCommandPrediction * (1f / this.clientInputRate / Time.fixedDeltaTime) is the number of
+                    // commands contained in a single input message.
                     if (this.lastProcessedCommand != null && command.commandNumber != expectedNextCommandNumber &&
                         this.serverPredictedCommandCount < Math.Ceiling(this.maxServerCommandPrediction *
                                                                         (NetworkServer.sendInterval /
@@ -750,13 +742,10 @@ namespace Code.Network.StateSystem
             }
             
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
-            this.serverCommandBufferTargetSize =
-                Math.Min(this.serverCommandBufferMaxSize,
-                    (int)Math.Ceiling(NetworkServer.sendInterval * bufferTimeMultiplier / Time.fixedUnscaledDeltaTime));
             // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
-            if (this.serverReceivedStateBuffer.Count == 0 || this.serverReceivedStateBuffer.Count < (int)Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
+            if (this.serverReceivedStateBuffer.Count == 0 || this.serverReceivedStateBuffer.Count < (int) Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)) {
                 // Debug.Log($"Waiting for additional states for {this.name}. There are {this.serverReceivedStateBuffer.Count} states in the buffer.");
                 // no operation since there is no new state for us to use. Client authority means we use whatever the client sends us, even if that means
                 // seeing irregular physics movement.
@@ -1221,6 +1210,7 @@ namespace Code.Network.StateSystem
 
         private void ServerReceiveInputCommand(Input[] commands)
         {
+            serverCommandInputGroupSize.Add(commands.Length);
             foreach (var command in commands)
             {
                 ProcessClientInputOnServer(command);
