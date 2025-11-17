@@ -685,6 +685,7 @@ namespace VoxelWorldStuff {
                 //Fill the collision out
                 VoxelWorldCollision.MakeCollision(this);
                 geometryDirty = false;
+                geometryDirtyPriorityUpdate = false;
                 SetLoaded();
                 return true;
             }
@@ -693,7 +694,7 @@ namespace VoxelWorldStuff {
         }
 
         public bool IsGeometryDirty() {
-            return geometryDirty;
+            return geometryDirty || geometryDirtyPriorityUpdate;
         }
 
         public bool NeedsToCopyMeshToScene() {
