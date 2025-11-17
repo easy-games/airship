@@ -119,9 +119,9 @@ public partial class VoxelWorld : MonoBehaviour {
     //[HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
     //[HideInInspector][NonSerialized] public List<WorldSaveFile.WorldPosition> worldPositions = new();
 
-    // Tracks which chunks are currently being processed for mesh generation.  Dictionary will need to be updated
+    // Tracks which chunks are currently being processed for mesh generation.  HashSet will need to be updated
     // if we need to add another code path that sets a chunk as processing or nulls it.
-    private ConcurrentDictionary<Vector3Int, byte> processingMeshChunks = new();
+    private HashSet<Vector3Int> processingMeshChunks = new();
 
     //Detail meshes (grass etc)
     [NonSerialized]
@@ -1402,11 +1402,11 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     internal void MarkChunkAsProcessing(Vector3Int chunkKey) {
-        processingMeshChunks.TryAdd(chunkKey, 0);
+        processingMeshChunks.Add(chunkKey);
     }
 
     internal void RemoveChunkFromProcessing(Vector3Int chunkKey) {
-        processingMeshChunks.TryRemove(chunkKey, out _);
+        processingMeshChunks.Remove(chunkKey);
     }
 
     public int GetNumProcessingMeshChunks() {
