@@ -349,6 +349,9 @@ public class Deploy {
 			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
 			if (!success) {
 				Debug.Log("Cancelled publish.");
+				
+				// Switch back to starting build target
+				EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 				yield break;
 			}
 
