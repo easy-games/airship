@@ -1820,7 +1820,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
-            rb.MovePosition(position);
+            rb.position = position;
         }
 
         public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
