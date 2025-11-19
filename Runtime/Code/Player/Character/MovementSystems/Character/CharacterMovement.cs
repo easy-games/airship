@@ -377,9 +377,9 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             if (drawDebugGizmos_GROUND) {
-                GizmoUtils.DrawBox(transform.position + new Vector3(0, characterHalfExtents.y, 0), Quaternion.identity,
+                GizmoUtils.DrawBox(rb.position + new Vector3(0, characterHalfExtents.y, 0), Quaternion.identity,
                     characterHalfExtents, Color.blue, 5);
-                Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
+                Debug.DrawLine(rb.position, rb.position + rb.linearVelocity * Time.fixedDeltaTime,
                     Color.green, 5);
             }
 
@@ -518,8 +518,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                     //In the air
                     // coyote jump
                     if (currentVelocity.y < 0f &&
-                        // currentMoveSnapshot.timeSinceWasGrounded <= movementSettings.jumpCoyoteTime &&
-                        // currentMoveSnapshot.timeSinceJump > movementSettings.jumpCoyoteTime
                         currentMoveSnapshot.canJump > 0
                        ) {
                         ableToJump = true;
@@ -536,23 +534,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                         }
                     }
                 }
-
-                // extra cooldown if jumping up blocks
-                // if (rootPosition.y - prevJumpStartPos.y > 0.01) {
-                // 	if (currentMoveState.timeSinceJump < moveData.jumpUpBlockCooldown)
-                // 	{
-                // 		ableToJump = false;
-                // 	}
-                // }
-                // dont allow jumping when travelling up
-                // if (currentVelocity.y > 0f) {
-                // 	ableToJump = false;
-                // }
-
-                // dont jump if we already processed the jump
-                // if(currentMoveState.prevState == CharacterState.Jumping){
-                // 	ableToJump = false;
-                // }
 
                 if (ableToJump) {
                     // Jump
@@ -669,15 +650,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 dragForce.y = 0;
             }
 
-
-            //Leaving friction out for now. Drag does the job and why complicate with two calculations and two variables to manage? 
-            // Calculate friction:
-            //var frictionForce = Vector3.zero;
-
-            // if (grounded && !isImpulsing) {
-            // 	frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, predictionRigidbody.Rigidbody.mass, moveData.friction);
-            // }
-
             //Slow down velocity based on drag
             newVelocity += Vector3.ClampMagnitude(dragForce, flatMagnitude);
 
@@ -690,22 +662,8 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region IMPULSE
 
-            //Apply any new impulses
-            //Apply the impulse over multiple frames to push against drag in a more expected way
-            ///_impulseForce *= .95f-deltaTime;
-            //characterMoveVelocity *= .95f-deltaTime;
-            //Stop the y impulse instantly since its not using air resistance atm
-            // _impulseForce.y = 0; 
-            // if(_impulseForce.sqrMagnitude < .5f){
-            // 	_impulseForce = Vector3.zero;
-            // }
-
             //Use the reconciled impulse velocity 
             if (isImpulsing) {
-                //The velocity will create drag in X and Z but ignore Y. 
-                //So we need to manually drag the impulses Y so it doesn't behave differently than the other axis
-                //impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
-
                 //Apply the impulse to the velocity
                 newVelocity += pendingImpulse;
                 currentMoveSnapshot.airborneFromImpulse = !grounded || pendingImpulse.y > .01f;
@@ -722,7 +680,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region SLOPE
 
             if (drawDebugGizmos_GROUND) {
-                GizmoUtils.DrawSphere(transform.position + new Vector3(0, 1, 0), .1f, inAir ? Color.cyan : Color.white,
+                GizmoUtils.DrawSphere(rb.position + new Vector3(0, 1, 0), .1f, inAir ? Color.cyan : Color.white,
                     4, 5);
             }
 
@@ -897,7 +855,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 foreach (var forwardHitResult in forwardHits) {
                     //Check if this is a valid wall and not something behind a surface
                     var forwardHit = forwardHitResult;
-                    var checkPoint = transform.position + new Vector3(0, characterHalfExtents.y, 0);
+                    var checkPoint = rb.position + new Vector3(0, characterHalfExtents.y, 0);
 
                     //Valid result from BoxCastAll but not a hit we want to use (happens on corners of voxels sometimes)
                     if (forwardHitResult.distance == 0) {
@@ -951,14 +909,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                         characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, forwardHit.normal);
                         characterMoveVelocity.y = 0;
                         characterMoveVelocity *= colliderDot;
-
-                        if (forwardHit.distance < characterRadius + .15f) {
-                            // newVelocity.x = 0;
-                            // newVelocity.z = 0;
-                            //newVelocity -= flatVelocity * (1 - colliderDot);
-                            //transform.position = forwardHit.point - forwardHit.normal * bumpSize;
-                        }
-                        //print("Collider Dot: " + colliderDot.ToString("R") + " moveVector: " + characterMoveVelocity.magnitude.ToString("R"));
                     }
 
                     flatVelocity = Vector3.ClampMagnitude(newVelocity,
@@ -967,13 +917,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                     newVelocity.x -= flatVelocity.x;
                     newVelocity.z -= flatVelocity.z;
                 }
-
-                // if (forwardHits.Length == 0) {
-                //     //Not hitting anything forwad, but make sure we aren't already overlapping something
-                //     var boundHits = Physics.OverlapBox(transform.position + new Vector3(0, characterHalfExtents.y, 0),
-                //         characterHalfExtents + new Vector3(forwardMargin, forwardMargin, forwardMargin),
-                //         Quaternion.identity);
-                // }
             }
 
             //Instantly move at the desired speed
@@ -1001,13 +944,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                     newVelocity += Vector3.ClampMagnitude(characterMoveVelocity,
                         currentSpeed - flatVelMagnitude);
                 } else {
-                    // if(Mathf.Abs(characterMoveVelocity.x) > Mathf.Abs(newVelocity.x)){
-                    // 	newVelocity.x = characterMoveVelocity.x;
-                    // }
-                    // if(Mathf.Abs(characterMoveVelocity.z) > Mathf.Abs(newVelocity.z)){
-                    // 	newVelocity.z = characterMoveVelocity.z;
-                    // }
-
                     //If our current flat velocity is less then our intended velocity we can use our move velocity
                     if (flatVelMagnitude <= currentSpeed) {
                         //Snap velocity to our target move velocity
@@ -1071,7 +1007,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                     var oldPos = rootPosition;
                     if (pointOnRamp.y > oldPos.y) {
                         SnapToY(pointOnRamp.y);
-                        //airshipTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
                     }
 
                     //print("STEPPED UP. Vel before: " + newVelocity);
@@ -1108,13 +1043,13 @@ namespace Code.Player.Character.MovementSystems.Character {
                 if (movementSettings.preventFallingWhileCrouching == CrouchEdgeDetection.UseMeshNormals) {
                     //Find the edge of the characters collider
                     var axisAlignedDir = new Vector3(Mathf.Round(velocityNorm.x), 0, Mathf.Round(velocityNorm.z));
-                    var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
+                    var projectedPosition = rb.position + new Vector3(0, .1f, 0) +
                                             axisAlignedDir * distanceCheck +
                                             velocityNorm * velocityMag;
 
                     if (drawDebugGizmos_CROUCH) {
-                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
-                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
+                        GizmoUtils.DrawSphere(rb.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
+                        GizmoUtils.DrawSphere(rb.position + new Vector3(0, .1f, 0) +
                                               axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
                         GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
                     }
@@ -1139,10 +1074,10 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                             //Stop movement into this surface
                             var colliderDot = Vector3.Dot(newVelocity, -cliffHit.normal);
-                            var flatPoint = new Vector3(cliffHit.point.x, transform.position.y, cliffHit.point.z);
+                            var flatPoint = new Vector3(cliffHit.point.x, rb.position.y, cliffHit.point.z);
                             //If we are too close to the edge or if there is an obstruction in the way
-                            if (Vector3.Distance(flatPoint, transform.position) < bumpSize - forwardMargin
-                                || Physics.Raycast(transform.position + new Vector3(0, .25f, 0), newVelocity,
+                            if (Vector3.Distance(flatPoint, rb.position) < bumpSize - forwardMargin
+                                || Physics.Raycast(rb.position + new Vector3(0, .25f, 0), newVelocity,
                                     distanceCheck,
                                     movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                 //Snap back to the bump distance so you never inch your way to the edge 
@@ -1156,7 +1091,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                                 //With this new velocity are we going to fall off a different ledge? 
                                 if (!Physics.Raycast(
-                                        new Vector3(0, 1.25f, 0) + transform.position +
+                                        new Vector3(0, 1.25f, 0) + rb.position +
                                         newVelocity.normalized * distanceCheck, Vector3.down, 1.5f,
                                         movementSettings.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
                                     //Nothing in the direction of the new velocity
@@ -1172,12 +1107,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                     //GRID BASED EDGE DETECTION
                     //Find the edge of the characters collider
                     var smallRadius = (characterRadius - forwardMargin) * .9f;
-                    var projectedPosition = transform.position + new Vector3(0, .1f, 0) +
+                    var projectedPosition = rb.position + new Vector3(0, .1f, 0) +
                                             velocityNorm * velocityMag;
 
                     if (drawDebugGizmos_CROUCH) {
-                        GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
-                        //GizmoUtils.DrawSphere(transform.position + new Vector3(0, .1f, 0) +
+                        GizmoUtils.DrawSphere(rb.position + new Vector3(0, .1f, 0), .05f, Color.black, 4, .1f);
+                        //GizmoUtils.DrawSphere(rb.position + new Vector3(0, .1f, 0) +
                         //axisAlignedDir * distanceCheck, .08f, Color.gray, 4, .1f);
                         GizmoUtils.DrawSphere(projectedPosition, .1f, Color.blue, 4, .1f);
                     }
@@ -1188,14 +1123,14 @@ namespace Code.Player.Character.MovementSystems.Character {
                     var groundVelocities = new[] { newVelocity, newVelocity, newVelocity };
                     if (Mathf.Abs(newVelocity.x) > Mathf.Abs(newVelocity.z)) {
                         //Check X Dir first
-                        groundCheckPositions[1].z = transform.position.z;
-                        groundCheckPositions[2].x = transform.position.x;
+                        groundCheckPositions[1].z = rb.position.z;
+                        groundCheckPositions[2].x = rb.position.x;
                         groundVelocities[1].z = 0;
                         groundVelocities[2].x = 0;
                     } else {
                         //Check Z dir first
-                        groundCheckPositions[1].x = transform.position.x;
-                        groundCheckPositions[2].z = transform.position.z;
+                        groundCheckPositions[1].x = rb.position.x;
+                        groundCheckPositions[2].z = rb.position.z;
                         groundVelocities[1].x = 0;
                         groundVelocities[2].z = 0;
                     }
@@ -1215,7 +1150,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
                         if (validGround) {
                             //Raycast to see if there is a path to this ground we found
-                            var rayCheckPos = transform.position + new Vector3(0, .175f, 0);
+                            var rayCheckPos = rb.position + new Vector3(0, .175f, 0);
                             var endPos = groundCheckPositions[groundCheckI] + new Vector3(0, .175f, 0);
                             var dist = Vector3.Distance(groundHitInfo.point, rayCheckPos);
                             if (Physics.Raycast(rayCheckPos, endPos - rayCheckPos, dist,
@@ -1271,7 +1206,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                     // label += "Hit " + i + " Point: " + forwardHitResult.point + " Normal: " + forwardHitResult.normal;
                     //Check if this is a valid wall and not something behind a surface
                     var forwardHit = forwardHitResult;
-                    var checkPoint = transform.position + new Vector3(0, characterHalfExtents.y, 0);
+                    var checkPoint = rb.position + new Vector3(0, characterHalfExtents.y, 0);
 
                     if (drawDebugGizmos_WALLCLIPPING) {
                         var color = Color.Lerp(Color.green, Color.cyan, i / (forwardHits.Length - 1f));
@@ -1326,70 +1261,28 @@ namespace Code.Player.Character.MovementSystems.Character {
                             colliderDot = 0;
                         }
 
-                        // flatVelocity = Vector3.ClampMagnitude(newVelocity,
-                        //     forwardHit.distance - characterRadius - forwardMargin);
-                        // //print("FLAT VEL: " + flatVelocity);
-                        // newVelocity.x -= flatVelocity.x;
-                        // newVelocity.z -= flatVelocity.z;
 
-                        var flatPoint = new Vector3(forwardHit.point.x, transform.position.y, forwardHit.point.z);
-                        if (Vector3.Distance(flatPoint, transform.position) < minDistance) {
+                        var flatPoint = new Vector3(forwardHit.point.x, rb.position.y, forwardHit.point.z);
+                        if (Vector3.Distance(flatPoint, rb.position) < minDistance) {
                             //Snap back to the bump distance so you never inch your way to the edge 
                             var newPos = forwardHit.point + forwardHit.normal * (bumpSize + forwardMargin);
                             if (forcedCount == 0) {
-                                transform.position = new Vector3(newPos.x, transform.position.y, newPos.z);
+                                rb.position = new Vector3(newPos.x, rb.position.y, newPos.z);
                             } else {
-                                transform.position = new Vector3(
-                                    (transform.position.x + newPos.x) / 2f,
-                                    transform.position.y,
-                                    (transform.position.z + newPos.z) / 2f);
+                                rb.position = new Vector3(
+                                    (rb.position.x + newPos.x) / 2f,
+                                    rb.position.y,
+                                    (rb.position.z + newPos.z) / 2f);
                             }
 
                             forcedCount++;
-                            //newVelocity = new Vector3(0, velY, 0);
-
-                            // var normalVel = forwardHit.normal * (Math.Abs(newVelocity.x) + Math.Abs(newVelocity.z)); 
-                            // newVelocity = new Vector3(normalVel.x, velY , normalVel.z);
                         } else { }
 
                         newVelocity = Vector3.ProjectOnPlane(flatVelocity, forwardHit.normal);
-                        //newVelocity.y = 0;
                         newVelocity *= colliderDot * .9f;
                         newVelocity.y = velY;
-
-                        //limit movement dir based on how straight you are walking into the wall
-                        // characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, forwardHit.normal);
-                        // characterMoveVelocity.y = 0;
-                        // characterMoveVelocity *= colliderDot;
-
-                        // if (forwardHit.distance < characterRadius + .15f)
-                        // {
-                        // newVelocity.x = 0;
-                        // newVelocity.z = 0;
-                        //newVelocity -= flatVelocity * (1 - colliderDot);
-                        //transform.position = forwardHit.point - forwardHit.normal * bumpSize;
-                        // }
-                        //print("Collider Dot: " + colliderDot.ToString("R") + " moveVector: " + characterMoveVelocity.magnitude.ToString("R"));
                     }
-
-                    //Push the character out of any colliders
-                    // if (forwardHit.distance < characterRadius + .15f) {
-                    //     newVelocity.x = 0;
-                    //     newVelocity.z = 0;
-                    // }
-                    // label += "\n";
                 }
-
-                if (forwardHits.Length > 0) {
-                    //Debug.Log(label);
-                }
-
-                // if (forwardHits.Length == 0) {
-                //     //Not hitting anything forwad, but make sure we aren't already overlapping something
-                //     var boundHits = Physics.OverlapBox(transform.position + new Vector3(0, characterHalfExtents.y, 0),
-                //         characterHalfExtents + new Vector3(forwardMargin, forwardMargin, forwardMargin),
-                //         Quaternion.identity);
-                // }
             }
 
             //Clamp the velocity
@@ -1413,7 +1306,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             //Execute the forces onto the rigidbody
             // if (isImpulsing) print("Impulsed velocity resulted in " + newVelocity);
             rb.linearVelocity = newVelocity;
-            // Debug.DrawLine(transform.position, transform.position + rb.linearVelocity * Time.fixedDeltaTime,
+            // Debug.DrawLine(rb.position, rb.position + rb.linearVelocity * Time.fixedDeltaTime,
             //     Color.green, 5);
 
 #endregion
