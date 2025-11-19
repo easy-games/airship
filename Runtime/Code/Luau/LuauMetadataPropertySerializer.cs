@@ -197,6 +197,10 @@ namespace Luau {
                 case "IntEnum": {
                     return AirshipComponentPropertyType.AirshipInt;
                 }
+                case "AirshipSerializableObject":
+                    return AirshipComponentPropertyType.AirshipClassObject;
+                case "AirshipScriptableObject":
+                    return AirshipComponentPropertyType.AirshipScriptableObject;
                 case "AirshipBehaviour": {
                     return AirshipComponentPropertyType.AirshipComponent;
                 }

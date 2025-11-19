@@ -21,5 +21,6 @@ namespace Code.Luau.LuauAssembly {
         POD_AIRSHIP_COMPONENT = 17,
         POD_BUFFER = 18,
         POD_RECT = 19,
+        POD_AIRSHIP_SCRIPTABLE_OBJECT = 20,
     };
 }

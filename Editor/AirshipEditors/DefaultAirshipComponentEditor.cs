@@ -13,3 +13,19 @@ public class DefaultAirshipComponentEditor : AirshipEditor {
         DrawDefaultInspector();
     }
 }
+
+/// <summary>
+/// The default editor for airship components
+/// </summary>
+public class DefaultAirshipScriptableObjectEditor : AirshipEditor {
+    public override void OnInspectorGUI() {
+        DrawDefaultProperties();
+    }
+}
+
+public class DefaultAirshipSerializableObjectEditor : AirshipEditor {
+    public override void OnInspectorGUI() {
+        EditorGUILayout.HelpBox("Serializable Class Objects are not yet supported at Runtime", MessageType.Error);
+        DrawDefaultProperties();
+    }
+}

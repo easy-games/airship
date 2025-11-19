@@ -20,12 +20,10 @@ namespace Luau {
         /// <summary>
         /// An AirshipScriptableObject class
         /// </summary>
-        [Obsolete] // not yet impl
         AirshipScriptableObject,
         /// <summary>
         /// A class that is @Serializable()
         /// </summary>
-        [Obsolete] // not yet impl
         SerializableClass,
     }
     
@@ -90,7 +88,12 @@ namespace Luau {
 
         internal AirshipType(AirshipBehaviourMeta meta) {
             Name = meta.className;
-            DeclarationType = meta.component ? AirshipDeclarationType.AirshipBehaviour : AirshipDeclarationType.Unknown;
+            DeclarationType = meta.type switch {
+                AirshipBehaviourMetaType.AirshipBehaviour => AirshipDeclarationType.AirshipBehaviour,
+                AirshipBehaviourMetaType.AirshipScriptableObject => AirshipDeclarationType.AirshipScriptableObject,
+                AirshipBehaviourMetaType.Serializable => AirshipDeclarationType.SerializableClass,
+                _ => AirshipDeclarationType.Unknown
+            };
             RuntimePath = meta.filePath;
         }
         

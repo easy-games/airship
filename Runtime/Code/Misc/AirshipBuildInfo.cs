@@ -20,21 +20,31 @@ namespace Luau {
         // ReSharper disable once CollectionNeverUpdated.Global
         // ReSharper disable once UnassignedField.Global
         public Dictionary<string, AirshipBehaviourMeta> behaviours;
+        public Dictionary<string, AirshipBehaviourMeta> scriptables;
+        public Dictionary<string, AirshipBehaviourMeta> serializables;
         public Dictionary<string, string[]> extends;
 
         private AirshipBehaviourMetaTop() { }
     }
 
+    public enum AirshipBehaviourMetaType {
+        AirshipBehaviour,
+        AirshipScriptableObject,
+        Serializable,
+    }
+    
     /// <summary>
     /// Defines each AirshipBehaviour component class.
     /// </summary>
     [Serializable]
     public class AirshipBehaviourMeta {
         public string className;
+        [Obsolete]
         public bool component;
         public string filePath;
         public List<string> extends;
-
+        public AirshipBehaviourMetaType type;
+        
         public string assetPath => "Assets/" + filePath.Replace(".lua", ".ts");
         
         public AirshipType _typeCache;
@@ -53,6 +63,9 @@ namespace Luau {
     [Serializable]
     public class AirshipBuildData {
         public List<AirshipBehaviourMeta> airshipBehaviourMetas;
+        public List<AirshipBehaviourMeta> airshipScriptableObjectMetas;
+        public List<AirshipBehaviourMeta> airshipSerializableMetas;
+        
         public List<AirshipExtendsMeta> airshipExtendsMetas;
         
         /// <summary>
@@ -70,6 +83,24 @@ namespace Luau {
                 pair.Value.className = pair.Key;
                 pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
                 airshipBehaviourMetas.Add(pair.Value);
+            }
+            
+            if (metaTop.scriptables != null) {
+                airshipScriptableObjectMetas = new List<AirshipBehaviourMeta>(metaTop.scriptables.Count);
+                foreach (var pair in metaTop.scriptables) {
+                    pair.Value.className = pair.Key;
+                    pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                    airshipScriptableObjectMetas.Add(pair.Value);
+                }
+            }
+
+            if (metaTop.serializables != null) {
+                airshipSerializableMetas = new List<AirshipBehaviourMeta>(metaTop.serializables.Count);
+                foreach (var pair in metaTop.serializables) {
+                    pair.Value.className = pair.Key;
+                    pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                    airshipSerializableMetas.Add(pair.Value);
+                }
             }
 
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
@@ -156,6 +187,14 @@ namespace Luau {
 
         private void Init() {
             foreach (var meta in data.airshipBehaviourMetas) {
+                _classes.TryAdd(meta.className, meta);
+            }
+            
+            foreach (var meta in data.airshipSerializableMetas) {
+                _classes.TryAdd(meta.className, meta);
+            }
+            
+            foreach (var meta in data.airshipScriptableObjectMetas) {
                 _classes.TryAdd(meta.className, meta);
             }
         }
@@ -337,4 +376,5 @@ namespace Luau {
             return meta.filePath;
         }
     }
+    
 }

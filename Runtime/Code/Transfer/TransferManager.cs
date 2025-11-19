@@ -29,6 +29,7 @@ public class TransferManager : Singleton<TransferManager> {
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
         AirshipBuildInfo.ResetOnLoad();
+        AirshipScriptableObjectRoot.ResetOnLoad();
 
         if (NetworkClient.isConnected || NetworkClient.isConnecting) {
             NetworkManager.singleton.StopClient();

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
@@ -31,7 +32,7 @@ public class AirshipSerializedObject {
     internal SerializedProperty serializedProperties => serializedMetadata.FindPropertyRelative("properties");
     internal SerializedProperty serializedName => serializedObject.FindProperty("name");
     internal LuauMetadata metadata { get; private set; }
-    internal AirshipEditor editor { get; private set; }
+    internal AirshipEditor editor { get; set; }
 
     public AirshipType airshipType => AirshipBuildInfo.Instance.GetTypeByName(serializedName.stringValue);
     public AirshipComponent airshipComponent => (AirshipComponent)serializedObject.targetObject;
@@ -39,6 +40,11 @@ public class AirshipSerializedObject {
     
     internal AirshipSerializedObject() {}
     public AirshipSerializedObject(AirshipComponent component) => Update(null, new SerializedObject(component), component.metadata);
+    public AirshipSerializedObject(AirshipScriptableObject scriptableObject) =>
+        Update(null, new SerializedObject(scriptableObject), scriptableObject.metadata);
+
+    public AirshipSerializedObject(AirshipSerializedLuauObject luauObject) =>
+        Update(null, new SerializedObject(luauObject), luauObject.metadata);
     
     [CanBeNull]
     internal AirshipSerializedObject prefabAsset {

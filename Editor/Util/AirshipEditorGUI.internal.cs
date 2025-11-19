@@ -9,6 +9,7 @@ using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
 using UnityEditor.Actions;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public static partial class AirshipEditorGUI {
     /// <summary>
@@ -329,6 +330,140 @@ public static partial class AirshipEditorGUI {
         }
 
         return true;
+    }
+
+    private static void AddLuauObjectToProperty(AirshipSerializedValue property, Object targetObject) {
+        var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
+        newInstance.fileRef = property.airshipType.AssetPath;
+        newInstance.type = property.airshipType.Name;
+                    
+                    
+                    
+        if (AssetDatabase.IsMainAsset(targetObject) || AssetDatabase.IsSubAsset(targetObject)) {
+            newInstance.name = property.name + ":" + GUID.Generate().ToString();
+            AssetDatabase.AddObjectToAsset(newInstance, targetObject);
+        }
+                    
+        property.objectReferenceValue = newInstance;
+        property.serializedObject.ApplyModifiedProperties();
+        property.serializedObject.serializedObject.Update();      
+    }
+
+    private static void DoAirshipSerializedClassObject(Rect? rect, GUIContent label, AirshipSerializedValue property, bool expanded = true) {
+        // AirshipSerializedLuauObject
+        DoValidateProperty(rect, property, AirshipSerializedType.SerializedClass);
+
+        if (property == null || property.editor == null) {
+            return;
+        }
+        
+        bool enabled;
+        if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
+            property.editor._foldouts.Add(property.name, expanded);
+        }
+        
+        if (rect.GetCustomRect(out var position)) {
+            // enabled = EditorGUI.BeginFoldoutHeaderGroup(position, label, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
+            // property.editor._foldouts[property.name] = enabled;
+        } else {
+            var targetObject = property.serializedObject.targetObject;
+            var isMainAsset = AssetDatabase.IsMainAsset(targetObject);
+            var isSubAsset = AssetDatabase.IsSubAsset(targetObject);
+
+            // if (property.objectReferenceValue == null) {
+            //     AddLuauObjectToProperty(property, targetObject);
+            // }
+            
+            if (property.objectReferenceValue != null && !isSubAsset) {
+                var foldoutRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                enabled = EditorGUI.Foldout(foldoutRect, enabled, label);
+                
+                if (GUI.Button(new Rect(foldoutRect) { width = 20, x = foldoutRect.xMin + foldoutRect.width - 20 }, "X")) {
+                    if (AssetDatabase.IsMainAsset(targetObject)) {
+                        AssetDatabase.RemoveObjectFromAsset(property.objectReferenceValue);
+                    }
+                
+                    property.objectReferenceValue = null;
+                }
+                
+                if (enabled) {
+                    if (property.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
+                        var refType = AirshipBuildInfo.Instance.GetTypeByPathAndName(serializedLuauObject.fileRef,
+                            serializedLuauObject.type);
+                        if (refType == null) {
+                            EditorGUILayout.HelpBox("Type non-existant", MessageType.Info);
+                        } else {
+                            var referenceMetadata = refType.GetMetadataForType();
+                            serializedLuauObject.Reconcile(referenceMetadata);
+                            
+                            Type customEditorType = null;
+                            if (serializedLuauObject.metadata != null) {
+                                customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(serializedLuauObject.metadata.name);
+                            }
+
+                            if (customEditorType != null) {
+                                var serializedObject = new SerializedObject(serializedLuauObject);
+                                var componentEditor = AirshipCustomEditors.GetEditorForClass(serializedLuauObject, customEditorType,
+                                    serializedObject);
+                                
+                                componentEditor.script = refType.Script;
+                                componentEditor.target = serializedLuauObject;
+                                componentEditor.OnInspectorGUI();
+                                serializedObject.ApplyModifiedProperties();
+                            } else {
+                                var obj = new AirshipSerializedObject(serializedLuauObject);
+                                obj.editor = property.editor;
+                            
+                                foreach (var prop in obj.GetProperties()) {
+                                    AirshipEditorGUI.PropertyField(prop);
+                                }
+                                obj.ApplyModifiedProperties();
+                            }
+                        }
+                    }
+                }
+                property.editor._foldouts[property.name] = enabled; 
+            } else if (!isSubAsset) {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PrefixLabel(label);
+                if (GUILayout.Button($"Add {ObjectNames.NicifyVariableName(property.airshipType.Name)}")) {
+                    AddLuauObjectToProperty(property, targetObject);
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+    }
+
+    private static AirshipScriptableObject DoAirshipScriptableObject(Rect? rect, GUIContent label,
+        AirshipSerializedValue property) {
+        DoValidateProperty(rect, property, AirshipSerializedType.AirshipScriptableObject);
+        if (!property.isAirshipType) return null;
+        
+        var currentValue = (AirshipScriptableObject)property.serializedObjectValue.objectReferenceValue;
+        if (property.serializedFileRef == null) return null;
+        
+        var fileRefStr = "Assets/" + property.serializedFileRef.stringValue.Replace("\\", "/");
+        var script = AirshipScript.GetBinaryFileFromPath(fileRefStr);
+        if (script == null) {
+            EditorGUILayout.HelpBox($"Cannot find script at path {property.serializedFileRef.stringValue}", MessageType.Error);
+            return null;
+        }
+        
+        AirshipScriptableObject binding;
+        if (rect.HasValue) {
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(rect.Value, label, property.serializedObject.targetObject, script, currentValue, property.serializedObjectValue);
+        } else {
+            var r = EditorGUILayout.GetControlRect(false, UnityEditor.Search.ObjectField.singleLineHeight);
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(r, label, property.serializedObject.targetObject, script, currentValue, property.serializedObjectValue);
+        }
+        
+        if (binding != currentValue) {
+            property.serializedObjectValue.objectReferenceValue = binding;
+            property.serializedModified.boolValue = true;
+        }
+
+        DoPropertyEvents(rect, property);
+        return binding;
     }
     
     private static AirshipComponent DoAirshipComponent(Rect? rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator propertyValidator = null) {

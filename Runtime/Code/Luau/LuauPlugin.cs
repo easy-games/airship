@@ -225,6 +225,32 @@ public static class LuauPlugin {
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void CreateScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.CreateScriptableObject(context, thread, unityInstanceId));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void RemoveScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.RemoveScriptableObject(context, thread, unityInstanceId));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static unsafe void InitializeScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId, Span<LuauMetadataPropertyMarshalDto> props) {
+		ThreadSafetyCheck();
+		fixed (LuauMetadataPropertyMarshalDto* ptr = &MemoryMarshal.GetReference(props)) {
+			ThrowIfNotNullPtr(LuauPluginNative.InitializeScriptableObject(context, thread, unityInstanceId, ptr, props.Length));
+		}
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void UpdateIndividualScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId, AirshipScriptableObjectUpdateType updateType) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.UpdateIndividualScriptableObject(context, thread, unityInstanceId, (int)updateType));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void RemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.RemoveAirshipComponent(context, thread, unityInstanceId, componentId));
@@ -240,6 +266,12 @@ public static class LuauPlugin {
 	public static void PushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(LuauPluginNative.PushAirshipComponent(context, thread, unityInstanceId, componentId));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void PushScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(LuauPluginNative.PushScriptableObject(context, thread, unityInstanceId));
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -24,7 +24,9 @@ public enum AirshipSerializedType {
     Vector3,
     Vector4,
     Matrix4x4,
-    Rect
+    Rect,
+    SerializedClass,
+    AirshipScriptableObject
 }
 
 public abstract class AirshipSerializedValue {
@@ -47,6 +49,8 @@ public abstract class AirshipSerializedValue {
             "Vector4" => AirshipSerializedType.Vector4,
             "Matrix4x4" => AirshipSerializedType.Matrix4x4,
             "Rect" => AirshipSerializedType.Rect,
+            "AirshipSerializableObject" => AirshipSerializedType.SerializedClass,
+            "AirshipScriptableObject" => AirshipSerializedType.AirshipScriptableObject,
             _ => AirshipSerializedType.Unknown,
         };
     }
@@ -85,7 +89,7 @@ public abstract class AirshipSerializedValue {
         }
     }
     
-    public bool isAirshipType => serializedType.stringValue == "AirshipBehaviour";
+    public bool isAirshipType => serializedType.stringValue is "AirshipBehaviour" or "AirshipSerializableObject" or "AirshipScriptableObject";
     public bool isEnum => serializedType.stringValue is "IntEnum" or "StringEnum" or "FlagEnum";
     public bool isObject => serializedType.stringValue == "object";
     public AirshipSerializedType type => GetTypeFromTypeString(serializedType.stringValue);
@@ -100,6 +104,20 @@ public abstract class AirshipSerializedValue {
     public AirshipComponentPropertyType propertyType =>
         LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(serializedType.stringValue, false);
 
+    public AirshipSerializedProperty FindAirshipPropertyRelative(string targetPropertyName) {
+        if (!isObject) return null;
+        
+        if (serializedObjectValue.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
+            var obj = new AirshipSerializedObject(serializedLuauObject);
+            return obj.FindAirshipProperty(targetPropertyName);
+        } else if (serializedObjectValue.objectReferenceValue is AirshipComponent component) {
+            var obj = new AirshipSerializedObject(component);
+            return obj.FindAirshipProperty(targetPropertyName);
+        }
+        
+        return null;
+    }
+    
     public UnityEngine.Object objectReferenceValue {
         get => isObject || isAirshipType ? serializedObjectValue.objectReferenceValue : null;
         set {
