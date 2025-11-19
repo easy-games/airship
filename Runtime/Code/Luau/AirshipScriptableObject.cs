@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 internal class AirshipScriptableObjectReconcileEventData {
     public AirshipScriptableObject ScriptableObject { get; }
@@ -34,38 +35,47 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     internal static event ReconcileAirshipScriptableObject Reconcile;
 #endif
     
-    public AirshipScript script;
+    [SerializeField] protected string _scriptPath;
+    protected string luaFilePath => _scriptPath.Replace(".ts", ".lua", StringComparison.OrdinalIgnoreCase);
+    [FormerlySerializedAs("script")] [SerializeField]
+    private AirshipScript _script;
+
+    public AirshipScript script {
+        get => _script;
+        set {
+            _script = value;
+            _scriptPath = _script.m_path;
+            context = LuauContext.Game;
+        }
+    }
+    
 #if !AIRSHIP_INTERNAL
     [HideInInspector]
 #endif
     public LuauMetadata metadata;
     public bool initialized { get; private set; }
     public int instanceId { get; private set; } = 0;
-
+    
     public static bool IsInstance(object obj) {
         return obj is AirshipScriptableObject;
     }
     
-    public static AirshipScriptableObject CreateInstance(string luaRequirePath) {
+    public new static AirshipScriptableObject CreateInstance(string luaRequirePath) {
         if (luaRequirePath == null) return null;
         AirshipScript runtimeScript;
 
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-        scriptPath = scriptPath + ".lua";
-        runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(scriptPath.ToLower());
+        luaRequirePath = luaRequirePath + ".lua";
+        runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(luaRequirePath.ToLower());
 #else
         runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + luaRequirePath + ".ts");
 #endif
-#if AIRSHIP_STAGING
-        Debug.Log($"[SO] CreateInstance at path {luaRequirePath} - {runtimeScript.m_path}");
-#endif
-        
         if (runtimeScript == null) {
             throw new ArgumentException($"{luaRequirePath} is not a valid script path", nameof(luaRequirePath));
         }
         
         var asset = ScriptableObject.CreateInstance<AirshipScriptableObject>();
-        asset.script = runtimeScript;
+        asset._script = runtimeScript;
         asset.metadata = runtimeScript.m_metadata;
         if (!asset.initialized) asset.Init();
         return asset;
@@ -74,9 +84,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     public void OnBeforeSerialize() {}
 
     public void OnAfterDeserialize() {
-        if (script == null) {
+        if (_script == null) {
             metadata = default;
-        } else if (script.m_metadata != null) {
+        } else if (_script.m_metadata != null) {
             this.ReconcileMetadata(ReconcileSource.Deserialization);
         }
     }
@@ -87,27 +97,23 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
 		// Grab the script from code.zip at runtime
-		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(LuaFilePath.ToLower());
+		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(luaFilePath.ToLower());
 		if (runtimeScript) {
-			script = runtimeScript;
+			_script = runtimeScript;
 		}
 		else {
-			var isPackage = scriptPath.StartsWith("Assets/AirshipPackage");
-			if (script == null) {
+			var isPackage = _scriptPath.StartsWith("Assets/AirshipPackage");
+			if (_script == null) {
 				var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
-				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) - {suggestion}", gameObject);
+				Debug.LogError($"Could not find compiled script from asset bundle '{_scriptPath}' for ScriptableObject {name} (Missing Script Asset) - {suggestion}", this);
 			}
 			else {
-				Debug.LogError($"Could not find compiled script in code archive '{script.m_path.ToLower()}' for GameObject {gameObject.name} (Missing Runtime Script Code)", gameObject);
+				Debug.LogError($"Could not find compiled script in code archive '{_script.m_path.ToLower()}' for ScriptableObject {name} (Missing Runtime Script Code)", this);
 			}
 			return;
 		}
 #endif
         CreateScriptableObject();
-        
-#if AIRSHIP_STAGING
-        Debug.Log($"[SO] {instanceId} was initialized");
-#endif
     }
 
     internal void Unload() {
@@ -115,29 +121,17 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         this.instanceId = 0;
         this.thread = IntPtr.Zero;
         this.context = LuauContext.Game;
-        
-#if AIRSHIP_STAGING
-        Debug.Log($"[SO] {instanceId} was unloaded");
-#endif
     }
 
     private void OnEnable() {
         if (!Application.isPlaying) initialized = false;
         if (!initialized) CreateScriptableObject();
         if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
-        
-#if AIRSHIP_STAGING
-        Debug.Log($"[SO] {instanceId} was enabled");
-#endif
     }
     
     private void OnDisable() {
         if (!initialized) return;
         if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDisabled);
-        
-#if AIRSHIP_STAGING
-        Debug.Log($"[SO] {instanceId} was disabled");
-#endif
     }
     
     private void OnDestroy() {
@@ -161,24 +155,20 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (ctx == context) {
             thread = IntPtr.Zero;
             LuauCore.onResetInstance -= OnLuauReset;
-            
-#if AIRSHIP_STAGING
-            Debug.Log($"[SO] Reset thread instance for scriptable object {instanceId}");
-#endif
         }
     }
 
     private void CreateScriptableObject() {
         if (!Application.isPlaying) return;
-        if (script == null) return;
+        if (_script == null) return;
         
-        thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.Cached, script, out var status);
+        thread = LuauScript.LoadAndExecuteScript(this, context, LuauScriptCacheMode.Cached, _script, out var status);
         if (status != 0) {
             thread = IntPtr.Zero;
             if (status == 1) {
-                Debug.LogError($"AirshipComponent constructor cannot yield: {script.m_path}");
+                Debug.LogError($"AirshipComponent constructor cannot yield: {_script.m_path}");
             } else {
-                Debug.LogError($"Component failed to load: {script.m_path}");
+                Debug.LogError($"Component failed to load: {_script.m_path}");
             }
             return;
         }
@@ -186,10 +176,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
 
-#if AIRSHIP_STAGING
-        Debug.Log($"[SO] Created scriptable object '{name}' with id {id}");
-#endif
-        
         LuauCore.onResetInstance += OnLuauReset;
         LuauPlugin.CreateScriptableObject(context, thread, id);
         AwakeScriptableObject();
@@ -199,11 +185,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     private void InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType updateType) {
         if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
-        
-#if AIRSHIP_STAGING
-        Debug.Log($"[SO] Invoked update for {instanceId} - {updateType}");
-#endif
-        
         LuauPlugin.UpdateIndividualScriptableObject(context, thread, AirshipScriptableObjectRoot.GetIdFromScriptableObject(this), updateType);
     }
     
@@ -268,8 +249,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             InitStringPtrs.Clear();
             
             InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipAwake);
-#if AIRSHIP_INTERNAL || AIRSHIP_STAGING
-            Debug.Log($"[SO] Started AirshipScriptableObject with id {id} at assetPath {script.assetPath}");
+#if AIRSHIP_INTERNAL
+            Debug.Log($"Started AirshipScriptableObject with id {id} at assetPath {script.assetPath}");
 #endif
         }
     }
@@ -285,6 +266,10 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     private void OnValidate() {
         if (Application.isPlaying) return;
         this.ReconcileMetadata(ReconcileSource.ComponentValidate);
+
+        if (_scriptPath == null && _script != null) {
+            _scriptPath = _script.m_path;
+        }
     }
 
     internal void ReconcileMetadata(ReconcileSource reconcileSource, [CanBeNull] LuauMetadata sourceMetadata = null) {
@@ -292,8 +277,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         return;
 #endif
         
-        var targetMetadata = script != null ? script.m_metadata : null;
-        if (script == null || targetMetadata == null || targetMetadata.name == "") {
+        var targetMetadata = _script != null ? _script.m_metadata : null;
+        if (_script == null || targetMetadata == null || targetMetadata.name == "") {
             return;
         }
 
