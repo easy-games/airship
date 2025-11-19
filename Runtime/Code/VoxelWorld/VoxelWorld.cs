@@ -48,7 +48,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public bool doVisuals {
         get => RunCore.IsClient()
 #if UNITY_EDITOR
-               || VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView
+               || VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView || !Application.isPlaying
 #endif
                ;
     } //Turn on for headless servers
