@@ -7,6 +7,7 @@ using UnityEngine.Pool;
 using UnityEngine.UI;
 
 namespace Nobi.UiRoundedCorners {
+	[LuauAPI]
     [ExecuteInEditMode]								//Required to check the OnEnable function
     [DisallowMultipleComponent]                     //You can only have one of these in every object.
     [RequireComponent(typeof(RectTransform))]

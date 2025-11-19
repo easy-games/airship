@@ -52,7 +52,15 @@ public class LuauHelper : Singleton<LuauHelper> {
     private void SetupUnityAPIClasses() {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         foreach (var assembly in assemblies) {
-            if (!FastStartsWith(assembly.FullName, "Airship") && !FastStartsWith(assembly.FullName, "Easy")) {
+            var validAssembly = false;
+            foreach (var refName in assembly.GetReferencedAssemblies()) {
+                if (refName.Name == "LuauAPI") {
+                    validAssembly = true;
+                    break;
+                }
+            }
+
+            if (!validAssembly) {
                 continue;
             }
 

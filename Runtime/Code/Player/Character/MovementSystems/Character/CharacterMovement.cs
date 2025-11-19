@@ -1837,7 +1837,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // TODO: why? Copied from old movement
             currentMoveSnapshot.airborneFromImpulse = true;
-            rb.MovePosition(position);
+            rb.position = position;
             SetLookVectorAndNotifyLuau(lookVector);
         }
 

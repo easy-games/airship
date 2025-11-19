@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -44,8 +45,13 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     internal const int logChunkSize = 4; // Log_2 of chunkSize, update with chunkSize (if it is a power of 2)!
 
-    [NonSerialized]
-    public bool doVisuals = true; //Turn on for headless servers
+    public bool doVisuals {
+        get => RunCore.IsClient()
+#if UNITY_EDITOR
+               || VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView || !Application.isPlaying
+#endif
+               ;
+    } //Turn on for headless servers
 
     public Vector3 focusPosition {
         get {
@@ -117,6 +123,10 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
     //[HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
     //[HideInInspector][NonSerialized] public List<WorldSaveFile.WorldPosition> worldPositions = new();
+
+    // Tracks which chunks are currently being processed for mesh generation.  HashSet will need to be updated
+    // if we need to add another code path that sets a chunk as processing or nulls it.
+    private HashSet<Vector3Int> processingMeshChunks = new();
 
     //Detail meshes (grass etc)
     [NonSerialized]
@@ -816,6 +826,7 @@ public partial class VoxelWorld : MonoBehaviour {
         //this.blocks.Load(this.GetBlockDefinesContents());
 
         chunks.Clear();
+        ClearProcessingMeshChunks();
 
         DeleteChildGameObjects(gameObject);
 
@@ -972,6 +983,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         PrepareVoxelWorldGameObject();
         loadingStatus = LoadingStatus.Loading;
+        ClearProcessingMeshChunks();
 
         voxelBlocks.Reload(useSimplifiedVoxels);
 
@@ -997,6 +1009,7 @@ public partial class VoxelWorld : MonoBehaviour {
         PrepareVoxelWorldGameObject();
 
         chunks.Clear();
+        ClearProcessingMeshChunks();
 
         DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
@@ -1039,6 +1052,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         DeleteChildGameObjects(gameObject);
         PrepareVoxelWorldGameObject();
+        ClearProcessingMeshChunks();
 
         voxelBlocks.Reload(useSimplifiedVoxels);
 
@@ -1052,7 +1066,6 @@ public partial class VoxelWorld : MonoBehaviour {
             _focusCamera = mainCam;
         }
 
-        doVisuals = RunCore.IsClient() || Application.isEditor;
         PrepareVoxelWorldGameObject();
     }
 
@@ -1162,9 +1175,11 @@ public partial class VoxelWorld : MonoBehaviour {
             var startTime = Time.realtimeSinceStartup;
             var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
 
-            chunksThatNeedMeshUpdates.Sort((x, y) =>
-                (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey)
-                    .magnitude));
+            if (RunCore.IsClient()) {
+                chunksThatNeedMeshUpdates.Sort((x, y) =>
+                    (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey)
+                        .magnitude));
+            }
 
             foreach (var chunk in chunksThatNeedMeshUpdates) {
                 chunk.MainthreadUpdateMesh(this);
@@ -1249,19 +1264,20 @@ public partial class VoxelWorld : MonoBehaviour {
             var focusPositionChunkKey = WorldPosToChunkKey(focusPosition);
 
             Profiler.BeginSample("Sort");
-            var chunksToKickOffNow = new Chunk[maxChunksToUpdate];
-            // Load with 8 chunks
-            for (var i = 0; i < maxChunksToUpdate && i < chunksThatNeedThreadKickoff.Count; i++) {
+            var numChunksToKickOff = Mathf.Min(maxChunksToUpdate, chunksThatNeedThreadKickoff.Count);
+            var chunksToKickOffNow = new Chunk[numChunksToKickOff];
+            for (var i = 0; i < numChunksToKickOff; i++) {
                 chunksToKickOffNow[i] = chunksThatNeedThreadKickoff[i];
             }
 
             // Loop over all chunks and keep replacing with best available chunk
             // This is random and definitely not a true sort function but should be good enough & fast
-            if (chunksThatNeedThreadKickoff.Count > maxChunksToUpdate) {
+            // (this is only useful on client where focal point matters)
+            if (RunCore.IsClient() && chunksThatNeedThreadKickoff.Count > numChunksToKickOff) {
                 var replaceIndex = 0;
                 var compareAgainstOrder =
                     GetChunkRenderOrder(chunksToKickOffNow[replaceIndex], camPos, forward, focusPositionChunkKey);
-                for (var i = maxChunksToUpdate; i < chunksThatNeedThreadKickoff.Count; i++) {
+                for (var i = numChunksToKickOff; i < chunksThatNeedThreadKickoff.Count; i++) {
                     var chunk = chunksThatNeedThreadKickoff[i];
                     var chunkOrder = GetChunkRenderOrder(chunk, camPos, forward, focusPositionChunkKey);
                     // If this chunk is earlier in order replace and continue
@@ -1276,11 +1292,7 @@ public partial class VoxelWorld : MonoBehaviour {
             Profiler.EndSample();
 
             var updatedChunks = 0;
-            foreach (var chunk in chunksThatNeedThreadKickoff) {
-                if (maxChunksToUpdate-- <= 0) {
-                    break;
-                }
-
+            foreach (var chunk in chunksToKickOffNow) {
                 var didUpdate = chunk.MainthreadUpdateMesh(this);
 
                 if (didUpdate) {
@@ -1392,15 +1404,20 @@ public partial class VoxelWorld : MonoBehaviour {
         return Vector3Int.zero;
     }
 
-    public int GetNumProcessingMeshChunks() {
-        var counter = 0;
-        foreach (var chunk in chunks) {
-            if (chunk.Value.Busy()) {
-                counter++;
-            }
-        }
+    internal void MarkChunkAsProcessing(Vector3Int chunkKey) {
+        processingMeshChunks.Add(chunkKey);
+    }
 
-        return counter;
+    internal void RemoveChunkFromProcessing(Vector3Int chunkKey) {
+        processingMeshChunks.Remove(chunkKey);
+    }
+
+    internal void ClearProcessingMeshChunks() {
+        processingMeshChunks.Clear();
+    }
+
+    public int GetNumProcessingMeshChunks() {
+        return processingMeshChunks.Count;
     }
 
     public struct Vector3IntEqualityComparer : IEqualityComparer<Vector3Int> {
