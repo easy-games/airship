@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -16,7 +17,14 @@ namespace Editor.Quality {
         [MenuItem("Airship/Quality/Config Mobile")]
 #endif
         public static void ConfigureLowQualityLevel() {
-            SwapToQualityLevel(LOW_QUALITY_NAME);
+            var index = GetOrCreateQualityLevel(LOW_QUALITY_NAME);
+            // Switch to it so QualitySettings.* edits apply to the right level
+            QualitySettings.SetQualityLevel(index, true);
+            ConfigureSupportedPlatforms(index, 
+                new []{ NamedBuildTarget.Android, NamedBuildTarget.iOS, },
+                new []{ NamedBuildTarget.Standalone }
+                );
+            
             ConfigureForLow();
             SaveChangesToQualitySettings();
         }
@@ -25,9 +33,29 @@ namespace Editor.Quality {
         [MenuItem("Airship/Quality/Config Normal")]
 #endif
         public static void ConfigureNormalQualityLevel() {
-            SwapToQualityLevel(NORMAL_QUALITY_NAME);
+            var index = GetOrCreateQualityLevel(NORMAL_QUALITY_NAME);
+            // Switch to it so QualitySettings.* edits apply to the right level
+            QualitySettings.SetQualityLevel(index, true);
+            ConfigureSupportedPlatforms(index, 
+                new []{ NamedBuildTarget.Standalone }, 
+                new []{ NamedBuildTarget.Android, NamedBuildTarget.iOS, }
+                );
+            
             ConfigureForNormal();
             SaveChangesToQualitySettings();
+        }
+
+        private static void ConfigureSupportedPlatforms(int index, NamedBuildTarget[] included, NamedBuildTarget[] excluded) {
+            foreach (var target in included) {
+                if (!QualitySettings.TryIncludePlatformAt(target.TargetName, index, out var ex)) {
+                    Debug.LogError($"Failed to configure included platforms for quality level: {ex}");
+                }
+            }
+            foreach (var target in excluded) {
+                if (!QualitySettings.TryExcludePlatformAt(target.TargetName, index, out var ex)) {
+                    Debug.LogError($"Failed to configure excluded platforms for quality level: {ex}");
+                }
+            }
         }
 
         private static void ConfigureForLow() {
@@ -88,21 +116,20 @@ namespace Editor.Quality {
             pipeline.shadowCascadeCount = 2;
             pipeline.cascade4Split = new Vector3(0.067f, 0.2f, 0.467f);
         }
-
-        private static void SwapToQualityLevel(string name) {
-            int index = GetQualityIndex(name);
+        
+        /// <summary>
+        /// Returns the index of the quality level with given name. Will create a new quality level if none
+        /// exist with the name.
+        /// </summary>
+        private static int GetOrCreateQualityLevel(string name) {
+            var index = GetQualityIndex(name);
             if (index < 0) {
                 if (!TryAddQualityLevel(name, out index)) {
-                    Debug.LogError("Failed to add Mobile quality level. See console for details.");
-                    return;
+                    throw new Exception("Failed to create quality level.");
                 }
                 Debug.Log($"Created quality level '{name}' at index {index}.");
-            } else {
-                Debug.Log($"Found existing quality level '{name}' at index {index}.");
             }
-
-            // Switch to it so QualitySettings.* edits apply to the right level
-            QualitySettings.SetQualityLevel(index, true);
+            return index;
         }
 
         private static void SaveChangesToQualitySettings() {

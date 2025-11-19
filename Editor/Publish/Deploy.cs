@@ -51,21 +51,7 @@ public class Deploy {
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new();
 
-#if UNITY_EDITOR_OSX
-		platforms.Add(AirshipPlatform.Windows);
-		platforms.Add(AirshipPlatform.Mac);
-#else
-		platforms.Add(AirshipPlatform.Windows);
-		platforms.Add(AirshipPlatform.Mac);
-#endif
-
-		var gameConfig = GameConfig.Load();
-		if (gameConfig.supportsMobile) {
-			platforms.Add(AirshipPlatform.iOS);
-			platforms.Add(AirshipPlatform.Android);
-		}
-
-		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
+		EditorCoroutines.Execute(BuildAndDeploy());
 	}
 
 	[MenuItem("Airship/Misc/Build Game Asset Bundle")]
@@ -86,12 +72,8 @@ public class Deploy {
 	}
 
 	[MenuItem("Airship/Publish Game (No Cache)", priority = 51)]
-	public static void PublishWithoutCache()
-	{
-		// Make sure we generate and write all `NetworkPrefabCollection`s before we
-		// build the game.
-		// NetworkPrefabManager.WriteAllCollections();
-		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
+	public static void PublishWithoutCache() {
+		EditorCoroutines.Execute(BuildAndDeploy(false, false));
 	}
 
 	private static string GetDeployKey(DeployAuthType authType) {
@@ -104,6 +86,28 @@ public class Deploy {
 				return null;
 		}
 		throw new Exception($"[Airship] Unknown auth type: {authType}");
+	}
+
+	/// <summary>
+	/// BuildAndDeploy with the target platforms defined in GameConfig. Should only be used in asset deployments
+	/// (not code only).
+	/// </summary>
+	private static IEnumerator BuildAndDeploy(bool skipBuild = false, bool useCache = true, bool dontUpload = false) {
+		var platforms = new List<AirshipPlatform>();
+#if UNITY_EDITOR_OSX
+		platforms.Add(AirshipPlatform.Windows);
+		platforms.Add(AirshipPlatform.Mac);
+#else
+		platforms.Add(AirshipPlatform.Windows);
+		platforms.Add(AirshipPlatform.Mac);
+#endif
+
+		var gameConfig = GameConfig.Load();
+		if (gameConfig.supportsMobile) {
+			platforms.Add(AirshipPlatform.iOS);
+			platforms.Add(AirshipPlatform.Android);
+		}
+		return BuildAndDeploy(platforms.ToArray(), skipBuild, useCache, dontUpload);
 	}
 
 	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true, bool dontUpload = false) {
@@ -345,6 +349,9 @@ public class Deploy {
 			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
 			if (!success) {
 				Debug.Log("Cancelled publish.");
+				
+				// Switch back to starting build target
+				EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 				yield break;
 			}
 
