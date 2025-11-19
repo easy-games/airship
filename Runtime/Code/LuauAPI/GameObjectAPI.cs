@@ -350,13 +350,18 @@ public class GameObjectAPI : BaseLuaAPIClass {
             var gameObject = (GameObject)targetObject;
             
             Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
-            if (objectType == null)
-            {
+            if (objectType == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInChildren component type not found: " + typeName + " (consider registering it?)");
                 return 0;
             }
-            var results = gameObject.GetComponentsInChildren(objectType);
+
+            var includeInactive = false;
+            if (numParameters >= 2) {
+                includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out _);
+            }
+            
+            var results = gameObject.GetComponentsInChildren(objectType, includeInactive);
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
@@ -380,7 +385,13 @@ public class GameObjectAPI : BaseLuaAPIClass {
                 Debug.LogError("Error: GetComponentsInParent component type not found: " + typeName + " (consider registering it?)");
                 return 0;
             }
-            var results = gameObject.GetComponentsInParent(objectType);
+            
+            var includeInactive = false;
+            if (numParameters >= 2) {
+                includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes, out _);
+            }
+            
+            var results = gameObject.GetComponentsInParent(objectType, includeInactive);
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
