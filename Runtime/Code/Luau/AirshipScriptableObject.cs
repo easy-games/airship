@@ -284,7 +284,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
         metadata.name = targetMetadata.name;
         
+#if UNITY_EDITOR
         var eventData = new AirshipScriptableObjectReconcileEventData(this, reconcileSource);
         Reconcile?.Invoke(eventData);
+#endif
     }
 }
