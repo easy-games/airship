@@ -8,6 +8,17 @@ namespace Luau {
         
         private static readonly Dictionary<AirshipScriptableObject, int> ScriptableObjectToId = new();
         private static readonly Dictionary<int, AirshipScriptableObject> IdToScriptableObject = new();
+
+        public static void DebugCmd() {
+            Debug.Log($"== Loaded Scriptable Objects ({IdToScriptableObject.Count}) ==");
+            foreach (var (id, so) in IdToScriptableObject) {
+                if (so != null) {
+                    Debug.Log($"\t{id}\t{so.name}");
+                } else {
+                    Debug.Log($"\t{id}\t(null reference)");
+                }
+            }
+        }
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void ResetOnLoad() {
