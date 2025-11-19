@@ -56,6 +56,10 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 #else
         runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + luaRequirePath + ".ts");
 #endif
+#if AIRSHIP_STAGING
+        Debug.Log($"[SO] CreateInstance at path {luaRequirePath} - {runtimeScript.m_path}");
+#endif
+        
         if (runtimeScript == null) {
             throw new ArgumentException($"{luaRequirePath} is not a valid script path", nameof(luaRequirePath));
         }
@@ -100,6 +104,10 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 		}
 #endif
         CreateScriptableObject();
+        
+#if AIRSHIP_STAGING
+        Debug.Log($"[SO] {instanceId} was initialized");
+#endif
     }
 
     internal void Unload() {
@@ -107,17 +115,29 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         this.instanceId = 0;
         this.thread = IntPtr.Zero;
         this.context = LuauContext.Game;
+        
+#if AIRSHIP_STAGING
+        Debug.Log($"[SO] {instanceId} was unloaded");
+#endif
     }
 
     private void OnEnable() {
         if (!Application.isPlaying) initialized = false;
         if (!initialized) CreateScriptableObject();
         if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
+        
+#if AIRSHIP_STAGING
+        Debug.Log($"[SO] {instanceId} was enabled");
+#endif
     }
     
     private void OnDisable() {
         if (!initialized) return;
         if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDisabled);
+        
+#if AIRSHIP_STAGING
+        Debug.Log($"[SO] {instanceId} was disabled");
+#endif
     }
     
     private void OnDestroy() {
@@ -141,6 +161,10 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (ctx == context) {
             thread = IntPtr.Zero;
             LuauCore.onResetInstance -= OnLuauReset;
+            
+#if AIRSHIP_STAGING
+            Debug.Log($"[SO] Reset thread instance for scriptable object {instanceId}");
+#endif
         }
     }
 
@@ -162,6 +186,10 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
 
+#if AIRSHIP_STAGING
+        Debug.Log($"[SO] Created scriptable object '{name}' with id {id}");
+#endif
+        
         LuauCore.onResetInstance += OnLuauReset;
         LuauPlugin.CreateScriptableObject(context, thread, id);
         AwakeScriptableObject();
@@ -171,6 +199,11 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     private void InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType updateType) {
         if (thread == IntPtr.Zero || !LuauCore.IsReady) return;
+        
+#if AIRSHIP_STAGING
+        Debug.Log($"[SO] Invoked update for {instanceId} - {updateType}");
+#endif
+        
         LuauPlugin.UpdateIndividualScriptableObject(context, thread, AirshipScriptableObjectRoot.GetIdFromScriptableObject(this), updateType);
     }
     
@@ -235,8 +268,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             InitStringPtrs.Clear();
             
             InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipAwake);
-#if AIRSHIP_INTERNAL
-            Debug.Log($"Started AirshipScriptableObject with id {id} at assetPath {script.assetPath}");
+#if AIRSHIP_INTERNAL || AIRSHIP_STAGING
+            Debug.Log($"[SO] Started AirshipScriptableObject with id {id} at assetPath {script.assetPath}");
 #endif
         }
     }
