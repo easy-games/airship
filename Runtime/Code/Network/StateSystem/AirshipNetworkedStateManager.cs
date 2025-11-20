@@ -256,8 +256,7 @@ namespace Code.Network.StateSystem
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
                     var commands =
-                        this.inputHistory.GetAllAfter((int)Math.Max(0,
-                            clientLastResentLocalTick)); // Send all inputs that haven't been sent as well as once that have been sent only once
+                        this.inputHistory.GetAllAfter((int)Math.Max(0,clientLastResentLocalTick)); // Send all inputs that haven't been sent as well as ones that have been sent only once
                     if (commands.Length > 0) {
                         this.clientLastResentLocalTick = this.clientLastSentLocalTick; // Store the last tick that was resent
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1]; // Store which tick was sent
