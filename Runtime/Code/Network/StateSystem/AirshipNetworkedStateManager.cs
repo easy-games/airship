@@ -54,8 +54,10 @@ namespace Code.Network.StateSystem
 
         private double lastServerSend = 0;
 
-        // The local time contained in the last data sent. This is used to know which data we have already sent to the server
+        // The local tick of the most recent data that was sent to the server.
         private int clientLastSentLocalTick = 0;
+        // The local tick of the last data that was sent the the server a second time.
+        private int clientLastResentLocalTick = 0;
 
         // Server processing for commands
         private Input lastProcessedCommand;
@@ -253,10 +255,10 @@ namespace Code.Network.StateSystem
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
                     var commands =
-                        this.inputHistory.GetAllAfter((int)Math.Max(0,
-                            (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime))));
+                        this.inputHistory.GetAllAfter((int)Math.Max(0,clientLastResentLocalTick)); // Send all inputs that haven't been sent as well as ones that have been sent only once
                     if (commands.Length > 0) {
-                        this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
+                        this.clientLastResentLocalTick = this.clientLastSentLocalTick; // Store the last tick that was resent
+                        this.clientLastSentLocalTick = this.inputHistory.Keys[^1]; // Store which tick was sent
                         this.SendClientInputToServer(commands);
                     }
                     
@@ -271,10 +273,9 @@ namespace Code.Network.StateSystem
                 // We are an authoritative client and should send our latest state
                 if (isClient && isOwned && !serverAuth) {
                     if (this.stateHistory.Keys.Count == 0) return;
-                    var states = this.stateHistory.GetAllAfter((int)Math.Max(0, (this.clientLastSentLocalTick -
-                                                                      (NetworkClient.sendInterval /
-                                                                       Time.fixedUnscaledDeltaTime))));
+                    var states = this.stateHistory.GetAllAfter((int)Math.Max(0, clientLastResentLocalTick));
                     if (states.Length > 0) {
+                        this.clientLastResentLocalTick = this.clientLastSentLocalTick;
                         this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
                     }
 
