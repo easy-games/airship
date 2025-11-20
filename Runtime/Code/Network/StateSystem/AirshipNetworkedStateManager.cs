@@ -351,7 +351,7 @@ namespace Code.Network.StateSystem
             // We check this in Update so that we have finished processing all required fixedUpdates before checking
             // if we are behind. Next time fixed update runs, we will process the additional amount we need to catch up.
             if (isServer && serverAuth) {
-                if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value) {
+                if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value && this.serverCommandBufferAvgSize.Value > this.serverCommandBufferTargetSize.Value) {
                     serverCommandCatchUpRequired = serverCommandBuffer.Count - (int) Math.Round(this.serverCommandBufferTargetSize.Value);
                     print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
                 } else {
@@ -567,6 +567,10 @@ namespace Code.Network.StateSystem
                 this.stateSystem.Tick(null, tick, time, false);
                 return;
             } else {
+                // Start processing commands from the beginning of the buffer after waiting
+                if (this.serverCommandBuffer.Count > 0) {
+                    this.serverLastProcessedCommandNumber = this.serverCommandBuffer.Values[0].commandNumber - 1;
+                }
                 this.serverCommandBufferWait = false;
             }
             
@@ -634,9 +638,10 @@ namespace Code.Network.StateSystem
 
                 if (commandsProcessed > 1) {
                     serverCommandCatchUpRequired--;
+                    print($"Processed additional command for catchup. {serverCommandCatchUpRequired} more required.");
                 }
                 
-            } while (commandsProcessed < 1 + this.maxServerCommandCatchup && serverCommandCatchUpRequired > 0);
+            } while (commandsProcessed < 1 + (this.serverCommandBufferTargetSize.Value / 2) && serverCommandCatchUpRequired > 0);
             // We add 1 to maxServerCommandCatchup because we always want to process at least 1 command per fixed update.
 
             // if (commandsProcessed > 1)
