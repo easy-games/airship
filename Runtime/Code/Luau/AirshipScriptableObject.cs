@@ -68,6 +68,12 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         return obj is AirshipScriptableObject;
     }
     
+    /// <summary>
+    /// Creates an instance of the given AirshipScriptableObject at the provided script path
+    /// </summary>
+    /// <param name="scriptPath">The script path, e.g. Assets/ScriptableObjects/MyScriptableObject.ts</param>
+    /// <returns>An AirshipScriptableObject of the given script type</returns>
+    /// <exception cref="ArgumentException">If the script path is not pointing to a valid scriptable object</exception>
     public new static AirshipScriptableObject CreateInstance(string scriptPath) {
         if (scriptPath == null) return null;
 
@@ -80,12 +86,20 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         
         if (!Path.HasExtension(scriptPath)) scriptPath += ".lua";
         var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(scriptPath.ToLower());
-#else
-        var runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + scriptPath + ".ts");
-#endif
+        
         if (runtimeScript == null) {
             throw new ArgumentException($"{scriptPath} is not a valid script path", nameof(scriptPath));
         }
+#else
+        if (!scriptPath.StartsWith("Assets/")) scriptPath = "Assets/" + scriptPath;
+        if (Path.GetExtension(scriptPath) != ".ts") scriptPath += ".ts";
+        
+        var runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>(scriptPath);
+        if (runtimeScript == null || runtimeScript.scriptType != AirshipScriptType.ScriptableObject) {
+            throw new ArgumentException("AirshipScriptableObject path provided is not a scriptable object class or file does not exist", nameof(scriptPath));
+        }
+#endif
+
         
         var asset = ScriptableObject.CreateInstance<AirshipScriptableObject>();
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
