@@ -354,9 +354,16 @@ namespace Code.Network.StateSystem
                 if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value && this.serverCommandBufferAvgSize.Value > this.serverCommandBufferTargetSize.Value) {
                     serverCommandCatchUpRequired = serverCommandBuffer.Count - (int) Math.Round(this.serverCommandBufferTargetSize.Value);
                     print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
+                } else if (this.serverCommandBufferAvgSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
+                    // This is a heuristic for if we are likely to have to predict more commands soon. Low buffer size means
+                    // we have less of a chance to recover dropped packets. It's probably better for us to wait for additional
+                    // inputs before we continue processing.
+                    this.serverCommandBufferWait = true;
                 } else {
                     serverCommandCatchUpRequired = 0;
                 }
+                
+                
             }
             
             // Same as above, but for client authoritative systems
@@ -562,15 +569,13 @@ namespace Code.Network.StateSystem
             }
 
             // Delay processing until we have at least one send interval worth of commands to process.
-            if (this.serverCommandBufferWait && this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value) {
+            if (this.serverCommandBufferWait && this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value || this.serverCommandBuffer.Count == 0) {
                 Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
                 this.stateSystem.Tick(null, tick, time, false);
                 return;
             } else {
                 // Start processing commands from the beginning of the buffer after waiting
-                if (this.serverCommandBuffer.Count > 0) {
-                    this.serverLastProcessedCommandNumber = this.serverCommandBuffer.Values[0].commandNumber - 1;
-                }
+                this.serverLastProcessedCommandNumber = this.serverCommandBuffer.Values[0].commandNumber - 1;
                 this.serverCommandBufferWait = false;
             }
             
@@ -606,12 +611,6 @@ namespace Code.Network.StateSystem
                     command.commandNumber = expectedNextCommandNumber;
                     this.serverPredictedCommandCount++;
                     print("Reprocessing last command");
-                    // This is a heuristic for if we are likely to have to predict more commands soon. Low buffer size means
-                    // we have less of a chance to recover dropped packets. It's probably better for us to wait for additional
-                    // inputs before we continue processing.
-                    if (this.serverCommandBufferAvgSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
-                        this.serverCommandBufferWait = true;
-                    }
                 }
                 // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer.
                 // this means we've completely run out of inputs and we should wait for more.
