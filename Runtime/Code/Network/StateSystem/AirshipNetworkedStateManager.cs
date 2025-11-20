@@ -56,6 +56,7 @@ namespace Code.Network.StateSystem
 
         // The local time contained in the last data sent. This is used to know which data we have already sent to the server
         private int clientLastSentLocalTick = 0;
+        private int clientLastSentLocalTick2 = 0;
 
         // Server processing for commands
         private Input lastProcessedCommand;
@@ -74,6 +75,7 @@ namespace Code.Network.StateSystem
         // How many commands we should generally have in the command buffer
         private int serverCommandCatchUpRequired = 0;
         private ExponentialMovingAverage serverCommandBufferTargetSize;
+        private ExponentialMovingAverage serverCommandBufferCurrentSize;
 
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
@@ -204,6 +206,7 @@ namespace Code.Network.StateSystem
             // This value is refreshed in auth server tick
             this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize = new ExponentialMovingAverage(NetworkServer.sendRate);
+            this.serverCommandBufferCurrentSize = new ExponentialMovingAverage(NetworkServer.sendRate);
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -253,8 +256,9 @@ namespace Code.Network.StateSystem
                     // it has them already.
                     var commands =
                         this.inputHistory.GetAllAfter((int)Math.Max(0,
-                            (clientLastSentLocalTick - (NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime))));
+                            clientLastSentLocalTick2));
                     if (commands.Length > 0) {
+                        this.clientLastSentLocalTick2 = this.clientLastSentLocalTick;
                         this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
                         this.SendClientInputToServer(commands);
                     }
@@ -541,7 +545,8 @@ namespace Code.Network.StateSystem
             // We must recalculate target size if the timescale has changed.
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             // Optimal max is when we will start processing extra commands.
-            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value}");
+            this.serverCommandBufferCurrentSize.Add(this.serverCommandBuffer.Count);
+            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferCurrentSize.Value}");
 
             // If we don't allow command catchup, drop commands to get to the target buffer size.
             if (this.maxServerCommandCatchup == 0)
@@ -598,6 +603,9 @@ namespace Code.Network.StateSystem
                     command.commandNumber = expectedNextCommandNumber;
                     this.serverPredictedCommandCount++;
                     print("Reprocessing last command");
+                    if (this.serverCommandBufferCurrentSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
+                        this.serverCommandBufferWait = true;
+                    }
                 }
                 // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer,
                 // advance so the associated command's tick result will be used to match up with state. The command that should have been used
