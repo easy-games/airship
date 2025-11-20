@@ -210,7 +210,7 @@ namespace Code.Network.Simulation
          */
         public T[] GetAllAfter(int tick)
         {
-            if (this.history.Keys.Count == 0 || tick > this.history.Keys[^1])
+            if (this.history.Keys.Count == 0 || tick >= this.history.Keys[^1])
             {
                 return new T[] {};
             }
@@ -219,7 +219,7 @@ namespace Code.Network.Simulation
             // Iterate in reverse since our return values will likely include the end
             for (var i = this.history.Count - 1; i >= 0; i--)
             {
-                if (this.history.Keys[i] < tick)
+                if (this.history.Keys[i] <= tick)
                 {
                     after.Reverse();
                     return after.ToArray();
