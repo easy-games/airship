@@ -25,6 +25,14 @@ internal delegate void ReconcileAirshipScriptableObject(AirshipScriptableObjectR
 
 [LuauAPI(LuauContext.Protected, ContextOverrideMask = (int) LuauContext.Game, ContextOverrideList = new []{ "CreateInstance", "IsInstance" })]
 public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackReceiver, IAirshipRuntimeReferenceDependency {
+    private class CreateInstanceData {
+        public string requirePath { get; set; }
+        public AirshipScript runtimeScript { get; set; }
+        public LuauMetadata metadata { get; set; }
+    }
+
+    private CreateInstanceData _createInstanceData;
+    
     private static readonly List<GCHandle> InitGcHandles = new();
     private static readonly List<IntPtr> InitStringPtrs = new();
     
@@ -60,23 +68,37 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         return obj is AirshipScriptableObject;
     }
     
-    public new static AirshipScriptableObject CreateInstance(string luaRequirePath) {
-        if (luaRequirePath == null) return null;
-        AirshipScript runtimeScript;
+    public new static AirshipScriptableObject CreateInstance(string scriptPath) {
+        if (scriptPath == null) return null;
 
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-        luaRequirePath = luaRequirePath + ".lua";
-        runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(luaRequirePath.ToLower());
+        if (scriptPath.EndsWith(".ts")) scriptPath = Path.ChangeExtension(scriptPath, null);
+        
+        if (!scriptPath.StartsWith("Assets")) {
+            scriptPath = "Assets/" + scriptPath;
+        }
+        
+        if (!Path.HasExtension(scriptPath)) scriptPath += ".lua";
+        var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(scriptPath.ToLower());
 #else
-        runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + luaRequirePath + ".ts");
+        var runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + scriptPath + ".ts");
 #endif
         if (runtimeScript == null) {
-            throw new ArgumentException($"{luaRequirePath} is not a valid script path", nameof(luaRequirePath));
+            throw new ArgumentException($"{scriptPath} is not a valid script path", nameof(scriptPath));
         }
         
         var asset = ScriptableObject.CreateInstance<AirshipScriptableObject>();
-        asset._script = runtimeScript;
-        asset.metadata = runtimeScript.m_metadata;
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+        asset._createInstanceData = new CreateInstanceData() {
+            requirePath = scriptPath,
+            metadata = new LuauMetadata(),
+            runtimeScript = runtimeScript,
+        };
+#else
+        asset.script = runtimeScript;
+        asset.metadata = new LuauMetadata();  
+#endif
+
         if (!asset.initialized) asset.Init();
         return asset;
     }
@@ -92,26 +114,32 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
     
     public void Init() {
+        if (script == null && _createInstanceData == null) return; // no point if no script or init data
         if (!Application.isPlaying) return;
         if (initialized) return;
         
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-		// Grab the script from code.zip at runtime
-		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(luaFilePath.ToLower());
-		if (runtimeScript) {
-			_script = runtimeScript;
-		}
-		else {
-			var isPackage = _scriptPath.StartsWith("Assets/AirshipPackage");
-			if (_script == null) {
-				var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
-				Debug.LogError($"Could not find compiled script from asset bundle '{_scriptPath}' for ScriptableObject {name} (Missing Script Asset) - {suggestion}", this);
-			}
-			else {
-				Debug.LogError($"Could not find compiled script in code archive '{_script.m_path.ToLower()}' for ScriptableObject {name} (Missing Runtime Script Code)", this);
-			}
-			return;
-		}
+        if (_createInstanceData != null) {
+            script = _createInstanceData.runtimeScript;
+            metadata = _createInstanceData.metadata;
+        } else {
+            // Grab the script from code.zip at runtime
+            var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(luaFilePath.ToLower());
+            if (runtimeScript) {
+                script = runtimeScript;
+            }
+            else {
+                var isPackage = _scriptPath.StartsWith("Assets/AirshipPackage");
+                if (_script == null) {
+                    var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
+                    Debug.LogError($"Could not find compiled script from asset bundle '{_scriptPath}' for ScriptableObject {name} (Missing Script Asset) - {suggestion}", this);
+                }
+                else {
+                    Debug.LogError($"Could not find compiled script in code archive '{_script.m_path.ToLower()}' for ScriptableObject {name} (Missing Runtime Script Code)", this);
+                }
+                return;
+            }
+        }
 #endif
         CreateScriptableObject();
     }
