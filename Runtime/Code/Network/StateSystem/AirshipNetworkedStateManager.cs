@@ -54,9 +54,10 @@ namespace Code.Network.StateSystem
 
         private double lastServerSend = 0;
 
-        // The local time contained in the last data sent. This is used to know which data we have already sent to the server
+        // The local tick of the most recent data that was sent to the server.
         private int clientLastSentLocalTick = 0;
-        private int clientLastSentLocalTick2 = 0;
+        // The local tick of the last data that was sent the the server a second time.
+        private int clientLastResentLocalTick = 0;
 
         // Server processing for commands
         private Input lastProcessedCommand;
@@ -75,7 +76,7 @@ namespace Code.Network.StateSystem
         // How many commands we should generally have in the command buffer
         private int serverCommandCatchUpRequired = 0;
         private ExponentialMovingAverage serverCommandBufferTargetSize;
-        private ExponentialMovingAverage serverCommandBufferCurrentSize;
+        private ExponentialMovingAverage serverCommandBufferAvgSize;
 
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
@@ -206,7 +207,7 @@ namespace Code.Network.StateSystem
             // This value is refreshed in auth server tick
             this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferTargetSize = new ExponentialMovingAverage(NetworkServer.sendRate);
-            this.serverCommandBufferCurrentSize = new ExponentialMovingAverage(NetworkServer.sendRate);
+            this.serverCommandBufferAvgSize = new ExponentialMovingAverage(NetworkServer.sendRate);
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -256,10 +257,10 @@ namespace Code.Network.StateSystem
                     // it has them already.
                     var commands =
                         this.inputHistory.GetAllAfter((int)Math.Max(0,
-                            clientLastSentLocalTick2));
+                            clientLastResentLocalTick)); // Send all inputs that haven't been sent as well as once that have been sent only once
                     if (commands.Length > 0) {
-                        this.clientLastSentLocalTick2 = this.clientLastSentLocalTick;
-                        this.clientLastSentLocalTick = this.inputHistory.Keys[^1];
+                        this.clientLastResentLocalTick = this.clientLastSentLocalTick; // Store the last tick that was resent
+                        this.clientLastSentLocalTick = this.inputHistory.Keys[^1]; // Store which tick was sent
                         this.SendClientInputToServer(commands);
                     }
                     
@@ -274,10 +275,9 @@ namespace Code.Network.StateSystem
                 // We are an authoritative client and should send our latest state
                 if (isClient && isOwned && !serverAuth) {
                     if (this.stateHistory.Keys.Count == 0) return;
-                    var states = this.stateHistory.GetAllAfter((int)Math.Max(0, (this.clientLastSentLocalTick -
-                                                                      (NetworkClient.sendInterval /
-                                                                       Time.fixedUnscaledDeltaTime))));
+                    var states = this.stateHistory.GetAllAfter((int)Math.Max(0, clientLastResentLocalTick));
                     if (states.Length > 0) {
+                        this.clientLastResentLocalTick = this.clientLastSentLocalTick;
                         this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
                     }
 
@@ -545,8 +545,8 @@ namespace Code.Network.StateSystem
             // We must recalculate target size if the timescale has changed.
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             // Optimal max is when we will start processing extra commands.
-            this.serverCommandBufferCurrentSize.Add(this.serverCommandBuffer.Count);
-            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferCurrentSize.Value}");
+            this.serverCommandBufferAvgSize.Add(this.serverCommandBuffer.Count);
+            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
 
             // If we don't allow command catchup, drop commands to get to the target buffer size.
             if (this.maxServerCommandCatchup == 0)
@@ -562,7 +562,6 @@ namespace Code.Network.StateSystem
             }
 
             // Delay processing until we have at least one send interval worth of commands to process.
-            // || this.serverCommandBuffer.Count < Math.Ceiling(NetworkClient.sendInterval / Time.fixedUnscaledDeltaTime)
             if (this.serverCommandBufferWait && this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value) {
                 Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
                 this.stateSystem.Tick(null, tick, time, false);
@@ -593,7 +592,7 @@ namespace Code.Network.StateSystem
                     this.serverPredictedCommandCount = 0;
                     this.lastProcessedCommand = command;
                     this.serverLastProcessedCommandNumber = command.commandNumber; 
-                // We have an out of order command, or no command and we can predict the next command in sequency
+                // We have an out of order command, or no command and we can predict the next command in sequence
                 } else if ((command != null && command.commandNumber != expectedNextCommandNumber ||
                             this.serverCommandBuffer.Count == 0) && this.lastProcessedCommand != null && canPredictCommand) {
                     command = this.lastProcessedCommand;
@@ -603,13 +602,15 @@ namespace Code.Network.StateSystem
                     command.commandNumber = expectedNextCommandNumber;
                     this.serverPredictedCommandCount++;
                     print("Reprocessing last command");
-                    if (this.serverCommandBufferCurrentSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
+                    // This is a heuristic for if we are likely to have to predict more commands soon. Low buffer size means
+                    // we have less of a chance to recover dropped packets. It's probably better for us to wait for additional
+                    // inputs before we continue processing.
+                    if (this.serverCommandBufferAvgSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
                         this.serverCommandBufferWait = true;
                     }
                 }
-                // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer,
-                // advance so the associated command's tick result will be used to match up with state. The command that should have been used
-                // here will be ignored when it arrives (if it ever does)
+                // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer.
+                // this means we've completely run out of inputs and we should wait for more.
                 else {
                     print("No command available for ticking");
                     // this.serverLastProcessedCommandNumber += 1;
@@ -622,7 +623,14 @@ namespace Code.Network.StateSystem
                 if (command != null) {
                     command.tick = tick; // Correct tick to local timeline for ticking on the server.
                 }
-                this.stateSystem.Tick(command, tick, time, false);
+
+                // We cannot tick more than once per tick with our current implementation of character movement. A physics.simulate
+                // is required to apply the calculated velocities and move the character. We could work around this by pausing all other
+                // characters and then simulating forward once, but it would add a lot of complexity. Instead we just drop the command and
+                // don't process it at all.
+                if (commandsProcessed == 1) {
+                    this.stateSystem.Tick(command, tick, time, false);
+                }
 
                 if (commandsProcessed > 1) {
                     serverCommandCatchUpRequired--;
