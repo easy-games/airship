@@ -65,7 +65,7 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
     private void OnEnable() {
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         if (binding.script != null && binding.metadata != null) {
-            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name, AirshipDeclarationType.AirshipScriptableObject);
             
             if (customEditorType != null && AirshipCustomEditors.TryGetEditorForScriptableObject(binding, customEditorType, out var editor)) {
                 editor.OnEnable();
@@ -77,7 +77,7 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
     private void OnDisable() {
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         if (binding.script != null && binding.metadata != null) {
-            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            var customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name, AirshipDeclarationType.AirshipScriptableObject);
             if (customEditorType != null) {
                 var editor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
                 editor.OnDisable();
@@ -96,7 +96,7 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         
         Type customEditorType = null;
         if (binding.script != null && binding.metadata != null) {
-            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name);
+            customEditorType = AirshipCustomEditors.GetEditorTypeForTypeName(binding.metadata.name, AirshipDeclarationType.AirshipScriptableObject);
         }
 
         var script = binding.script;

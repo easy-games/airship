@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using HandlebarsDotNet.PathStructure;
 using TypescriptAst;
 using Luau;
 using UnityEditor;
@@ -202,17 +203,20 @@ public static class AirshipCustomEditors {
         return instances;
     }
     
-    internal static Type GetEditorTypeForTypeName(string typeName) {
+    internal static Type GetEditorTypeForTypeName(string typeName, AirshipDeclarationType? airshipDeclarationType = null) {
         if (!UseNewInspector) return null;
+      
         
         var pathType = AirshipBuildInfo.Instance.GetTypeByName(typeName);
         if (pathType == null) return null;
+
+        airshipDeclarationType ??= pathType.DeclarationType;
         
         if (airshipTypeToCustomEditor.TryGetValue(pathType, out var editorType)) {
             return editorType.EditorType;
         }
         
-        return pathType.DeclarationType switch {
+        return airshipDeclarationType switch {
             AirshipDeclarationType.Unknown => null,
             AirshipDeclarationType.AirshipBehaviour => typeof(DefaultAirshipComponentEditor),
             AirshipDeclarationType.Enum => null,

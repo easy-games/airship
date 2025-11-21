@@ -61,8 +61,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     [HideInInspector]
 #endif
     public LuauMetadata metadata;
-    public bool initialized { get; private set; }
-    public int instanceId { get; private set; } = 0;
+    public bool isReferenced => AirshipScriptableObjectRoot.ContainsScriptableObject(this);
+    public bool initialized => isReferenced && instanceId != 0;
+    public int instanceId { get; private set; }
     
     public static bool IsInstance(object obj) {
         return obj is AirshipScriptableObject;
@@ -131,6 +132,12 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (script == null && _createInstanceData == null) return; // no point if no script or init data
         if (!Application.isPlaying) return;
         if (initialized) return;
+        if (isReferenced) {
+            var id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
+            instanceId = id;
+            Debug.Log($"Already referenced at id {id}");
+            return;
+        }
         
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
         if (_createInstanceData != null) {
@@ -159,14 +166,12 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     }
 
     internal void Unload() {
-        this.initialized = false;
-        this.instanceId = 0;
-        this.thread = IntPtr.Zero;
-        this.context = LuauContext.Game;
+        instanceId = 0;
+        thread = IntPtr.Zero;
+        context = LuauContext.Game;
     }
 
     private void OnEnable() {
-        if (!Application.isPlaying) initialized = false;
         if (!initialized) CreateScriptableObject();
         if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
     }
@@ -178,19 +183,25 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     
     private void OnDestroy() {
         if (!initialized) return;
-        
+        Destroy();
+    }
+
+    internal void Destroy() {
         LuauCore.onResetInstance -= OnLuauReset;
         if (thread == IntPtr.Zero) return;
     
-        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDestroy);
-        int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
+        InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDestroy);
+        var id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
+        
         LuauPlugin.RemoveScriptableObject(context, thread, id);
         AirshipScriptableObjectRoot.CleanIdOnDestroy(this);
+        
         if (LuauState.IsContextActive(context)) {
             LuauPlugin.UnpinThread(thread);
             LuauPlugin.DestroyThread(thread);
         }
-        thread = IntPtr.Zero;
+        
+        Unload();
     }
     
     private void OnLuauReset(LuauContext ctx) {
@@ -214,14 +225,11 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             }
             return;
         }
-
         
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
-
         LuauCore.onResetInstance += OnLuauReset;
         LuauPlugin.CreateScriptableObject(context, thread, id);
         AwakeScriptableObject();
-        initialized = true;
         instanceId = id;
     }
 
@@ -239,7 +247,12 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     private void AwakeScriptableObject() {
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
 
+        Debug.Log($"[SO] Initializing Scriptable Object {id}");
         foreach (var dependency in GetDependencies()) {
+            if (dependency is AirshipScriptableObject aso) {
+                Debug.Log($"[SO] Dependency {id} depends on {aso.instanceId}");
+            }
+            
             dependency.Init();
         }
         
