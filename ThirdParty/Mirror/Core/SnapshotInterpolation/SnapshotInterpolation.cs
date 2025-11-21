@@ -276,7 +276,7 @@ namespace Mirror
                 localTimescale = Math.Clamp(Math.Max(1 + 0.5 * (drift / bufferTime), 0), 0.05f, 1.05f);
 
                 // debug logging
-                UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3} timeDiff={timeDiff}");
+                // UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3} timeDiff={timeDiff}");
             }
         }
 
