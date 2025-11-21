@@ -365,7 +365,7 @@ namespace Code.Network.StateSystem
                 if (isServer && serverAuth) {
                     if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value && this.serverCommandBufferAvgSize.Value > this.serverCommandBufferTargetSize.Value) {
                         serverCommandCatchUpRequired = (int) Math.Round(this.serverCommandBufferAvgSize.Value - this.serverCommandBufferTargetSize.Value);
-                        print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
+                        // print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
                     } else if (this.serverCommandBufferAvgSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
                         // This is a heuristic for if we are likely to have to predict more commands soon. Low buffer size means
                         // we have less of a chance to recover dropped packets. It's probably better for us to wait for additional
@@ -566,11 +566,11 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             // Optimal max is when we will start processing extra commands.
             this.serverCommandBufferAvgSize.Add(this.serverCommandBuffer.Count);
-            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
+            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
             if (this.serverCommandBufferWait && this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value || this.serverCommandBuffer.Count == 0) {
-                Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
+                // Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
                 this.stateSystem.Tick(null, tick, time, false);
                 return;
             } else {
@@ -610,12 +610,12 @@ namespace Code.Network.StateSystem
                     
                     command.commandNumber = expectedNextCommandNumber;
                     this.serverPredictedCommandCount++;
-                    print("Reprocessing last command");
+                    // print("Reprocessing last command");
                 }
                 // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer.
                 // this means we've completely run out of inputs and we should wait for more.
                 else {
-                    print("No command available for ticking");
+                    // print("No command available for ticking");
                     this.serverPredictedCommandCount = 0;
                     this.serverCommandBufferWait = true;
                 }
@@ -636,7 +636,7 @@ namespace Code.Network.StateSystem
 
                 if (commandsProcessed > 1) {
                     serverCommandCatchUpRequired--;
-                    print($"Processed additional command for catchup. {serverCommandCatchUpRequired} more required.");
+                    // print($"Processed additional command for catchup. {serverCommandCatchUpRequired} more required.");
                 }
                 
             } while (commandsProcessed < 1 + (this.serverCommandBufferTargetSize.Value / 2) && serverCommandCatchUpRequired > 0);
@@ -754,7 +754,7 @@ namespace Code.Network.StateSystem
             
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferAvgSize.Add(this.serverReceivedStateBuffer.Count);
-            print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize.Value} avg {serverCommandBufferAvgSize.Value}");
+            // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize.Value} avg {serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
             if (this.serverCommandBufferWait && this.serverReceivedStateBuffer.Count < this.serverCommandBufferTargetSize.Value || this.serverReceivedStateBuffer.Count == 0) {
