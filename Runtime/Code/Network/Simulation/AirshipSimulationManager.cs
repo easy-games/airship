@@ -217,7 +217,10 @@ namespace Code.Network.Simulation
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
                     // commandBufferTime is the additional time we queue commands locally on the server before processing them
-                    var commandBufferTime = (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f));
+                    // (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f) is an estimate of the number of commands that will be buffered
+                    // rttVariance is the additional time added to the input buffer for network jitter
+                    // Todo: double check input buffer size estimate now that input buffer is always sending 2 intervals worth per tick (can be more inputs if framerate is low)
+                    var commandBufferTime = (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f)) + entry.Key.rttVariance;
                     OnLagCompensationCheck?.Invoke(entry.Key.connectionId, previousTicks[^1], previousTimes[^1], entry.Key.rtt / 2f, entry.Key.bufferTime + commandBufferTime);
                     
                     var requests = entry.Value;
