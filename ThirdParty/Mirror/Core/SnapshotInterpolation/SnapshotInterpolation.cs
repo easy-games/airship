@@ -178,6 +178,9 @@ namespace Mirror
             // note that insert may be called twice for the same key.
             // by default, this would throw.
             // need to handle it silently.
+            // TODO: for some reason new snapshots are inserted, but this if is not running. Our timescale would be more
+            // accurate with higher interval of checks. Not sure why snapshots are being added, but not stored... Perhaps be
+            // cause we are receiving snapshots every frame an the buffer becomes too large?
             if (InsertIfNotExists(buffer, bufferLimit, snapshot))
             {
                 // dynamic buffer adjustment needs delivery interval jitter
@@ -273,7 +276,7 @@ namespace Mirror
                 localTimescale = Math.Clamp(Math.Max(1 + 0.5 * (drift / bufferTime), 0), 0.05f, 1.05f);
 
                 // debug logging
-                // UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3} timeDiff={timeDiff}");
+                UnityEngine.Debug.Log($"sendInterval={sendInterval:F3} bufferTime={bufferTime:F3} drift={drift:F3} driftEma={driftEma.Value:F3} timescale={localTimescale:F3} deliveryIntervalEma={deliveryTimeEma.Value:F3} timeDiff={timeDiff}");
             }
         }
 

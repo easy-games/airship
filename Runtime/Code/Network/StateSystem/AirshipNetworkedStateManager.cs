@@ -290,6 +290,9 @@ namespace Code.Network.StateSystem
             }
 
             // We are operating as a server
+            // TODO: I think we may be artificially delaying the server sending the latest generated snapshot. We should hopefully
+            // always be very in sync with when a new snapshot is generated on the server. Lowering framerate to tick rate seems
+            // to have made this less true...
             if (isServer &&
                 AccurateInterval.Elapsed(NetworkTime.localTime, NetworkServer.sendInterval, ref lastServerSend)) {
                 // No matter what mode the server is operating in, we send our latest state to clients.
@@ -987,10 +990,10 @@ namespace Code.Network.StateSystem
             if (!this.observerHistory.GetAround(NetworkTime.time, out State prevState, out State nextState))
             {
                 // if (clientTime < this.observerHistory.Keys[0]) return; // Our local time hasn't advanced enough to render the positions reported. No need to log debug
-                // Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering " + this.name + ". " + this.observerHistory.Keys.Count +
-                //                  " entries. First " + this.observerHistory.Keys[0] + " Last " +
-                //                  this.observerHistory.Keys[^1] + " Target " + NetworkTime.time + " Buffer is: " +  NetworkClient.bufferTime + " Estimated Latency (1 way): " +
-                //                  (NetworkTime.rtt / 2) + " TScale: " + Time.timeScale);
+                Debug.LogWarning("Frame " + Time.frameCount + " not enough state history for rendering " + this.name + ". " + this.observerHistory.Keys.Count +
+                                 " entries. First " + this.observerHistory.Keys[0] + " Last " +
+                                 this.observerHistory.Keys[^1] + " Target " + NetworkTime.time + " Buffer is: " +  NetworkClient.bufferTime + " Estimated Latency (1 way): " +
+                                 (NetworkTime.rtt / 2) + " TScale: " + Time.timeScale);
                 return;
             }
             
@@ -1105,6 +1108,7 @@ namespace Code.Network.StateSystem
             // interpolate over unscaledTime accurately. The remote timestamp is what the server was rendering
             // at that time, which may be the same tick twice (especially with modified timescales)
             if (!isOwned) {
+                print($"Frame {Time.frameCount} received state for {state.time}");
                 this.observerHistory.Set(state.time, state);
             }
              

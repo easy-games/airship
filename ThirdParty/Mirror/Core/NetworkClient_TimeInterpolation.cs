@@ -142,7 +142,7 @@ namespace Mirror
                 snapshotSettings.catchupPositiveThreshold,
                 ref deliveryTimeEma);
 
-            // Debug.Log($"inserted TimeSnapshot remote={snap.remoteTime:F2} local={snap.localTime:F2} total={snapshots.Count}");
+            Debug.Log($"inserted TimeSnapshot frame={Time.frameCount} remote={snap.remoteTime:F2} local={snap.localTime:F2} pred={localTimeline} diff={localTimeline - snap.remoteTime} total={snapshots.Count}");
         }
 
         // call this from early update, so the timeline is safe to use in update
