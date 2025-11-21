@@ -96,7 +96,6 @@ namespace Code.Player.Character.MovementSystems.Character {
         private Transform _cameraTransform;
         private CharacterRig _rig;
         private Quaternion initialHeadRotation;
-        private bool _smoothLookVector = false;
 
         /**
          * Used for calculating interp for non-authoritative clients. Set to the previous airshipTransform location
@@ -1586,33 +1585,41 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             return true;
         }
-
-        public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
-            moveDir = Vector3.ClampMagnitude(moveDir, 1);
-            var moveDirMode = (MoveDirectionMode)moveDirModeInt;
+        
+        /// <summary>
+        /// Transforms an intended relative move direction into a world space move direction based on the move direction
+        /// mode.
+        /// </summary>
+        public Vector3 TransformMoveDirection(Vector3 moveDir, int moveDirModeInt) {
+            var moveDirMode = (MoveDirectionMode) moveDirModeInt;
             switch (moveDirMode) {
                 case MoveDirectionMode.World:
-                    moveDirInput = moveDir;
-                    break;
+                    return moveDir;
                 case MoveDirectionMode.Character:
-                    moveDirInput = airshipTransform.TransformDirection(moveDir);
-                    break;
+                    return airshipTransform.TransformDirection(moveDir);
                 case MoveDirectionMode.Camera:
                     var forwardZeroY = _cameraTransform.forward;
                     forwardZeroY = new Vector3(forwardZeroY.x, 0, forwardZeroY.z).normalized;
                     var angle = Mathf.Atan2(forwardZeroY.x, forwardZeroY.z) * Mathf.Rad2Deg;
-                    moveDirInput = Quaternion.AngleAxis(angle, Vector3.up) * moveDir;
-                    break;
+                    return Quaternion.AngleAxis(angle, Vector3.up) * moveDir;
                 default:
                     Debug.LogWarning($"Unknown move direction input: {moveDirModeInt}");
-                    break;
+                    return moveDir;
             }
-
+        }
+        
+        public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch) {
+            moveDirInput = Vector3.ClampMagnitude(moveDir, 1);
+            
             crouchInput = crouch;
             sprintInput = sprinting;
             jumpInput = jump;
+        }
 
-            _smoothLookVector = moveDirMode == MoveDirectionMode.Camera;
+        // To be deleted when version is fully bumped in favor of setting without moveDirMode
+        public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, int moveDirModeInt) {
+            var adjustedMoveDir = TransformMoveDirection(moveDir, moveDirModeInt);
+            SetMoveInput(adjustedMoveDir, jump, sprinting, crouch);
         }
 
         /// <summary>
@@ -1670,7 +1677,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             // If we are the client creating input, we want to set the actual local look vector.
             // It will be moved into the state and sent to the server in the next snapshot.
             if (mode == NetworkedStateSystemMode.Input || (mode == NetworkedStateSystemMode.Authority && isClient)) {
-                if (_smoothLookVector && moveDirInput != Vector3.zero) {
+                if (moveDirInput != Vector3.zero) {
                     lookVector = Vector3.RotateTowards(
                         airshipTransform.forward,
                         moveDirInput.normalized,
