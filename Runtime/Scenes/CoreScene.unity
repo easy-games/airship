@@ -3035,7 +3035,7 @@ MonoBehaviour:
   offlineScene: 
   onlineScene: 
   offlineSceneLoadDelay: 0
-  transport: {fileID: 9206288457435645616}
+  transport: {fileID: 6429755776191137293}
   networkAddress: localhost
   maxConnections: 100
   disconnectInactiveConnections: 0
@@ -3085,7 +3085,7 @@ MonoBehaviour:
     deliveryTimeEmaDuration: 2
   evaluationMethod: 0
   evaluationInterval: 3
-  timeInterpolationGui: 1
+  timeInterpolationGui: 0
   net: {fileID: 7506870531531751248}
   serverConsole: {fileID: 1409266999}
   clientBundleLoader: {fileID: 1253642241}
