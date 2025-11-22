@@ -178,9 +178,6 @@ namespace Mirror
             // note that insert may be called twice for the same key.
             // by default, this would throw.
             // need to handle it silently.
-            // TODO: for some reason new snapshots are inserted, but this if is not running. Our timescale would be more
-            // accurate with higher interval of checks. Not sure why snapshots are being added, but not stored... Perhaps be
-            // cause we are receiving snapshots every frame an the buffer becomes too large?
             if (InsertIfNotExists(buffer, bufferLimit, snapshot))
             {
                 // dynamic buffer adjustment needs delivery interval jitter
