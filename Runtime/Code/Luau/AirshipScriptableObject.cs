@@ -61,8 +61,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     [HideInInspector]
 #endif
     public LuauMetadata metadata;
-    public bool isReferenced => AirshipScriptableObjectRoot.ContainsScriptableObject(this);
-    public bool initialized => isReferenced && instanceId != 0;
+    public bool initialized => AirshipScriptableObjectRoot.ContainsScriptableObject(this) && instanceId != 0;
     public int instanceId { get; private set; }
     
     public static bool IsInstance(object obj) {
@@ -132,12 +131,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (script == null && _createInstanceData == null) return; // no point if no script or init data
         if (!Application.isPlaying) return;
         if (initialized) return;
-        if (isReferenced) {
-            var id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
-            instanceId = id;
-            Debug.Log($"Already referenced at id {id}");
-            return;
-        }
         
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
         if (_createInstanceData != null) {

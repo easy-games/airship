@@ -141,7 +141,16 @@ public abstract class AirshipEditor : ScriptableObject {
             }
 
             if (shouldHideProperty) continue;
+            
             AirshipEditorGUI.PropertyField(property);
+            
+#if AIRSHIP_DEBUG
+            var propertyMetadata = property.scriptPropertyMetadata;
+            if (propertyMetadata.defaultValue != null) {
+                EditorGUILayout.LabelField(LuauMetadataPropertySerializer.SerializeAirshipProperty(propertyMetadata.defaultValue, propertyMetadata.ComponentType));
+            }
+            AirshipEditorGUI.HorizontalLine();
+#endif
         }
     }
 
@@ -159,20 +168,24 @@ public abstract class AirshipEditor : ScriptableObject {
 #if AIRSHIP_INTERNAL
     private void DrawInternalDebug() {
         if (Application.isPlaying) {
-            var binding = (AirshipComponent)target;
-            if (binding == null) return;
+            if (target is AirshipComponent component) {
+                AirshipEditorGUI.HorizontalLine();
+                EditorGUILayout.BeginHorizontal();
+                {
+                    EditorGUILayout.LabelField("GameObject Id", AirshipBehaviourRootV2.GetId(component.gameObject).ToString());
+                    EditorGUILayout.LabelField("Component Id", component.GetAirshipComponentId().ToString());
+                }
+                EditorGUILayout.EndHorizontal();
             
-            AirshipEditorGUI.HorizontalLine();
-            EditorGUILayout.BeginHorizontal();
-            {
-                EditorGUILayout.LabelField("GameObject Id", AirshipBehaviourRootV2.GetId(binding.gameObject).ToString());
-                EditorGUILayout.LabelField("Component Id", binding.GetAirshipComponentId().ToString());
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Context", component.context.ToString());
+                EditorGUILayout.EndHorizontal();
+            } else if (target is AirshipScriptableObject scriptableObject) {
+                if (AirshipScriptableObjectRoot.ContainsScriptableObject(scriptableObject)) {
+                    AirshipEditorGUI.HorizontalLine();
+                    EditorGUILayout.LabelField("Scriptable Id", AirshipScriptableObjectRoot.GetIdFromScriptableObject(scriptableObject).ToString());
+                }
             }
-            EditorGUILayout.EndHorizontal();
-            
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Context", binding.context.ToString());
-            EditorGUILayout.EndHorizontal();
         }
     }
 #endif

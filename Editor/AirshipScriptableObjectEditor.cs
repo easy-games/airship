@@ -131,6 +131,10 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
             componentEditor.script = binding.script;
             componentEditor.target = binding;
             componentEditor.OnInspectorGUI();
+
+            if (serializedObject.hasModifiedProperties) {
+                EditorUtility.SetDirty(binding);
+            }
             
             serializedObject.ApplyModifiedProperties();
             serializedObject.Update();

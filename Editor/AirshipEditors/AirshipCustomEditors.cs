@@ -35,7 +35,7 @@ public static class AirshipCustomEditors {
     private static Dictionary<string, Type> decoratorNameToEditorType = new();
     
     internal const string inspectorModeKey = "AirshipBetaInspectorMode";
-    internal const EditorInspectorMode DefaultInspectorMode = EditorInspectorMode.UseLegacyInspector;
+    internal const EditorInspectorMode DefaultInspectorMode = EditorInspectorMode.UseNewInspector;
     #endregion
     
     #region Properties
@@ -249,7 +249,8 @@ public static class AirshipCustomEditors {
         return editor;
     }
     
-    internal static AirshipEditor GetEditorForClass(AirshipSerializedLuauObject component, Type type, SerializedObject serializedObject) {
+#if AIRSHIPEX_CLASS_OBJECT
+    internal static AirshipEditor GetEditorForClass(AirshipSerializableClassObject component, Type type, SerializedObject serializedObject) {
         if (instanceToAirshipEditor.TryGetValue(component.GetInstanceID(), out var editor)) {
             editor.serializedObject ??= new AirshipSerializedObject();
             editor.serializedObject.Update(editor, serializedObject, component.metadata);
@@ -262,35 +263,21 @@ public static class AirshipCustomEditors {
         instanceToAirshipEditor.Add(component.GetInstanceID(), editor);
         return editor;
     }
+#endif
     
-    internal static AirshipEditor GetEditorForScriptableObject(AirshipScriptableObject component, Type type, SerializedObject serializedObject) {
-        if (instanceToAirshipEditor.TryGetValue(component.GetInstanceID(), out var editor)) {
-            editor.serializedObject ??= new AirshipSerializedObject();
-            editor.serializedObject.Update(editor, serializedObject, component.script.m_metadata);
+    internal static AirshipEditor GetEditorForScriptableObject(AirshipScriptableObject scriptableObject, Type type, SerializedObject serializedObject) {
+        if (instanceToAirshipEditor.TryGetValue(scriptableObject.GetInstanceID(), out var editor)) {
+            editor.serializedObject ??= new AirshipSerializedObject(scriptableObject);
+            editor.serializedObject.Update(editor, serializedObject, scriptableObject.script.m_metadata);
             return editor;
         }
 
         editor = (AirshipEditor) ScriptableObject.CreateInstance(type);
         editor.serializedObject ??= new AirshipSerializedObject();
-        editor.serializedObject.Update(editor, serializedObject, component.script.m_metadata);
-        instanceToAirshipEditor.Add(component.GetInstanceID(), editor);
+        editor.serializedObject.Update(editor, serializedObject, scriptableObject.script.m_metadata);
+        instanceToAirshipEditor.Add(scriptableObject.GetInstanceID(), editor);
         return editor;
     }
-    
-    internal static AirshipEditor GetEditorForScriptableClass(AirshipSerializedLuauObject component, Type type, SerializedObject serializedObject) {
-        if (instanceToAirshipEditor.TryGetValue(component.GetInstanceID(), out var editor)) {
-            editor.serializedObject ??= new AirshipSerializedObject();
-            editor.serializedObject.Update(editor, serializedObject, component.metadata);
-            return editor;
-        }
-
-        editor = (AirshipEditor) ScriptableObject.CreateInstance(type);
-        editor.serializedObject ??= new AirshipSerializedObject();
-        editor.serializedObject.Update(editor, serializedObject, component.metadata);
-        instanceToAirshipEditor.Add(component.GetInstanceID(), editor);
-        return editor;
-    }
-
 
     internal static AirshipEditor GetComponentEditorForType(AirshipType airshipType, AirshipComponent component, AirshipSerializedObject serializedObject) {
         if (airshipType.DeclarationType != AirshipDeclarationType.AirshipBehaviour) return null;
@@ -353,10 +340,6 @@ public static class AirshipCustomEditors {
             return GetComponentEditorForType(airshipType, component, serializedObject);
         }
 
-        return null;
-    }
-
-    public static AirshipEditor GetEditor(AirshipSerializedLuauObject luauObject) {
         return null;
     }
     

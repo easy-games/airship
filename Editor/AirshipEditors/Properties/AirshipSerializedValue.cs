@@ -107,10 +107,14 @@ public abstract class AirshipSerializedValue {
     public AirshipSerializedProperty FindAirshipPropertyRelative(string targetPropertyName) {
         if (!isObject) return null;
         
-        if (serializedObjectValue.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
+#if AIRSHIPEX_CLASS_OBJECT
+        if (serializedObjectValue.objectReferenceValue is AirshipSerializableClassObject serializedLuauObject) {
             var obj = new AirshipSerializedObject(serializedLuauObject);
             return obj.FindAirshipProperty(targetPropertyName);
-        } else if (serializedObjectValue.objectReferenceValue is AirshipComponent component) {
+        } 
+#endif
+        
+        if (serializedObjectValue.objectReferenceValue is AirshipComponent component) {
             var obj = new AirshipSerializedObject(component);
             return obj.FindAirshipProperty(targetPropertyName);
         }
