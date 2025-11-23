@@ -703,6 +703,9 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// Returns field value for a blittable object by directly accessing memory. Won't work for managed types.
+    /// </summary>
     private static unsafe T GetFieldValue<T>(object instance, FieldInfo fieldInfo) where T : unmanaged {
         var addr = UnsafeUtility.PinGCObjectAndGetAddress(instance, out ulong handle);
         try {
@@ -1120,6 +1123,8 @@ public partial class LuauCore : MonoBehaviour {
         if (cacheData.memberInfo is not FieldInfo fieldInfo) throw new Exception("FastGetAndWriteValueField must be called with FieldInfo.");
         
         var fieldType = cacheData.memberType;
+        // GetFieldValue only works reliably with blittable types
+        if (!UnsafeUtility.IsBlittable(cacheData.objectType)) return false;
         
         if (fieldType == intType) {
             var intValue = GetFieldValue<int>(objectReference, fieldInfo);
