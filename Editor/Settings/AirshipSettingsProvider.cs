@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Airship.Editor;
 using Code.Bootstrap;
@@ -186,7 +187,9 @@ public class AirshipSettingsProvider : SettingsProvider
 
             if (newTimeout != EditorIntegrationsConfig.instance.luauScriptTimeout) {
                 EditorIntegrationsConfig.instance.luauScriptTimeout = newTimeout;
-                LuauPlugin.SetScriptTimeoutDuration(newTimeout);
+                if (!Debugger.IsAttached) {
+                    LuauPlugin.SetScriptTimeoutDuration(newTimeout);
+                }
             }
             
             if (GUI.changed) {
@@ -252,6 +255,12 @@ public class AirshipSettingsProvider : SettingsProvider
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void OnReload() {
-        LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
+        if (Debugger.IsAttached) {
+            // If the debugger is attached, just feed in a large delay to effectively disable the timeout.
+            // In the future, we could adjust the plugin to take something like -1 to disable it.
+            LuauPlugin.SetScriptTimeoutDuration(86400);
+        } else {
+            LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
+        }
     }
 }
