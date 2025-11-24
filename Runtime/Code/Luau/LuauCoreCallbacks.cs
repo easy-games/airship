@@ -717,6 +717,12 @@ public partial class LuauCore : MonoBehaviour {
     }
     
     private static unsafe void SetFieldValue<T>(object instance, T value, FieldInfo fieldInfo) where T : unmanaged {
+        // If declaring type is not blittable just use reflection
+        if (!UnsafeUtility.IsBlittable(fieldInfo.DeclaringType)) {
+            fieldInfo.SetValue(instance, value);
+            return;
+        }
+
         if (fieldInfo.IsStatic) {
             // Not sure how to do non-alloc static field sets, so just use reflection for now
             // (these are relatively rare anyways)
