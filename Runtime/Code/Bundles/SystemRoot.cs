@@ -616,7 +616,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			print("Successfully cleared code.zip cache.");
 		}));
 
-		DevConsole.AddCommand(Command.Create("scriptables", "", "", AirshipScriptableObjectRoot.DebugCmd));
+		DevConsole.AddCommand(Command.Create("scriptables", "", "Lists all loaded ScriptableObjects in memory", AirshipScriptableObjectRoot.DebugCommand));
 
 		DevConsole.AddCommand(Command.Create<bool>(
 			"cachecode",

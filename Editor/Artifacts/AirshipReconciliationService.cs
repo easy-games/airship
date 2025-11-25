@@ -125,7 +125,6 @@ namespace Airship.Editor {
                 else {
                     if (!componentProperty.HasSameTypesAs(scriptProperty)) {
                         componentProperty.ReconcileTypesWith(scriptProperty);
-                        // componentProperty.ReconcileItemsWith(scriptProperty);
 #if AIRSHIP_DEBUG
                         modifications.Add(componentProperty.name);
 #endif
@@ -138,6 +137,7 @@ namespace Airship.Editor {
                 
                 componentProperty.fileRef = scriptProperty.fileRef;
                 componentProperty.refPath = scriptProperty.refPath;
+                componentProperty.defaultValue = scriptProperty.defaultValue;
                 
                 componentProperty.ReconcileDecorators(scriptProperty);
             }
@@ -162,13 +162,14 @@ namespace Airship.Editor {
 #if AIRSHIP_DEBUG
                     deletions.Add(componentProperty.name);
 #endif
-                    if (componentProperty.serializedObject is AirshipSerializedLuauObject serializedLuauObject) {
+                    
+#if AIRSHIPEX_CLASS_OBJECT
+                    if (componentProperty.serializedObject is AirshipSerializableClassObject serializedLuauObject) {
                         if (AssetDatabase.IsSubAsset(serializedLuauObject)) {
                             AssetDatabase.RemoveObjectFromAsset(serializedLuauObject);
                         }
-                        
-                        Debug.Log($"Should have removed serialized object ref {AssetDatabase.IsSubAsset(serializedLuauObject)}");
                     }
+#endif
                     
                     componentMetadata.properties.Remove(componentProperty);
                 }
@@ -177,7 +178,7 @@ namespace Airship.Editor {
 
 #if AIRSHIP_DEBUG
             if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
-                Debug.Log($"<color=#b878f7>[Reconcile] ReconcileComponent(com) for '{component.name}'#{component.script.m_metadata?.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
+                // Debug.Log($"<color=#b878f7>[Reconcile] ReconcileComponent(com) for '{component.name}'#{component.script.m_metadata?.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
 
                 foreach (var addition in additions) {
                     Debug.Log($"\t<color=#78f798>+ {ObjectNames.NicifyVariableName(addition)}</color>");
@@ -233,7 +234,7 @@ namespace Airship.Editor {
             
             var scriptMetadata = component.script.m_metadata;
             var componentMetadata = component.metadata;
-
+            
             ReconcileMetadata(componentMetadata, scriptMetadata);
             
             // Add required components

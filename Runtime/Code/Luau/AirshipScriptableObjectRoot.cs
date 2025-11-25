@@ -9,13 +9,17 @@ namespace Luau {
         private static readonly Dictionary<AirshipScriptableObject, int> ScriptableObjectToId = new();
         private static readonly Dictionary<int, AirshipScriptableObject> IdToScriptableObject = new();
 
-        public static void DebugCmd() {
-            Debug.Log($"== Loaded Scriptable Objects ({IdToScriptableObject.Count}) ==");
-            foreach (var (id, so) in IdToScriptableObject) {
-                if (so != null) {
-                    Debug.Log($"\t{id}\t{so.name}");
+        public static void DebugCommand() {
+            Debug.Log($"=== Scriptable Objects ({IdToScriptableObject.Count}) ===");
+            foreach (var (id, obj) in IdToScriptableObject) {
+                if (obj == null) {
+                    Debug.Log($"\tid: {id}\t**NULL REFERENCE**");
                 } else {
-                    Debug.Log($"\t{id}\t(null reference)");
+                    if (obj.script == null) {
+                        Debug.Log($"\tid: {id}\tname: '{obj.name}'\t\tscript: **NULL SCRIPT**");
+                    } else {
+                        Debug.Log($"\tid: {id}\tname: '{obj.name}'\t\tscript: '{obj.script.m_path}'");
+                    }
                 }
             }
         }
@@ -24,7 +28,7 @@ namespace Luau {
         public static void ResetOnLoad() {
 #if AIRSHIP_PLAYER
             foreach (var (_, scriptableObject) in IdToScriptableObject) {
-                Object.Destroy(scriptableObject);
+                scriptableObject.Destroy();
             }
 #endif
             
@@ -34,7 +38,9 @@ namespace Luau {
         }
         
         public static int GetIdFromScriptableObject(AirshipScriptableObject scriptableObject) {
-            if (ScriptableObjectToId.TryGetValue(scriptableObject, out var id)) return id;
+            if (ScriptableObjectToId.TryGetValue(scriptableObject, out var id)) {
+                return id;
+            }
 
             id = ++_idGen;
             ScriptableObjectToId.Add(scriptableObject, id);
@@ -50,6 +56,10 @@ namespace Luau {
             }
 
             return null;
+        }
+
+        public static bool ContainsScriptableObject(AirshipScriptableObject scriptableObject) {
+            return ScriptableObjectToId.TryGetValue(scriptableObject, out _);
         }
 
         public static void CleanIdOnDestroy(AirshipScriptableObject scriptableObject) {

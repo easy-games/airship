@@ -1,12 +1,12 @@
 ﻿#if UNITY_EDITOR
 using System;
 using UnityEditor;
-
-[CustomEditor(typeof(AirshipSerializedLuauObject))]
+#if AIRSHIPEX_CLASS_OBJECT
+[CustomEditor(typeof(AirshipSerializableClassObject))]
 public class AirshipSerializedLuauObjectEditor : UnityEditor.Editor {
     private AirshipEditor editor;
     public override void OnInspectorGUI() {
-        AirshipSerializedLuauObject binding = (AirshipSerializedLuauObject)target;
+        AirshipSerializableClassObject binding = (AirshipSerializableClassObject)target;
         
         Type customEditorType = null;
         if (binding.metadata != null) {
@@ -14,7 +14,7 @@ public class AirshipSerializedLuauObjectEditor : UnityEditor.Editor {
         }
         
         if (customEditorType != null) {
-            var componentEditor = AirshipCustomEditors.GetEditorForScriptableClass(binding, customEditorType, serializedObject);
+            var componentEditor = AirshipCustomEditors.GetEditorForClass(binding, customEditorType, serializedObject);
             if (this.editor == null) this.editor = componentEditor;
             componentEditor.script = binding.GetAirshipType().Script;
             componentEditor.target = binding;
@@ -25,4 +25,5 @@ public class AirshipSerializedLuauObjectEditor : UnityEditor.Editor {
         }
     }
 }
+#endif
 #endif

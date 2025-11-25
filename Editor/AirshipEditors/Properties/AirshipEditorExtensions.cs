@@ -28,10 +28,12 @@ public static class AirshipEditorExtensions {
         return AirshipBuildInfo.Instance.GetTypeByName(component.script.m_metadata.name);
     }
 
-    public static AirshipType GetAirshipType(this AirshipSerializedLuauObject luauObject) {
+#if AIRSHIPEX_CLASS_OBJECT
+    public static AirshipType GetAirshipType(this AirshipSerializableClassObject luauObject) {
         if (luauObject.metadata == null) return null;
         return AirshipBuildInfo.Instance.GetTypeByName(luauObject.metadata.name);
     }
+#endif
 
     public static LuauMetadata GetMetadataForType(this AirshipType type) {
         var script = type.Script;

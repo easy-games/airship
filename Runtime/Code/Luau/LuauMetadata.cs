@@ -330,15 +330,16 @@ namespace Luau {
         private LuauMetadataJsDoc jsDocs;
         public LuauMetadataJsDoc JsDoc => jsDocs;
         public string Documentation => JsDoc?.RichText;
-        
-        #if UNITY_EDITOR
+
+#if UNITY_EDITOR
         [JsonProperty][SerializeField]
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
+        
         public bool nullable;
         [JsonProperty("default")]
         public object defaultValue;
-        
+
         // Misc:
         public string serializedValue;
         public UnityEngine.Object serializedObject;
@@ -660,9 +661,9 @@ namespace Luau {
                     }
                     break;
                 }
+#if AIRSHIPEX_CLASS_OBJECT
                 case AirshipComponentPropertyType.AirshipClassObject: {
-                    // TODO implement
-                    if (objectRef is AirshipSerializedLuauObject serializedObject) {
+                    if (objectRef is AirshipSerializableClassObject serializedObject) {
                     } else {
                         propType = AirshipComponentPropertyType.AirshipNil;
                         obj = -1; // Reference to null
@@ -670,21 +671,10 @@ namespace Luau {
 
                     break;
                 }
+#endif
                 case AirshipComponentPropertyType.AirshipComponent: {
                     if (objectRef is AirshipComponent scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
-                        // if (!AirshipBehaviourRootV2.HasId(gameObject)) {
-                        //     // See if it just needs to be started first:
-                        //     var foundAny = false;
-                        //     foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
-                        //         foundAny = true;
-                        //     }
-                        //
-                        //     // Retry getting AirshipBehaviourRoot:
-                        //     // if (foundAny) {
-                        //         // airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-                        //     // }
-                        // }
 
                         if (AirshipBehaviourRootV2.HasId(gameObject)) {
                             // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
@@ -745,9 +735,9 @@ namespace Luau {
             }
         }
         
-        public void SetDefaultAsValue() {
+        public bool SetDefaultAsValue() {
             if (type == "Array") {
-                Newtonsoft.Json.Linq.JArray jarray = (Newtonsoft.Json.Linq.JArray) defaultValue;
+                JArray jarray = (JArray) defaultValue;
                 var elementComponentPropertyType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(items.type, HasDecorator("int"));
                 var jarraySize = jarray == null ? 0 : jarray.Count;
                 string[] serializedElements = new string[jarraySize];
@@ -757,22 +747,21 @@ namespace Luau {
                 }
 
                 items.serializedItems = serializedElements;
-                return;
+                return true;
             }
 
             // void AirshipBehaviours or Components
             if (type is "AirshipBehaviour" or "object") {
                 serializedObject = null;
+                return true;
             }
 
-            // if (type == "AirshipSerializableObject") {
-            //     var instance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
-            //     serializedObject = instance;
-            // }
-            
-            if (defaultValue == null) return;
+            if (defaultValue == null) {
+                return false;
+            }
             
             serializedValue = LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, ComponentType);
+            return true;
         }
     }
 
@@ -821,6 +810,7 @@ namespace Luau {
             if (metadata.scriptable != null) {
                 // Set default values:
                 foreach (var property in metadata.scriptable.properties) {
+                    Debug.Log($"scriptable {property.name} as default {property.defaultValue}");
                     property.SetDefaultAsValue();
                 }
             }

@@ -333,7 +333,8 @@ public static partial class AirshipEditorGUI {
     }
 
     private static void AddLuauObjectToProperty(AirshipSerializedValue property, Object targetObject) {
-        var newInstance = ScriptableObject.CreateInstance<AirshipSerializedLuauObject>();
+#if AIRSHIPEX_CLASS_OBJECT
+        var newInstance = ScriptableObject.CreateInstance<AirshipSerializableClassObject>();
         newInstance.fileRef = property.airshipType.AssetPath;
         newInstance.type = property.airshipType.Name;
                     
@@ -346,10 +347,12 @@ public static partial class AirshipEditorGUI {
                     
         property.objectReferenceValue = newInstance;
         property.serializedObject.ApplyModifiedProperties();
-        property.serializedObject.serializedObject.Update();      
+        property.serializedObject.serializedObject.Update();     
+#endif
     }
 
     private static void DoAirshipSerializedClassObject(Rect? rect, GUIContent label, AirshipSerializedValue property, bool expanded = true) {
+#if AIRSHIPEX_CLASS_OBJECT
         // AirshipSerializedLuauObject
         DoValidateProperty(rect, property, AirshipSerializedType.SerializedClass);
 
@@ -387,14 +390,13 @@ public static partial class AirshipEditorGUI {
                 }
                 
                 if (enabled) {
-                    if (property.objectReferenceValue is AirshipSerializedLuauObject serializedLuauObject) {
+                    if (property.objectReferenceValue is AirshipSerializableClassObject serializedLuauObject) {
                         var refType = AirshipBuildInfo.Instance.GetTypeByPathAndName(serializedLuauObject.fileRef,
                             serializedLuauObject.type);
                         if (refType == null) {
                             EditorGUILayout.HelpBox("Type non-existant", MessageType.Info);
                         } else {
                             var referenceMetadata = refType.GetMetadataForType();
-                            serializedLuauObject.Reconcile(referenceMetadata);
                             
                             Type customEditorType = null;
                             if (serializedLuauObject.metadata != null) {
@@ -432,6 +434,7 @@ public static partial class AirshipEditorGUI {
                 EditorGUILayout.EndHorizontal();
             }
         }
+#endif
     }
 
     private static AirshipScriptableObject DoAirshipScriptableObject(Rect? rect, GUIContent label,
