@@ -89,7 +89,7 @@ public static class AirshipCustomEditors {
     
     private static bool RegisterEditor(Type editorType, CustomAirshipEditorAttribute editorAttribute) {
         var typeName = editorAttribute.TypeName;
-        var filePath = editorAttribute.FilePath;
+        var filePath = editorAttribute.AssetPath;
                 
         var pathType = string.IsNullOrEmpty(filePath) ? 
             AirshipBuildInfo.Instance.GetTypeByName(typeName) :  

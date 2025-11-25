@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 using Luau;
@@ -35,6 +36,7 @@ public class AirshipSerializedObject {
     internal AirshipEditor editor { get; set; }
 
     public AirshipType airshipType => AirshipBuildInfo.Instance.GetTypeByName(serializedName.stringValue);
+    [Obsolete]
     public AirshipComponent airshipComponent => (AirshipComponent)serializedObject.targetObject;
     public UnityEngine.Object targetObject => serializedObject.targetObject;
     

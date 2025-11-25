@@ -37,6 +37,7 @@ public abstract class AirshipEditor : ScriptableObject {
     }
     
     public AirshipSerializedObject serializedObject { get; internal set; }
+    internal SerializedObject unitySerializedObject => serializedObject.serializedObject;
     public UnityEngine.Object target { get; internal set; }
     public AirshipScript script { get; internal set; }
 
