@@ -42,7 +42,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 #if UNITY_EDITOR
     internal static event ReconcileAirshipScriptableObject Reconcile;
 #endif
-    
+
     [SerializeField] protected string _scriptPath;
     protected string luaFilePath => _scriptPath.Replace(".ts", ".lua", StringComparison.OrdinalIgnoreCase);
     [FormerlySerializedAs("script")] [SerializeField]
