@@ -50,6 +50,9 @@ namespace Mirror
 
         /// <summary>Round trip time (in seconds) that it takes a message to go server->client->server.</summary>
         public double rtt => _rtt.Value;
+        /// <Summary>Round trip time variance aka jitter, in seconds.</Summary>
+        // "rttVariance" instead of "rttVar" for consistency with older versions.
+        public double rttVariance => _rtt.Variance;
 
         public NetworkConnectionToClient(int networkConnectionId, string clientAddress = "localhost")
             : base(networkConnectionId)
