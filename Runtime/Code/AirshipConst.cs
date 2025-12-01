@@ -11,6 +11,7 @@ namespace Code {
             "SkipLoading",
             "LagCompCheckIdIsInt",
             "PlatformGearDownloadClassId",
+            "HasTransformMoveDirection", // True for versions that have access to CharacterMovement.TransformMoveDirection
         };
 
 
