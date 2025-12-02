@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -27,7 +28,8 @@ namespace Luau {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void ResetOnLoad() {
 #if AIRSHIP_PLAYER
-            foreach (var (_, scriptableObject) in IdToScriptableObject) {
+            var scriptableObjects = IdToScriptableObject.ToArray();
+            foreach (var (_, scriptableObject) in scriptableObjects) {
                 scriptableObject.Destroy();
             }
 #endif
