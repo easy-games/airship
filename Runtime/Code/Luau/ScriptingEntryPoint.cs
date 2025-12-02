@@ -7,6 +7,7 @@ namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
 		public static bool IsLoaded = false;
 		public static event Action OnScriptBindingRun;
+		public static event Action OnCoreScriptsStarted;
 
 		public static void InvokeOnLuauStartup() {
 			OnScriptBindingRun?.Invoke();
@@ -55,6 +56,8 @@ namespace Assets.Code.Luau {
 			}
 			stopwatch.Stop();
 			// Debug.Log($"ScriptingEntryPoint elapsed time: {stopwatch.ElapsedMilliseconds}ms");
+			
+			OnCoreScriptsStarted?.Invoke();
 		}
 	}
 }

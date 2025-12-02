@@ -36,6 +36,10 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     private static readonly List<GCHandle> InitGcHandles = new();
     private static readonly List<IntPtr> InitStringPtrs = new();
     
+    private bool _init;
+    private bool _awake;
+    private bool _enable;
+    private bool _deferred;
     private IntPtr thread;
     private LuauContext context = LuauContext.Game;
     
@@ -45,7 +49,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 
     [SerializeField] protected string _scriptPath;
     protected string luaFilePath => _scriptPath.Replace(".ts", ".lua", StringComparison.OrdinalIgnoreCase);
-    [FormerlySerializedAs("script")] [SerializeField]
+    [SerializeField]
     private AirshipScript _script;
 
     public AirshipScript script {
@@ -61,8 +65,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     [HideInInspector]
 #endif
     public LuauMetadata metadata;
-    public bool initialized => AirshipScriptableObjectRoot.ContainsScriptableObject(this) && instanceId != 0;
-    public int instanceId { get; private set; }
+    internal bool initialized => AirshipScriptableObjectRoot.ContainsScriptableObject(this) && instanceId != 0 && _init;
+    internal int instanceId { get; private set; }
+
     
     public static bool IsInstance(object obj) {
         return obj is AirshipScriptableObject;
@@ -112,8 +117,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         asset.script = runtimeScript;
         asset.metadata = new LuauMetadata();  
 #endif
-
-        if (!asset.initialized) asset.Init();
+        if (!asset._init) asset.Init();
         return asset;
     }
     
@@ -130,7 +134,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     public void Init() {
         if (script == null && _createInstanceData == null) return; // no point if no script or init data
         if (!Application.isPlaying) return;
-        if (initialized) return;
+        if (_init) return;
+        _init = true;
         
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
         if (_createInstanceData != null) {
@@ -157,18 +162,43 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
 #endif
         CreateScriptableObject();
     }
-
-    internal void Unload() {
-        instanceId = 0;
-        thread = IntPtr.Zero;
-        context = LuauContext.Game;
+    
+    private void Awake() {
+        if (!Application.isPlaying) return;
+        
+        if (!ScriptingEntryPoint.IsLoaded) {
+            _deferred = true;
+            ScriptingEntryPoint.OnCoreScriptsStarted += OnCoreScriptsLoaded;
+        } else if (_createInstanceData == null) {
+            Init();
+        }
     }
 
     private void OnEnable() {
-        if (!initialized) CreateScriptableObject();
-        if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
+        if (!Application.isPlaying) return;
+
+        if (_deferred && !ScriptingEntryPoint.IsLoaded) {
+        } else if (_createInstanceData == null) {
+            InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
+            _enable = true;
+        }
     }
-    
+
+    private void OnCoreScriptsLoaded() {
+        ScriptingEntryPoint.OnCoreScriptsStarted -= OnCoreScriptsLoaded;
+        Init();
+      
+        if (!_awake) {
+            InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipAwake);
+            _awake = true;
+        }
+        
+        if (!_enable) {
+            InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
+            _enable = true;
+        }
+    }
+
     private void OnDisable() {
         if (!initialized) return;
         if (Application.isPlaying) InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipDisabled);
@@ -178,7 +208,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (!initialized) return;
         Destroy();
     }
-
+    
     internal void Destroy() {
         LuauCore.onResetInstance -= OnLuauReset;
         if (thread == IntPtr.Zero) return;
@@ -239,13 +269,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
     
     private void AwakeScriptableObject() {
         int id = AirshipScriptableObjectRoot.GetIdFromScriptableObject(this);
-
-        Debug.Log($"[SO] Initializing Scriptable Object {id}");
+        
         foreach (var dependency in GetDependencies()) {
-            if (dependency is AirshipScriptableObject aso) {
-                Debug.Log($"[SO] Dependency {id} depends on {aso.instanceId}");
-            }
-            
             dependency.Init();
         }
         
@@ -295,21 +320,20 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             }
             InitGcHandles.Clear();
             InitStringPtrs.Clear();
-            
+        }
+
+        if (!_awake) {
             InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipAwake);
-#if AIRSHIP_INTERNAL
-            Debug.Log($"Started AirshipScriptableObject with id {id} at assetPath {script.assetPath}");
-#endif
+            _awake = true;
+        }
+        
+        if (!_enable) {
+            InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
+            _enable = true;
         }
     }
-    
-    private void Awake() {
-        Init();
-    }
 
-    private void Reset() {
-        // TODO: Reset values to defaults
-    }
+    private void Reset() {}
 
     private void OnValidate() {
         if (Application.isPlaying) return;
@@ -336,5 +360,15 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         var eventData = new AirshipScriptableObjectReconcileEventData(this, reconcileSource);
         Reconcile?.Invoke(eventData);
 #endif
+    }
+    
+    internal void Unload() {
+        _init = false;
+        _enable = false;
+        _deferred = false;
+        _awake = false;
+        instanceId = 0;
+        thread = IntPtr.Zero;
+        context = LuauContext.Game;
     }
 }
