@@ -352,7 +352,7 @@ namespace Code.Network.StateSystem
             // Server states are sent one at a time instead of as a group, but we track how many we receive per frame so we can adjust our
             // target buffer size if the client is slow. This is similar to what we do for received input groups.
             if (serverStatesReceivedThisFrame != 0) {
-                var jitterTime = this.connectionToClient.rttVariance / Time.fixedUnscaledDeltaTime;
+                var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance)  / Time.fixedUnscaledDeltaTime;
                 this.serverCommandBufferTargetSize.Add(serverStatesReceivedThisFrame + jitterTime);
                 serverStatesReceivedThisFrame = 0;
             }
@@ -566,7 +566,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             // Optimal max is when we will start processing extra commands.
             this.serverCommandBufferAvgSize.Add(this.serverCommandBuffer.Count);
-            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
+            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
             if (this.serverCommandBufferWait && this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value || this.serverCommandBuffer.Count == 0) {
@@ -610,12 +610,12 @@ namespace Code.Network.StateSystem
                     
                     command.commandNumber = expectedNextCommandNumber;
                     this.serverPredictedCommandCount++;
-                    // print("Reprocessing last command");
+                    print("Reprocessing last command");
                 }
                 // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer.
                 // this means we've completely run out of inputs and we should wait for more.
                 else {
-                    // print("No command available for ticking");
+                    print("No command available for ticking");
                     this.serverPredictedCommandCount = 0;
                     this.serverCommandBufferWait = true;
                 }
@@ -1224,7 +1224,7 @@ namespace Code.Network.StateSystem
         }
 
         private void ServerReceiveInputCommand(Input[] commands) {
-            var jitterTime = this.connectionToClient.rttVariance / Time.fixedUnscaledDeltaTime;
+            var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance) / Time.fixedUnscaledDeltaTime;
             serverCommandBufferTargetSize.Add(commands.Length + jitterTime);
             foreach (var command in commands)
             {

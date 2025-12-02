@@ -220,7 +220,7 @@ namespace Code.Network.Simulation
                     // (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f) is an estimate of the number of commands that will be buffered
                     // rttVariance is the additional time added to the input buffer for network jitter
                     // Todo: double check input buffer size estimate now that input buffer is always sending 2 intervals worth per tick (can be more inputs if framerate is low)
-                    var commandBufferTime = (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f)) + entry.Key.rttVariance;
+                    var commandBufferTime = (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f)) + Math.Sqrt(entry.Key.rttVariance);
                     OnLagCompensationCheck?.Invoke(entry.Key.connectionId, previousTicks[^1], previousTimes[^1], entry.Key.rtt / 2f, entry.Key.bufferTime + commandBufferTime);
                     
                     var requests = entry.Value;
