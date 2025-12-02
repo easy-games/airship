@@ -208,8 +208,8 @@ namespace Code.Network.StateSystem
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
             // This value is refreshed in auth server tick
             this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
-            this.serverCommandBufferTargetSize = new ExponentialMovingAverage(NetworkServer.sendRate);
-            this.serverCommandBufferAvgSize = new ExponentialMovingAverage(NetworkServer.sendRate);
+            this.serverCommandBufferTargetSize = new ExponentialMovingAverage(NetworkServer.sendRate * 2);
+            this.serverCommandBufferAvgSize = new ExponentialMovingAverage(NetworkServer.sendRate * 2);
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
