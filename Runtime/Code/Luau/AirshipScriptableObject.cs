@@ -137,10 +137,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (_init) return;
         _init = true;
         
-#if AIRSHIP_INTERNAL
-        Debug.Log($"[SO] '{name}' initializing");
-#endif
-        
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
         if (_createInstanceData != null) {
             script = _createInstanceData.runtimeScript;
@@ -171,15 +167,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (!Application.isPlaying) return;
         
         if (!ScriptingEntryPoint.IsLoaded) {
-#if AIRSHIP_INTERNAL
-            Debug.LogWarning($"[SO] '{name}' is deferring awake");
-#endif
             _deferred = true;
             ScriptingEntryPoint.OnCoreScriptsStarted += OnCoreScriptsLoaded;
         } else if (_createInstanceData == null) {
-#if AIRSHIP_INTERNAL
-            Debug.Log($"[SO] '{name}' is calling awake");
-#endif
             Init();
         }
     }
@@ -188,13 +178,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (!Application.isPlaying) return;
 
         if (_deferred && !ScriptingEntryPoint.IsLoaded) {
-#if AIRSHIP_INTERNAL
-            Debug.LogWarning($"[SO] '{name}' is deferring enabled");
-#endif
         } else if (_createInstanceData == null) {
-#if AIRSHIP_INTERNAL
-            Debug.Log($"[SO] '{name}' is calling enabled");
-#endif
             InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
             _enable = true;
         }
@@ -210,9 +194,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         }
         
         if (!_enable) {
-#if AIRSHIP_INTERNAL
-            Debug.Log($"[SO] '{name}' is calling enabled");
-#endif
             InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
             _enable = true;
         }
@@ -273,10 +254,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         LuauPlugin.CreateScriptableObject(context, thread, id);
         AwakeScriptableObject();
         instanceId = id;
-        
-#if AIRSHIP_INTERNAL
-        Debug.Log($"[SO] '{name}' ({instanceId}) initialized");
-#endif
     }
 
     private void InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType updateType) {
@@ -354,8 +331,6 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             InvokeAirshipLifecycle(AirshipScriptableObjectUpdateType.AirshipEnabled);
             _enable = true;
         }
-        
-        Debug.Log($"[SO] Scriptable State for @{instanceId} '{name}': Awake={_awake}, Enabled={_enable}, Deferred={_deferred}");
     }
 
     private void Reset() {}
