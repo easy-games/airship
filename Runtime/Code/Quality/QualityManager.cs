@@ -101,7 +101,7 @@ namespace Code.Quality {
         private int GetRealTargetFPS() {
             var targetFrameRate = Application.targetFrameRate;
             if (targetFrameRate < 0 || targetFrameRate > Screen.currentResolution.refreshRateRatio.value)
-                targetFrameRate = (int) (1.0 / Screen.currentResolution.refreshRateRatio.value);
+                targetFrameRate = (int) Screen.currentResolution.refreshRateRatio.value;
             return targetFrameRate;
         }
 
@@ -115,7 +115,7 @@ namespace Code.Quality {
             var avgFrameTimings = GetRecentAverageFrameTimings();
             
             // If our 5% is lower than 80% of target we should drop quality
-            if (currentFivePercent < 0.80 * targetFrameRate) {
+            if (currentFivePercent < 0.80 * Math.Min(targetFrameRate, 144)) {
                 frameHealth = FrameHealth.Unhealthy;
             }
 
