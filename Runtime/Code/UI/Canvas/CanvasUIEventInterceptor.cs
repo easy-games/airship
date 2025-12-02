@@ -6,35 +6,35 @@ using UnityEngine.EventSystems;
 public class CanvasUIEventInterceptor : MonoBehaviour {
 
 	/** Generic pointer event. */
-	public event Action<object, object, object> PointerEvent;
+	public event Action<int, int, int> PointerEvent;
 
 	/** Generic hover event. */
-	public event Action<object, object, object> HoverEvent;
+	public event Action<int, int, PointerEventData> HoverEvent;
 	
 	/** Params: InstanceId */
-	public event Action<object> SubmitEvent;
+	public event Action<int> SubmitEvent;
 
 	/** Params: InstanceId, string value */
-	public event Action<object, object> InputFieldSubmitEvent;
+	public event Action<int, string> InputFieldSubmitEvent;
 	
 	/** Params: InstanceId */
-	public event Action<object> SelectEvent;
+	public event Action<int> SelectEvent;
 	
 	/** Params: InstanceId */
-	public event Action<object> DeselectEvent;
+	public event Action<int> DeselectEvent;
 
-	public event Action<object> ClickEvent;
+	public event Action<int> ClickEvent;
 	
-	public event Action<object, object> ValueChangeEvent;
+	public event Action<int, float> ValueChangeEvent;
 
-	public event Action<object, object> ToggleValueChangeEvent;
+	public event Action<int, bool> ToggleValueChangeEvent;
 
-	public event Action<object, object> BeginDragEvent;
-	public event Action<object, object> EndDragEvent;
-	public event Action<object, object> DropEvent;
-	public event Action<object, object> DragEvent;
+	public event Action<int, PointerEventData> BeginDragEvent;
+	public event Action<int, PointerEventData> EndDragEvent;
+	public event Action<int, PointerEventData> DropEvent;
+	public event Action<int, PointerEventData> DragEvent;
 
-	public event Action<object, object> ScreenSizeChangeEvent;
+	public event Action<int, int> ScreenSizeChangeEvent;
 
 	/** Fires a pointer event for instance that corresponds to `instanceId`. Includes pointer button and direction. (up or down) */
 	public void FirePointerEvent(int instanceId, int direction, int button) {
