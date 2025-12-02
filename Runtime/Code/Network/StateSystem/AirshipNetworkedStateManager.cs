@@ -76,8 +76,8 @@ namespace Code.Network.StateSystem
 
         // How many commands we should generally have in the command buffer
         private int serverCommandCatchUpRequired = 0;
-        private ExponentialMovingAverage serverCommandBufferTargetSize;
-        private ExponentialMovingAverage serverCommandBufferAvgSize;
+        private SimpleMovingAverage serverCommandBufferTargetSize;
+        private SimpleMovingAverage serverCommandBufferAvgSize;
 
         // Non-auth server command tracking
         // Note: we also re-use some of the above command buffer fields
@@ -208,8 +208,8 @@ namespace Code.Network.StateSystem
             // The client should also stop sending commands after 1 second's worth of unconfirmed commands.
             // This value is refreshed in auth server tick
             this.serverCommandBufferMaxSize = (int)(1f/ Time.fixedUnscaledDeltaTime);
-            this.serverCommandBufferTargetSize = new ExponentialMovingAverage(NetworkServer.sendRate * 2);
-            this.serverCommandBufferAvgSize = new ExponentialMovingAverage(NetworkServer.sendRate * 2);
+            this.serverCommandBufferTargetSize = new SimpleMovingAverage(NetworkServer.sendRate);
+            this.serverCommandBufferAvgSize = new SimpleMovingAverage(NetworkServer.sendRate);
 
             this.inputHistory = new(1);
             this.stateHistory = new(1);
@@ -352,8 +352,8 @@ namespace Code.Network.StateSystem
             // Server states are sent one at a time instead of as a group, but we track how many we receive per frame so we can adjust our
             // target buffer size if the client is slow. This is similar to what we do for received input groups.
             if (serverStatesReceivedThisFrame != 0) {
-                var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance) / Time.fixedUnscaledDeltaTime;
-                this.serverCommandBufferTargetSize.Add(serverStatesReceivedThisFrame + jitterTime);
+                // var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance) / Time.fixedUnscaledDeltaTime;
+                this.serverCommandBufferTargetSize.Add(serverStatesReceivedThisFrame);
                 serverStatesReceivedThisFrame = 0;
             }
 
@@ -363,13 +363,14 @@ namespace Code.Network.StateSystem
                 // We check this in Update so that we have finished processing all required fixedUpdates before checking
                 // if we are behind. Next time fixed update runs, we will process the additional amount we need to catch up.
                 if (isServer && serverAuth) {
-                    if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value && this.serverCommandBufferAvgSize.Value > this.serverCommandBufferTargetSize.Value) {
-                        serverCommandCatchUpRequired = (int) Math.Round(this.serverCommandBufferAvgSize.Value - this.serverCommandBufferTargetSize.Value);
-                        // print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
+                    if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value && Math.Floor(this.serverCommandBufferAvgSize.Value) > Math.Ceiling(this.serverCommandBufferTargetSize.Value)) {
+                        serverCommandCatchUpRequired = (int) Math.Round(Math.Floor(this.serverCommandBufferAvgSize.Value) - Math.Ceiling(this.serverCommandBufferTargetSize.Value));
+                        print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
                     } else if (this.serverCommandBufferAvgSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
                         // This is a heuristic for if we are likely to have to predict more commands soon. Low buffer size means
                         // we have less of a chance to recover dropped packets. It's probably better for us to wait for additional
                         // inputs before we continue processing.
+                        print($"Command delay required for {this.name}: {serverCommandBuffer.Count} in buffer, {this.serverCommandBufferAvgSize.Value} ema, {this.serverCommandBufferTargetSize.Value} target");
                         this.serverCommandBufferWait = true;
                     } else {
                         serverCommandCatchUpRequired = 0;
@@ -1226,8 +1227,9 @@ namespace Code.Network.StateSystem
         }
 
         private void ServerReceiveInputCommand(Input[] commands) {
-            var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance) / Time.fixedUnscaledDeltaTime;
-            serverCommandBufferTargetSize.Add(commands.Length + jitterTime);
+            // var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance) / Time.fixedUnscaledDeltaTime;
+            serverCommandBufferTargetSize.Add(commands.Length);
+            // print($"{commands.Length} + {jitterTime}");
             foreach (var command in commands)
             {
                 ProcessClientInputOnServer(command);
