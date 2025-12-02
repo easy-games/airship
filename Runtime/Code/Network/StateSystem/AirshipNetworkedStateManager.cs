@@ -352,7 +352,7 @@ namespace Code.Network.StateSystem
             // Server states are sent one at a time instead of as a group, but we track how many we receive per frame so we can adjust our
             // target buffer size if the client is slow. This is similar to what we do for received input groups.
             if (serverStatesReceivedThisFrame != 0) {
-                var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance)  / Time.fixedUnscaledDeltaTime;
+                var jitterTime = Math.Sqrt(this.connectionToClient.rttVariance) / Time.fixedUnscaledDeltaTime;
                 this.serverCommandBufferTargetSize.Add(serverStatesReceivedThisFrame + jitterTime);
                 serverStatesReceivedThisFrame = 0;
             }
@@ -566,7 +566,8 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             // Optimal max is when we will start processing extra commands.
             this.serverCommandBufferAvgSize.Add(this.serverCommandBuffer.Count);
-            print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
+            this.connectionToClient.inputBufferTime = this.serverCommandBufferAvgSize.Value * Time.fixedUnscaledDeltaTime;
+            // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
             if (this.serverCommandBufferWait && this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value || this.serverCommandBuffer.Count == 0) {
@@ -754,6 +755,7 @@ namespace Code.Network.StateSystem
             
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferAvgSize.Add(this.serverReceivedStateBuffer.Count);
+            this.connectionToClient.inputBufferTime = this.serverCommandBufferAvgSize.Value * Time.fixedUnscaledDeltaTime;
             // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize.Value} avg {serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
