@@ -365,12 +365,12 @@ namespace Code.Network.StateSystem
                 if (isServer && serverAuth) {
                     if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value && Math.Floor(this.serverCommandBufferAvgSize.Value) > Math.Ceiling(this.serverCommandBufferTargetSize.Value)) {
                         serverCommandCatchUpRequired = (int) Math.Round(Math.Floor(this.serverCommandBufferAvgSize.Value) - Math.Ceiling(this.serverCommandBufferTargetSize.Value));
-                        print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
+                        // print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
                     } else if (this.serverCommandBufferAvgSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
                         // This is a heuristic for if we are likely to have to predict more commands soon. Low buffer size means
                         // we have less of a chance to recover dropped packets. It's probably better for us to wait for additional
                         // inputs before we continue processing.
-                        print($"Command delay required for {this.name}: {serverCommandBuffer.Count} in buffer, {this.serverCommandBufferAvgSize.Value} ema, {this.serverCommandBufferTargetSize.Value} target");
+                        // print($"Command delay required for {this.name}: {serverCommandBuffer.Count} in buffer, {this.serverCommandBufferAvgSize.Value} ema, {this.serverCommandBufferTargetSize.Value} target");
                         this.serverCommandBufferWait = true;
                     } else {
                         serverCommandCatchUpRequired = 0;
@@ -612,12 +612,12 @@ namespace Code.Network.StateSystem
                     
                     command.commandNumber = expectedNextCommandNumber;
                     this.serverPredictedCommandCount++;
-                    print("Reprocessing last command");
+                    // print("Reprocessing last command");
                 }
                 // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer.
                 // this means we've completely run out of inputs and we should wait for more.
                 else {
-                    print("No command available for ticking");
+                    // print("No command available for ticking");
                     this.serverPredictedCommandCount = 0;
                     this.serverCommandBufferWait = true;
                 }
