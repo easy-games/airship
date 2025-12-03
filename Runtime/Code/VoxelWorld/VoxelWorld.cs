@@ -1320,7 +1320,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
         
         // Super prioritize priority updates
-        if (chunk.GetPriorityUpdate()) dist -= 1000;
+        // if (chunk.GetPriorityUpdate()) dist -= 1000;
 
         return dist;
     }
