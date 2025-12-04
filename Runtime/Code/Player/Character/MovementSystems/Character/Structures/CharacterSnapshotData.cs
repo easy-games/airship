@@ -258,7 +258,7 @@ namespace Code.Player.Character.MovementSystems.Character
             // we could not do this optimization since there would be no way to know where the next packet starts.
             if (fullCustomData && other.customData != null) { // If we should send the full new data, send it, but only if we actually have data. null custom data shouldn't be sent.
                 writer.WriteBytes(other.customData.Data, 0, other.customData.Data.Length);
-            } else {
+            } else if (customDataDiff != null) {
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
             

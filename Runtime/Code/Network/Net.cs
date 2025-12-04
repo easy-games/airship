@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Code.Luau;
+using Code.Zstd;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -75,11 +76,16 @@ namespace Assets.Luau.Network {
 
 	    private void OnBroadcastFromClient(NetworkConnectionToClient conn, NetBroadcast msg) {
 		    // Runs on the server, when the client broadcasts a message
-		    if ((ulong)msg.Blob.DecompressedDataSize >= MaxBytesAtOnce) {
-			    Debug.LogWarning($"Dropping message from client connection {conn.connectionId} due to exceeding max data size.");
+		    try {
+			    if ((ulong)msg.Blob.DecompressedDataSize >= MaxBytesAtOnce) {
+				    Debug.LogWarning(
+					    $"Dropping message from client connection {conn.connectionId} due to exceeding max data size.");
+				    return;
+			    }
+		    } catch (ZstdException) { // TODO: temporary code to discard Zstd exceptions
 			    return;
 		    }
-		    
+
 		    var now = Time.realtimeSinceStartup;
 		    if (!_throttle.TryGetValue(conn.connectionId, out var throttle)) {
 			    // If we don't have a throttle key, that means the client isn't connected anymore and we are processing an old message.

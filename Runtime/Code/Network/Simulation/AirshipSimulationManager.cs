@@ -216,9 +216,9 @@ namespace Code.Network.Simulation
                 {
                     processedLagCompensation = true;
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
-                    // commandBufferTime is the additional time we queue commands locally on the server before processing them
-                    var commandBufferTime = (NetworkServer.sendInterval * (entry.Key.bufferTimeMultiplier / 2f));
-                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, previousTicks[^1], previousTimes[^1], entry.Key.rtt / 2f, entry.Key.bufferTime + commandBufferTime);
+                    // inputBufferTime is the additional time we queue commands locally on the server before processing them
+                    // bufferTime is the observed player buffer size on the client
+                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, previousTicks[^1], previousTimes[^1], entry.Key.rtt / 2f, entry.Key.bufferTime + entry.Key.inputBufferTime);
                     
                     var requests = entry.Value;
                     for (var i = 0; i < requests.Count; i++) {
