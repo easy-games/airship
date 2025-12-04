@@ -409,9 +409,20 @@ namespace Airship {
                 for (int i = 0; i < finalSkinnedMeshCopy.subMeshes.Count; i++) {
                     finalMaterials[i] = finalSkinnedMeshCopy.subMeshes[i].material;
 
-                    if (isClient && !finalMaterials[i].shader.isSupported) {
-                        finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
+                    if (isClient) {
+                        var eColor = finalMaterials[i].GetColor("_EmissionColor");
+                        if (eColor == null || eColor != Color.black) {
+                            Debug.Log("Emissive Color: " + eColor);
+                            //finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
+                            finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
+                            // finalMaterials[i].EnableKeyword("_EMISSION");
+                            // finalMaterials[i].globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                        }
+                        if (!finalMaterials[i].shader.isSupported) {
+                            finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
+                        }
                     }
+
                     // finalMaterials[i].shader = 1(finalMaterials[i].shader.name);
                     // finalMaterials[i].name = finalMaterials[i].name + " (Modified)";
                 }
