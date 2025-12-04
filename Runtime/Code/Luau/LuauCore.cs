@@ -262,7 +262,7 @@ public partial class LuauCore : MonoBehaviour {
     private bool _appPaused = false;
     private bool _pluginPaused = false;
 
-    private void DispatchPluginPausedIfNeeded() {
+    private void OnApplicationOrEditorPauseChanged() {
         var shouldPause = _appPaused || _editorPauseState == PauseState.Paused;
         if (shouldPause == _pluginPaused) return;
         
@@ -273,7 +273,7 @@ public partial class LuauCore : MonoBehaviour {
     private void OnPauseStateChanged(PauseState state) {
         // Handle pauses in-editor triggered by the toolbar pause button
         _editorPauseState = state;
-        DispatchPluginPausedIfNeeded();
+        OnApplicationOrEditorPauseChanged();
     }
 #endif
 
@@ -281,7 +281,7 @@ public partial class LuauCore : MonoBehaviour {
         // Handle application pauses (e.g. when application loses focus on iOS)
 #if UNITY_EDITOR
         _appPaused = pauseStatus;
-        DispatchPluginPausedIfNeeded();
+        OnApplicationOrEditorPauseChanged();
 #else
         LuauPlugin.SetIsPaused(pauseStatus);
 #endif
