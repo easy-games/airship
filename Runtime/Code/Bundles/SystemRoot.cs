@@ -175,15 +175,25 @@ public class SystemRoot : Singleton<SystemRoot> {
 		var sw = Stopwatch.StartNew();
 
 		// Find packages we should UNLOAD
-		List<string> unloadList = new();
+		HashSet<string> unloadList = new();
 		foreach (var loadedPair in this.loadedAssetBundles) {
 			if (forceUnloadAll) {
 				unloadList.Add(loadedPair.Key);
 				continue;
 			}
+
 			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
+			// Todo: we can not unload asset bundles if there is only a code change.
 			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion || packageToLoad.codeVersion != loadedPair.Value.airshipPackage.codeVersion) {
 				unloadList.Add(loadedPair.Key);
+
+				// If a package changes, then we need to unload everything because other packages & the game may depend on it.
+				if (packageToLoad != null && packageToLoad.packageType == AirshipPackageType.Package) {
+					foreach (var loaded in loadedAssetBundles) {
+						unloadList.Add(loaded.Key);
+					}
+					break;
+				}
 			}
 		}
 
