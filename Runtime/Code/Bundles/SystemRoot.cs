@@ -175,7 +175,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		var sw = Stopwatch.StartNew();
 
 		// Find packages we should UNLOAD
-		List<string> unloadList = new();
+		HashSet<string> unloadList = new();
 		foreach (var loadedPair in this.loadedAssetBundles) {
 			if (forceUnloadAll) {
 				unloadList.Add(loadedPair.Key);
@@ -184,6 +184,12 @@ public class SystemRoot : Singleton<SystemRoot> {
 			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
 			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion || packageToLoad.codeVersion != loadedPair.Value.airshipPackage.codeVersion) {
 				unloadList.Add(loadedPair.Key);
+				// Temp: unload all bundles if we're unloading core
+				if (packageToLoad.id.ToLower().Contains("@easy/core")) {
+					foreach (var loaded in loadedAssetBundles) {
+						unloadList.Add(loaded.Key);
+					}
+				}
 			}
 		}
 
