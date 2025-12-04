@@ -14,6 +14,11 @@ namespace Code.CoreUI.Components {
             }
 #endif
 
+#if UNITY_IOS || UNITY_ANDROID
+            this.versionText.enabled = false;
+            return;
+#endif
+
             var hash = AirshipVersion.GetVersionHash();
             this.versionText.text = Application.version + "-" + hash;
         }
