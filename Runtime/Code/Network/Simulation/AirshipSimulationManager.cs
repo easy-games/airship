@@ -205,10 +205,18 @@ namespace Code.Network.Simulation
 
             // Only resimulate once. Go back to the farthest back time that was requested.
             if (resimBackTo != tick) this.PerformResimulation(resimBackTo);
+
+            // Perform the standard tick behavior
+            OnTick?.Invoke(tick, time, false);
+            // Debug.Log($"Simulate call. Main tick {tick}");
+            Physics.Simulate(Time.fixedDeltaTime);
+            OnCaptureSnapshot?.Invoke(tick, time, false);
             
             // Process any lag compensation requests now that we have completed the ticking and snapshot creation
             // Note: This process is placed after snapshot processing so that changes made to physics (like an impulse)
-            // are processed on the _next_ tick. This is safe because the server never resimulates.
+            // are processed on the _next_ tick. This is safe because the server never resimulates. If lag compensation
+            // is placed before OnTick, lag compensation may overwrite changes that occured during Update() or LateUpdate()
+            // since we roll back to the last snapshot which will have occured before Update() and LateUpdate().
             var processedLagCompensation = false;
             foreach (var entry in this.lagCompensationRequests)
             {
@@ -218,7 +226,7 @@ namespace Code.Network.Simulation
                     // Debug.LogWarning("Server lag compensation rolling back for client " + entry.Key.connectionId);
                     // inputBufferTime is the additional time we queue commands locally on the server before processing them
                     // bufferTime is the observed player buffer size on the client
-                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, previousTicks[^1], previousTimes[^1], entry.Key.rtt / 2f, entry.Key.bufferTime + entry.Key.inputBufferTime);
+                    OnLagCompensationCheck?.Invoke(entry.Key.connectionId, tick, time, entry.Key.rtt / 2f, entry.Key.bufferTime + entry.Key.inputBufferTime);
                     
                     var requests = entry.Value;
                     for (var i = 0; i < requests.Count; i++) {
@@ -236,7 +244,7 @@ namespace Code.Network.Simulation
             {
                 // Debug.LogWarning("Server completed " + this.lagCompensationRequests.Count + " lag compensation requests. Resetting to current tick (" + previousTimes[^1] + ") and finalizing.");
                 // Reset back to the server view of the world at the current time.
-                OnSetSnapshot?.Invoke(previousTicks[^1]);
+                OnSetSnapshot?.Invoke(tick);
                 Physics.SyncTransforms();
                 // Invoke all of the callbacks for modifying physics that should be applied in the next tick.
                 foreach (var entry in this.lagCompensationRequests)
@@ -255,12 +263,6 @@ namespace Code.Network.Simulation
                 }
                 this.lagCompensationRequests.Clear();
             }
-
-            // Perform the standard tick behavior
-            OnTick?.Invoke(tick, time, false);
-            // Debug.Log($"Simulate call. Main tick {tick}");
-            Physics.Simulate(Time.fixedDeltaTime);
-            OnCaptureSnapshot?.Invoke(tick, time, false);
             
             // Add our completed tick time into our history
             this.previousTicks.Add(tick);
