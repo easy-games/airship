@@ -122,9 +122,9 @@ namespace Code.Quality {
             // print($"[Quality Check] 5%: {currentFivePercent}, 0.5%: {pointFivePercent}, health: {frameHealth}");
 
             if (this.tracer != null) {
-                this.tracer.SetMeasurement("spf_5_percent", 1f / currentFivePercent);
-                this.tracer.SetMeasurement("spf_0.5_percent", 1f / pointFivePercent);
-                this.tracer.SetMeasurement("target_spf", 1f / targetFrameRate);
+                this.tracer.SetMeasurement("spf_5_percent", 1f / Math.Max(0.01, currentFivePercent));
+                this.tracer.SetMeasurement("spf_0.5_percent", 1f / Math.Max(0.01, pointFivePercent));
+                this.tracer.SetMeasurement("target_spf", 1f / Math.Max(0.01, targetFrameRate));
                 this.tracer.SetMeasurement("cpu_main_avg", avgFrameTimings.cpuMainAvg);
                 this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg);
                 this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg);
