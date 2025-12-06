@@ -18,6 +18,6 @@ namespace Code {
         /// <summary>
         /// The server will kick clients that have a playerVersion lower than this value.
         /// </summary>
-        public const int minAcceptedPlayerVersionOnServer = 21;
+        public const int minAcceptedPlayerVersionOnServer = 23;
     }
 }
