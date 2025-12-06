@@ -10,6 +10,8 @@ using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.UniMicInput;
 using Airship.DevConsole;
 using Code.Player;
+using Concentus.Enums;
+using Concentus.Structs;
 using Mirror;
 using UnityEngine;
 
@@ -55,7 +57,11 @@ namespace Code.VoiceChat {
 
         private uint audioNonce = 0;
         private bool deafened = false;
-        
+        /// <summary>
+        /// Only on client, this is the VOIP encoder to reduce bandwidth. Initialized in Start.
+        /// </summary>
+        private OpusEncoder encoder;
+        private byte[] encodedBytes = new byte[6633]; // This should be more than enough size for 1 frame @ 10samples/s?
         
         private void OnDisable() {
             if (this.agent != null) {
@@ -69,11 +75,13 @@ namespace Code.VoiceChat {
             
             this.agent = new ChatroomAgent(
                 this,
-                new UniVoiceUniMicInput(0, 16000, 100),
+                new UniVoiceUniMicInput(),
                 new UniVoiceAudioSourceOutput.Factory()
             );
             
             if (RunCore.IsClient()) {
+                // Sample rate matches ProtectedSettingsSingleton.ts
+                encoder = new OpusEncoder(16_000, 1, OpusApplication.OPUS_APPLICATION_VOIP);
                 this.ClientSendReadyWhenAble();
             }
 
@@ -332,6 +340,7 @@ namespace Code.VoiceChat {
         }
 
         private void EmitAudioInScene(short senderPeerId, byte[] bytes) {
+            Debug.Log("Recv audio: " + bytes.Length);
             if (this.deafened) return;
             
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
@@ -375,8 +384,14 @@ namespace Code.VoiceChat {
             if (!NetworkClient.isConnected) return;
 
             if (isClient) {
+                var frameSize = agent.AudioInput.Frequency / agent.AudioInput.SegmentRate;
+                Debug.Log($"Sample size = {data.samples.Length}, frameSize={frameSize}");
+                var encodedSize = encoder.Encode(data.samples, frameSize, this.encodedBytes, this.encodedBytes.Length);
+                Debug.Log("Encoded size: " + encodedSize);
+                
                 var bytes = ToByteArray(data);
                 this.EmitAudioInScene(LocalPeerId, bytes);
+                Debug.Log("Broadcasting audio of size " + bytes.Length);
                 RpcSendAudioToServer(bytes);
             }
 

@@ -10,8 +10,8 @@ namespace Adrenak.UniMic {
     public class MicAudioSource : MonoBehaviour {
         public bool startRecordingAutomatically = true;
         [Header("If startRecordingAutomatically is true:")]
-        public int recordingFrequency = 44000;
-        public int sampleDurationMS = 100;
+        public int recordingFrequency = 16000;
+        public int sampleDurationMS = 40;
 
         void Start() {
             var audioSource = gameObject.GetComponent<AudioSource>();
