@@ -1392,14 +1392,16 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void InterpolateReachedState(CharacterSnapshotData snapshot) {
+            var leftGroundWhileHoldingJump = currentMoveSnapshot.isGrounded && !snapshot.isGrounded && snapshot.alreadyJumped;
+            
             var newState = new CharacterAnimationSyncData() {
                 state = snapshot.state,
-                grounded = snapshot.isGrounded,
+                grounded = snapshot.isGrounded && !snapshot.alreadyJumped,
                 sprinting = snapshot.isSprinting,
                 crouching = snapshot.isCrouching,
                 localVelocity = graphicTransform.InverseTransformDirection(snapshot.velocity),
                 lookVector = snapshot.lookVector,
-                jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount
+                jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount || leftGroundWhileHoldingJump
             };
             var changed = newState.state != currentAnimState.state;
 
