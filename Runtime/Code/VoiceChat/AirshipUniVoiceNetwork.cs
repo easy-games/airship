@@ -63,7 +63,7 @@ namespace Code.VoiceChat {
         /// </summary>
         private OpusEncoder encoder;
         private OpusDecoder decoder;
-        private byte[] encodedBytes = new byte[600]; // This should be more than enough size for 1 frame @ 10samples/s?
+        private byte[] encodedBytes = new byte[600]; // This should be more than enough size for 1 frame @ 25samples/s?
         private float[] outPcm = new float[Mic.Frequency / (1000 / Mic.SampleDurationMS)]; // Sample rate / samples per second = sample size
         
         private void OnDisable() {
@@ -372,7 +372,7 @@ namespace Code.VoiceChat {
                 segmentIndex = compressedSegment.segmentIndex,
                 // Keeping these constant reduces bandwidth
                 channelCount = 1,
-                frequency = 16_000,
+                frequency = Mic.Frequency,
             };
             // Span<float> segment = outPcm.AsSpan(0, decodedFloats);
             
