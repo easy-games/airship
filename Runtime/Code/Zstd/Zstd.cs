@@ -163,6 +163,8 @@ namespace Code.Zstd {
 			
 			if (ZSTD_isError(rSize)) {
 				if (rSize == ContentSizeError) {
+					var preview = compressedData.Length >= 4 ? $"{compressedData[0]:X2}-{compressedData[1]:X2}-{compressedData[2]:X2}-{compressedData[3]:X2}" : "too short";
+					UnityEngine.Debug.LogWarning($"[ChatDebug] Zstd ContentSizeError - not valid Zstd data. First4Bytes={preview}, Length={compressedData.Length}");
 					throw new ZstdException("Failed to get frame content size");
 				}
 				throw new ZstdNativeException(rSize);

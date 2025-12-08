@@ -82,7 +82,8 @@ namespace Assets.Luau.Network {
 					    $"Dropping message from client connection {conn.connectionId} due to exceeding max data size.");
 				    return;
 			    }
-		    } catch (ZstdException) { // TODO: temporary code to discard Zstd exceptions
+		    } catch (ZstdException ex) { // TODO: temporary code to discard Zstd exceptions
+			    Debug.LogWarning($"[ChatDebug] DROPPING MESSAGE - ZstdException: {ex.Message}, Data[0]={msg.Blob.Data[0]}, DataSize={msg.Blob.DataSize}, connId={conn.connectionId}");
 			    return;
 		    }
 
