@@ -344,7 +344,6 @@ namespace Code.VoiceChat {
         }
 
         private void EmitAudioInScene(short senderPeerId, byte[] bytes) {
-            Debug.Log("Recv audio: " + bytes.Length);
             if (this.deafened) return;
 
             var compressedSegment = FromByteArray<AirshipCompressedChatroomAudioSegment>(bytes);
@@ -398,7 +397,6 @@ namespace Code.VoiceChat {
 
             if (isClient) {
                 var frameSize = agent.AudioInput.Frequency / agent.AudioInput.SegmentRate;
-                Debug.Log($"Sample size = {data.samples.Length}, frameSize={frameSize}");
                 var encodedSize = encoder.Encode(data.samples, frameSize, this.encodedBytes, this.encodedBytes.Length);
 
                 var encodedPcmBytes = this.encodedBytes.AsSpan(0, encodedSize).ToArray();
@@ -406,9 +404,7 @@ namespace Code.VoiceChat {
                     compressedSamples = encodedPcmBytes,
                     segmentIndex = data.segmentIndex,
                 });
-                Debug.Log("Bytes size: " + bytes.Length);
                 this.EmitAudioInScene(LocalPeerId, bytes);
-                Debug.Log("Broadcasting audio of size " + bytes.Length);
                 RpcSendAudioToServer(bytes);
             }
 
