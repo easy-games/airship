@@ -23,7 +23,7 @@ namespace Assets.Luau {
         /// Gets the decompressed size of the underlying data, if the data is currently compressed. If not compressed,
         /// then this returns <c>dataSize</c>.
         /// </summary>
-        public int DecompressedDataSize => IsCompressed ? Zstd.GetDecompressionBound(Data) : Data.Length;
+        public int DecompressedDataSize => IsCompressed ? Zstd.GetDecompressionBound(new ReadOnlySpan<byte>(Data, 1, Data.Length - 1)) : Data.Length;
 
         /// <summary>
         /// Returns <c>true</c> if the BinaryBlob data appears to be compressed.
