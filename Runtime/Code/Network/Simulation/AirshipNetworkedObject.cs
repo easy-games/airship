@@ -78,9 +78,7 @@ namespace Code.Network.Simulation
 
         private void LagCompensationCheck(int clientId, int tick, double time, double latency, double bufferTime)
         {
-            var commandBufferTime = (NetworkServer.sendInterval * (NetworkClient.bufferTimeMultiplier / 2f));
-            
-            var totalBuffer = (latency * 2) + bufferTime + commandBufferTime;
+            var totalBuffer = (latency * 2) + bufferTime;
             var lagCompensatedTime = time - (totalBuffer + bufferAdjustment);
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             this.SetSnapshot(lagCompensatedTick);

@@ -101,7 +101,7 @@ namespace Code.Quality {
         private int GetRealTargetFPS() {
             var targetFrameRate = Application.targetFrameRate;
             if (targetFrameRate < 0 || targetFrameRate > Screen.currentResolution.refreshRateRatio.value)
-                targetFrameRate = (int) (1.0 / Screen.currentResolution.refreshRateRatio.value);
+                targetFrameRate = (int) Screen.currentResolution.refreshRateRatio.value;
             return targetFrameRate;
         }
 
@@ -115,16 +115,16 @@ namespace Code.Quality {
             var avgFrameTimings = GetRecentAverageFrameTimings();
             
             // If our 5% is lower than 80% of target we should drop quality
-            if (currentFivePercent < 0.80 * targetFrameRate) {
+            if (currentFivePercent < 0.80 * Math.Min(targetFrameRate, 144)) {
                 frameHealth = FrameHealth.Unhealthy;
             }
 
             // print($"[Quality Check] 5%: {currentFivePercent}, 0.5%: {pointFivePercent}, health: {frameHealth}");
 
             if (this.tracer != null) {
-                this.tracer.SetMeasurement("fps_5_percent", currentFivePercent);
-                this.tracer.SetMeasurement("fps_0.5_percent", pointFivePercent);
-                this.tracer.SetMeasurement("target_fps", targetFrameRate);
+                this.tracer.SetMeasurement("spf_5_percent", 1f / Math.Max(0.01, currentFivePercent));
+                this.tracer.SetMeasurement("spf_0.5_percent", 1f / Math.Max(0.01, pointFivePercent));
+                this.tracer.SetMeasurement("target_spf", 1f / Math.Max(0.01, targetFrameRate));
                 this.tracer.SetMeasurement("cpu_main_avg", avgFrameTimings.cpuMainAvg);
                 this.tracer.SetMeasurement("cpu_render_avg", avgFrameTimings.cpuRenderAvg);
                 this.tracer.SetMeasurement("gpu_avg", avgFrameTimings.gpuAvg);

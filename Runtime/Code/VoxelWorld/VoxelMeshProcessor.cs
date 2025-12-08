@@ -1193,6 +1193,9 @@ namespace VoxelWorldStuff {
                 handledBlockFaces[i] = new HashSet<int>();
             }
 
+            // List used in internals of face expansion functions to avoid repeated non-main-thread allocations
+            var expandTempList = new List<int>();
+
             for (int x = 0; x < VoxelWorld.chunkSize; x++) {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++) {
                     for (int z = 0; z < VoxelWorld.chunkSize; z++) {
@@ -1368,15 +1371,17 @@ namespace VoxelWorldStuff {
                             var zScale = 1;
                             // Only expand face in planes perpendicular to normal
                             var flooredNorm = Vector3Int.FloorToInt(faceNormal);
+                            Profiler.BeginSample("MeshFace");
                             if (Vector3.Dot(faceNormal, Vector3.right) == 0)
                                 while (ExpandFaceX(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
                                            handledBlockFaces, xScale)) xScale++;
                             if (Vector3.Dot(faceNormal, Vector3.forward) == 0)
                                 while (ExpandFaceZ(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
-                                           handledBlockFaces, new Vector3(xScale, yScale, zScale), zScale)) zScale++;
+                                           handledBlockFaces, expandTempList, new Vector3(xScale, yScale, zScale), zScale)) zScale++;
                             if (Vector3.Dot(faceNormal, Vector3.up) == 0)
                                 while (ExpandFaceY(localVoxel, flooredNorm, faceIndex, blockIndex, damage,
-                                           handledBlockFaces, new Vector3(xScale, yScale, zScale), yScale)) yScale++;
+                                           handledBlockFaces, expandTempList, new Vector3(xScale, yScale, zScale), yScale)) yScale++;
+                            Profiler.EndSample();
 
                             Rect uvRect = block.GetUvsForFace(faceIndex);
 
@@ -1545,10 +1550,10 @@ namespace VoxelWorldStuff {
             return true;
         }
         
-        private bool ExpandFaceY(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, Vector3 size, int y) {
+        private bool ExpandFaceY(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, List<int> expandChecks, Vector3 size, int y) {
             if (y + localVoxel.y >= chunkSize) return false;
 
-            var expandChecks = new List<int>();
+            expandChecks.Clear();
             for (var x = 0; x < size.x; x++) {
                 for (var z = 0; z < size.z; z++) {
                     var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
@@ -1579,10 +1584,10 @@ namespace VoxelWorldStuff {
             return true;
         }
         
-        private bool ExpandFaceZ(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, Vector3 size, int z) {
+        private bool ExpandFaceZ(Vector3Int localVoxel, Vector3Int normal, int faceIndex, ushort blockIndex, float damage, HashSet<int>[] handledBlockFaces, List<int> expandChecks, Vector3 size, int z) {
             if (z + localVoxel.z >= chunkSize) return false;
 
-            var expandChecks = new List<int>();
+            expandChecks.Clear();
             for (var x = 0; x < size.x; x++) {
                 for (var y = 0; y < size.y; y++) {
                     var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +

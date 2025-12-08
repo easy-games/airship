@@ -37,6 +37,9 @@ namespace Mirror
         public double bufferTimeMultiplier = 2;
         public double bufferTime => NetworkServer.sendInterval * bufferTimeMultiplier;
 
+        // EASYMOD: This is a hack for us to be able to adjust lag comp requests per connection to account for the character input buffer. This is not used by anything in mirror.
+        public double inputBufferTime = 0;
+
         // <clienttime, snaps>
         readonly SortedList<double, TimeSnapshot> snapshots = new SortedList<double, TimeSnapshot>();
 
@@ -50,6 +53,9 @@ namespace Mirror
 
         /// <summary>Round trip time (in seconds) that it takes a message to go server->client->server.</summary>
         public double rtt => _rtt.Value;
+        /// <Summary>Round trip time variance aka jitter, in seconds.</Summary>
+        // "rttVariance" instead of "rttVar" for consistency with older versions.
+        public double rttVariance => _rtt.Variance;
 
         public NetworkConnectionToClient(int networkConnectionId, string clientAddress = "localhost")
             : base(networkConnectionId)
