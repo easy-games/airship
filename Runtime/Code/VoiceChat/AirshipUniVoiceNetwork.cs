@@ -84,7 +84,7 @@ namespace Code.VoiceChat {
 
             // We include the decoder on the server in editor for testing
             if (RunCore.IsClient() || (RunCore.IsServer() && Application.isEditor)) {
-                decoder = new OpusDecoder(16_000, 1);
+                decoder = new OpusDecoder(Mic.Frequency, 1);
             }
             
             if (RunCore.IsClient()) {
