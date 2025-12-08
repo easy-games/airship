@@ -7,6 +7,7 @@ using Code.Util;
 using Mirror;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
+using UnityEngine.Serialization;
 
 namespace Code.Network.StateSystem
 {
@@ -41,6 +42,9 @@ namespace Code.Network.StateSystem
         [Tooltip(
             "Determines if the server will process inputs from a client, or if it will create it's own input commands.")]
         public bool serverGeneratesCommands = false;
+        
+        [Tooltip("The maximum amount of lag compensation allowed in seconds")] [Range(0, 1)]
+        public float maximumLagCompensation = 0.5f;
 
         #endregion
 
@@ -531,7 +535,7 @@ namespace Code.Network.StateSystem
             // client when they issued the command.
             
             var totalBuffer = (latency * 2) + bufferTime;
-            var lagCompensatedTime = currentTime - totalBuffer;
+            var lagCompensatedTime = currentTime - Math.Max(maximumLagCompensation, totalBuffer);
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             
             // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {commandBufferTime}))");

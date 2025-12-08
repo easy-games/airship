@@ -1,6 +1,7 @@
 using System;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Network.Simulation
 {
@@ -22,6 +23,9 @@ namespace Code.Network.Simulation
         [Tooltip("Adjusts the lag compensation timing by this amount in seconds. Useful to add or remove additional delay on the lag compensation request. Ex. Removing observer buffer delay for non-buffered entities.")]
         [Range(-1, 1)]
         public float bufferAdjustment = 0;
+
+        [Tooltip("The maximum amount of lag compensation allowed in seconds")] [Range(0, 1)]
+        public float maximumLagCompensation = 0.5f;
         
         private History<PositionSnapshot> history;
         private Rigidbody rb;
@@ -79,7 +83,7 @@ namespace Code.Network.Simulation
         private void LagCompensationCheck(int clientId, int tick, double time, double latency, double bufferTime)
         {
             var totalBuffer = (latency * 2) + bufferTime;
-            var lagCompensatedTime = time - (totalBuffer + bufferAdjustment);
+            var lagCompensatedTime = time - Math.Min(maximumLagCompensation, totalBuffer + bufferAdjustment);
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             this.SetSnapshot(lagCompensatedTick);
         }
