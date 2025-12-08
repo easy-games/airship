@@ -6,7 +6,7 @@ using UnityEngine.Scripting;
 namespace Code {
     [LuauAPI][Preserve]
     public static class AirshipConst {
-        public const int playerVersion = 23;
+        public const int playerVersion = 24;
         public static readonly IReadOnlyList<string> playerFlags = new string[] {
             "SkipLoading",
             "LagCompCheckIdIsInt",
@@ -19,6 +19,6 @@ namespace Code {
         /// <summary>
         /// The server will kick clients that have a playerVersion lower than this value.
         /// </summary>
-        public const int minAcceptedPlayerVersionOnServer = 23;
+        public const int minAcceptedPlayerVersionOnServer = 24;
     }
 }
