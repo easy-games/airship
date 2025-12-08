@@ -24,4 +24,10 @@
         /// </summary>
         public float[] samples;
     }
+
+    [System.Serializable]
+    public struct AirshipCompressedChatroomAudioSegment {
+        public int segmentIndex;
+        public byte[] compressedSamples;
+    }
 }

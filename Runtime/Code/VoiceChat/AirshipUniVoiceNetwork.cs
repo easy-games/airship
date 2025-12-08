@@ -61,7 +61,9 @@ namespace Code.VoiceChat {
         /// Only on client, this is the VOIP encoder to reduce bandwidth. Initialized in Start.
         /// </summary>
         private OpusEncoder encoder;
-        private byte[] encodedBytes = new byte[6633]; // This should be more than enough size for 1 frame @ 10samples/s?
+        private OpusDecoder decoder;
+        private byte[] encodedBytes = new byte[600]; // This should be more than enough size for 1 frame @ 10samples/s?
+        private float[] outPcm = new float[16_000 / (1000 / 40)]; // Sample rate / samples per second = sample size
         
         private void OnDisable() {
             if (this.agent != null) {
@@ -82,6 +84,8 @@ namespace Code.VoiceChat {
             if (RunCore.IsClient()) {
                 // Sample rate matches ProtectedSettingsSingleton.ts
                 encoder = new OpusEncoder(16_000, 1, OpusApplication.OPUS_APPLICATION_VOIP);
+                decoder = new OpusDecoder(16_000, 1);
+                
                 this.ClientSendReadyWhenAble();
             }
 
@@ -342,8 +346,17 @@ namespace Code.VoiceChat {
         private void EmitAudioInScene(short senderPeerId, byte[] bytes) {
             Debug.Log("Recv audio: " + bytes.Length);
             if (this.deafened) return;
-            
-            var segment = FromByteArray<ChatroomAudioSegment>(bytes);
+
+            var compressedSegment = FromByteArray<AirshipCompressedChatroomAudioSegment>(bytes);
+            var decodedFloats = decoder.Decode(compressedSegment.compressedSamples, 0, compressedSegment.compressedSamples.Length, outPcm, 0, outPcm.Length, false);
+            var segment = new ChatroomAudioSegment {
+                samples = outPcm,
+                segmentIndex = compressedSegment.segmentIndex,
+                // Keeping these constant reduces bandwidth
+                channelCount = 1,
+                frequency = 16_000,
+            };
+            // Span<float> segment = outPcm.AsSpan(0, decodedFloats);
             
             this.PreProcessAudio(segment);
             
@@ -387,9 +400,13 @@ namespace Code.VoiceChat {
                 var frameSize = agent.AudioInput.Frequency / agent.AudioInput.SegmentRate;
                 Debug.Log($"Sample size = {data.samples.Length}, frameSize={frameSize}");
                 var encodedSize = encoder.Encode(data.samples, frameSize, this.encodedBytes, this.encodedBytes.Length);
-                Debug.Log("Encoded size: " + encodedSize);
-                
-                var bytes = ToByteArray(data);
+
+                var encodedPcmBytes = this.encodedBytes.AsSpan(0, encodedSize).ToArray();
+                var bytes = ToByteArray<AirshipCompressedChatroomAudioSegment>(new AirshipCompressedChatroomAudioSegment {
+                    compressedSamples = encodedPcmBytes,
+                    segmentIndex = data.segmentIndex,
+                });
+                Debug.Log("Bytes size: " + bytes.Length);
                 this.EmitAudioInScene(LocalPeerId, bytes);
                 Debug.Log("Broadcasting audio of size " + bytes.Length);
                 RpcSendAudioToServer(bytes);

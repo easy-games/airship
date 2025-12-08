@@ -12,6 +12,7 @@ namespace Code {
             "LagCompCheckIdIsInt",
             "PlatformGearDownloadClassId",
             "HasTransformMoveDirection", // True for versions that have access to CharacterMovement.TransformMoveDirection
+            "CompressVOIPAudio",
         };
 
 

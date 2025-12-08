@@ -380,8 +380,8 @@ public static class Bridge {
     }
 
     [LuauAPI(LuauContext.Protected)]
-    public static void StartMicRecording(int frequency, int sampleLength) {
-        Mic.Instance.StartRecording(frequency, sampleLength);
+    public static void StartMicRecording() {
+        Mic.Instance.StartRecording();
     }
 
     [LuauAPI(LuauContext.Protected)]

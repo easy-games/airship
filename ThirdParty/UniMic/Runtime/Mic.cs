@@ -137,8 +137,17 @@ namespace Adrenak.UniMic {
         /// <summary>
         /// Starts to stream the input of the current Mic device
         /// </summary>
-        public void StartRecording(int frequency = 16000, int sampleDurationMS = 10) {
-            Debug.Log("Start recording @ " + sampleDurationMS);
+        /// <param name="frequency">
+        /// Mic frequency hz. Matches AirshipUniVoiceNetwork.cs for audio encoding.
+        /// </param>
+        /// <param name="sampleDurationMS">
+        /// Microphone sample duration in milliseconds
+        ///  
+        /// https://datatracker.ietf.org/doc/html/rfc6716#section-2.1.4
+        /// Opus supports 40ms sample sizes. It is also important that 1000/dur
+        /// is an integer, which 40 satisfies (this is for UniMic segment rate).
+        /// </param>
+        public void StartRecording(int frequency = 16000, int sampleDurationMS = 40) {
             StopRecording();
             IsRecording = true;
 
