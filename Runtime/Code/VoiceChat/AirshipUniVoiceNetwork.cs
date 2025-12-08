@@ -9,6 +9,7 @@ using Adrenak.UniVoice;
 using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.UniMicInput;
 using Airship.DevConsole;
+using Code.NetworkRateLimit;
 using Code.Player;
 using Concentus.Enums;
 using Concentus.Structs;
@@ -63,7 +64,7 @@ namespace Code.VoiceChat {
         private OpusEncoder encoder;
         private OpusDecoder decoder;
         private byte[] encodedBytes = new byte[600]; // This should be more than enough size for 1 frame @ 10samples/s?
-        private float[] outPcm = new float[16_000 / (1000 / 40)]; // Sample rate / samples per second = sample size
+        private float[] outPcm = new float[Mic.Frequency / (1000 / Mic.SampleDurationMS)]; // Sample rate / samples per second = sample size
         
         private void OnDisable() {
             if (this.agent != null) {
@@ -80,11 +81,14 @@ namespace Code.VoiceChat {
                 new UniVoiceUniMicInput(),
                 new UniVoiceAudioSourceOutput.Factory()
             );
+
+            // We include the decoder on the server in editor for testing
+            if (RunCore.IsClient() || (RunCore.IsServer() && Application.isEditor)) {
+                decoder = new OpusDecoder(16_000, 1);
+            }
             
             if (RunCore.IsClient()) {
-                // Sample rate matches ProtectedSettingsSingleton.ts
-                encoder = new OpusEncoder(16_000, 1, OpusApplication.OPUS_APPLICATION_VOIP);
-                decoder = new OpusDecoder(16_000, 1);
+                encoder = new OpusEncoder(Mic.Frequency, 1, OpusApplication.OPUS_APPLICATION_VOIP);
                 
                 this.ClientSendReadyWhenAble();
             }
@@ -300,20 +304,35 @@ namespace Code.VoiceChat {
             // throw new NotImplementedException();
         }
 
-        [Command(requiresAuthority = false, channel = Channels.Reliable)]
+        [Command(requiresAuthority = false, channel = Channels.Unreliable)]
         void RpcSendAudioToServer(byte[] bytes, NetworkConnectionToClient conn = null) {
+            if (bytes.Length > 1000) {
+                Debug.LogWarning($"Audio size too large, rejecting. size={bytes.Length} client={conn.connectionId}");
+                return;
+            }
+            var maxCallsPerHalfSecond = 500 / Mic.SampleDurationMS + 1;
+            if (!NetworkRateLimiter.CheckRateLimit(conn.connectionId, System.Reflection.MethodBase.GetCurrentMethod(), maxCallsPerHalfSecond, 0.5f)) {
+                Debug.LogWarning($"Audio rate limit exceeded, rejecting. client={conn.connectionId}");
+                return;
+            }
+            
             this.audioNonce++;
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.connectionId);
             // print("[server] received audio from peer " + senderPeerId);
-            RpcSendAudioToClient(senderPeerId, bytes, this.audioNonce);
-
-            if (Application.isEditor) {
-                this.EmitAudioInScene(senderPeerId, bytes);
+            foreach (var connectionToClient in NetworkServer.connections.Values) {
+                if (!connectionToClient.isReady) continue;
+                if (connectionToClient.connectionId == conn.connectionId) continue; // Don't send to sender
+                
+                TargetSendAudioToClient(connectionToClient, senderPeerId, bytes, this.audioNonce);   
             }
+
+            // if (Application.isEditor) {
+            //     this.EmitAudioInScene(senderPeerId, bytes);
+            // }
         }
 
-        [ClientRpc(channel = Channels.Reliable)]
-        void RpcSendAudioToClient(short senderPeerId, byte[] bytes, uint nonce) {
+        [TargetRpc(channel = Channels.Unreliable)]
+        void TargetSendAudioToClient(NetworkConnectionToClient target, short senderPeerId, byte[] bytes, uint nonce) {
             // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             this.EmitAudioInScene(senderPeerId, bytes);
         }

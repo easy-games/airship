@@ -19,7 +19,7 @@ namespace Adrenak.UniMic {
             var mic = Mic.Instance;
 
             if(startRecordingAutomatically)
-                mic.StartRecording(recordingFrequency, sampleDurationMS);
+                mic.StartRecording();
 
             mic.OnTimestampedSampleReady += (index, segment) => {
                 var clip = AudioClip.Create("clip", mic.SampleLength, mic.AudioClip.channels, mic.AudioClip.frequency, false);

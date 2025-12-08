@@ -39,8 +39,8 @@ namespace Adrenak.UniMic {
 				EditorGUILayout.LabelField("Device Name", mic.CurrentDeviceName);
 
 				EditorGUILayout.Toggle("Is Recording", mic.IsRecording);
-				EditorGUILayout.IntField("Frequency", mic.Frequency);
-				EditorGUILayout.IntField("Sample Duration (ms)", mic.SampleDurationMS);
+				// EditorGUILayout.IntField("Frequency", mic.Frequency);
+				// EditorGUILayout.IntField("Sample Duration (ms)", mic.SampleDurationMS);
 
 				GUI.enabled = true;
 			}

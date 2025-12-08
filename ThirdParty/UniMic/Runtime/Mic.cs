@@ -19,7 +19,7 @@ namespace Adrenak.UniMic {
         /// <summary>
         /// The frequency at which the mic is operating
         /// </summary>
-        public int Frequency { get; set; }
+        public const int Frequency = 16_000;
 
         /// <summary>
         /// Last populated audio sample
@@ -28,8 +28,13 @@ namespace Adrenak.UniMic {
 
         /// <summary>
         /// Sample duration/length in milliseconds
+        /// Microphone sample duration in milliseconds
+        ///
+        /// https://datatracker.ietf.org/doc/html/rfc6716#section-2.1.4
+        /// Opus supports 40ms sample sizes. It is also important that 1000/dur
+        /// is an integer, which 40 satisfies (this is for UniMic segment rate).
         /// </summary>
-        public int SampleDurationMS { get; set; }
+        public const int SampleDurationMS = 40;
 
         /// <summary>
         /// The length of the sample float array
@@ -123,7 +128,7 @@ namespace Adrenak.UniMic {
             Microphone.End(CurrentDeviceName);
             CurrentDeviceName = deviceName;
             if (IsRecording)
-                StartRecording(Frequency, SampleDurationMS);
+                StartRecording();
         }
 
         /// <summary>
@@ -131,28 +136,16 @@ namespace Adrenak.UniMic {
         /// previously being used.
         /// </summary>
         public void ResumeRecording() {
-            StartRecording(Frequency, SampleDurationMS);
+            StartRecording();
         }
 
         /// <summary>
         /// Starts to stream the input of the current Mic device
         /// </summary>
-        /// <param name="frequency">
-        /// Mic frequency hz. Matches AirshipUniVoiceNetwork.cs for audio encoding.
         /// </param>
-        /// <param name="sampleDurationMS">
-        /// Microphone sample duration in milliseconds
-        ///  
-        /// https://datatracker.ietf.org/doc/html/rfc6716#section-2.1.4
-        /// Opus supports 40ms sample sizes. It is also important that 1000/dur
-        /// is an integer, which 40 satisfies (this is for UniMic segment rate).
-        /// </param>
-        public void StartRecording(int frequency = 16000, int sampleDurationMS = 40) {
+        public void StartRecording() {
             StopRecording();
             IsRecording = true;
-
-            Frequency = frequency;
-            SampleDurationMS = sampleDurationMS;
 
             AudioClip = Microphone.Start(CurrentDeviceName, true, 1, Frequency);
             Sample = new float[Frequency / 1000 * SampleDurationMS * AudioClip.channels];
