@@ -50,10 +50,6 @@ namespace Editor.Settings {
                         AirshipCustomEditors.UserInspectorMode);
 
                     if (AirshipCustomEditors.UseNewInspector) {
-                        EditorGUILayout.HelpBox("Using the new inspectors, please report any issues to @Vorlias on discord. Custom editor API is subject to change.", MessageType.Warning);
-                        EditorGUILayout.Space(5);
-                        
-                        
                         listEditors = EditorGUILayout.BeginFoldoutHeaderGroup(listEditors, "Active Editors");
                         if (listEditors) {
                             var codeStyle = new GUIStyle() {
@@ -107,6 +103,9 @@ namespace Editor.Settings {
                             EditorGUILayout.EndScrollView();
                         }
                         EditorGUILayout.EndFoldoutHeaderGroup();
+                    } else {
+                        EditorGUILayout.HelpBox("Using the legacy inspector system, which will not work for scriptable objects and will soon be sunset.", MessageType.Warning);
+                        EditorGUILayout.Space(5);
                     }
                 }
                 BetaCategoryEnd();

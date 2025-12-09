@@ -6,19 +6,19 @@ using UnityEditor;
 using Object = UnityEngine.Object;
 
 public class AirshipSerializedArray {
+    private readonly SerializedProperty serializedItems;
+    private readonly SerializedProperty serializedObjects;
     public AirshipSerializedProperty property { get; }
     public AirshipSerializedType elementType =>
         AirshipSerializedValue.GetTypeFromTypeString(property.serializedItems.FindPropertyRelative("type").stringValue);
-
+    public bool isObjectArray => elementType is AirshipSerializedType.Object or AirshipSerializedType.AirshipBehaviour
+        or AirshipSerializedType.AirshipScriptableObject;
     public string elementObjectTypeString => property.serializedItems.FindPropertyRelative("objectType").stringValue;
     
     [CanBeNull]
     public Type elementObjectType => TypeReflection.GetTypeFromString(property.serializedItems.FindPropertyRelative("objectType").stringValue);
     [CanBeNull]
     public AirshipType elementAirshipType => AirshipBuildInfo.Instance.GetTypeByName(property.serializedItems.FindPropertyRelative("objectType").stringValue);
-    
-    private readonly SerializedProperty serializedItems;
-    private readonly SerializedProperty serializedObjects;
 
     public bool prefabOverride => serializedItems.prefabOverride || serializedObjects.prefabOverride;
 
@@ -70,9 +70,7 @@ public class AirshipSerializedArray {
     }
 
     public int size {
-        get {
-            return this.serializedItems.arraySize;
-        }
+        get => isObjectArray ? this.serializedObjects.arraySize : this.serializedItems.arraySize;
     }
     
     public AirshipSerializedArrayValue PushElement() {
@@ -83,17 +81,23 @@ public class AirshipSerializedArray {
     }
     
     public AirshipSerializedArrayValue InsertLastElement(Object obj) {
-        if (this.elementType == AirshipSerializedType.Object) {
-            var element = PushElement();
-            element.objectReferenceValue = obj;
-            return element;
-        } else if (this.elementType == AirshipSerializedType.AirshipBehaviour && obj is AirshipComponent component) {
-            var element = PushElement();
-            element.objectReferenceValue = component;
-            return element;
-        }
+        if (!isObjectArray) throw new ArgumentException("Cannot insert object into non-object array", nameof(obj));
+        var element = PushElement();
+        if (obj == null) return element;
 
-        return null;
+        var (isExpectedType, expectedTypeName) = elementType switch {
+            AirshipSerializedType.Object => (obj.GetType() == elementObjectType, obj.GetType().Name),
+            AirshipSerializedType.AirshipBehaviour => (obj is AirshipComponent ac && ac.GetAirshipType() == elementAirshipType, elementAirshipType!.Name),
+            AirshipSerializedType.AirshipScriptableObject => (obj is AirshipScriptableObject aso && aso.GetAirshipType() == elementAirshipType, elementAirshipType!.Name),
+            _ => (false, elementType.ToString()),
+        };
+
+        if (!isExpectedType) {
+            throw new ArgumentException($"Inserted value is not a {expectedTypeName}");
+        }
+        
+        element.objectReferenceValue = obj;
+        return element;
     }
     
     public AirshipSerializedArrayValue GetElementAtIndex(int index) {
@@ -134,7 +138,7 @@ public class AirshipSerializedArray {
     }
 
     public static implicit operator SerializedProperty(AirshipSerializedArray array) {
-        if (array.elementType is AirshipSerializedType.Object or AirshipSerializedType.AirshipBehaviour) {
+        if (array.isObjectArray) {
             return array.serializedObjects;
         } else {
             return array.serializedItems;

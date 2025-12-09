@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
@@ -20,12 +22,10 @@ namespace Luau {
         /// <summary>
         /// An AirshipScriptableObject class
         /// </summary>
-        [Obsolete] // not yet impl
         AirshipScriptableObject,
         /// <summary>
         /// A class that is @Serializable()
         /// </summary>
-        [Obsolete] // not yet impl
         SerializableClass,
     }
     
@@ -40,7 +40,10 @@ namespace Luau {
         /// <returns>The type, or null if not found</returns>
         [CanBeNull]
         public static AirshipType GetType(string typeName) => AirshipBuildInfo.Instance.GetTypeByName(typeName);
-        
+
+        public bool IsAbstract { get; }
+        public bool IsDefault { get; }
+
         /// <summary>
         /// The name of this type
         /// </summary>
@@ -57,6 +60,9 @@ namespace Luau {
         /// The types this Type inherits
         /// </summary>
         public AirshipType[] BaseTypes { get; internal set; }
+
+        internal List<AirshipType> childTypes = new();
+        public AirshipType[] ChildTypes => childTypes.ToArray();
         /// <summary>
         /// A unique identifier for this type
         /// </summary>
@@ -88,9 +94,25 @@ namespace Luau {
             }
         }
 
+        internal AirshipType(AirshipTypeInfo typeMetadata) {
+            Name = typeMetadata.name;
+            DeclarationType = typeMetadata.declarationType;
+            RuntimePath = Path.ChangeExtension(typeMetadata.file, ".lua");
+
+            if (typeMetadata.modifiers != null) {
+                IsAbstract = typeMetadata.modifiers.Contains("abstract");
+                IsDefault = typeMetadata.modifiers.Contains("default");
+            }
+        }
+
         internal AirshipType(AirshipBehaviourMeta meta) {
             Name = meta.className;
-            DeclarationType = meta.component ? AirshipDeclarationType.AirshipBehaviour : AirshipDeclarationType.Unknown;
+            DeclarationType = meta.type switch {
+                AirshipBehaviourMetaType.AirshipBehaviour => AirshipDeclarationType.AirshipBehaviour,
+                AirshipBehaviourMetaType.AirshipScriptableObject => AirshipDeclarationType.AirshipScriptableObject,
+                AirshipBehaviourMetaType.Serializable => AirshipDeclarationType.SerializableClass,
+                _ => AirshipDeclarationType.Unknown
+            };
             RuntimePath = meta.filePath;
         }
         

@@ -28,7 +28,17 @@ namespace Luau {
         AirshipArray,
         AirshipPod,
         AirshipComponent,
-        AirshipLayerMask
+        AirshipLayerMask,
+        AirshipScriptableObject,
+        AirshipClassObject,
+    }
+    
+    [Flags]
+    public enum PropertyDependencyFilterFlags {
+        None = 0,
+        AirshipComponent = 1 << 0,
+        AirshipScriptableObject = 1 << 1,
+        All = -1,
     }
     
     [Serializable]
@@ -102,10 +112,28 @@ namespace Luau {
             return component;
         }
     }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    internal class AirshipScriptableObjectRef {
+        public int unityInstanceId;
+
+        public AirshipScriptableObjectRef() {}
+
+        public AirshipScriptableObjectRef(int unityInstanceId) {
+            this.unityInstanceId = unityInstanceId;
+        }
+    }
     
     // This must match up with the C++ version of the struct
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public struct LuauMetadataAirshipComponentRefContainerDto {
+        public IntPtr value;
+        public int valueType;
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataAirshipScriptableObjectRefContainerDto {
         public IntPtr value;
         public int valueType;
     }
@@ -163,6 +191,54 @@ namespace Luau {
         // From JSON:
         public string name;
         public List<LuauMetadataDecoratorValue> parameters = new();
+        
+        [CanBeNull]
+        public string GetParameterAsString(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            return parameters[index].value as string;
+        }
+
+        public int? GetParameterAsInt(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            var serializedValue = parameters[index].serializedValue;
+            if (int.TryParse(serializedValue, out var value)) {
+                return value;
+            } else {
+                return null;
+            }
+        }
+        
+        public float? GetParameterAsFloat(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            var serializedValue = parameters[index].serializedValue;
+            if (float.TryParse(serializedValue, out var value)) {
+                return value;
+            } else {
+                return null;
+            }
+        }
+        
+        public bool? GetParameterAsBool(int index) {
+            if (index >= parameters.Count) {
+                return null;
+            }
+
+            var serializedValue = parameters[index].serializedValue;
+            if (bool.TryParse(serializedValue, out var value)) {
+                return value;
+            } else {
+                return null;
+            }
+        }
     }
     
     [Serializable]
@@ -254,15 +330,16 @@ namespace Luau {
         private LuauMetadataJsDoc jsDocs;
         public LuauMetadataJsDoc JsDoc => jsDocs;
         public string Documentation => JsDoc?.RichText;
-        
-        #if UNITY_EDITOR
+
+#if UNITY_EDITOR
         [JsonProperty][SerializeField]
         #endif
         private List<LuauMetadataDecoratorElement> decorators = new();
+        
         public bool nullable;
         [JsonProperty("default")]
         public object defaultValue;
-        
+
         // Misc:
         public string serializedValue;
         public UnityEngine.Object serializedObject;
@@ -335,6 +412,11 @@ namespace Luau {
                 serializedObject = property.serializedObject;
                 modified = false;
             }
+        }
+
+        internal bool ReconcileDecorators(LuauMetadataProperty property) {
+            property.decorators = new List<LuauMetadataDecoratorElement>(property.decorators);
+            return true;
         }
 
         internal bool ReconcileItemsWith(LuauMetadataProperty property) {
@@ -463,6 +545,13 @@ namespace Luau {
                     };
                 }
                 
+                if (componentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+                    return new LuauMetadataAirshipScriptableObjectRefContainerDto() {
+                        value = valuePtr,
+                        valueType = (int) componentType,
+                    };
+                }
+                
                 // Pod needs to additionally add "type" field
                 if (componentType == AirshipComponentPropertyType.AirshipPod) {
                     if (!_builtInTypes.TryGetValue(objTypeStr, out var podType)) {
@@ -562,21 +651,30 @@ namespace Luau {
                     }
                     break;
                 }
+                case AirshipComponentPropertyType.AirshipScriptableObject: {
+                    if (objectRef is AirshipScriptableObject scriptableObject) {
+                        var instanceId = AirshipScriptableObjectRoot.GetIdFromScriptableObject(scriptableObject);
+                        obj = new AirshipScriptableObjectRef(instanceId);
+                    } else {
+                        propType = AirshipComponentPropertyType.AirshipNil;
+                        obj = -1; // Reference to null
+                    }
+                    break;
+                }
+#if AIRSHIPEX_CLASS_OBJECT
+                case AirshipComponentPropertyType.AirshipClassObject: {
+                    if (objectRef is AirshipSerializableClassObject serializedObject) {
+                    } else {
+                        propType = AirshipComponentPropertyType.AirshipNil;
+                        obj = -1; // Reference to null
+                    }
+
+                    break;
+                }
+#endif
                 case AirshipComponentPropertyType.AirshipComponent: {
                     if (objectRef is AirshipComponent scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
-                        // if (!AirshipBehaviourRootV2.HasId(gameObject)) {
-                        //     // See if it just needs to be started first:
-                        //     var foundAny = false;
-                        //     foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
-                        //         foundAny = true;
-                        //     }
-                        //
-                        //     // Retry getting AirshipBehaviourRoot:
-                        //     // if (foundAny) {
-                        //         // airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-                        //     // }
-                        // }
 
                         if (AirshipBehaviourRootV2.HasId(gameObject)) {
                             // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
@@ -637,9 +735,9 @@ namespace Luau {
             }
         }
         
-        public void SetDefaultAsValue() {
+        public bool SetDefaultAsValue() {
             if (type == "Array") {
-                Newtonsoft.Json.Linq.JArray jarray = (Newtonsoft.Json.Linq.JArray) defaultValue;
+                JArray jarray = (JArray) defaultValue;
                 var elementComponentPropertyType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(items.type, HasDecorator("int"));
                 var jarraySize = jarray == null ? 0 : jarray.Count;
                 string[] serializedElements = new string[jarraySize];
@@ -649,20 +747,93 @@ namespace Luau {
                 }
 
                 items.serializedItems = serializedElements;
-                return;
+                return true;
             }
 
             // void AirshipBehaviours or Components
             if (type is "AirshipBehaviour" or "object") {
                 serializedObject = null;
+                return true;
+            }
+
+            if (defaultValue == null) {
+                return false;
             }
             
-            if (defaultValue == null) return;
-            
             serializedValue = LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, ComponentType);
+            return true;
         }
     }
 
+    [Serializable]
+    public class AirshipScriptMetadata {
+        [SerializeReference]
+        public LuauMetadata behaviour;
+        [SerializeReference]
+        public LuauMetadata scriptable;
+        [SerializeReference]
+        public LuauMetadata[] serializables;
+
+        public bool isComponent => behaviour != null && scriptable == null;
+        public bool isScriptableObject => scriptable != null && behaviour == null;
+        public bool hasScriptableClasses => serializables != null;
+
+        public static bool ParseScriptMetadata(string json, out AirshipScriptMetadata metadata) {
+            metadata = JsonConvert.DeserializeObject<AirshipScriptMetadata>(json);
+
+            if (metadata.behaviour != null) {
+#if UNITY_EDITOR
+                var airshipComponentMenu = metadata.behaviour.FindClassDecorator("AirshipComponentMenu");
+                if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out var componentPath)) {
+                    var value = componentPath.Split("/");
+                    metadata.behaviour.displayName = ObjectNames.NicifyVariableName(value.Last());
+                }
+                else {
+                    metadata.behaviour.displayName = ObjectNames.NicifyVariableName(metadata.behaviour.name);
+                }
+
+                var airshipIcon = metadata.behaviour.FindClassDecorator("AirshipComponentIcon");
+                if (airshipIcon != null && airshipIcon.parameters[0].TryGetString(out var airshipIconPath)) {
+                    metadata.behaviour.displayIcon = File.Exists(airshipIconPath) ? AssetDatabase.LoadAssetAtPath<Texture2D>(airshipIconPath) : null;
+                }
+                else {
+                    metadata.behaviour.displayIcon = null;
+                }
+#endif
+                
+                // Set default values:
+                foreach (var property in metadata.behaviour.properties) {
+                    property.SetDefaultAsValue();
+                }
+            }
+
+            if (metadata.scriptable != null) {
+                // Set default values:
+                foreach (var property in metadata.scriptable.properties) {
+                    Debug.Log($"scriptable {property.name} as default {property.defaultValue}");
+                    property.SetDefaultAsValue();
+                }
+            }
+
+            if (metadata.serializables != null) {
+                foreach (var serializable in metadata.serializables) {
+                    foreach (var property in serializable.properties) {
+                        property.SetDefaultAsValue();
+                    }
+                }
+            }
+            
+            return metadata.behaviour != null || metadata.scriptable != null || metadata.serializables != null;
+        }
+        
+        public static AirshipScriptMetadata FromJson(string json) {
+            var metadata = JsonConvert.DeserializeObject<AirshipScriptMetadata>(json);
+            return metadata;
+        }
+
+        public bool hasExports => behaviour != null || scriptable != null || serializables != null;
+    }
+    
     [Serializable]
     public class LuauMetadata {
         public string name;
@@ -716,7 +887,44 @@ namespace Luau {
             
             return (metadata, null);
         }
+
         
+        internal IReadOnlyList<IAirshipRuntimeReferenceDependency> GetRuntimePropertyDependencies(PropertyDependencyFilterFlags filterFlags = PropertyDependencyFilterFlags.All) {
+            List<IAirshipRuntimeReferenceDependency> dependencies = new();
+
+            var includeComponents = (filterFlags & PropertyDependencyFilterFlags.AirshipComponent) != 0;
+            var includeScriptableObjects = (filterFlags & PropertyDependencyFilterFlags.AirshipScriptableObject) != 0;
+            
+            foreach (var property in properties) {
+                if (includeComponents && property.ComponentType == AirshipComponentPropertyType.AirshipComponent) {
+                    var obj = property.serializedObject;
+                    if (obj == null) continue;
+                    dependencies.Add(obj as AirshipComponent);
+                } else if (includeComponents && property.ComponentType == AirshipComponentPropertyType.AirshipArray && property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipComponent) {
+                    if (property.items.objectRefs == null) continue;
+                    foreach (var arrayItem in property.items.objectRefs) {
+                        if (arrayItem != null) {
+                            dependencies.Add(arrayItem as AirshipComponent);
+                        }
+                    }
+                } else if (includeScriptableObjects && property.ComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+                    var obj = property.serializedObject;
+                    if (obj == null) continue;
+                    dependencies.Add(obj as AirshipScriptableObject);
+                } else if (includeScriptableObjects && property.ComponentType == AirshipComponentPropertyType.AirshipArray &&
+                           property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipScriptableObject) {
+                    if (property.items.objectRefs == null) continue;
+                    foreach (var arrayItem in property.items.objectRefs) {
+                        if (arrayItem != null) {
+                            dependencies.Add(arrayItem as AirshipScriptableObject);
+                        }
+                    }
+                }
+            }
+
+            return dependencies;
+        }
+
         public LuauMetadataDecoratorElement FindClassDecorator(string decoratorName) {
             foreach (var property in decorators) {
                 if (property.name == decoratorName) {
@@ -741,9 +949,8 @@ namespace Luau {
             return null;
         }
 
-        [Obsolete("Use FindProperty - the <T> argument is not used")]
-        public LuauMetadataProperty FindProperty<T>(string propertyName) {
-            return FindProperty(propertyName);
+        public int FindPropertyIndex(string propertyName) {
+            return properties.FindIndex(f => f.name == propertyName);
         }
     }
 }

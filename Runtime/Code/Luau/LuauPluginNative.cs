@@ -80,6 +80,21 @@ public static class LuauPluginNative {
 	internal delegate IntPtr PrewarmAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId);
 	[NativeDelegate] internal static PrewarmAirshipComponentDelegate PrewarmAirshipComponent;
 	
+	internal delegate IntPtr CreateScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId);
+	[NativeDelegate] internal static CreateScriptableObjectDelegate CreateScriptableObject;
+	
+	internal delegate IntPtr RemoveScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId);
+	[NativeDelegate] internal static RemoveScriptableObjectDelegate RemoveScriptableObject;
+	
+	internal delegate IntPtr PushScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId);
+	[NativeDelegate] internal static PushScriptableObjectDelegate PushScriptableObject;
+	
+	internal unsafe delegate IntPtr InitializeAirshipScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId, LuauMetadataPropertyMarshalDto* props, int nProps);
+	[NativeDelegate] internal static InitializeAirshipScriptableObjectDelegate InitializeScriptableObject;
+	
+	internal delegate IntPtr UpdateIndividualAirshipScriptableObjectDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int updateType);
+	[NativeDelegate] internal static UpdateIndividualAirshipScriptableObjectDelegate UpdateIndividualScriptableObject;
+	
 	internal delegate IntPtr RemoveAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
 	[NativeDelegate] internal static RemoveAirshipComponentDelegate RemoveAirshipComponent;
 	
@@ -377,6 +392,41 @@ public static class LuauPluginNative {
 	[DllImport("LuauPlugin")]
 #endif
 	internal static extern IntPtr PrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern IntPtr CreateScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern IntPtr RemoveScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern IntPtr PushScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId);
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern unsafe IntPtr InitializeScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId, LuauMetadataPropertyMarshalDto* props, int nProps);
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	internal static extern IntPtr UpdateIndividualScriptableObject(LuauContext context, IntPtr thread, int unityInstanceId, int updateType);
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
