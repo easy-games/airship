@@ -535,7 +535,7 @@ namespace Code.Network.StateSystem
             // client when they issued the command.
             
             var totalBuffer = (latency * 2) + bufferTime;
-            var lagCompensatedTime = currentTime - Math.Max(maximumLagCompensation, totalBuffer);
+            var lagCompensatedTime = currentTime - Math.Min(maximumLagCompensation, totalBuffer);
             var lagCompensatedTick = AirshipSimulationManager.Instance.GetNearestTickForUnscaledTime(lagCompensatedTime);
             
             // print($"CLIENTTIME - ({currentTime} - (({latency} * 2) + {bufferTime} + {commandBufferTime}))");
