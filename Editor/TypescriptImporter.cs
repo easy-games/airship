@@ -159,7 +159,7 @@ namespace Editor {
                     
                     if (airshipScript.scriptType == AirshipScriptType.Behaviour) AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
                 }
-
+                
                 if (airshipScript.scriptType == AirshipScriptType.ScriptableObject) {
                     var decorator = airshipScript.m_metadata?.FindClassDecorator("CreateAssetMenu");
                     if (decorator != null) {

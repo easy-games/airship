@@ -16,7 +16,7 @@ public static class AirshipEditorExtensions {
     public static T GetObject<T>(this AirshipSerializedValue value) where T : UnityEngine.Object {
         return (T) GetObject(value);
     }
-
+    
     /// <summary>
     /// Grab the type of the given AirshipComponent
     /// </summary>
