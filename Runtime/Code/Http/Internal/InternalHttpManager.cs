@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Code.Http.Internal {
 
-    [LuauAPI]
+    [LuauAPI(LuauContext.Protected)]
     public static class InternalHttpManager {
         public static string editorUserId;
         public static string editorAuthToken = "";
