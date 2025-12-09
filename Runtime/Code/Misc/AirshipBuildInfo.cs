@@ -6,7 +6,6 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
-using Unity.Android.Gradle.Manifest;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
