@@ -215,6 +215,11 @@ public static class AirshipCustomEditors {
         if (airshipTypeToCustomEditor.TryGetValue(pathType, out var editorType)) {
             return editorType.EditorType;
         }
+
+        foreach (var baseType in pathType.BaseTypes) {
+            if (!airshipTypeToCustomEditor.TryGetValue(baseType, out editorType)) continue;
+            if (editorType.EditorAttribute.EditorForChildClasses) return editorType.EditorType;
+        }
         
         return airshipDeclarationType switch {
             AirshipDeclarationType.Unknown => null,

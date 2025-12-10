@@ -545,7 +545,30 @@ public static partial class AirshipEditorGUI {
         return enabled;
     }
 
+    /// <summary>
+    /// Draws the decorators (if applicable) and will return true if the property should render
+    /// </summary>
+    /// <param name="property">The property to draw the decorators for</param>
+    /// <returns></returns>
+    public static bool DrawDecorators(AirshipSerializedProperty property) {
+        var shouldHideProperty = false;
+        foreach (var decorator in property.decorators) {
+            if (AirshipCustomEditors.TryGetDecorator(decorator, out var propertyDecorator)) {
+                propertyDecorator.arguments = decorator.parameters.ToArray();
+                propertyDecorator.property = property;
+                propertyDecorator.serializedObject = property.serializedObject;
+                    
+                if (!propertyDecorator.ShouldDrawProperty()) {
+                    shouldHideProperty = true;
+                    break;
+                }
+                    
+                propertyDecorator.OnBeforeInspectorGUI();
+            }
+        }
 
+        return !shouldHideProperty;
+    }
     
     /// <summary>
     /// Draws the given airship property value
