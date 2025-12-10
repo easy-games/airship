@@ -7,8 +7,10 @@ using UnityEngine.UIElements;
 [InitializeOnLoad]
 public class AirshipComponentHeaderHandler {
     static AirshipComponentHeaderHandler() {
+#if !AIRSHIP_PLAYER
         UnityEditor.Editor.finishedDefaultHeaderGUI -= AfterInspectorRootEditorHeaderGUI;
         UnityEditor.Editor.finishedDefaultHeaderGUI += AfterInspectorRootEditorHeaderGUI;
+#endif
     }
 
     private static void AfterGameObjectHeaderGUI(UnityEditor.Editor gameObjectEditor) {

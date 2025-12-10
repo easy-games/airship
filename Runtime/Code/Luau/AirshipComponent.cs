@@ -29,37 +29,44 @@ internal enum MetadataChangeState {
 
 internal enum ReconcileSource {
 	/// <summary>
-	/// When the component is calling 'OnValidate'
+	/// When the component or scriptable object is calling 'OnValidate'
 	/// </summary>
 	ComponentValidate,
 	/// <summary>
-	/// When the component properties are changed in the inspector
+	/// When the component or scriptable object properties are changed in the inspector
 	/// </summary>
 	Inspector,
 	/// <summary>
 	/// When the compiler is in the post-compile import state
 	/// </summary>
 	PostCompile,
+	/// <summary>
+	/// A forced reconcile
+	/// </summary>
 	ForceReconcile,
+	/// <summary>
+	/// When an AirshipScriptableObject is deserialized
+	/// </summary>
+	Deserialization,
 }
 
-internal class AirshipReconcileEventData {
+internal class AirshipComponentReconcileEventData {
 	public AirshipComponent Component { get; }
 	public bool ShouldReconcile { get; set; } = true;
 	public bool UseLegacyReconcile { get; set; } = true;
 	public ReconcileSource ReconcileSource { get; }
 
-	public AirshipReconcileEventData(AirshipComponent component, ReconcileSource source) {
+	public AirshipComponentReconcileEventData(AirshipComponent component, ReconcileSource source) {
 		Component = component;
 		ReconcileSource = source;
 	}
 }
-internal delegate void ReconcileAirshipComponent(AirshipReconcileEventData data);
+internal delegate void ReconcileAirshipComponent(AirshipComponentReconcileEventData data);
 
 [AddComponentMenu("Airship/Airship Component")]
 [HelpURL("https://docs.airship.gg/typescript/airshipbehaviour")]
 [LuauAPI(LuauContext.Protected)]
-public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
+public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IAirshipRuntimeReferenceDependency {
 	internal static bool UsePostCompileReconciliation { get; set; } = true;
 	private const bool ElevateToProtectedWithinCoreScene = true;
 	
@@ -98,7 +105,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 	public IntPtr thread;
 	[NonSerialized] public LuauContext context = LuauContext.Game;
 	[HideInInspector] public bool forceContext = false;
-#if !AIRSHIP_DEBUG
+#if !AIRSHIP_INTERNAL
 	[HideInInspector]
 #endif
 	[FormerlySerializedAs("m_metadata")]  public LuauMetadata metadata = new();
@@ -424,26 +431,11 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 		var argObjId = ThreadDataManager.AddObjectReference(thread, obj);
 		LuauPlugin.UpdateCollisionAirshipComponent(context, thread, AirshipBehaviourRootV2.GetId(gameObject), _airshipComponentId, updateType, argObjId);
 	}
-
-	private IReadOnlyList<AirshipComponent> GetDependencies() {
-		List<AirshipComponent> dependencies = new();
-		
-		foreach (var property in metadata.properties) {
-			if (property.ComponentType == AirshipComponentPropertyType.AirshipComponent) {
-				var obj = property.serializedObject;
-				if (obj == null) continue;
-				dependencies.Add(obj as AirshipComponent);
-			} else if (property.ComponentType == AirshipComponentPropertyType.AirshipArray && property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipComponent) {
-				if (property.items.objectRefs == null) continue;
-				foreach (var arrayItem in property.items.objectRefs) {
-					if (arrayItem != null) {
-						dependencies.Add(arrayItem as AirshipComponent);
-					}
-				}
-			}
-		}
-
-		return dependencies;
+	
+	
+	
+	private IReadOnlyList<IAirshipRuntimeReferenceDependency> GetDependencies() {
+		return metadata.GetRuntimePropertyDependencies();
 	}
 
 	private bool HasAirshipMethod(AirshipComponentUpdateType updateType) {
@@ -537,7 +529,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver {
 
 	    metadata.name = targetMetadata.name;
 	    
-	    var eventData = new AirshipReconcileEventData(this, reconcileSource);
+	    var eventData = new AirshipComponentReconcileEventData(this, reconcileSource);
 	    Reconcile?.Invoke(eventData);
 #endif
     }

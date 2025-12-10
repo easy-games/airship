@@ -8,6 +8,27 @@ using Object = UnityEngine.Object;
 
 namespace Airship.Editor {
     public static class AirshipScriptContextMenus {
+        [MenuItem("CONTEXT/" + nameof(AirshipScriptableObject) + "/Edit Script")]
+        public static void EditScriptableObject(MenuCommand command) {
+            var binding = command.context as AirshipScriptableObject;
+            if (binding == null || binding.metadata == null) return;
+
+            TypescriptProjectsService.OpenFileInEditor(binding.script.assetPath);
+        }
+        
+        [MenuItem("CONTEXT/" + nameof(AirshipScriptableObject) + "/Reset")]
+        public static void ResetScriptableObject(MenuCommand command) {
+            var binding = command.context as AirshipScriptableObject;
+            if (binding == null || binding.metadata == null) return;
+            foreach (var property in binding.metadata.properties.Where(property => property.modified)) {
+                property.SetDefaultAsValue();
+                property.modified = false;
+            }
+
+            AirshipReconciliationService.ReconcileScriptableObject(binding);
+            EditorUtility.SetDirty(binding);
+        }
+        
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Reset", priority = 0)]
         public static void Test(MenuCommand command) {
             var binding = command.context as AirshipComponent;
@@ -20,8 +41,7 @@ namespace Airship.Editor {
             EditorUtility.SetDirty(binding);
         }
         
-        
-        
+
         [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Edit Script")]
         public static void EditScript(MenuCommand command) {
             var binding = command.context as AirshipComponent;
@@ -118,9 +138,12 @@ namespace Airship.Editor {
                         break;
                     }
                     case AirshipScriptLanguage.Typescript: {
-                        if (item.airshipBehaviour && item.m_metadata != null) {
+                        if (item.scriptType == AirshipScriptType.Behaviour && item.m_metadata != null) {
                             GUI.Label(rect, item.m_metadata.displayName, "IN TitleText");
                             GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), item.m_metadata.singleton ? "Airship Singleton" : "Airship Component");
+                        } else if (item.scriptType == AirshipScriptType.ScriptableObject && item.m_metadata != null) {
+                            GUI.Label(rect, ObjectNames.NicifyVariableName(item.m_metadata.name), "IN TitleText");
+                            GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), "Airship Scriptable Object");
                         }
                         else {
                             rect.y += 6;
@@ -228,7 +251,7 @@ namespace Airship.Editor {
             GUI.enabled = true;
 
             if (item != null) {
-                if (item.scriptLanguage == AirshipScriptLanguage.Typescript && item.airshipBehaviour) {
+                if (item.scriptLanguage == AirshipScriptLanguage.Typescript && item.scriptType is AirshipScriptType.Behaviour or AirshipScriptType.ScriptableObject) {
                     var project = TypescriptProjectsService.Project;
                     var errors = project.GetProblemsForFile(item.assetPath);
                     foreach (var error in errors) {
@@ -236,16 +259,16 @@ namespace Airship.Editor {
                     }
                     
                     EditorGUILayout.Space(10);
-                    GUILayout.Label("Component Details", EditorStyles.boldLabel);
+                    GUILayout.Label("Script Details", EditorStyles.boldLabel);
                     
-                    EditorGUILayout.LabelField("DisplayName", item.m_metadata!.displayName, EditorStyles.boldLabel);
+                    if (!string.IsNullOrEmpty(item.m_metadata!.displayName)) EditorGUILayout.LabelField("DisplayName", item.m_metadata!.displayName, EditorStyles.boldLabel);
                     EditorGUILayout.LabelField("ClassName", item.m_metadata.name, scriptTextMono);
 
                     GUI.enabled = false;
 #if AIRSHIP_INTERNAL
                     EditorGUILayout.LabelField("Luau Hash", project.GetOutputFileHash(item.assetPath));
                     EditorGUILayout.LabelField("Source Hash", item.sourceFileHash);
-                    EditorGUILayout.ToggleLeft("Is Singleton", item.m_metadata.singleton);
+                    EditorGUILayout.EnumPopup("Script Type", item.scriptType);
 #endif
                     GUI.enabled = true;
 

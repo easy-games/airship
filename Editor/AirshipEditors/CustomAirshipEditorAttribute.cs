@@ -8,11 +8,16 @@ using NUnit.Framework.Internal;
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 public class CustomAirshipEditorAttribute : Attribute {
     public string TypeName { get; }
-    public string FilePath { get; set; }
+    public string AssetPath { get; set; }
     public int Priority { get; set; } = 0;
 
     public CustomAirshipEditorAttribute(string className) {
         TypeName = className;
+    }
+
+    public CustomAirshipEditorAttribute(string className, string assetPath) {
+        TypeName = className;
+        AssetPath = assetPath;
     }
 }
 

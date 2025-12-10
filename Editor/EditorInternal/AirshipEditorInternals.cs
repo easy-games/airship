@@ -18,6 +18,14 @@ namespace Editor.EditorInternal {
             return EditorGUIUtility.GetBoldDefaultFont();
         }
 
+        public static void RemoveUnityMenuItem(string menuPath) => Menu.RemoveMenuItem(menuPath);
+        public static bool HasUnityMenuItem(string menuPath) => Menu.MenuItemExists(menuPath);
+
+        public static void AddUnityMenuItem(string name, string shortcut, bool @checked, int priority, Action execute, Func<bool> validate)
+        {
+            Menu.AddMenuItem(name, shortcut, @checked, priority, execute, validate);
+        }
+
         // internal static void ShowObjectSelector(UnityEngine.Object obj, Type objectTypes, UnityEngine.Object objBeingEdited, bool allowSceneObjects) {
         //     ObjectSelector.get.Show(obj, objectTypes,objBeingEdited, allowSceneObjects);
         // }
