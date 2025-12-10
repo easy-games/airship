@@ -28,6 +28,7 @@ namespace Adrenak.UniVoice.Networks {
         public event Action<int> OnPeerJoined;
         public event Action<int> OnPeerLeft;
         public event Action<int, AudioFrame> OnReceivedPeerAudioFrame;
+        public Action<int, AudioFrame> OnPostProcessedPeerAudioFrame { get; set; }
 
         readonly MirrorModeObserver mirrorEvents;
 

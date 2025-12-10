@@ -1,6 +1,8 @@
 using System;
 using Adrenak.UniVoice;
+using Code.Player;
 using Mirror;
+using UnityEngine;
 using Utils = Adrenak.UniVoice.Utils;
 
 namespace Code.Voice {
@@ -20,7 +22,7 @@ namespace Code.Voice {
         }
 
         public AudioFrame Run(AudioFrame input) {
-            speakingLevelEvent?.Invoke(NetworkClient.connection.connectionId, AirshipVoiceUtils.ComputeSpeakingLevel(Utils.Bytes.BytesToFloats(input.samples)));
+            speakingLevelEvent.Invoke(PlayerManagerBridge.Instance.localPlayer.connectionId, AirshipVoiceUtils.ComputeSpeakingLevel(Utils.Bytes.BytesToFloats(input.samples)));
             return input;
         }
     }

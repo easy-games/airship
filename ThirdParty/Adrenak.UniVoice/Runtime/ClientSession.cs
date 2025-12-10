@@ -185,6 +185,7 @@ namespace Adrenak.UniVoice {
 
                     if (audioFrame.samples.Length > 0)
                         PeerOutputs[id]?.Feed(audioFrame);
+                    Client.OnPostProcessedPeerAudioFrame?.Invoke(id, audioFrame);
                 };
             }
         }

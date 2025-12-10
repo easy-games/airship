@@ -6,6 +6,8 @@ namespace Code.Voice {
         /// Computes speaking level for display based on a set of samples
         /// </summary>
         public static float ComputeSpeakingLevel(float[] samples) {
+            if (samples.Length == 0) return 0;
+            
             float sum = 0f;
             for (int i = 0; i < samples.Length; i++) {
                 sum += samples[i] * samples[i];

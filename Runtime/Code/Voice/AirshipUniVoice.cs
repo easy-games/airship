@@ -113,7 +113,7 @@ namespace Code.Voice {
             IAudioClient<int> client = new MirrorClient();
             
             // Forward speaking level to TS for Mic display (this is only for peers)
-            client.OnReceivedPeerAudioFrame += (connectionId, frame) => {
+            client.OnPostProcessedPeerAudioFrame += (connectionId, frame) => {
                 var speakingLevel = AirshipVoiceUtils.ComputeSpeakingLevel(Utils.Bytes.BytesToFloats(frame.samples));
                 OnSpeakingLevelChanged?.Invoke(connectionId, speakingLevel);
             };
@@ -165,7 +165,9 @@ namespace Code.Voice {
             }
             
             // Inject a "filter" to grab speaking level prior to encode on Input
-            ClientSession.InputFilters.Add(new SpeakingLevelEventFilter(OnSpeakingLevelChanged));
+            ClientSession.InputFilters.Add(new SpeakingLevelEventFilter((id, level) => {
+                OnSpeakingLevelChanged?.Invoke(id, level);
+            }));
 
             if (useConcentusEncodeAndDecode) {
                 // ConcentureEncoder filter to encode captured audio that reduces the audio frame size

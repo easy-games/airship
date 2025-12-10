@@ -61,6 +61,10 @@ namespace Adrenak.UniVoice {
         /// - AudioFrame: the frame containing audio data
         /// </summary>
         event Action<T, AudioFrame> OnReceivedPeerAudioFrame;
+        /// <summary>
+        /// Fired after running all filters on a peer's audio frame
+        /// </summary>
+        Action<T, AudioFrame> OnPostProcessedPeerAudioFrame { get; set; }
 
         /// <summary>
         /// Sends an audio frame to the server for being
