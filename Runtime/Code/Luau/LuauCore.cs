@@ -102,7 +102,7 @@ public partial class LuauCore : MonoBehaviour {
     /// </summary>
     public static bool IsLuauThreadRunning => ThreadRunningCount > 0;
 
-    /// ThreadRunningCount should be incremented when calling a LuauPlugin method that might call back into C#.
+    /// This value should be incremented/decremented within the LuauPlugin.cs file any time a plugin function might call back into C#.
     internal static int ThreadRunningCount;
     
     public static LuauCore CoreInstance => _coreInstance;
