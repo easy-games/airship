@@ -61,22 +61,12 @@ namespace Adrenak.UniVoice.Networks {
 
         void OnServerStarted() {
             NetworkManager.OnServerReadyEvent += OnServerConnection;
-// #if MIRROR_89_OR_NEWER
-//             NetworkManager.singleton.transport.OnServerConnectedWithAddress += OnServerConnected;
-// #else
-//             NetworkManager.singleton.transport.OnServerConnected += OnServerConnected;
-// #endif
             NetworkManager.singleton.transport.OnServerDisconnected += OnServerDisconnected;
             OnServerStart?.Invoke();
         }
 
         void OnServerShutdown() {
             NetworkManager.OnServerReadyEvent -= OnServerConnection;
-// #if MIRROR_89_OR_NEWER
-//             NetworkManager.singleton.transport.OnServerConnectedWithAddress -= OnServerConnected;
-// #else
-//             NetworkManager.singleton.transport.OnServerConnected -= OnServerConnected;
-// #endif            
             NetworkManager.singleton.transport.OnServerDisconnected -= OnServerDisconnected;
             ClientIDs.Clear();
             ClientVoiceSettings.Clear();

@@ -46,7 +46,6 @@ namespace Adrenak.UniVoice.Networks {
         }
 
         void OnModeChanged(NetworkManagerMode oldMode, NetworkManagerMode newMode) {
-            Debug.Log("Connection mode changed: " + oldMode + " , " + newMode);
             // For some reason, handlers don't always work as expected when the connection mode changes
             NetworkClient.ReplaceHandler<MirrorMessage>(OnReceivedMessage, true);
 

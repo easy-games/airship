@@ -8,11 +8,19 @@ using Adrenak.UniVoice.Outputs;
 using Adrenak.UniVoice.Inputs;
 using Adrenak.UniVoice.Filters;
 using Mirror;
+using Utils = Adrenak.UniVoice.Utils;
 
 namespace Code.Voice {
     [LuauAPI(LuauContext.Protected)]
     public class AirshipUniVoice : MonoBehaviour {
         const string TAG = "[AirshipUniVoice]";
+
+        /// <summary>
+        /// Fired with connectionId, speakingLevel [0-1] whenever a client speaks (including local player).
+        ///
+        /// Only fires on client.
+        /// </summary>
+        public static event Action<int, float> OnSpeakingLevelChanged;
 
         /// <summary>
         /// Whether UniVoice server has been setup successfully.
@@ -103,6 +111,13 @@ namespace Code.Voice {
 #if MIRROR
             // ---- CREATE AUDIO CLIENT AND SUBSCRIBE TO EVENTS ----
             IAudioClient<int> client = new MirrorClient();
+            
+            // Forward speaking level to TS for Mic display (this is only for peers)
+            client.OnReceivedPeerAudioFrame += (connectionId, frame) => {
+                var speakingLevel = AirshipVoiceUtils.ComputeSpeakingLevel(Utils.Bytes.BytesToFloats(frame.samples));
+                OnSpeakingLevelChanged?.Invoke(connectionId, speakingLevel);
+            };
+            
             client.OnJoined += (id, peerIds) => {
                 Debug.unityLogger.Log(LogType.Log, TAG, $"You are Peer ID {id}");
             };
@@ -148,6 +163,9 @@ namespace Code.Voice {
                 // This way lot of the background noise has been removed, VAD is truly trying to detect voice
                 ClientSession.InputFilters.Add(new SimpleVadFilter(new SimpleVad()));
             }
+            
+            // Inject a "filter" to grab speaking level prior to encode on Input
+            ClientSession.InputFilters.Add(new SpeakingLevelEventFilter(OnSpeakingLevelChanged));
 
             if (useConcentusEncodeAndDecode) {
                 // ConcentureEncoder filter to encode captured audio that reduces the audio frame size

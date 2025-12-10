@@ -24,7 +24,6 @@ namespace Code.Voice {
             var cted = audioOutputGO.AddComponent<PlayerAudioSourceOutput>();
             
             // Hook up audio source output to player's voiceChatAudioSource
-            Debug.Log("Creating new audio output for " + peerId);
             PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(peerId).ContinueWith(
                 (playerInfo) => {
                     if (!playerInfo.IsCompletedSuccessfully) {
@@ -34,7 +33,6 @@ namespace Code.Voice {
                     
                     var go = playerInfo.Result.voiceChatAudioSource.gameObject;
                     cted.Stream = go.GetComponent<StreamedAudioSource>() ?? go.AddComponent<StreamedAudioSource>();
-                    Debug.Log("Setup voice audio stream for " + peerId);
                 }, TaskScheduler.FromCurrentSynchronizationContext());
             return cted;
         }
