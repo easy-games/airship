@@ -1,0 +1,212 @@
+using System;
+using UnityEngine;
+
+using Adrenak.UniMic;
+using Adrenak.UniVoice;
+using Adrenak.UniVoice.Networks;
+using Adrenak.UniVoice.Outputs;
+using Adrenak.UniVoice.Inputs;
+using Adrenak.UniVoice.Filters;
+using Mirror;
+
+namespace Code.Voice {
+    [LuauAPI(LuauContext.Protected)]
+    public class AirshipUniVoice : MonoBehaviour {
+        const string TAG = "[AirshipUniVoice]";
+
+        /// <summary>
+        /// Whether UniVoice server has been setup successfully.
+        /// </summary>
+        public static bool HasSetUpServer { get; private set; }
+        /// <summary>
+        /// Whether UniVoice client has been setup successfully.
+        /// </summary>
+        public static bool HasSetUpClient { get; private set; }
+
+        /// <summary>
+        /// The server object.
+        /// </summary>
+        public static MirrorServer AudioServer { get; private set; }
+
+        /// <summary>
+        /// The client session.
+        /// </summary>
+        public static ClientSession<int> ClientSession { get; private set; }
+
+#pragma warning disable CS0414
+        [SerializeField] bool useRNNoise4UnityIfAvailable = true;
+
+        [SerializeField] bool useConcentusEncodeAndDecode = true;
+
+        [SerializeField] bool useVad = true;
+#pragma warning restore
+        
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticFields() {
+            HasSetUpClient = false;
+            HasSetUpServer = false;
+            AudioServer = null;
+            ClientSession = null;
+        }
+
+        private void Start() {
+            if (RunCore.IsServer()) TrySetupServer();
+            if (RunCore.IsClient()) TrySetupClient();
+        }
+        
+        private void TrySetupServer() {
+            if (HasSetUpServer) return;
+            
+            var createdAudioServer = SetupAudioServer();
+            if (!createdAudioServer) {
+                Debug.unityLogger.Log(LogType.Error, TAG, "Could not setup UniVoice server.");
+                return;
+            }
+            HasSetUpServer = true;
+        }
+
+        private void TrySetupClient() {
+            if (HasSetUpClient) return;
+            
+            var setupAudioClient = SetupClientSession();
+            if (!setupAudioClient) {
+                Debug.unityLogger.Log(LogType.Error, TAG, "Could not setup UniVoice client.");
+                return;
+            }
+            HasSetUpClient = true;
+        }
+
+        bool SetupAudioServer() {
+#if MIRROR
+            // ---- CREATE AUDIO SERVER AND SUBSCRIBE TO EVENTS TO PRINT LOGS ----
+            // We create a server. If this code runs in server mode, MirrorServer will take care
+            // or automatically handling all incoming messages. On a device connecting as a client,
+            // this code doesn't do anything.
+            AudioServer = new MirrorServer();
+            Debug.unityLogger.Log(LogType.Log, TAG, "Created MirrorServer object");
+
+            AudioServer.OnServerStart += () => {
+                Debug.unityLogger.Log(LogType.Log, TAG, "Server started");
+            };
+            
+            AudioServer.OnServerStop += () => {
+                Debug.unityLogger.Log(LogType.Log, TAG, "Server stopped");
+            };
+            return true;
+#else
+            Debug.unityLogger.Log(LogType.Error, TAG, "MirrorServer implementation not found!");
+            return false;
+#endif
+        }
+
+        bool SetupClientSession() {
+#if MIRROR
+            // ---- CREATE AUDIO CLIENT AND SUBSCRIBE TO EVENTS ----
+            IAudioClient<int> client = new MirrorClient();
+            client.OnJoined += (id, peerIds) => {
+                Debug.unityLogger.Log(LogType.Log, TAG, $"You are Peer ID {id}");
+            };
+
+            client.OnLeft += () => {
+                Debug.unityLogger.Log(LogType.Log, TAG, "You left the chatroom");
+            };
+
+            // When a peer joins, we instantiate a new peer view 
+            client.OnPeerJoined += id => {
+                Debug.unityLogger.Log(LogType.Log, TAG, $"Peer {id} joined");
+            };
+
+            // When a peer leaves, destroy the UI representing them
+            client.OnPeerLeft += id => {
+                Debug.unityLogger.Log(LogType.Log, TAG, $"Peer {id} left");
+            };
+
+            Debug.unityLogger.Log(LogType.Log, TAG, "Created MirrorClient object");
+
+            // ---- CREATE AUDIO OUTPUT FACTORY ----
+            IAudioOutputFactory<int> outputFactory;
+            // We want the incoming audio from peers to be played via the StreamedAudioSourceOutput
+            // implementation of IAudioSource interface. So we get the factory for it.
+            outputFactory = new PlayerAudioSourceOutput.Factory();
+            Debug.unityLogger.Log(LogType.Log, TAG, "Using StreamedAudioSourceOutput.Factory as output factory");
+
+            // ---- CREATE CLIENT SESSION AND ADD FILTERS TO IT ----
+            // With the client, input and output factory ready, we create create the client session
+            ClientSession = new ClientSession<int>(client, null, outputFactory);
+            Debug.unityLogger.Log(LogType.Log, TAG, "Created session");
+
+#if UNIVOICE_FILTER_RNNOISE4UNITY
+            if(useRNNoise4UnityIfAvailable) {
+                // RNNoiseFilter to remove noise from captured audio
+                ClientSession.InputFilters.Add(new RNNoiseFilter());
+                Debug.unityLogger.Log(LogType.Log, TAG, "Registered RNNoiseFilter as an input filter");
+            }
+#endif
+
+            if (useVad) {
+                // We add the VAD filter after RNNoise. 
+                // This way lot of the background noise has been removed, VAD is truly trying to detect voice
+                ClientSession.InputFilters.Add(new SimpleVadFilter(new SimpleVad()));
+            }
+
+            if (useConcentusEncodeAndDecode) {
+                // ConcentureEncoder filter to encode captured audio that reduces the audio frame size
+                ClientSession.InputFilters.Add(new ConcentusEncodeFilter());
+                Debug.unityLogger.Log(LogType.Log, TAG, "Registered ConcentusEncodeFilter as an input filter");
+
+                // For incoming audio register the ConcentusDecodeFilter to decode the encoded audio received from other clients 
+                ClientSession.AddOutputFilter<ConcentusDecodeFilter>(() => new ConcentusDecodeFilter());
+                Debug.unityLogger.Log(LogType.Log, TAG, "Registered ConcentusDecodeFilter as an output filter");
+            }
+
+            return true;
+#else
+            Debug.unityLogger.Log(LogType.Error, TAG, "MirrorClient implementation not found!");
+            return false;
+#endif
+        }
+
+        public static void StartRecording(Mic.Device mic) {
+            // Since in this sample we use microphone input via UniMic, we first check if there
+            // are any mic devices available.
+            Mic.Init(); // Must do this to use the Mic class
+            
+            mic.StartRecording();
+            Debug.unityLogger.Log(LogType.Log, TAG, "Started recording with Mic device named." +
+                                                    mic.Name + $" at frequency {mic.SamplingFrequency} with frame duration {mic.FrameDurationMS} ms.");
+            ClientSession.Input = new UniMicInput(mic);
+            Debug.unityLogger.Log(LogType.Log, TAG, "Created UniMicInput");
+        }
+
+        /// <summary>
+        /// Sets the server muted status for a client. If muted the client will be unable to transmit audio.
+        /// </summary>
+        public static void ServerMute(int connectionId, bool muted) {
+            if (muted) AudioServer.ServerMutedClientIDs.Add(connectionId);
+            else AudioServer.ServerMutedClientIDs.Remove(connectionId);
+        }
+
+        /// <summary>
+        /// Called from the client, sets self deafened status (and sends settings change to server)
+        /// </summary>
+        public static void ClientSetDeafened(bool deafened) {
+            // Client settings already OK
+            if (deafened == ClientSession.Client.YourVoiceSettings.deafenAll) return;
+            ClientSession.Client.YourVoiceSettings.deafenAll = deafened;
+            ClientSession.Client.SubmitVoiceSettings();
+        }
+
+        public static void StopRecording() {
+            if (ClientSession.Input is UniMicInput uniMicInput) {
+                uniMicInput.Device.StopRecording();
+            }
+        }
+        
+        public static bool IsRecording() {
+            if (ClientSession.Input is UniMicInput uniMicInput) {
+                return uniMicInput.Device.IsRecording;
+            }
+            return false;
+        }
+    }
+}

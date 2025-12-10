@@ -1,95 +1,14 @@
 using System;
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
+
+using UnityEngine;
 
 namespace Adrenak.UniMic {
-    [ExecuteAlways]
+    /// <summary>
+    /// Provides access to all the recording devices available 
+    /// </summary>
     public class Mic : MonoBehaviour {
-        // ================================================
-        #region MEMBERS
-        // ================================================
-        /// <summary>
-        /// Whether the microphone is running
-        /// </summary>
-        public bool IsRecording { get; private set; }
-
-        /// <summary>
-        /// The frequency at which the mic is operating
-        /// </summary>
-        public const int Frequency = 16_000;
-
-        /// <summary>
-        /// Last populated audio sample
-        /// </summary>
-        public float[] Sample { get; set; }
-
-        /// <summary>
-        /// Sample duration/length in milliseconds
-        /// Microphone sample duration in milliseconds
-        ///
-        /// https://datatracker.ietf.org/doc/html/rfc6716#section-2.1.4
-        /// Opus supports 40ms sample sizes. It is also important that 1000/dur
-        /// is an integer, which 40 satisfies (this is for UniMic segment rate).
-        /// </summary>
-        public const int SampleDurationMS = 40;
-
-        /// <summary>
-        /// The length of the sample float array
-        /// </summary>
-        public int SampleLength {
-            get { return Frequency * SampleDurationMS / 1000; }
-        }
-
-        /// <summary>
-        /// The AudioClip currently being streamed in the Mic
-        /// </summary>
-        public AudioClip AudioClip { get; private set; }
-
-        [CanBeNull] public Coroutine readAudioCoroutine;
-
-        /// <summary>
-        /// Gets the name of the Mic device currently in use
-        /// </summary>
-        public string CurrentDeviceName = "";
-
-        int m_SampleCount = 0;
-        #endregion
-
-        // ================================================
-        #region EVENTS
-        // ================================================
-        /// <summary>
-        /// Invoked when the instance starts Recording.
-        /// </summary>
-        public event Action OnStartRecording;
-
-        /// <summary>
-        /// Invoked everytime an audio frame is collected. Includes the frame count.
-        /// NOTE: There isn't much use for the index of a sample. Refer to 
-        /// <see cref="OnTimestampedSampleReady"/> for an event that gives you the
-        /// unix timestamp with a millisecond precision.
-        /// </summary>
-        public event Action<int, float[]> OnSampleReady;
-
-        /// <summary>
-        /// Invoked everytime an audio sample is collected. Includes the unix timestamp
-        /// from when the sample was captured with a millisecond precision.
-        /// </summary>
-        public event Action<long, float[]> OnTimestampedSampleReady;
-
-        /// <summary>
-        /// Invoked when the instance stop Recording.
-        /// </summary>
-        public event Action OnStopRecording;
-        #endregion
-
-        // ================================================
-        #region METHODS
-        // ================================================
-
         static Mic m_Instance;
         public static Mic Instance {
             get {
@@ -105,118 +24,356 @@ namespace Adrenak.UniMic {
                 return m_Instance;
             }
         }
+        
+        /// <summary>
+        /// Provides information and APIs for a single recording device.
+        /// </summary>
+        public class Device {
+            /// <summary>
+            /// The default duration of the frames in milliseconds
+            /// </summary>
+            public const int DEFAULT_FRAME_DURATION_MS = 60;  // Airship modified: was 20ms
 
-        public static Mic GetInstanceWithoutCreate() {
-            return m_Instance;
+            /// <summary>
+            /// The default sampling frequency when in uncapped devices that
+            /// support any frequency.
+            /// </summary>
+            public const int DEFAULT_SAMPLING_FREQUENCY = 24_000;
+
+            /// <summary>
+            /// Invoked when the instance starts Recording.
+            /// </summary>
+            public event Action OnStartRecording;
+
+            /// <summary>
+            /// Invoked everytime an audio sample is collected.
+            /// Params: (sampling frequency, channel count, PCM samples)
+            /// You use the channel count provided to be able to react
+            /// to it changing
+            /// </summary>
+            public event Action<int, int, float[]> OnFrameCollected;
+
+            /// <summary>
+            /// Invoked when the instance stop Recording.
+            /// </summary>
+            public event Action OnStopRecording;
+
+            /// <summary>
+            /// The name of the recording device
+            /// </summary>
+            public string Name { get; private set; }
+
+            /// <summary>
+            /// The maximum sampling frequency this device supports
+            /// </summary>
+            public int MaxFrequency { get; private set; }
+
+            /// <summary>
+            /// The minimum sampling frequency this device supports
+            /// </summary>
+            public int MinFrequency { get; private set; }
+
+            /// <summary>
+            /// If this device is capable of supporting any sampling frequency
+            /// </summary>
+            public bool SupportsAnyFrequency =>
+                MaxFrequency == 0 && MinFrequency == 0;
+
+            float volumeMultiplier = 1;
+            /// <summary>
+            /// Multiplies the incoming PCM samples by the given value
+            /// to increase/decrease the volume. Default: 1
+            /// </summary>
+            public float VolumeMultiplier {
+                get => volumeMultiplier;
+                set => volumeMultiplier = value;
+            }
+
+            int samplingFrequency;
+            /// <summary>
+            /// The sampling frequency this device is recording at
+            /// </summary>
+            public int SamplingFrequency {
+                get => samplingFrequency;
+                private set {
+                    if (!SupportsAnyFrequency && (value > MaxFrequency || value < MinFrequency))
+                        throw new Exception($"Sampling frequency cannot be set to {value} " +
+                        $"which is outside of [min, max] range [{MinFrequency}, {MaxFrequency}]");
+                    samplingFrequency = value;
+                }
+            }
+
+            int frameDurationMS;
+            /// <summary>
+            /// The duration of the audio frame (in milliseconds) that would be reported by the device.
+            /// Note that, for example, setting this value to 50 does not mean you would predictably 
+            /// receive 20 frames representing 50ms of audio at fixed and regular intervals. 
+            /// Often times, sent multiple may be sent multiple times in a single game frame or with 
+            /// varying intervals between the frames. 
+            /// For playback, consider creating a buffer. See <see cref="MicAudioSource"/> for references.
+            /// </summary>
+            public int FrameDurationMS {
+                get => frameDurationMS;
+                private set {
+                    if (value <= 0)
+                        throw new Exception("FrameDurationMS cannot be zero or negative");
+                    frameDurationMS = value;
+                }
+            }
+
+            /// <summary>
+            /// The length of a single PCM frame array that will be sent
+            /// via <see cref="OnFrameCollected"/>
+            /// </summary>
+            public int FrameLength =>
+                SamplingFrequency / 1000 * FrameDurationMS * ChannelCount;
+
+            /// <summary>
+            /// The number of channels the audio is captured into.
+            /// Note that this value is made available ONLY after recording 
+            /// starts and resets to 0 when it stops.
+            /// Also note that depending on the device, channel count can be
+            /// changed while the recording is ongoing use <see cref="OnFrameCollected"/>
+            /// to react to such changes.
+            /// </summary>
+            public int ChannelCount => GetChannelCount(this);
+
+            internal Device(string name, int minFrequency, int maxFrequency) {
+                Name = name;
+                MinFrequency = minFrequency;
+                MaxFrequency = maxFrequency;
+            }
+
+            /// <summary>
+            /// Start recording audio using this device. 
+            /// If the device is capped (has a min and max frequency) it starts at the maximum frequency supported.
+            /// If the device isn't capped (supports any frequency) it starts at 48KHz.
+            /// The frameDuration is <see cref="DEFAULT_FRAME_DURATION_MS"/> unless specified.
+            /// </summary>
+            /// <param name="frameDurationMS">The audio length of one frame (in MS)</param>
+            public void StartRecording(int frameDurationMS = DEFAULT_FRAME_DURATION_MS) {
+                StartRecording(SupportsAnyFrequency ? DEFAULT_SAMPLING_FREQUENCY : MaxFrequency, frameDurationMS);
+            }
+
+            /// <summary>
+            /// Start recording audio using this device at the provided sampling frequency
+            /// and frame duration
+            /// </summary>
+            /// <param name="samplingFrequency"></param>
+            /// <param name="frameDurationMS"></param>
+            public void StartRecording(int samplingFrequency, int frameDurationMS = DEFAULT_FRAME_DURATION_MS) {
+                // Return if we're already recording at the same value
+                if (SamplingFrequency == samplingFrequency
+                && FrameDurationMS == frameDurationMS
+                && IsRecording)
+                    return;
+
+                Mic.StopRecording(this);
+                SamplingFrequency = samplingFrequency;
+                FrameDurationMS = frameDurationMS;
+
+                Mic.StartRecording(this);
+                if (IsRecording)
+                    OnStartRecording?.Invoke();
+            }
+
+            /// <summary>
+            /// Stop recording audio
+            /// </summary>
+            public void StopRecording() {
+                // Return if we're not recording
+                if (!IsRecording) return;
+
+                Mic.StopRecording(this);
+                if (!IsRecording)
+                    OnStopRecording?.Invoke();
+            }
+
+            /// <summary>
+            /// Whether this device is currently recording audio
+            /// </summary>
+            public bool IsRecording =>
+                Mic.IsRecording(this);
+
+            internal void BroadcastFrame(int channelCount, float[] pcm) {
+                if (VolumeMultiplier != 1) {
+                    for (int i = 0; i < pcm.Length; i++)
+                        pcm[i] *= VolumeMultiplier;
+                }
+                OnFrameCollected?.Invoke(SamplingFrequency, channelCount, pcm);
+            }
+        }
+
+        // ================================================
+
+        const string TAG = "Mic";
+
+        readonly static Dictionary<string, Device> deviceMap = new Dictionary<string, Device>();
+        /// <summary>
+        /// Gets the available recording devices
+        /// </summary>
+        public static List<Device> AvailableDevices {
+            get {
+                // Make sure the Mic class is initialized when we try to get available devices.
+                // It's easy to forget to call Mic.Init()
+                if(instance == null)
+                    Init();
+
+                // Add to the map if we've detected a new device
+                var deviceNames = Microphone.devices;
+                foreach (var deviceName in deviceNames) {
+                    if (!deviceMap.ContainsKey(deviceName)) {
+                        Microphone.GetDeviceCaps(deviceName, out int minFreq, out int maxFreq);
+                        var device = new Device(deviceName, minFreq, maxFreq);
+                        deviceMap.Add(deviceName, device);
+                    }
+                }
+
+                // Remove from the map any device that may have been disconnected
+                var removedDeviceNames = deviceMap.Where(x => !deviceNames.Contains(x.Key));
+                foreach (var removed in removedDeviceNames)
+                    deviceMap.Remove(removed.Key);
+
+                // return the values of the map as a list
+                return deviceMap.Values.ToList();
+            }
         }
 
         // Prevent 'new' keyword construction
-        [Obsolete("Mic is a MonoBehaviour class. Use Mic.Instance to get the instance", true)]
+        [Obsolete("Mic is a MonoBehaviour singleton that is created on its own upon usage.", true)]
         public Mic() { }
 
+        static Mic instance;
         /// <summary>
-        /// Ensures an instance of the Mic class
+        /// Initialize the Mic class for use.
         /// </summary>
-        public static Mic Instantiate() {
-            return Instance;
-        }
-
-        /// <summary>
-        /// Sets a Mic device for Recording
-        /// </summary>
-        public void SetCurrentDevice(string deviceName) {
-            Microphone.End(CurrentDeviceName);
-            CurrentDeviceName = deviceName;
-            if (IsRecording)
-                StartRecording();
-        }
-
-        /// <summary>
-        /// Resumes recording at the frequency and sample duration that was 
-        /// previously being used.
-        /// </summary>
-        public void ResumeRecording() {
-            StartRecording();
-        }
-
-        /// <summary>
-        /// Starts to stream the input of the current Mic device
-        /// </summary>
-        /// </param>
-        public void StartRecording() {
-            StopRecording();
-            IsRecording = true;
-
-            AudioClip = Microphone.Start(CurrentDeviceName, true, 1, Frequency);
-            Sample = new float[Frequency / 1000 * SampleDurationMS * AudioClip.channels];
-
-            this.readAudioCoroutine = StartCoroutine(ReadRawAudio());
-
-            OnStartRecording?.Invoke();
-        }
-
-        /// <summary>
-        /// Ends the Mic stream.
-        /// </summary>
-        public void StopRecording() {
-            if (this.readAudioCoroutine != null) {
-                StopCoroutine(this.readAudioCoroutine);
-                this.readAudioCoroutine = null;
+        public static void Init() {
+            if (instance != null) {
+                Debug.unityLogger.Log(LogType.Warning, TAG, "UniMic.Mic is already initialized. This message is not an error");
+                return;
             }
 
-            if (!Microphone.IsRecording(CurrentDeviceName)) return;
-
-            IsRecording = false;
-
-            Microphone.End(CurrentDeviceName);
-            Destroy(AudioClip);
-            AudioClip = null;
-
-            OnStopRecording?.Invoke();
+            var go = new GameObject("UniMic.Mic");
+            go.hideFlags = HideFlags.DontSave;
+            DontDestroyOnLoad(go);
+            instance = go.AddComponent<Mic>();
+            Debug.unityLogger.Log(LogType.Log, TAG, "UniMic.Mic initialized.");
         }
 
-        IEnumerator ReadRawAudio() {
-            int loops = 0;
-            int readAbsPos = 0;
-            int prevPos = 0;
-            float[] temp = new float[Sample.Length];
+        static void StartRecording(Device device) {
+            StopRecording(device);
 
-            while (AudioClip != null && Microphone.IsRecording(CurrentDeviceName)) {
-                bool isNewDataAvailable = true;
+            var newClip = Microphone.Start(device.Name, true, 1, device.SamplingFrequency);
+            if (newClip != null) {
+                clips.Add(device, newClip);
+                prevPositions.Add(device, 0);
+                pcms.Add(device, new Queue<float>());
+            }
+        }
 
-                while (isNewDataAvailable) {
-                    int currPos = Microphone.GetPosition(CurrentDeviceName);
-                    if (currPos < prevPos)
-                        loops++;
-                    prevPos = currPos;
+        static bool IsRecording(Device device) {
+            return Microphone.IsRecording(device.Name);
+        }
 
-                    var currAbsPos = loops * AudioClip.samples + currPos;
-                    var nextReadAbsPos = readAbsPos + temp.Length;
+        static int GetChannelCount(Device device) {
+            if (!clips.ContainsKey(device))
+                return 0;
+            return clips[device].channels;
+        }
 
-                    if (nextReadAbsPos < currAbsPos) {
-                        AudioClip.GetData(temp, readAbsPos % AudioClip.samples);
+        static void StopRecording(Device device) {
+            if (device == null)
+                return;
 
-                        Sample = temp;
-                        m_SampleCount++;
-                        OnSampleReady?.Invoke(m_SampleCount, Sample);
+            Microphone.End(device.Name);
+            ClearDeviceData(device);
+        }
 
-                        OnTimestampedSampleReady?.Invoke(
-                            (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds),
-                            Sample
-                        );
+        static void ClearDeviceData(Device device) {
+            if (clips.ContainsKey(device)) {
+                Destroy(clips[device]);
+                clips.Remove(device);
+            }
 
-                        readAbsPos = nextReadAbsPos;
-                        isNewDataAvailable = true;
-                    }
-                    else
-                        isNewDataAvailable = false;
+            if (prevPositions.ContainsKey(device))
+                prevPositions.Remove(device);
+
+            if (pcms.ContainsKey(device)) {
+                pcms[device] = null;
+                pcms.Remove(device);
+            }
+        }
+
+        // PCM DATA RETRIEVAL LOOP
+        static Dictionary<Device, AudioClip> clips = new Dictionary<Device, AudioClip>();
+        static Dictionary<Device, int> prevPositions = new Dictionary<Device, int>();
+        static Dictionary<Device, Queue<float>> pcms = new Dictionary<Device, Queue<float>>();
+
+        // Variables declared once and re-assigned for every device in the Update loop
+        int pos;
+        bool didLoop;
+        Device device;
+        AudioClip clip;
+        float[] frame;
+        int prevPos;
+        Queue<float> pcm;
+        int frameLen;
+        void Update() {
+            foreach (var pair in clips) {
+                device = pair.Key;
+                clip = pair.Value;
+                prevPos = prevPositions[device];
+                pcm = pcms[device];
+
+                // Skip the device if it is not recording
+                // or if the clip is null (this can happen when quitting the game)
+                if (!device.IsRecording || clip == null)
+                    continue;
+
+                // If the mic position hasn't moved, skip
+                pos = Microphone.GetPosition(device.Name);
+                if (pos == prevPos)
+                    continue;
+
+                // Check if the mic has looped over the clip. If it hasn't, 
+                // we just need the data between the current and last mic positions.
+                // If it has, we need to read the data from last position to the end
+                // of the clip, then the data from the start of the clip to current position
+                didLoop = pos < prevPos;
+                if (!didLoop) {
+                    var sample = new float[pos - prevPos];
+                    clip.GetData(sample, prevPos);
+                    foreach (var t in sample)
+                        pcm.Enqueue(t);
                 }
-                yield return null;
+                else {
+                    int lastLoopSampleLen = clip.samples - prevPos - 1;
+                    int currLoopSampleLen = pos + 1;
+                    var lastLoopSamples = new float[lastLoopSampleLen];
+                    var currLoopSamples = new float[currLoopSampleLen];
+                    clip.GetData(lastLoopSamples, prevPos - 1);
+                    clip.GetData(currLoopSamples, 0);
+
+                    foreach (var sample in lastLoopSamples)
+                        pcm.Enqueue(sample);
+
+                    foreach (var sample in currLoopSamples)
+                        pcm.Enqueue(sample);
+                }
+
+                // Send as many complete frames from the pcm history as possible
+                frameLen = device.SamplingFrequency * device.FrameDurationMS * device.ChannelCount / 1000;
+                if (frame == null || frame.Length != frameLen)
+                    frame = new float[frameLen];
+                while (pcm.Count >= frame.Length) {
+                    for (int i = 0; i < frame.Length; i++)
+                        frame[i] = pcm.Dequeue();
+                    device.BroadcastFrame(clip.channels, frame);
+                }
+
+                // Update the last position of this device
+                prevPositions[device] = pos;
             }
         }
-        #endregion
-
-        [Obsolete("UpdateDevices method is no longer needed. Devices property is now always up to date")]
-        public void UpdateDevices() { }
     }
 }
