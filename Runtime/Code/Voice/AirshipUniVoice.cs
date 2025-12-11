@@ -189,6 +189,7 @@ namespace Code.Voice {
         /// <summary>
         /// Sets the server muted status for a client. If muted the client will be unable to transmit audio.
         /// </summary>
+        [LuauAPI(LuauContext.Game)]
         public static void ServerMute(int connectionId, bool muted) {
             if (muted) AudioServer.ServerMutedClientIDs.Add(connectionId);
             else AudioServer.ServerMutedClientIDs.Remove(connectionId);
@@ -197,7 +198,8 @@ namespace Code.Voice {
         /// <summary>
         /// Mutes a client 
         /// </summary>
-        public static void ClientMute(int peerConnectionId, bool muted) {
+        [LuauAPI(LuauContext.Game)]
+        public static void MutePeer(int peerConnectionId, bool muted) {
             var mutedPeers = ClientSession.Client.YourVoiceSettings.mutedPeers;
             var muteListUpdated = false;
             if (muted) {
@@ -215,6 +217,14 @@ namespace Code.Voice {
                 }
             }
             if (muteListUpdated) ClientSession.Client.SubmitVoiceSettings();
+        }
+
+        /// <summary>
+        /// Only can be run on client, returns true if a peer is muted
+        /// </summary>
+        [LuauAPI(LuauContext.Game)]
+        public static bool IsPeerMuted(int peerConnectionId) {
+            return ClientSession.Client.YourVoiceSettings.mutedPeers.Contains(peerConnectionId);
         }
 
         /// <summary>
