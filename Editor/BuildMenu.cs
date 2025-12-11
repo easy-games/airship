@@ -426,6 +426,10 @@ namespace Editor {
         }
 #endif
 
+
+#if AIRSHIP_PLAYER
+        [MenuItem("Airship/Create Binary/Client/Windows (Staging)", priority = 80)]
+#endif
         public static void BuildWindowsClientStaging() {
             PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
             BuildWindowsClient();
