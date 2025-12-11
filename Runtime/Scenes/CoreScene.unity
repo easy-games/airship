@@ -1552,7 +1552,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4fe0430c632f459b98340d31a0074477, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useRNNoise4UnityIfAvailable: 1
+  useRNNoise4UnityIfAvailable: 0
   useConcentusEncodeAndDecode: 1
   useVad: 1
 --- !u!224 &601736979 stripped
