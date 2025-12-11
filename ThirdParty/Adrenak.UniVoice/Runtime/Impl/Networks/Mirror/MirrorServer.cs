@@ -73,7 +73,6 @@ namespace Adrenak.UniVoice.Networks {
         }
 
         void OnServerConnection(NetworkConnectionToClient conn) {
-            Debug.Log("new connection: " + conn.connectionId);
             OnServerConnected(conn.connectionId);
         }
 
@@ -85,7 +84,6 @@ namespace Adrenak.UniVoice.Networks {
             // The host client seems to have ID 0 always, so we trigger a new client connection using id 0.
             if (newMode == NetworkManagerMode.Host) {
                 OnServerStarted();
-                OnServerConnected(0);
             }
             else if (newMode == NetworkManagerMode.ServerOnly) {
                 // If a Host changes to ServerOnly, we disconnect the internal client
@@ -166,7 +164,6 @@ namespace Adrenak.UniVoice.Networks {
                         if (recipientSettings.mutedTags.Intersect(senderSettings.myTags).Count() > 0)
                             continue;
                     }
-                    Debug.Log("Broadcast out frame: " + message.data.Length);
                     SendToClient(recipient, message.data, Channels.Unreliable);
                 }
             }
@@ -209,7 +206,6 @@ namespace Adrenak.UniVoice.Networks {
             // Not sure if this needs to be done, but being extra cautious here
             NetworkServer.ReplaceHandler<MirrorMessage>(OnReceivedMessage, true);
 
-            Debug.unityLogger.Log(LogType.Log, TAG, $"Client {connId} connected");
             ClientIDs.Add(connId);
 
             foreach (var peer in ClientIDs) {
@@ -268,17 +264,6 @@ namespace Adrenak.UniVoice.Networks {
                     $"Notified client {peerId} about {connId} leaving");
                 SendToClient(peerId, packet.Bytes, Channels.Reliable);
             }
-        }
-
-        async void SendToClientDelayed(int connectionId, byte[] bytes, int channel) {
-            Debug.Log("Waiting for ready...");
-            // AIRSHIP: Wait for client to be ready in intervals of 25ms
-            // Note: previously this waited an arbitrary 100ms which wasn't working when
-            // testing locally. I believe this is essentially waiting for client to be ready, but
-            // could be mistaken as Mirror seems to suggest isReady isn't necessary for this to work.
-            while (!GetConnectionToClient(connectionId).isReady) await Task.Delay(25);
-            
-            SendToClient(connectionId, bytes, channel);
         }
 
         void SendToClient(int clientConnId, byte[] bytes, int channel) {
