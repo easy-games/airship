@@ -247,7 +247,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 						foreach (var entry in zip.Entries) {
 							var entryName = entry.Name;
 							var entryFullName = entry.FullName;
-							print("Loading script: " + entryFullName);
 							
 							var runContext = AirshipRuntimeHint.None; // both server and client
 							
