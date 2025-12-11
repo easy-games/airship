@@ -195,6 +195,29 @@ namespace Code.Voice {
         }
 
         /// <summary>
+        /// Mutes a client 
+        /// </summary>
+        public static void ClientMute(int peerConnectionId, bool muted) {
+            var mutedPeers = ClientSession.Client.YourVoiceSettings.mutedPeers;
+            var muteListUpdated = false;
+            if (muted) {
+                // Add to muted client list if not already in
+                if (!mutedPeers.Contains(peerConnectionId)) {
+                    mutedPeers.Add(peerConnectionId);
+                    muteListUpdated = true;
+                }
+            } else {
+                // Unmute by removing from mutedPeers list
+                var currentIndex = mutedPeers.IndexOf(peerConnectionId);
+                if (currentIndex >= 0) {
+                    mutedPeers.Remove(currentIndex);
+                    muteListUpdated = true;
+                }
+            }
+            if (muteListUpdated) ClientSession.Client.SubmitVoiceSettings();
+        }
+
+        /// <summary>
         /// Called from the client, sets self deafened status (and sends settings change to server)
         /// </summary>
         public static void ClientSetDeafened(bool deafened) {
