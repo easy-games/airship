@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
@@ -79,7 +80,7 @@ public class GameConfig : ScriptableObject {
     }
 
     public bool TryGetUserTag(string runtimeTag, out string userTag) {
-        if (!runtimeTag.StartsWith(TagPrefix)) {
+        if (!runtimeTag.StartsWith(TagPrefix, StringComparison.Ordinal)) {
             userTag = null;
             return false;
         }
@@ -128,8 +129,8 @@ public class GameConfig : ScriptableObject {
             var guids = AssetDatabase.FindAssets("t:Scene").ToList();
             var paths = guids.Select((guid) => AssetDatabase.GUIDToAssetPath(guid));
             foreach (var path in paths) {
-                if (path.StartsWith("Assets/")) {
-                    if (path.EndsWith(startingSceneName + ".unity")) {
+                if (path.StartsWith("Assets/", StringComparison.Ordinal)) {
+                    if (path.EndsWith(startingSceneName + ".unity", StringComparison.Ordinal)) {
                         var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
                         startingScene = sceneAsset;
                         startingSceneName = "";

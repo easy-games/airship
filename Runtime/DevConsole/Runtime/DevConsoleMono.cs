@@ -2653,7 +2653,7 @@ namespace Airship.DevConsole
                 string assemblyName = assembly.GetName().Name;
 
 #if UNITY_EDITOR || !NETFX_CORE
-                if (ignoredAssemblies.Any(a => assemblyName.ToLower().StartsWith(a.ToLower())))
+                if (ignoredAssemblies.Any(a => assemblyName.ToLowerInvariant().StartsWith(a.ToLowerInvariant(), true, CultureInfo.InvariantCulture)))
                 {
                     continue;
                 }
@@ -2746,9 +2746,9 @@ namespace Airship.DevConsole
             {
                 if (!buildingParameter)
                 {
-                    if (split[i].StartsWith("\"") && i != split.Length - 1)
+                    if (split[i].StartsWith("\"", true, CultureInfo.InvariantCulture) && i != split.Length - 1)
                     {
-                        if (!split[i].EndsWith("\""))
+                        if (!split[i].EndsWith("\"", true, CultureInfo.InvariantCulture))
                         {
                             buildingParameter = true;
                             parameter = split[i].TrimStart('"');
@@ -2909,7 +2909,7 @@ namespace Airship.DevConsole
         private void RefreshCommandSuggestions()
         {
             // Do not show if there is no command or the parameters are being specified
-            if (InputText.Length == 0 || InputText.StartsWith(" ") || InputText.Split(' ').Length > 1 || _commandHistoryIndex != -1)
+            if (InputText.Length == 0 || InputText.StartsWith(" ", true, CultureInfo.InvariantCulture) || InputText.Split(' ').Length > 1 || _commandHistoryIndex != -1)
             {
                 _suggestionText.text = string.Empty;
                 _commandStringSuggestions = null;

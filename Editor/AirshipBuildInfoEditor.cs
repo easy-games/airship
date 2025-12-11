@@ -40,7 +40,7 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
                     GUI.enabled = false;
                     EditorGUILayout.EnumPopup("Declaration Type", type.DeclarationType);
                     EditorGUILayout.LabelField("Asset Path", type.AssetPath);
-                    EditorGUILayout.LabelField("Runtime Path", type.RuntimePath.ToLower());
+                    EditorGUILayout.LabelField("Runtime Path", type.RuntimePath.ToLowerInvariant());
                     EditorGUILayout.ObjectField("Script", type.Script, typeof(AirshipScript));
                     
                     if (airshipBehaviourMeta.extends.Count > 0) {
@@ -84,7 +84,7 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
         foreach (var info in buildInfo.data.airshipBehaviourMetas) {
             if (searchText != "" && !info.className.StartsWith(searchText, StringComparison.OrdinalIgnoreCase)) continue;
             
-            if (info.assetPath.StartsWith("Assets/AirshipPackages/@Easy/Core")) {
+            if (info.assetPath.StartsWith("Assets/AirshipPackages/@Easy/Core", StringComparison.Ordinal)) {
                 packageMetas.Add(info);
             } else {
                 gameMetas.Add(info);
@@ -94,7 +94,7 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
         foreach (var info in buildInfo.data.airshipScriptableObjectMetas) {
             if (searchText != "" && !info.className.StartsWith(searchText, StringComparison.OrdinalIgnoreCase)) continue;
             
-            if (info.assetPath.StartsWith("Assets/AirshipPackages/@Easy/Core")) {
+            if (info.assetPath.StartsWith("Assets/AirshipPackages/@Easy/Core", StringComparison.Ordinal)) {
                 packageMetas.Add(info);
             } else {
                 gameMetas.Add(info);
@@ -126,7 +126,7 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
             if (selectedItem.StartsWith("@")) {
                 if (packageMetas.Count > 0) {
                     foreach (var info in packageMetas) {
-                        if (info.assetPath.StartsWith("Assets/AirshipPackages/" + selectedItem)) OnBehaviourMeta(info);
+                        if (info.assetPath.StartsWith("Assets/AirshipPackages/" + selectedItem, StringComparison.Ordinal)) OnBehaviourMeta(info);
                     }
                 }      
             } else {

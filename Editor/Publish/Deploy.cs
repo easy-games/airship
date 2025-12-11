@@ -269,8 +269,8 @@ public class Deploy {
 			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
 			var paths = new List<string>();
 			foreach (var guid in binaryFileGuids) {
-				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-				if (path.StartsWith("assets/airshippackages")) {
+				var path = AssetDatabase.GUIDToAssetPath(guid).ToLowerInvariant();
+				if (path.StartsWith("assets/airshippackages", StringComparison.OrdinalIgnoreCase)) {
 					continue;
 				}
 				paths.Add(path);

@@ -331,7 +331,7 @@ public static class Bridge {
     public static async Task LoadSceneAsyncFromAssetBundle(string sceneName, LoadSceneMode loadSceneMode) {
         foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
             foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
-                if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                if (scenePath.ToLowerInvariant().EndsWith(sceneName.ToLowerInvariant() + ".unity")) {
                     await SceneManager.LoadSceneAsync(scenePath, loadSceneMode);
                     return;
                 }
@@ -422,13 +422,13 @@ public static class Bridge {
     [LuauAPI(LuauContext.Protected)]
     public static bool IsLowEndDevice() {
         // CPU check
-        var cpu = SystemInfo.processorType.ToLower();
+        var cpu = SystemInfo.processorType.ToLowerInvariant();
         if (cpu.Contains("celeron") || cpu.Contains("pentium") || cpu.Contains("atom")) {
             return true;
         }
 
         // GPU check
-        var gpu = SystemInfo.graphicsDeviceName.ToLower();
+        var gpu = SystemInfo.graphicsDeviceName.ToLowerInvariant();
         if (gpu.Contains("intel") || gpu.Contains("uhd") || gpu.Contains("hd graphics")) {
             return true;
         }

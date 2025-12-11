@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEditor;
 
@@ -29,14 +30,14 @@ namespace EasyEditorUtilities
             //manipulate the path
             string rootPath = "Assets/AirshipPackages/";
 
-            if (path.StartsWith(rootPath))
+            if (path.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
             {
                 path = path.Substring(rootPath.Length);
             }
 
             string playerPath = "Assets/"; //For player etc
 
-            if (path.StartsWith(playerPath))
+            if (path.StartsWith(playerPath, StringComparison.OrdinalIgnoreCase))
             {
                 path = path.Substring(playerPath.Length);
             }

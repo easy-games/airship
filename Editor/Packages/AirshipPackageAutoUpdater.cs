@@ -114,7 +114,7 @@ namespace Editor.Packages {
                     yield break;
                 }
                 if (version.package.codeVersionNumber.ToString() != package.codeVersion) {
-                    if (!immediatelyUpdateCore && (package.id.ToLower() == "@easy/core" || package.id.ToLower() == "@easy/corematerials")) {
+                    if (!immediatelyUpdateCore && (package.id.ToLowerInvariant() == "@easy/core" || package.id.ToLowerInvariant() == "@easy/corematerials")) {
                         isCoreUpdateAvailable = true;
                     } else {
                         yield return AirshipPackagesWindow.DownloadPackage(package.id, targetCodeVersion, targetAssetVersion, targetPublishVersion);
