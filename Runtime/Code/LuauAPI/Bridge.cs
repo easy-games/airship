@@ -379,7 +379,7 @@ public static class Bridge {
 
     [LuauAPI(LuauContext.Protected)]
     public static int GetCurrentMicDeviceIndex() {
-        return Array.IndexOf(Microphone.devices, currentDevice.Name);
+        return Array.IndexOf(Microphone.devices, currentDevice != null ? currentDevice.Name : "");
     }
 
     [LuauAPI(LuauContext.Protected)]
