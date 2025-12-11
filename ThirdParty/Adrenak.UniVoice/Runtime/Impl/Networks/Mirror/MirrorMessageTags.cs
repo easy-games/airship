@@ -1,5 +1,4 @@
-﻿#if MIRROR
-namespace Adrenak.UniVoice.Networks {
+﻿namespace Adrenak.UniVoice.Networks {
     /// <summary>
     /// The different types of messages we send over Mirror 
     /// to implement the <see cref="IAudioClient{T}"/> and <see cref="IAudioServer{T}"/>
@@ -13,4 +12,3 @@ namespace Adrenak.UniVoice.Networks {
         public const string VOICE_SETTINGS = "VOICE_SETTINGS";
     }
 }
-#endif

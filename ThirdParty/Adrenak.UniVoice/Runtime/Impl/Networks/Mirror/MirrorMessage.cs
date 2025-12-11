@@ -1,5 +1,4 @@
-﻿#if MIRROR
-using System;
+﻿using System;
 
 using Mirror;
 
@@ -18,4 +17,3 @@ namespace Adrenak.UniVoice.Networks {
         public byte[] data;
     }
 }
-#endif

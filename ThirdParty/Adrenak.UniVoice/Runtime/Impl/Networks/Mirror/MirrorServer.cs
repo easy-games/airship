@@ -3,7 +3,6 @@
 // https://github.com/MirrorNetworking/Mirror/releases/tag/v89.11.0
 // OnServerConnected no longer seems to work?
 
-#if MIRROR
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -206,11 +205,7 @@ namespace Adrenak.UniVoice.Networks {
         }
 
         // When a new Mirror client connects
-#if MIRROR_89_OR_NEWER
         void OnServerConnected(int connId) {
-#else
-        void OnServerConnected(int connId) {
-#endif
             // Not sure if this needs to be done, but being extra cautious here
             NetworkServer.ReplaceHandler<MirrorMessage>(OnReceivedMessage, true);
 
@@ -306,4 +301,3 @@ namespace Adrenak.UniVoice.Networks {
         }
     }
 }
-#endif

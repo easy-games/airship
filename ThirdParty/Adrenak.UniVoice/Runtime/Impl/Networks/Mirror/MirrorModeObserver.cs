@@ -1,5 +1,4 @@
-﻿#if MIRROR
-using Mirror;
+﻿using Mirror;
 
 using System;
 
@@ -47,4 +46,3 @@ namespace Adrenak.UniVoice.Networks {
         }
     }
 }
-#endif

@@ -1,4 +1,3 @@
-#if UNIVOICE_FILTER_RNNOISE4UNITY
 using System;
 
 using Adrenak.RNNoise4Unity;
@@ -25,4 +24,3 @@ namespace Adrenak.UniVoice.Filters {
         }
     }
 }
-#endif

@@ -85,7 +85,6 @@ namespace Code.Voice {
         }
 
         bool SetupAudioServer() {
-#if MIRROR
             // ---- CREATE AUDIO SERVER AND SUBSCRIBE TO EVENTS TO PRINT LOGS ----
             // We create a server. If this code runs in server mode, MirrorServer will take care
             // or automatically handling all incoming messages. On a device connecting as a client,
@@ -101,14 +100,9 @@ namespace Code.Voice {
                 Debug.unityLogger.Log(LogType.Log, TAG, "Server stopped");
             };
             return true;
-#else
-            Debug.unityLogger.Log(LogType.Error, TAG, "MirrorServer implementation not found!");
-            return false;
-#endif
         }
 
         bool SetupClientSession() {
-#if MIRROR
             // ---- CREATE AUDIO CLIENT AND SUBSCRIBE TO EVENTS ----
             IAudioClient<int> client = new MirrorClient();
             
@@ -150,13 +144,11 @@ namespace Code.Voice {
             ClientSession = new ClientSession<int>(client, null, outputFactory);
             Debug.unityLogger.Log(LogType.Log, TAG, "Created session");
 
-#if UNIVOICE_FILTER_RNNOISE4UNITY
             if(useRNNoise4UnityIfAvailable) {
                 // RNNoiseFilter to remove noise from captured audio
                 ClientSession.InputFilters.Add(new RNNoiseFilter());
                 Debug.unityLogger.Log(LogType.Log, TAG, "Registered RNNoiseFilter as an input filter");
             }
-#endif
 
             if (useVad) {
                 // We add the VAD filter after RNNoise. 
@@ -180,10 +172,6 @@ namespace Code.Voice {
             }
 
             return true;
-#else
-            Debug.unityLogger.Log(LogType.Error, TAG, "MirrorClient implementation not found!");
-            return false;
-#endif
         }
 
         public static void StartRecording(Mic.Device mic) {
