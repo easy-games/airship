@@ -395,7 +395,7 @@ public class ServerBootstrap : MonoBehaviour
 		foreach (var package in gameConfig.packages) {
 			// Ignore packages already in the startup config. Anything already in startup config is a "required package" at this point.
 			// The below code is finding an existing package in startup config.
-			if (this.startupConfig.packages.Find((p) => p.id.ToLower() == package.id.ToLower()) != null) {
+			if (this.startupConfig.packages.Find((p) => p.id.ToLowerInvariant() == package.id.ToLowerInvariant()) != null) {
 				continue;
 			}
 

@@ -251,23 +251,23 @@ public class SystemRoot : Singleton<SystemRoot> {
 							
 							var runContext = AirshipRuntimeHint.None; // both server and client
 							
-							if (entryName.EndsWith("json~")) {
+							if (entryName.EndsWith("json~", StringComparison.OrdinalIgnoreCase)) {
 								continue;
 							}
 
-							if (entryName.EndsWith(".asbuildinfo")) {
+							if (entryName.EndsWith(".asbuildinfo", StringComparison.OrdinalIgnoreCase)) {
 								continue;
 							}
 
 							
-							if (entryName.EndsWith(AirshipRuntimePath.ClientExtension)) {
+							if (entryName.EndsWith(AirshipRuntimePath.ClientExtension, StringComparison.OrdinalIgnoreCase)) {
 								// client script
 								runContext = AirshipRuntimeHint.Client;
 								entryFullName = entryFullName.Replace(AirshipRuntimePath.ClientExtension, AirshipRuntimePath.LuaExtension);
 	#if AIRSHIP_STAGING
 								Debug.Log($"[CS] Detected dist client code {entryName}");
 	#endif
-							} else if (entryName.EndsWith(AirshipRuntimePath.ServerExtension)) {
+							} else if (entryName.EndsWith(AirshipRuntimePath.ServerExtension, StringComparison.OrdinalIgnoreCase)) {
 								// server script
 								runContext = AirshipRuntimeHint.Server;
 								entryFullName = entryFullName.Replace(AirshipRuntimePath.ServerExtension, AirshipRuntimePath.LuaExtension);

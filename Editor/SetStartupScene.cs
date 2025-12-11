@@ -39,7 +39,7 @@ namespace Editor {
             }
 
             foreach (var sceneInfo in EditorBuildSettings.scenes) {
-                if (!sceneInfo.path.ToLower().StartsWith("assets")) {
+                if (!sceneInfo.path.StartsWith("assets", StringComparison.OrdinalIgnoreCase)) {
                     continue;
                 }
                 EditorSceneManager.OpenScene(sceneInfo.path);

@@ -186,7 +186,7 @@ public class AirshipComponentDropdown : AdvancedDropdown {
                 rootNode.AddScriptPath(binaryFile, pathComponents[..^1], path);
             }
             else {
-                var isPackage = binaryFile.m_path.StartsWith("Assets/AirshipPackages/@");
+                var isPackage = binaryFile.m_path.StartsWith("Assets/AirshipPackages/@", StringComparison.Ordinal);
                 if (isPackage) {
                     var packagePath = string.Join(" ", binaryFile.m_path["Assets/AirshipPackages/@".Length..].Split("/")[0..2]);
                     

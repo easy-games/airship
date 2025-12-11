@@ -261,7 +261,7 @@ namespace Luau {
         }
 
         private string StripAssetPrefix(string path) {
-            return path.ToLower().StartsWith("assets/") ? path[7..] : path;
+            return path.ToLowerInvariant().StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? path[7..] : path;
         }
 
         private Dictionary<string, string> scriptPathByTypeNameCache = new();
