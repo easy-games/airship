@@ -231,7 +231,7 @@ namespace Adrenak.UniMic {
                     if (desiredReadSec < 0f) desiredReadSec += clipLengthSec;
 
                     UnityAudioSource.time = desiredReadSec;
-                    UnityAudioSource.pitch = 1f;
+                    // UnityAudioSource.pitch = 1f;
                     UnityAudioSource.Play();
 
                     IsBuffering = false;
@@ -263,9 +263,9 @@ namespace Adrenak.UniMic {
 
             if (Mathf.Abs(errorSec) <= pitchDeadzoneSec) {
                 // Within the deadzone: gently relax pitch back to 1.0
-                UnityAudioSource.pitch = Mathf.MoveTowards(
-                    UnityAudioSource.pitch, 1f, pitchReturnSpeed * Time.deltaTime
-                );
+                // UnityAudioSource.pitch = Mathf.MoveTowards(
+                //     UnityAudioSource.pitch, 1f, pitchReturnSpeed * Time.deltaTime
+                // );
             }
             else {
                 // sign: short => negative; long => positive
@@ -275,7 +275,7 @@ namespace Adrenak.UniMic {
                 float minResp = -pitchMaxCorrection * downwardPitchCorrectionScale;
                 float maxResp = pitchMaxCorrection;
                 float resp = Mathf.Clamp(raw, minResp, maxResp);
-                UnityAudioSource.pitch = 1f + resp;
+                // UnityAudioSource.pitch = 1f + resp;
             }
         }
 
@@ -301,7 +301,7 @@ namespace Adrenak.UniMic {
             IsBuffering = false;
             writePosPerChannel = 0;
             absWritePerChannel = 0;
-            UnityAudioSource.pitch = 1f;
+            // UnityAudioSource.pitch = 1f;
             UnityAudioSource.Stop();
             frameStopwatch.Reset();
         }
