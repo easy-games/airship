@@ -161,8 +161,10 @@ namespace Adrenak.UniVoice.Networks {
                             continue;
 
                         // If the peer has muted the sender using tag, skip sending audio
-                        if (recipientSettings.mutedTags.Intersect(senderSettings.myTags).Count() > 0)
-                            continue;
+                        if (senderSettings != null) {
+                            if (recipientSettings.mutedTags.Intersect(senderSettings.myTags).Count() > 0)
+                                continue;
+                        }
                     }
                     SendToClient(recipient, message.data, Channels.Unreliable);
                 }
@@ -272,10 +274,7 @@ namespace Adrenak.UniVoice.Networks {
             };
 
             var conn = GetConnectionToClient(clientConnId);
-            if (conn != null) {
-                Debug.Log("Sending to client who is " + (conn.isReady ? "ready" : "not ready"));
-                conn.Send(message, channel);
-            }
+            if (conn != null) conn.Send(message, channel);
         }
 
         NetworkConnectionToClient GetConnectionToClient(int connId) {

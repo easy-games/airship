@@ -210,9 +210,7 @@ namespace Code.Voice {
                 }
             } else {
                 // Unmute by removing from mutedPeers list
-                var currentIndex = mutedPeers.IndexOf(peerConnectionId);
-                if (currentIndex >= 0) {
-                    mutedPeers.Remove(currentIndex);
+                if (mutedPeers.Remove(peerConnectionId)) {
                     muteListUpdated = true;
                 }
             }
@@ -231,9 +229,9 @@ namespace Code.Voice {
         /// Called from the client, sets self deafened status (and sends settings change to server)
         /// </summary>
         public static void ClientSetDeafened(bool deafened) {
-            // Client settings already OK
-            if (deafened == ClientSession.Client.YourVoiceSettings.deafenAll) return;
-            ClientSession.Client.YourVoiceSettings.deafenAll = deafened;
+            // muteAll is UniVoice way of muting all incoming audio
+            if (deafened == ClientSession.Client.YourVoiceSettings.muteAll) return;
+            ClientSession.Client.YourVoiceSettings.muteAll = deafened;
             ClientSession.Client.SubmitVoiceSettings();
         }
 
