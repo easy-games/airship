@@ -410,8 +410,7 @@ namespace Airship {
                     finalMaterials[i] = finalSkinnedMeshCopy.subMeshes[i].material;
 
                     if (isClient && !finalMaterials[i].shader.isSupported) {
-                            finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
-                        }
+                        finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
                     }
 
                     // finalMaterials[i].shader = 1(finalMaterials[i].shader.name);
