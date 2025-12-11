@@ -147,7 +147,7 @@ namespace Editor {
                 ctx.AddObjectToAsset(fileName, airshipScript, assetIcon);
                 ctx.SetMainObject(airshipScript);
                 
-                if (AirshipReconciliationService.ReconcilerVersion == ReconcilerVersion.Version2 && airshipScript.airshipBehaviour) {
+                if (AirshipReconciliationService.ReconcilerVersion == ReconcilerVersion.Version2) {
                     var assetData = AirshipLocalArtifactDatabase.instance.GetOrCreateScriptAssetData(airshipScript);
                     
                     if (assetData.metadata == null || airshipScript.sourceFileHash != assetData.metadata.hash) {
@@ -157,7 +157,28 @@ namespace Editor {
                         };
                     }
                     
-                    AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
+                    if (airshipScript.scriptType == AirshipScriptType.Behaviour) AirshipReconciliationService.ReconcileQueuedComponents(airshipScript);
+                }
+                
+                if (airshipScript.scriptType == AirshipScriptType.ScriptableObject) {
+                    var decorator = airshipScript.m_metadata?.FindClassDecorator("CreateAssetMenu");
+                    if (decorator != null) {
+                        string menuItem = decorator.GetParameterAsString(0);
+                        if (string.IsNullOrEmpty(menuItem)) {
+                            menuItem = $"Assets/Create/Scriptable Objects/{ObjectNames.NicifyVariableName(airshipScript.m_metadata.name)}";
+                        } else {
+                            menuItem = $"Assets/Create/{menuItem}";
+                        }
+
+                        string assetFileName = decorator.GetParameterAsString(1);
+                        if (string.IsNullOrEmpty(assetFileName)) {
+                            assetFileName = $"{airshipScript.m_metadata.name}.asset";
+                        }
+                        
+                        var priority = decorator.GetParameterAsInt(2) ?? 0;
+                        
+                        AirshipCustomMenus.instance.AddCreateAssetMenu(airshipScript.assetPath, assetFileName, menuItem, priority);
+                    }
                 }
             }
         }

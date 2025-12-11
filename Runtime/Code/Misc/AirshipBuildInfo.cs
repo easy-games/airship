@@ -13,6 +13,16 @@ using UnityEditor;
 #endif
 
 namespace Luau {
+    [Serializable]
+    public class AirshipTypeInfo {
+        public string name;
+        public string id;
+        public AirshipDeclarationType declarationType;
+        public string[] modifiers;
+        public string[] inherits;
+        public string file;
+    }
+    
     /// <summary>
     /// Temporary intermediate class used for deserializing the JSON data.
     /// </summary>
@@ -20,21 +30,32 @@ namespace Luau {
         // ReSharper disable once CollectionNeverUpdated.Global
         // ReSharper disable once UnassignedField.Global
         public Dictionary<string, AirshipBehaviourMeta> behaviours;
+        public Dictionary<string, AirshipBehaviourMeta> scriptables;
+        public Dictionary<string, AirshipBehaviourMeta> serializables;
         public Dictionary<string, string[]> extends;
+        public AirshipTypeInfo[] types;
 
         private AirshipBehaviourMetaTop() { }
     }
 
+    public enum AirshipBehaviourMetaType {
+        AirshipBehaviour,
+        AirshipScriptableObject,
+        Serializable,
+    }
+    
     /// <summary>
     /// Defines each AirshipBehaviour component class.
     /// </summary>
     [Serializable]
     public class AirshipBehaviourMeta {
         public string className;
+        [Obsolete]
         public bool component;
         public string filePath;
         public List<string> extends;
-
+        public AirshipBehaviourMetaType type;
+        
         public string assetPath => "Assets/" + filePath.Replace(".lua", ".ts");
         
         public AirshipType _typeCache;
@@ -53,7 +74,15 @@ namespace Luau {
     [Serializable]
     public class AirshipBuildData {
         public List<AirshipBehaviourMeta> airshipBehaviourMetas;
+        public List<AirshipBehaviourMeta> airshipScriptableObjectMetas;
+        public List<AirshipBehaviourMeta> airshipSerializableMetas;
+        
         public List<AirshipExtendsMeta> airshipExtendsMetas;
+        
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+        [NonSerialized]
+#endif
+        public AirshipTypeInfo[] typeInfos;
         
         /// <summary>
         /// Build AirshipBuildData from JSON. Used by the AirshipComponentBuildImporter.
@@ -70,6 +99,24 @@ namespace Luau {
                 pair.Value.className = pair.Key;
                 pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
                 airshipBehaviourMetas.Add(pair.Value);
+            }
+            
+            if (metaTop.scriptables != null) {
+                airshipScriptableObjectMetas = new List<AirshipBehaviourMeta>(metaTop.scriptables.Count);
+                foreach (var pair in metaTop.scriptables) {
+                    pair.Value.className = pair.Key;
+                    pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                    airshipScriptableObjectMetas.Add(pair.Value);
+                }
+            }
+
+            if (metaTop.serializables != null) {
+                airshipSerializableMetas = new List<AirshipBehaviourMeta>(metaTop.serializables.Count);
+                foreach (var pair in metaTop.serializables) {
+                    pair.Value.className = pair.Key;
+                    pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
+                    airshipSerializableMetas.Add(pair.Value);
+                }
             }
 
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
@@ -94,6 +141,8 @@ namespace Luau {
 
                 airshipExtendsMetas.Add(meta);
             }
+
+            typeInfos = metaTop.types;
         }
     }
     
@@ -105,6 +154,8 @@ namespace Luau {
         public AirshipBuildData data;
         
         private readonly Dictionary<string, AirshipType> _types = new();
+        private readonly Dictionary<string, AirshipType> _typesByName = new();
+        
         private readonly Dictionary<string, AirshipBehaviourMeta> _classes = new();
 
 #if UNITY_EDITOR
@@ -157,6 +208,45 @@ namespace Luau {
         private void Init() {
             foreach (var meta in data.airshipBehaviourMetas) {
                 _classes.TryAdd(meta.className, meta);
+            }
+            
+            foreach (var meta in data.airshipSerializableMetas) {
+                _classes.TryAdd(meta.className, meta);
+            }
+            
+            foreach (var meta in data.airshipScriptableObjectMetas) {
+                _classes.TryAdd(meta.className, meta);
+            }
+
+            if (data.typeInfos != null) {
+                _types.Clear();
+                
+                // Add types
+                foreach (var typeInfo in data.typeInfos) {
+                    var type = new AirshipType(typeInfo);
+                    _types.Add(typeInfo.id, type);
+                    _typesByName.TryAdd(typeInfo.name, type);
+                }
+                    
+                // build inheritance
+                foreach (var typeInfo in data.typeInfos) {
+                    var inheritance = typeInfo.inherits;
+                    if (inheritance == null) continue;
+                    if (!_types.TryGetValue(typeInfo.id, out var type)) continue;
+                    
+                    var inheritedTypes = new List<AirshipType>();
+                    foreach (var inheritedTypeId in inheritance) {
+                        if (!_types.TryGetValue(inheritedTypeId, out var inheritedType)) continue;
+                        inheritedTypes.Add(inheritedType);
+                        inheritedType.childTypes.Add(type);
+                    }
+                    
+                    type.BaseTypes = inheritedTypes.ToArray();
+                }
+                
+#if AIRSHIP_INTERNAL
+                Debug.Log($"Registered {_types.Count} types");
+#endif
             }
         }
 
@@ -337,4 +427,5 @@ namespace Luau {
             return meta.filePath;
         }
     }
+    
 }

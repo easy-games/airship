@@ -4,7 +4,11 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Code.Http.Public {
+#if UNITY_SERVER || UNITY_EDITOR
     [LuauAPI]
+#else
+    [LuauAPI(LuauContext.Protected)]
+#endif
     public class HttpManager {
         public static bool loggingEnabled = false;
 

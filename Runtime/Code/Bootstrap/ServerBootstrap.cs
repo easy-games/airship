@@ -66,6 +66,9 @@ public class ServerBootstrap : MonoBehaviour
     private GameServer gameServer;
 
     [NonSerialized] public bool isServerReady = false;
+    /// <summary>
+    /// Can be fired multiple times.
+    /// </summary>
     public event Action OnStartLoadingGame;
     public event Action OnServerReady;
     public event Action OnStartupConfigReady;
@@ -316,7 +319,7 @@ public class ServerBootstrap : MonoBehaviour
 			}
 			this.airshipJWT = annotations["JWT"];
 			UnityWebRequestProxyHelper.ProxyAuthCredentials = this.airshipJWT;
-			InternalHttpManager.authTokenSetTaskCompletionSource.SetResult(true);
+			InternalHttpManager.SetAuthToken(this.airshipJWT);
 			// Debug.Log("Airship JWT:");
 			// Debug.Log(airshipJWT);
 
@@ -373,6 +376,7 @@ public class ServerBootstrap : MonoBehaviour
 		var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(url));
 		var gameConfigPath = Path.Combine(Application.persistentDataPath, "Games", startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
+		request.timeout = 7;
 		yield return request.SendWebRequest();
 		if (request.result != UnityWebRequest.Result.Success) {
 			Debug.LogError($"Failed to download gameConfig.json. url={url}, message={request.error}");
