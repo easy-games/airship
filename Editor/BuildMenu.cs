@@ -220,6 +220,7 @@ namespace Editor {
 
         public static void BuildIOSClient(bool development, bool staging) {
 #if AIRSHIP_PLAYER
+            StreamingAssets.SetCoreMaterialPlatform(AirshipPlatform.iOS);
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
@@ -266,6 +267,7 @@ namespace Editor {
             }
 
             CreateAssetBundles.AddAllGameBundleScenes();
+            StreamingAssets.ResetCoreMaterials();
 #endif
         }
 
