@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public enum AirshipSerializedType {
     Unknown,
@@ -315,5 +316,50 @@ public abstract class AirshipSerializedValue {
         }
 
         return false;
+    }
+
+    public bool TryGetAsScriptableObject(out AirshipScriptableObject scriptableObject) {
+        if (objectReferenceValue is AirshipScriptableObject scriptableObjectRef) {
+            scriptableObject = scriptableObjectRef;
+            return true;
+        }
+        
+        scriptableObject = default;
+        return false;
+    }
+
+    public bool TryGetAsComponent(out AirshipComponent component) {
+        if (objectReferenceValue is AirshipComponent componentRef) {
+            component = componentRef;
+            return true;
+        }
+        
+        component = default;
+        return false;
+    }
+
+    public bool TryGetAsObject<T>(out T obj) where T : Object {
+        if (objectReferenceValue is T objRef) {
+            obj = objRef;
+            return true;
+        }
+        
+        obj = default;
+        return false;
+    }
+
+    public bool IsA(AirshipType targetAirshipType) {
+        if (!isAirshipType) return false;
+        return this.airshipType.IsAssignableFrom(targetAirshipType);
+    }
+
+    public bool IsA(Type targetType) {
+        if (!isObject) return false;
+        return objectType.IsAssignableFrom(targetType);
+    }
+    
+    public bool IsA<T>() where T : Object {
+        if (!isObject) return false;
+        return objectType.IsAssignableFrom(typeof(T));
     }
 }
