@@ -132,7 +132,7 @@ public class SocketManager : Singleton<SocketManager> {
             };
 
             Instance.socket.OnError += async (sender, s) => {
-                if (s.StartsWith("User does not have \"GC Edge\" access")) {
+                if (s.StartsWith("User does not have \"GC Edge\" access", StringComparison.OrdinalIgnoreCase)) {
                     Debug.Log("User does not have \"GC Edge\" access");
                     await Awaitable.MainThreadAsync();
                     CrossSceneState.kickForceLogout = true;

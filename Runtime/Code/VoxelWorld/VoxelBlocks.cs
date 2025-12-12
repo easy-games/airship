@@ -817,7 +817,7 @@ public class VoxelBlocks : MonoBehaviour {
 
             string rootPath = Application.dataPath;
             string assetsFolder = "/Assets";
-            if (rootPath.EndsWith(assetsFolder)) {
+            if (rootPath.EndsWith(assetsFolder, StringComparison.OrdinalIgnoreCase)) {
                 rootPath = rootPath.Substring(0, rootPath.Length - assetsFolder.Length);
             }
 

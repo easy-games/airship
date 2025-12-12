@@ -1,0 +1,13 @@
+{
+	"name": "com.adrenak.concentus-unity",
+	"version": "1.0.1",
+	"license": "SEE LICENSE FILE",
+	"displayName": "Concentus Unity",
+	"description": "Concentus (C# port of Opus with Speex resampler) made into a UPM package",
+	"unity": "2021.2",
+	"author": {
+		"name": "Vatsal Ambastha",
+		"email": "ambastha.vatsal@gmail.com",
+		"url": "http://www.vatsalambastha.com"
+	}
+}

@@ -108,7 +108,14 @@ namespace Editor {
         [MenuItem("Airship/Create Binary/Client/Mac (Staging)", priority = 80)]
 #endif
         public static void BuildMacClientStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
+            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var currDefines);
+            
+            var allDefines = new HashSet<string>(currDefines);
+            allDefines.Add("AIRSHIP_STAGING");
+            allDefines.Add("AIRSHIP_PLAYER");
+            allDefines.Add("AIRSHIP_INTERNAL");
+            
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, allDefines.ToArray());
             BuildMacClient();
         }
 
@@ -213,6 +220,7 @@ namespace Editor {
 
         public static void BuildIOSClient(bool development, bool staging) {
 #if AIRSHIP_PLAYER
+            StreamingAssets.SetCoreMaterialPlatform(AirshipPlatform.iOS);
             OnBuild();
             CreateAssetBundles.ResetScenes();
 
@@ -259,6 +267,7 @@ namespace Editor {
             }
 
             CreateAssetBundles.AddAllGameBundleScenes();
+            StreamingAssets.ResetCoreMaterials();
 #endif
         }
 
@@ -427,7 +436,15 @@ namespace Editor {
 #endif
 
         public static void BuildWindowsClientStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, new string[] {"AIRSHIP_STAGING", "AIRSHIP_PLAYER", "AIRSHIP_INTERNAL"});
+            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var currDefines);
+            
+            var allDefines = new HashSet<string>(currDefines);
+            allDefines.Add("AIRSHIP_STAGING");
+            allDefines.Add("AIRSHIP_PLAYER");
+            allDefines.Add("AIRSHIP_INTERNAL");
+            
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, allDefines.ToArray());
+            
             BuildWindowsClient();
         }
 
