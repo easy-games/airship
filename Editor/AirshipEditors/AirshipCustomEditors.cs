@@ -215,6 +215,11 @@ public static class AirshipCustomEditors {
         if (airshipTypeToCustomEditor.TryGetValue(pathType, out var editorType)) {
             return editorType.EditorType;
         }
+
+        foreach (var baseType in pathType.BaseTypes) {
+            if (!airshipTypeToCustomEditor.TryGetValue(baseType, out editorType)) continue;
+            if (editorType.EditorAttribute.EditorForChildClasses) return editorType.EditorType;
+        }
         
         return airshipDeclarationType switch {
             AirshipDeclarationType.Unknown => null,
@@ -285,33 +290,15 @@ public static class AirshipCustomEditors {
         var editor = AirshipCustomEditors.GetEditorForScriptableObject(scriptableObject, editorType, serializedObject);
         return editor;
     }
-    
-    internal static AirshipEditor GetComponentEditorForType(AirshipType airshipType, AirshipComponent component, AirshipSerializedObject serializedObject) {
+
+    internal static AirshipEditor GetComponentEditorForType(AirshipType airshipType, AirshipComponent component,
+        AirshipSerializedObject serializedObject) {
         if (airshipType.DeclarationType != AirshipDeclarationType.AirshipBehaviour) return null;
         var editorType = AirshipCustomEditors.GetEditorTypeForTypeName(airshipType.Name);
         var editor = AirshipCustomEditors.GetEditorForComponent(component, editorType, serializedObject);
         return editor;
     }
 
-    /// <summary>
-    /// Get an AirshipEditor for the given serialized property - can be used to embed inline
-    /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    internal static AirshipEditor GetEditor(AirshipSerializedProperty value) {
-        if (!value.isAirshipType) return null;
-
-        var component = value.objectReferenceValue;
-        if (component == null) return null;
-        
-        if (component is AirshipComponent airshipComponent) {
-            return GetEditor(airshipComponent);
-        };
-        
-        // TODO: In future we'll support Serializable objects & ScriptableObjects through here too.
-        return null;
-    }
-    
     /// <summary>
     /// Gets the editor's property decorator for the given luau property decorator
     /// </summary>
@@ -330,6 +317,24 @@ public static class AirshipCustomEditors {
 
         propertyDecorator = default;
         return false;
+    }
+    
+    /// <summary>
+    /// Get an AirshipEditor for the given serialized property - will only work with AirshipBehaviour and AirshipScriptableObject properties
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public static AirshipEditor GetEditor(AirshipSerializedProperty value) {
+        if (!value.isAirshipType) return null;
+
+        var objectReferenceValue = value.objectReferenceValue;
+        if (objectReferenceValue == null) return null;
+
+        return objectReferenceValue switch {
+            AirshipComponent airshipComponent => GetEditor(airshipComponent),
+            AirshipScriptableObject scriptableObject => GetEditor(scriptableObject),
+            _ => null
+        };
     }
 
     /// <summary>

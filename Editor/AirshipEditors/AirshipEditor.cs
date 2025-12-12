@@ -125,24 +125,7 @@ public abstract class AirshipEditor : ScriptableObject {
     protected void DrawDefaultProperties() {
         // Draw each property
         foreach (var property in serializedObject.GetProperties()) {
-            var shouldHideProperty = false;
-            foreach (var decorator in property.decorators) {
-                if (AirshipCustomEditors.TryGetDecorator(decorator, out var propertyDecorator)) {
-                    propertyDecorator.arguments = decorator.parameters.ToArray();
-                    propertyDecorator.property = property;
-                    propertyDecorator.serializedObject = serializedObject;
-                    
-                    if (!propertyDecorator.ShouldDrawProperty()) {
-                        shouldHideProperty = true;
-                        break;
-                    }
-                    
-                    propertyDecorator.OnBeforeInspectorGUI();
-                }
-            }
-
-            if (shouldHideProperty) continue;
-            
+            if (!AirshipEditorGUI.DrawDecorators(property)) continue;
             AirshipEditorGUI.PropertyField(property);
             
 #if AIRSHIP_DEBUG
