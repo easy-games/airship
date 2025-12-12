@@ -710,7 +710,10 @@ public partial class LuauCore : MonoBehaviour {
     private static unsafe T GetFieldValue<T>(object instance, FieldInfo fieldInfo) where T : unmanaged {
         var addr = UnsafeUtility.PinGCObjectAndGetAddress(instance, out ulong handle);
         try {
-            var offset = UnsafeUtility.GetFieldOffset(fieldInfo);
+            // Objects start with 2 IntPtrs, see layout:
+            // https://devblogs.microsoft.com/premier-developer/managed-object-internals-part-1-layout/
+            var headerSize = 2 * IntPtr.Size;
+            var offset = headerSize + UnsafeUtility.GetFieldOffset(fieldInfo);
             return *(T*)((byte*)addr + offset);
         } finally {
             UnsafeUtility.ReleaseGCObject(handle);
