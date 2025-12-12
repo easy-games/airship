@@ -22,7 +22,6 @@ using Code.Network;
 using Code.Network.Simulation;
 using Code.Player;
 using Code.RemoteConsole;
-using Code.VoiceChat;
 using ElRaccoone.Tweens;
 using ElRaccoone.Tweens.Core;
 using LeTai.TrueShadow;
@@ -52,6 +51,7 @@ using UnityEngine.VFX;
 using Code.Player.Accessories;
 using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.NetworkedMovement;
+using Code.Voice;
 using Unity.Mathematics;
 using UnityEngine.InputSystem;
 using UnityEngine.Splines;
@@ -208,7 +208,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(TerrainCollider),
             typeof(NavMeshHit),
             typeof(Graphics),
-            typeof(AirshipUniVoiceNetwork),
             typeof(StandaloneFileBrowser),
             typeof(MaterialColorURP),
             typeof(UnityWebRequestTexture),
@@ -294,6 +293,7 @@ public class TypeGenerator : MonoBehaviour
             
             typeof(VibrationManager),
             typeof(VibrationFeedbackType),
+            typeof(AirshipUniVoice),
 
 
             

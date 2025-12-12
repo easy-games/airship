@@ -242,62 +242,63 @@ public class SystemRoot : Singleton<SystemRoot> {
 						yield break;
 					}
 
-					var useContextualSource = package.packageType == AirshipPackageType.Game;
+					using (zip) {
+						var useContextualSource = package.packageType == AirshipPackageType.Game;
+						foreach (var entry in zip.Entries) {
+							var entryName = entry.Name;
+							var entryFullName = entry.FullName;
+							
+							var runContext = AirshipRuntimeHint.None; // both server and client
+							
+							if (entryName.EndsWith("json~", StringComparison.OrdinalIgnoreCase)) {
+								continue;
+							}
 
-					foreach (var entry in zip.Entries) {
-						var entryName = entry.Name;
-						var entryFullName = entry.FullName;
-						
-						var runContext = AirshipRuntimeHint.None; // both server and client
-						
-						if (entryName.EndsWith("json~")) {
-							continue;
-						}
+							if (entryName.EndsWith(".asbuildinfo", StringComparison.OrdinalIgnoreCase)) {
+								continue;
+							}
 
-						if (entryName.EndsWith(".asbuildinfo")) {
-							continue;
-						}
+							
+							if (entryName.EndsWith(AirshipRuntimePath.ClientExtension, StringComparison.OrdinalIgnoreCase)) {
+								// client script
+								runContext = AirshipRuntimeHint.Client;
+								entryFullName = entryFullName.Replace(AirshipRuntimePath.ClientExtension, AirshipRuntimePath.LuaExtension);
+	#if AIRSHIP_STAGING
+								Debug.Log($"[CS] Detected dist client code {entryName}");
+	#endif
+							} else if (entryName.EndsWith(AirshipRuntimePath.ServerExtension, StringComparison.OrdinalIgnoreCase)) {
+								// server script
+								runContext = AirshipRuntimeHint.Server;
+								entryFullName = entryFullName.Replace(AirshipRuntimePath.ServerExtension, AirshipRuntimePath.LuaExtension);
+	#if AIRSHIP_STAGING
+								Debug.Log($"[CS] Detected dist server code {entryName}");
+	#endif
+							}
+							
+							// check for metadata json
+							var jsonEntry = zip.GetEntry(entry.FullName + ".json~");
+							bool airshipBehaviour = jsonEntry != null;
 
-						
-						if (entryName.EndsWith(AirshipRuntimePath.ClientExtension)) {
-							// client script
-							runContext = AirshipRuntimeHint.Client;
-							entryFullName = entryFullName.Replace(AirshipRuntimePath.ClientExtension, AirshipRuntimePath.LuaExtension);
-#if AIRSHIP_STAGING
-							Debug.Log($"[CS] Detected dist client code {entryName}");
-#endif
-						} else if (entryName.EndsWith(AirshipRuntimePath.ServerExtension)) {
-							// server script
-							runContext = AirshipRuntimeHint.Server;
-							entryFullName = entryFullName.Replace(AirshipRuntimePath.ServerExtension, AirshipRuntimePath.LuaExtension);
-#if AIRSHIP_STAGING
-							Debug.Log($"[CS] Detected dist server code {entryName}");
-#endif
-						}
-						
-						// check for metadata json
-						var jsonEntry = zip.GetEntry(entry.FullName + ".json~");
-						bool airshipBehaviour = jsonEntry != null;
-
-						using (var stream = entry.Open()) {
-							using (var sr = new StreamReader(stream)) {
-								var text = sr.ReadToEnd();
-								var bf = Object.Instantiate(binaryFileTemplate);
-								bf.m_metadata = null;
-								bf.airshipBehaviour = false;
-								LuauCompiler.RuntimeCompile(entryFullName, text, bf, airshipBehaviour);
-								
-								// Depending on what kind of script we have, determines if it's server-only, client-only or both
-								//		Since packages can still be both, we have to separate the game scripts themselves.
-								if (runContext == AirshipRuntimeHint.Server) {
-									AddServerLuauFile(package.id, bf); // this is a server only script
-								} else if (runContext == AirshipRuntimeHint.Client) {
-									AddClientLuauFile(package.id, bf); 
-								} else {
-									AddLuauFile(package.id, bf);
+							using (var stream = entry.Open()) {
+								using (var sr = new StreamReader(stream)) {
+									var text = sr.ReadToEnd();
+									var bf = Object.Instantiate(binaryFileTemplate);
+									bf.m_metadata = null;
+									bf.airshipBehaviour = false;
+									LuauCompiler.RuntimeCompile(entryFullName, text, bf, airshipBehaviour);
+									
+									// Depending on what kind of script we have, determines if it's server-only, client-only or both
+									//		Since packages can still be both, we have to separate the game scripts themselves.
+									if (runContext == AirshipRuntimeHint.Server) {
+										AddServerLuauFile(package.id, bf); // this is a server only script
+									} else if (runContext == AirshipRuntimeHint.Client) {
+										AddClientLuauFile(package.id, bf); 
+									} else {
+										AddLuauFile(package.id, bf);
+									}
+									
+									scriptCounter++;
 								}
-								
-								scriptCounter++;
 							}
 						}
 					}

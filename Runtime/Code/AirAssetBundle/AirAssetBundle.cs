@@ -25,7 +25,7 @@ namespace Code.AirAssetBundle {
         }
 
         public async Task<Object> LoadAsync(string assetPath) {
-            var res = this.assetBundle.LoadAssetAsync(assetPath.ToLower());
+            var res = this.assetBundle.LoadAssetAsync(assetPath.ToLowerInvariant());
             await res;
             return res.asset;
         }

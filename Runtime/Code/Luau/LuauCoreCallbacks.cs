@@ -2,6 +2,7 @@ using Luau;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -1250,7 +1251,7 @@ public partial class LuauCore : MonoBehaviour {
             if (!fileNameStr.Contains("/")) {
                 // Get a stripped name
                 fileNameStr = GetTidyPathNameForLuaFile(originalScriptPath);
-            } else if (fileNameStr.StartsWith("./")) {
+            } else if (fileNameStr.StartsWith("./", StringComparison.Ordinal)) {
                 // Get a stripped name
                 var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
@@ -1260,7 +1261,7 @@ public partial class LuauCore : MonoBehaviour {
                 var bindingPath = Path.Combine(bits.ToArray());
                 
                 fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
-            } else if (fileNameStr.StartsWith("../")) {
+            } else if (fileNameStr.StartsWith("../", StringComparison.Ordinal)) {
                 var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
                 //Remove two bits of this filename off the end

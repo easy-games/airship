@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
@@ -188,7 +189,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IAirshipRuntime
 			script = runtimeScript;
 		}
 		else {
-			var isPackage = scriptPath.StartsWith("Assets/AirshipPackage");
+			var isPackage = scriptPath.StartsWith("Assets/AirshipPackage", StringComparison.Ordinal);
 			if (script == null) {
 				var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
 				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) - {suggestion}", gameObject);
@@ -199,7 +200,6 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IAirshipRuntime
 			return;
 		}
 #endif
-
 		if (script == null) {
 			Debug.LogError($"No script assigned to AirshipComponent ({gameObject.name})", gameObject);
 			return;
