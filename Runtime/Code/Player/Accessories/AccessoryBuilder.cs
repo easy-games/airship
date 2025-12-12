@@ -237,7 +237,28 @@ public class AccessoryBuilder : MonoBehaviour {
     ///     Remove all accessories from the entity that are in the given slot.
     /// </summary>
     /// <param name="slot">Slot from which to remove accessories.</param>
-    public void RemoveBySlot(AccessorySlot slot) {
+    public void RemoveBySlot(AccessorySlot slot, bool removeRelativeSlots = true) {
+
+        if (removeRelativeSlots) {
+            switch (slot) {
+                case AccessorySlot.Feet: 
+                    RemoveBySlot(AccessorySlot.LeftFoot, false);
+                    RemoveBySlot(AccessorySlot.RightFoot, false);
+                    break;
+                case AccessorySlot.LeftFoot: 
+                case AccessorySlot.RightFoot: 
+                    RemoveBySlot(AccessorySlot.Feet, false);
+                    break;
+                case AccessorySlot.Hands: 
+                    RemoveBySlot(AccessorySlot.LeftHand, false);
+                    RemoveBySlot(AccessorySlot.RightHand, false);
+                    break;
+                case AccessorySlot.LeftHand: 
+                case AccessorySlot.RightHand: 
+                    RemoveBySlot(AccessorySlot.Hands, false);
+                    break;
+            }
+        }
         if (activeAccessories.TryGetValue(slot, out var activeAccessory)) {
             DestroyActiveAccessory(activeAccessory);
             activeAccessories.Remove(slot);
