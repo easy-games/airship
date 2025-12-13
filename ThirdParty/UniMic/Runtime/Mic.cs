@@ -248,10 +248,7 @@ namespace Adrenak.UniMic {
         /// Initialize the Mic class for use.
         /// </summary>
         public static void Init() {
-            if (instance != null) {
-                Debug.unityLogger.Log(LogType.Warning, TAG, "UniMic.Mic is already initialized. This message is not an error");
-                return;
-            }
+            if (instance != null) return;
 
             var go = new GameObject("UniMic.Mic");
             go.hideFlags = HideFlags.DontSave;
