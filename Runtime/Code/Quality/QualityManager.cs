@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Code.Bootstrap;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -20,7 +21,7 @@ namespace Code.Quality {
         public double gpuAvg;
         public double cpuMainAvg;
         public double cpuRenderAvg;
-
+        
         public int numFrames;
     }
     
@@ -63,7 +64,12 @@ namespace Code.Quality {
 
         private void Start() {
             this.gameSessionStartTime = Time.unscaledTime;
-            this.StartCapture();
+            StartCoroutine(StartCaptureAfterSeconds(5));
+        }
+
+        private IEnumerator StartCaptureAfterSeconds(float seconds) {
+            yield return new WaitForSeconds(seconds);
+            StartCapture();
         }
 
         private void StartCapture() {
@@ -114,8 +120,8 @@ namespace Code.Quality {
             var frameHealth = FrameHealth.Ok;
             var avgFrameTimings = GetRecentAverageFrameTimings();
             
-            // If our 5% is lower than 80% of target we should drop quality
-            if (currentFivePercent < 0.80 * Math.Min(targetFrameRate, 144)) {
+            // If our 5% is lower than 50% of target we should drop quality
+            if (currentFivePercent < 0.50 * Math.Min(targetFrameRate, 144)) {
                 frameHealth = FrameHealth.Unhealthy;
             }
 
