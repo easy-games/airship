@@ -332,11 +332,14 @@ using Object = UnityEngine.Object;
             private static void OnPostInitialCompilation(TypescriptCompilationResult result) {
                 if (!result.InitialCompilation) return;
                 
-             
-                AirshipCustomEditors.RegisterEditorsForRegisteredTypes();
-                AirshipCustomMenus.instance.RegisterMenus();
-                AirshipCustomMenus.instance.Save();
-                
+                try {
+                    AirshipCustomEditors.RegisterEditorsForRegisteredTypes();
+                    AirshipCustomMenus.instance.RegisterMenus();
+                    AirshipCustomMenus.instance.Save();
+                } catch (Exception ex) {
+                    Debug.LogError($"Failed to register Airship custom editors: {ex}");
+                }
+
                 TypescriptServices.FinishedCompilation -= OnPostInitialCompilation;
             }
             
