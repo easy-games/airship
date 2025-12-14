@@ -11,6 +11,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "url": "https://github.com/easy-games/airship"
+  },
   "references": [
     "Easy.Airship",
     "Airship.Core",
