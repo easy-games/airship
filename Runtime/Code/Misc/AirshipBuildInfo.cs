@@ -93,6 +93,19 @@ namespace Luau {
             return buildData;
         }
 
+        public bool TryGetMetaFromKey(AirshipBehaviourMetaTop metaTop, string key,  out AirshipBehaviourMeta meta) {
+            if (metaTop.behaviours.TryGetValue(key, out meta)) {
+                return true;
+            }
+
+            if (metaTop.scriptables.TryGetValue(key, out meta)) {
+                return true;
+            }
+            
+            meta = default;
+            return false;
+        }
+        
         private AirshipBuildData(AirshipBehaviourMetaTop metaTop) {
             airshipBehaviourMetas = new List<AirshipBehaviourMeta>(metaTop.behaviours.Count);
             foreach (var pair in metaTop.behaviours) {
@@ -121,14 +134,11 @@ namespace Luau {
 
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
             foreach (var pair in metaTop.extends) {
-                var matching = metaTop.behaviours[pair.Key];
-
-                if (matching == null) continue;
+                if (!TryGetMetaFromKey(metaTop, pair.Key, out var matching)) continue;
                 
                 var extendsPaths = new List<string>();
                 foreach (var extendsPath in pair.Value) {
-                    if (metaTop.behaviours.TryGetValue(extendsPath, out var extends) ||
-                        (metaTop.scriptables != null && metaTop.scriptables.TryGetValue(extendsPath, out extends))) {
+                    if (TryGetMetaFromKey(metaTop, extendsPath, out var extends)) {
                         extendsPaths.Add(extends.filePath);
                     }
                 }
