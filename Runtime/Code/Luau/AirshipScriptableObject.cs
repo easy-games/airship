@@ -116,7 +116,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         };
 #else
         asset.script = runtimeScript;
-        asset.metadata = new LuauMetadata();  
+        asset.metadata = new LuauMetadata();
+        Reconcile?.Invoke(new AirshipScriptableObjectReconcileEventData(asset, ReconcileSource.Instantiated));
 #endif
         if (!asset._init) asset.Init();
         return asset;

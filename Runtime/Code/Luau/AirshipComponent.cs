@@ -49,6 +49,10 @@ internal enum ReconcileSource {
 	/// When an AirshipScriptableObject is deserialized
 	/// </summary>
 	Deserialization,
+	/// <summary>
+	/// When an AirshipScriptableObject is created
+	/// </summary>
+	Instantiated
 }
 
 internal class AirshipComponentReconcileEventData {
