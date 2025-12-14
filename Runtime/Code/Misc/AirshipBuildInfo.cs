@@ -127,9 +127,10 @@ namespace Luau {
                 
                 var extendsPaths = new List<string>();
                 foreach (var extendsPath in pair.Value) {
-                    var matchingExtends = metaTop.behaviours[extendsPath];
-                    if (matchingExtends == null) continue;
-                    extendsPaths.Add(matchingExtends.filePath);
+                    if (metaTop.behaviours.TryGetValue(extendsPath, out var extends) ||
+                        (metaTop.scriptables != null && metaTop.scriptables.TryGetValue(extendsPath, out extends))) {
+                        extendsPaths.Add(extends.filePath);
+                    }
                 }
 
                 var meta = new AirshipExtendsMeta {
