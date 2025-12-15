@@ -134,7 +134,7 @@ public static class LuauPluginNative {
 	internal delegate IntPtr DestroySignalsDelegate(LuauContext context, IntPtr thread, int unityInstanceId);
 	[NativeDelegate] internal static DestroySignalsDelegate DestroySignals;
 	
-	internal unsafe delegate IntPtr CreateThreadDelegate(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
+	internal unsafe delegate IntPtr CreateThreadDelegate(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId);
 	[NativeDelegate] internal static CreateThreadDelegate CreateThread;
 	
 	internal delegate IntPtr CreateThreadWithCachedModuleDelegate(LuauContext context, string filename, int gameObjectId);
@@ -524,7 +524,7 @@ public static class LuauPluginNative {
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	internal static extern unsafe IntPtr CreateThread(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool nativeCodegen);
+	internal static extern unsafe IntPtr CreateThread(LuauContext context, byte* scriptBytecode, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId);
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
