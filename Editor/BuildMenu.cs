@@ -45,6 +45,12 @@ namespace Editor {
             "UNIVOICE_NETWORK_MIRROR", "UNIVOICE_FILTER_RNNOISE4UNITY",
         };
         /// <summary>
+        /// Defines for builds with Steam support
+        /// </summary>
+        private static string[] SteamDefines = {
+            "STEAMWORKS_NET",
+        };
+        /// <summary>
         /// List of additional scripting defines for all staging builds.
         /// </summary>
         private static string[] StagingAdditionalDefines = {
@@ -100,7 +106,6 @@ namespace Editor {
             // Setup scripting defines
             var defines = new HashSet<string>(AirshipPlayerDefines);
             defines.Add("UNITY_SERVER");
-            defines.Add("AIRSHIP_INTERNAL"); // Production servers have internal define
             foreach (var extraDefine in extraDefines) defines.Add(extraDefine);
             buildProfile.scriptingDefines = defines.ToArray();
             
@@ -176,7 +181,7 @@ namespace Editor {
             options.scenes = scenes;
             options.locationPathName = $"build/client_mac/{ClientExecutableName}";
             options.target = BuildTarget.StandaloneOSX;
-            options.extraScriptingDefines = additionalScriptingDefines;
+            options.extraScriptingDefines = SteamDefines.Concat(additionalScriptingDefines).ToArray();
             options.options = buildOptions;
 
             var report = BuildPipeline.BuildPlayer(options);
@@ -456,7 +461,7 @@ namespace Editor {
             options.locationPathName = $"build/client_windows/{ClientExecutableName}.exe";
             options.target = BuildTarget.StandaloneWindows64;
             options.options = buildOptions;
-            options.extraScriptingDefines = additionalScriptingDefines;
+            options.extraScriptingDefines = SteamDefines.Concat(additionalScriptingDefines).ToArray();
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;

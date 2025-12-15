@@ -12,7 +12,6 @@ using System.Collections.Generic;
 public class RedistInstall {
 	static RedistInstall() {
 		WriteSteamAppIdTxtFile();
-		AddDefineSymbols();
 		CheckForOldDlls();
 	}
 
@@ -53,20 +52,6 @@ public class RedistInstall {
 		string strDll64Path = Path.Combine(strCwdPath, "steam_api64.dll");
 		if (File.Exists(strDll64Path)) {
 			Debug.LogError("[Steamworks.NET] Please delete the old version of 'steam_api64.dll' in your project root before continuing.");
-		}
-	}
-
-	static void AddDefineSymbols() {
-		var target = EditorUserBuildSettings.selectedBuildTargetGroup;
-		if (target is BuildTargetGroup.Android or BuildTargetGroup.iOS) return;
-		string currentDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(target);
-		HashSet<string> defines = new HashSet<string>(currentDefines.Split(';')) {
-			"STEAMWORKS_NET"
-		};
-
-		string newDefines = string.Join(";", defines);
-		if (newDefines != currentDefines) {
-			PlayerSettings.SetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup, newDefines);
 		}
 	}
 }
