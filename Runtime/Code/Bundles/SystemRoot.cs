@@ -27,18 +27,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, Dictionary<string, AirshipScript>> serverLuauFiles = new(); // server-only scripts
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
-	public ushort networkCollectionIdCounter = 1;
+	[NonSerialized] public ushort networkCollectionIdCounter = 1;
 
-	[FormerlySerializedAs("cacheCodeZip")] public bool codeZipCacheEnabled = false;
+	[NonSerialized] public bool codeZipCacheEnabled = false;
 
-	public string currentCoreVersion = "";
-	public string currentCoreMaterialsVersion = "";
+	[NonSerialized] public string currentCoreVersion = "";
+	[NonSerialized] public string currentCoreMaterialsVersion = "";
 
 	public List<AssetBundleCreateRequest> extraBundleLoadRequests = new();
 	public static bool startedLoadingExtraBundle = false;
 	public static bool preWarmedCoreShaders = false;
 	private static bool disableCoreMaterialsBundle = false;
-	public AssetBundle coreMaterialsAssetBundle;
+	[NonSerialized] public AssetBundle coreMaterialsAssetBundle;
 	private bool loadInProgress = false;
 
 	private void Awake() {
