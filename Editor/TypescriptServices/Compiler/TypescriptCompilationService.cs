@@ -333,11 +333,12 @@ using Object = UnityEngine.Object;
                 if (!result.InitialCompilation) return;
                 
                 try {
+                    TypescriptLogService.LogInfo("Finishing compilation message recieved...");
                     AirshipCustomEditors.RegisterEditorsForRegisteredTypes();
-                    AirshipCustomMenus.instance.RegisterMenus();
-                    AirshipCustomMenus.instance.Save();
+                    
                 } catch (Exception ex) {
                     Debug.LogError($"Failed to register Airship custom editors: {ex}");
+                    TypescriptLogService.Log(TypescriptLogLevel.Error,$"Failed to register Airship custom editors: {ex}");
                 }
 
                 TypescriptServices.FinishedCompilation -= OnPostInitialCompilation;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using Codice.CM.Common.Tree.Partial;
 using HandlebarsDotNet.PathStructure;
 using TypescriptAst;
 using Luau;
@@ -90,19 +91,20 @@ public static class AirshipCustomEditors {
     private static bool RegisterEditor(Type editorType, CustomAirshipEditorAttribute editorAttribute) {
         var typeName = editorAttribute.TypeName;
         var filePath = editorAttribute.AssetPath;
-                
+        if (!AirshipBuildInfo.TryGetInstance(out var buildInfo)) return false;
+        
         var pathType = string.IsNullOrEmpty(filePath) ? 
-            AirshipBuildInfo.Instance.GetTypeByName(typeName) :  
-            AirshipBuildInfo.Instance.GetTypeByPathAndName(filePath, typeName);
-                
+            buildInfo.GetTypeByName(typeName) :  
+            buildInfo.GetTypeByPathAndName(filePath, typeName);
+            
         if (pathType == null) {
             return false;
         }
-                
+            
         if (!AirshipCustomEditors.airshipTypeToCustomEditor.TryGetValue(pathType, out var _)) {
             AirshipCustomEditors.airshipTypeToCustomEditor.Add(pathType, new CustomEditorInfo(editorType, pathType, editorAttribute));
         }
-
+        
         return true;
     }
     
@@ -122,7 +124,9 @@ public static class AirshipCustomEditors {
             }
             
             var attr = editorType.GetCustomAttribute<CustomAirshipEditorAttribute>();
-            RegisterEditor(editorType, attr);
+            if (!RegisterEditor(editorType, attr)) {
+                Debug.LogWarning($"Could not register editor {editorType.Name}");
+            }
         }
 
         var decoratorStatements = new List<IStatement>();

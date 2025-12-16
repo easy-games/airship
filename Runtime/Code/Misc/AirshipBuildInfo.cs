@@ -183,6 +183,38 @@ namespace Luau {
         public static string PrimaryAssetPath => $"Assets/{BundlePath}";
 #endif
         
+        /// <summary>
+        /// Try to get the build info instance, and will return whether or not it exists yet.
+        /// </summary>
+        /// <param name="buildInfo">The build info instance</param>
+        /// <returns>True if the build info instance exists yet</returns>
+        public static bool TryGetInstance(out AirshipBuildInfo buildInfo) {
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
+            if (_instance != null) {
+                buildInfo = _instance;
+                return true;
+            }
+            
+            if (_instance == null) {
+                _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
+            }
+#elif AIRSHIP_PLAYER
+            if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
+                _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
+            }
+#endif
+            if (_instance != null) {
+                _instance.Init();
+                buildInfo = _instance;
+                return true;
+            }
+
+            buildInfo = null;
+            return false;
+        }
+
+        
+        public static bool IsLoaded { get; private set; }
         public static AirshipBuildInfo Instance {
             get {
                 if (_instance != null) {
@@ -197,16 +229,20 @@ namespace Luau {
                     return null;
                 }
                 
+                // AssetBridge only is used at runtime, this just spams confusing errors otherwise
+// #if AIRSHIP_PLAYER
                 if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
                     _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
                 }
-
+// #endif
+                
                 if (_instance != null) {
                     _instance.Init();
                 } else {
                     Debug.LogWarning("Failed to load AirshipBuildInfo");
                 }
 
+                IsLoaded = _instance != null;
                 return _instance;
             }
         }
