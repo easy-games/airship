@@ -128,7 +128,7 @@ namespace Editor {
             TypescriptProjectsService.CheckTypescriptProject();
 
             // Update the AirshipPackages
-            AirshipPackageAutoUpdater.CheckPackageVersions(ignoreUserSetting: true);
+            AirshipPackageAutoUpdater.CheckPackageVersions(ignoreUserSetting: true, immediatelyUpdateCore: true);
         }
 
         static AirshipUpdateService() {
