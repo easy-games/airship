@@ -9,9 +9,17 @@
                     var scriptableObjects = AssetDatabase.FindAssets($"t:{typeof(AirshipScriptableObject)}");
                     foreach (var guid in scriptableObjects) {
                         var path = AssetDatabase.GUIDToAssetPath(guid);
-                        var asset = AssetDatabase.LoadAssetAtPath<AirshipScriptableObject>(path);
-                        asset.Unload();
-                        asset.ReconcileMetadata(ReconcileSource.ComponentValidate);
+
+                        var assets = AssetDatabase.LoadAllAssetsAtPath(path);
+                        foreach (var asset in assets) {
+                            if (asset is not AirshipScriptableObject scriptableObjectAsset) continue;
+                            scriptableObjectAsset.Unload();
+                            scriptableObjectAsset.ReconcileMetadata(ReconcileSource.ComponentValidate);
+                        }
+                        
+                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScriptableObject>(path);
+                        // asset.Unload();
+                        // asset.ReconcileMetadata(ReconcileSource.ComponentValidate);
                     }
                 }
             };

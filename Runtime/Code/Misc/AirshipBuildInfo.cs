@@ -93,6 +93,19 @@ namespace Luau {
             return buildData;
         }
 
+        public bool TryGetMetaFromKey(AirshipBehaviourMetaTop metaTop, string key,  out AirshipBehaviourMeta meta) {
+            if (metaTop.behaviours.TryGetValue(key, out meta)) {
+                return true;
+            }
+
+            if (metaTop.scriptables.TryGetValue(key, out meta)) {
+                return true;
+            }
+            
+            meta = default;
+            return false;
+        }
+        
         private AirshipBuildData(AirshipBehaviourMetaTop metaTop) {
             airshipBehaviourMetas = new List<AirshipBehaviourMeta>(metaTop.behaviours.Count);
             foreach (var pair in metaTop.behaviours) {
@@ -121,15 +134,13 @@ namespace Luau {
 
             airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
             foreach (var pair in metaTop.extends) {
-                var matching = metaTop.behaviours[pair.Key];
-
-                if (matching == null) continue;
+                if (!TryGetMetaFromKey(metaTop, pair.Key, out var matching)) continue;
                 
                 var extendsPaths = new List<string>();
                 foreach (var extendsPath in pair.Value) {
-                    var matchingExtends = metaTop.behaviours[extendsPath];
-                    if (matchingExtends == null) continue;
-                    extendsPaths.Add(matchingExtends.filePath);
+                    if (TryGetMetaFromKey(metaTop, extendsPath, out var extends)) {
+                        extendsPaths.Add(extends.filePath);
+                    }
                 }
 
                 var meta = new AirshipExtendsMeta {
@@ -172,6 +183,38 @@ namespace Luau {
         public static string PrimaryAssetPath => $"Assets/{BundlePath}";
 #endif
         
+        /// <summary>
+        /// Try to get the build info instance, and will return whether or not it exists yet.
+        /// </summary>
+        /// <param name="buildInfo">The build info instance</param>
+        /// <returns>True if the build info instance exists yet</returns>
+        public static bool TryGetInstance(out AirshipBuildInfo buildInfo) {
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
+            if (_instance != null) {
+                buildInfo = _instance;
+                return true;
+            }
+            
+            if (_instance == null) {
+                _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
+            }
+#elif AIRSHIP_PLAYER
+            if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
+                _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
+            }
+#endif
+            if (_instance != null) {
+                _instance.Init();
+                buildInfo = _instance;
+                return true;
+            }
+
+            buildInfo = null;
+            return false;
+        }
+
+        
+        public static bool IsLoaded { get; private set; }
         public static AirshipBuildInfo Instance {
             get {
                 if (_instance != null) {
@@ -186,16 +229,20 @@ namespace Luau {
                     return null;
                 }
                 
+                // AssetBridge only is used at runtime, this just spams confusing errors otherwise
+// #if AIRSHIP_PLAYER
                 if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
                     _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
                 }
-
+// #endif
+                
                 if (_instance != null) {
                     _instance.Init();
                 } else {
                     Debug.LogWarning("Failed to load AirshipBuildInfo");
                 }
 
+                IsLoaded = _instance != null;
                 return _instance;
             }
         }
