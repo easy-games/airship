@@ -160,7 +160,7 @@ namespace Code.Network.StateSystem
             if (isServer && this.connectionToClient == null) {
                 // Only show log if not correctly configured.
                 if (RunCore.IsEditor() && (!serverAuth || !serverGeneratesCommands)) {
-                    Debug.Log($"Detected {this.name} as dummy character. Swapping character to bot mode.");
+                    Debug.LogWarning($"No owner detected for character {this.name}. Swapping character to bot mode. You can remove this warning by checking serverAuth and serverGeneratesCommands in the character prefab.");
                 }
                 serverAuth = true;
                 serverGeneratesCommands = true;
