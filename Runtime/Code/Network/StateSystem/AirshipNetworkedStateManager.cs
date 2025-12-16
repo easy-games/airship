@@ -49,7 +49,7 @@ namespace Code.Network.StateSystem
         #endregion
 
         #region Internal State
-
+        
         // Command number tracking
         private int clientCommandNumber = 0;
 
@@ -123,10 +123,6 @@ namespace Code.Network.StateSystem
         // A map between clientId and the last acked snapshot they received. We use this to select
         // the snapshot we use to generate diffs for the client.
         private Dictionary<int, int> serverAckedSnapshots = new();
-        
-        private double bufferTimeMultiplier => this.connectionToClient != null
-            ? this.connectionToClient.bufferTimeMultiplier // The server's connection to the client with client specific buffer settings
-            : NetworkClient.bufferTimeMultiplier;
 
         #endregion
 
@@ -159,6 +155,17 @@ namespace Code.Network.StateSystem
         #region Lifecycle Functions
 
         private void Start() {
+            // If we have no owning client on the server, swap to serverAuth mode so physics works
+            // for dummies.
+            if (isServer && this.connectionToClient == null) {
+                // Only show log if not correctly configured.
+                if (RunCore.IsEditor() && (!serverAuth || !serverGeneratesCommands)) {
+                    Debug.Log($"Detected {this.name} as dummy character. Swapping character to bot mode.");
+                }
+                serverAuth = true;
+                serverGeneratesCommands = true;
+            }
+            
             // We are a shared client and server
             if (isClient && isServer) {
                 this.stateSystem.mode = NetworkedStateSystemMode.Authority;
@@ -305,7 +312,7 @@ namespace Code.Network.StateSystem
 
                 foreach (var client in NetworkServer.connections) {
                     if (!client.Value.isAuthenticated || !client.Value.isReady) continue;
-                    if (!serverAuth && client.Key == this.netIdentity.connectionToClient.connectionId) {
+                    if (!serverAuth && this.netIdentity.connectionToClient != null && client.Key == this.netIdentity.connectionToClient.connectionId) {
                         // This client is the authoritative owner and doesn't need snapshot data,
                         // it is only meant for observers
                         continue;
@@ -571,7 +578,7 @@ namespace Code.Network.StateSystem
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             // Optimal max is when we will start processing extra commands.
             this.serverCommandBufferAvgSize.Add(this.serverCommandBuffer.Count);
-            this.connectionToClient.inputBufferTime = this.serverCommandBufferAvgSize.Value * Time.fixedUnscaledDeltaTime;
+            if (this.connectionToClient != null) this.connectionToClient.inputBufferTime = this.serverCommandBufferAvgSize.Value * Time.fixedUnscaledDeltaTime;
             // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
@@ -760,7 +767,7 @@ namespace Code.Network.StateSystem
             
             this.serverCommandBufferMaxSize = (int)( 1 / Time.fixedUnscaledDeltaTime);
             this.serverCommandBufferAvgSize.Add(this.serverReceivedStateBuffer.Count);
-            this.connectionToClient.inputBufferTime = this.serverCommandBufferAvgSize.Value * Time.fixedUnscaledDeltaTime;
+            if (this.connectionToClient != null) this.connectionToClient.inputBufferTime = this.serverCommandBufferAvgSize.Value * Time.fixedUnscaledDeltaTime;
             // print($"{this.name} {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize.Value} avg {serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
