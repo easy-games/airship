@@ -25,6 +25,38 @@ namespace Editor {
             "Packages/gg.easy.airship/Runtime/Scenes/Disconnected.unity",
             "Packages/gg.easy.airship/Runtime/Scenes/AirshipUpdateApp.unity",
         };
+        
+        /// <summary>
+        /// List of all shared defines for Airship. Every built client & server will use all of these.
+        /// </summary>
+        private static string[] AirshipPlayerDefines = new string[] {
+            // Airship
+            "AIRSHIP_PLAYER",
+            
+            // Mirror
+            "MIRROR", "MIRROR_79_OR_NEWER", "MIRROR_81_OR_NEWER", "MIRROR_82_OR_NEWER",
+            "MIRROR_83_OR_NEWER", "MIRROR_84_OR_NEWER", "MIRROR_85_OR_NEWER", "MIRROR_86_OR_NEWER",
+            "MIRROR_89_OR_NEWER",
+            
+            // True Shadow
+            "LETAI_TRUESHADOW",
+            
+            // UniVoice
+            "UNIVOICE_NETWORK_MIRROR", "UNIVOICE_FILTER_RNNOISE4UNITY",
+        };
+        /// <summary>
+        /// Defines for builds with Steam support
+        /// </summary>
+        private static string[] SteamDefines = {
+            "STEAMWORKS_NET",
+        };
+        /// <summary>
+        /// List of additional scripting defines for all staging builds.
+        /// </summary>
+        private static string[] StagingAdditionalDefines = {
+            "AIRSHIP_STAGING",
+            "AIRSHIP_INTERNAL",
+        };
 
         private static string FormatBytes(BuildSummary summary) {
             var bytes = summary.totalSize;
@@ -44,24 +76,24 @@ namespace Editor {
             return $"{gb:F2} GB [{bytes} bytes]";
         }
 
-        public static void OnBuild() {
+        public static void SetupProjectForBuild() {
             PhysicsSetup.Setup();
         }
 
         public static void BuildLinuxServerStaging() {
-            BuildLinuxServer(new []{"AIRSHIP_STAGING"});
+            BuildLinuxServer(StagingAdditionalDefines);
         }
         
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Server/Linux", priority = 80)]
 #endif
         public static void BuildLinuxServerProduction() {
-            BuildLinuxServer(new string[]{});
+            BuildLinuxServer();
         }
 
 
-        public static void BuildLinuxServer(string[] extraDefines) {
-            OnBuild();
+        public static void BuildLinuxServer(params string[] extraDefines) {
+            SetupProjectForBuild();
             FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
 
             BuildProfile buildProfile =
@@ -70,7 +102,13 @@ namespace Editor {
             buildProfile.scenes = new[] {
                 new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true)
             };
-            buildProfile.scriptingDefines = new[] { "UNITY_SERVER", "AIRSHIP_PLAYER", "AIRSHIP_INTERAL" }.Concat(extraDefines).ToArray();
+            
+            // Setup scripting defines
+            var defines = new HashSet<string>(AirshipPlayerDefines);
+            defines.Add("UNITY_SERVER");
+            foreach (var extraDefine in extraDefines) defines.Add(extraDefine);
+            buildProfile.scriptingDefines = defines.ToArray();
+            
             BuildProfile.SetActiveBuildProfile(buildProfile);
             
             Debug.Log("Building with " + buildProfile.scenes.Length + " scenes");
@@ -108,23 +146,28 @@ namespace Editor {
         [MenuItem("Airship/Create Binary/Client/Mac (Staging)", priority = 80)]
 #endif
         public static void BuildMacClientStaging() {
-            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var currDefines);
-            
-            var allDefines = new HashSet<string>(currDefines);
-            allDefines.Add("AIRSHIP_STAGING");
-            allDefines.Add("AIRSHIP_PLAYER");
-            allDefines.Add("AIRSHIP_INTERNAL");
-            
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, allDefines.ToArray());
-            BuildMacClient();
+            InternalBuildMacClient(BuildOptions.None, StagingAdditionalDefines);
         }
 
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Mac", priority = 80)]
 #endif
         public static void BuildMacClient() {
+            InternalBuildMacClient(BuildOptions.None);
+        }
+        
+#if AIRSHIP_PLAYER
+        [MenuItem("Airship/Create Binary/Client/Mac (Development)", priority = 80)]
+#endif
+        public static void BuildMacClientDev() {
+            InternalBuildMacClient(BuildOptions.Development | BuildOptions.ConnectWithProfiler);
+        }
+
+        private static void InternalBuildMacClient(BuildOptions buildOptions, params string[] additionalScriptingDefines) {
 #if UNITY_EDITOR_OSX
-            OnBuild();
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, AirshipPlayerDefines);
+            
+            SetupProjectForBuild();
             CreateAssetBundles.ResetScenes();
 
             CreateAssetBundles.SwapToQualityLevel("Normal");
@@ -132,65 +175,14 @@ namespace Editor {
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             
-            // Grab icons
-            // var sizes = new[] { 1024, 512, 256, 128, 64, 48, 32, 16 };
-            // var icons = new Texture2D[8];
-            // for (var i = 0; i < sizes.Length; i++) {
-            //     var iconSize = sizes[i];
-            //     icons[i] = AssetDatabase.LoadAssetAtPath<Texture2D>($"Assets/App Icons/logo_mac/mac_icon_{iconSize}.png");
-            // }
-            // PlayerSettings.SetIcons(NamedBuildTarget.Standalone, icons, IconKind.Application);
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+            
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = $"build/client_mac/{ClientExecutableName}";
             options.target = BuildTarget.StandaloneOSX;
-            // options.options = BuildOptions.Development;
-
-            var report = BuildPipeline.BuildPlayer(options);
-            var summary = report.summary;
-            switch (summary.result) {
-                case BuildResult.Succeeded:
-                    Debug.Log($"Build Mac succeeded with size: {FormatBytes(summary)}");
-                    // EditorUtility.RevealInFinder(Application.dataPath + "/" + options.locationPathName);
-                    EditorUtility.RevealInFinder(report.summary.outputPath);
-                    break;
-                case BuildResult.Failed:
-                    Debug.LogError("Build Mac failed");
-#if GAME_CI
-                    EditorApplication.Exit(1);
-#endif
-                    break;
-                default:
-                    Debug.LogError("Build Mac unexpected result:" + summary.result);
-#if GAME_CI
-                    EditorApplication.Exit(2);
-#endif
-                    break;
-            }
-
-            CreateAssetBundles.AddAllGameBundleScenes();
-#endif
-        }
-
-#if AIRSHIP_PLAYER
-        [MenuItem("Airship/Create Binary/Client/Mac (Development)", priority = 80)]
-#endif
-        public static void BuildMacClientDev() {
-#if UNITY_EDITOR_OSX
-            OnBuild();
-            CreateAssetBundles.ResetScenes();
-
-            CreateAssetBundles.SwapToQualityLevel("Normal");
-
-            UserBuildSettings.architecture = OSArchitecture.x64ARM64;
-            PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            var options = new BuildPlayerOptions();
-            options.scenes = scenes;
-            options.locationPathName = $"build/client_mac/{ClientExecutableName}";
-            options.target = BuildTarget.StandaloneOSX;
-            options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
+            options.extraScriptingDefines = SteamDefines.Concat(additionalScriptingDefines).ToArray();
+            options.options = buildOptions;
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
@@ -220,25 +212,25 @@ namespace Editor {
 
         public static void BuildIOSClient(bool development, bool staging) {
 #if AIRSHIP_PLAYER
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.iOS, AirshipPlayerDefines);
+            
             StreamingAssets.SetCoreMaterialPlatform(AirshipPlatform.iOS);
-            OnBuild();
+            SetupProjectForBuild();
             CreateAssetBundles.ResetScenes();
 
             CreateAssetBundles.SwapToQualityLevel("Low");
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
+            
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = "build/client_ios";
             options.target = BuildTarget.iOS;
 
-            var extraDefines = new List<string>();
             if (staging) {
-                extraDefines.Add("AIRSHIP_STAGING");
-                extraDefines.Add("AIRSHIP_INTERNAL");
+                options.extraScriptingDefines = StagingAdditionalDefines;
             }
-            options.extraScriptingDefines = extraDefines.ToArray();
 
             if (development == true) {
                 options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
@@ -291,7 +283,7 @@ namespace Editor {
 
             CreateAssetBundles.SwapToQualityLevel("Low");
             
-            OnBuild();
+            SetupProjectForBuild();
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
@@ -334,11 +326,11 @@ namespace Editor {
                 buildProfile = AssetDatabase.LoadAssetAtPath<BuildProfile>("Assets/Settings/Build Profiles/Android Google Play.asset");
             }
 
-            var defines = new List<string>();
-            defines.Add("AIRSHIP_PLAYER");
+            var defines = new List<string>(AirshipPlayerDefines);
             if (environment == AndroidEnvironment.Staging) {
-                defines.Add("AIRSHIP_STAGING");
-                defines.Add("AIRSHIP_INTERNAL");
+                foreach (var stagingDefine in StagingAdditionalDefines) {
+                    defines.Add(stagingDefine);
+                }
             }
             buildProfile.scriptingDefines = defines.ToArray();
             
@@ -436,77 +428,40 @@ namespace Editor {
 #endif
 
         public static void BuildWindowsClientStaging() {
-            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var currDefines);
-            
-            var allDefines = new HashSet<string>(currDefines);
-            allDefines.Add("AIRSHIP_STAGING");
-            allDefines.Add("AIRSHIP_PLAYER");
-            allDefines.Add("AIRSHIP_INTERNAL");
-            
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, allDefines.ToArray());
-            
-            BuildWindowsClient();
+            InternalBuildWindowsClient(BuildOptions.None, StagingAdditionalDefines);
         }
 
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Windows", priority = 80)]
 #endif
         public static void BuildWindowsClient() {
+            InternalBuildWindowsClient(BuildOptions.None);
+        }
+        
+#if AIRSHIP_PLAYER
+        [MenuItem("Airship/Create Binary/Client/Windows (Development)", priority = 80)]
+#endif
+        public static void BuildWindowsClientDev() {
+            InternalBuildWindowsClient(BuildOptions.Development | BuildOptions.ConnectWithProfiler);
+        }
+
+        public static void InternalBuildWindowsClient(BuildOptions buildOptions, params string[] additionalScriptingDefines) {
 #if UNITY_EDITOR
-            OnBuild();
+            SetupProjectForBuild();
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, AirshipPlayerDefines);
             CreateAssetBundles.ResetScenes();
 
             CreateAssetBundles.SwapToQualityLevel("Normal");
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            var options = new BuildPlayerOptions();
             
-            options.scenes = scenes;
-            options.locationPathName = $"build/client_windows/{ClientExecutableName}.exe";
-            options.target = BuildTarget.StandaloneWindows64;
-
-            var report = BuildPipeline.BuildPlayer(options);
-            var summary = report.summary;
-            switch (summary.result) {
-                case BuildResult.Succeeded:
-                    Debug.Log($"Build Windows succeeded with size: {FormatBytes(summary)}");
-                    break;
-                case BuildResult.Failed:
-                    Debug.Log("Build Windows failed");
-#if GAME_CI
-                    EditorApplication.Exit(1);
-#endif
-                    break;
-                default:
-                    Debug.Log("Build Windows unexpected result:" + summary.result);
-#if GAME_CI
-                    EditorApplication.Exit(2);
-#endif
-                    break;
-            }
-
-            CreateAssetBundles.AddAllGameBundleScenes();
-#endif
-        }
-
-#if AIRSHIP_PLAYER
-        [MenuItem("Airship/Create Binary/Client/Windows (Development)", priority = 80)]
-#endif
-        public static void BuildWindowsClientDev() {
-#if UNITY_EDITOR
-            OnBuild();
-            CreateAssetBundles.ResetScenes();
-
-            PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-
             var options = new BuildPlayerOptions();
-
             options.scenes = scenes;
             options.locationPathName = $"build/client_windows/{ClientExecutableName}.exe";
             options.target = BuildTarget.StandaloneWindows64;
-            options.options |= BuildOptions.Development | BuildOptions.ConnectWithProfiler;
+            options.options = buildOptions;
+            options.extraScriptingDefines = SteamDefines.Concat(additionalScriptingDefines).ToArray();
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
