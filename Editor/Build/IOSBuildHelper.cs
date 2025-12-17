@@ -27,24 +27,22 @@ public class IOSBuildProcessor {
         // Push Notification Entitlements
         {
             string projectPath = PBXProject.GetPBXProjectPath(path);
-            PBXProject project = new PBXProject();
-            project.ReadFromFile(projectPath);
+            PBXProject pbx = new PBXProject();
+            pbx.ReadFromFile(projectPath);
 
-            string mainTarget = project.GetUnityMainTargetGuid();
+            string mainTargetGuid = pbx.GetUnityMainTargetGuid();
 
-            // Add Push Notifications capability
-            project.AddCapability(
-                mainTarget,
-                PBXCapabilityType.PushNotifications
-            );
+            // Put the entitlements file at the root of the Xcode project (common convention).
+            string entitlementsFileName = "Entitlements.entitlements";
 
-            // Optional but common
-            project.AddCapability(
-                mainTarget,
-                PBXCapabilityType.BackgroundModes
-            );
+            // ProjectCapabilityManager will create/maintain the entitlements file and hook it up.
+            var capManager = new ProjectCapabilityManager(projectPath, entitlementsFileName, "Unity-iPhone", mainTargetGuid);
 
-            project.WriteToFile(projectPath);
+            capManager.AddPushNotifications(true); // 'true' enables Background Modes -> Remote notifications too
+            // If you don't want background remote notifications, use false:
+            // capManager.AddPushNotifications(false);
+
+            capManager.WriteToFile();
         }
     }
 #endif
