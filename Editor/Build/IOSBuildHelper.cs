@@ -23,6 +23,29 @@ public class IOSBuildProcessor {
 
         // Write plist
         File.WriteAllText(plistPath, plist.WriteToString());
+
+        // Push Notification Entitlements
+        {
+            string projectPath = PBXProject.GetPBXProjectPath(path);
+            PBXProject project = new PBXProject();
+            project.ReadFromFile(projectPath);
+
+            string mainTarget = project.GetUnityMainTargetGuid();
+
+            // Add Push Notifications capability
+            project.AddCapability(
+                mainTarget,
+                PBXCapabilityType.PushNotifications
+            );
+
+            // Optional but common
+            project.AddCapability(
+                mainTarget,
+                PBXCapabilityType.BackgroundModes
+            );
+
+            project.WriteToFile(projectPath);
+        }
     }
 #endif
 }
