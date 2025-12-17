@@ -293,7 +293,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Undo.CollapseUndoOperations(undoId);
 
         voxelWorld.GenerateWorld(false);
-        voxelWorld.CreateSingleStarterBlock();
+        voxelWorld.CreateSingleStarterVoxel();
 
         Selection.activeObject = voxelWorldGo;
     }
@@ -753,7 +753,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         }
                     } else if (currentEvent.alt) {
                         var voxel = world.GetVoxelAt(lastPos);
-                        world.selectedBlockIndex = VoxelWorld.VoxelDataToBlockId(voxel);
+                        world.selectedBlockIndex = VoxelWorld.GetVoxelDataId(voxel);
                     } else {
                         // Add voxel
                         var voxelPos = lastNormalPos;
@@ -764,7 +764,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         var def = world.voxelBlocks.GetBlock(newValue);
 
                         if (def.definition.rotatedPlacement) {
-                            newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, (int)placementFlip);
+                            newValue = (ushort)VoxelWorld.GetVoxelDataWithFlippedBits(newValue, (int)placementFlip);
                         }
 
                         VoxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
@@ -818,7 +818,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     var voxelPos = lastPos;
                     var oldValue =
                         world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
-                    var oldBlockId = VoxelWorld.VoxelDataToBlockId(oldValue);
+                    var oldBlockId = VoxelWorld.GetVoxelDataId(oldValue);
                     if (oldBlockId > 0) {
                         var edits = new List<EditInfo>();
                         PaintBucket(world, edits, lastPos, oldValue, (ushort)world.selectedBlockIndex,
@@ -844,11 +844,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     var oldVoxel = world.GetVoxelAt(lastPos); // Assuming you have a method to get the voxel value
 
                     //Step the rotation to the next enum value
-                    var flipBits = VoxelWorld.GetVoxelFlippedBits(oldVoxel);
+                    var flipBits = VoxelWorld.GetVoxelDataFlippedBits(oldVoxel);
                     var newBits = (flipBits + 1) % 8;
                     // Debug.Log("Old rotation: " +
                     //           ((VoxelWorld.Flips)flipBits + " new rotation: " + (VoxelWorld.Flips)newBits));
-                    var newVoxel = (ushort)VoxelWorld.SetVoxelFlippedBits(oldVoxel, newBits);
+                    var newVoxel = (ushort)VoxelWorld.GetVoxelDataWithFlippedBits(oldVoxel, newBits);
 
                     var def = world.voxelBlocks.GetBlock(newVoxel);
 
@@ -886,7 +886,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
             if (currentEvent.keyCode == KeyCode.I) {
                 //Eye dropper tool
-                var blockIndex = VoxelWorld.VoxelDataToBlockId(world.GetVoxelAt(lastPos));
+                var blockIndex = VoxelWorld.GetVoxelDataId(world.GetVoxelAt(lastPos));
                 world.selectedBlockIndex = blockIndex;
             }
         }
@@ -903,7 +903,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         var voxelAtPos = world.GetVoxelAt(pos);
         // Debug.Log("Voxel at pos: " + VoxelWorld.VoxelDataToBlockId(voxelAtPos) + " where from=" + from);
-        if (VoxelWorld.VoxelDataToBlockId(voxelAtPos) != VoxelWorld.VoxelDataToBlockId(from)) {
+        if (VoxelWorld.GetVoxelDataId(voxelAtPos) != VoxelWorld.GetVoxelDataId(from)) {
             return;
         }
 

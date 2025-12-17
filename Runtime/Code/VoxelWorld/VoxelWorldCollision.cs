@@ -68,7 +68,7 @@ namespace VoxelWorldStuff {
             for (int x = 0; x < VoxelWorld.chunkSize; x++) {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++) {
                     for (int z = 0; z < VoxelWorld.chunkSize; z++) {
-                        var voxelAtPos = src.GetLocalVoxelAt(x, y, z);
+                        var voxelAtPos = src.GetLocalVoxelDataAt(x, y, z);
                         if (!IsVoxelUsed(x, y, z, used) && voxelAtPos > 0) {
                             if (src.world.GetCollisionType(voxelAtPos) != VoxelBlocks.CollisionType.Solid) continue; // No collision for this block
                             
@@ -211,7 +211,7 @@ namespace VoxelWorldStuff {
                     
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
-                    var voxelAt = src.GetLocalVoxelAt(xx, yy, zz);
+                    var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
                     
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
@@ -233,7 +233,7 @@ namespace VoxelWorldStuff {
                     int zz = origin.z + z;
 
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
-                    var voxelAt = src.GetLocalVoxelAt(xx, yy, zz);
+                    var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
                     
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
@@ -262,7 +262,7 @@ namespace VoxelWorldStuff {
                     
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
-                    var voxelAt = src.GetLocalVoxelAt(xx, yy, zz);
+                    var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
                     
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found

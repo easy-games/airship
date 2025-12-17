@@ -168,11 +168,11 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             GUILayout.Label("Highlighted Block");
 
-            if (VoxelWorld.VoxelDataToBlockId(blockData) == 0) {
+            if (VoxelWorld.GetVoxelDataId(blockData) == 0) {
                 GUI.enabled = false;
             }
 
-            var flipBits = VoxelWorld.GetVoxelFlippedBits(blockData);
+            var flipBits = VoxelWorld.GetVoxelDataFlippedBits(blockData);
 
             var def = GUI.backgroundColor;
 

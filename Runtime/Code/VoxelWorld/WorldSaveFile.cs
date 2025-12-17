@@ -154,7 +154,7 @@ public class WorldSaveFile : ScriptableObject {
         foreach (var chunk in chunks) {
             var data = chunk.data;
             for (int j = 0; j < data.Length; j++) {
-                UsedIds.Add(VoxelWorld.VoxelDataToBlockId(data[j]));
+                UsedIds.Add(VoxelWorld.GetVoxelDataId(data[j]));
             }
         }
 
@@ -285,8 +285,8 @@ public class WorldSaveFile : ScriptableObject {
         var writeColor = color != null && color.Count > 0;
 
         for (int i = 0; i < data.Count; i++) {
-            BlockId fileBlockId = VoxelWorld.VoxelDataToBlockId(data[i]);
-            ushort extraBits = VoxelWorld.VoxelDataToExtraBits(data[i]);
+            BlockId fileBlockId = VoxelWorld.GetVoxelDataId(data[i]);
+            ushort extraBits = VoxelWorld.GetVoxelDataExtraBits(data[i]);
             
             bool found = blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
             if (found) {
@@ -296,7 +296,7 @@ public class WorldSaveFile : ScriptableObject {
                 // Fix the solid bit - we have to do this in case someone has already placed a bunch of blocks and then changes their solid bit, which is usually only set when the voxel is written
                 if (!Application.isPlaying) {
                     var definition = world.voxelBlocks.GetBlockDefinitionFromBlockId(updatedBlockId);
-                    vox = VoxelWorld.SetVoxelSolidBit(vox, definition.definition.solid && !definition.definition.halfBlock);
+                    vox = VoxelWorld.GetVoxelDataWithSolidBit(vox, definition.definition.solid && !definition.definition.halfBlock);
                 }
 #endif
 

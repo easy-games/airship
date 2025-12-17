@@ -169,7 +169,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
             if (currentChunk != null) {
                 //if (GetRawBlock(currentChunk,localx,localy,localz) == true)
-                if (currentChunk.GetLocalVoxelAt(localx, localy, localz) > 0) {
+                if (currentChunk.GetLocalVoxelDataAt(localx, localy, localz) > 0) {
                     //Vector3 hitPos = pos + direction * dist;
                     Vector3 hitNormal = Vector3.zero;
                     switch (lastFace) {
@@ -234,9 +234,9 @@ public partial class VoxelWorld : MonoBehaviour {
 
         //startSolid check
         if (currentChunk != null) {
-            VoxelData vox = currentChunk.GetLocalVoxelAt(localx, localy, localz);
+            VoxelData vox = currentChunk.GetLocalVoxelDataAt(localx, localy, localz);
 
-            if (VoxelIsSolid(vox)) {
+            if (GetVoxelDataIsSolid(vox)) {
                 //Continue!
                 return 2;
             }
@@ -343,10 +343,10 @@ public partial class VoxelWorld : MonoBehaviour {
             }
 
             if (currentChunk != null) {
-                VoxelData vox = currentChunk.GetLocalVoxelAt(localx, localy, localz);
+                VoxelData vox = currentChunk.GetLocalVoxelDataAt(localx, localy, localz);
 
 
-                if (VoxelIsSolid(vox)) {
+                if (GetVoxelDataIsSolid(vox)) {
                     //calculate the impact point
                     //Vector3 finalPos = (chunkKey * chunkSize) + new Vector3(localx, localy, localz) + posInsideVoxel;
 

@@ -345,7 +345,7 @@ public class VoxelBlocks : MonoBehaviour {
     private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
-        var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
+        var ix = VoxelWorld.GetVoxelDataId(index); //safety
         if (ix >= loadedBlocks.Count) {
             throw new ArgumentOutOfRangeException($"[Airship VW] Could not find block index {ix}. Number of loaded blocks is {loadedBlocks.Count}. VoxelBlocks loaded={loadedTask.Task.IsCompleted}.");
         }
@@ -372,7 +372,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     public BlockDefinition GetBlockDefinitionFromBlockId(int index) {
-        index = VoxelWorld.VoxelDataToBlockId(index);
+        index = VoxelWorld.GetVoxelDataId(index);
         return GetBlock((ushort)index);
     }
 
@@ -419,7 +419,7 @@ public class VoxelBlocks : MonoBehaviour {
     /// <returns>The string id of this voxel block</returns>
     public string GetStringIdFromBlockId(BlockId blockVoxelId) {
 
-        blockVoxelId = VoxelWorld.VoxelDataToBlockId(blockVoxelId); //anti foot gun
+        blockVoxelId = VoxelWorld.GetVoxelDataId(blockVoxelId); //anti foot gun
         
         var block = TryGetBlock(blockVoxelId, out var blockDefinition);
         if (block) {
@@ -789,7 +789,7 @@ public class VoxelBlocks : MonoBehaviour {
 
     //Fix a voxel value up with its solid mask bit
     public VoxelData AddSolidMaskToVoxelValue(VoxelData voxelValue) {
-        BlockId blockid = VoxelWorld.VoxelDataToBlockId(voxelValue);
+        BlockId blockid = VoxelWorld.GetVoxelDataId(voxelValue);
         BlockDefinition block = GetBlock(blockid);
 
         if (block == null) {

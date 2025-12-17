@@ -192,43 +192,54 @@ public partial class VoxelWorld : MonoBehaviour {
 
     //Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort VoxelDataToBlockId(int block) {
-        return (ushort)(block & 0xFFF); //Lower 12 bits
+    public static ushort GetVoxelDataId(int voxelData) {
+        return (ushort)(voxelData & 0xFFF); //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort VoxelDataToBlockId(ushort block) {
-        return (ushort)(block & 0xFFF); //Lower 12 bits
+    public static ushort GetVoxelDataId(ushort voxelData) {
+        return (ushort)(voxelData & 0xFFF); //Lower 12 bits
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort VoxelDataToExtraBits(ushort block) {
+    public static ushort GetVoxelDataExtraBits(ushort voxelData) {
         //mask off everything except the upper 4 bits
-        return (ushort)(block & 0xF000);
+        return (ushort)(voxelData & 0xF000);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool VoxelIsSolid(ushort voxel) {
-        return (voxel & 0x8000) != 0; //15th bit 
+    public static bool GetVoxelDataIsSolid(ushort voxelData) {
+        return (voxelData & 0x8000) != 0; //15th bit 
     }
 
+    /// <summary>
+    /// Takes voxel data and applies the solid data to it
+    /// </summary>
+    /// <param name="voxelData"></param>
+    /// <param name="solid"></param>
+    /// <returns>Returns the new voxel data with the set "solid" value</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort SetVoxelSolidBit(ushort voxel, bool solid) {
+    public static ushort GetVoxelDataWithSolidBit(ushort voxelData, bool solid) {
         //Solid bit is bit 15, toggle it on or off
         if (solid) {
-            return (ushort)(voxel | 0x8000);
+            return (ushort)(voxelData | 0x8000);
         } else {
-            return (ushort)(voxel & 0x7FFF);
+            return (ushort)(voxelData & 0x7FFF);
         }
     }
 
+    /// <summary>
+    /// Gets the flipped bits from a byte packed voxelData
+    /// </summary>
+    /// <param name="voxelData"></param>
+    /// <returns></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetVoxelFlippedBits(ushort voxel) {
+    public static int GetVoxelDataFlippedBits(ushort voxelData) {
         //Flipped bits are the 12th,13th and 14th bits
-        return (voxel & 0x7000) >> 12;
+        return (voxelData & 0x7000) >> 12;
     }
 
-    public static Quaternion FlipBitsToQuaternion(int flipBits) {
+    protected static Quaternion GetRotationFromFlipBits(int flipBits) {
         var flipEnum = (Flips)flipBits;
         switch (flipEnum) {
             case Flips.Flip_0Deg:
@@ -252,10 +263,18 @@ public partial class VoxelWorld : MonoBehaviour {
         return Quaternion.identity;
     }
 
+    public static Quaternion GetVoxelDataRotation(ushort voxelData) {
+        return GetRotationFromFlipBits(GetVoxelDataFlippedBits(voxelData));
+    }
+
+    public static Flips GetVoxelDataFlips(ushort voxelData) {
+        return (Flips)GetVoxelDataFlippedBits(voxelData);
+    }
+
     /// <summary>
     /// Half blocks are scaled based on their flip bits
     /// </summary>
-    public static Vector3 GetScaleFromFlipBits(int flipBits) {
+    protected static Vector3 GetScaleFromFlipBits(int flipBits) {
         if (flipBits % 4 == 0) {
             return new Vector3(1, 0.5f, 1);
         }
@@ -270,9 +289,19 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return Vector3.one;
     }
+    
+    public static Vector3 GetVoxelDataScale(ushort voxelData) {
+        return GetScaleFromFlipBits(GetVoxelDataFlippedBits(voxelData));
+    }
 
+    /// <summary>
+    /// Takes voxel data and applies the flippedBits
+    /// </summary>
+    /// <param name="voxelData"></param>
+    /// <param name="flippedBits"></param>
+    /// <returns>Returns the new voxel data with the set "flippedBits" value</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int SetVoxelFlippedBits(int voxel, int flippedBits) {
+    public static int GetVoxelDataWithFlippedBits(int voxel, int flippedBits) {
         // Ensure flippedBits is a 3-bit value (0-7)
         flippedBits &= 0x7;
 
@@ -299,7 +328,7 @@ public partial class VoxelWorld : MonoBehaviour {
             return VoxelBlocks.CollisionType.None;
         }
 
-        return voxelBlocks.GetCollisionType(VoxelDataToBlockId(voxelData));
+        return voxelBlocks.GetCollisionType(GetVoxelDataId(voxelData));
     }
 
     public Ray TransformRayToLocalSpace(Ray ray) {
@@ -329,10 +358,17 @@ public partial class VoxelWorld : MonoBehaviour {
         finishedReplicatingChunksFromServer = true;
         OnFinishedReplicatingChunksFromServer?.Invoke();
     }
-
-    //This is in localspace, make sure you transform your ray into localspace first
-    public VoxelRaycastResult RaycastVoxel(Vector3 pos, Vector3 direction, float maxDistance) {
-        var (hit, distance, hitPosition, hitNormal) = RaycastVoxel_Internal(pos, direction, maxDistance);
+    
+    /// <summary>
+    /// Cast a ray and return hit voxel
+    /// This is in local space, make sure you transform your ray into local space first
+    /// </summary>
+    /// <param name="localPos"></param>
+    /// <param name="localDirection"></param>
+    /// <param name="maxDistance"></param>
+    /// <returns></returns>
+    public VoxelRaycastResult RaycastVoxel(Vector3 localPos, Vector3 localDirection, float maxDistance) {
+        var (hit, distance, hitPosition, hitNormal) = RaycastVoxel_Internal(localPos, localDirection, maxDistance);
         return new VoxelRaycastResult() {
             Hit = hit,
             Distance = distance,
@@ -387,7 +423,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         var voxelPos = FloorInt(pos);
-        if (chunk.GetVoxelAt(voxelPos) == 0) {
+        if (chunk.GetVoxelDataAt(voxelPos) == 0) {
             return;
         }
 
@@ -403,7 +439,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         var voxelPos = FloorInt(pos);
-        if (chunk.GetVoxelAt(voxelPos) == 0) {
+        if (chunk.GetVoxelDataAt(voxelPos) == 0) {
             return;
         }
 
@@ -411,19 +447,24 @@ public partial class VoxelWorld : MonoBehaviour {
         DirtyMesh(voxelPos, false, priority);
     }
 
-    private Chunk WriteSingleVoxelAt(Vector3Int posInt, ushort voxel, bool priority) {
-        var affectedChunk = WriteVoxelAtInternal(posInt, voxel, out var collisionUpdated);
+    private Chunk WriteSingleVoxelAt(Vector3Int posInt, ushort voxelData, bool priority) {
+        var affectedChunk = WriteVoxelAtInternal(posInt, voxelData, out var collisionUpdated);
         DamageVoxelAt(posInt, 0.0f, false);
         if (affectedChunk != null) {
             //Adding voxels to history stack for playback
-            BeforeVoxelPlaced?.Invoke(voxel, posInt);
+            BeforeVoxelPlaced?.Invoke(voxelData, posInt);
             DirtyNeighborMeshes(posInt, collisionUpdated, priority);
-            VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
+            VoxelPlaced?.Invoke(voxelData, posInt.x, posInt.y, posInt.z);
         }
 
         return affectedChunk;
     }
 
+    /// <summary>
+    /// Grab a set of voxel data based on positions
+    /// </summary>
+    /// <param name="positions"></param>
+    /// <returns>Array of Voxel Data</returns>
     public ushort[] BulkReadVoxels(Vector3[] positions) {
         var result = new ushort[positions.Length];
         for (var i = 0; i < positions.Length; i++) {
@@ -433,11 +474,11 @@ public partial class VoxelWorld : MonoBehaviour {
         return result;
     }
 
-    public void WriteVoxelGroupAt(Vector3[] positions, double[] nums, bool priority) {
+    public void WriteVoxelGroupAt(Vector3[] positions, double[] voxelData, bool priority) {
         HashSet<Chunk> affectedChunks = new();
         for (var i = 0; i < positions.Length; i++) {
             var pos = FloorInt(positions[i]);
-            var num = (ushort)nums[i];
+            var num = (ushort)voxelData[i];
             var affectedChunk = WriteSingleVoxelAt(pos, num, false);
             if (affectedChunk != null) {
                 affectedChunks.Add(affectedChunk);
@@ -453,7 +494,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         if (RunCore.IsServer() && worldNetworker != null && worldNetworker.networkWriteVoxels) {
-            worldNetworker.RpcWriteVoxelGroup(positions, nums, priority);
+            worldNetworker.RpcWriteVoxelGroup(positions, voxelData, priority);
         }
     }
 
@@ -476,42 +517,6 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return chunk.GetPrefabAt(pos);
     }
-
-    /*
-    [HideFromTS]
-    public void AddWorldPosition(WorldSaveFile.WorldPosition worldPosition) {
-#if UNITY_EDITOR
-        if (!Application.isPlaying) {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/WorldPosition.prefab");
-            var go = Instantiate<GameObject>(prefab, this.transform);
-            var indicator = go.GetComponent<VoxelWorldPositionIndicator>();
-            indicator.Init(this);
-            go.hideFlags = HideFlags.DontSave;
-            go.name = worldPosition.name;
-            go.transform.position = worldPosition.position;
-            go.transform.rotation = worldPosition.rotation;
-        }
-#endif
-        this.worldPositions.Add(worldPosition);
-    }*/
-
-    /*
-    [HideFromTS]
-    public Light AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows) {
-        var emptyPointLight = new GameObject("Pointlight", typeof(Light));
-        emptyPointLight.transform.parent = this.lightsFolder.transform;
-        emptyPointLight.name = "Pointlight";
-        emptyPointLight.transform.position = position;
-        emptyPointLight.transform.rotation = rotation;
-
-       
-        var pointLight = emptyPointLight.GetComponent<Light>();
-        pointLight.color = color;
-        pointLight.intensity = intensity;
-        pointLight.range = range;
-
-        return pointLight;
-    }*/
 
     [HideFromTS]
     public void InitializeChunksAroundChunk(Vector3Int chunkKey) {
@@ -559,7 +564,7 @@ public partial class VoxelWorld : MonoBehaviour {
         num = voxelBlocks.AddSolidMaskToVoxelValue(num);
 
         // Ignore if this changes nothing.
-        var existingVoxel = chunk.GetVoxelAt(pos);
+        var existingVoxel = chunk.GetVoxelDataAt(pos);
         if (num == existingVoxel) {
             collisionUpdated = false;
             return null;
@@ -572,7 +577,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         //Write a new voxel
-        chunk.WriteVoxel(pos, num);
+        chunk.WriteVoxelAt(pos, num);
         return chunk;
     }
 
@@ -593,7 +598,7 @@ public partial class VoxelWorld : MonoBehaviour {
             return 0;
         }
 
-        return value.GetVoxelAt(pos);
+        return value.GetVoxelDataAt(pos);
     }
 
     public ushort ReadVoxelAt(Vector3 pos) {
@@ -664,7 +669,7 @@ public partial class VoxelWorld : MonoBehaviour {
             return (0, null);
         }
 
-        return (value.GetVoxelAt(pos), value);
+        return (value.GetVoxelDataAt(pos), value);
     }
 
     public ushort GetVoxelAt(Vector3 pos) {
@@ -675,7 +680,7 @@ public partial class VoxelWorld : MonoBehaviour {
             return 0;
         }
 
-        return value.GetVoxelAt(posi);
+        return value.GetVoxelDataAt(posi);
     }
 
     public Color32 GetVoxelColorAt(Vector3 pos) {
@@ -835,7 +840,7 @@ public partial class VoxelWorld : MonoBehaviour {
         hasUnsavedChanges = true;
     }
 
-    public void CreateSingleStarterBlock() {
+    public void CreateSingleStarterVoxel() {
         if (voxelBlocks == null || voxelBlocks.loadedBlocks.Count < 2) {
             Debug.LogError("No voxel blocks defined.");
             return;
@@ -915,7 +920,7 @@ public partial class VoxelWorld : MonoBehaviour {
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
 #endif
         foreach (var chunk in chunks) {
-            chunk.Value.Free();
+            chunk.Value.DestroyAllMeshes();
         }
 
         if (chunksFolder) {
@@ -1371,7 +1376,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public int GetNumRadiosityProcessingChunks() {
         var counter = 0;
         foreach (var chunk in chunks) {
-            if (chunk.Value.Busy()) {
+            if (chunk.Value.IsBusy()) {
                 counter++;
             }
         }
@@ -1503,9 +1508,12 @@ public partial class VoxelWorld : MonoBehaviour {
         saveFile.LoadIntoVoxelWorld(this);
     }
 
-    // Todo: How do we want to handle having multiple voxelworlds?
     public static VoxelWorld GetFirstInstance() {
         return FindAnyObjectByType<VoxelWorld>();
+    }
+
+    public static VoxelWorld[] GetAllInstances(FindObjectsInactive findObjectsInactive) {
+        return FindObjectsByType<VoxelWorld>(findObjectsInactive, FindObjectsSortMode.None);
     }
 
     private void OnBeforeAssemblyReload() {
