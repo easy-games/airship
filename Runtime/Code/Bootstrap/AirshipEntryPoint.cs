@@ -28,12 +28,12 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
         UnityServices.InitializeAsync();
         AnalyticsService.Instance.StartDataCollection();
 
-        var playerSingletons = Resources.Load("AirshipPlayerSingletons");
+        var playerSingletons = Resources.Load("InternalSingletons");
         if (playerSingletons) {
             var go = Instantiate(playerSingletons);
-            go.name = "AirshipPlayerSingletons";
+            go.name = "InternalSingletons";
         } else {
-            Debug.LogError("Missing private AirshipPlayerSingletons prefab.");
+            Debug.LogError("Missing private InternalSingletons prefab.");
         }
 #endif
     }
