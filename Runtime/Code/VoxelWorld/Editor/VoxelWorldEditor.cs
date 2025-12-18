@@ -907,9 +907,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             var pos = toVisit.Dequeue();
             if (visited.Contains(pos)) continue;
             
-            var voxelAtPos = world.GetVoxelAt(pos);
+            var voxelData = world.GetVoxelAt(pos);
             visited.Add(pos);
-            if (VoxelWorld.VoxelDataToBlockId(voxelAtPos) != VoxelWorld.VoxelDataToBlockId(from)) continue;
+            if (VoxelWorld.GetVoxelDataId(voxelData) != VoxelWorld.GetVoxelDataId(from)) continue;
             
             edits.Add(new EditInfo(VoxelWorld.FloorInt(pos), from, target));
             
