@@ -1,6 +1,7 @@
 // ReSharper disable InconsistentNaming
 
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.Scripting;
 
 namespace Code {
@@ -17,6 +18,10 @@ namespace Code {
             "PushNotifications",
 #endif
         };
+
+        public static bool HasFlag(string flag) {
+            return playerFlags.Contains(flag);
+        }
 
 
         /// <summary>
