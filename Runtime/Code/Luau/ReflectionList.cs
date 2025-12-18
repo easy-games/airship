@@ -362,12 +362,14 @@ namespace Luau {
             
             var t = Type.GetType(typeStr);
             if (t != null) {
+                TypeReflection._shortTypeNames.TryAdd(typeStr, t);
                 return t;
             }
             
             foreach (var (assembly, namespaces) in _assemblyNamespacesUsed) {
                 var type = assembly.GetType(typeStr);
                 if (type != null) {
+                    TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                     return type;
                 }
                 
@@ -375,6 +377,7 @@ namespace Luau {
                     if (SkipNamespaces.Contains(ns)) continue;
                     type = assembly.GetType(ns + "." + typeStr);
                     if (type != null) {
+                        TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                         return type;
                     }
                 }
@@ -388,6 +391,7 @@ namespace Luau {
                 var type = assembly.GetType(typeStr);
                 if (type != null) {
                     _assemblyNamespacesUsed.Add(assembly, namespaces);
+                    TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                     return type;
                 }
                 
@@ -396,6 +400,7 @@ namespace Luau {
                     type = assembly.GetType(ns + "." + typeStr);
                     if (type != null) {
                         _assemblyNamespacesUsed.Add(assembly, namespaces);
+                        TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                         return type;
                     }
                 }

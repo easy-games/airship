@@ -810,7 +810,6 @@ namespace Luau {
             if (metadata.scriptable != null) {
                 // Set default values:
                 foreach (var property in metadata.scriptable.properties) {
-                    Debug.Log($"scriptable {property.name} as default {property.defaultValue}");
                     property.SetDefaultAsValue();
                 }
             }

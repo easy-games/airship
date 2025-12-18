@@ -1510,14 +1510,20 @@ public partial class LuauCore : MonoBehaviour {
         // Check for IsA call:
         if (methodName == "IsA") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-            
-            var t = ReflectionList.AttemptGetTypeFromString(typeName);
 
-            if (t == null) {
-                return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
+            // First: quick check if type name matches object type name directly
+            var isA = typeName == type.Name;
+            if (!isA) {
+                // Second: if not a direct match get the type by name and check if assignable from
+                var t = ReflectionList.AttemptGetTypeFromString(typeName);
+
+                if (t == null) {
+                    return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
+                }
+
+                isA = t.IsAssignableFrom(type);
             }
 
-            var isA = t.IsAssignableFrom(type);
             WritePropertyToThread(thread, isA, typeof(bool));
 
             return 1;
