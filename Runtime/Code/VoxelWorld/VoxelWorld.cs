@@ -11,6 +11,7 @@ using BlockId = System.UInt16;
 using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Code.Zstd;
 using Luau;
 
 #if UNITY_EDITOR
@@ -1465,6 +1466,14 @@ public partial class VoxelWorld : MonoBehaviour {
         chunks.Add(key, chunk);
         chunk.SetGeometryDirty(true);
         chunk.SetCollisionDirty(true);
+    }
+
+    public string EncodeToString() {
+       return Convert.ToBase64String(Zstd.CompressData(ToBuffer().Data, Zstd.DefaultCompressionLevel));
+    }
+
+    public void DecodeFromString(string stringData) {
+        FromBuffer(Zstd.DecompressData(Convert.FromBase64String(stringData)));
     }
 
     public LuauBuffer ToBuffer() {
