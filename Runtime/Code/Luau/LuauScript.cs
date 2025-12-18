@@ -126,12 +126,11 @@ public class LuauScript : MonoBehaviour {
 		
 		var cleanPath = CleanupFilePath(script.m_path);
 		var id = obj != null ? ThreadDataManager.GetOrCreateObjectId(obj) : -1;
-		var nativeCodegen = script.HasDirective("native");
 		
 		// Tell Luau to load the bytecode onto a new Luau thread:
 		switch (cacheMode) {
 			case LuauScriptCacheMode.NotCached:
-				return LuauPlugin.CreateThread(context, script.m_bytes, cleanPath, id, nativeCodegen);
+				return LuauPlugin.CreateThread(context, script.m_bytes, cleanPath, id);
 			case LuauScriptCacheMode.Cached:
 				var requirePath = LuauCore.GetRequirePath(script.m_path, cleanPath);
 				return LuauPlugin.CreateThreadWithCachedModule(context, requirePath, id);
