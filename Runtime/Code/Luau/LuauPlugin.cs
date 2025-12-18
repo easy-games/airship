@@ -369,7 +369,7 @@ public static class LuauPlugin {
 		ThrowIfNotNullPtr(LuauPluginNative.DestroySignals(context, thread, unityInstanceId));
 	}
 	
-	public static unsafe IntPtr CreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId, bool nativeCodegen) {
+	public static unsafe IntPtr CreateThread(LuauContext context, byte[] scriptBytecode, string filename, int gameObjectId) {
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
 		
@@ -378,7 +378,7 @@ public static class LuauPlugin {
 
 		IntPtr returnValue;
 		fixed (byte* bytecodePtr = scriptBytecode) {
-			returnValue = LuauPluginNative.CreateThread(context, bytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId, nativeCodegen);
+			returnValue = LuauPluginNative.CreateThread(context, bytecodePtr, scriptBytecode.Length, filenamePtr, filenameLength, gameObjectId);
 		}
 		
 		Marshal.FreeCoTaskMem(filenamePtr);

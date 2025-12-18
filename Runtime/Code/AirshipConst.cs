@@ -1,6 +1,7 @@
 // ReSharper disable InconsistentNaming
 
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.Scripting;
 
 namespace Code {
@@ -13,7 +14,14 @@ namespace Code {
             "PlatformGearDownloadClassId",
             "HasTransformMoveDirection", // True for versions that have access to CharacterMovement.TransformMoveDirection
             "CompressVOIPAudio",
+#if UNITY_IOS
+            "PushNotifications",
+#endif
         };
+
+        public static bool HasFlag(string flag) {
+            return playerFlags.Contains(flag);
+        }
 
 
         /// <summary>
