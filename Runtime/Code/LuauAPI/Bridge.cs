@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Adrenak.UniMic;
 using Airship.DevConsole;
 using Code.Luau.LuauAssembly.Protection;
-using Code.VoiceChat;
+using Code.Voice;
 using Mirror;
 using Tayx.Graphy;
 using Unity.Mathematics;
@@ -331,7 +331,7 @@ public static class Bridge {
     public static async Task LoadSceneAsyncFromAssetBundle(string sceneName, LoadSceneMode loadSceneMode) {
         foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
             foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
-                if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                if (scenePath.ToLowerInvariant().EndsWith(sceneName.ToLowerInvariant() + ".unity")) {
                     await SceneManager.LoadSceneAsync(scenePath, loadSceneMode);
                     return;
                 }
@@ -366,41 +366,55 @@ public static class Bridge {
         return Microphone.devices;
     }
 
+    // Used to prevent constant lookups
+    private static Mic.Device currentDevice;
+    
     [LuauAPI(LuauContext.Protected)]
     public static void SetMicDeviceIndex(int i) {
         var devices = Microphone.devices;
         if (i < 0 || i >= devices.Length)
             throw new ArgumentOutOfRangeException($"Microphone index {i} is out of range (devices.Length = {devices.Length})");
-        Mic.Instance.SetCurrentDevice(Microphone.devices[i]);
+        currentDevice = Mic.AvailableDevices.Find((d) => d.Name == Microphone.devices[i]);
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static int GetCurrentMicDeviceIndex() {
-        return Array.IndexOf(Microphone.devices, Mic.Instance.CurrentDeviceName);
+        return Array.IndexOf(Microphone.devices, currentDevice != null ? currentDevice.Name : "");
     }
 
     [LuauAPI(LuauContext.Protected)]
-    public static void StartMicRecording(int frequency, int sampleLength) {
-        Mic.Instance.StartRecording(frequency, sampleLength);
+    public static void StartMicRecording() {
+        AirshipUniVoice.StartRecording(currentDevice);
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static void StopMicRecording() {
-        Mic.Instance.StopRecording();
+        AirshipUniVoice.StopRecording();
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static bool IsMicRecording() {
-        return Mic.Instance.IsRecording;
+        return AirshipUniVoice.IsRecording();
+    }
+    
+    [LuauAPI(LuauContext.Protected)]
+    public static void SetMicInputEnabled(bool enabled) {
+        AirshipUniVoice.ClientSession.InputEnabled = enabled;
+    }
+    
+    [LuauAPI]
+    public static bool IsMicInputEnabled() {
+        return AirshipUniVoice.ClientSession.InputEnabled;
     }
 
-    [LuauAPI(LuauContext.Protected)]
-    public static AirshipUniVoiceNetwork GetAirshipVoiceChatNetwork() {
-        return Object.FindFirstObjectByType<AirshipUniVoiceNetwork>(FindObjectsInactive.Include);
+    [LuauAPI]
+    public static bool IsVoiceSetup() {
+        return RunCore.IsServer() ? AirshipUniVoice.HasSetUpServer : AirshipUniVoice.HasSetUpClient;
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static async void RequestMicrophonePermissionAsync() {
+        if (Application.HasUserAuthorization(UserAuthorization.Microphone)) return;
         await Awaitable.FromAsyncOperation(Application.RequestUserAuthorization(UserAuthorization.Microphone));
     }
 
@@ -422,13 +436,13 @@ public static class Bridge {
     [LuauAPI(LuauContext.Protected)]
     public static bool IsLowEndDevice() {
         // CPU check
-        var cpu = SystemInfo.processorType.ToLower();
+        var cpu = SystemInfo.processorType.ToLowerInvariant();
         if (cpu.Contains("celeron") || cpu.Contains("pentium") || cpu.Contains("atom")) {
             return true;
         }
 
         // GPU check
-        var gpu = SystemInfo.graphicsDeviceName.ToLower();
+        var gpu = SystemInfo.graphicsDeviceName.ToLowerInvariant();
         if (gpu.Contains("intel") || gpu.Contains("uhd") || gpu.Contains("hd graphics")) {
             return true;
         }

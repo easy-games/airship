@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Airship.Editor;
 using Code.Bootstrap;
@@ -38,6 +39,7 @@ public class AirshipSettingsProvider : SettingsProvider
     private bool showAutomaticEditorIntegrations = true;
     private bool showLuauOptions = true;
     private bool showNetworkOptions = true;
+    private bool showVoxelWorldOptions = false;
     private bool showBetaOptions = false;
 
     bool showGithubAccessToken = false;
@@ -185,7 +187,9 @@ public class AirshipSettingsProvider : SettingsProvider
 
             if (newTimeout != EditorIntegrationsConfig.instance.luauScriptTimeout) {
                 EditorIntegrationsConfig.instance.luauScriptTimeout = newTimeout;
-                LuauPlugin.SetScriptTimeoutDuration(newTimeout);
+                if (!Debugger.IsAttached) {
+                    LuauPlugin.SetScriptTimeoutDuration(newTimeout);
+                }
             }
             
             if (GUI.changed) {
@@ -206,6 +210,22 @@ public class AirshipSettingsProvider : SettingsProvider
             
             if (AirshipEditorNetworkConfig.instance.portOverride != prev) {
                 AirshipEditorNetworkConfig.instance.Modify();
+            }
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+        
+        EditorGUILayout.Space();
+        showVoxelWorldOptions = EditorGUILayout.BeginFoldoutHeaderGroup(showVoxelWorldOptions, "Voxel World");
+        if (showVoxelWorldOptions) {
+            EditorGUILayout.HelpBox("Updating Server View Rendering requires you to restart multiplayer play mode window", MessageType.Warning);
+            VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView = EditorGUILayout.Toggle(
+                new GUIContent(
+                    "Server View Rendering", 
+                    "When enabled the Voxel World will be visible in dedicated server view. This is an editor only preference that results in worse performance (but can be useful for debugging)."
+                ), VoxelWorldEditorConfig.instance.renderVoxelWorldInServerView);
+            
+            if (GUI.changed) {
+                VoxelWorldEditorConfig.instance.Modify();
             }
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
@@ -235,6 +255,12 @@ public class AirshipSettingsProvider : SettingsProvider
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void OnReload() {
-        LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
+        if (Debugger.IsAttached) {
+            // If the debugger is attached, just feed in a large delay to effectively disable the timeout.
+            // In the future, we could adjust the plugin to take something like -1 to disable it.
+            LuauPlugin.SetScriptTimeoutDuration(86400);
+        } else {
+            LuauPlugin.SetScriptTimeoutDuration(EditorIntegrationsConfig.instance.luauScriptTimeout);
+        }
     }
 }

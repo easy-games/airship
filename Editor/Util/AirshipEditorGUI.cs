@@ -10,6 +10,7 @@ using Luau;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public static partial class AirshipEditorGUI {
     public static void HorizontalLine(Color color = default, int thickness = 1, int padding = 10, int margin = 0)
@@ -52,6 +53,50 @@ public static partial class AirshipEditorGUI {
             return _nonClippingObjectField;
         }
     }
+    
+    private static GUIStyle _nonClippingObjectFieldError;
+    internal static GUIStyle nonClippingObjectFieldError {
+        get {
+            if (_nonClippingObjectFieldError == null) {
+                _nonClippingObjectFieldError = new GUIStyle(EditorStyles.objectField) {
+                    imagePosition = ImagePosition.TextOnly,
+                    clipping = TextClipping.Ellipsis,
+                    normal = new GUIStyleState() {
+                        textColor = new Color(1, 0.2f, 0.2f),
+                    },
+                    hover = new GUIStyleState() {
+                        textColor = new Color(1, 0.2f, 0.2f),
+                    },
+                    fontStyle = FontStyle.Italic
+                };
+            }
+
+            return _nonClippingObjectFieldError;
+        }
+    }
+    
+    private static GUIStyle _nonClippingObjectFieldNone;
+    internal static GUIStyle nonClippingObjectFieldNone {
+        get {
+            if (_nonClippingObjectFieldNone == null) {
+                _nonClippingObjectFieldNone = new GUIStyle(EditorStyles.objectField) {
+                    imagePosition = ImagePosition.TextOnly,
+                    clipping = TextClipping.Ellipsis,
+                    normal = new GUIStyleState() {
+                        textColor = new Color(0.6f, 0.6f, 0.6f),
+                    },
+                    hover = new GUIStyleState() {
+                        textColor = new Color(0.6f, 0.6f, 0.6f),
+                    },
+                    focused = new GUIStyleState() {
+                        textColor = new Color(0.6f, 0.6f, 0.6f),
+                    },
+                };
+            }
+
+            return _nonClippingObjectFieldNone;
+        }
+    }
 
     internal static bool ValidateProperty(AirshipSerializedProperty serializedProperty, Func<AirshipSerializedProperty, bool> validate) {
         serializedProperty.valid = validate(serializedProperty);
@@ -63,6 +108,49 @@ public static partial class AirshipEditorGUI {
         return AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_objectFieldHash".GetHashCode(), currentValue, null,
             type, null, allowSceneObjects, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle, required: requiresReference);
     }
+
+    public static T ObjectField<T>(Rect rect, GUIContent label, T obj, bool allowSceneObjects, bool requiresReference) where T : UnityEngine.Object {
+        return (T) ObjectField(rect, label, obj, typeof(T), allowSceneObjects, requiresReference);
+    }
+
+    internal enum ScriptExportType {
+        Any,
+        ScriptableObject,
+        AirshipBehaviour,
+    }
+    
+    internal static AirshipScript AirshipScriptField(Rect rect, GUIContent label, AirshipScript script, 
+        Action<AirshipScript> onScriptSelected, ScriptExportType scriptExportType = ScriptExportType.Any, bool allowNone = true) {
+        switch (scriptExportType) {
+            case ScriptExportType.ScriptableObject:
+                int id = GUIUtility.GetControlID("_airshipScriptableObjectScriptFieldHash".GetHashCode(), FocusType.Keyboard, rect);
+                rect = EditorGUI.PrefixLabel(rect, id, label);
+                
+                AirshipObjectGUIInternal.DoCustomObjectField(rect, rect, id, script, null, typeof(AirshipScript), null,
+                    false, nonClippingObjectField, AirshipObjectGUIInternal.objectFieldButtonStyle, (o, types) => {
+                        var selection = new AirshipScriptSelectionContext(AirshipScriptType.ScriptableObject, null, script, allowNone);
+                        AirshipScriptSelectorWindow.Show(selection, null, onScriptSelected);
+                    }, false);
+                
+                return null;
+            default:
+                return (AirshipScript) AirshipObjectGUIInternal.DoObjectField(rect, rect, label, "k_scriptFieldHash".GetHashCode(), script,
+                    null, typeof(AirshipScript), null, false, nonClippingObjectField,
+                    AirshipObjectGUIInternal.objectFieldButtonStyle);
+        }
+    }
+
+    private static Object ValidateScriptableObject(Object[] references, Type objtype, SerializedProperty property, AirshipObjectGUIInternal.UnityObjectFieldValidatorOptions options) {
+        if (references.Length != 1) return null;
+        var obj = references[0];
+
+        if (obj is AirshipScript script && script.scriptType == AirshipScriptType.ScriptableObject) {
+            return script;
+        }
+        
+        return null;
+    }
+
 
     public static UnityEngine.Object ObjectFieldLayout(GUIContent label, UnityEngine.Object currentValue, System.Type type, bool
         allowSceneObjects, bool requiresReference) {
@@ -457,7 +545,30 @@ public static partial class AirshipEditorGUI {
         return enabled;
     }
 
+    /// <summary>
+    /// Draws the decorators (if applicable) and will return true if the property should render
+    /// </summary>
+    /// <param name="property">The property to draw the decorators for</param>
+    /// <returns></returns>
+    public static bool DrawDecorators(AirshipSerializedProperty property) {
+        var shouldHideProperty = false;
+        foreach (var decorator in property.decorators) {
+            if (AirshipCustomEditors.TryGetDecorator(decorator, out var propertyDecorator)) {
+                propertyDecorator.arguments = decorator.parameters.ToArray();
+                propertyDecorator.property = property;
+                propertyDecorator.serializedObject = property.serializedObject;
+                    
+                if (!propertyDecorator.ShouldDrawProperty()) {
+                    shouldHideProperty = true;
+                    break;
+                }
+                    
+                propertyDecorator.OnBeforeInspectorGUI();
+            }
+        }
 
+        return !shouldHideProperty;
+    }
     
     /// <summary>
     /// Draws the given airship property value
@@ -537,6 +648,14 @@ public static partial class AirshipEditorGUI {
                 AnimationCurveProperty(label, value);
                 break;
             }
+            case AirshipSerializedType.SerializedClass: {
+                DoAirshipSerializedClassObject(null, label, value);
+                break;
+            }
+            case AirshipSerializedType.AirshipScriptableObject: {
+                DoAirshipScriptableObject(null, label, value);
+                break;
+            }
             default: {
                 EditorGUILayout.HelpBox($"{value.typeString} is not yet supported by PropertyFieldLayout!",
                     MessageType.Warning);
@@ -613,6 +732,13 @@ public static partial class AirshipEditorGUI {
             }
             case AirshipSerializedType.AnimationCurve: {
                 AnimationCurveProperty(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.AirshipScriptableObject: {
+                DoAirshipScriptableObject(rect, label, value);
+                break;
+            }
+            case AirshipSerializedType.SerializedClass: {
                 break;
             }
             default: {

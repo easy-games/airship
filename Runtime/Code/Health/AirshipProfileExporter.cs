@@ -111,6 +111,17 @@ namespace Code.Health
                     OnProfileCommand(context, d, true);
                 }));
         }
+        
+        private void OnDestroy() { 
+            if (RunCore.IsServer()) {
+                NetworkServer.UnregisterHandler<StartServerProfileMessage>();
+                NetworkServer.UnregisterHandler<ClientProfileUploadRequest>();
+            }
+            if (RunCore.IsClient()) {
+                NetworkClient.UnregisterHandler<ServerProfileCompleteMessage>();
+                NetworkClient.UnregisterHandler<ClientProfileUploadResponse>();
+            }
+        }
 
         private void OnProfileCommand(string context, int dur, bool callstacks) {
             if (dur is < 0 or > 5) {

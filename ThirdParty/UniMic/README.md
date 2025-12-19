@@ -1,77 +1,70 @@
-![Cover](https://github.com/adrenak/UniMic/blob/master/cover.jpg)
-## UniMic
-A wrapper for Unity's Microphone class.
+## UniMic 🎤
+A wrapper for Unity's Microphone class.  
+Provides easy APIs for mic input and management.  
+Also includes `StreamedAudioSource`, a (not Microphone related) class that can be used for playing streaming audio by feeding it incoming audio samples.  
 
-## API
-`Mic` class in the `Adrenak.UniMic` namespace is a singleton and is accessed using `Mic.Instance`
+## Documentation 📝
+[Refer to the Scripting Reference](https://www.vatsalambastha.com/unimic/api/Adrenak.UniMic.html)
 
-### Properties
-- `IsRecording` 
-Returns if the Mic instance is recording audio
+## Installing 📦
+⚠️ [OpenUPM](https://openupm.com/packages/com.adrenak.unimic/?subPage=versions) doesn't have up to date releases. Install using NPM registry instead 👇
 
-- `Frequency`
-The frequency of the Microphone AudioClip
+Ensure you have the NPM registry in the `packages.json` file of your Unity project with `com.adrenak.unimic` as one of the scopes
+```
+"scopedRegistries": [
+    {
+        "name": "npmjs",
+        "url": "https://registry.npmjs.org",
+        "scopes": [
+            "com.npmjs",
+            "com.adrenak.unimic"
+        ]
+    }
+}
+```
 
-- `Sample`
-The last populated sample of the audio data
+Add `"com.adrenak.unimic" : "x.y.z"` to `dependencies` list in `packages.json` file where `x.y.z` is the version name
+> 💬 You can see the versions on the NPM page [here](https://www.npmjs.com/package/com.adrenak.unimic?activeTab=versions).  
+> Also note that v3.x.x is recommended. v3 has several breaking changes against v1 and v2. Refer to the scripting reference if you're upgrading.  
 
-- `SampleDurationMS`
-The duration of the sample segment in milliseconds that the instance maintains and fires in events. 
+## Samples 🚀
+Getting started with some samples is the best way to see the features of UniMic, and there are many!
 
-- `SampleLength`
-The number of samples in the sample segment
+Ensure that atleast one recording device is connected to your PC/Mac for the samples to work.
 
-- `AudioClip`
-The inner `AudioClip` of the instance
+### Simple MicAudioSource Sample
+- A gameobject called `My Mic` is placed. It has the `MicAudioSource` component. 
+- Another gmeobject called `Sample` has `SimpleMicAudioSourceSample`
+    - On start it checks if there are any mic devices available
+    - If yes, it takes the first recording device available and starts the recording using `.StartRecording()`
+    - Then assigns the device to `MicAudioSource`, which then starts playing the audio
+- Play the scene. You should be able to hear your voice in the editor
 
-- `Devices`
-The recording devices that are connected to the machine running the code
+### Multiple MicAudioSource Sample
+- Run the scene, you should see every mic device connected 
+    - On start, all the devices will start recording in parallel and playing back
+    - Toggling the checkbox on or off will start or stop the recording for a device
+- Prefab `MicDeviceCell` is used to represent one device. The `MicDeviceCell.cs` script handles its UI.
+- Check out the `MultipleMicAudioSourceSample` script to see how the UI has been created
 
-- `CurrentDeviceIndex`
-The index of the active device in the `Devices` list
+### MicAudioSource Switch Sample
+- Run the scene, recording should start on one device and a dropdown will show all the available recording devices
+- Use the dropdown to change to a difference device at runtime
+- Check out the `MicAudioSourceSwitchSample` script to see how the Device of a `MicAudioSource` can be changed at runtime.
 
-- `CurrentDeviceName`
-The name of the active device
+### Spatial Blend Sample (for spatial audio)
+- Run the scene, the audio source is a moving ball.
+- When you speak, your audio is played from the balls position. Use headphones to hear the sound moving.
+- Using the slider, you can change the spatial blend from 0 to 1
 
-### Events
-- `OnStartRecording`
-Event fired when the instance starts to record the audio
+## Note 📄
+* Some Xiaomi phones may prevent side loaded APKs from functioning.  
+* There is no AEC (Acoustic Echo Cancelletion). If you're trying the samples be sure to use headphones to avoid creating a feedback loop.
 
-- `OnStopRecording`
-Event fired when the instance stops recording the audio
+## Credits
+Many thanks to [Metater](https://www.github.com/metater)'s repository [MetaVoiceChat](https://github.com/Metater/MetaVoiceChat) and our chat over Discord to help create pitch gain, audio frame lifetime/expiry and other improvements to `StreamedAudioSource.cs` in [version 3.3.0](https://www.npmjs.com/package/com.adrenak.unimic/v/3.3.0)
 
-- `OnSampleReady`
-Event fired when a sample of `SampleLength` has been populated by the instance. 
-Includes the sample count.
-
-- `OnTimestampedSampleReady`
-Event fired when a sample of `SampleLength` has been populated by the instance. 
-Includes the timestamp from when the sample was captured.
-
-### Methods
-- `SetDeviceIndex` changes the recording device. The method internally restarts the recording process
-    - `Arguments`
-        - `int index` the index of the device in the `Devices` list
-    - `Returns`
-        - `void`
-
-
-- `StartRecording` starts the microphone recording
-    - `Arguments`
-        - `int frequency=16000` the frequency of the inner `AudioClip`
-        - `int sampleDurationMS` the duration of a single sample segment in milliseconds that the instance keeps and fires on event
-    - `Returns`
-        - `void`
-
-- `ResumeRecording` resumes the microphone recording at the frequency and sampleDurationMS 
-
-- `StopRecording` stops the microphone recording
-    - `Returns`
-        - `void`
-
-## Tips
-Just open the Unity project in Unity 2017.4.40f1+ and try the sample scene.  
-
-## Contact
+## Contact 👥
 [@github](https://www.github.com/adrenak)  
-[@www](http://www.vatsalambastha.com)
+[@website](http://www.vatsalambastha.com)  
+@discord: `adrenak#1934`

@@ -285,7 +285,7 @@ namespace Code.Player.Character.MovementSystems.Character {
             }
 
             var heightDiff = Mathf.Abs(forwardHitInfo.point.y - startPos.y);
-            var flatDistance = GetFlatDistance(_movement.rootTransform.position, forwardHitInfo.point);
+            var flatDistance = GetFlatDistance(_movement.rb.position, forwardHitInfo.point);
             //See if we can do ramp based step up
             if (didHitForward &&
                 //lower than the step up height
@@ -422,7 +422,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public bool CanStand() {
             if (Physics.BoxCast(
-                    _movement.rootTransform.position + new Vector3(0, _movement.characterRadius + offsetMargin, 0),
+                    _movement.rb.position + new Vector3(0, _movement.characterRadius + offsetMargin, 0),
                     new Vector3(_movement.characterRadius, _movement.characterRadius, _movement.characterRadius),
                     Vector3.up, out var hitInfo, Quaternion.identity,
                     _movement.standingCharacterHeight - _movement.characterRadius - _movement.characterRadius -

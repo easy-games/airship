@@ -133,7 +133,10 @@ namespace Code.Authentication {
                     return;
                 }
                 // If the user does not have an account send them to our website to finish creating it
-                if (string.IsNullOrEmpty(localUser.uid)) {
+                if (string.IsNullOrEmpty(localUser.uid) && !Application.isPlaying) {
+                    #if AIRSHIP_PLAYER
+                    return;
+                    #endif
                     var acceptsRestart = EditorUtility.DisplayDialog("Finish Creating Account",
                         "Head to our website to finish creating your Airship account", "Go", "Sign out");
                     if (acceptsRestart) {

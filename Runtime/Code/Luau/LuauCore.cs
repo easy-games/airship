@@ -97,6 +97,14 @@ public partial class LuauCore : MonoBehaviour {
 
     public static bool IsReady => !s_shutdown && _coreInstance != null && _coreInstance.initialized;
     
+    /// <summary>
+    /// Returns <c>true</c> if a Luau thread is currently executing (i.e. a Luau thread triggered a C# callback to run).
+    /// </summary>
+    public static bool IsLuauThreadRunning => ThreadRunningCount > 0;
+
+    /// This value should be incremented/decremented within the LuauPlugin.cs file any time a plugin function might call back into C#.
+    internal static int ThreadRunningCount;
+    
     public static LuauCore CoreInstance => _coreInstance;
 
     public static LuauState GetInstance(LuauContext context) {
@@ -212,6 +220,7 @@ public partial class LuauCore : MonoBehaviour {
         WriteMethodFunctions.Clear();
         LuauProtection.CurrentContext = LuauContext.Game;
         s_shutdown = false;
+        ThreadRunningCount = 0;
     }
 
     public static void ResetContext(LuauContext context) {
@@ -258,10 +267,34 @@ public partial class LuauCore : MonoBehaviour {
     }
 
 #if UNITY_EDITOR
+    private PauseState _editorPauseState = PauseState.Unpaused;
+    private bool _appPaused = false;
+    private bool _pluginPaused = false;
+
+    private void OnApplicationOrEditorPauseChanged() {
+        var shouldPause = _appPaused || _editorPauseState == PauseState.Paused;
+        if (shouldPause == _pluginPaused) return;
+        
+        _pluginPaused = shouldPause;
+        LuauPlugin.SetIsPaused(_pluginPaused);
+    }
+    
     private void OnPauseStateChanged(PauseState state) {
-        LuauPlugin.SetIsPaused(state == PauseState.Paused);
+        // Handle pauses in-editor triggered by the toolbar pause button
+        _editorPauseState = state;
+        OnApplicationOrEditorPauseChanged();
     }
 #endif
+
+    private void OnApplicationPause(bool pauseStatus) {
+        // Handle application pauses (e.g. when application loses focus on iOS)
+#if UNITY_EDITOR
+        _appPaused = pauseStatus;
+        OnApplicationOrEditorPauseChanged();
+#else
+        LuauPlugin.SetIsPaused(pauseStatus);
+#endif
+    }
 
     private void Start() {
         Application.quitting += Quit;

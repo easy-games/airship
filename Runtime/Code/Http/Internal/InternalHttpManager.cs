@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Code.Http.Internal {
 
-    [LuauAPI]
+    [LuauAPI(LuauContext.Protected)]
     public static class InternalHttpManager {
         public static string editorUserId;
         public static string editorAuthToken = "";
@@ -93,12 +93,7 @@ namespace Code.Http.Internal {
                 return $"Authorization=Bearer {editorAuthToken},{additionalHeaders},{internalHeader}";
             }
             #endif
-            if (RunCore.IsClient()) {
-                return $"Authorization=Bearer {authToken},{additionalHeaders},{internalHeader}";
-            } else {
-                var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
-                return $"Authorization=Bearer {serverBootstrap.airshipJWT},{additionalHeaders},{internalHeader}";
-            }
+            return $"Authorization=Bearer {authToken},{additionalHeaders},{internalHeader}";
         }
 
         public static void SetAuthToken(string authToken) {

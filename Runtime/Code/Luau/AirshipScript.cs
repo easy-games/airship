@@ -11,6 +11,12 @@ namespace Luau {
         Typescript,
         Luau,
     }
+
+    public enum AirshipScriptType {
+        Script,
+        Behaviour,
+        ScriptableObject,
+    }
     
     [Serializable]
     internal class TypescriptCompilerMetadata {
@@ -90,8 +96,19 @@ namespace Luau {
         public string[] m_directiveValues;
         #endregion
         
+        /// <summary>
+        /// Represents the metadata of an AirshipBehaviour or AirshipScriptableObject
+        /// </summary>
         [CanBeNull] public LuauMetadata m_metadata;
+
+        /// <summary>
+        /// Represents the metadata of secondary serializable classes
+        /// </summary>
+        [CanBeNull] public LuauMetadata[] m_serializables;
+        
+        [Obsolete]
         public bool airshipBehaviour;
+        public AirshipScriptType scriptType;
         
         /// <summary>
         /// Used to check if the file has changed but not been recompiled yet

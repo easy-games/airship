@@ -2016,13 +2016,15 @@ namespace Mirror
                 fullUpdateDuration.Begin();
             }
 
-            // process all incoming messages first before updating the world
-            if (Transport.active != null)
-                Transport.active.ServerEarlyUpdate();
-
+            // EASYMOD: Moved ahead of transport early update for the same reason as
+            // described in NetworkClient.NetworkEarlyUpdate()
             // step each connection's local time interpolation in early update.
             foreach (NetworkConnectionToClient connection in connections.Values)
                 connection.UpdateTimeInterpolation();
+            
+            // process all incoming messages first before updating the world
+            if (Transport.active != null)
+                Transport.active.ServerEarlyUpdate();
 
             if (active) earlyUpdateDuration.End();
         }

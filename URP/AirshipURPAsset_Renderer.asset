@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: UniversalBlurFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  iterations: 4
+  iterations: 6
   downsample: 2
   enableMipMaps: 1
   scale: 1
@@ -22,7 +22,7 @@ MonoBehaviour:
   scaleReferenceSize: 1080
   blurType: 0
   injectionPoint: 600
-  shader: {fileID: 4800000, guid: bb11bdc2e8aaf4c80b5315f3778d7ad4, type: 3}
+  shader: {fileID: 4800000, guid: 5aeb65ef37980442399e9918610cd1aa, type: 3}
 --- !u!114 &-1785112278215371326
 MonoBehaviour:
   m_ObjectHideFlags: 0

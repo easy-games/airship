@@ -895,32 +895,33 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     public void PaintBucket(
         VoxelWorld world,
         List<EditInfo> edits,
-        Vector3 pos,
+        Vector3 startPosition,
         ushort from,
         ushort target,
         HashSet<Vector3> visited) {
-        visited.Add(pos);
+        
+        Queue<Vector3> toVisit = new Queue<Vector3>();
+        toVisit.Enqueue(startPosition);
 
-        var voxelAtPos = world.GetVoxelAt(pos);
-        // Debug.Log("Voxel at pos: " + VoxelWorld.VoxelDataToBlockId(voxelAtPos) + " where from=" + from);
-        if (VoxelWorld.VoxelDataToBlockId(voxelAtPos) != VoxelWorld.VoxelDataToBlockId(from)) {
-            return;
-        }
+        while (toVisit.Count > 0) {
+            var pos = toVisit.Dequeue();
+            if (visited.Contains(pos)) continue;
+            
+            var voxelAtPos = world.GetVoxelAt(pos);
+            visited.Add(pos);
+            if (VoxelWorld.VoxelDataToBlockId(voxelAtPos) != VoxelWorld.VoxelDataToBlockId(from)) continue;
+            
+            edits.Add(new EditInfo(VoxelWorld.FloorInt(pos), from, target));
+            
+            // Enqueue all neighbors
+            for (var axis = 0; axis < 3; axis++) {
+                for (var sign = -1; sign <= 1; sign += 2) {
+                    var newPos = pos;
+                    newPos[axis] += sign; // Cool Vector3 accessor!
 
-        edits.Add(new EditInfo(VoxelWorld.FloorInt(pos), from, target));
-
-        for (var axis = 0; axis < 3; axis++) {
-            for (var sign = -1; sign <= 1; sign += 2) {
-                var newPos = pos;
-                newPos[axis] += sign; // Cool Vector3 accessor!
-                // Debug.Log("Check out pos: " + newPos);
-
-                if (visited.Contains(newPos)) {
-                    continue;
+                    toVisit.Enqueue(newPos);
                 }
-
-                PaintBucket(world, edits, newPos, from, target, visited);
-            }
+            }   
         }
     }
 

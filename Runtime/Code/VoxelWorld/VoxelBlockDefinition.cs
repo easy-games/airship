@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
+[LuauAPI]
 [CreateAssetMenu(fileName = "VoxelBlockDefinition", menuName = "Airship/VoxelWorld/VoxelBlockDefinition")]
 public class VoxelBlockDefinition : ScriptableObject {
 

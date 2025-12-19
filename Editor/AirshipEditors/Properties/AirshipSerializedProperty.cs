@@ -13,7 +13,21 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
     internal SerializedProperty serializedProperty;
     internal SerializedProperty serializedItems { get; set; }
     internal LuauMetadataProperty propertyMetadata { get; set; }
-
+    internal LuauMetadataProperty scriptPropertyMetadata {
+        get {
+            var target = serializedObject.targetObject;
+            if (target is AirshipScriptableObject airshipScriptableObject) {
+                var metadata = airshipScriptableObject.metadata;
+                return metadata.FindProperty(name);
+            } else if (target is AirshipComponent component) {
+                var metadata = component.metadata;
+                return metadata.FindProperty(name);
+            }
+            
+            return null;
+        }
+    }
+    
     public bool isArray => serializedType.stringValue == "Array";
     internal bool valid { get; set; } = true;
     
@@ -97,13 +111,14 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         PrefabUtility.ApplyPropertyOverride(this.serializedValue, assetPath, InteractionMode.UserAction);
     }
     
-    internal void ResetToDefault() {
+    internal bool ResetToDefault() {
         if (isObject) serializedObjectValue.objectReferenceValue = null;
         if (isArray) array.ResetToDefault();
-        
-        propertyMetadata.SetDefaultAsValue();
+
+        if (!propertyMetadata.SetDefaultAsValue()) return false;
         propertyMetadata.modified = false;
         isModified = false;
         serializedProperty.serializedObject.ApplyModifiedProperties();
+        return true;
     }
 }

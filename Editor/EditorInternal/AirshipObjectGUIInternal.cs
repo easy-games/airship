@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -9,14 +10,26 @@ internal static class AirshipObjectGUIInternal {
 
     public delegate void ObjectSelectAction(UnityEngine.Object obj, System.Type[] requiredTypes);
     
-    private static Object DoCustomObjectField(
+    internal enum UnityObjectFieldValidatorOptions
+    {
+        None = 0,
+        ExactObjectTypeValidation = 1,
+    }
+    
+    internal delegate UnityEngine.Object ObjectFieldValidator(
+        UnityEngine.Object[] references,
+        System.Type objType,
+        SerializedProperty property,
+        UnityObjectFieldValidatorOptions options);
+    
+    internal static Object DoCustomObjectField(
         Rect position, 
         Rect dropRect, 
         int id, 
         Object obj, 
         Object objBeingEdited, 
         Type objType,
-        EditorGUI.ObjectFieldValidator validator,
+        ObjectFieldValidator validator,
         bool allowSceneObjects,
         GUIStyle style,
         GUIStyle buttonStyle,
@@ -25,7 +38,9 @@ internal static class AirshipObjectGUIInternal {
         ) {
 
         var visualType = EditorGUI.ObjectFieldVisualType.IconAndText;
-        validator ??= EditorGUI.ValidateObjectFieldAssignment;
+        EditorGUI.ObjectFieldValidator internalValidator = validator != null ? (references, type, property, options) => {
+            return validator(references, type, property, (UnityObjectFieldValidatorOptions) options);
+        } : EditorGUI.ValidateObjectFieldAssignment;
         
         var current = Event.current;
         var eventType = current.type;
@@ -93,7 +108,7 @@ internal static class AirshipObjectGUIInternal {
                 break;
             }
             case EventType.Repaint: {
-                var content = EditorGUIUtility.ObjectContent(obj, objType, null, validator);
+                var content = EditorGUIUtility.ObjectContent(obj, objType, null, internalValidator);
                 var contentColor = GUI.contentColor;
                 var a = contentColor.a;
 
@@ -120,7 +135,7 @@ internal static class AirshipObjectGUIInternal {
             case EventType.DragPerform: {
                 if (dropRect.Contains(UnityEngine.Event.current.mousePosition) && GUI.enabled) {
                     var objectReferences = DragAndDrop.objectReferences;
-                    var target = validator(objectReferences, objType, null, EditorGUI.ObjectFieldValidatorOptions.None);
+                    var target = internalValidator(objectReferences, objType, null, EditorGUI.ObjectFieldValidatorOptions.None);
                     if (target != null && !allowSceneObjects && !EditorUtility.IsPersistent(target)) {
                         target = null;
                     }
@@ -158,19 +173,21 @@ internal static class AirshipObjectGUIInternal {
         Object obj,
         Object objBeingEdited,
         Type objType,
-        EditorGUI.ObjectFieldValidator validator,
+        ObjectFieldValidator validator,
         bool allowSceneObjects,
         GUIStyle style,
         GUIStyle buttonStyle, 
         Action<Object> onObjectSelectorClosed = null,
         Action<Object> onObjectSelectedUpdated = null, 
-        bool required = false) {
+        bool required = false,
+        List<int> allowedInstanceIds = null) {
         
         var controlId = GUIUtility.GetControlID(id, FocusType.Keyboard, position);
         position = EditorGUI.PrefixLabel(position, controlId, label);
         
         void ShowObjectSelector(Object onObject, Type[] types) {
-            ObjectSelector.get.Show(onObject, types, onObject, allowSceneObjects, onObjectSelectedUpdated: onObjectSelectedUpdated, onObjectSelectorClosed: onObjectSelectorClosed);
+            ObjectSelector.get.Show(onObject, types, onObject, allowSceneObjects, 
+                onObjectSelectedUpdated: onObjectSelectedUpdated, onObjectSelectorClosed: onObjectSelectorClosed, allowedInstanceIDs: allowedInstanceIds);
             ObjectSelector.get.objectSelectorID = controlId;
         }
 

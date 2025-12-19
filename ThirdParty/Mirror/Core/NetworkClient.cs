@@ -1587,12 +1587,18 @@ namespace Mirror
         // (we add this to the UnityEngine in NetworkLoop)
         internal static void NetworkEarlyUpdate()
         {
+            // EASYMOD: Moved above transport early update. UpdateTimeInterpolation() updates NetworkTime.time, so
+            // you would have NetworkTime.time one frame behind when processing snapshot updates compared to when FixedUpdate()/Update() runs.
+            // This throws off the localTimeline clock drift adjustment as it's operating on the previous NetworkTime.time when adjusting
+            // based on the received time snapshot. This causes you to jump ahead of the expected time when the timeline advances.
+            // If you had a low framerate, you may end up eating up all of the buffer time on this jump and even go ahead of the predicted server time, causing stuttering
+            // for observed objects that depend on NetworkTime.time being buffered to give extra time for packets to arrive.
+            // time snapshot interpolation
+            UpdateTimeInterpolation();
+            
             // process all incoming messages first before updating the world
             if (Transport.active != null)
                 Transport.active.ClientEarlyUpdate();
-
-            // time snapshot interpolation
-            UpdateTimeInterpolation();
         }
 
         // NetworkLateUpdate called after any Update/FixedUpdate/LateUpdate

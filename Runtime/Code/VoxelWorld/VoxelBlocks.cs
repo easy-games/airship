@@ -201,6 +201,7 @@ public class VoxelBlocks : MonoBehaviour {
         QuarterBlockTypes.DM,  //UN
     };
 
+    [LuauAPI]
     public class LodSet {
         public VoxelMeshCopy lod0;
         public VoxelMeshCopy lod1;
@@ -208,6 +209,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     //The runtime version of VoxelBlockDefinition, after everything is loaded in
+    [LuauAPI]
     public class BlockDefinition {
         /// <summary>
         /// The generated world id for this block
@@ -815,7 +817,7 @@ public class VoxelBlocks : MonoBehaviour {
 
             string rootPath = Application.dataPath;
             string assetsFolder = "/Assets";
-            if (rootPath.EndsWith(assetsFolder)) {
+            if (rootPath.EndsWith(assetsFolder, StringComparison.OrdinalIgnoreCase)) {
                 rootPath = rootPath.Substring(0, rootPath.Length - assetsFolder.Length);
             }
 

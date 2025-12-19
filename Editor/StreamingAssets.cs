@@ -30,10 +30,8 @@ internal class StreamingAssets {
     private static void FixStreamingAssetsPath(string sourcePath) {
         var resourcePath = PosixPath.Join(sourcePath, RelativeResourcesPath);
         var excludedResourcePath = resourcePath.Replace("StreamingAssets", "StreamingAssets~");
-        if (!File.Exists(excludedResourcePath)) {
-            Debug.LogWarning($"Could not find {excludedResourcePath}");
-            return;
-        }
+        if (!File.Exists(excludedResourcePath)) return;
+        
         File.Move(excludedResourcePath, resourcePath);
         AssetDatabase.ImportAsset(resourcePath);
     }
@@ -41,6 +39,7 @@ internal class StreamingAssets {
     public static void SetCoreMaterialPlatform(AirshipPlatform platform) {
         var platformPath = platform switch {
             AirshipPlatform.Android => CoreMaterialsAndroid,
+            AirshipPlatform.iOS => CoreMaterialsIOS,
             _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
         };
 

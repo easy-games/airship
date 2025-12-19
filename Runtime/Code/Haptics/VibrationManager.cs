@@ -26,7 +26,7 @@ namespace Code.Haptics {
 #endif
 
         public static void Play(VibrationFeedbackType vibrationFeedbackType) {
-#if UNITY_IOS
+#if UNITY_IOS && !UNITY_EDITOR
             PlayHaptic((int) vibrationFeedbackType);
 #endif
         }

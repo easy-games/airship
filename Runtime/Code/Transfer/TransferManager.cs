@@ -25,7 +25,8 @@ public class TransferManager : Singleton<TransferManager> {
         yield return null;
         CrossSceneState.ServerTransferData.address = address;
         CrossSceneState.ServerTransferData.port = port;
-
+        
+        AirshipScriptableObjectRoot.ResetOnLoad();
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
         AirshipBuildInfo.ResetOnLoad();
@@ -95,10 +96,11 @@ public class TransferManager : Singleton<TransferManager> {
 
     private IEnumerator StartDisconnect(bool kicked = false, string kickMessage = "") {
         yield return null;
+        
+        AirshipScriptableObjectRoot.ResetOnLoad();
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
         AirshipBuildInfo.ResetOnLoad();
-
         AnalyticsRecorder.Reset();
 
         ResetClientUnityState();
