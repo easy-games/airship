@@ -626,6 +626,8 @@ public class Deploy {
 	private static IEnumerator CompleteDeployment(GameConfig gameConfig, string gameVersionId, string devKey) {
 		{
 			List<string> uploadedFileIds = new();
+			uploadedFileIds.Add("code");
+			uploadedFileIds.Add("gameConfig");
 			uploadedFileIds.Add("Mac_shared_resources");
 			uploadedFileIds.Add("Mac_shared_scenes");
 			uploadedFileIds.Add("Windows_shared_resources");
