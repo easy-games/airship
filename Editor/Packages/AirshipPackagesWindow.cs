@@ -704,6 +704,8 @@ namespace Editor.Packages {
                                 "Windows_shared_resources",
                                 "iOS_shared_resources",
                                 "Android_shared_resources",
+                                "source",
+                                "code",
 
                                 // "Linux_shared_scenes",
                                 // "Mac_shared_scenes",
