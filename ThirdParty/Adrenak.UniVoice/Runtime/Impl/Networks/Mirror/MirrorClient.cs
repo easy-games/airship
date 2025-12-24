@@ -62,6 +62,12 @@ namespace Adrenak.UniVoice.Networks {
             }
         }
 
+        public static void Log(string message) {
+#if AIRSHIP_PLAYER
+            Debug.Log($"[{TAG}] " + message);
+#endif
+        }
+
         void OnClientDisconnected() {
             YourVoiceSettings = new VoiceSettings();
             var oldPeerIds = PeerIDs;
@@ -88,7 +94,7 @@ namespace Adrenak.UniVoice.Networks {
                         log += $"Peer list: {string.Join(", ", PeerIDs)}";
                     else
                         log += "There are currently no peers.";
-                    Debug.unityLogger.Log(LogType.Log, TAG, log);
+                    Log(log);
 
                     OnJoined?.Invoke(ID, PeerIDs);
                     foreach (var peerId in PeerIDs)
@@ -100,7 +106,7 @@ namespace Adrenak.UniVoice.Networks {
                     var newPeerID = reader.ReadInt();
                     if (!PeerIDs.Contains(newPeerID)) {
                         PeerIDs.Add(newPeerID);
-                        Debug.unityLogger.Log(LogType.Log, TAG,
+                        Log(
                             $"Peer {newPeerID} joined. Peer list is now {string.Join(", ", PeerIDs)}");
                         OnPeerJoined?.Invoke(newPeerID);
                     }
@@ -117,7 +123,7 @@ namespace Adrenak.UniVoice.Networks {
                         else
                             log2 += $"Peer list is now {string.Join(", ", PeerIDs)}";
 
-                        Debug.unityLogger.Log(LogType.Log, TAG, log2);
+                        Log(log2);
                         OnPeerLeft?.Invoke(leftPeerID);
                     }
                     break;
