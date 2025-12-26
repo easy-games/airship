@@ -7,9 +7,9 @@ using UnityEngine.UI;
 public class UIOutline : Graphic
 {
     [SerializeField] Texture m_Texture;
-    [SerializeField, Range(0f, 500f)] float _outlineWidth = 100f;
-    [SerializeField, Range(0f, 500f)] float _cornerRadius = 50f;
-    [SerializeField, Range(1, 20)] int _cornerSegments = 1;
+    [SerializeField, Range(0f, 500f)] float _outlineWidth = 1f;
+    [SerializeField, Range(0f, 500f)] float _cornerRadius = 10f;
+    [SerializeField, Range(1, 20)] int _cornerSegments = 18;
     [SerializeField, Range(0f, 1f)] float _mappingBias = 0.5f;
     [SerializeField, Tooltip("This should be enabled for very thin outlines that won't render well on low res monitors.")]
     bool _slightlyThickerCorners = false;
