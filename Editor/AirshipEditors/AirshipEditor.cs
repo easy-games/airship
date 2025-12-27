@@ -96,8 +96,6 @@ public abstract class AirshipEditor : ScriptableObject {
                 var element = property.array.GetElementAtIndex(index);
                 var propertyDrawer = element.isAirshipType ? AirshipCustomEditors.GetPropertyDrawer(element) : null;
                 
-                Debug.Log($"element is {property.name}#{index} - {element.type} ({element.isAirshipType}, {element.airshipType.UniqueId})");
-                
                 if (propertyDrawer != null) {
                     propertyDrawer.OnGUI(rect, element, label);
                 } else {
