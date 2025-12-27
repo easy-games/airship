@@ -394,7 +394,7 @@ public static partial class AirshipEditorGUI {
         
         switch (currentEvent.type) {
             case EventType.DragUpdated or EventType.DragPerform
-                when property.array.elementType is AirshipSerializedType.Object or AirshipSerializedType.AirshipBehaviour: {
+                when property.array.elementType is AirshipSerializedType.Object or AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.AirshipScriptableObject: {
                 var refs = DragAndDrop.objectReferences;
                 
                 if (headerRect.Contains(currentEvent.mousePosition)) {
@@ -402,16 +402,22 @@ public static partial class AirshipEditorGUI {
 
                     foreach (var draggedObject in refs) {
                         var objRef = draggedObject;
+                        var elementType = property.array.elementType;
                         
-                        if (property.array.elementType == AirshipSerializedType.AirshipBehaviour) {
+                        if (elementType is AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.AirshipScriptableObject) {
                             var buildInfo = AirshipBuildInfo.Instance;
                             var scriptPath = buildInfo.GetScriptPathByTypeName(property.array.elementObjectTypeString);
 
                             switch (draggedObject) {
-                                case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
+                                case AirshipComponent component when elementType is AirshipSerializedType.AirshipBehaviour && scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
                                     objRef = component;
                                     consume = true;
                                     break;
+                                case AirshipScriptableObject scriptableObject when elementType is AirshipSerializedType.AirshipScriptableObject && scriptPath != null && buildInfo.Inherits(scriptableObject.script, scriptPath):
+                                    objRef = scriptableObject;
+                                    consume = true;
+                                    break;
+                                case AirshipScriptableObject:
                                 case AirshipComponent:
                                     continue;
                                 case GameObject go: {

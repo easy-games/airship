@@ -390,13 +390,24 @@ namespace Luau {
             return null;
         }
         
+        internal List<AirshipBehaviourMeta> allMetas {
+            get {
+                var metas = new List<AirshipBehaviourMeta>();
+                metas.AddRange(data.airshipBehaviourMetas);
+                metas.AddRange(data.airshipScriptableObjectMetas);
+                return metas;
+            }
+        }
+        
         [CanBeNull]
         public string GetScriptPathByTypeName(string typeName) {
             if (scriptPathByTypeNameCache.TryGetValue(typeName, out var scriptPath)) {
                 return scriptPath;
             }
 
-            scriptPath = (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
+
+            
+            scriptPath = (from meta in allMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
             
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
             scriptPathByTypeNameCache.Add(typeName, scriptPath);
