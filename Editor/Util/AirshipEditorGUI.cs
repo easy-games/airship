@@ -500,7 +500,7 @@ public static partial class AirshipEditorGUI {
         if (enabled) {
             var reorderableList = property.editor.GetOrCreateArrayList(property);
             var prevElementHeight = AirshipGUI.arrayItemHeight;
-
+            
             if (property.arraySize > 0) {
                 switch (property.array.elementType) {
                     case AirshipSerializedType.String:
@@ -610,6 +610,16 @@ public static partial class AirshipEditorGUI {
                 break;
             }
             case AirshipSerializedType.AirshipBehaviour: {
+                if (value is AirshipSerializedProperty serializedProperty) {
+                    var customProperty = AirshipCustomEditors.GetPropertyDrawer(serializedProperty);
+                    if (customProperty != null) {
+                        var rect = EditorGUILayout.GetControlRect(false,
+                            customProperty.GetPropertyHeight(serializedProperty, label));
+                        customProperty.OnGUI(rect, serializedProperty, label);
+                        return true;
+                    }
+                }
+                
                 return AirshipComponentProperty(label, value) != null;
             }
             // Arrays can only really be used with serialized property not serialized array, due to how we set this up

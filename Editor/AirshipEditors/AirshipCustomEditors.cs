@@ -4,8 +4,10 @@ using System.IO;
 using System.Reflection;
 using Codice.CM.Common.Tree.Partial;
 using HandlebarsDotNet.PathStructure;
+using JetBrains.Annotations;
 using TypescriptAst;
 using Luau;
+using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -27,9 +29,22 @@ public static class AirshipCustomEditors {
             AirshipType = airshipType;
         }
     }
+
+    internal class CustomPropertyDrawerInfo {
+        public Type EditorType { get; }
+        public AirshipType AirshipType { get; }
+        public CustomAirshipPropertyDrawerAttribute PropertyDrawerAttribute { get; }
+        public AirshipPropertyDrawer PropertyDrawer { get; internal set; }
+        public CustomPropertyDrawerInfo(Type editorType, AirshipType airshipType, CustomAirshipPropertyDrawerAttribute editorAttribute) {
+            EditorType = editorType;
+            PropertyDrawerAttribute = editorAttribute;
+            AirshipType = airshipType;
+        }
+    }
     
     #region Fields
     private static Dictionary<AirshipType, CustomEditorInfo> airshipTypeToCustomEditor = new();
+    private static Dictionary<AirshipType, CustomPropertyDrawerInfo> airshipTypeToCustomPropertyDrawer = new();
     private static Dictionary<int, AirshipEditor> instanceToAirshipEditor = new();
     
     private static Dictionary<Type, AirshipPropertyDecorator> typeToEditorPropertyDecorator = new();
@@ -87,6 +102,26 @@ public static class AirshipCustomEditors {
     #endregion
     
     #region Editor Registration Methods
+    private static bool RegisterPropertyDrawer(Type editorType, CustomAirshipPropertyDrawerAttribute propertyDrawerAttribute) {
+        var typeName = propertyDrawerAttribute.TypeName;
+        var filePath = propertyDrawerAttribute.AssetPath;
+        if (!AirshipBuildInfo.TryGetInstance(out var buildInfo)) return false;
+        
+        var pathType = string.IsNullOrEmpty(filePath) ? 
+            buildInfo.GetTypeByName(typeName) :  
+            buildInfo.GetTypeByPathAndName(filePath, typeName);
+            
+        if (pathType == null) {
+            return false;
+        }
+        
+        if (!AirshipCustomEditors.airshipTypeToCustomPropertyDrawer.TryGetValue(pathType, out var _)) {
+            Debug.Log($"Create custom property drawer for {pathType.UniqueId} - {editorType.Name}");
+            AirshipCustomEditors.airshipTypeToCustomPropertyDrawer.Add(pathType, new CustomPropertyDrawerInfo(editorType, pathType, propertyDrawerAttribute));
+        }
+
+        return true;
+    }
     
     private static bool RegisterEditor(Type editorType, CustomAirshipEditorAttribute editorAttribute) {
         var typeName = editorAttribute.TypeName;
@@ -110,6 +145,7 @@ public static class AirshipCustomEditors {
     
     internal static void RegisterEditorsForRegisteredTypes() {
         airshipTypeToCustomEditor.Clear();
+        airshipTypeToCustomPropertyDrawer.Clear();
         decoratorNameToEditorType.Clear();
         typeToEditorPropertyDecorator.Clear();
         instanceToAirshipEditor.Clear();
@@ -127,6 +163,12 @@ public static class AirshipCustomEditors {
             if (!RegisterEditor(editorType, attr)) {
                 Debug.LogWarning($"Could not register editor {editorType.Name}");
             }
+        }
+
+        var propertyEditorAttributes = TypeCache.GetTypesWithAttribute<CustomAirshipPropertyDrawerAttribute>();
+        foreach (var editorType in propertyEditorAttributes) {
+            var propertyDrawerAttribute = editorType.GetCustomAttribute<CustomAirshipPropertyDrawerAttribute>();
+            RegisterPropertyDrawer(editorType, propertyDrawerAttribute);
         }
 
         var decoratorStatements = new List<IStatement>();
@@ -323,6 +365,23 @@ public static class AirshipCustomEditors {
 
         propertyDecorator = default;
         return false;
+    }
+    
+    /// <summary>
+    /// Gets the property drawer for the property (if applicable)
+    /// </summary>
+    /// <param name="property">The property to get the property drawer for</param>
+    /// <returns>A property drawer, or null if it is not an airship type, or no property drawer is set</returns>
+    public static AirshipPropertyDrawer GetPropertyDrawer(AirshipSerializedValue property) {
+        if (!property.isAirshipType) return null;
+        var airshipType = property.airshipType;
+
+        if (airshipTypeToCustomPropertyDrawer.TryGetValue(airshipType, out var customPropertyDrawerInfo)) {
+            return customPropertyDrawerInfo.PropertyDrawer ?? (customPropertyDrawerInfo.PropertyDrawer =
+                (AirshipPropertyDrawer)Activator.CreateInstance(customPropertyDrawerInfo.EditorType));
+        }
+
+        return null;
     }
     
     /// <summary>

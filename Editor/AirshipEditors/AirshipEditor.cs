@@ -8,7 +8,6 @@ using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
-
 /// <summary>
 /// Base class to derive custom property drawers from.
 /// </summary>
@@ -81,11 +80,30 @@ public abstract class AirshipEditor : ScriptableObject {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
             var modified = property.serializedModified;
-            
             reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
+
+            reorderableList.elementHeightCallback = index => {
+                var label = new GUIContent($"Element {index}");
+                var element = property.array[index];
+                var propertyDrawer = element.isAirshipType ? AirshipCustomEditors.GetPropertyDrawer(element) : null;
+                
+                return propertyDrawer?.GetPropertyHeight(element, label) ?? EditorGUIUtility.singleLineHeight;
+            };
+            
+
             reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+                var label = new GUIContent($"Element {index}");
                 var element = property.array.GetElementAtIndex(index);
-                AirshipEditorGUI.PropertyField(rect, new GUIContent($"Element {index}"), element);
+                var propertyDrawer = element.isAirshipType ? AirshipCustomEditors.GetPropertyDrawer(element) : null;
+                
+                Debug.Log($"element is {property.name}#{index} - {element.type} ({element.isAirshipType}, {element.airshipType.UniqueId})");
+                
+                if (propertyDrawer != null) {
+                    propertyDrawer.OnGUI(rect, element, label);
+                } else {
+                    
+                    AirshipEditorGUI.PropertyField(rect, label, element);
+                }
             };
             
             reorderableList.onChangedCallback = (ReorderableList list) => {
