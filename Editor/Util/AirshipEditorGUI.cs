@@ -371,6 +371,16 @@ public static partial class AirshipEditorGUI {
     public static AirshipComponent AirshipComponentProperty(Rect rect, GUIContent label, AirshipSerializedValue property, AirshipComponentPropertyValidator validator = null) {
         return DoAirshipComponent(rect, label, property, validator);
     }
+
+    public static AirshipScriptableObject AirshipScriptableObjectProperty(GUIContent label,
+        AirshipSerializedValue property) {
+        return DoAirshipScriptableObject(null, label, property);
+    }
+    
+    public static AirshipScriptableObject AirshipScriptableObjectProperty(Rect rect, GUIContent label,
+        AirshipSerializedValue property) {
+        return DoAirshipScriptableObject(rect, label, property);
+    }
     
     private static int focusedIntValue;
     
@@ -616,14 +626,12 @@ public static partial class AirshipEditorGUI {
                 break;
             }
             case AirshipSerializedType.AirshipBehaviour: {
-                if (value is AirshipSerializedProperty serializedProperty) {
-                    var customProperty = AirshipCustomEditors.GetPropertyDrawer(serializedProperty);
-                    if (customProperty != null) {
-                        var rect = EditorGUILayout.GetControlRect(false,
-                            customProperty.GetPropertyHeight(serializedProperty, label));
-                        customProperty.OnGUI(rect, serializedProperty, label);
-                        return true;
-                    }
+                var customPropertyDrawer = AirshipCustomEditors.GetPropertyDrawer(value);
+                if (customPropertyDrawer != null) {
+                    var rect = EditorGUILayout.GetControlRect(false,
+                        customPropertyDrawer.GetPropertyHeight(value, label));
+                    customPropertyDrawer.OnGUI(rect, value, label);
+                    return true;
                 }
                 
                 return AirshipComponentProperty(label, value) != null;
@@ -665,10 +673,26 @@ public static partial class AirshipEditorGUI {
                 break;
             }
             case AirshipSerializedType.SerializedClass: {
+                var customPropertyDrawer = AirshipCustomEditors.GetPropertyDrawer(value);
+                if (customPropertyDrawer != null) {
+                    var rect = EditorGUILayout.GetControlRect(false,
+                        customPropertyDrawer.GetPropertyHeight(value, label));
+                    customPropertyDrawer.OnGUI(rect, value, label);
+                    return true;
+                }
+                
                 DoAirshipSerializedClassObject(null, label, value);
                 break;
             }
             case AirshipSerializedType.AirshipScriptableObject: {
+                var customPropertyDrawer = AirshipCustomEditors.GetPropertyDrawer(value);
+                if (customPropertyDrawer != null) {
+                    var rect = EditorGUILayout.GetControlRect(false,
+                        customPropertyDrawer.GetPropertyHeight(value, label));
+                    customPropertyDrawer.OnGUI(rect, value, label);
+                    return true;
+                }
+                
                 DoAirshipScriptableObject(null, label, value);
                 break;
             }

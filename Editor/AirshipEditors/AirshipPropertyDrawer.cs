@@ -19,3 +19,15 @@ public abstract class AirshipPropertyDrawer : GUIDrawer {
     
     public virtual float GetPropertyHeight(AirshipSerializedValue property, GUIContent label) => 18f;
 }
+
+public class AirshipComponentDefaultPropertyDrawer : AirshipPropertyDrawer {
+    public override void OnGUI(Rect position, AirshipSerializedValue property, GUIContent label) {
+        AirshipEditorGUI.AirshipComponentProperty(position, label, property);
+    }
+}
+
+public class AirshipScriptableObjectDefaultPropertyDrawer : AirshipPropertyDrawer {
+    public override void OnGUI(Rect position, AirshipSerializedValue property, GUIContent label) {
+        AirshipEditorGUI.AirshipScriptableObjectProperty(position, label, property);
+    }
+}

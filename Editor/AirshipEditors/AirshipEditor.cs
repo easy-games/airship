@@ -7,6 +7,7 @@ using Luau;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 /// <summary>
 /// Base class to derive custom property drawers from.
@@ -73,7 +74,7 @@ public abstract class AirshipEditor : ScriptableObject {
             _lists.Add(property.name, displayInfo);
             BindReorderableListToProperty(list);
         }
-        
+
         displayInfo.reorderableList.serializedProperty = property.array;
         
         void BindReorderableListToProperty(ReorderableList reorderableList) {
@@ -256,12 +257,17 @@ public abstract class AirshipEditor : ScriptableObject {
     /// <param name="propertyName">The property name</param>
     /// <param name="label">The label to apply to this property field</param>
     public bool PropertyField(string label, string propertyName) => PropertyField(new GUIContent(label), propertyName);
+
+    [Obsolete("Not yet implemented")]
+    internal virtual VisualElement CreateInspectorGUI() {
+        return null;
+    }
     
     /// <summary>
     /// Override this to use a custom inspector for this editor
     /// </summary>
     public virtual void OnInspectorGUI() {
-        EditorGUILayout.HelpBox($"Using custom inspector {GetType().Name} but OnInspectorGUI is not overloaded", MessageType.Warning);
+        DrawDefaultProperties();
     }
     
     public virtual void OnSceneGUI() {}

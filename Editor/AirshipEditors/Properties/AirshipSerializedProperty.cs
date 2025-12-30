@@ -55,7 +55,7 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         get {
             if (!isArray) return null;
             
-            UpdateProperty();
+            UpdateProperty(serializedProperty);
             return new AirshipSerializedArray(
                 this, 
                 serializedItems.FindPropertyRelative("serializedItems"), 
@@ -63,29 +63,32 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         }
     }
     
+    private AirshipSerializedProperty() {}
+    
     public AirshipSerializedProperty(AirshipSerializedObject serializedObject, SerializedProperty property, LuauMetadataProperty metadata, AirshipEditor editor) {
-        serializedProperty = property;
-        UpdateProperty();
+        UpdateProperty(property);
+        name = metadata.name;
         propertyMetadata = metadata;
         decorators = metadata.GetDecorators();
         this.editor = editor;
         this.serializedObject = serializedObject;
     }
     
-    internal void UpdateProperty() {
-        serializedName = serializedProperty.FindPropertyRelative("name");
+    internal void UpdateProperty(SerializedProperty targetSerializedProperty) {
+        serializedProperty = targetSerializedProperty;
+        serializedName = targetSerializedProperty.FindPropertyRelative("name");
         
-        serializedType = serializedProperty.FindPropertyRelative("type");
-        serializedValue = serializedProperty.FindPropertyRelative("serializedValue");
-        serializedModified = serializedProperty.FindPropertyRelative("modified");
+        serializedType = targetSerializedProperty.FindPropertyRelative("type");
+        serializedValue = targetSerializedProperty.FindPropertyRelative("serializedValue");
+        serializedModified = targetSerializedProperty.FindPropertyRelative("modified");
         
-        serializedObjectType = serializedProperty.FindPropertyRelative("objectType");
-        serializedObjectValue = serializedProperty.FindPropertyRelative("serializedObject");
+        serializedObjectType = targetSerializedProperty.FindPropertyRelative("objectType");
+        serializedObjectValue = targetSerializedProperty.FindPropertyRelative("serializedObject");
         
-        serializedItems = serializedProperty.FindPropertyRelative("items");
+        serializedItems = targetSerializedProperty.FindPropertyRelative("items");
         
-        serializedRef = serializedProperty.FindPropertyRelative("refPath");
-        serializedFileRef = serializedProperty.FindPropertyRelative("fileRef");
+        serializedRef = targetSerializedProperty.FindPropertyRelative("refPath");
+        serializedFileRef = targetSerializedProperty.FindPropertyRelative("fileRef");
     }
 
     internal Object prefab => PrefabUtility.GetPrefabInstanceHandle(serializedProperty.serializedObject.targetObject);
@@ -121,4 +124,11 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
         serializedProperty.serializedObject.ApplyModifiedProperties();
         return true;
     }
+
+    // public AirshipSerializedProperty Copy() {
+    //     AirshipSerializedProperty copy = new AirshipSerializedProperty();
+    //     copy.serializedProperty = copy.serializedProperty.Copy();
+    //     copy.serializedName = copy.serializedName.Copy();
+    //     return copy;
+    // }
 }

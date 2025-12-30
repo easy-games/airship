@@ -200,7 +200,7 @@ public static class AirshipCustomEditors {
         }
         
 #if AIRSHIP_INTERNAL
-        Debug.Log($"Registered {airshipTypeToCustomEditor.Count} custom editors, {decoratorNameToEditorType.Count} decorators.");
+        Debug.Log($"Registered {airshipTypeToCustomEditor.Count} custom editors, {airshipTypeToCustomPropertyDrawer.Count} property drawers and {decoratorNameToEditorType.Count} decorators.");
 #endif
     }
 

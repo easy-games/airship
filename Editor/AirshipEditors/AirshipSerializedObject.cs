@@ -80,9 +80,18 @@ public class AirshipSerializedObject {
     /// <param name="targetPropertyName">The name of the property (should match the variable in TypeScript)</param>
     /// <returns>The AirshipProperty, if it exists</returns>
     public AirshipSerializedProperty FindAirshipProperty(string targetPropertyName) {
-        // if (_propertyCache.TryGetValue(targetPropertyName, out var cachedProperty)) {
-        //     return cachedProperty;
-        // }
+        if (_propertyCache.TryGetValue(targetPropertyName, out var cachedProperty)) {
+            for (var i = 0; i < serializedProperties.arraySize; i++) {
+                var property = serializedProperties.GetArrayElementAtIndex(i);
+                var propertyName = property.FindPropertyRelative("name").stringValue;
+                if (propertyName != targetPropertyName) continue;
+                cachedProperty.UpdateProperty(property);
+                return cachedProperty;
+            }
+            
+            _propertyCache.Remove(targetPropertyName);
+            return null;
+        }
         
         for (var i = 0; i < serializedProperties.arraySize; i++) {
             var property = serializedProperties.GetArrayElementAtIndex(i);
@@ -90,6 +99,7 @@ public class AirshipSerializedObject {
             if (propertyName == targetPropertyName) {
                 var propertyMetadata = metadata.FindProperty(targetPropertyName);
                 var airshipProperty = new AirshipSerializedProperty(this, property, propertyMetadata, this.editor);
+                _propertyCache.TryAdd(targetPropertyName, airshipProperty);
                 return airshipProperty;
             }
         }
@@ -130,7 +140,15 @@ public class AirshipSerializedObject {
         return obj;
     }
 
-    public void ApplyModifiedProperties() {
-        serializedObject.ApplyModifiedProperties();
+    public bool ApplyModifiedProperties() {
+        if (serializedObject.ApplyModifiedProperties()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    internal void Disabled() {
+        this._propertyCache.Clear();
     }
 }

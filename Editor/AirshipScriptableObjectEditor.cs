@@ -10,6 +10,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 internal class DoCreateScriptableObject : EndNameEditAction {
@@ -139,6 +140,14 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
             GUILayout.Space(5);
         }
         EditorGUILayout.EndHorizontal();
+    }
+
+    public override VisualElement CreateInspectorGUI() {
+        if (editor != null) {
+            return editor.CreateInspectorGUI();
+        }
+
+        return null;
     }
 
     public override void OnInspectorGUI() {

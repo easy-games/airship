@@ -80,7 +80,10 @@ public abstract class AirshipSerializedValue {
 
     internal AirshipEditor editor { get; set; }
     
-    public string name => serializedName.stringValue;
+    // public string name => serializedName.stringValue;
+
+    public string name { get; protected set; }
+
     public bool isModified {
         get {
             return serializedModified.boolValue;

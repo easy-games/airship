@@ -4,6 +4,8 @@ public class AirshipSerializedArrayValue : AirshipSerializedValue {
     
     
     public AirshipSerializedArrayValue(AirshipSerializedProperty parentSerializedProperty, int index, SerializedProperty valueProperty, SerializedProperty objectValueProperty) {
+        name = parentSerializedProperty.name + "[" + index + "]";
+        
         serializedModified = parentSerializedProperty.serializedModified;
 
         serializedType = parentSerializedProperty.serializedItems.FindPropertyRelative("type");
