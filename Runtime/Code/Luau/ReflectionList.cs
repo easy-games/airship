@@ -21,6 +21,7 @@ using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
 using UnityEngine.Tilemaps;
 using UnityEngine.VFX;
+using UnityEngine.Video;
 using Slider = UnityEngine.UI.Slider;
 
 #if UNITY_EDITOR
@@ -163,6 +164,7 @@ namespace Luau {
             [typeof(Text)] = LuauContextAll,
             [typeof(RectMask2D)] = LuauContextAll,
             [typeof(WheelFrictionCurve)] = LuauContextAll,
+            [typeof(VideoPlayer)] = LuauContextAll,
 
             // Particles
             [typeof(ParticleSystem)] = LuauContextAll,

@@ -55,6 +55,7 @@ using Code.Voice;
 using Unity.Mathematics;
 using UnityEngine.InputSystem;
 using UnityEngine.Splines;
+using UnityEngine.Video;
 using TouchPhase = UnityEngine.TouchPhase;
 
 public class TypeGenerator : MonoBehaviour
@@ -231,6 +232,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(UniversalRenderPipelineAsset),
             typeof(WheelFrictionCurve),
             typeof(WheelHit),
+            typeof(VideoPlayer),
+            typeof(RenderTexture),
 
             // Mirror
             typeof(NetworkServer),
