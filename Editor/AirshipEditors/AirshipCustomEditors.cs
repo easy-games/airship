@@ -48,7 +48,9 @@ public static class AirshipCustomEditors {
     private static Dictionary<int, AirshipEditor> instanceToAirshipEditor = new();
     
     private static Dictionary<Type, AirshipPropertyDecorator> typeToEditorPropertyDecorator = new();
+    
     private static Dictionary<string, Type> decoratorNameToEditorType = new();
+    private static Dictionary<string, AirshipGUIDrawer> decoratorNameToGUIDrawer = new();
     
     internal const string inspectorModeKey = "AirshipBetaInspectorMode";
     internal const EditorInspectorMode DefaultInspectorMode = EditorInspectorMode.UseNewInspector;
@@ -122,6 +124,13 @@ public static class AirshipCustomEditors {
 
         return true;
     }
+
+    private static void RegisterPropertyDrawer(Type editorType,
+        CustomAirshipDecoratorDrawerAttribute propertyDrawerAttribute) {
+        if (decoratorNameToGUIDrawer.TryGetValue(propertyDrawerAttribute.DecoratorName, out _)) return;
+        var instance = (AirshipGUIDrawer) Activator.CreateInstance(editorType);
+        decoratorNameToGUIDrawer.Add(propertyDrawerAttribute.DecoratorName, instance);
+    }
     
     private static bool RegisterEditor(Type editorType, CustomAirshipEditorAttribute editorAttribute) {
         var typeName = editorAttribute.TypeName;
@@ -168,6 +177,12 @@ public static class AirshipCustomEditors {
         var propertyEditorAttributes = TypeCache.GetTypesWithAttribute<CustomAirshipPropertyDrawerAttribute>();
         foreach (var editorType in propertyEditorAttributes) {
             var propertyDrawerAttribute = editorType.GetCustomAttribute<CustomAirshipPropertyDrawerAttribute>();
+            RegisterPropertyDrawer(editorType, propertyDrawerAttribute);
+        }
+
+        var decoratorPropertyAttributes = TypeCache.GetTypesWithAttribute<CustomAirshipDecoratorDrawerAttribute>();
+        foreach (var editorType in decoratorPropertyAttributes) {
+            var propertyDrawerAttribute = editorType.GetCustomAttribute<CustomAirshipDecoratorDrawerAttribute>();
             RegisterPropertyDrawer(editorType, propertyDrawerAttribute);
         }
 
@@ -366,12 +381,18 @@ public static class AirshipCustomEditors {
         propertyDecorator = default;
         return false;
     }
+
+    [CanBeNull]
+    internal static AirshipGUIDrawer GetDecoratorDrawer(string name) {
+        return decoratorNameToGUIDrawer.GetValueOrDefault(name);
+    }
     
     /// <summary>
     /// Gets the property drawer for the property (if applicable)
     /// </summary>
     /// <param name="property">The property to get the property drawer for</param>
     /// <returns>A property drawer, or null if it is not an airship type, or no property drawer is set</returns>
+    [CanBeNull]
     public static AirshipPropertyDrawer GetPropertyDrawer(AirshipSerializedValue property) {
         if (!property.isAirshipType) return null;
         var airshipType = property.airshipType;

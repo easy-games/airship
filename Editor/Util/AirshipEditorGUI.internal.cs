@@ -550,7 +550,7 @@ public static partial class AirshipEditorGUI {
         DoPropertyEvents(rect, property);
         return nextValue;
     }
-
+    
     private static int DoIntProperty(Rect? rect, GUIContent label, AirshipSerializedValue property) {
         DoValidateProperty(rect, property, AirshipSerializedType.Number);
         
@@ -643,12 +643,12 @@ public static partial class AirshipEditorGUI {
         var displayTextAreaHorizontal = true;
         var displayFixedHeight = false;
 
-        if (property.TryGetDecorator("Multiline", out var multilineParams)) {
+        if (property.TryGetDecorator("Multiline", out var multilineParams, excludeIfHasDrawer: true)) {
             if (multilineParams.Count > 0) textAreaMaxLines = int.Parse(multilineParams[0].serializedValue);
             useTextArea = true;
             displayFixedHeight = true;
         }
-        if (property.TryGetDecorator("TextArea", out var _))
+        if (property.TryGetDecorator("TextArea", out var _, excludeIfHasDrawer: true))
         {
             useTextArea = true;
             displayTextAreaHorizontal = false;

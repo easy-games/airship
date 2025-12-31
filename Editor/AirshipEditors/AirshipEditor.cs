@@ -136,6 +136,19 @@ public abstract class AirshipEditor : ScriptableObject {
     
     internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
     
+    private static readonly Dictionary<AirshipSerializedProperty, Stack<AirshipGUIDrawer>> _decoratorPropertyDrawers =
+        new();
+    internal Stack<AirshipGUIDrawer> GetPropertyDecoratorStack(AirshipSerializedProperty property) {
+        if (_decoratorPropertyDrawers.TryGetValue(property, out var stack)) return stack;
+        stack = new  Stack<AirshipGUIDrawer>();
+        _decoratorPropertyDrawers.Add(property, stack);
+        return stack;
+    }
+
+    internal void ClearPropertyDecoratorStack(AirshipSerializedProperty property) {
+        _decoratorPropertyDrawers.Remove(property);
+    }
+    
     /// <summary>
     /// Draw the default properties for this inspector
     /// </summary>
@@ -273,4 +286,6 @@ public abstract class AirshipEditor : ScriptableObject {
     public virtual void OnSceneGUI() {}
     public virtual bool HasPreviewGUI() => false;
     public virtual void OnPreviewGUI(Rect r, GUIStyle background) {}
+
+
 }

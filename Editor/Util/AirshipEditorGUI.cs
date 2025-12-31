@@ -266,6 +266,56 @@ public static partial class AirshipEditorGUI {
         DoIntProperty(rect, label, property);
     public static int IntProperty(GUIContent label, AirshipSerializedValue property) =>
         DoIntProperty(null, label, property);
+    
+    public static float NumberSliderProperty(GUIContent label, AirshipSerializedValue property, float min, float max) {
+        DoValidateProperty(null, property, AirshipSerializedType.Number);
+        var nextValue = EditorGUILayout.Slider(label, property.numberValue, min, max);
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (nextValue != property.numberValue) {
+            property.numberValue = nextValue;
+            property.isModified = true;
+        }
+        
+        DoPropertyEvents(null, property);
+        return nextValue;
+    }
+    
+    public static float NumberSliderProperty(Rect position, GUIContent label, AirshipSerializedValue property, float min, float max) {
+        DoValidateProperty(null, property, AirshipSerializedType.Number);
+        var nextValue = EditorGUI.Slider(position, label, property.numberValue, min, max);
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (nextValue != property.numberValue) {
+            property.numberValue = nextValue;
+            property.isModified = true;
+        }
+        
+        DoPropertyEvents(null, property);
+        return nextValue;
+    }
+    
+    public static int IntSliderProperty(Rect position, GUIContent label, AirshipSerializedValue property, int min, int max) {
+        DoValidateProperty(null, property, AirshipSerializedType.Number);
+        var nextValue = EditorGUI.IntSlider(position, label, property.intValue, min, max);
+        if (nextValue != property.intValue) {
+            property.intValue = nextValue;
+            property.isModified = true;
+        }
+        
+        DoPropertyEvents(null, property);
+        return nextValue;
+    }
+    
+    public static int IntSliderProperty(GUIContent label, AirshipSerializedValue property, int min, int max) {
+        DoValidateProperty(null, property, AirshipSerializedType.Number);
+        var nextValue = EditorGUILayout.IntSlider(label, property.intValue, min, max);
+        if (nextValue != property.intValue) {
+            property.intValue = nextValue;
+            property.isModified = true;
+        }
+        
+        DoPropertyEvents(null, property);
+        return nextValue;
+    }
 
     public static bool BooleanProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
         DoBooleanProperty(rect, label, property);
@@ -568,6 +618,9 @@ public static partial class AirshipEditorGUI {
     /// <returns></returns>
     public static bool DrawDecorators(AirshipSerializedProperty property) {
         var shouldHideProperty = false;
+        var decoratorStack = AirshipGUI.GetPropertyDecoratorStack(property);
+        
+        
         foreach (var decorator in property.decorators) {
             if (AirshipCustomEditors.TryGetDecorator(decorator, out var propertyDecorator)) {
                 propertyDecorator.arguments = decorator.parameters.ToArray();
@@ -580,6 +633,30 @@ public static partial class AirshipEditorGUI {
                 }
                     
                 propertyDecorator.OnBeforeInspectorGUI();
+                continue;
+            }
+            
+            if (property.TryGetDecoratorDrawer(decorator.name, out var guiDrawer)) {
+                switch (guiDrawer) {
+                    case AirshipPropertyDrawer propertyDrawer when !decoratorStack.Contains(propertyDrawer): {
+                        var label = new GUIContent(ObjectNames.NicifyVariableName(property.name));
+                        var rect = EditorGUILayout.GetControlRect(false, propertyDrawer.GetPropertyHeight(property, label));
+
+                        decoratorStack.Push(propertyDrawer);
+                        propertyDrawer.decorator = decorator;
+                        propertyDrawer.OnGUI(rect, property, label);
+                        propertyDrawer.decorator = null;
+                        decoratorStack.Pop();
+
+                        if (decoratorStack.Count == 0) AirshipGUI.ClearPropertyDecoratorStack(property);
+                        return false;
+                    }
+                    case AirshipDecoratorDrawer decoratorDrawer: {
+                        var rect = EditorGUILayout.GetControlRect(false, decoratorDrawer.GetHeight());
+                        decoratorDrawer.OnGUI(rect);
+                        break;
+                    }
+                }
             }
         }
 

@@ -291,9 +291,23 @@ public abstract class AirshipSerializedValue {
     }
     
     public IEnumerable<LuauMetadataDecoratorElement> decorators { get; protected set; }
+    internal Dictionary<string, AirshipGUIDrawer> decoratorDrawers { get; } = new();
 
-    public bool TryGetDecorator(string targetDecoratorName, out List<LuauMetadataDecoratorValue> parameters) {
+    internal bool TryGetDecoratorDrawer(string targetDecoratorName, out AirshipGUIDrawer decoratorDrawer) {
+        if (!decoratorDrawers.TryGetValue(targetDecoratorName, out decoratorDrawer)) {
+            decoratorDrawer = AirshipCustomEditors.GetDecoratorDrawer(targetDecoratorName);
+        }
+        
+        return decoratorDrawer != null;
+    }
+    
+    public bool TryGetDecorator(string targetDecoratorName, out List<LuauMetadataDecoratorValue> parameters, bool excludeIfHasDrawer = false) {
         if (decorators == null) {
+            parameters = null;
+            return false;
+        }
+        
+        if (excludeIfHasDrawer && decoratorDrawers.ContainsKey(targetDecoratorName)) {
             parameters = null;
             return false;
         }
