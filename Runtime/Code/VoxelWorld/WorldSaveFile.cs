@@ -53,7 +53,7 @@ public class WorldSaveFile : ScriptableObject {
             
             // Write voxel data:
             writer.Write((uint)data.Length);
-            var dataPoolLen = color.Length * sizeof(ushort);
+            var dataPoolLen = data.Length * sizeof(ushort);
             var dataPool = ArrayPool<byte>.Shared.Rent(dataPoolLen);
             Buffer.BlockCopy(data, 0, dataPool, 0, dataPoolLen);
             writer.Write(dataPool, 0, dataPoolLen);
