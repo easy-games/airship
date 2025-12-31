@@ -86,14 +86,6 @@ public abstract class AirshipEditor : ScriptableObject {
 
             reorderableList.elementHeightCallback = index => {
                 var label = new GUIContent($"Element {index}");
-                var element = property.array[index];
-                var propertyDrawer = element.isAirshipType ? AirshipCustomEditors.GetPropertyDrawer(element) : null;
-                
-                return propertyDrawer?.GetPropertyHeight(element, label) ?? EditorGUIUtility.singleLineHeight;
-            };
-
-            reorderableList.elementHeightCallback = index => {
-                var label = new GUIContent($"Element {index}");
                 var element = property.array.GetElementAtIndex(index);
                 return AirshipEditorGUI.GetPropertyHeight(element, label);
             };
@@ -106,7 +98,6 @@ public abstract class AirshipEditor : ScriptableObject {
                 if (propertyDrawer != null) {
                     propertyDrawer.OnGUI(rect, element, label);
                 } else {
-                    
                     AirshipEditorGUI.PropertyField(rect, label, element);
                 }
             };
