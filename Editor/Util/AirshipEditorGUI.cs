@@ -467,9 +467,7 @@ public static partial class AirshipEditorGUI {
     /// <param name="property">The array property</param>
     /// <returns></returns>
     public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property) {
-        var height = GetPropertyHeight(property, content);
-        var rect = EditorGUILayout.GetControlRect(!string.IsNullOrEmpty(content.text), height);
-        return DoArrayProperty(rect, content, property);
+        return DoArrayProperty(GetPropertyControlRect(property, content), content, property);
     }
 
     /// <summary>
