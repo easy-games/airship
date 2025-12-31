@@ -1,10 +1,11 @@
 ﻿using UnityEditor;
 
 public class AirshipSerializedArrayValue : AirshipSerializedValue {
-    
-    
+    public int index { get; }
+
     public AirshipSerializedArrayValue(AirshipSerializedProperty parentSerializedProperty, int index, SerializedProperty valueProperty, SerializedProperty objectValueProperty) {
         name = parentSerializedProperty.name + "[" + index + "]";
+        this.index = index;
         
         serializedModified = parentSerializedProperty.serializedModified;
 

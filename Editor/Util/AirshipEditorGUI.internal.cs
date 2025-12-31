@@ -830,4 +830,142 @@ public static partial class AirshipEditorGUI {
         int right = Mathf.RoundToInt((tabIndex + 1) * tabWidth);
         return new Rect(rect.x + left, rect.y, right - left,  /* kTabButtonHeight */ TabButtonHeight);
     }
+
+    private static bool DoArrayProperty(Rect rect, GUIContent content, AirshipSerializedProperty property,
+        bool expanded = false) {
+        if (property == null) {
+            EditorGUI.HelpBox(rect, "Property is not an array", MessageType.Error);
+            return false;
+        }
+        if (!property.isArray) return false;
+        
+        bool enabled;
+        if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
+            property.editor._foldouts.Add(property.name, expanded);
+        }
+
+        var headerRect = new Rect(rect) { height = EditorStyles.foldoutHeader.fixedHeight, width = rect.width - 40 };
+        var sizeRect = new Rect(rect) { width = 30, height = headerRect.height, x = rect.width - 15 };
+        
+        rect.height -= headerRect.height;
+        rect.y += headerRect.height + 5;
+        
+        enabled = EditorGUI.BeginFoldoutHeaderGroup(headerRect, enabled, content, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
+        property.editor._foldouts[property.name] = enabled;
+
+        DoPropertyEvents(headerRect, property);
+        
+        Event currentEvent = Event.current;
+        switch (currentEvent.type) {
+            case EventType.DragUpdated or EventType.DragPerform
+                when property.array.elementType is AirshipSerializedType.Object or AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.AirshipScriptableObject: {
+                var refs = DragAndDrop.objectReferences;
+                
+                if (headerRect.Contains(currentEvent.mousePosition)) {
+                    var consume = false;
+
+                    foreach (var draggedObject in refs) {
+                        var objRef = draggedObject;
+                        var elementType = property.array.elementType;
+                        
+                        if (elementType is AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.AirshipScriptableObject) {
+                            var buildInfo = AirshipBuildInfo.Instance;
+                            var scriptPath = buildInfo.GetScriptPathByTypeName(property.array.elementObjectTypeString);
+
+                            switch (draggedObject) {
+                                case AirshipComponent component when elementType is AirshipSerializedType.AirshipBehaviour && scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
+                                    objRef = component;
+                                    consume = true;
+                                    break;
+                                case AirshipScriptableObject scriptableObject when elementType is AirshipSerializedType.AirshipScriptableObject && scriptPath != null && buildInfo.Inherits(scriptableObject.script, scriptPath):
+                                    objRef = scriptableObject;
+                                    consume = true;
+                                    break;
+                                case AirshipScriptableObject:
+                                case AirshipComponent:
+                                    continue;
+                                case GameObject go: {
+                                    var firstMatchingComponent = go.GetComponents<AirshipComponent>()
+                                        .FirstOrDefault(f => buildInfo.Inherits(f.script, scriptPath));
+                                    if (firstMatchingComponent != null) {
+                                        objRef = firstMatchingComponent;
+                                        consume = true;
+                                    }
+                                    break;
+                                }
+                                default:
+                                    objRef = null;
+                                    break;
+                            }
+
+                        } else if (property.array.elementType == AirshipSerializedType.Object) {
+                            var objType = property.array.elementObjectType;
+                            if (objType == null) break;
+                            
+                            // If objType is not game object we need to parse the correct component
+                            var targetNotGameObject = objType != typeof(GameObject);
+                            if (targetNotGameObject && objRef is GameObject draggedGo && typeof(Component).IsAssignableFrom(objType)) {
+                                var comp = draggedGo.GetComponent(objType);
+                                if (!comp) {
+                                    consume = false;
+                                    break;
+                                }
+                                objRef = comp;
+                                consume = true;
+                            } else if (objRef.GetType().IsAssignableFrom(objType)) {
+                                consume = true;
+                            } else if (objRef is GameObject && objType == typeof(GameObject)) {
+                                consume = true;
+                            }
+
+                            if (!objType.IsInstanceOfType(objRef)) {
+                                break;
+                            }
+                        }
+                        
+                        if (objRef != null && consume && currentEvent.type == EventType.DragPerform) {
+                            property.array.InsertLastElement(objRef);
+                        }
+                    }
+
+                    if (consume) {
+                        DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+
+
+                        
+                        currentEvent.Use();
+                    }
+                }
+                break;
+            }
+        }
+        
+        var lastSize = property.arraySize;
+
+        var arrayName = property.name;
+        GUI.SetNextControlName(arrayName);
+        var size = EditorGUI.IntField(sizeRect, lastSize,
+            new GUIStyle(EditorStyles.numberField) { alignment = TextAnchor.MiddleCenter });
+        var modifyArraySize = false;
+        //Handle only updating array size on focus lost
+        if ((Event.current.isKey && Event.current.keyCode == KeyCode.Return &&
+             GUI.GetNameOfFocusedControl() == arrayName)) {
+            modifyArraySize = true;
+            size = focusedIntValue;
+        } else if (GUI.GetNameOfFocusedControl() == arrayName && size != lastSize) {
+            focusedIntValue = size;
+        }
+        
+        if (modifyArraySize && size != lastSize && size >= 0) {
+            property.array.ResizeArray(size);
+        }
+
+        if (enabled) {
+            var reorderableList = property.editor.GetOrCreateArrayList(property);
+            reorderableList.DoList(rect);
+        }
+        
+        EditorGUI.EndFoldoutHeaderGroup();
+        return enabled;
+    }
 }

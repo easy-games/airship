@@ -34,6 +34,7 @@ public abstract class AirshipEditor : ScriptableObject {
         }
         
         public void DoLayoutList() => reorderableList.DoLayoutList();
+        public void DoList(Rect rect) => reorderableList.DoList(rect);
     }
     
     public AirshipSerializedObject serializedObject { get; internal set; }
@@ -90,7 +91,12 @@ public abstract class AirshipEditor : ScriptableObject {
                 
                 return propertyDrawer?.GetPropertyHeight(element, label) ?? EditorGUIUtility.singleLineHeight;
             };
-            
+
+            reorderableList.elementHeightCallback = index => {
+                var label = new GUIContent($"Element {index}");
+                var element = property.array.GetElementAtIndex(index);
+                return AirshipEditorGUI.GetPropertyHeight(element, label);
+            };
 
             reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
                 var label = new GUIContent($"Element {index}");

@@ -433,182 +433,43 @@ public static partial class AirshipEditorGUI {
     }
     
     private static int focusedIntValue;
+
+    internal static float GetArrayPropertyHeight(AirshipSerializedProperty property) {
+        if (!property.isArray) return 0f;
+
+        if (!property.editor._foldouts.TryGetValue(property.name, out var enabled)) {
+            property.editor._foldouts.Add(property.name, false);
+        }
+
+        var size = EditorStyles.foldoutHeader.fixedHeight;
+        if (!enabled) return size;
+        
+        var reorderableList = property.editor.GetOrCreateArrayList(property);
+        size += reorderableList.reorderableList.GetHeight() + 5;
+        return size;
+    }
+
+    /// <summary>
+    /// Draw an array property using the Editor GUI system
+    /// </summary>
+    /// <param name="rect">The rect for this array properrty</param>
+    /// <param name="content">The label of this array</param>
+    /// <param name="property">The array property</param>
+    /// <returns></returns>
+    public static bool ArrayProperty(Rect rect, GUIContent content, AirshipSerializedProperty property) {
+        return DoArrayProperty(rect, content, property);
+    }
     
-    public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property, bool expanded = false) {
-        if (!property.isArray) return false;
-
-        bool enabled;
-        if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
-            property.editor._foldouts.Add(property.name, expanded);
-        }
-
-        var rect2 = EditorGUILayout.GetControlRect(false, EditorStyles.foldoutHeader.fixedHeight);
-        
-        enabled = EditorGUI.BeginFoldoutHeaderGroup(new Rect(rect2) {width = rect2.width - 40}, enabled, content, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
-        property.editor._foldouts[property.name] = enabled;
-
-        Event currentEvent = Event.current;
-        var headerRect = GUILayoutUtility.GetLastRect();
-        
-        DoPropertyEvents(null, property);
-        
-        switch (currentEvent.type) {
-            case EventType.DragUpdated or EventType.DragPerform
-                when property.array.elementType is AirshipSerializedType.Object or AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.AirshipScriptableObject: {
-                var refs = DragAndDrop.objectReferences;
-                
-                if (headerRect.Contains(currentEvent.mousePosition)) {
-                    var consume = false;
-
-                    foreach (var draggedObject in refs) {
-                        var objRef = draggedObject;
-                        var elementType = property.array.elementType;
-                        
-                        if (elementType is AirshipSerializedType.AirshipBehaviour or AirshipSerializedType.AirshipScriptableObject) {
-                            var buildInfo = AirshipBuildInfo.Instance;
-                            var scriptPath = buildInfo.GetScriptPathByTypeName(property.array.elementObjectTypeString);
-
-                            switch (draggedObject) {
-                                case AirshipComponent component when elementType is AirshipSerializedType.AirshipBehaviour && scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
-                                    objRef = component;
-                                    consume = true;
-                                    break;
-                                case AirshipScriptableObject scriptableObject when elementType is AirshipSerializedType.AirshipScriptableObject && scriptPath != null && buildInfo.Inherits(scriptableObject.script, scriptPath):
-                                    objRef = scriptableObject;
-                                    consume = true;
-                                    break;
-                                case AirshipScriptableObject:
-                                case AirshipComponent:
-                                    continue;
-                                case GameObject go: {
-                                    var firstMatchingComponent = go.GetComponents<AirshipComponent>()
-                                        .FirstOrDefault(f => buildInfo.Inherits(f.script, scriptPath));
-                                    if (firstMatchingComponent != null) {
-                                        objRef = firstMatchingComponent;
-                                        consume = true;
-                                    }
-                                    break;
-                                }
-                                default:
-                                    objRef = null;
-                                    break;
-                            }
-
-                        } else if (property.array.elementType == AirshipSerializedType.Object) {
-                            var objType = property.array.elementObjectType;
-                            if (objType == null) break;
-                            
-                            // If objType is not game object we need to parse the correct component
-                            var targetNotGameObject = objType != typeof(GameObject);
-                            if (targetNotGameObject && objRef is GameObject draggedGo && typeof(Component).IsAssignableFrom(objType)) {
-                                var comp = draggedGo.GetComponent(objType);
-                                if (!comp) {
-                                    consume = false;
-                                    break;
-                                }
-                                objRef = comp;
-                                consume = true;
-                            } else if (objRef.GetType().IsAssignableFrom(objType)) {
-                                consume = true;
-                            } else if (objRef is GameObject && objType == typeof(GameObject)) {
-                                consume = true;
-                            }
-
-                            if (!objType.IsInstanceOfType(objRef)) {
-                                break;
-                            }
-                        }
-                        
-                        if (objRef != null && consume && currentEvent.type == EventType.DragPerform) {
-                            property.array.InsertLastElement(objRef);
-                        }
-                    }
-
-                    if (consume) {
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Move;
-
-
-                        
-                        currentEvent.Use();
-                    }
-                }
-                break;
-            }
-        }
-        
-        var rect = GUILayoutUtility.GetLastRect();
-
-        var lastSize = property.arraySize;
-
-        var arrayName = property.name;
-        GUI.SetNextControlName(arrayName);
-        var size = EditorGUI.IntField(
-            new Rect(rect) { width = 30, x = rect.width - 15 }, 
-            lastSize, 
-            new GUIStyle(EditorStyles.numberField) { alignment = TextAnchor.MiddleCenter}
-            );
-
-        var modifyArraySize = false;
-        //Handle only updating array size on focus lost
-        if ((Event.current.isKey && Event.current.keyCode == KeyCode.Return &&
-             GUI.GetNameOfFocusedControl() == arrayName)) {
-            modifyArraySize = true;
-            size = focusedIntValue;
-        } else if (GUI.GetNameOfFocusedControl() == arrayName && size != lastSize) {
-            focusedIntValue = size;
-        }
-        
-        if (modifyArraySize && size != lastSize && size >= 0) {
-            property.array.ResizeArray(size);
-        }
-
-        
-        if (enabled) {
-            var reorderableList = property.editor.GetOrCreateArrayList(property);
-            var prevElementHeight = AirshipGUI.arrayItemHeight;
-            
-            if (property.arraySize > 0) {
-                switch (property.array.elementType) {
-                    case AirshipSerializedType.String:
-                        var style = EditorStyles.textArea;
-                        var textAreaMaxLines = 3;
-                        var useTextArea = false;
-                        var displayTextAreaHorizontal = true;
-                        var displayFixedHeight = false;
-                        
-                        if (property.TryGetDecorator("Multiline", out var multilineParams)) {
-                            if (multilineParams.Count > 0) textAreaMaxLines = int.Parse(multilineParams[0].serializedValue);
-                            useTextArea = true;
-                            displayFixedHeight = true;
-                        }
-                        
-                        if (property.TryGetDecorator("TextArea", out _)) {
-                            useTextArea = true;
-                            displayTextAreaHorizontal = false;
-                            displayFixedHeight = false;
-                        }
-
-                        if (displayFixedHeight) {
-                            var maxHeight = style.lineHeight * textAreaMaxLines;
-                            style.fixedHeight = maxHeight;
-                        }
-
-                        if (useTextArea) reorderableList.elementHeight = style.lineHeight * textAreaMaxLines;
-                        if (displayTextAreaHorizontal == false) reorderableList.elementHeight += EditorGUIUtility.singleLineHeight;
-                        break;
-                    case AirshipSerializedType.Rect:
-                        reorderableList.elementHeight = EditorGUIUtility.singleLineHeight * 2 + 3;
-                        break;
-                }
-            } else {
-                reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
-            }
-            
-            reorderableList.DoLayoutList();
-            AirshipGUI.arrayItemHeight = prevElementHeight;
-        }
-        EditorGUILayout.EndFoldoutHeaderGroup();
-        return enabled;
+    /// <summary>
+    /// Draw an array property using the Editor GUILayout system
+    /// </summary>
+    /// <param name="content">The label of this array</param>
+    /// <param name="property">The array property</param>
+    /// <returns></returns>
+    public static bool ArrayProperty(GUIContent content, AirshipSerializedProperty property) {
+        var height = GetPropertyHeight(property, content);
+        var rect = EditorGUILayout.GetControlRect(!string.IsNullOrEmpty(content.text), height);
+        return DoArrayProperty(rect, content, property);
     }
 
     /// <summary>
@@ -715,7 +576,7 @@ public static partial class AirshipEditorGUI {
             }
             // Arrays can only really be used with serialized property not serialized array, due to how we set this up
             case AirshipSerializedType.Array when value is AirshipSerializedProperty property: {
-                return ArrayProperty(label, property, includeChildren);
+                return ArrayProperty(label, property);
             }
             case AirshipSerializedType.Color: {
                 ColorProperty(label, value);
@@ -858,6 +719,10 @@ public static partial class AirshipEditorGUI {
             case AirshipSerializedType.SerializedClass: {
                 break;
             }
+            // Arrays can only really be used with serialized property not serialized array, due to how we set this up
+            case AirshipSerializedType.Array when value is AirshipSerializedProperty property: {
+                return ArrayProperty(rect, label, property);
+            }
             default: {
                 EditorGUI.HelpBox(rect, $"{value.typeString} is not yet supported by PropertyField!",
                     MessageType.Warning);
@@ -868,6 +733,10 @@ public static partial class AirshipEditorGUI {
         return false;
     }
 
+    public static bool PropertyField(Rect rect, AirshipSerializedProperty property) {
+        return PropertyField(rect, GetPropertyLabel(property), property);
+    }
+    
     public static bool PropertyField(GUIContent label, AirshipSerializedValue value) {
         if (value is AirshipSerializedProperty serializedProperty) {
             return PropertyField(label, serializedProperty);
@@ -919,4 +788,106 @@ public static partial class AirshipEditorGUI {
     /// <param name="property"></param>
     public static void BeginProperty(AirshipSerializedProperty property) => BeginSerializedProperty(property);
     public static void EndProperty() => EndSerializedProperty();
+
+    /// <summary>
+    /// Gets the height of the given property
+    /// </summary>
+    /// <param name="property">The property to get the height of</param>
+    /// <param name="label">The label of this property</param>
+    /// <returns></returns>
+    public static float GetPropertyHeight(AirshipSerializedValue property, GUIContent label) {
+        float height = 0;
+        if (property == null) return EditorGUIUtility.singleLineHeight;
+        
+        foreach (var decorator in property.decorators) {
+            var drawerGui = AirshipCustomEditors.GetDecoratorDrawer(decorator.name);
+            if (drawerGui is AirshipDecoratorDrawer decoratorDrawer) height += decoratorDrawer.GetHeight();
+        }
+        
+        var drawer = AirshipCustomEditors.GetPropertyDrawer(property);
+        if (drawer != null) {
+            return height + drawer.GetPropertyHeight(property, label);
+        } else if (property is AirshipSerializedProperty { isArray: true } serializedProperty) {
+            return height + GetArrayPropertyHeight(serializedProperty);
+        }
+
+        switch (property.type) {
+            case AirshipSerializedType.String: {
+                var textAreaMaxLines = 3;
+                var useTextArea = false;
+                var displayTextAreaHorizontal = true;
+                var displayFixedHeight = false;
+
+                if (property.TryGetDecorator("Multiline", out var multilineParams, excludeIfHasDrawer: true)) {
+                    if (multilineParams.Count > 0) textAreaMaxLines = int.Parse(multilineParams[0].serializedValue);
+                    useTextArea = true;
+                    displayFixedHeight = true;
+                }
+
+                if (property.TryGetDecorator("TextArea", out var _, excludeIfHasDrawer: true)) {
+                    useTextArea = true;
+                    displayTextAreaHorizontal = false;
+                    displayFixedHeight = false;
+                }
+
+                if (!useTextArea) return height + EditorGUIUtility.singleLineHeight;
+                if (!displayTextAreaHorizontal) {
+                    height += EditorGUIUtility.singleLineHeight;
+                }
+
+                var style = EditorStyles.textArea;
+                var maxHeight = style.lineHeight * textAreaMaxLines;
+                
+                return height + maxHeight;
+            }
+            default:
+                return height + GetPropertyHeight(property.type, label);
+        }
+    }
+
+    /// <summary>
+    /// Gets the default label for the given property
+    /// </summary>
+    /// <param name="property">The property to grab the label for</param>
+    /// <returns>The GUIContent for the property's label</returns>
+    public static GUIContent GetPropertyLabel(AirshipSerializedValue property) {
+        if (property is AirshipSerializedArrayValue arrayValue) return GetArrayElementLabel(arrayValue);
+        return property == null ? new  GUIContent() : new GUIContent(ObjectNames.NicifyVariableName(property.name));
+    }
+
+    /// <summary>
+    /// Gets the label for the given array element
+    /// </summary>
+    /// <param name="element">The array element</param>
+    /// <returns></returns>
+    internal static GUIContent GetArrayElementLabel(AirshipSerializedArrayValue element) {
+        return element == null ? new  GUIContent() : new GUIContent($"Element {element.index}");
+    }
+
+    /// <summary>
+    /// Gets the Editor GUILayout rect for the given property
+    /// </summary>
+    /// <param name="property">The property to grab the rect for</param>
+    /// <param name="label">A custom label, if applicable - otherwise will infer the default label</param>
+    /// <returns></returns>
+    public static Rect GetPropertyControlRect(AirshipSerializedProperty property, GUIContent label = null) {
+        var propLabel = label ?? GetPropertyLabel(property);
+        var height = GetPropertyHeight(property, propLabel);
+        return EditorGUILayout.GetControlRect(!string.IsNullOrEmpty(propLabel.text), height);
+    }
+    
+    private static float GetPropertyHeight(AirshipSerializedType type, GUIContent label) {
+        switch (type) {
+            case AirshipSerializedType.Vector2:
+            case AirshipSerializedType.Vector3:
+            case AirshipSerializedType.Vector4: 
+            case AirshipSerializedType.Quaternion:
+            case AirshipSerializedType.Number:
+                return EditorGUIUtility.singleLineHeight;
+            case AirshipSerializedType.Rect:
+                return EditorGUIUtility.singleLineHeight * 2;
+            default:
+                return EditorGUIUtility.singleLineHeight;
+        }
+    }
 }
