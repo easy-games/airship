@@ -79,8 +79,8 @@ public abstract class AirshipSerializedValue {
     public AirshipSerializedObject serializedObject { get; protected set; }
 
     internal AirshipEditor editor { get; set; }
-    
-    // public string name => serializedName.stringValue;
+
+    public string propertyPath => serializedName.propertyPath;
 
     public string name { get; protected set; }
 

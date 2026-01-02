@@ -191,6 +191,7 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         if (customEditorType != null && binding.script != null) {
             var componentEditor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
             if (this.editor == null) this.editor = componentEditor;
+            AirshipCustomEditors.CurrentEditor = componentEditor;
             componentEditor.script = binding.script;
             componentEditor.target = binding;
             componentEditor.OnInspectorGUI();

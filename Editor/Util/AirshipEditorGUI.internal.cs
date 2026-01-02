@@ -180,11 +180,10 @@ public static partial class AirshipEditorGUI {
 
     public static Matrix4x4 DoMatrix4x4Field(Rect? rect, GUIContent label, AirshipSerializedValue property) {
         DoValidateProperty(rect, property, AirshipSerializedType.Matrix4x4);
+        var editor = AirshipCustomEditors.CurrentEditor;
 
-        if (!property.editor._foldouts.TryGetValue(property.name, out bool open)) {
-            open = false;
-        }
-
+        var open = editor.GetFoldoutState(property);
+        
         var currentValue = property.matrix4x4Value;
         open = EditorGUILayout.BeginFoldoutHeaderGroup(open, label);
         var modified = false;
@@ -201,8 +200,8 @@ public static partial class AirshipEditorGUI {
                 }
             }
         }
-
-        property.editor._foldouts[property.name] = open;
+        
+        editor.SetFoldoutState(property, open);
 
         if (modified) {
             property.matrix4x4Value = currentValue;
@@ -838,11 +837,11 @@ public static partial class AirshipEditorGUI {
             return false;
         }
         if (!property.isArray) return false;
+
+        var editor = AirshipCustomEditors.CurrentEditor;
+        if (!editor) return false;
         
-        bool enabled;
-        if (!property.editor._foldouts.TryGetValue(property.name, out enabled)) {
-            property.editor._foldouts.Add(property.name, expanded);
-        }
+        var enabled = editor.GetFoldoutState(property);
 
         var headerRect = new Rect(rect) { height = EditorStyles.foldoutHeader.fixedHeight, width = rect.width - 40 };
         var sizeRect = new Rect(rect) { width = 30, height = headerRect.height, x = rect.width - 15 };
@@ -851,7 +850,7 @@ public static partial class AirshipEditorGUI {
         rect.y += headerRect.height + 5;
         
         enabled = EditorGUI.BeginFoldoutHeaderGroup(headerRect, enabled, content, new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal });
-        property.editor._foldouts[property.name] = enabled;
+        editor.SetFoldoutState(property, expanded);
 
         DoPropertyEvents(headerRect, property);
         
@@ -961,7 +960,7 @@ public static partial class AirshipEditorGUI {
         }
 
         if (enabled) {
-            var reorderableList = property.editor.GetOrCreateArrayList(property);
+            var reorderableList = editor.GetOrCreateArrayList(property);
             reorderableList.DoList(rect);
         }
         

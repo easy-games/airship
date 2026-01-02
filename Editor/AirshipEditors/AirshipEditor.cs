@@ -53,6 +53,16 @@ public abstract class AirshipEditor : ScriptableObject {
             }
         }
     }
+
+    internal bool GetFoldoutState(AirshipSerializedValue property) {
+        if (_foldouts.TryGetValue(property.propertyPath, out var foldout)) return foldout;
+        _foldouts.Add(property.propertyPath, false);
+        return false;
+    }
+
+    internal void SetFoldoutState(AirshipSerializedValue property, bool value) {
+        _foldouts[property.propertyPath] = value;
+    }
     
     internal ArrayDisplayInfo GetOrCreateArrayList(AirshipSerializedProperty property) {
         var itemInfo = property.serializedItems;

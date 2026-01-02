@@ -143,6 +143,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
                 var componentEditor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
                 if (this.editor == null) this.editor = componentEditor;
+                AirshipCustomEditors.CurrentEditor = componentEditor;
+                
                 componentEditor.script = binding.script;
                 componentEditor.target = binding;
                 componentEditor.OnInspectorGUI();

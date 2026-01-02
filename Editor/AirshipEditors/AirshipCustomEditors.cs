@@ -57,6 +57,8 @@ public static class AirshipCustomEditors {
     #endregion
     
     #region Properties
+    internal static AirshipEditor CurrentEditor { get; set; }
+    
     /// <summary>
     /// A list of the active custom editors
     /// </summary>

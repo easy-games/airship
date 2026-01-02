@@ -435,16 +435,18 @@ public static partial class AirshipEditorGUI {
     private static int focusedIntValue;
 
     internal static float GetArrayPropertyHeight(AirshipSerializedProperty property) {
+        if (property == null) return 0f;
         if (!property.isArray) return 0f;
 
-        if (!property.editor._foldouts.TryGetValue(property.name, out var enabled)) {
-            property.editor._foldouts.Add(property.name, false);
-        }
+        var editor = AirshipCustomEditors.CurrentEditor;
+        if (!editor) return EditorStyles.foldoutHeader.fixedHeight;
+
+        var enabled = editor.GetFoldoutState(property);
 
         var size = EditorStyles.foldoutHeader.fixedHeight;
         if (!enabled) return size;
         
-        var reorderableList = property.editor.GetOrCreateArrayList(property);
+        var reorderableList = editor.GetOrCreateArrayList(property);
         size += reorderableList.reorderableList.GetHeight() + 5;
         return size;
     }
@@ -731,7 +733,7 @@ public static partial class AirshipEditorGUI {
         return false;
     }
 
-    public static bool PropertyField(Rect rect, AirshipSerializedProperty property) {
+    public static bool PropertyField(Rect rect, AirshipSerializedValue property) {
         return PropertyField(rect, GetPropertyLabel(property), property);
     }
     
@@ -787,15 +789,24 @@ public static partial class AirshipEditorGUI {
     public static void BeginProperty(AirshipSerializedProperty property) => BeginSerializedProperty(property);
     public static void EndProperty() => EndSerializedProperty();
 
+    private static readonly Stack<AirshipSerializedValue> propertyHeightQueryStack = new();
+    
     /// <summary>
     /// Gets the height of the given property
     /// </summary>
     /// <param name="property">The property to get the height of</param>
     /// <param name="label">The label of this property</param>
+    /// <param name="includeCustomPropertyDrawers">Whether to allow custom property drawers</param>
     /// <returns></returns>
-    public static float GetPropertyHeight(AirshipSerializedValue property, GUIContent label) {
+    public static float GetPropertyHeight(AirshipSerializedValue property, GUIContent label, bool includeCustomPropertyDrawers = true) {
         float height = 0;
         if (property == null) return EditorGUIUtility.singleLineHeight;
+
+        if (propertyHeightQueryStack.Contains(property)) {
+            throw new StackOverflowException($"Calling GetPropertyHeight({property.name}, \"{label.text}\") recursively.");
+        }
+        propertyHeightQueryStack.Push(property);
+        
         
         foreach (var decorator in property.decorators) {
             var drawerGui = AirshipCustomEditors.GetDecoratorDrawer(decorator.name);
@@ -803,10 +814,14 @@ public static partial class AirshipEditorGUI {
         }
         
         var drawer = AirshipCustomEditors.GetPropertyDrawer(property);
-        if (drawer != null) {
-            return height + drawer.GetPropertyHeight(property, label);
+        if (includeCustomPropertyDrawers && drawer != null) {
+            height += drawer.GetPropertyHeight(property, label);
+            propertyHeightQueryStack.Pop();
+            return height;
         } else if (property is AirshipSerializedProperty { isArray: true } serializedProperty) {
-            return height + GetArrayPropertyHeight(serializedProperty);
+            height += GetArrayPropertyHeight(serializedProperty);
+            propertyHeightQueryStack.Pop();
+            return height;
         }
 
         switch (property.type) {
@@ -836,10 +851,13 @@ public static partial class AirshipEditorGUI {
                 var style = EditorStyles.textArea;
                 var maxHeight = style.lineHeight * textAreaMaxLines;
                 
+                propertyHeightQueryStack.Pop();
                 return height + maxHeight;
             }
             default:
-                return height + GetPropertyHeight(property.type, label);
+                height += GetPropertyHeight(property.type, label);
+                propertyHeightQueryStack.Pop();
+                return height;
         }
     }
 
