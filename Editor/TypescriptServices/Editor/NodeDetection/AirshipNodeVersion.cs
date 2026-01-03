@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,6 +14,7 @@ namespace Airship.Editor {
         public string GetCommand(NodeJsArguments arguments);
     }
     internal interface IAirshipNodeVersion {
+        public int priority { get; }
         public string InstallId { get; }
         public IAirshipNodeInstall[] Installs { get; }
         public bool Valid { get; }
@@ -30,7 +32,21 @@ namespace Airship.Editor {
         public static IAirshipNodeInstall currentNodeVersion {
             get {
                 var path = EditorPrefs.GetString(AIRSHIP_NODE_PATH);
-                return FindNodeInstallByPath(path, out var install) ? install : null;
+                return FindNodeInstallByPath(path, out var install) ? install : automaticNodeVersion;
+            }
+        }
+
+        public static IAirshipNodeInstall automaticNodeVersion {
+            get {
+                if (nodeVersions.Length == 0) return null;
+
+                IAirshipNodeVersion version = null;
+                foreach (var nodeVersion in nodeVersions) {
+                    if (version != null && nodeVersion.priority < version.priority) continue;
+                    version = nodeVersion;
+                }
+
+                return version?.Installs[0];
             }
         }
 
@@ -43,12 +59,11 @@ namespace Airship.Editor {
             }
 #endif
             
-#if UNITY_EDITOR_LINUX || UNITY_EDITOR_OSX
             var nvmManagedNode = new AirshipNvmNodeVersion();
             if (nvmManagedNode.Installs.Length > 0) {
                 _nodeVersions.Add(nvmManagedNode);
             }
-#endif
+            
             _nodeVersions.Add(customNodeVersion);
         }
 
@@ -82,12 +97,52 @@ namespace Airship.Editor {
     }
 
     internal class AirshipWindowsNodeVersion : IAirshipNodeVersion {
-        public string InstallId => "node.exe";
+        public int priority => 1000;
+
+        public class AirshipWindowsNodeInstall : IAirshipNodeInstall {
+            public string name { get; internal set; }
+            public string binPath { get; internal set; }
+            public string nodePath => Path.Join(binPath, "node.exe");
+            public string npmPath => Path.Join(binPath, "npm.cmd");
+            public string GetCommand(NodeJsArguments arguments) {
+                return "";
+            }
+        }
+        
+        public string InstallId => "Node for Windows";
         public IAirshipNodeInstall[] Installs { get; }
         public bool Valid { get; }
+
+        public AirshipWindowsNodeVersion() {
+            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            var programFilesX64 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            
+            string[] possibleNodeDirs = {
+                Path.Join(programFilesX86, "nodejs"),
+                Path.Join(programFilesX64, "nodejs"),
+            };
+
+            List<IAirshipNodeInstall> installs = new List<IAirshipNodeInstall>();
+            foreach (var nvmDir in possibleNodeDirs) {
+                if (!Directory.Exists(nvmDir)) continue;
+                
+                var nodeExe = Path.Join(nvmDir, "node.exe");
+                var npmCmd = Path.Join(nvmDir, "npm.cmd");
+                if (File.Exists(nodeExe) && File.Exists(npmCmd)) {
+                    installs.Add(new AirshipWindowsNodeInstall() {
+                        name = "Node for Windows",
+                        binPath = nvmDir,
+                    });
+                }
+            }
+
+            Installs = installs.ToArray();
+        }
     }
 
     internal class CustomNodeVersion : IAirshipNodeVersion {
+        public int priority => -1000;
+        
         public class AirshipCustomNodeInstall : IAirshipNodeInstall {
             public string name { get; }
             public string binPath { get; }
@@ -104,6 +159,8 @@ namespace Airship.Editor {
     }
 
     internal class AirshipNvmNodeVersion : IAirshipNodeVersion {
+        public int priority => 0;
+        
         internal class Install : IAirshipNodeInstall {
             public string name { get; internal set; }
             public string nodePath { get; internal set; }
@@ -130,15 +187,38 @@ namespace Airship.Editor {
 
         public AirshipNvmNodeVersion() {
             var installs = new List<Install>();
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); // should be /home/USER
- 
+#if UNITY_EDITOR_WIN
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+#else
+            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); // should be /home/USER or %USERPROFILE%
+#endif
+            
             string[] possibleNvmDirs = {
-#if UNITY_EDITOR_LINUX
+#if UNITY_EDITOR_LINUX || UNITY_EDITOR_OSX
                 Path.Join(homeDir, ".nvm"), // /home/USER/.nvm (OSX & Linux default)
                 Path.Join(homeDir, ".config", "nvm"), // /home/USER/.config/nvm (bazzite?)
+#elif UNITY_EDITOR_WIN
+                Path.Join(appData, "nvm"),
 #endif
             };
 
+#if UNITY_EDITOR_WIN
+            foreach (var nvmDir in possibleNvmDirs) {
+                if (!Directory.Exists(nvmDir)) continue;
+
+                foreach (var dir in Directory.GetDirectories(nvmDir)) {
+                    var node =  Path.Combine(dir, "node.exe");
+                    var npm =  Path.Combine(dir, "npm.cmd");
+                
+                    installs.Add(new Install() {
+                        name = $"NVM",
+                        nodePath = node,
+                        npmPath = npm,
+                        binPath = dir,
+                    });
+                }
+            }
+#else
             foreach (var nvmDir in possibleNvmDirs) {
                 if (!Directory.Exists(nvmDir)) continue;
                 
@@ -155,6 +235,9 @@ namespace Airship.Editor {
                     });
                 }
             }
+#endif
+            
+
             
             Installs = installs.ToArray();
         }

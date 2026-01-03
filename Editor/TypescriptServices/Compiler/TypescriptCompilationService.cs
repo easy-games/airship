@@ -527,11 +527,14 @@ using Object = UnityEngine.Object;
 
             internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) {
 #if UNITY_EDITOR_WIN
-                // Windows uses the .exe
-                var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, "node.exe", command);
+                var versionTarget = AirshipNodeVersionService.currentNodeVersion;
+                var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, versionTarget != null ? versionTarget.nodePath : "node.exe", command);
+                TypescriptLogService.LogInfo($"Running node command '{procStartInfo.FileName} {procStartInfo.Arguments}' at '{dir}'");
 #elif UNITY_EDITOR_LINUX
                 var nodeInstall = AirshipNodeVersionService.currentNodeVersion;
                 var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, nodeInstall.nodePath, command);
+                
+                TypescriptLogService.LogInfo($"Running node command '{procStartInfo.FileName} {procStartInfo.Arguments}' at '{dir}'");
 #else
                 var procStartInfo = ShellProcess.GetShellStartInfoForCommand(command, dir);
 #endif

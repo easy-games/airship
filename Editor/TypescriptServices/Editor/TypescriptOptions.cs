@@ -332,43 +332,45 @@ namespace Airship.Editor {
                 if (AirshipExternalCodeEditor.CurrentEditorPath != "")
                     EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
                 
-#if UNITY_EDITOR_LINUX
-                GUILayout.Space(5);
-                GUILayout.Label("Node Version", EditorStyles.boldLabel);
+                if (TypescriptCompilationService.ShowDeveloperOptions) {
+                    GUILayout.Space(5);
+                    GUILayout.Label("Node Version", EditorStyles.boldLabel);
 
-                var currentVersion = AirshipNodeVersionService.currentNodeVersion;
-                IAirshipNodeVersion[] nodeVersions = AirshipNodeVersionService.nodeVersions;
-                List<IAirshipNodeInstall> nodeInstalls = new();
-              
-                
-                foreach (var nodeVersion in nodeVersions) {
-                    if (nodeVersion.Installs == null) continue;
-                    nodeInstalls.AddRange(nodeVersion.Installs);
-                }
-
-                var installIndex = nodeInstalls.IndexOf(currentVersion);
-                if (installIndex == -1) {
+                    var currentVersion = AirshipNodeVersionService.currentNodeVersion;
+                    IAirshipNodeVersion[] nodeVersions = AirshipNodeVersionService.nodeVersions;
+                    List<IAirshipNodeInstall> nodeInstalls = new();
+                  
                     
-                }
+                    foreach (var nodeVersion in nodeVersions) {
+                        if (nodeVersion.Installs == null) continue;
+                        nodeInstalls.AddRange(nodeVersion.Installs);
+                    }
 
-                EditorGUILayout.BeginHorizontal();
-                
-                var nextInstallIndex = EditorGUILayout.Popup("Node Version", 
-                    installIndex, 
-                    nodeInstalls.Select(installation => $"{installation.name} - {installation.binPath.Replace("/", "\u2215")}").ToArray());
+                    var installIndex = nodeInstalls.IndexOf(currentVersion);
+                    if (installIndex == -1) {
+                        
+                    }
 
-                if (installIndex != nextInstallIndex) {
-                    Debug.Log($"Changed node install to {nextInstallIndex}");
-                    AirshipNodeVersionService.SetNodeInstall(nodeInstalls[nextInstallIndex]);
-                    TypescriptCompilationService.RestartCompilers();
-                }
+                    EditorGUILayout.BeginHorizontal();
+                    
+                    var nextInstallIndex = EditorGUILayout.Popup("Node Version", 
+                        installIndex, 
+                        nodeInstalls.Select(installation => $"{installation.name} - {installation.binPath.Replace("/", "\u2215")}").ToArray());
 
-                if (GUILayout.Button("Custom...", GUILayout.Width(100))) {
-                    var path = EditorUtility.OpenFolderPanel("Locate node...", "", "");
+                    if (installIndex != nextInstallIndex) {
+                        Debug.Log($"Changed node install to {nextInstallIndex}");
+                        AirshipNodeVersionService.SetNodeInstall(nodeInstalls[nextInstallIndex]);
+                        TypescriptCompilationService.RestartCompilers();
+                    }
+
+                    // if (GUILayout.Button("Custom...", GUILayout.Width(100))) {
+                    //     var path = EditorUtility.OpenFolderPanel("Locate node...", "", "");
+                    // }
+                    
+                    EditorGUILayout.EndHorizontal();
+                    
+                    EditorGUILayout.LabelField("Node Path", currentVersion.nodePath);
                 }
-                
-                EditorGUILayout.EndHorizontal();
-#endif
                 
                 GUILayout.Space(5);
                 GUILayout.Label("Debugging", EditorStyles.boldLabel);
