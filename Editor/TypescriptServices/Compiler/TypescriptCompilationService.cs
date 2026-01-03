@@ -529,6 +529,9 @@ using Object = UnityEngine.Object;
 #if UNITY_EDITOR_WIN
                 // Windows uses the .exe
                 var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, "node.exe", command);
+#elif UNITY_EDITOR_LINUX
+                var nodeInstall = AirshipNodeVersionService.currentNodeVersion;
+                var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, nodeInstall.nodePath, command);
 #else
                 var procStartInfo = ShellProcess.GetShellStartInfoForCommand(command, dir);
 #endif
