@@ -7,7 +7,7 @@ using Luau;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-
+using UnityEngine.UIElements;
 
 /// <summary>
 /// Base class to derive custom property drawers from.
@@ -34,6 +34,7 @@ public abstract class AirshipEditor : ScriptableObject {
         }
         
         public void DoLayoutList() => reorderableList.DoLayoutList();
+        public void DoList(Rect rect) => reorderableList.DoList(rect);
     }
     
     public AirshipSerializedObject serializedObject { get; internal set; }
@@ -51,6 +52,16 @@ public abstract class AirshipEditor : ScriptableObject {
                 targetArray.DeleteArrayElementAtIndex(targetArray.arraySize - 1);
             }
         }
+    }
+
+    internal bool GetFoldoutState(AirshipSerializedValue property) {
+        if (_foldouts.TryGetValue(property.propertyPath, out var foldout)) return foldout;
+        _foldouts.Add(property.propertyPath, false);
+        return false;
+    }
+
+    internal void SetFoldoutState(AirshipSerializedValue property, bool value) {
+        _foldouts[property.propertyPath] = value;
     }
     
     internal ArrayDisplayInfo GetOrCreateArrayList(AirshipSerializedProperty property) {
@@ -74,18 +85,31 @@ public abstract class AirshipEditor : ScriptableObject {
             _lists.Add(property.name, displayInfo);
             BindReorderableListToProperty(list);
         }
-        
+
         displayInfo.reorderableList.serializedProperty = property.array;
         
         void BindReorderableListToProperty(ReorderableList reorderableList) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
             var modified = property.serializedModified;
-            
             reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
-            reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+
+            reorderableList.elementHeightCallback = index => {
+                var label = new GUIContent($"Element {index}");
                 var element = property.array.GetElementAtIndex(index);
-                AirshipEditorGUI.PropertyField(rect, new GUIContent($"Element {index}"), element);
+                return AirshipEditorGUI.GetPropertyHeight(element, label);
+            };
+
+            reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+                var label = new GUIContent($"Element {index}");
+                var element = property.array.GetElementAtIndex(index);
+                var propertyDrawer = element.isAirshipType ? AirshipCustomEditors.GetPropertyDrawer(element) : null;
+                
+                if (propertyDrawer != null) {
+                    propertyDrawer.OnGUI(rect, element, label);
+                } else {
+                    AirshipEditorGUI.PropertyField(rect, label, element);
+                }
             };
             
             reorderableList.onChangedCallback = (ReorderableList list) => {
@@ -118,6 +142,19 @@ public abstract class AirshipEditor : ScriptableObject {
     }
     
     internal static Color k_LiveModifiedMarginDarkThemeColor = new(1f / 255f, 153f / 255f, 235f / 255f, 0.2f);
+    
+    private static readonly Dictionary<AirshipSerializedProperty, Stack<AirshipGUIDrawer>> _decoratorPropertyDrawers =
+        new();
+    internal Stack<AirshipGUIDrawer> GetPropertyDecoratorStack(AirshipSerializedProperty property) {
+        if (_decoratorPropertyDrawers.TryGetValue(property, out var stack)) return stack;
+        stack = new  Stack<AirshipGUIDrawer>();
+        _decoratorPropertyDrawers.Add(property, stack);
+        return stack;
+    }
+
+    internal void ClearPropertyDecoratorStack(AirshipSerializedProperty property) {
+        _decoratorPropertyDrawers.Remove(property);
+    }
     
     /// <summary>
     /// Draw the default properties for this inspector
@@ -240,15 +277,22 @@ public abstract class AirshipEditor : ScriptableObject {
     /// <param name="propertyName">The property name</param>
     /// <param name="label">The label to apply to this property field</param>
     public bool PropertyField(string label, string propertyName) => PropertyField(new GUIContent(label), propertyName);
+
+    [Obsolete("Not yet implemented")]
+    internal virtual VisualElement CreateInspectorGUI() {
+        return null;
+    }
     
     /// <summary>
     /// Override this to use a custom inspector for this editor
     /// </summary>
     public virtual void OnInspectorGUI() {
-        EditorGUILayout.HelpBox($"Using custom inspector {GetType().Name} but OnInspectorGUI is not overloaded", MessageType.Warning);
+        DrawDefaultProperties();
     }
     
     public virtual void OnSceneGUI() {}
     public virtual bool HasPreviewGUI() => false;
     public virtual void OnPreviewGUI(Rect r, GUIStyle background) {}
+
+
 }

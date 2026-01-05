@@ -14,6 +14,7 @@ using JetBrains.Annotations;
 using Luau;
 using UnityEditor.IMGUI.Controls;
 using UnityEditorInternal;
+using UnityEngine.UIElements;
 using Object = System.Object;
 
 public struct ArrayDisplayInfo {
@@ -96,6 +97,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         this.editor.OnSceneGUI();
     }
 
+    public override VisualElement CreateInspectorGUI() {
+        if (this.editor != null) {
+            return this.editor.CreateInspectorGUI();
+        }
+
+        return null;
+    }
+
     public override void OnPreviewGUI(Rect r, GUIStyle background) {
         if (!AirshipCustomEditors.UseNewInspector) return;
         if (!this.editor) return;
@@ -134,6 +143,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
                 var componentEditor = AirshipCustomEditors.GetEditorForComponent(binding, customEditorType, serializedObject);
                 if (this.editor == null) this.editor = componentEditor;
+                AirshipCustomEditors.CurrentEditor = componentEditor;
+                
                 componentEditor.script = binding.script;
                 componentEditor.target = binding;
                 componentEditor.OnInspectorGUI();

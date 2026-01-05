@@ -10,6 +10,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 internal class DoCreateScriptableObject : EndNameEditAction {
@@ -141,6 +142,14 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         EditorGUILayout.EndHorizontal();
     }
 
+    public override VisualElement CreateInspectorGUI() {
+        if (editor != null) {
+            return editor.CreateInspectorGUI();
+        }
+
+        return null;
+    }
+
     public override void OnInspectorGUI() {
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         
@@ -182,6 +191,7 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         if (customEditorType != null && binding.script != null) {
             var componentEditor = AirshipCustomEditors.GetEditorForScriptableObject(binding, customEditorType, serializedObject);
             if (this.editor == null) this.editor = componentEditor;
+            AirshipCustomEditors.CurrentEditor = componentEditor;
             componentEditor.script = binding.script;
             componentEditor.target = binding;
             componentEditor.OnInspectorGUI();
