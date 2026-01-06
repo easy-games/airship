@@ -527,16 +527,21 @@ using Object = UnityEngine.Object;
 
             internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) {
 #if UNITY_EDITOR_WIN
-                var versionTarget = AirshipNodeVersionService.currentNodeVersion;
+                var versionTarget = AirshipNodeInstallService.current;
                 var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, versionTarget != null ? versionTarget.nodePath : "node.exe", command);
                 TypescriptLogService.LogInfo($"Running node command '{procStartInfo.FileName} {procStartInfo.Arguments}' at '{dir}'");
 #elif UNITY_EDITOR_LINUX
-                var nodeInstall = AirshipNodeVersionService.currentNodeVersion;
+                var nodeInstall = AirshipNodeInstallService.current;
                 var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, nodeInstall.nodePath, command);
                 
                 TypescriptLogService.LogInfo($"Running node command '{procStartInfo.FileName} {procStartInfo.Arguments}' at '{dir}'");
 #else
-                var procStartInfo = ShellProcess.GetShellStartInfoForCommand(command, dir);
+                var versionTarget = AirshipNodeInstallService.current;
+                var procStartInfo = versionTarget != null ? 
+                    ShellProcess.GetStartInfoForCommand(dir, versionTarget.nodePath, command) 
+                    : ShellProcess.GetShellStartInfoForCommand(command, dir);
+                
+                TypescriptLogService.LogInfo($"Running node command '{procStartInfo.FileName} {procStartInfo.Arguments}' at '{dir}'");
 #endif
                 
                 var proc = new Process();

@@ -336,9 +336,9 @@ namespace Airship.Editor {
                     GUILayout.Space(5);
                     GUILayout.Label("Node Version", EditorStyles.boldLabel);
 
-                    var currentVersion = AirshipNodeVersionService.currentNodeVersion;
-                    IAirshipNodeVersion[] nodeVersions = AirshipNodeVersionService.nodeVersions;
-                    List<IAirshipNodeInstall> nodeInstalls = new();
+                    var currentVersion = AirshipNodeInstallService.current;
+                    IAirshipNodeDistribution[] nodeVersions = AirshipNodeInstallService.available;
+                    List<IAirshipNodeVersion> nodeInstalls = new();
                   
                     
                     foreach (var nodeVersion in nodeVersions) {
@@ -355,11 +355,11 @@ namespace Airship.Editor {
                     
                     var nextInstallIndex = EditorGUILayout.Popup("Node Version", 
                         installIndex, 
-                        nodeInstalls.Select(installation => $"{installation.name} - {installation.binPath.Replace("/", "\u2215")}").ToArray());
+                        nodeInstalls.Select(installation => $"{installation.name}").ToArray());
 
                     if (installIndex != nextInstallIndex) {
                         Debug.Log($"Changed node install to {nextInstallIndex}");
-                        AirshipNodeVersionService.SetNodeInstall(nodeInstalls[nextInstallIndex]);
+                        AirshipNodeInstallService.SetNodeInstall(nodeInstalls[nextInstallIndex]);
                         TypescriptCompilationService.RestartCompilers();
                     }
 
@@ -369,7 +369,7 @@ namespace Airship.Editor {
                     
                     EditorGUILayout.EndHorizontal();
                     
-                    EditorGUILayout.LabelField("Node Path", currentVersion.nodePath);
+                    if (currentVersion != null) EditorGUILayout.LabelField("Node Path", currentVersion.nodePath);
                 }
                 
                 GUILayout.Space(5);
