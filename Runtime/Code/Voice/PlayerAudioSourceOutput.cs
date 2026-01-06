@@ -50,7 +50,7 @@ namespace Code.Voice {
         /// Disposes the instance by deleting the GameObject of the component.
         /// </summary>
         public void Dispose() {
-            Debug.unityLogger.Log(LogType.Log, TAG, "Disposing StreamedAudioSource");
+            // Debug.unityLogger.Log(LogType.Log, TAG, "Disposing StreamedAudioSource");
             Destroy(gameObject);
         }
 

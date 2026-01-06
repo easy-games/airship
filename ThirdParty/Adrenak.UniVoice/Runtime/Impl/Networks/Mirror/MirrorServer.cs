@@ -76,6 +76,12 @@ namespace Adrenak.UniVoice.Networks {
             OnServerConnected(conn.connectionId);
         }
 
+        public static void Log(string message) {
+#if AIRSHIP_PLAYER
+            Debug.Log($"[{TAG}] " + message);
+#endif
+        }
+
         void OnModeChanged(NetworkManagerMode oldMode, NetworkManagerMode newMode) {
             // For some reason, handlers don't always work as expected when the connection mode changes
             NetworkServer.ReplaceHandler<MirrorMessage>(OnReceivedMessage, true);
@@ -232,7 +238,7 @@ namespace Adrenak.UniVoice.Networks {
                     string log = $"Initializing new client with ID {connId}";
                     if (otherPeerIDs.Length > 0)
                         log += $" and peer list {string.Join(", ", otherPeerIDs)}";
-                    Debug.unityLogger.Log(LogType.Log, TAG, log);
+                    Log(log);
                 }
                 // To the already existing peers, we let them know a new peer has joined
                 // by sending the new peer ID to them.
@@ -240,28 +246,27 @@ namespace Adrenak.UniVoice.Networks {
                     var newPeerNotifyPacked = new BytesWriter()
                         .WriteString(MirrorMessageTags.PEER_JOINED)
                         .WriteInt(connId);
-                    Debug.unityLogger.Log(
-                        LogType.Log, TAG,
-                        $"Notified client {peer} about new client {connId}");
+                    Log( $"Notified client {peer} about new client {connId}");
                     SendToClient(peer, newPeerNotifyPacked.Bytes, Channels.Reliable);
                 }
             }
         }
+
+
 
         void OnServerDisconnected(int connId) {
             // Not sure if this needs to be done, but being extra cautious here
             NetworkServer.ReplaceHandler<MirrorMessage>(OnReceivedMessage, true);
 
             ClientIDs.Remove(connId);
-            Debug.unityLogger.Log(LogType.Log, TAG, $"Client {connId} disconnected");
+            Log($"Client {connId} disconnected");
 
             // Notify all remaining peers that a peer has left 
             foreach (var peerId in ClientIDs) {
                 var packet = new BytesWriter()
                     .WriteString(MirrorMessageTags.PEER_LEFT)
                     .WriteInt(connId);
-                Debug.unityLogger.Log(LogType.Log, TAG,
-                    $"Notified client {peerId} about {connId} leaving");
+                Log($"Notified client {peerId} about {connId} leaving");
                 SendToClient(peerId, packet.Bytes, Channels.Reliable);
             }
         }

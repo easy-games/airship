@@ -17,6 +17,7 @@ namespace Code {
 #if UNITY_IOS
             "PushNotifications",
 #endif
+            "VideoPlayer",
         };
 
         public static bool HasFlag(string flag) {
