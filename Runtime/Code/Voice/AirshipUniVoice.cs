@@ -67,7 +67,7 @@ namespace Code.Voice {
             
             var createdAudioServer = SetupAudioServer();
             if (!createdAudioServer) {
-                Debug.unityLogger.Log(LogType.Error, TAG, "Could not setup UniVoice server.");
+                Debug.LogError("Could not setup UniVoice server.");
                 return;
             }
             HasSetUpServer = true;
@@ -78,7 +78,7 @@ namespace Code.Voice {
             
             var setupAudioClient = SetupClientSession();
             if (!setupAudioClient) {
-                Debug.unityLogger.Log(LogType.Error, TAG, "Could not setup UniVoice client.");
+                Log("Could not setup UniVoice client.");
                 return;
             }
             HasSetUpClient = true;
@@ -90,14 +90,14 @@ namespace Code.Voice {
             // or automatically handling all incoming messages. On a device connecting as a client,
             // this code doesn't do anything.
             AudioServer = new MirrorServer();
-            Debug.unityLogger.Log(LogType.Log, TAG, "Created MirrorServer object");
+            Log("Created MirrorServer object");
 
             AudioServer.OnServerStart += () => {
-                Debug.unityLogger.Log(LogType.Log, TAG, "Server started");
+                Log("Server started");
             };
             
             AudioServer.OnServerStop += () => {
-                Debug.unityLogger.Log(LogType.Log, TAG, "Server stopped");
+                Log("Server stopped");
             };
             return true;
         }
@@ -113,41 +113,41 @@ namespace Code.Voice {
             };
             
             client.OnJoined += (id, peerIds) => {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"You are Peer ID {id}");
+                Log($"You are Peer ID {id}");
             };
 
             client.OnLeft += () => {
-                Debug.unityLogger.Log(LogType.Log, TAG, "You left the chatroom");
+                Log("You left the chatroom");
             };
 
             // When a peer joins, we instantiate a new peer view 
             client.OnPeerJoined += id => {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"Peer {id} joined");
+                Log($"Peer {id} joined");
             };
 
             // When a peer leaves, destroy the UI representing them
             client.OnPeerLeft += id => {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"Peer {id} left");
+                Log($"Peer {id} left");
             };
 
-            Debug.unityLogger.Log(LogType.Log, TAG, "Created MirrorClient object");
+            Log("Created MirrorClient object");
 
             // ---- CREATE AUDIO OUTPUT FACTORY ----
             IAudioOutputFactory<int> outputFactory;
             // We want the incoming audio from peers to be played via the StreamedAudioSourceOutput
             // implementation of IAudioSource interface. So we get the factory for it.
             outputFactory = new PlayerAudioSourceOutput.Factory();
-            Debug.unityLogger.Log(LogType.Log, TAG, "Using StreamedAudioSourceOutput.Factory as output factory");
+            Log("Using StreamedAudioSourceOutput.Factory as output factory");
 
             // ---- CREATE CLIENT SESSION AND ADD FILTERS TO IT ----
             // With the client, input and output factory ready, we create create the client session
             ClientSession = new ClientSession<int>(client, null, outputFactory);
-            Debug.unityLogger.Log(LogType.Log, TAG, "Created session");
+            Log("Created session");
 
             if(useRNNoise4UnityIfAvailable) {
                 // RNNoiseFilter to remove noise from captured audio
                 ClientSession.InputFilters.Add(new RNNoiseFilter());
-                Debug.unityLogger.Log(LogType.Log, TAG, "Registered RNNoiseFilter as an input filter");
+                Log("Registered RNNoiseFilter as an input filter");
             }
 
             if (useVad) {
@@ -164,14 +164,20 @@ namespace Code.Voice {
             if (useConcentusEncodeAndDecode) {
                 // ConcentureEncoder filter to encode captured audio that reduces the audio frame size
                 ClientSession.InputFilters.Add(new ConcentusEncodeFilter());
-                Debug.unityLogger.Log(LogType.Log, TAG, "Registered ConcentusEncodeFilter as an input filter");
+                Log("Registered ConcentusEncodeFilter as an input filter");
 
                 // For incoming audio register the ConcentusDecodeFilter to decode the encoded audio received from other clients 
                 ClientSession.AddOutputFilter<ConcentusDecodeFilter>(() => new ConcentusDecodeFilter());
-                Debug.unityLogger.Log(LogType.Log, TAG, "Registered ConcentusDecodeFilter as an output filter");
+                Log("Registered ConcentusDecodeFilter as an output filter");
             }
 
             return true;
+        }
+
+        public static void Log(string message) {
+#if AIRSHIP_PLAYER
+            Debug.Log("[AirshipUniVoice] " + message);
+#endif
         }
 
         public static void StartRecording(Mic.Device mic) {
@@ -180,10 +186,10 @@ namespace Code.Voice {
             Mic.Init(); // Must do this to use the Mic class
             
             mic.StartRecording();
-            Debug.unityLogger.Log(LogType.Log, TAG, "Started recording with Mic device named." +
+            Log("Started recording with Mic device named." +
                                                     mic.Name + $" at frequency {mic.SamplingFrequency} with frame duration {mic.FrameDurationMS} ms.");
             ClientSession.Input = new UniMicInput(mic);
-            Debug.unityLogger.Log(LogType.Log, TAG, "Created UniMicInput");
+            Log("Created UniMicInput");
         }
 
         /// <summary>
