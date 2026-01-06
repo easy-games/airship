@@ -6,7 +6,7 @@ namespace VoxelWorldStuff {
 
     public partial class MeshProcessor {
         private static bool NeedsCapSurface(VoxelData data, VoxelBlocks.BlockDefinition block) {
-            if (VoxelWorld.GetVoxelDataIsSolid(data)) {
+            if (VoxelWorld.IsVoxelDataIsSolid(data)) {
                 return false;
             }
             return true;
@@ -22,7 +22,7 @@ namespace VoxelWorldStuff {
             int blockId = VoxelWorld.GetVoxelDataId(data);
             if (blockId == 0) return true;
 
-            if (VoxelWorld.GetVoxelDataIsSolid(data)) {
+            if (VoxelWorld.IsVoxelDataIsSolid(data)) {
                 return false;
             }
             else {

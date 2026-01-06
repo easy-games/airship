@@ -236,7 +236,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (currentChunk != null) {
             VoxelData vox = currentChunk.GetLocalVoxelDataAt(localx, localy, localz);
 
-            if (GetVoxelDataIsSolid(vox)) {
+            if (IsVoxelDataIsSolid(vox)) {
                 //Continue!
                 return 2;
             }
@@ -346,7 +346,7 @@ public partial class VoxelWorld : MonoBehaviour {
                 VoxelData vox = currentChunk.GetLocalVoxelDataAt(localx, localy, localz);
 
 
-                if (GetVoxelDataIsSolid(vox)) {
+                if (IsVoxelDataIsSolid(vox)) {
                     //calculate the impact point
                     //Vector3 finalPos = (chunkKey * chunkSize) + new Vector3(localx, localy, localz) + posInsideVoxel;
 

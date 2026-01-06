@@ -226,7 +226,7 @@ public partial class VoxelWorld : MonoBehaviour {
     /// <param name="voxelData"></param>
     /// <returns>true if it takes up space</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool GetVoxelDataIsSolid(ushort voxelData) {
+    public static bool IsVoxelDataIsSolid(ushort voxelData) {
         return (voxelData & 0x8000) != 0; //15th bit 
     }
 

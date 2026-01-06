@@ -166,7 +166,7 @@ namespace VoxelWorldStuff {
             return chunkKey;
         }
 
-        public bool GetPriorityUpdate() {
+        public bool IsPriorityUpdate() {
             return geometryDirtyPriorityUpdate;
         }
 
@@ -193,7 +193,7 @@ namespace VoxelWorldStuff {
                 for (var y = -1; y <= 1; y++) {
                     for (var z = -1; z <= 1; z++) {
                         var pos = checkPos + new Vector3Int(x, y, z);
-                        if (VoxelWorld.GetVoxelDataIsSolid(world.ReadVoxelAtInternal(pos)) == false) {
+                        if (VoxelWorld.IsVoxelDataIsSolid(world.ReadVoxelAtInternal(pos)) == false) {
                             count++;
                         }
                     }
