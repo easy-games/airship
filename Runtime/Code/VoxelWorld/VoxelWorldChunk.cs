@@ -6,6 +6,7 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Assets.Luau;
 using Mirror;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
@@ -62,6 +63,13 @@ namespace VoxelWorldStuff {
         /// nearest neighboring voxel colors. Format is 1 byte for r,g,b,a.
         /// </summary>
         public uint[] color = new uint[chunkSize * chunkSize * chunkSize];
+        
+        //Permanent data
+        /// <summary>
+        /// Binary blob of data that TS can fill with custom interfaces
+        /// Key points to voxel index in readWriteVoxel, data is custom data for that voxel
+        /// </summary>
+        public Dictionary<ushort, BinaryBlob> customDataMap = new();
 
         /// <summary>
         /// Voxel damage, a float stored to represent a damaged state (or any other
@@ -456,7 +464,7 @@ namespace VoxelWorldStuff {
         }
 
         /// <summary>
-        /// Write voxel byets to a specific position
+        /// Write voxel bytes to a specific position
         /// Assumes you've already identified if this the right chunk
         /// </summary>
         /// <param name="worldPos"></param>
@@ -472,6 +480,31 @@ namespace VoxelWorldStuff {
             readWriteVoxel[key] = voxelData;
             keysWithVoxels.Add(key);
         }
+
+        /// <summary>
+        /// Write custom data to a voxel id
+        /// </summary>
+        public void WriteCustomDataAt(Vector3Int worldPos, BinaryBlob data) {
+            var key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return;
+            }
+
+            customDataMap[(ushort)key] = data;
+        }
+
+        public BinaryBlob GetCustomDataAt(Vector3Int worldPos) {
+            var key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return null;
+            }
+
+            return customDataMap[(ushort)key];
+        }
+
+
 
         /// <summary>
         /// Writes a simple change to the chunk's collision. This change will be
@@ -535,7 +568,7 @@ namespace VoxelWorldStuff {
 
             var keysWithVoxels = GetKeysWithVoxels();
             if (keysWithVoxels.Count == 0) {
-                throw new InvalidOperationException("GetRandomVoxel");
+                throw new InvalidOperationException("GetRandomOccupiedVoxelPosition");
             }
 
             var possibilities = new List<int>(keysWithVoxels);
@@ -549,7 +582,6 @@ namespace VoxelWorldStuff {
 
             return readWriteVoxel[key];
         }
-
         public Color32 GetVoxelColorAt(Vector3Int worldPos) {
             var key = WorldPosToVoxelIndex(worldPos);
             var col = color[key];
@@ -580,6 +612,16 @@ namespace VoxelWorldStuff {
             }
 
             damageMap[(ushort)key] = dmg;
+        }
+
+        public float GetVoxelDamage(Vector3Int worldPos) {
+            var key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize || !damageMap.ContainsKey((ushort)key)) {
+                return -1f;
+            }
+
+            return damageMap[(ushort)key];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

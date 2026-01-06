@@ -191,12 +191,23 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     public bool hasUnsavedChanges = false;
 
-    //Methods
+    // Methods
+    /// <summary>
+    /// Get the block id of the voxel. Used to index from BlockDefinition
+    /// </summary>
+    /// <param name="voxelData"></param>
+    /// <returns>Unsigned short that represents the index in the voxel worlds block definitions</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort GetVoxelDataId(int voxelData) {
         return (ushort)(voxelData & 0xFFF); //Lower 12 bits
     }
 
+    // Methods
+    /// <summary>
+    /// Get the block id of the voxel. Used to index from BlockDefinition
+    /// </summary>
+    /// <param name="voxelData"></param>
+    /// <returns>Unsigned short that represents the index in the voxel worlds block definitions</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort GetVoxelDataId(ushort voxelData) {
         return (ushort)(voxelData & 0xFFF); //Lower 12 bits
@@ -208,6 +219,12 @@ public partial class VoxelWorld : MonoBehaviour {
         return (ushort)(voxelData & 0xF000);
     }
 
+    // Methods
+    /// <summary>
+    /// Check if this voxel is a solid voxel
+    /// </summary>
+    /// <param name="voxelData"></param>
+    /// <returns>true if it takes up space</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool GetVoxelDataIsSolid(ushort voxelData) {
         return (voxelData & 0x8000) != 0; //15th bit 
@@ -585,7 +602,10 @@ public partial class VoxelWorld : MonoBehaviour {
     /// <summary>
     /// Returns a random occupied voxel position in the world.
     /// </summary>
-    public Vector3 GetRandomVoxelInWorld() {
+    public Vector3 GetRandomOccupiedVoxelPosition() {
+        if (chunks.Count == 0) {
+            throw new InvalidOperationException("GetRandomOccupiedVoxelPosition");
+        }
         var rand = new System.Random();
         var randomChunk = chunks.ElementAt(rand.Next(0, chunks.Count)).Value;
         return randomChunk.GetRandomOccupiedVoxelPosition();
@@ -674,16 +694,35 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public ushort GetVoxelAt(Vector3 pos) {
-        var posi = FloorInt(pos);
-        var chunkKey = WorldPosToChunkKey(posi);
+        var posI = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posI);
         chunks.TryGetValue(chunkKey, out var value);
         if (value == null) {
             return 0;
         }
 
-        return value.GetVoxelDataAt(posi);
+        return value.GetVoxelDataAt(posI);
     }
 
+    public int GetVoxelIdAt(Vector3 pos) {
+        var posI = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posI);
+        if (!chunks.TryGetValue(chunkKey, out var value)) {
+            return -1;
+        }
+
+        return GetVoxelDataId(value.GetVoxelDataAt(posI));
+    }
+
+    public VoxelBlocks.BlockDefinition GetVoxelBlockType(Vector3 pos) {
+        var index = GetVoxelIdAt(pos);
+        if (index >= 0) {
+            return voxelBlocks.GetBlock((ushort)index);
+        }
+
+        return null;
+    }
+    
     public Color32 GetVoxelColorAt(Vector3 pos) {
         var posi = FloorInt(pos);
         var chunkKey = WorldPosToChunkKey(posi);
