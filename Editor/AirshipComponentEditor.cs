@@ -139,12 +139,16 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 componentEditor.OnInspectorGUI();
             }
             
-            serializedObject.ApplyModifiedProperties();
+            if (GUI.changed) {
+                if (Application.isPlaying) {
+                    var component = (AirshipComponent)target;
+                    component.WriteChangedComponentProperties();
+                
+                }
             
-            if (Application.isPlaying) {
-                var component = (AirshipComponent)target;
-                component.WriteChangedComponentProperties();
+                serializedObject.ApplyModifiedProperties();
             }
+            
             return true;
         }
 
