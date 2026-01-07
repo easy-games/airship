@@ -1,6 +1,7 @@
 #if UNITY_EDITOR_OSX
 using System.Collections.Generic;
 using System.IO;
+using UnityEngine;
 
 namespace Airship.Editor
 {
@@ -32,6 +33,7 @@ namespace Airship.Editor
             foreach (var path in paths) {
                 var nodePath = Path.Join(path, "node");
                 var npmPath = Path.Join(path, "npm");
+                
                 if (File.Exists(nodePath) && File.Exists(npmPath)) {
                     installs.Add(new AirshipOsxNodeInstall() {
                         binPath = path,
@@ -39,6 +41,8 @@ namespace Airship.Editor
                     });
                 }
             }
+
+            Installs = installs.ToArray();
         }
     }
 }

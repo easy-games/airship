@@ -46,7 +46,7 @@ namespace Airship.Editor {
                     distribution = nodeVersion;
                 }
 
-                return distribution?.Installs?[0];
+                return distribution is { Installs: { Length: > 0 } } ? distribution.Installs[0] : null;
             }
         }
 
@@ -60,8 +60,11 @@ namespace Airship.Editor {
 #endif
                 new AirshipNvmNodeDistribution(),
             };
-          
-            _nodeVersions.AddRange(versions);
+
+            foreach (var version in versions) {
+                if (version.Installs == null || version.Installs.Length == 0) continue;
+                _nodeVersions.Add(version);
+            }
         }
 
         public static bool FindNodeInstallByPath(string nodePath, out IAirshipNodeVersion install) {
