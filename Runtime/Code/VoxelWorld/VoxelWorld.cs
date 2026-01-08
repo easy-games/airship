@@ -11,6 +11,7 @@ using BlockId = System.UInt16;
 using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Assets.Luau;
 using Code.Zstd;
 using Luau;
 
@@ -433,7 +434,34 @@ public partial class VoxelWorld : MonoBehaviour {
         chunk.WriteTemporaryCollision(pos, addCollision);
     }
 
-    public void ColorVoxelAt(Vector3 pos, Color color, bool priority) {
+    /// <summary>
+    /// Assign custom data to a voxel
+    /// </summary>
+    /// <param name="pos">World Position</param>
+    /// <param name="data"></param>
+    /// <param name="priority"></param>
+    public void WriteVoxelCustomDataAt(Vector3 pos, BinaryBlob data, bool priority) {
+        var chunkKey = WorldPosToChunkKey(pos);
+        chunks.TryGetValue(chunkKey, out var chunk);
+        if (chunk == null) {
+            return;
+        }
+
+        var voxelPos = FloorInt(pos);
+        if (chunk.GetVoxelDataAt(voxelPos) == 0) {
+            return;
+        }
+
+        chunk.WriteCustomDataAt(voxelPos, data);
+    }
+
+    /// <summary>
+    /// Assign a color to a voxel
+    /// </summary>
+    /// <param name="pos">World Position</param>
+    /// <param name="color"></param>
+    /// <param name="priority"></param>
+    public void WriteVoxelColorAt(Vector3 pos, Color color, bool priority) {
         var chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out var chunk);
         if (chunk == null) {
@@ -721,6 +749,16 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         return null;
+    }
+    
+    public BinaryBlob GetVoxelCustomDataAt(Vector3 pos) {
+        var posi = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posi);
+        if (!chunks.TryGetValue(chunkKey, out var value)) {
+            return null;
+        }
+
+        return value.GetCustomDataAt(posi);
     }
     
     public Color32 GetVoxelColorAt(Vector3 pos) {

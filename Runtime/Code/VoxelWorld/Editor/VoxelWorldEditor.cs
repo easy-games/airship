@@ -80,7 +80,7 @@ public static class VoxelEditManager {
         }
 
         foreach (var pos in positionSet) {
-            world.ColorVoxelAt(pos, col, false);
+            world.WriteVoxelColorAt(pos, col, false);
         }
 
         return positionSet;
