@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Assets.Luau;
 using Code.Zstd;
 using Luau;
+using UnityEditor.Graphs;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -396,9 +397,9 @@ public partial class VoxelWorld : MonoBehaviour {
         };
     }
 
-    public void WriteVoxelAt(Vector3 pos, double num, bool priority) {
+    public void WriteVoxelAt(Vector3 pos, double voxelData, bool priority = false) {
         var posInt = Vector3Int.FloorToInt(pos);
-        var voxel = (ushort)num;
+        var voxel = (ushort)voxelData;
 
         //Write the single voxel
         var affectedChunk = WriteSingleVoxelAt(posInt, voxel, priority);
@@ -1098,6 +1099,9 @@ public partial class VoxelWorld : MonoBehaviour {
         RegenerateAllMeshes();
     }
 
+    /// <summary>
+    /// Save to disk in the editor. Used when working on the world in editor only. 
+    /// </summary>
     public void SaveToFile() {
 #if UNITY_EDITOR
         if (voxelWorldFile == null) {
@@ -1545,10 +1549,19 @@ public partial class VoxelWorld : MonoBehaviour {
         chunk.SetCollisionDirty(true);
     }
 
+    /// <summary>
+    /// Use this to save voxel world data to a file or server.
+    /// ie. place into a Platform.DataStore object 
+    /// </summary>
+    /// <returns>compressed string of voxel world data</returns>
     public string EncodeToString() {
        return Convert.ToBase64String(Zstd.CompressData(ToBuffer().Data, Zstd.DefaultCompressionLevel));
     }
 
+    /// <summary>
+    /// Load voxel world data from a string that has been compressed using EncodeToString
+    /// </summary>
+    /// <param name="stringData">Encoded data from EncodeToString</param>
     public void DecodeFromString(string stringData) {
         FromBuffer(Zstd.DecompressData(Convert.FromBase64String(stringData)));
     }
