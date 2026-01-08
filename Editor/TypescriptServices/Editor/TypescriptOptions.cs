@@ -332,7 +332,7 @@ namespace Airship.Editor {
                 if (AirshipExternalCodeEditor.CurrentEditorPath != "")
                     EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
                 
-                if (TypescriptCompilationService.ShowDeveloperOptions) {
+                if (TypescriptCompilationService.ShowDeveloperOptions && AirshipNodeInstallService.available.Length > 0) {
                     GUILayout.Space(5);
                     GUILayout.Label("Node Version", EditorStyles.boldLabel);
 
