@@ -193,7 +193,7 @@ namespace VoxelWorldStuff {
                 for (var y = -1; y <= 1; y++) {
                     for (var z = -1; z <= 1; z++) {
                         var pos = checkPos + new Vector3Int(x, y, z);
-                        if (VoxelWorld.IsVoxelDataIsSolid(world.ReadVoxelAtInternal(pos)) == false) {
+                        if (VoxelWorld.IsVoxelDataSolid(world.ReadVoxelAtInternal(pos)) == false) {
                             count++;
                         }
                     }
@@ -700,6 +700,10 @@ namespace VoxelWorldStuff {
                 }
 
                 if (obj == null) {
+                    if (parent == null) {
+                        Debug.Log("MISSING PARENT?");
+                        parent = world.chunksFolder.gameObject;
+                    }
                     obj = newChunk;
                     obj.layer = worldGameObject.layer;
                     obj.transform.parent = parent.transform;

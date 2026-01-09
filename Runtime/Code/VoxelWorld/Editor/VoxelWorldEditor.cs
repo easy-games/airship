@@ -292,7 +292,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Undo.RegisterCreatedObjectUndo(voxelWorldGo, "Create " + voxelWorldGo.name);
         Undo.CollapseUndoOperations(undoId);
 
-        voxelWorld.GenerateWorld(false);
+        voxelWorld.GenerateWorld();
         voxelWorld.CreateSingleStarterVoxel();
 
         Selection.activeObject = voxelWorldGo;

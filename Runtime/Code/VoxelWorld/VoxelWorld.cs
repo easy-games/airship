@@ -228,7 +228,7 @@ public partial class VoxelWorld : MonoBehaviour {
     /// <param name="voxelData"></param>
     /// <returns>true if it takes up space</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsVoxelDataIsSolid(ushort voxelData) {
+    public static bool IsVoxelDataSolid(ushort voxelData) {
         return (voxelData & 0x8000) != 0; //15th bit 
     }
 
@@ -897,7 +897,7 @@ public partial class VoxelWorld : MonoBehaviour {
         chunksFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
     }
 
-    public void GenerateWorld(bool populateTerrain = false) {
+    public void GenerateWorld() {
         PrepareVoxelWorldGameObject();
 
         if (!voxelBlocks) {
@@ -1603,8 +1603,11 @@ public partial class VoxelWorld : MonoBehaviour {
         var chunksCompressed = reader.ReadBytes(chunksCompressedLen);
         saveFile.chunksCompressed = chunksCompressed;
         saveFile.chunksCompressedV2 = true;
-
+        
+        //Clear and prepare the world for new chunks and meshes 
+        PrepareVoxelWorldGameObject();
         saveFile.LoadIntoVoxelWorld(this);
+        GenerateWorld();
     }
 
     public static VoxelWorld GetFirstInstance() {

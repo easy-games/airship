@@ -268,6 +268,7 @@ public class WorldSaveFile : ScriptableObject {
             if (!foundVoxel) continue;
 
             
+            Debug.Log("Valid Chunk: " + chunk.Value.chunkKey);
             var chunkData = new SaveChunk(chunk.Key, data, chunk.Value.color, chunk.Value.customDataMap);
             savedChunks.Add(chunkData);
             finalChunkCounter++;
@@ -283,7 +284,9 @@ public class WorldSaveFile : ScriptableObject {
         
         // Serialize chunks:
         writer.Write((uint)savedChunks.Count);
+        Debug.Log("Writing chunk size: " + savedChunks.Count);
         foreach (var chunk in savedChunks) {
+            Debug.Log("Serializing chunk: " + chunk.key);
             chunk.Serialize(writer, version);
         }
         
@@ -397,7 +400,9 @@ public class WorldSaveFile : ScriptableObject {
             var data = new List<VoxelData>();
             var color = new List<uint>();
             var customData = new Dictionary<ushort, BinaryBlob>();
+            Debug.Log("Number of chunks: " + numChunks);
             for (uint i = 0; i < numChunks; i++) {
+                Debug.Log("Load chunk: " + i);
                 data.Clear();
                 color.Clear();
                 
@@ -408,12 +413,17 @@ public class WorldSaveFile : ScriptableObject {
                 counter += 1;
                 
                 Profiler.BeginSample("LoadChunkIntoVoxelWorld");
-                LoadChunkIntoVoxelWorld(world, blockRemapping, key, data, color, customData);
+                try {
+                    LoadChunkIntoVoxelWorld(world, blockRemapping, key, data, color, customData);
+                } catch (Exception e) {
+                    Debug.LogError("Unable to load chunk: " + i + " error: " + e.Message);
+                }
                 Profiler.EndSample();
             }
             
             Profiler.EndSample();
         } else {
+            Debug.Log("Loading non compressed chunk");
             // Old, non-compressed data version:
             foreach (var chunk in chunks) {
                 counter += 1;
