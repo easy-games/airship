@@ -5,7 +5,9 @@
         "GUID:f87ecb857e752164ab814a3de8eb0262"
     ],
     "includePlatforms": [],
-    "excludePlatforms": [],
+    "excludePlatforms": [
+        "Android"
+    ],
     "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
