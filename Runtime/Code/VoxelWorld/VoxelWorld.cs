@@ -743,7 +743,7 @@ public partial class VoxelWorld : MonoBehaviour {
         return GetVoxelDataId(value.GetVoxelDataAt(posI));
     }
 
-    public VoxelBlocks.BlockDefinition GetVoxelBlockType(Vector3 pos) {
+    public VoxelBlocks.BlockDefinition GetVoxelBlockTypeAt(Vector3 pos) {
         var index = GetVoxelIdAt(pos);
         if (index >= 0) {
             return voxelBlocks.GetBlock((ushort)index);
