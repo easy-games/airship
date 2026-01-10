@@ -146,6 +146,9 @@ namespace Airship.Editor {
                 "/usr/local/bin/code-insiders",
                 "/Applications/Visual Studio Code Insiders.app/Contents/MacOS/Electron"
             };
+#elif UNITY_EDITOR_LINUX
+            visualStudioCodePaths = new[] { "/usr/bin/code" };
+            vscodeInsidersPaths = new string[] { };
 #else
             visualStudioCodePaths = new string[] { };
             vscodeInsidersPaths = new string[] { };
@@ -153,7 +156,11 @@ namespace Airship.Editor {
             foreach (var possiblePath in visualStudioCodePaths) {
                 if (!File.Exists(possiblePath)) continue;
                 installations.Add(new CodeEditor.Installation() {
+#if !UNITY_EDITOR_LINUX
                     Name = "Visual Studio Code",
+#else
+                    Name = $"Visual Studio Code - {possiblePath.Replace("/", "\u2215")}",
+#endif
                     Path = possiblePath
                 });
                 break;

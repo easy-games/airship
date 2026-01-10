@@ -144,11 +144,13 @@ namespace Code.Voice {
             ClientSession = new ClientSession<int>(client, null, outputFactory);
             Log("Created session");
 
+#if !UNITY_ANDROID
             if(useRNNoise4UnityIfAvailable) {
                 // RNNoiseFilter to remove noise from captured audio
                 ClientSession.InputFilters.Add(new RNNoiseFilter());
                 Log("Registered RNNoiseFilter as an input filter");
             }
+#endif
 
             if (useVad) {
                 // We add the VAD filter after RNNoise. 

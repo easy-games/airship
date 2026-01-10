@@ -73,9 +73,10 @@ namespace Airship.Editor {
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
                 processId = compilerProcess.Id;
             }
-            catch (Win32Exception _) {
+            catch (Win32Exception ex) {
                 EditorUtility.DisplayDialog("Failed to initialize TypeScript",
                     "Ensure you have the latest LTS node.js installed, then restart the editor and Unity Hub", "Ok");
+                Debug.LogException(ex);
             }
             
             TypescriptCompilationServicesState.instance.RegisterWatchCompiler(this);

@@ -507,9 +507,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
-#if AIRSHIP_STAGING
-		Debug.Log($"Added shared lua file {br.m_path}");
-#endif
 	}
 
 	public static string GetLoadedAssetBundleKey(AirshipPackage package, string assetBundleFile) {
