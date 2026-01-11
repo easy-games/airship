@@ -12,12 +12,11 @@ using Debug = UnityEngine.Debug;
 
 [CustomEditor(typeof(AccessoryComponent))]
 public class AccessoryComponentEditor : UnityEditor.Editor {
-
     private bool foldout = false; // Variable to handle foldout state
 
     private void OnEnable() {
         var accessoryComponent = (AccessoryComponent)target;
-        this.foldout = accessoryComponent.bodyMask > 0;
+        foldout = accessoryComponent.bodyMask > 0;
     }
 
     public static void GenerateLODs(AccessoryComponent target) {
@@ -27,23 +26,27 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             Debug.LogError("Generate LODs only works with one MeshFilter.");
             return;
         }
+
         if (target.GetComponentsInChildren<MeshRenderer>().Length > 1) {
             Debug.LogError("Generate LODs only works with one MeshRenderer.");
             return;
         }
 
-        SkinnedMeshRenderer skinnedMeshRenderer = target.GetComponentInChildren<SkinnedMeshRenderer>();
+        var skinnedMeshRenderer = target.GetComponentInChildren<SkinnedMeshRenderer>();
         if (skinnedMeshRenderer) {
             sourceMesh = skinnedMeshRenderer.sharedMesh;
         }
+
         if (sourceMesh == null) {
-            MeshFilter meshFilter = target.GetComponentInChildren<MeshFilter>();
+            var meshFilter = target.GetComponentInChildren<MeshFilter>();
             if (meshFilter) {
                 sourceMesh = meshFilter.sharedMesh;
             }
         }
+
         if (sourceMesh == null) {
-            Debug.LogError("Must have a MeshFilter or SkinnedMeshRenderer attached with mesh assigned to generate LODs.");
+            Debug.LogError(
+                "Must have a MeshFilter or SkinnedMeshRenderer attached with mesh assigned to generate LODs.");
             return;
         }
 
@@ -52,6 +55,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             var path = AssetDatabase.GetAssetPath(mesh);
             AssetDatabase.DeleteAsset(path);
         }
+
         target.meshLods.Clear();
 
         void MakeLOD(int lodLevel, float quality) {
@@ -75,12 +79,14 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
                 var path = $"{selfPath}/LOD/{sourceMesh.name} (LOD {lodLevel})";
                 Debug.Log("path: " + path);
                 if (AssetDatabase.AssetPathExists(path + ".asset")) {
-                    int i = 1;
+                    var i = 1;
                     while (AssetDatabase.AssetPathExists(path + $" ({i}).asset")) {
                         i++;
                     }
+
                     path += $" ({i})";
                 }
+
                 AssetDatabase.CreateAsset(mesh, path + ".asset");
                 target.meshLods.Add(mesh);
             } else {
@@ -104,12 +110,14 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
                 }
 
                 if (AssetDatabase.AssetPathExists(path + ".asset")) {
-                    int i = 1;
+                    var i = 1;
                     while (AssetDatabase.AssetPathExists(path + $" ({i}).asset")) {
                         i++;
                     }
+
                     path += $" ({i})";
                 }
+
                 AssetDatabase.CreateAsset(mesh, path + ".asset");
                 target.meshLods.Add(mesh);
             }
@@ -122,18 +130,18 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             var renderer = target.GetComponentInChildren<Renderer>();
 
             // setup LOD group
-            LODGroup lodGroup = renderer.gameObject.GetComponent<LODGroup>();
+            var lodGroup = renderer.gameObject.GetComponent<LODGroup>();
             if (lodGroup == null) {
                 lodGroup = renderer.gameObject.AddComponent<LODGroup>();
 
-                float[] screenSizes = new[] { 0.20f, 0.05f, 0.0029f };
+                var screenSizes = new[] { 0.20f, 0.05f, 0.0029f };
                 var newLods = new List<LOD>();
-                GameObject lod0 = new GameObject($"LOD 0") {
+                var lod0 = new GameObject($"LOD 0") {
                     transform = {
                         parent = renderer.transform,
                         localPosition = Vector3.zero,
                         localRotation = Quaternion.identity,
-                        localScale = Vector3.one,
+                        localScale = Vector3.one
                     }
                 };
                 {
@@ -151,22 +159,23 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
                             newMatColor.CopyFrom(matColor);
                             DestroyImmediate(matColor);
                         }
+
                         DestroyImmediate(renderer);
                         DestroyImmediate(meshFilter);
 
-                        LOD lod = new LOD(screenSizes[0], new Renderer[]{ newRenderer });
+                        var lod = new LOD(screenSizes[0], new Renderer[] { newRenderer });
                         newLods.Add(lod);
                     }
                 }
 
-                for (int i = 1; i <= 2; i++) {
+                for (var i = 1; i <= 2; i++) {
                     var newGO = Instantiate(lod0, lod0.transform.parent);
                     newGO.name = $"LOD {i}";
 
                     var meshFilter = newGO.GetComponentInChildren<MeshFilter>();
                     meshFilter.sharedMesh = target.meshLods[i - 1];
 
-                    LOD lod = new LOD(screenSizes[i], newGO.GetComponentsInChildren<Renderer>());
+                    var lod = new LOD(screenSizes[i], newGO.GetComponentsInChildren<Renderer>());
                     newLods.Add(lod);
                 }
 
@@ -187,14 +196,15 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
     }
 
     public override void OnInspectorGUI() {
-        AccessoryComponent myTarget = (AccessoryComponent)target;
+        var myTarget = (AccessoryComponent)target;
         var serializedObject = new SerializedObject(target);
 
         //Accessory Slot
         myTarget.accessorySlot = (AccessorySlot)EditorGUILayout.EnumPopup("Slot", myTarget.accessorySlot);
 
         //Visibility Mode
-        myTarget.visibilityMode = (AccessoryComponent.VisibilityMode)EditorGUILayout.EnumPopup("Visibility", myTarget.visibilityMode);
+        myTarget.visibilityMode
+            = (AccessoryComponent.VisibilityMode)EditorGUILayout.EnumPopup("Visibility", myTarget.visibilityMode);
 
         //Skinned To Character
         myTarget.skinnedToCharacter = EditorGUILayout.Toggle("Skinned", myTarget.skinnedToCharacter);
@@ -203,11 +213,11 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             EditorGUILayout.Space(10);
             EditorGUI.indentLevel++;
 
-            GUIStyle buttonStyle = new GUIStyle(EditorStyles.miniButton);
+            var buttonStyle = new GUIStyle(EditorStyles.miniButton);
             buttonStyle.margin = new RectOffset(EditorGUI.indentLevel * 15, 0, 0, 0);
             if (GUILayout.Button("Generate LODs", buttonStyle)) {
                 GenerateLODs(myTarget);
-                this.SaveChanges();
+                SaveChanges();
             }
 
             var property = serializedObject.FindProperty("meshLods");
@@ -225,6 +235,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             GUILayout.Label("Accessory Editor disabled in clone window.");
             return;
         }
+
         if (GUILayout.Button("Open Accessory Editor")) {
             var accessory = targets?.First((obj) => obj is AccessoryComponent) as AccessoryComponent;
             if (accessory != null) {
@@ -232,14 +243,26 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             }
         }
 
+        // Customization
+        var colorProp = serializedObject.FindProperty("colorSetter");
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(colorProp, false);
+        serializedObject.ApplyModifiedProperties();
+
+        var variantProp = serializedObject.FindProperty("variantSetter");
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(variantProp, false);
+        serializedObject.ApplyModifiedProperties();
+        EditorGUILayout.Space(10);
+
         // Start a foldout
         EditorGUILayout.Space();
-        this.foldout = EditorGUILayout.Foldout(this.foldout, "Hide Body Parts");
-        if (this.foldout) {
+        foldout = EditorGUILayout.Foldout(foldout, "Hide Body Parts");
+        if (foldout) {
             EditorGUI.indentLevel++;
 
             // Show bools for all the hide bits
-            int hideBits = myTarget.bodyMask;
+            var hideBits = myTarget.bodyMask;
 
             // Display them based on the sort order in BodyMaskInspectorData
             foreach (var maskData in AccessoryComponent.BodyMaskInspectorDatas) {
@@ -247,13 +270,12 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
                     continue;
                 }
 
-                bool isHidden = (hideBits & (int)maskData.bodyMask) != 0;
-                bool newIsHidden = EditorGUILayout.Toggle(maskData.name, isHidden);
+                var isHidden = (hideBits & (int)maskData.bodyMask) != 0;
+                var newIsHidden = EditorGUILayout.Toggle(maskData.name, isHidden);
                 if (newIsHidden != isHidden) {
                     if (newIsHidden) {
                         hideBits |= (int)maskData.bodyMask;
-                    }
-                    else {
+                    } else {
                         hideBits &= ~(int)maskData.bodyMask;
                     }
                 }
@@ -274,7 +296,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         myTarget.serverClassIdStaging = EditorGUILayout.TextField("Class Id (Staging)", myTarget.serverClassIdStaging);
 #endif
 
-        if (GUI.changed){
+        if (GUI.changed) {
             EditorUtility.SetDirty(myTarget);
         }
     }
@@ -284,7 +306,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         AccessoryEditorWindow.OpenOrCreateWindow();
     }
 
-    #if AIRSHIP_INTERNAL
+#if AIRSHIP_INTERNAL
     [MenuItem("Airship/Internal/Generate Skinned Accessory LODs")]
     public static void GenerateLODsForAllAccessories() {
         var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(
@@ -293,13 +315,17 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
 
         Debug.Log($"Generating LODs...");
         var st = Stopwatch.StartNew();
-        int counter = 0;
+        var counter = 0;
         foreach (var accessory in collection.accessories) {
-            if (!accessory.skinnedToCharacter) continue;
+            if (!accessory.skinnedToCharacter) {
+                continue;
+            }
+
             GenerateLODs(accessory);
             counter++;
         }
+
         Debug.Log($"<color=green>Finished generating {counter} LODs in {st.ElapsedMilliseconds} ms!</color>");
     }
-    #endif
+#endif
 }

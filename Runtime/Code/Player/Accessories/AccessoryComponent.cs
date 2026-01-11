@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Code.Accessories.Clothing;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -24,6 +25,7 @@ namespace Code.Player.Accessories {
             EARS = 1 << 4,
             UNUSED1 = 1 << 5,
             UNUSED2 = 1 << 6,
+
             //Row 1
             L_ARM_LOWER = 1 << 7,
             L_HAND = 1 << 8,
@@ -33,6 +35,7 @@ namespace Code.Player.Accessories {
             L_ARM_JOINTS = 1 << 12,
             UNUSED5 = 1 << 13,
             UNUSED6 = 1 << 14,
+
             //Row 2
             L_LEG_UPPER = 1 << 15,
             HIPS = 1 << 16,
@@ -42,6 +45,7 @@ namespace Code.Player.Accessories {
             L_LEG_JOINTS = 1 << 20,
             UNUSED9 = 1 << 21,
             UNUSED10 = 1 << 22,
+
             //Row 3
             L_LEG_LOWER = 1 << 23,
             L_FOOT = 1 << 24,
@@ -50,19 +54,20 @@ namespace Code.Player.Accessories {
             UNUSED11 = 1 << 27,
             UNUSED12 = 1 << 28,
             UNUSED13 = 1 << 29,
-            UNUSED14 = 1 << 30,
+            UNUSED14 = 1 << 30
         }
 
-        void Start() {
+
+        private void Start() {
             if (RunCore.IsClient() || Application.isEditor) {
-                var renderers = this.gameObject.GetComponentsInChildren<MeshRenderer>();
+                var renderers = gameObject.GetComponentsInChildren<MeshRenderer>();
                 foreach (var r in renderers) {
                     if (!r.sharedMaterial.shader.isSupported) {
                         r.sharedMaterial.shader = Shader.Find("Universal Render Pipeline/Lit");
                     }
                 }
             }
-            
+
             // foreach (var r in renderers) {
             //     foreach (var mat in r.sharedMaterials) {
             //         if (!mat.shader.isSupported) {
@@ -75,7 +80,7 @@ namespace Code.Player.Accessories {
         public struct BodyMaskInspectorData {
             public BodyMaskInspectorData(BodyMask mask, string name) {
                 this.name = name;
-                this.bodyMask = mask;
+                bodyMask = mask;
             }
 
             public string name;
@@ -104,19 +109,20 @@ namespace Code.Player.Accessories {
             new(BodyMask.R_LEG_UPPER, "Right Leg Upper"),
             new(BodyMask.R_LEG_JOINTS, "Right Leg Joints"),
             new(BodyMask.R_LEG_LOWER, "Right Leg Lower"),
-            new(BodyMask.R_FOOT, "Right Foot"),
+            new(BodyMask.R_FOOT, "Right Foot")
         };
 
         public static string GetBodyMaskName(int bit) {
-
             if (bit == 0) {
                 return "NONE";
             }
+
             foreach (var data in BodyMaskInspectorDatas) {
-                if (data.bodyMask == (BodyMask)(1<<bit)) {
+                if (data.bodyMask == (BodyMask)(1 << bit)) {
                     return data.name;
                 }
             }
+
             return "UNUSED";
         }
 
@@ -125,10 +131,16 @@ namespace Code.Player.Accessories {
         public VisibilityMode visibilityMode = VisibilityMode.Both;
         public bool skinnedToCharacter = false;
 
+        [Header("Optional Customizations")]
+        public CustomAccSetter_Color colorSetter;
+
+        public CustomAccSetter_Variant variantSetter;
+
         [SerializeField]
         public List<Mesh> meshLods = new();
 
-        [Tooltip("True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
+        [Tooltip(
+            "True if the mesh should be combined with the character for mesh deformation. This is usually true for clothing, but false for static held items like swords.")]
         [Obsolete]
         public bool canMeshCombine = false;
 
@@ -139,43 +151,73 @@ namespace Code.Player.Accessories {
         [Header("Legacy IDs")]
         [HideFromTS]
         public string serverClassId;
+
         [HideFromTS]
         public string serverClassIdStaging;
+
         private string serverInstanceId;
 
         public Vector3 localPosition {
-            get {
-                return transform.localPosition;
-            }
-            set {
-                transform.localPosition = value;
-            }
+            get => transform.localPosition;
+            set => transform.localPosition = value;
         }
 
         public Quaternion localRotation {
-            get {
-                return transform.localRotation;
-            }
-            set {
-                transform.localRotation = value;
-            }
+            get => transform.localRotation;
+            set => transform.localRotation = value;
         }
 
         public Vector3 localScale {
-            get {
-                return transform.localScale;
-            }
-            set {
-                transform.localScale = value;
-            }
+            get => transform.localScale;
+            set => transform.localScale = value;
         }
 
         public string GetServerClassId() {
 #if AIRSHIP_STAGING
             return this.serverClassIdStaging;
 #else
-            return this.serverClassId;
+            return serverClassId;
 #endif
+        }
+
+        public void CustomizeVariant(int variantIndex) {
+            if (variantSetter) {
+                variantSetter.Set(variantIndex);
+                if (colorSetter) {
+                    colorSetter.Refresh();
+                }
+            }
+        }
+
+        public void CustomizeColors(OutfitCustomizationColor[] colorsHex) {
+            if (colorsHex.Length == 0) {
+                return;
+            }
+
+            var newColor = Color.black;
+            if (colorSetter) {
+                for (var i = 0; i < colorsHex.Length; i++) {
+                    if (ColorUtility.TryParseHtmlString(colorsHex[i].colorHex, out newColor)) {
+                        colorSetter.SetColor(colorsHex[i].key, newColor);
+                    }
+                }
+            } else {
+                var setters = gameObject.GetComponentsInChildren<MaterialColorURP>();
+                foreach (var set in setters) {
+                    var colorLength = colorsHex.Length;
+                    if (colorLength == 1) {
+                        if (ColorUtility.TryParseHtmlString(colorsHex[0].colorHex, out newColor)) {
+                            set.SetColorOnAll(newColor);
+                        }
+                    } else if (colorLength > 1) {
+                        for (var i = 0; i < colorLength; i++) {
+                            if (ColorUtility.TryParseHtmlString(colorsHex[i].colorHex, out newColor)) {
+                                set.SetColor(i, newColor);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public void Copy(AccessoryComponent other) {
@@ -191,12 +233,12 @@ namespace Code.Player.Accessories {
             return (int)accessorySlot;
         }
 
-        public void SetInstanceId(string id){
+        public void SetInstanceId(string id) {
             serverInstanceId = id;
             gameObject.GetComponent<AccessoryRandomizer>()?.Apply(id);
         }
 
-        public string GetServerInstanceId(){
+        public string GetServerInstanceId() {
             return serverInstanceId;
         }
 
@@ -205,4 +247,3 @@ namespace Code.Player.Accessories {
         }
     }
 }
- 
