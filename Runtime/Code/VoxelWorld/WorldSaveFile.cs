@@ -112,13 +112,15 @@ public class WorldSaveFile : ScriptableObject {
             }
             ArrayPool<byte>.Shared.Return(dataBytes);
             
-            //Read custom data:
-            var numCustomElements = reader.ReadInt32();
-            for (int i = 0; i < numCustomElements; i++) {
-                var voxelIndex = reader.ReadUInt16();
-                var arrayLength = reader.ReadUInt32();
-                var blobData = reader.ReadBytes((int)arrayLength);
-                customData.Add(voxelIndex, new BinaryBlob(blobData));
+            // Read custom data:
+            if (version >= 3) {
+                var numCustomElements = reader.ReadInt32();
+                for (int i = 0; i < numCustomElements; i++) {
+                    var voxelIndex = reader.ReadUInt16();
+                    var arrayLength = reader.ReadUInt32();
+                    var blobData = reader.ReadBytes((int)arrayLength);
+                    customData.Add(voxelIndex, new BinaryBlob(blobData));
+                }
             }
 
             return chunkKey;
