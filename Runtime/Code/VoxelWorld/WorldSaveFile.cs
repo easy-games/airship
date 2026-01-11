@@ -400,9 +400,8 @@ public class WorldSaveFile : ScriptableObject {
             var data = new List<VoxelData>();
             var color = new List<uint>();
             var customData = new Dictionary<ushort, BinaryBlob>();
-            Debug.Log("Number of chunks: " + numChunks);
+            // Debug.Log("Number of chunks: " + numChunks);
             for (uint i = 0; i < numChunks; i++) {
-                Debug.Log("Load chunk: " + i);
                 data.Clear();
                 color.Clear();
                 
