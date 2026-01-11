@@ -206,7 +206,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             selectedStyle.normal.textColor = Color.green;
             selectedStyle.hover.textColor = Color.green;
 
-            var loadedBlocks = world.voxelBlocks.alphebeticalBlocks;
+            var loadedBlocks = world.voxelBlocks.loadedBlocks;
             for (ushort id = 0; id < loadedBlocks.Count; id++) {
                 var block = loadedBlocks[id];
                 var name = block.definition.name;

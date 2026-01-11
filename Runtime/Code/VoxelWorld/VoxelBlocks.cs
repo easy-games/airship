@@ -327,7 +327,7 @@ public class VoxelBlocks : MonoBehaviour {
 
     [NonSerialized] private Dictionary<string, BlockId> blockIdLookup = new();
     [NonSerialized] public List<BlockDefinition> loadedBlocks = new();
-    [NonSerialized] public List<BlockDefinition> alphebeticalBlocks = new();
+    [NonSerialized] public List<BlockDefinition> alphabeticalBlocks = new();
 
     [NonSerialized] public string rootAssetPath;
     [NonSerialized] public List<string> m_bundlePaths = null;
@@ -442,7 +442,7 @@ public class VoxelBlocks : MonoBehaviour {
 
         blockIdLookup = new();
         loadedBlocks = new();
-        alphebeticalBlocks = new();
+        alphabeticalBlocks = new();
     }
 
     private LodSet BuildLodSet(VoxelBlockDefinition.MeshSet meshSet) {
@@ -710,7 +710,7 @@ public class VoxelBlocks : MonoBehaviour {
         }
         
         // Creates a new sorted list, leaves the original 'fruits' list unchanged
-        alphebeticalBlocks = loadedBlocks.OrderBy(block => block.definition.blockName, StringComparer.OrdinalIgnoreCase).ToList();
+        alphabeticalBlocks = loadedBlocks.OrderBy(block => block.definition.blockName, StringComparer.OrdinalIgnoreCase).ToList();
         
 #if !UNITY_SERVER
         SetupAtlas();
