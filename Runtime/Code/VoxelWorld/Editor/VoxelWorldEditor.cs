@@ -224,7 +224,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     private Vector3 placementRotationVector;
 
     [NonSerialized]
-    private VoxelWorld.Flips placementFlip = VoxelWorld.Flips.Flip_0Deg;
+    private VoxelWorld.VoxelFlip placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_0Deg;
 
     [NonSerialized]
     private bool placementVertical = false;
@@ -583,17 +583,17 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
 
             if (placementRotationVector.x > 0.01) {
-                placementFlip = VoxelWorld.Flips.Flip_180Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_180Deg;
             } else if (placementRotationVector.x < -0.01) {
-                placementFlip = VoxelWorld.Flips.Flip_0Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_0Deg;
             } else if (placementRotationVector.z < -0.01) {
-                placementFlip = VoxelWorld.Flips.Flip_270Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_270Deg;
             } else {
-                placementFlip = VoxelWorld.Flips.Flip_90Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_90Deg;
             }
 
             if (placementVertical) {
-                placementFlip += 4;
+                placementVoxelFlip += 4;
             }
         } else {
             validPosition = false;
@@ -764,7 +764,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         var def = world.voxelBlocks.GetBlock(newValue);
 
                         if (def.definition.rotatedPlacement) {
-                            newValue = (ushort)VoxelWorld.GetVoxelDataWithFlippedBits(newValue, (int)placementFlip);
+                            newValue = (ushort)VoxelWorld.GetVoxelDataWithFlippedBits(newValue, (int)placementVoxelFlip);
                         }
 
                         VoxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,

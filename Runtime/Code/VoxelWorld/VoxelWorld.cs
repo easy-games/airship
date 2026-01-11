@@ -161,8 +161,8 @@ public partial class VoxelWorld : MonoBehaviour {
     // Mirroring
     public Vector3 mirrorAround = Vector3.zero;
 
-    //Flipped blocks 
-    public enum Flips : byte {
+    // Flipped blocks
+    public enum VoxelFlip : byte {
         Flip_0Deg = 0,
         Flip_90Deg = 1,
         Flip_180Deg = 2,
@@ -184,7 +184,7 @@ public partial class VoxelWorld : MonoBehaviour {
         "270 Deg Vertical"
     };
 
-    public static Flips[] allFlips = (Flips[])Enum.GetValues(typeof(Flips));
+    public static VoxelFlip[] allFlips = (VoxelFlip[])Enum.GetValues(typeof(VoxelFlip));
 
     [HideInInspector]
     public bool renderingDisabled = false;
@@ -260,23 +260,23 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     protected static Quaternion GetRotationFromFlipBits(int flipBits) {
-        var flipEnum = (Flips)flipBits;
+        var flipEnum = (VoxelFlip)flipBits;
         switch (flipEnum) {
-            case Flips.Flip_0Deg:
+            case VoxelFlip.Flip_0Deg:
                 return Quaternion.identity;
-            case Flips.Flip_90Deg:
+            case VoxelFlip.Flip_90Deg:
                 return Quaternion.Euler(0, 90, 0);
-            case Flips.Flip_180Deg:
+            case VoxelFlip.Flip_180Deg:
                 return Quaternion.Euler(0, 180, 0);
-            case Flips.Flip_270Deg:
+            case VoxelFlip.Flip_270Deg:
                 return Quaternion.Euler(0, 270, 0);
-            case Flips.Flip_0DegVertical:
+            case VoxelFlip.Flip_0DegVertical:
                 return Quaternion.Euler(0, 0, 180);
-            case Flips.Flip_90DegVertical:
+            case VoxelFlip.Flip_90DegVertical:
                 return Quaternion.Euler(0, 90, 180);
-            case Flips.Flip_180DegVertical:
+            case VoxelFlip.Flip_180DegVertical:
                 return Quaternion.Euler(0, 180, 180);
-            case Flips.Flip_270DegVertical:
+            case VoxelFlip.Flip_270DegVertical:
                 return Quaternion.Euler(0, 270, 180);
         }
 
@@ -287,8 +287,8 @@ public partial class VoxelWorld : MonoBehaviour {
         return GetRotationFromFlipBits(GetVoxelDataFlippedBits(voxelData));
     }
 
-    public static Flips GetVoxelDataFlips(ushort voxelData) {
-        return (Flips)GetVoxelDataFlippedBits(voxelData);
+    public static VoxelFlip GetVoxelDataFlips(ushort voxelData) {
+        return (VoxelFlip)GetVoxelDataFlippedBits(voxelData);
     }
 
     /// <summary>
