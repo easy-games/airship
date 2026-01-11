@@ -64,18 +64,20 @@ public class WorldSaveFile : ScriptableObject {
 
             // Write custom data individually
             // Store how many custom data entries there are
-            writer.Write((uint)customData.Values.Count);
-            // Each binary blob can be different sizes
-            // Each blob has meta data that specifies the key in the dictionary and the size of the blob 
-            foreach (var kvp in customData) {
-                // Position Key
-                writer.Write(kvp.Key);
-                
-                // Size indicator
-                writer.Write((uint)kvp.Value.Data.Length);
+            if (version >= 3) {
+                writer.Write((uint)customData.Values.Count);
+                // Each binary blob can be different sizes
+                // Each blob has meta data that specifies the key in the dictionary and the size of the blob
+                foreach (var kvp in customData) {
+                    // Position Key
+                    writer.Write(kvp.Key);
 
-                // Blob Data
-                writer.Write(kvp.Value.Data);
+                    // Size indicator
+                    writer.Write((uint)kvp.Value.Data.Length);
+
+                    // Blob Data
+                    writer.Write(kvp.Value.Data);
+                }
             }
         }
 
