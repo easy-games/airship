@@ -168,11 +168,11 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             GUILayout.Label("Highlighted Block");
 
-            if (VoxelWorld.VoxelDataToBlockId(blockData) == 0) {
+            if (VoxelWorld.GetVoxelDataId(blockData) == 0) {
                 GUI.enabled = false;
             }
 
-            var flipBits = VoxelWorld.GetVoxelFlippedBits(blockData);
+            var flipBits = VoxelWorld.GetVoxelDataFlippedBits(blockData);
 
             var def = GUI.backgroundColor;
 
@@ -206,7 +206,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             selectedStyle.normal.textColor = Color.green;
             selectedStyle.hover.textColor = Color.green;
 
-            var loadedBlocks = world.voxelBlocks.loadedBlocks;
+            var loadedBlocks = world.voxelBlocks.alphebeticalBlocks;
             for (ushort id = 0; id < loadedBlocks.Count; id++) {
                 var block = loadedBlocks[id];
                 var name = block.definition.name;
