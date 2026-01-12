@@ -863,8 +863,7 @@ namespace VoxelWorldStuff {
                             = ShadowCastingMode.ShadowsOnly; // Only cast shadows (invisible)
                         shadowRenderer.staticShadowCaster = true;
                         shadowGo.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-                        shadowGo.transform.parent = obj.transform;
-
+                        shadowGo.transform.SetParent(obj.transform, false);
 
                         lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
 
