@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using ElRaccoone.Tweens;
@@ -137,6 +137,7 @@ namespace Luau {
             [typeof(GridLayoutGroup)] = LuauContextAll,
             [typeof(LayoutRebuilder)] = LuauContextAll,
             [typeof(UnityEngine.UI.Button)] = LuauContextAll,
+            [typeof(ColorBlock)] = LuauContextAll,
             [typeof(ToggleGroup)] = LuauContextAll,
             [typeof(Dropdown)] = LuauContextAll,
             [typeof(TMP_Dropdown)] = LuauContextAll,
