@@ -305,6 +305,7 @@ public class TypeGenerator : MonoBehaviour
             
             // Editor stuff
             typeof(EditorPrefs),
+            typeof(Guid),
         };
 
         // TwoBoneIKConstraint ik;
