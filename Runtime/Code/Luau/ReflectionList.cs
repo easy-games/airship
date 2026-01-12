@@ -232,6 +232,7 @@ namespace Luau {
             [typeof(VolumeProfile)] = LuauContextAll,
             [typeof(DepthOfField)] = LuauContextAll,
             [typeof(GraphicRaycaster)] = LuauContextAll,
+            [typeof(Guid)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
