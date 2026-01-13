@@ -147,6 +147,7 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     public int selectedBlockIndex = 1;
 
+    
     //For the editor
     [NonSerialized]
     public ushort highlightedBlock = 0;
@@ -1050,7 +1051,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
         if (voxelBlocks == null) {
-            //Error
+            // Error
             Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
             return;
         }
@@ -1061,7 +1062,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         delayUpdate = 1;
 
-        //Clear to begin with
+        // Clear to begin with
         DeleteChildGameObjects(gameObject);
 
         PrepareVoxelWorldGameObject();
@@ -1070,7 +1071,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         voxelBlocks.Reload(useSimplifiedVoxels);
 
-        //load the text of textAsset
+        // load the text of textAsset
         file.LoadIntoVoxelWorld(this);
 
         RegenerateAllMeshes();
@@ -1078,7 +1079,7 @@ public partial class VoxelWorld : MonoBehaviour {
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
 
-        //Clear this
+        // Clear this
         hasUnsavedChanges = false;
     }
 
@@ -1603,10 +1604,19 @@ public partial class VoxelWorld : MonoBehaviour {
         saveFile.chunksCompressed = chunksCompressed;
         saveFile.chunksCompressedV2 = true;
         
-        //Clear and prepare the world for new chunks and meshes 
+        // Clear and prepare the world for new chunks and meshes 
+        DeleteChildGameObjects(gameObject);
         PrepareVoxelWorldGameObject();
+        loadingStatus = LoadingStatus.Loading;
+        ClearProcessingMeshChunks();
+        voxelBlocks.Reload(useSimplifiedVoxels);
+        
         saveFile.LoadIntoVoxelWorld(this);
-        GenerateWorld();
+        
+        RegenerateAllMeshes();
+        
+        // Clear this
+        hasUnsavedChanges = false;
     }
 
     public static VoxelWorld GetFirstInstance() {
