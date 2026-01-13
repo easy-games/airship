@@ -57,11 +57,8 @@ namespace Code.Network.StateSystem
         private double lastClientSend = 0;
 
         private double lastServerSend = 0;
-
-        // The local tick of the most recent data that was sent to the server.
-        private int clientLastSentLocalTick = 0;
-        // The local tick of the last data that was sent the the server a second time.
-        private int clientLastResentLocalTick = 0;
+        
+        private Queue<int> clientSentTicks = new Queue<int>();
 
         // Server processing for commands
         private Input lastProcessedCommand;
@@ -268,11 +265,16 @@ namespace Code.Network.StateSystem
                 if (isClient && isOwned && serverAuth) {
                     // We will sometimes resend unconfirmed commands. The server should ignore these if
                     // it has them already.
+                    var lastTick = clientSentTicks.TryPeek(out var value) ? value : 0;
                     var commands =
-                        this.inputHistory.GetAllAfter((int)Math.Max(0,clientLastResentLocalTick)); // Send all inputs that haven't been sent as well as ones that have been sent only once
+                        this.inputHistory.GetAllAfter(lastTick); // Send all inputs that haven't been sent as well as ones that have been sent only once or twice
                     if (commands.Length > 0) {
-                        this.clientLastResentLocalTick = this.clientLastSentLocalTick; // Store the last tick that was resent
-                        this.clientLastSentLocalTick = this.inputHistory.Keys[^1]; // Store which tick was sent
+                        // Enqueue latest sent tick
+                        clientSentTicks.Enqueue(this.inputHistory.Keys[^1]);
+                        // If we have more than 3 ticks numbers, dequeue so we stay at 3. (resend ticks twice)
+                        if (clientSentTicks.Count > 3) {
+                            clientSentTicks.Dequeue();
+                        }
                         this.SendClientInputToServer(commands);
                     }
                     
@@ -287,10 +289,15 @@ namespace Code.Network.StateSystem
                 // We are an authoritative client and should send our latest state
                 if (isClient && isOwned && !serverAuth) {
                     if (this.stateHistory.Keys.Count == 0) return;
-                    var states = this.stateHistory.GetAllAfter((int)Math.Max(0, clientLastResentLocalTick));
+                    var lastTick = clientSentTicks.TryPeek(out var value) ? value : 0;
+                    var states = this.stateHistory.GetAllAfter(lastTick);
                     if (states.Length > 0) {
-                        this.clientLastResentLocalTick = this.clientLastSentLocalTick;
-                        this.clientLastSentLocalTick = this.stateHistory.Keys[^1];
+                        // Enqueue latest sent tick
+                        clientSentTicks.Enqueue(this.stateHistory.Keys[^1]);
+                        // If we have more than 3 ticks numbers, dequeue so we stay at 3. (resend ticks twice)
+                        if (clientSentTicks.Count > 3) {
+                            clientSentTicks.Dequeue();
+                        }
                     }
 
                     // We make multiple calls so that Mirror can batch the snapshots efficiently
@@ -376,12 +383,12 @@ namespace Code.Network.StateSystem
                 if (isServer && serverAuth) {
                     if (serverCommandBuffer.Count > this.serverCommandBufferTargetSize.Value && Math.Floor(this.serverCommandBufferAvgSize.Value) > Math.Ceiling(this.serverCommandBufferTargetSize.Value)) {
                         serverCommandCatchUpRequired = (int) Math.Round(Math.Floor(this.serverCommandBufferAvgSize.Value) - Math.Ceiling(this.serverCommandBufferTargetSize.Value));
-                        // print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
+                        print($"Command catchup required for {this.name}: {serverCommandCatchUpRequired}. {serverCommandBuffer.Count} in buffer {(int) Math.Round(this.serverCommandBufferTargetSize.Value)} target");
                     } else if (this.serverCommandBufferAvgSize.Value * 2 < this.serverCommandBufferTargetSize.Value) {
                         // This is a heuristic for if we are likely to have to predict more commands soon. Low buffer size means
                         // we have less of a chance to recover dropped packets. It's probably better for us to wait for additional
                         // inputs before we continue processing.
-                        // print($"Command delay required for {this.name}: {serverCommandBuffer.Count} in buffer, {this.serverCommandBufferAvgSize.Value} ema, {this.serverCommandBufferTargetSize.Value} target");
+                        print($"Command delay required for {this.name}: {serverCommandBuffer.Count} in buffer, {this.serverCommandBufferAvgSize.Value} ema, {this.serverCommandBufferTargetSize.Value} target");
                         this.serverCommandBufferWait = true;
                     } else {
                         serverCommandCatchUpRequired = 0;
@@ -582,13 +589,18 @@ namespace Code.Network.StateSystem
             // print($"{this.name} has {serverCommandBuffer.Count} entries in the buffer. Target is {this.serverCommandBufferTargetSize.Value} Current Avg Fill: {this.serverCommandBufferAvgSize.Value}");
 
             // Delay processing until we have at least one send interval worth of commands to process.
-            if (this.serverCommandBufferWait && this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value || this.serverCommandBuffer.Count == 0) {
+            if ((this.serverCommandBufferWait &&
+                 this.serverCommandBuffer.Count < this.serverCommandBufferTargetSize.Value) || this.serverCommandBuffer.Count == 0) {
+                this.serverCommandBufferWait = true;
                 // Debug.Log($"Waiting for additional commands for {this.name}. There are {this.serverCommandBuffer.Count} commands in the buffer.");
                 this.stateSystem.Tick(null, tick, time, false);
+
+                if (serverCommandBuffer.Count > 0) {
+                    // Start processing commands from the beginning of the buffer after waiting
+                    this.serverLastProcessedCommandNumber = this.serverCommandBuffer.Values[0].commandNumber - 1;
+                }
                 return;
             } else {
-                // Start processing commands from the beginning of the buffer after waiting
-                this.serverLastProcessedCommandNumber = this.serverCommandBuffer.Values[0].commandNumber - 1;
                 this.serverCommandBufferWait = false;
             }
             
@@ -604,9 +616,9 @@ namespace Code.Network.StateSystem
                 var expectedNextCommandNumber = this.serverLastProcessedCommandNumber + 1;
                 Input command = this.serverCommandBuffer.Count > 0 ? this.serverCommandBuffer.Values[0] : null;
 
-                // We have a valid command that is in sequence, or we reached our max predicted fill. Remove the next
+              // We have a valid command that is in sequence. Remove the next
                 // valid command from the buffer and process it.
-                if (command != null && (command.commandNumber == expectedNextCommandNumber || !canPredictCommand)) {
+                if (command != null && command.commandNumber == expectedNextCommandNumber) {
                     // Get the command to process
                     command = this.serverCommandBuffer.Values[0];
                     this.serverCommandBuffer.RemoveAt(0);
@@ -614,21 +626,42 @@ namespace Code.Network.StateSystem
                     this.serverPredictedCommandCount = 0;
                     this.lastProcessedCommand = command;
                     this.serverLastProcessedCommandNumber = command.commandNumber; 
-                // We have an out of order command, or no command and we can predict the next command in sequence
-                } else if ((command != null && command.commandNumber != expectedNextCommandNumber ||
-                            this.serverCommandBuffer.Count == 0) && this.lastProcessedCommand != null && canPredictCommand) {
+                // We have an out of order command and we can predict the next command in sequence
+                } else if ((command != null && command.commandNumber != expectedNextCommandNumber) && this.lastProcessedCommand != null && canPredictCommand) {
                     command = this.lastProcessedCommand;
                     
                     this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
                     
                     command.commandNumber = expectedNextCommandNumber;
                     this.serverPredictedCommandCount++;
-                    // print("Reprocessing last command");
+                    print("Reprocessing last command to fill gap.");
                 }
-                // we processed a command that never reached the server and we can't fill it or move on to a new command in the buffer.
+                // We have more commands, but we cannot predict the next command.
+                else if (command != null && command.commandNumber != expectedNextCommandNumber && !canPredictCommand) {
+                    command = null;
+                    
+                    // Advance to the next command number if we want our buffer to stay the same size/shrink.
+                    if (serverCommandBufferAvgSize.Value >= serverCommandBufferTargetSize.Value) {
+                        this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
+                    }
+
+                    print("Gap too large for prediction. Ticking null command.");
+                }
+                // We don't have the next command, but we can predict it
+                else if (command == null && this.lastProcessedCommand != null && canPredictCommand) {
+                    command = this.lastProcessedCommand;
+                    
+                    this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
+                    
+                    command.commandNumber = expectedNextCommandNumber;
+                    this.serverPredictedCommandCount++;
+                    
+                    print("Predicting next command with no available commands.");
+                }
+                // We don't have the next command in sequence and we can't fill it or move on to a new command in the buffer.
                 // this means we've completely run out of inputs and we should wait for more.
                 else {
-                    // print("No command available for ticking");
+                    print("No command available for ticking");
                     this.serverPredictedCommandCount = 0;
                     this.serverCommandBufferWait = true;
                 }
