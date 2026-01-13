@@ -708,15 +708,16 @@ public static partial class AirshipEditorGUI {
 
         switch (typescriptEnum.memberType) {
             case TypeScriptEnumMemberType.Integer: {
-                int prevValue = property.enumValue.IntValue;
+                int prevValue = property.enumType.IndexOf(property.enumValue);
                 int nextValue;
-            
+                
                 if (rect.GetCustomRect(out var position)) {
                     nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 } else {
-                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
+                    nextValue = EditorGUILayout.Popup(label, prevValue,
+                        typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 }
-            
+
                 if (prevValue != nextValue) {
                     property.enumValue = typescriptEnum.members[nextValue];
                     property.serializedModified.boolValue = true;

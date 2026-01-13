@@ -35,6 +35,10 @@ public class TypeScriptEnum : ISerializationCallbackReceiver {
     public TypeScriptEnumMemberType memberType => _memberType;
     public IReadOnlyList<TypeScriptEnumMember> members => _members;
 
+    internal int IndexOf(TypeScriptEnumMember enumMember) {
+        return _members.IndexOf(enumMember);
+    }
+
     internal TypeScriptEnum(string id, TypeScriptEnumMemberType memberType, List<TypeScriptEnumMember> members) {
         _id = id;
         _memberType = memberType;
