@@ -147,6 +147,7 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     public int selectedBlockIndex = 1;
 
+    
     //For the editor
     [NonSerialized]
     public ushort highlightedBlock = 0;
@@ -1604,9 +1605,18 @@ public partial class VoxelWorld : MonoBehaviour {
         saveFile.chunksCompressedV2 = true;
         
         //Clear and prepare the world for new chunks and meshes 
+        DeleteChildGameObjects(gameObject);
         PrepareVoxelWorldGameObject();
+        loadingStatus = LoadingStatus.Loading;
+        ClearProcessingMeshChunks();
+        voxelBlocks.Reload(useSimplifiedVoxels);
+        
         saveFile.LoadIntoVoxelWorld(this);
-        GenerateWorld();
+        
+        RegenerateAllMeshes();
+        
+        //Clear this
+        hasUnsavedChanges = false;
     }
 
     public static VoxelWorld GetFirstInstance() {
