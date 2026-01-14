@@ -454,10 +454,10 @@ public static partial class AirshipEditorGUI {
         
         AirshipScriptableObject binding;
         if (rect.HasValue) {
-            binding = AirshipScriptGUI.AirshipScriptableObjectField(rect.Value, label, property.serializedObject.targetObject, script, currentValue, property.serializedObjectValue);
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(rect.Value, label, property.serializedObject.targetObject, property.airshipType, currentValue, property.serializedObjectValue);
         } else {
             var r = EditorGUILayout.GetControlRect(false, UnityEditor.Search.ObjectField.singleLineHeight);
-            binding = AirshipScriptGUI.AirshipScriptableObjectField(r, label, property.serializedObject.targetObject, script, currentValue, property.serializedObjectValue);
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(r, label, property.serializedObject.targetObject, property.airshipType, currentValue, property.serializedObjectValue);
         }
         
         if (binding != currentValue) {

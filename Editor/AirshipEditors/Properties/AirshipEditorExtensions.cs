@@ -91,7 +91,7 @@ public static class AirshipEditorExtensions {
     [CanBeNull]
     public static AirshipType GetComponentType(this AirshipScript script) {
         // TODO: Get types by path
-        if (script.m_metadata != null) {
+        if (script.m_metadata?.name != null) {
             return AirshipBuildInfo.Instance.GetTypeByPathAndName(script.assetPath, script.m_metadata.name) ?? AirshipBuildInfo.Instance.GetTypeByName(script.m_metadata.name);
         }
         
