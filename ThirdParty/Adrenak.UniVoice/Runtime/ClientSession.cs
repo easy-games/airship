@@ -150,7 +150,7 @@ namespace Adrenak.UniVoice {
                         }
                         else if (OutputFactory != null) {
                             var output = OutputFactory.Create(id);
-                            PeerOutputs.Add(id, output);
+                            PeerOutputs.TryAdd(id, output);
                         }
 
                         var filters = outputFilterFactories
