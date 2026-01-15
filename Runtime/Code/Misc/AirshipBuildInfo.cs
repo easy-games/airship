@@ -76,6 +76,16 @@ namespace Luau {
         public List<AirshipBehaviourMeta> airshipBehaviourMetas;
         public List<AirshipBehaviourMeta> airshipScriptableObjectMetas;
         public List<AirshipBehaviourMeta> airshipSerializableMetas;
+
+        public List<AirshipBehaviourMeta> allMetas {
+            get {
+                List<AirshipBehaviourMeta> metas = new List<AirshipBehaviourMeta>();
+                metas.AddRange(airshipBehaviourMetas);
+                metas.AddRange(airshipScriptableObjectMetas);
+                metas.AddRange(airshipSerializableMetas);
+                return metas;
+            }
+        }
         
         public List<AirshipExtendsMeta> airshipExtendsMetas;
         
@@ -395,8 +405,8 @@ namespace Luau {
             if (scriptPathByTypeNameCache.TryGetValue(typeName, out var scriptPath)) {
                 return scriptPath;
             }
-
-            scriptPath = (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
+            
+            scriptPath = (from meta in data.allMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
             
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
             scriptPathByTypeNameCache.Add(typeName, scriptPath);

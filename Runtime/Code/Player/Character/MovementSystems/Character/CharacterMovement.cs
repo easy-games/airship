@@ -621,7 +621,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region FLYING
 
-            //Flying movement
+            // Flying movement
             if (currentMoveSnapshot.isFlying) {
                 if (command.jump) {
                     newVelocity.y += movementSettings.verticalFlySpeed;
@@ -1745,15 +1745,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public void SetMovementEnabled(bool isEnabled) {
             disableInput = !isEnabled;
-        }
-
-        public void SetDebugFlying(bool flying) {
-            if (!movementSettings.allowDebugFlying) {
-                // Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
-                return;
-            }
-
-            SetFlying(flying);
         }
 
         public void SetFlying(bool flyModeEnabled) {

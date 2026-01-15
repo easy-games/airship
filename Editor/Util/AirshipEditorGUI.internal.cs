@@ -454,10 +454,10 @@ public static partial class AirshipEditorGUI {
         
         AirshipScriptableObject binding;
         if (rect.HasValue) {
-            binding = AirshipScriptGUI.AirshipScriptableObjectField(rect.Value, label, property.serializedObject.targetObject, script, currentValue, property.serializedObjectValue);
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(rect.Value, label, property.serializedObject.targetObject, property.airshipType, currentValue, property.serializedObjectValue);
         } else {
             var r = EditorGUILayout.GetControlRect(false, UnityEditor.Search.ObjectField.singleLineHeight);
-            binding = AirshipScriptGUI.AirshipScriptableObjectField(r, label, property.serializedObject.targetObject, script, currentValue, property.serializedObjectValue);
+            binding = AirshipScriptGUI.AirshipScriptableObjectField(r, label, property.serializedObject.targetObject, property.airshipType, currentValue, property.serializedObjectValue);
         }
         
         if (binding != currentValue) {
@@ -708,15 +708,16 @@ public static partial class AirshipEditorGUI {
 
         switch (typescriptEnum.memberType) {
             case TypeScriptEnumMemberType.Integer: {
-                int prevValue = property.enumValue.IntValue;
+                int prevValue = property.enumType.IndexOf(property.enumValue);
                 int nextValue;
-            
+                
                 if (rect.GetCustomRect(out var position)) {
                     nextValue = EditorGUI.Popup(position, label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 } else {
-                    nextValue = EditorGUILayout.Popup(label, prevValue, typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
+                    nextValue = EditorGUILayout.Popup(label, prevValue,
+                        typescriptEnum.keys.Select(v => new GUIContent(ObjectNames.NicifyVariableName(v))).ToArray());
                 }
-            
+
                 if (prevValue != nextValue) {
                     property.enumValue = typescriptEnum.members[nextValue];
                     property.serializedModified.boolValue = true;

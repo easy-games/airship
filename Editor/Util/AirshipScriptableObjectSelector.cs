@@ -35,7 +35,9 @@ internal class AirshipScriptableObjectSelector : AirshipSelectorWindow<AirshipSc
         foreach (var guid in guids) {
             var path = AssetDatabase.GUIDToAssetPath(guid);
             var asset = AssetDatabase.LoadAssetAtPath<AirshipScriptableObject>(path);
-            if (asset.script == ((SelectorContext)_context).scriptableObjectType.Script) {
+
+            if (AirshipBuildInfo.Instance.Inherits(asset.script,
+                    ((SelectorContext)_context).scriptableObjectType.Script)) {
                 objects.Add(asset);
             }
         }
