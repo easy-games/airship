@@ -272,7 +272,7 @@ public class WorldSaveFile : ScriptableObject {
             if (!foundVoxel) continue;
 
             
-            Debug.Log("Valid Chunk: " + chunk.Value.chunkKey);
+            // Debug.Log("Valid Chunk: " + chunk.Value.chunkKey);
             var chunkData = new SaveChunk(chunk.Key, data, chunk.Value.color, chunk.Value.customDataMap);
             savedChunks.Add(chunkData);
             finalChunkCounter++;
@@ -288,9 +288,9 @@ public class WorldSaveFile : ScriptableObject {
         
         // Serialize chunks:
         writer.Write((uint)savedChunks.Count);
-        Debug.Log("Writing chunk size: " + savedChunks.Count);
+        // Debug.Log("Writing chunk size: " + savedChunks.Count);
         foreach (var chunk in savedChunks) {
-            Debug.Log("Serializing chunk: " + chunk.key);
+            // Debug.Log("Serializing chunk: " + chunk.key);
             chunk.Serialize(writer, version);
         }
         
