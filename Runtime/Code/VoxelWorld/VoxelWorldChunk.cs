@@ -762,7 +762,7 @@ namespace VoxelWorldStuff {
 
         private bool DoVisualUpdate(VoxelWorld world) {
             if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true) {
-                LODGroup lodSystem = null;
+                LODGroup lodGroup = null;
                 //This runs on the main thread, so we can do unity scene manipulation here (and only here)
                 if (meshProcessor.GetGeometryReady() == true) {
                     Profiler.BeginSample("ChunkMainThread");
@@ -821,19 +821,7 @@ namespace VoxelWorldStuff {
                         }
 
                         for (var i = 0; i < 3; i++) {
-                            if (detailGameObjects[i] != null) {
-                                Object.Destroy(detailGameObjects[i]);
-                            }
-                            detailGameObjects[i] = new GameObject();
-                            detailGameObjects[i].layer = world.gameObject.layer;
-                            detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-                            detailGameObjects[i].transform.parent = obj.transform;
-
-                            detailGameObjects[i].transform.localRotation = Quaternion.identity;
-                            detailGameObjects[i].transform.localScale = Vector3.one;
-                            detailGameObjects[i].transform.localPosition = Vector3.zero;
-
-                            string name = "DetailMeshNear";
+                            string name;
                             if (i == 0) {
                                 name = "DetailMeshNear";
                             } else if (i == 1) {
@@ -842,16 +830,52 @@ namespace VoxelWorldStuff {
                                 name = "DetailMeshVeryFar";
                             }
 
-                            detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
-                            detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
-                            detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
+                            if (detailGameObjects[i] == null) {
+                                detailGameObjects[i] = new GameObject();
+                                detailGameObjects[i].layer = world.gameObject.layer;
+                                detailGameObjects[i].hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+                                detailGameObjects[i].transform.parent = obj.transform;
+                                detailGameObjects[i].transform.localRotation = Quaternion.identity;
+                                detailGameObjects[i].transform.localScale = Vector3.one;
+                                detailGameObjects[i].transform.localPosition = Vector3.zero;
+                                detailGameObjects[i].name = name;
 
-                            detailMeshes[i] = new Mesh();
-                            detailGameObjects[i].name = detailMeshes[i].name = name;
-                            // detailMeshes[i].indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
+                                detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
+                                detailRenderers[i] = detailGameObjects[i].AddComponent<MeshRenderer>();
+                                detailRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
 
+                                if (i == 0) {
+                                    lodGroup = detailGameObjects[i].AddComponent<LODGroup>();
+
+                                    // Enable crossfade
+                                    lodGroup.fadeMode = LODFadeMode.None;
+                                    lodGroup.animateCrossFading = false;
+                                }
+                            } else {
+                                if (i == 0) {
+                                    lodGroup = detailGameObjects[i].GetComponent<LODGroup>();
+                                }
+                            }
+
+                            detailMeshes[i] = new Mesh {
+                                name = name
+                            };
                             detailFilters[i].mesh = detailMeshes[i];
                         }
+
+                        // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
+                        if (lodGroup != null) {
+                            var lods = new LOD[3] {
+                                new(0.4f,
+                                    new Renderer[] {
+                                        detailRenderers[0]
+                                    }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
+                                new(0.01f, new Renderer[] { detailRenderers[1] }),
+                                new(0.0f, new Renderer[] { detailRenderers[2] })
+                            };
+                            lodGroup.SetLODs(lods);
+                        }
+
 
                         // Setup lod'd shadows
                         if (shadowRenderer != null) {
@@ -870,24 +894,6 @@ namespace VoxelWorldStuff {
                         shadowRenderer.staticShadowCaster = true;
                         shadowGo.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                         shadowGo.transform.SetParent(obj.transform, false);
-
-                        lodSystem = detailGameObjects[0].AddComponent<LODGroup>();
-
-                        // Enable crossfade
-                        lodSystem.fadeMode = LODFadeMode.None;
-                        lodSystem.animateCrossFading = false;
-
-                        // Configure LODs with the last LOD2 as the lowest and no "culled" LOD
-                        var lods = new LOD[3] {
-                            new(0.4f,
-                                new Renderer[] {
-                                    detailRenderers[0]
-                                }), //The distance is actually for the next group eg: this one sets LOD1 to 10%
-                            new(0.01f, new Renderer[] { detailRenderers[1] }),
-                            new(0.0f, new Renderer[] { detailRenderers[2] })
-                        };
-
-                        lodSystem.SetLODs(lods);
                     } else {
                         if (detailGameObjects != null) {
                             for (var i = 0; i < 3; i++) {
@@ -939,11 +945,11 @@ namespace VoxelWorldStuff {
                 world.RemoveChunkFromProcessing(chunkKey);
                 Profiler.EndSample();
 
-                if (lodSystem != null) {
+                if (lodGroup != null) {
                     Profiler.BeginSample("RecalculateLodBounds");
                     // lodSystem.RecalculateBounds();
-                    lodSystem.size = chunkSize / 2.0f * 1.732f; // cube radius * sqrt(3)
-                    lodSystem.localReferencePoint = chunkKey * chunkSize + chunkSize / 2.0f * Vector3.one;
+                    lodGroup.size = chunkSize / 2.0f * 1.732f; // cube radius * sqrt(3)
+                    lodGroup.localReferencePoint = chunkKey * chunkSize + chunkSize / 2.0f * Vector3.one;
                     Profiler.EndSample();
                 }
 
