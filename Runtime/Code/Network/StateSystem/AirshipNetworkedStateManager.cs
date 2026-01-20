@@ -632,16 +632,12 @@ namespace Code.Network.StateSystem
                         command.commandNumber = expectedNextCommandNumber;
                         this.serverPredictedCommandCount++;
                     }
-
-                    // If our buffer is larger than the serverCommandBufferMinSize and we have a gap, a larger buffer won't save us since
-                    // we won't receive a command more than serverCommandBufferMinSize times. Technically if we have very high jitter, it could be helpful,
-                    // but jitter would have to be near 3x the send rate which is really really bad and we'll probably need
-                    // to bump up the buffer anyway.
-                    if (serverCommandBufferTargetSize <= serverCommandBufferMinSize) {
-                        serverCommandBufferMisses++;
-                        this.serverCommandBufferTargetSize =
-                            Math.Min(serverCommandBufferTargetSize + 1, serverCommandBufferMaxSize);
-                    }
+                    
+                    // Command gaps are never improved by a larger target buffer size except in cases where jitter
+                    // is larger than the min buffer size (which is basically never). Instead of varying the target
+                    // buffer size unnecessarily, we'll just leave it as is. (no serverCommandBufferMisses++ or 
+                    // serverCommandBufferTargetSize increase)
+                    
                     // print($"Reprocessing last command to fill gap. New buffer {serverCommandBufferTargetSize}");
                 }
                 // We don't have any more commands in the command buffer. We've completely run out of inputs and we should wait for more.
