@@ -282,6 +282,7 @@ namespace Luau {
                 foreach (var typeInfo in data.typeInfos) {
                     var type = new AirshipType(typeInfo);
                     _types.Add(typeInfo.id, type);
+                    _types.TryAdd(typeInfo.name, type);
                     _typesByName.TryAdd(typeInfo.name, type);
                 }
                     
@@ -299,6 +300,8 @@ namespace Luau {
                     }
                     
                     type.BaseTypes = inheritedTypes.ToArray();
+                    
+                    Debug.Log($"Registered type {typeInfo.name} with base types {string.Join(", ", type.BaseTypes.Select(t => t.Name))}");
                 }
                 
 #if AIRSHIP_INTERNAL

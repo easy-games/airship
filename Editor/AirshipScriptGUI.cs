@@ -17,7 +17,7 @@ namespace Code.Luau {
             return file.assetPath == component.script.assetPath;
         }
 
-        private static Object Validate(Object[] references, AirshipScript script, AirshipComponent binding) {
+        private static Object Validate(Object[] references, AirshipType type, AirshipComponent binding) {
             if (references.Length <= 0) return null;
 
             var buildInfo = AirshipBuildInfo.Instance;
@@ -27,13 +27,12 @@ namespace Code.Luau {
                 references = gameObject.GetComponents(typeof(AirshipComponent));
                 foreach (var reference in references) {
                     if (reference != null && reference is AirshipComponent bindingComponent &&
-                        (IsBindableAsComponent(bindingComponent, script) ||
-                         buildInfo.ComponentIsValidInheritance(bindingComponent, script))) {
+                        bindingComponent.GetAirshipType().IsAssignableFrom(type)) {
                         return reference;
                     }
                 }
             }
-            else if (objectReference is AirshipComponent otherBinding && (IsBindableAsComponent(otherBinding, script) || buildInfo.ComponentIsValidInheritance(otherBinding, script))) {
+            else if (objectReference is AirshipComponent otherBinding && otherBinding.GetAirshipType().IsAssignableFrom(type)) {
                 return otherBinding;
             }
             
@@ -233,15 +232,15 @@ namespace Code.Luau {
             Rect position, 
             Rect dropRect, 
             int id, 
-            AirshipScript script, 
+            AirshipType type,
             UnityEngine.Object objectBeingEdited,
             [CanBeNull] AirshipComponent airshipComponent, 
             SerializedProperty property,
             bool allowSceneObjects,
             Action<AirshipComponent> onObjectSelected = null,
             Action onObjectRemoved = null) {
-            if (!script) {
-                EditorGUI.HelpBox(position, "script == null", MessageType.Error);
+            if (type == null) {
+                EditorGUI.HelpBox(position, "Invalid type", MessageType.Error);
                 return null;
             }
             
@@ -276,7 +275,7 @@ namespace Code.Luau {
                         // if dropping something on this
                         var references = DragAndDrop.objectReferences;
 
-                        var validatedObject = Validate(references, script, airshipComponent);
+                        var validatedObject = Validate(references, type, airshipComponent);
                         if (validatedObject != null) {
                             if (!allowSceneObjects && !EditorUtility.IsPersistent(validatedObject)) {
                                 validatedObject = null;
@@ -306,12 +305,10 @@ namespace Code.Luau {
                     if (buttonRect.Contains(Event.current.mousePosition)) {
                         if (GUI.enabled) {
                             GUIUtility.keyboardControl = id;
-
-                            var componentType = script.GetComponentType();
-                            if (componentType != null) {
-                                var context = new AirshipComponentSelectionContext(objectBeingEdited, componentType, obj as AirshipComponent);
-                                AirshipComponentSelectorWindow.Show(context, onObjectSelected, onObjectSelected);
-                            }
+                            
+                            var context = new AirshipComponentSelectionContext(objectBeingEdited, type, obj as AirshipComponent);
+                            AirshipComponentSelectorWindow.Show(context, onObjectSelected, onObjectSelected);
+                            
                             evt.Use();
                             GUIUtility.ExitGUI();
                         }
@@ -345,11 +342,11 @@ namespace Code.Luau {
                 case EventType.Repaint: {
                     var temp = EditorGUIUtility.ObjectContent(obj, typeof(AirshipComponent));
 
-                    var scriptInfo = airshipComponent && airshipComponent.script ? airshipComponent.script : script;
+                    var scriptInfo = airshipComponent && airshipComponent.script ? airshipComponent.script : type.Script;
                     
                     var displayName = scriptInfo.m_metadata != null && !string.IsNullOrEmpty(scriptInfo.m_metadata.displayName)
                         ? scriptInfo.m_metadata.displayName
-                        : ObjectNames.NicifyVariableName(script.name);
+                        : type.NicifyName();
                     
                     temp.text = obj == null
                         ? $"None ({displayName})"
@@ -410,17 +407,15 @@ namespace Code.Luau {
         }
         
         internal static AirshipComponent AirshipBehaviourField(
-            Rect rect, GUIContent content, UnityEngine.Object objectBeingEdited, AirshipScript script, AirshipComponent airshipComponent, SerializedProperty property) {
+            Rect rect, GUIContent content, UnityEngine.Object objectBeingEdited, AirshipType type, AirshipComponent airshipComponent, AirshipSerializedValue property) {
             int id = GUIUtility.GetControlID("_airshipBehaviourFieldHash".GetHashCode(), FocusType.Keyboard, rect);
             
             rect = EditorGUI.PrefixLabel(rect, id, content);
             var value = DoAirshipBehaviourField(
-                rect, rect, id, script, objectBeingEdited, airshipComponent, property, true,
+                rect, rect, id, type, objectBeingEdited, airshipComponent, property.serializedObjectValue, true,
                 binding => {
-                    if (property != null) {
-                        property.objectReferenceValue = binding;
-                        property.serializedObject.ApplyModifiedProperties();
-                    }
+                    property.objectReferenceValue = binding;
+                    property.serializedObject.ApplyModifiedProperties();
                 },
                 () => {
                     property.objectReferenceValue = null;
@@ -430,18 +425,18 @@ namespace Code.Luau {
             return value;
         }
         
-        public static AirshipComponent AirshipBehaviourField(Rect r, GUIContent content, UnityEngine.Object objectBeingEdited, AirshipScript script, AirshipComponent airshipComponent) {
-            return AirshipBehaviourField(r, content,objectBeingEdited, script, airshipComponent,  null);
+        public static AirshipComponent AirshipBehaviourField(Rect r, GUIContent content, UnityEngine.Object objectBeingEdited, AirshipType type, AirshipComponent airshipComponent) {
+            return AirshipBehaviourField(r, content,objectBeingEdited, type, airshipComponent,  null);
         }
 
-        internal static AirshipComponent AirshipBehaviourField(GUIContent content, UnityEngine.Object objectBeingEdited, AirshipScript script, SerializedProperty property) {
+        internal static AirshipComponent AirshipBehaviourField(GUIContent content, UnityEngine.Object objectBeingEdited, AirshipType type, AirshipSerializedValue property) {
             var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
-            return AirshipBehaviourField(r, content,objectBeingEdited, script, (AirshipComponent) property.objectReferenceValue, property);
+            return AirshipBehaviourField(r, content,objectBeingEdited, type, (AirshipComponent) property.objectReferenceValue, property);
         }
         
-        public static AirshipComponent AirshipBehaviourField(GUIContent content, UnityEngine.Object objectBeingEdited, AirshipScript script, AirshipComponent airshipComponent) {
+        public static AirshipComponent AirshipBehaviourField(GUIContent content, UnityEngine.Object objectBeingEdited, AirshipType type, AirshipComponent airshipComponent, AirshipSerializedValue property) {
             var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
-            return AirshipBehaviourField(r, content,objectBeingEdited, script, airshipComponent, null);
+            return AirshipBehaviourField(r, content,objectBeingEdited, type, airshipComponent, property);
         }
 
         internal static Sprite AirshipSpriteField(Rect position, GUIContent content, Sprite sprite) {
