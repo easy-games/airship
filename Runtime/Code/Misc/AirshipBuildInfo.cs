@@ -300,8 +300,6 @@ namespace Luau {
                     }
                     
                     type.BaseTypes = inheritedTypes.ToArray();
-                    
-                    Debug.Log($"Registered type {typeInfo.name} with base types {string.Join(", ", type.BaseTypes.Select(t => t.Name))}");
                 }
                 
 #if AIRSHIP_INTERNAL

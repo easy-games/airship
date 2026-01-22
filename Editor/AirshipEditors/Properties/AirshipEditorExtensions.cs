@@ -151,7 +151,6 @@ public static class AirshipEditorExtensions {
         
         var components = stage.FindComponentsOfType<AirshipComponent>();
         foreach (var component in components) {
-            Debug.Log($"Check {component.name} against {type.Name} {component.GetAirshipType().Name} {component.GetAirshipType().IsAssignableFrom(type)} {string.Join(", ", component.GetAirshipType().BaseTypes.Select(t => t.Name))}");
             if (!component.GetAirshipType().IsAssignableFrom(type)) continue;
             matchingComponents.Add(component);
         }
