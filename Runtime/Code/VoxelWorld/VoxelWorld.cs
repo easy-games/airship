@@ -521,7 +521,7 @@ public partial class VoxelWorld : MonoBehaviour {
         return result;
     }
 
-    public void WriteVoxelGroupAt(Vector3[] positions, double[] voxelData, bool priority) {
+    public void WriteVoxelGroupAt(Vector3[] positions, double[] voxelData, bool priority, bool asServer = true) {
         HashSet<Chunk> affectedChunks = new();
         for (var i = 0; i < positions.Length; i++) {
             var pos = FloorInt(positions[i]);
@@ -540,7 +540,7 @@ public partial class VoxelWorld : MonoBehaviour {
             }
         }
 
-        if (RunCore.IsServer() && worldNetworker != null && worldNetworker.networkWriteVoxels) {
+        if (RunCore.IsServer() && asServer && worldNetworker != null && worldNetworker.networkWriteVoxels) {
             worldNetworker.RpcWriteVoxelGroup(positions, voxelData, priority);
         }
     }
