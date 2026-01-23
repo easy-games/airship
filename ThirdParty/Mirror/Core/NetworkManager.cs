@@ -844,6 +844,10 @@ namespace Mirror
 
             // and finally (in case it isn't null already)...
             singleton = null;
+            
+            onClientSetup = null;
+            OnServerReadyEvent = null;
+            OnServerConnectEvent = null;
         }
 
         // virtual so that inheriting classes' OnDestroy() can call base.OnDestroy() too
