@@ -49,10 +49,14 @@ namespace Adrenak.UniVoice.Networks {
             mirrorEvents = MirrorModeObserver.New("for MirrorServer");
             mirrorEvents.ModeChanged += OnModeChanged;
 
+            NetworkManager.OnStopServerEvent += Dispose;
+
             NetworkServer.RegisterHandler<MirrorMessage>(OnReceivedMessage, true);
         }
 
         public void Dispose() {
+            NetworkManager.OnStopServerEvent -= Dispose;
+                
             mirrorEvents.ModeChanged -= OnModeChanged;
             NetworkServer.UnregisterHandler<MirrorMessage>();
             OnServerShutdown();
