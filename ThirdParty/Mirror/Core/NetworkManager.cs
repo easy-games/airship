@@ -647,6 +647,7 @@ namespace Mirror
                 && SceneManager.GetActiveScene().path != offlineScene)
                 SceneManager.MoveGameObjectToScene(gameObject, SceneManager.GetActiveScene());
 
+            OnStopServerEvent?.Invoke();
             OnStopServer();
 
             //Debug.Log("NetworkManager StopServer");
@@ -1596,9 +1597,7 @@ namespace Mirror
         public virtual void OnStartClient() { }
 
         /// <summary>This is called when a server is stopped - including when a host is stopped.</summary>
-        public virtual void OnStopServer() {
-            OnStopServerEvent?.Invoke();
-        }
+        public virtual void OnStopServer() { }
 
         /// <summary>This is called when a client is stopped.</summary>
         public virtual void OnStopClient() { }
