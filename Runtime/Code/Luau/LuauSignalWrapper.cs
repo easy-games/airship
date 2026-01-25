@@ -38,14 +38,20 @@ namespace Luau {
         }
 
         private static int _instanceIdGen = 0;
-        private static readonly Dictionary<System.Object, int> InstanceIds = new();
+        private static readonly Dictionary<System.Object, Dictionary<IntPtr, int>> InstanceIds = new();
 
-        private static int GetOrCreateId(object obj) {
-            var idFound = InstanceIds.TryGetValue(obj, out var id);
-            if (!idFound) {
-                id = _instanceIdGen++;
-                InstanceIds[obj] = id;
+        private static int GetOrCreateId(object obj, IntPtr thread) {
+            var dictFound = InstanceIds.TryGetValue(obj, out var threadDict);
+            if (dictFound && threadDict.TryGetValue(thread, out var id)) {
+                return id;
             }
+
+            if (!dictFound) {
+                threadDict = new Dictionary<IntPtr, int>();
+            }
+            
+            id = _instanceIdGen++;
+            threadDict[thread] = id;
             return id;
         }
 
@@ -157,7 +163,7 @@ namespace Luau {
         }
         
         public static int HandleCsEvent(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, EventInfo eventInfo, bool staticClass) {
-            var signalInstanceId = GetOrCreateId(objectReference);
+            var signalInstanceId = GetOrCreateId(objectReference, thread);
             var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 GameObject go = null;
@@ -218,7 +224,8 @@ namespace Luau {
         }
         
         public static int HandleUnityEvent0(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent unityEvent) {
-            var signalInstanceId = GetOrCreateId(objectReference);
+            var signalInstanceId = GetOrCreateId(objectReference, thread);
+            // Debug.Log("Handle event on " + ((UnityEngine.Object) objectReference).name, ((UnityEngine.Object) objectReference));
             var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
@@ -233,6 +240,7 @@ namespace Luau {
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
+                    // Debug.Log("Destroy signals on: " + thread);
                     if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.DestroySignals(context, thread, signalInstanceId);
                         LuauPlugin.UnpinThread(thread);
@@ -245,7 +253,7 @@ namespace Luau {
         }
         
         public static int HandleUnityEvent1<T0>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0> unityEvent) {
-            var signalInstanceId = GetOrCreateId(objectReference);
+            var signalInstanceId = GetOrCreateId(objectReference, thread);
             var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
@@ -272,7 +280,7 @@ namespace Luau {
         }
         
         public static int HandleUnityEvent2<T0, T1>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0, T1> unityEvent) {
-            var signalInstanceId = GetOrCreateId(objectReference);
+            var signalInstanceId = GetOrCreateId(objectReference, thread);
             var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
@@ -299,7 +307,7 @@ namespace Luau {
         }
         
         public static int HandleUnityEvent3<T0, T1, T2>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0, T1, T2> unityEvent) {
-            var signalInstanceId = GetOrCreateId(objectReference);
+            var signalInstanceId = GetOrCreateId(objectReference, thread);
             var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
@@ -326,7 +334,7 @@ namespace Luau {
         }
         
         public static int HandleUnityEvent4<T0, T1, T2, T3>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0, T1, T2, T3> unityEvent) {
-            var signalInstanceId = GetOrCreateId(objectReference);
+            var signalInstanceId = GetOrCreateId(objectReference, thread);
             var newSignalCreated = LuauPlugin.PushSignal(context, thread, signalInstanceId, propNameHash);
             if (newSignalCreated) {
                 var go = GetGameObjectFromObject(objectReference);
