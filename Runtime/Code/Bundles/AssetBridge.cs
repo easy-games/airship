@@ -152,7 +152,7 @@ public class AssetBridge : IAssetBridge {
 			if (!thisBundle) {
 				continue;
 			}
-
+			
 			var assetNames = loadedBundle.assetBundle.GetAllAssetNames();
 			var filteredAssetNames = new List<string>();
 			foreach (var assetName in assetNames) {
@@ -169,20 +169,36 @@ public class AssetBridge : IAssetBridge {
 
 			return filteredAssetNames.ToArray();
 		}
+		
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
+		//Check the resource system
+		var fixedPath = $"assets/{path.ToLowerInvariant()}";
+		fixedPath = fixedPath.Replace(".lua", ".ts");
 
-		return Array.Empty<string>();
-	}
-
-	public Object[] LoadAssets(string[] paths) {
-		var assets = new List<Object>();
-		foreach (var path in paths) {
-			var asset = LoadAssetIfExistsInternal<Object>(path);
-			if (asset != null) {
-				assets.Add(asset);
+		if (!(fixedPath.StartsWith("assets/resources", StringComparison.OrdinalIgnoreCase) || fixedPath.StartsWith("assets/airshippackages", StringComparison.OrdinalIgnoreCase))) {
+			if (path != "gameconfig.asset") {
+				return Array.Empty<string>();
 			}
 		}
 
-		return assets.ToArray();
+		var allPaths = AssetDatabase.GetAllAssetPaths();
+		var filteredPaths = new List<string>();
+		foreach (var assetName in allPaths) {
+			if (assetName.StartsWith(fixedPath, StringComparison.OrdinalIgnoreCase)) {
+				if (deep || assetName.LastIndexOf('/') < fixedPath.Length) {
+					filteredPaths.Add(assetName);
+				}
+			}
+		}
+
+		if (filteredPaths.Count == 0) {
+			return Array.Empty<string>();
+		}
+		
+		return filteredPaths.ToArray();
+#else
+		return Array.Empty<string>();
+#endif
 	}
 
 	public bool IsLoaded() {
