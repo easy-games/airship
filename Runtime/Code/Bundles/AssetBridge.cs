@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using Code.Bootstrap;
 using JetBrains.Annotations;
@@ -80,14 +81,14 @@ public class AssetBridge : IAssetBridge
 	/// C# should use <see cref="LoadAssetInternal{T}" />
 	/// </summary>
 	public Object LoadAsset(string path) {
-		if (path.EndsWith(".sprite")) {
+		if (path.EndsWith(".sprite", StringComparison.OrdinalIgnoreCase)) {
 			return LoadAssetInternal<Sprite>(path.Replace(".sprite", ""));
 		}
 		return LoadAssetInternal<Object>(path);
 	}
 
 	public Object LoadAssetIfExists(string path) {
-		if (path.EndsWith(".sprite")) {
+		if (path.EndsWith(".sprite", StringComparison.OrdinalIgnoreCase)) {
 			return LoadAssetInternal<Sprite>(path.Replace(".sprite", ""), false);
 		}
 		return LoadAssetInternal<Object>(path, false);
@@ -141,23 +142,23 @@ public class AssetBridge : IAssetBridge
 		 * - Shared/Resources/Prefabs/GameUI/ShopItem.prefab
 		 */
 
-		path = path.ToLower();
+		path = path.ToLowerInvariant();
 		if (path == "shared/include/runtimelib.lua") {
 			path = "shared/resources/include/runtimelib.lua";
 		}
 
-		if (path.StartsWith("assets/")) {
+		if (path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
 			path = path.Substring(7);
 		}
 		// Correct package path
-		if (path.StartsWith("@")) {
+		if (path.StartsWith("@", StringComparison.OrdinalIgnoreCase)) {
 			path = "airshippackages/" + path;
 		}
 
 		string importedPackageName; // ex: "@Easy/Core" or "" for game package.
 		bool isImportedPackage;
 		string assetBundleFile;
-		if (path.StartsWith("airshippackages/@")) {
+		if (path.StartsWith("airshippackages/@", StringComparison.OrdinalIgnoreCase)) {
 			var split = path.Split("/");
 			if (split.Length < 3) {
 				if (printErrorOnFail) {
@@ -180,12 +181,12 @@ public class AssetBridge : IAssetBridge
 
 		if (root != null && Application.isPlaying) {
 			string fullFilePath = path;
-			if (!path.StartsWith("assets/")) {
+			if (!path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
 				fullFilePath = $"assets/{path}";
 			}
 
 			// find luau file from code.zip
-			if (path.EndsWith(".lua")) {
+			if (path.EndsWith(".lua", StringComparison.OrdinalIgnoreCase)) {
 				var scriptFile = this.GetBinaryFileFromLuaPath<AirshipScript>(fullFilePath);
 				if (scriptFile) {
 					return scriptFile as T;
@@ -211,13 +212,13 @@ public class AssetBridge : IAssetBridge
 
 				bool thisBundle = false;
 				if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Game) {
-					if (!isImportedPackage && loadedBundle.assetBundleFile.ToLower() == assetBundleFile) {
+					if (!isImportedPackage && loadedBundle.assetBundleFile.ToLowerInvariant() == assetBundleFile) {
 						thisBundle = true;
 					}
 				} else if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Package) {
 					// Debug.Log($"importedPackageName={importedPackageName}, bundleId={loadedBundle.bundleId.ToLower()}");
-					if (isImportedPackage && loadedBundle.bundleId.ToLower() == importedPackageName &&
-					    loadedBundle.assetBundleFile.ToLower() == assetBundleFile) {
+					if (isImportedPackage && loadedBundle.bundleId.ToLowerInvariant() == importedPackageName &&
+					    loadedBundle.assetBundleFile.ToLowerInvariant() == assetBundleFile) {
 						thisBundle = true;
 					}
 				}
@@ -248,16 +249,15 @@ public class AssetBridge : IAssetBridge
 		//Check the resource system
 		Profiler.BeginSample("Editor.AssetBridge.LoadAsset");
 
-		var fixedPath = $"assets/{path.ToLower()}";
+		var fixedPath = $"assets/{path.ToLowerInvariant()}";
 		fixedPath = fixedPath.Replace(".lua", ".ts");
 
-		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
+		if (!(fixedPath.StartsWith("assets/resources", StringComparison.OrdinalIgnoreCase) || fixedPath.StartsWith("assets/airshippackages", StringComparison.OrdinalIgnoreCase))) {
 			if (path != "gameconfig.asset") {
 				Profiler.EndSample();
 				Debug.LogError($"Failed to load asset at path: \"{fixedPath}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
 				return null;
 			}
-
 		}
 
 		var res = AssetDatabase.LoadAssetAtPath<T>(fixedPath);

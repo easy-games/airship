@@ -16,7 +16,22 @@ namespace Mirror
     [HelpURL("https://mirror-networking.gitbook.io/docs/components/network-manager")]
     public class NetworkManager : MonoBehaviour
     {
-        public static event Action onClientSetup; 
+        public static event Action onClientSetup;
+        
+        /// <summary>
+        /// Fired when a client connection's IsReady becomes true
+        /// </summary>
+        public static event Action<NetworkConnectionToClient> OnServerReadyEvent;
+        /// <summary>
+        /// Fired when a client authenticates with the server
+        /// </summary>
+        public static event Action<NetworkConnectionToClient> OnServerConnectEvent;
+        // EASY MOD: Used to hook into server stop to clean up connections
+        /// <summary>
+        /// Fired when server is stopped but before singleton is destroyed
+        /// </summary>
+        public static event Action OnStopServerEvent;
+        // END EASY MOD
         
         /// <summary>Enable to keep NetworkManager alive when changing scenes.</summary>
         // This should be set if your game has a single NetworkManager that exists for the lifetime of the process. If there is a NetworkManager in each scene, then this should not be set.</para>
@@ -632,6 +647,7 @@ namespace Mirror
                 && SceneManager.GetActiveScene().path != offlineScene)
                 SceneManager.MoveGameObjectToScene(gameObject, SceneManager.GetActiveScene());
 
+            OnStopServerEvent?.Invoke();
             OnStopServer();
 
             //Debug.Log("NetworkManager StopServer");
@@ -835,6 +851,11 @@ namespace Mirror
 
             // and finally (in case it isn't null already)...
             singleton = null;
+            
+            onClientSetup = null;
+            OnServerReadyEvent = null;
+            OnServerConnectEvent = null;
+            OnStopServerEvent = null;
         }
 
         // virtual so that inheriting classes' OnDestroy() can call base.OnDestroy() too
@@ -1262,6 +1283,7 @@ namespace Mirror
             // airship end
 
             OnServerConnect(conn);
+            OnServerConnectEvent?.Invoke(conn);
         }
 
         void OnServerReadyMessageInternal(NetworkConnectionToClient conn, ReadyMessage msg)
@@ -1449,6 +1471,7 @@ namespace Mirror
                 //Debug.Log("Ready with no player object");
             }
             NetworkServer.SetClientReady(conn);
+            OnServerReadyEvent?.Invoke(conn);
         }
 
         /// <summary>Called on server when a client requests to add the player. Adds playerPrefab by default. Can be overwritten.</summary>

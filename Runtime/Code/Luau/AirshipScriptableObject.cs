@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -83,9 +84,9 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         if (scriptPath == null) return null;
 
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
-        if (scriptPath.EndsWith(".ts")) scriptPath = Path.ChangeExtension(scriptPath, null);
+        if (scriptPath.EndsWith(".ts", StringComparison.Ordinal)) scriptPath = Path.ChangeExtension(scriptPath, null);
         
-        if (!scriptPath.StartsWith("Assets")) {
+        if (!scriptPath.StartsWith("Assets", StringComparison.Ordinal)) {
             scriptPath = "Assets/" + scriptPath;
         }
         
@@ -96,7 +97,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             throw new ArgumentException($"{scriptPath} is not a valid script path", nameof(scriptPath));
         }
 #else
-        if (!scriptPath.StartsWith("Assets/")) scriptPath = "Assets/" + scriptPath;
+        if (!scriptPath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)) scriptPath = "Assets/" + scriptPath;
         if (Path.GetExtension(scriptPath) != ".ts") scriptPath += ".ts";
         
         var runtimeScript = AssetDatabase.LoadAssetAtPath<AirshipScript>(scriptPath);
@@ -115,7 +116,8 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         };
 #else
         asset.script = runtimeScript;
-        asset.metadata = new LuauMetadata();  
+        asset.metadata = new LuauMetadata();
+        Reconcile?.Invoke(new AirshipScriptableObjectReconcileEventData(asset, ReconcileSource.Instantiated));
 #endif
         if (!asset._init) asset.Init();
         return asset;
@@ -148,7 +150,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
                 script = runtimeScript;
             }
             else {
-                var isPackage = _scriptPath.StartsWith("Assets/AirshipPackage");
+                var isPackage = _scriptPath.StartsWith("Assets/AirshipPackage", StringComparison.Ordinal);
                 if (_script == null) {
                     var suggestion = isPackage ? "have you published this package?" : "have you done a full publish of this game?";
                     Debug.LogError($"Could not find compiled script from asset bundle '{_scriptPath}' for ScriptableObject {name} (Missing Script Asset) - {suggestion}", this);

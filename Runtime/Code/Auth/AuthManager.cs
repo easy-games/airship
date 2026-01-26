@@ -178,6 +178,10 @@ public class AuthManager {
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, standaloneBrowser);
         crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
 
+#if UNITY_EDITOR_LINUX
+		crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.LinuxEditor, standaloneBrowser);
+#endif
+        
         using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 
         // Opens a browser to log user in

@@ -109,8 +109,8 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     }
 
     [ClientRpc]
-    public void RpcWriteVoxelGroup(Vector3[] positions, double[] nums, bool priority) {
-        world.WriteVoxelGroupAt(positions, nums, priority);
+    public void RpcWriteVoxelGroup(Vector3[] positions, double[] voxelData, bool priority) {
+        world.WriteVoxelGroupAt(positions, voxelData, priority, false);
     }
 
     //Sending chunks happens to specific clients when they initialize

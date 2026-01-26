@@ -50,7 +50,7 @@ namespace Editor.Packages {
             });
         }
         
-        public static void CheckPackageVersions(bool ignoreUserSetting = false) {
+        public static void CheckPackageVersions(bool ignoreUserSetting = false, bool immediatelyUpdateCore = false) {
             var gameConfig = GameConfig.Load();
 
             var shouldUseLatestPackages = EditorIntegrationsConfig.instance.autoUpdatePackages;
@@ -58,7 +58,7 @@ namespace Editor.Packages {
             if (!shouldUpdate && !RequiresPackageDownloads(gameConfig)) return;
             if (AirshipPackagesWindow.buildingAssetBundles || CreateAssetBundles.buildingBundles) return;
 
-            EditorCoroutines.Execute(CheckAllPackages(gameConfig, useLocalVersion: !shouldUseLatestPackages, firstUpdateCheck));
+            EditorCoroutines.Execute(CheckAllPackages(gameConfig, useLocalVersion: !shouldUseLatestPackages,immediatelyUpdateCore || firstUpdateCheck));
             firstUpdateCheck = false;
         }
 
@@ -114,7 +114,7 @@ namespace Editor.Packages {
                     yield break;
                 }
                 if (version.package.codeVersionNumber.ToString() != package.codeVersion) {
-                    if (!immediatelyUpdateCore && (package.id.ToLower() == "@easy/core" || package.id.ToLower() == "@easy/corematerials")) {
+                    if (!immediatelyUpdateCore && (package.id.ToLowerInvariant() == "@easy/core" || package.id.ToLowerInvariant() == "@easy/corematerials")) {
                         isCoreUpdateAvailable = true;
                     } else {
                         yield return AirshipPackagesWindow.DownloadPackage(package.id, targetCodeVersion, targetAssetVersion, targetPublishVersion);

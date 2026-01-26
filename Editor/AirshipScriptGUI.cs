@@ -40,7 +40,7 @@ namespace Code.Luau {
             return null;
         }
         
-        private static Object Validate(Object[] references, AirshipScript script, AirshipScriptableObject binding) {
+        private static Object Validate(Object[] references, AirshipType type, AirshipScriptableObject binding) {
             if (references.Length <= 0) return null;
 
             var buildInfo = AirshipBuildInfo.Instance;
@@ -51,7 +51,7 @@ namespace Code.Luau {
                 if (airshipScriptableObject.script == null) return null;
                 var airshipType = airshipScriptableObject.GetAirshipType();
 
-                if (airshipType.IsAssignableFrom(script.GetComponentType())) {
+                if (airshipType.IsAssignableFrom(type)) {
                     return airshipScriptableObject;
                 }
 
@@ -65,15 +65,16 @@ namespace Code.Luau {
             Rect position,
             Rect dropRect,
             int id,
-            AirshipScript script,
+            // AirshipScript script,
+            AirshipType type,
             UnityEngine.Object objectBeingEdited,
             [CanBeNull] AirshipScriptableObject airshipScriptableObject,
             SerializedProperty property,
             bool allowSceneObjects,
             Action<AirshipScriptableObject> onObjectSelected = null,
             Action onObjectRemoved = null) {
-            if (!script) {
-                EditorGUI.HelpBox(position, "script == null", MessageType.Error);
+            if (type == null) {
+                EditorGUI.HelpBox(position, "type == null", MessageType.Error);
                 return null;
             }
             
@@ -108,7 +109,7 @@ namespace Code.Luau {
                         // if dropping something on this
                         var references = DragAndDrop.objectReferences;
 
-                        var validatedObject = Validate(references, script, airshipScriptableObject);
+                        var validatedObject = Validate(references, type, airshipScriptableObject);
                         if (validatedObject != null) {
                             if (!allowSceneObjects && !EditorUtility.IsPersistent(validatedObject)) {
                                 validatedObject = null;
@@ -138,13 +139,10 @@ namespace Code.Luau {
                     if (buttonRect.Contains(Event.current.mousePosition)) {
                         if (GUI.enabled) {
                             GUIUtility.keyboardControl = id;
-
-                            var componentType = script.GetComponentType();
-                            if (componentType != null) {
-                                AirshipScriptableObjectSelector.Show(
-                                    new AirshipScriptableObjectSelector.SelectorContext(objectBeingEdited, componentType, obj as AirshipScriptableObject), 
-                                    onObjectSelected, onObjectSelected);
-                            }
+                            
+                            AirshipScriptableObjectSelector.Show(
+                                new AirshipScriptableObjectSelector.SelectorContext(objectBeingEdited, type, obj as AirshipScriptableObject), 
+                                onObjectSelected, onObjectSelected);
                             
                             evt.Use();
                             GUIUtility.ExitGUI();
@@ -178,24 +176,21 @@ namespace Code.Luau {
                 }
                 case EventType.Repaint: {
                     var temp = EditorGUIUtility.ObjectContent(obj, typeof(AirshipScriptableObject));
-
-                    var scriptInfo = airshipScriptableObject && airshipScriptableObject.script ? airshipScriptableObject.script : script;
                     
-                    var displayName = scriptInfo.m_metadata != null && !string.IsNullOrEmpty(scriptInfo.m_metadata.displayName)
-                        ? scriptInfo.m_metadata.displayName
-                        : ObjectNames.NicifyVariableName(script.name);
+                    var displayName = airshipScriptableObject?.GetAirshipType().NicifyName() ?? type.NicifyName();
+                    var script = type.Script;
                     
                     temp.text = obj == null
                         ? $"None ({displayName})"
                         : $"{obj.name} ({displayName})";
 
-                    var displayIcon = scriptInfo.m_metadata?.displayIcon;
+                    var displayIcon = script.m_metadata?.displayIcon;
                     
                     if (displayIcon) {
                         temp.image = displayIcon;
                     }
-
-                    if (airshipScriptableObject && (airshipScriptableObject.script == null || airshipScriptableObject.script != script)) {
+                    
+                    if (airshipScriptableObject && (airshipScriptableObject.script == null || !AirshipBuildInfo.Instance.Inherits(airshipScriptableObject.script, script))) {
                         var width = 1;
                         EditorGUI.DrawRect(new Rect(position) {
                             x = position.x - width,
@@ -394,12 +389,12 @@ namespace Code.Luau {
         }
         
         internal static AirshipScriptableObject AirshipScriptableObjectField(
-            Rect rect, GUIContent content, UnityEngine.Object objectBeingEdited, AirshipScript script, AirshipScriptableObject airshipScriptableObject, SerializedProperty property) {
+            Rect rect, GUIContent content, UnityEngine.Object objectBeingEdited, AirshipType objectType, AirshipScriptableObject airshipScriptableObject, SerializedProperty property) {
             int id = GUIUtility.GetControlID("_airshipScriptableObjectFieldHash".GetHashCode(), FocusType.Keyboard, rect);
             
             rect = EditorGUI.PrefixLabel(rect, id, content);
             var value = DoAirshipScriptableObjectField(
-                rect, rect, id, script, objectBeingEdited, airshipScriptableObject, property, true,
+                rect, rect, id, objectType, objectBeingEdited, airshipScriptableObject, property, true,
                 binding => {
                     if (property != null) {
                         property.objectReferenceValue = binding;

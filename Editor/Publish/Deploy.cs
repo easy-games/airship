@@ -267,13 +267,14 @@ public class Deploy {
 		{
 			var st = Stopwatch.StartNew();
 			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
-			var paths = new List<string>();
+			var paths = new List<(string fileSystemPath, string bundlePath)>();
 			foreach (var guid in binaryFileGuids) {
-				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-				if (path.StartsWith("assets/airshippackages")) {
+				var path = AssetDatabase.GUIDToAssetPath(guid);
+				if (path.StartsWith("assets/airshippackages", StringComparison.OrdinalIgnoreCase)) {
 					continue;
 				}
-				paths.Add(path);
+				// linux is case-sensitive, so we need fsPath as well.
+				paths.Add((fileSystemPath: path, bundlePath: path.ToLowerInvariant()));
 			}
 			
 			// var airshipBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
@@ -286,14 +287,13 @@ public class Deploy {
 				File.Delete(codeZipPath);
 			}
 			var codeZip = new ZipFile();
-			foreach (var path in paths) {
+			foreach (var (fsPath, path) in paths) {
 				// if (path.EndsWith(".asbuildinfo")) {
 				// 	codeZip.AddEntry(path, File.ReadAllBytes(path));
 				// 	continue;
 				// }
-
-				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
-				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
+				
+				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(fsPath);
 				if (!File.Exists(luaOutPath)) {
 					Debug.LogWarning("Missing lua file: " + luaOutPath);
 					continue;
@@ -626,6 +626,8 @@ public class Deploy {
 	private static IEnumerator CompleteDeployment(GameConfig gameConfig, string gameVersionId, string devKey) {
 		{
 			List<string> uploadedFileIds = new();
+			uploadedFileIds.Add("code");
+			uploadedFileIds.Add("gameConfig");
 			uploadedFileIds.Add("Mac_shared_resources");
 			uploadedFileIds.Add("Mac_shared_scenes");
 			uploadedFileIds.Add("Windows_shared_resources");

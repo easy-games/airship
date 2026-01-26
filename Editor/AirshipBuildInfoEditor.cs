@@ -40,7 +40,7 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
                     GUI.enabled = false;
                     EditorGUILayout.EnumPopup("Declaration Type", type.DeclarationType);
                     EditorGUILayout.LabelField("Asset Path", type.AssetPath);
-                    EditorGUILayout.LabelField("Runtime Path", type.RuntimePath.ToLower());
+                    EditorGUILayout.LabelField("Runtime Path", type.RuntimePath.ToLowerInvariant());
                     EditorGUILayout.ObjectField("Script", type.Script, typeof(AirshipScript));
                     
                     if (airshipBehaviourMeta.extends.Count > 0) {
@@ -62,15 +62,6 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
         }
         
     }
-    //
-    // public void OnType(AirshipType airshipType) {
-    //     EditorGUILayout.BeginHorizontal();
-    //     {
-    //         
-    //         EditorGUILayout.LabelField(ObjectNames.NicifyVariableName(airshipType.Name), airshipType.DeclarationType.ToString());
-    //     }
-    //     EditorGUILayout.EndHorizontal();
-    // }
 
     private int packageId = 0;
     public override void OnInspectorGUI() {
@@ -79,12 +70,10 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
         List<AirshipBehaviourMeta> gameMetas = new List<AirshipBehaviourMeta>();
         List<AirshipBehaviourMeta> packageMetas = new List<AirshipBehaviourMeta>();
         
-        
-        
         foreach (var info in buildInfo.data.airshipBehaviourMetas) {
             if (searchText != "" && !info.className.StartsWith(searchText, StringComparison.OrdinalIgnoreCase)) continue;
             
-            if (info.assetPath.StartsWith("Assets/AirshipPackages/@Easy/Core")) {
+            if (info.assetPath.StartsWith("Assets/AirshipPackages/@", StringComparison.Ordinal)) {
                 packageMetas.Add(info);
             } else {
                 gameMetas.Add(info);
@@ -94,7 +83,7 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
         foreach (var info in buildInfo.data.airshipScriptableObjectMetas) {
             if (searchText != "" && !info.className.StartsWith(searchText, StringComparison.OrdinalIgnoreCase)) continue;
             
-            if (info.assetPath.StartsWith("Assets/AirshipPackages/@Easy/Core")) {
+            if (info.assetPath.StartsWith("Assets/AirshipPackages/@", StringComparison.Ordinal)) {
                 packageMetas.Add(info);
             } else {
                 gameMetas.Add(info);
@@ -119,31 +108,19 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
 
         var selectedItem = items[packageId];
         
-        // pos = EditorGUILayout.BeginScrollView(pos);
-        // {
- 
-
-            if (selectedItem.StartsWith("@")) {
-                if (packageMetas.Count > 0) {
-                    foreach (var info in packageMetas) {
-                        if (info.assetPath.StartsWith("Assets/AirshipPackages/" + selectedItem)) OnBehaviourMeta(info);
-                    }
-                }      
-            } else {
-                if (gameMetas.Count > 0) {
-                    foreach (var info in gameMetas) {
-                        OnBehaviourMeta(info);
-                    }
+        if (selectedItem.StartsWith("@")) {
+            if (packageMetas.Count > 0) {
+                foreach (var info in packageMetas) {
+                    if (info.assetPath.StartsWith("Assets/AirshipPackages/" + selectedItem, StringComparison.Ordinal)) OnBehaviourMeta(info);
+                }
+            }      
+        } else {
+            if (gameMetas.Count > 0) {
+                foreach (var info in gameMetas) {
+                    OnBehaviourMeta(info);
                 }
             }
-
-            
-            // AirshipEditorGUI.Heading(new GUIContent("Airship Scriptable Objects"));
-            // foreach (var info in buildInfo.data.airshipScriptableObjectMetas) {
-            //     OnBehaviourMeta(info);
-            // }
-        // }
-        // EditorGUILayout.EndScrollView();
+        }
 
         GUI.enabled = prevEnabled;
     }

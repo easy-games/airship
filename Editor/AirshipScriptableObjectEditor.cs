@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Airship.Editor;
 using Editor.EditorInternal;
 using Editor.Util;
 using Luau;
@@ -9,6 +10,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 internal class DoCreateScriptableObject : EndNameEditAction {
     public AirshipScript script;
@@ -87,6 +89,58 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
         }
     }
 
+    private const string LuaIconOk = "Packages/gg.easy.airship/Editor/AirshipScriptableObject.png";
+    
+    protected override void OnHeaderGUI() {
+        var scriptableObject = target as AirshipScriptableObject;
+        var script = scriptableObject != null ? scriptableObject.script : null;
+        if (script == null) {
+            base.OnHeaderGUI();
+            return;
+        }
+        
+
+        
+        GUILayout.BeginHorizontal("In BigTitle", GUILayout.ExpandWidth(true));
+        
+        var rect = EditorGUILayout.GetControlRect(false, 40, "IN BigTitle");
+        
+        var textureImage = new Rect(rect);
+        textureImage.y += 0;
+        textureImage.x += 0;
+        textureImage.width = 38;
+        textureImage.height = 38;
+
+
+        rect.x += 40;
+        
+        GUI.Label(rect, ObjectNames.NicifyVariableName(target.name), "IN TitleText");
+        GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), ObjectNames.NicifyVariableName(script.m_metadata.name));
+
+        var icon = script.m_metadata.displayIcon != null ? script.m_metadata.displayIcon : AssetDatabase.LoadAssetAtPath<Texture2D>(LuaIconOk);
+        GUI.Label(textureImage, icon);
+        
+        EditorGUILayout.EndHorizontal();
+        
+        EditorGUILayout.BeginHorizontal(GUILayout.Height(30));
+        {
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Reimport", GUILayout.MaxWidth(100))) {
+                AssetDatabase.StartAssetEditing();
+                AssetDatabase.ImportAsset(script.assetPath, ImportAssetOptions.Default);
+                AssetDatabase.StopAssetEditing();
+                return;
+            }
+            
+            if (GUILayout.Button("Edit", GUILayout.MaxWidth(100))) {
+                TypescriptProjectsService.OpenFileInEditor(script.assetPath);
+            }
+            
+            GUILayout.Space(5);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
     public override void OnInspectorGUI() {
         AirshipScriptableObject binding = (AirshipScriptableObject)target;
         
@@ -106,7 +160,19 @@ public class AirshipScriptableObjectEditor : UnityEditor.Editor {
             return;
         }
 
-        if (script == null) return;
+        if (script == null) {
+            EditorGUILayout.Space(5);
+            // var newScript = EditorGUILayout.ObjectField(new GUIContent("Script"), script, typeof(AirshipScript), true);
+
+            var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight, EditorStyles.label);
+            AirshipEditorGUI.AirshipScriptField(rect, new GUIContent("Script"), script, (script) => {
+                    binding.script = script;
+                },
+                AirshipEditorGUI.ScriptExportType.ScriptableObject, false);
+            
+            EditorGUILayout.Space(5);
+            return;
+        }
         
         if (script.scriptType != AirshipScriptType.ScriptableObject) {
             EditorGUILayout.HelpBox("Script is not a ScriptableObject", MessageType.Warning);

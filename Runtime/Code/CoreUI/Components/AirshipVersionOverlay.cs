@@ -7,6 +7,8 @@ namespace Code.CoreUI.Components {
         public TMP_Text versionText;
 
         private void Start() {
+            this.versionText.enabled = false;
+            return;
 #if !AIRSHIP_PLAYER
             if (Application.isEditor) {
                 this.versionText.gameObject.SetActive(false);

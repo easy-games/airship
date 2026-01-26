@@ -531,22 +531,9 @@ public partial class LuauCore : MonoBehaviour
 
     public static unsafe void WritePropertyToThreadMatrix4x4(IntPtr thread, Matrix4x4 mat) {
         var matData = stackalloc float[16];
-        matData[0] = mat.m00;
-        matData[1] = mat.m01;
-        matData[2] = mat.m02;
-        matData[3] = mat.m03;
-        matData[4] = mat.m10;
-        matData[5] = mat.m11;
-        matData[6] = mat.m12;
-        matData[7] = mat.m13;
-        matData[8] = mat.m20;
-        matData[9] = mat.m21;
-        matData[10] = mat.m22;
-        matData[11] = mat.m23;
-        matData[12] = mat.m30;
-        matData[13] = mat.m31;
-        matData[14] = mat.m32;
-        matData[15] = mat.m33;
+        for (var i = 0; i < 16; i++) {
+            matData[i] = mat[i];
+        }
 
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_MATRIX, new IntPtr(matData), 0); // 0, because we know how big an intPtr is
     }

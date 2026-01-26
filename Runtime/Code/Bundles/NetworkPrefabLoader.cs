@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,7 +34,7 @@ public class NetworkPrefabLoader
 
         string networkPrefabCollectionPath = null;
         foreach (var path in bundle.GetAllAssetNames()) {
-            if (path.EndsWith("networkprefabcollection.asset")) {
+            if (path.EndsWith("networkprefabcollection.asset", StringComparison.OrdinalIgnoreCase)) {
                 networkPrefabCollectionPath = path;
                 break;
             }

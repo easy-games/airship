@@ -1055,7 +1055,7 @@ namespace VoxelWorldStuff {
                         int localVoxelKey = (dx + dy * paddedChunkSize + dz * paddedChunkSize * paddedChunkSize);
                         VoxelData vox = processedVoxelMask[localVoxelKey];
 
-                        BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
+                        BlockId blockIndex = VoxelWorld.GetVoxelDataId(vox);
                         if (blockIndex != match) {
                             return FitResult.NO_FIT;
                         }
@@ -1099,12 +1099,12 @@ namespace VoxelWorldStuff {
         }
 
         private bool SeeIfVoxelVisible(int voxelKey) {
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + 1]) == false) return true;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - 1]) == false) return true;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + paddedChunkSize]) == false) return true;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - paddedChunkSize]) == false) return true;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + (paddedChunkSize * paddedChunkSize)]) == false) return true;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - (paddedChunkSize * paddedChunkSize)]) == false) return true;
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey + 1]) == false) return true;
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey - 1]) == false) return true;
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey + paddedChunkSize]) == false) return true;
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey - paddedChunkSize]) == false) return true;
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey + (paddedChunkSize * paddedChunkSize)]) == false) return true;
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey - (paddedChunkSize * paddedChunkSize)]) == false) return true;
 
             return false;
         }
@@ -1114,42 +1114,42 @@ namespace VoxelWorldStuff {
             for (int xPlane = 0; xPlane < sizeX; xPlane++) {
                 for (int zPlane = 0; zPlane < sizeZ; zPlane++) {
                     int voxelKey2 = voxelKey + (xPlane) + (-1 * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey2]) == false) return true;
                 }
             }
             //check top Surface
             for (int xPlane = 0; xPlane < sizeX; xPlane++) {
                 for (int zPlane = 0; zPlane < sizeZ; zPlane++) {
                     int voxelKey2 = voxelKey + (xPlane) + (sizeY * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey2]) == false) return true;
                 }
             }
             //check left Surface
             for (int yPlane = 0; yPlane < sizeY; yPlane++) {
                 for (int zPlane = 0; zPlane < sizeZ; zPlane++) {
                     int voxelKey2 = voxelKey + (-1) + (yPlane * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey2]) == false) return true;
                 }
             }
             //Check right surface
             for (int yPlane = 0; yPlane < sizeY; yPlane++) {
                 for (int zPlane = 0; zPlane < sizeZ; zPlane++) {
                     int voxelKey2 = voxelKey + (sizeX) + (yPlane * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey2]) == false) return true;
                 }
             }
             //Check front surface
             for (int xPlane = 0; xPlane < sizeX; xPlane++) {
                 for (int yPlane = 0; yPlane < sizeY; yPlane++) {
                     int voxelKey2 = voxelKey + (xPlane) + (yPlane * paddedChunkSize) + (-1 * paddedChunkSize * paddedChunkSize);
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey2]) == false) return true;
                 }
             }
             //Check back surface
             for (int xPlane = 0; xPlane < sizeX; xPlane++) {
                 for (int yPlane = 0; yPlane < sizeY; yPlane++) {
                     int voxelKey2 = voxelKey + (xPlane) + (yPlane * paddedChunkSize) + (sizeZ * paddedChunkSize * paddedChunkSize);
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[voxelKey2]) == false) return true;
                 }
             }
             
@@ -1204,7 +1204,7 @@ namespace VoxelWorldStuff {
                         localVoxel.Set(x + inset, y + inset, z + inset); // Account for padding
                         origin.Set(localVector.x + worldKey.x, localVector.y + worldKey.y, localVector.z + worldKey.z);
                         int localVoxelKey = ((localVoxel.x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
-                        VoxelData vox = readOnlyVoxel[localVoxelKey];
+                        VoxelData voxelData = readOnlyVoxel[localVoxelKey];
                         var voxelColor = readOnlyColor[localVoxelKey];
 
                         //Read the damage number
@@ -1212,7 +1212,7 @@ namespace VoxelWorldStuff {
                         if (!readOnlyDamageMap.TryGetValue(internalVoxelKey, out float damage)) damage = 0.0f;
                         damageUv.Set(damage, 0);
 
-                        BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
+                        BlockId blockIndex = VoxelWorld.GetVoxelDataId(voxelData);
                         if (blockIndex == 0) //Air!
                         {
                             //no visual
@@ -1225,10 +1225,10 @@ namespace VoxelWorldStuff {
                             continue;
                         }
                         
-                        int flip = VoxelWorld.GetVoxelFlippedBits(vox);
+                        int flip = VoxelWorld.GetVoxelDataFlippedBits(voxelData);
                         var scale = Vector3.one;
                         if (block.definition.halfBlock) {
-                            scale = VoxelWorld.GetScaleFromFlipBits(flip);
+                            scale = VoxelWorld.GetVoxelDataScale(voxelData);
                         }
 
                         var lodOffset = 0; // How much do we offset lod index for default placement. 
@@ -1357,9 +1357,9 @@ namespace VoxelWorldStuff {
                             int voxelKeyCheck = (localVoxel.x + check.x) + (localVoxel.y + check.y) * paddedChunkSize + (localVoxel.z + check.z) * paddedChunkSize * paddedChunkSize;
                             VoxelData other = readOnlyVoxel[voxelKeyCheck];
 
-                            BlockId otherBlockIndex = VoxelWorld.VoxelDataToBlockId(other);
+                            BlockId otherBlockIndex = VoxelWorld.GetVoxelDataId(other);
 
-                            bool solid = VoxelWorld.VoxelIsSolid(other);
+                            bool solid = VoxelWorld.IsVoxelDataSolid(other);
                             if (solid) continue; // Don't create if facing solid block
                             if (otherBlockIndex == blockIndex) continue; // For non-solid neighbors like glass we shouldn't build internal faces
 
@@ -1533,11 +1533,11 @@ namespace VoxelWorldStuff {
             if (x + localVoxel.x >= chunkSize) return false;
             ushort expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
             var expandOther = readOnlyVoxel[expandCheck];
-            if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
+            if (VoxelWorld.GetVoxelDataId(expandOther) != blockIndex) return false;
             
             var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
                              normal.z * paddedChunkSize * paddedChunkSize;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[solidCheck])) return false;
 
 
             var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y - 1) * chunkSize + (localVoxel.z - 1) * chunkSize * chunkSize);
@@ -1559,12 +1559,12 @@ namespace VoxelWorldStuff {
                     var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
                                       (localVoxel.z + z) * paddedChunkSize * paddedChunkSize);
                     var expandOther = readOnlyVoxel[expandCheck];
-                    if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
+                    if (VoxelWorld.GetVoxelDataId(expandOther) != blockIndex) return false;
                     if (handledBlockFaces[faceIndex].Contains(expandCheck)) return false;
                     
                     var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
                                      normal.z * paddedChunkSize * paddedChunkSize;
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[solidCheck])) return false;
                     
                     var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y + y - 1) * chunkSize +
                                                 (localVoxel.z + z - 1) * chunkSize * chunkSize);
@@ -1593,12 +1593,12 @@ namespace VoxelWorldStuff {
                     var expandCheck = (ushort) ((localVoxel.x + x) + (localVoxel.y + y) * paddedChunkSize +
                                       (localVoxel.z + z) * paddedChunkSize * paddedChunkSize);
                     var expandOther = readOnlyVoxel[expandCheck];
-                    if (VoxelWorld.VoxelDataToBlockId(expandOther) != blockIndex) return false;
+                    if (VoxelWorld.GetVoxelDataId(expandOther) != blockIndex) return false;
                     if (handledBlockFaces[faceIndex].Contains(expandCheck)) return false;
 
                     var solidCheck = expandCheck + normal.x + normal.y * paddedChunkSize +
                                      normal.z * paddedChunkSize * paddedChunkSize;
-                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[solidCheck])) return false;
+                    if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[solidCheck])) return false;
                     
                     var damageMapExpandKey = (ushort) ((localVoxel.x + x - 1) + (localVoxel.y + y - 1) * chunkSize +
                                                 (localVoxel.z + z - 1) * chunkSize * chunkSize);
@@ -1621,19 +1621,19 @@ namespace VoxelWorldStuff {
         private bool IsAnyVoxelOccluded(int faceIndex, int j, Vector3Int localVoxel) {
             Vector3Int i0 = occlusionSamples[faceIndex][j * 3 + 0];
             int index0 = (localVoxel.x + i0.x) + (localVoxel.y + i0.y) * paddedChunkSize + (localVoxel.z + i0.z) * paddedChunkSize * paddedChunkSize;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[index0])) {
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[index0])) {
                 return true;
             }
 
             Vector3Int i1 = occlusionSamples[faceIndex][j * 3 + 1];
             int index1 = (localVoxel.x + i1.x) + (localVoxel.y + i1.y) * paddedChunkSize + (localVoxel.z + i1.z) * paddedChunkSize * paddedChunkSize;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[index1])) {
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[index1])) {
                 return true;
             }
 
             Vector3Int i2 = occlusionSamples[faceIndex][j * 3 + 2];
             int index2 = (localVoxel.x + i2.x) + (localVoxel.y + i2.y) * paddedChunkSize + (localVoxel.z + i2.z) * paddedChunkSize * paddedChunkSize;
-            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[index2])) {
+            if (VoxelWorld.IsVoxelDataSolid(readOnlyVoxel[index2])) {
                 return true;
             }
 
@@ -1893,12 +1893,12 @@ namespace VoxelWorldStuff {
             var meshContextArray = block.meshContexts[0];
                         
             //Check for top is air
-            if (VoxelWorld.VoxelIsSolid(voxUp) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxUp) &&
-                VoxelWorld.VoxelIsSolid(voxDown) == true) {
-                bool airLeft = (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeft));
-                bool airRight = (VoxelWorld.VoxelIsSolid(voxRight) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight));
-                bool airForward = (VoxelWorld.VoxelIsSolid(voxForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward));
-                bool airBack = (VoxelWorld.VoxelIsSolid(voxBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack));
+            if (VoxelWorld.IsVoxelDataSolid(voxUp) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxUp) &&
+                VoxelWorld.IsVoxelDataSolid(voxDown) == true) {
+                bool airLeft = (VoxelWorld.IsVoxelDataSolid(voxLeft) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxLeft));
+                bool airRight = (VoxelWorld.IsVoxelDataSolid(voxRight) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxRight));
+                bool airForward = (VoxelWorld.IsVoxelDataSolid(voxForward) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxForward));
+                bool airBack = (VoxelWorld.IsVoxelDataSolid(voxBack) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxBack));
                 
                 //Are we a block with 4 surrounding air spaces? That is block C!
                 if (airLeft && airRight && airForward && airBack) {
@@ -1991,10 +1991,10 @@ namespace VoxelWorldStuff {
                 VoxelData voxRightBack = readOnlyVoxel[localVoxelKey + 1 - (paddedChunkSize * paddedChunkSize)];
 
 
-                bool airLeftForward = (VoxelWorld.VoxelIsSolid(voxLeftForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeftForward));
-                bool airRightForward = (VoxelWorld.VoxelIsSolid(voxRightForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRightForward));
-                bool airLeftBack = (VoxelWorld.VoxelIsSolid(voxLeftBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeftBack));
-                bool airRightBack = (VoxelWorld.VoxelIsSolid(voxRightBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRightBack));
+                bool airLeftForward = (VoxelWorld.IsVoxelDataSolid(voxLeftForward) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxLeftForward));
+                bool airRightForward = (VoxelWorld.IsVoxelDataSolid(voxRightForward) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxRightForward));
+                bool airLeftBack = (VoxelWorld.IsVoxelDataSolid(voxLeftBack) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxLeftBack));
+                bool airRightBack = (VoxelWorld.IsVoxelDataSolid(voxRightBack) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxRightBack));
 
                 //Check for 1 air space
                 if (airLeftForward && !airRightForward && !airLeftBack && !airRightBack) {
@@ -2040,11 +2040,11 @@ namespace VoxelWorldStuff {
             }
 
             //fallback, if any face is visible, emit the whole mesh
-            if ((VoxelWorld.VoxelIsSolid(voxDown) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxDown)) ||
-                 (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeft)) ||
-                 (VoxelWorld.VoxelIsSolid(voxRight) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight)) ||
-                 (VoxelWorld.VoxelIsSolid(voxForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward)) ||
-                 (VoxelWorld.VoxelIsSolid(voxBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack))) {
+            if ((VoxelWorld.IsVoxelDataSolid(voxDown) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxDown)) ||
+                 (VoxelWorld.IsVoxelDataSolid(voxLeft) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxLeft)) ||
+                 (VoxelWorld.IsVoxelDataSolid(voxRight) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxRight)) ||
+                 (VoxelWorld.IsVoxelDataSolid(voxForward) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxForward)) ||
+                 (VoxelWorld.IsVoxelDataSolid(voxBack) == false && block.blockId != VoxelWorld.GetVoxelDataId(voxBack))) {
                 EmitMesh(block, meshContextArray[0], temporaryMeshData, world, origin, 0, flip, damageUv, col);
             }
             else {

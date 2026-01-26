@@ -31,11 +31,11 @@ namespace Assets.Airship.VoxelRenderer {
                 Vector3[] srcVertices,
                 Vector3[] srcNormals,
                 Surface[] srcSurfaces,
-                VoxelWorld.Flips flip) {
+                VoxelWorld.VoxelFlip voxelFlip) {
                 vertices = new Vector3[srcVertices.Length];
                 normals = new Vector3[srcNormals.Length];
 
-                var bits = (VoxelWorld.Flips)flip;
+                var bits = (VoxelWorld.VoxelFlip)voxelFlip;
 
                 //Copy the surfaces
                 surfaces = new Surface[srcSurfaces.Length];
@@ -65,7 +65,7 @@ namespace Assets.Airship.VoxelRenderer {
 
 
                 //check for 1
-                if (bits == VoxelWorld.Flips.Flip_90Deg) {
+                if (bits == VoxelWorld.VoxelFlip.Flip_90Deg) {
                     //Rot left 90
                     for (var i = 0; i < srcVertices.Length; i++) {
                         vertices[i] = new Vector3(srcVertices[i].z, srcVertices[i].y, -srcVertices[i].x);
@@ -74,7 +74,7 @@ namespace Assets.Airship.VoxelRenderer {
                 }
 
                 //check for 2
-                if (bits == VoxelWorld.Flips.Flip_180Deg) {
+                if (bits == VoxelWorld.VoxelFlip.Flip_180Deg) {
                     //Rot 180
                     for (var i = 0; i < srcVertices.Length; i++) {
                         vertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, -srcVertices[i].z);
@@ -83,7 +83,7 @@ namespace Assets.Airship.VoxelRenderer {
                 }
 
                 //check for 3
-                if (bits == VoxelWorld.Flips.Flip_270Deg) {
+                if (bits == VoxelWorld.VoxelFlip.Flip_270Deg) {
                     //Rot right 270
                     for (var i = 0; i < srcVertices.Length; i++) {
                         vertices[i] = new Vector3(-srcVertices[i].z, srcVertices[i].y, srcVertices[i].x);
@@ -93,7 +93,7 @@ namespace Assets.Airship.VoxelRenderer {
 
                 //Do the vertical flipped ones
                 //check for 4
-                if (bits == VoxelWorld.Flips.Flip_0DegVertical) {
+                if (bits == VoxelWorld.VoxelFlip.Flip_0DegVertical) {
                     //Flip y
                     for (var i = 0; i < srcVertices.Length; i++) {
                         vertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y, srcVertices[i].z);
@@ -104,7 +104,7 @@ namespace Assets.Airship.VoxelRenderer {
                 }
 
                 //check for 5
-                if (bits == VoxelWorld.Flips.Flip_90DegVertical) {
+                if (bits == VoxelWorld.VoxelFlip.Flip_90DegVertical) {
                     //Flip y, rot left 90
                     for (var i = 0; i < srcVertices.Length; i++) {
                         vertices[i] = new Vector3(srcVertices[i].z, -srcVertices[i].y, -srcVertices[i].x);
@@ -115,7 +115,7 @@ namespace Assets.Airship.VoxelRenderer {
                 }
 
                 //check for 6
-                if (bits == VoxelWorld.Flips.Flip_180DegVertical) {
+                if (bits == VoxelWorld.VoxelFlip.Flip_180DegVertical) {
                     //Flip y, rot 180
                     for (var i = 0; i < srcVertices.Length; i++) {
                         vertices[i] = new Vector3(-srcVertices[i].x, -srcVertices[i].y, -srcVertices[i].z);
@@ -126,7 +126,7 @@ namespace Assets.Airship.VoxelRenderer {
                 }
 
                 //check for 7
-                if (bits == VoxelWorld.Flips.Flip_270DegVertical) {
+                if (bits == VoxelWorld.VoxelFlip.Flip_270DegVertical) {
                     //Flip y, rot right 90
                     for (var i = 0; i < srcVertices.Length; i++) {
                         vertices[i] = new Vector3(-srcVertices[i].z, -srcVertices[i].y, srcVertices[i].x);

@@ -1,3 +1,7 @@
+#if AIRSHIP_PLAYER
+using Unity.Services.Analytics;
+using Unity.Services.Core;
+#endif
 using Code.Bootstrap;
 using Sentry;
 using UnityEngine;
@@ -20,6 +24,17 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
                 scope.SetExtra("server", true);
             }
         });
+
+        UnityServices.InitializeAsync();
+        AnalyticsService.Instance.StartDataCollection();
+
+        var playerSingletons = Resources.Load("InternalSingletons");
+        if (playerSingletons) {
+            var go = Instantiate(playerSingletons);
+            go.name = "InternalSingletons";
+        } else {
+            Debug.LogError("Missing private InternalSingletons prefab.");
+        }
 #endif
     }
 }
