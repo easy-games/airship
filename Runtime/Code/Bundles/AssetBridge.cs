@@ -15,8 +15,7 @@ using Object = UnityEngine.Object;
 
 [LuauAPI]
 [Preserve]
-public class AssetBridge : IAssetBridge
-{
+public class AssetBridge : IAssetBridge {
 	public static string GamesPath = Path.Join("bundles", "games");
 	public static string PackagesPath = Path.Join("bundles", "packages");
 
@@ -27,8 +26,7 @@ public class AssetBridge : IAssetBridge
 
 	[CanBeNull] private static GameConfig gameConfig;
 
-	public AssetBundle GetAssetBundle(string name)
-	{
+	public AssetBundle GetAssetBundle(string name) {
 		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].assetBundle;
 		return retValue;
 	}
@@ -46,12 +44,10 @@ public class AssetBridge : IAssetBridge
 		return gameConfig;
 	}
 
-	private Type GetTypeFromPath(string path)
-	{
+	private Type GetTypeFromPath(string path) {
 		var extension = Path.GetExtension(path);
 		Type type = null;
-		switch (extension)
-		{
+		switch (extension) {
 			case ".asset":
 				type = typeof(ScriptableObject);
 				break;
@@ -128,8 +124,7 @@ public class AssetBridge : IAssetBridge
 		return null;
 	}
 
-	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
-	{
+	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object {
 		/*
 		 * Expected formats. There will always be an extension.
 		 *
@@ -276,33 +271,28 @@ public class AssetBridge : IAssetBridge
 		return null;
 	}
 
-	public string[] GetAllBundlePaths()
-	{ 
+	public string[] GetAllBundlePaths() {
         //Get a list of directories in Assets
         string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
         
 		//Get a list of bundles in each game
         List<string> bundles = new List<string>();
-        foreach (string directory in directories)
-        {
+        foreach (string directory in directories) {
             string combinedPath = Path.Combine(directory, "AirshipPackages");
             bundles.AddRange(Directory.GetDirectories(combinedPath, "*", SearchOption.TopDirectoryOnly));
         }
 		return bundles.ToArray();	
     }
 
-    public string[] GetAllGameRootPaths()
-    {
+    public string[] GetAllGameRootPaths() {
         //Get a list of directories in Assets
         string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
         return directories;
     }
 
-    public string[] GetAllAssets()
-	{
+    public string[] GetAllAssets() {
 		List<string> results = new();
-		foreach (var bundle in SystemRoot.Instance.loadedAssetBundles)
-		{
+		foreach (var bundle in SystemRoot.Instance.loadedAssetBundles) {
 			results.AddRange(bundle.Value.assetBundle.GetAllAssetNames());
 		}
 
