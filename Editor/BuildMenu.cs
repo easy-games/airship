@@ -427,6 +427,10 @@ namespace Editor {
         }
 #endif
 
+
+#if AIRSHIP_PLAYER
+        [MenuItem("Airship/Create Binary/Client/Windows (Staging)", priority = 80)]
+#endif
         public static void BuildWindowsClientStaging() {
             InternalBuildWindowsClient(BuildOptions.None, StagingAdditionalDefines);
         }
