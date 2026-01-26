@@ -153,12 +153,9 @@ public class AssetBridge : IAssetBridge {
 				continue;
 			}
 
-			// TODO: assetNames, filteredAssetNames, and return are 3 arrays! Would be nice to cut down on these allocs
 			var assetNames = loadedBundle.assetBundle.GetAllAssetNames();
 			var filteredAssetNames = new List<string>();
 			foreach (var assetName in assetNames) {
-				// path: Assets/Somewhere/MyStuff
-				// assetName: Assets/Somewhere/MyStuff/Hello.prefab
 				if (assetName.StartsWith(path, StringComparison.OrdinalIgnoreCase)) {
 					if (deep || assetName.LastIndexOf('/') < path.Length) {
 						filteredAssetNames.Add(assetName);
