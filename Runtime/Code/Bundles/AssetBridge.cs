@@ -94,6 +94,100 @@ public class AssetBridge : IAssetBridge {
 		return LoadAssetInternal<T>(path, false);
 	}
 
+	public string[] GetAssetPathsInDirectory(string directory, bool deep) {
+		var path = directory.ToLowerInvariant();
+
+		if (path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
+			path = path.Substring(7);
+		}
+		
+		if (path.StartsWith("@", StringComparison.OrdinalIgnoreCase)) {
+			path = "airshippackages/" + path;
+		}
+
+		// Add trailing slash:
+		if (!path.EndsWith('/')) {
+			path += '/';
+		}
+		
+		string importedPackageName; // ex: "@Easy/Core" or "" for game package.
+		bool isImportedPackage;
+		string assetBundleFile;
+		if (path.StartsWith("airshippackages/@", StringComparison.OrdinalIgnoreCase)) {
+			var split = path.Split("/");
+			if (split.Length < 3) {
+				return Array.Empty<string>();
+			}
+			
+			// split should be of form [AirshipPackages, @Easy, Core, ...]
+			importedPackageName = split[1] + "/" + split[2];
+			isImportedPackage = true;
+			assetBundleFile = "shared/resources";
+		} else {
+			importedPackageName = "";
+			isImportedPackage = false;
+			assetBundleFile = "shared/resources";
+		}
+
+		var root = SystemRoot.Instance;
+
+		foreach (var bundleValue in root.loadedAssetBundles) {
+			LoadedAssetBundle loadedBundle = bundleValue.Value;
+			if (loadedBundle.assetBundle == null) {
+				continue;
+			}
+
+			bool thisBundle = false;
+			if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Game) {
+				if (!isImportedPackage && loadedBundle.assetBundleFile.ToLowerInvariant() == assetBundleFile) {
+					thisBundle = true;
+				}
+			} else if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Package) {
+				if (isImportedPackage && loadedBundle.bundleId.ToLowerInvariant() == importedPackageName &&
+				    loadedBundle.assetBundleFile.ToLowerInvariant() == assetBundleFile) {
+					thisBundle = true;
+				}
+			}
+
+			if (!thisBundle) {
+				continue;
+			}
+
+			// TODO: assetNames, filteredAssetNames, and return are 3 arrays! Would be nice to cut down on these allocs
+			var assetNames = loadedBundle.assetBundle.GetAllAssetNames();
+			var filteredAssetNames = new List<string>();
+			foreach (var assetName in assetNames) {
+				// path: Assets/Somewhere/MyStuff
+				// assetName: Assets/Somewhere/MyStuff/Hello.prefab
+				if (assetName.StartsWith(path, StringComparison.OrdinalIgnoreCase)) {
+					if (deep || assetName.LastIndexOf('/') < path.Length) {
+						filteredAssetNames.Add(assetName);
+					}
+				}
+			}
+
+			if (filteredAssetNames.Count == 0) {
+				return Array.Empty<string>();
+			}
+
+			return filteredAssetNames.ToArray();
+		}
+
+		return Array.Empty<string>();
+	}
+
+	public Object[] LoadAssets(string[] paths) {
+		var assets = new List<Object>();
+		foreach (var path in paths) {
+			var asset = LoadAssetIfExistsInternal<Object>(path);
+			if (asset != null) {
+				assets.Add(asset);
+			}
+		}
+
+		return assets.ToArray();
+	}
+
 	public bool IsLoaded() {
 		return SystemRoot.Instance != null;
 	}
