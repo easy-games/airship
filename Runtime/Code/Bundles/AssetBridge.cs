@@ -90,13 +90,11 @@ public class AssetBridge : IAssetBridge {
 		return LoadAssetInternal<Object>(path, false);
 	}
 
-	public T LoadAssetIfExistsInternal<T>(string path) where T : Object
-	{
+	public T LoadAssetIfExistsInternal<T>(string path) where T : Object {
 		return LoadAssetInternal<T>(path, false);
 	}
 
-	public bool IsLoaded()
-	{
+	public bool IsLoaded() {
 		return SystemRoot.Instance != null;
 	}
 
