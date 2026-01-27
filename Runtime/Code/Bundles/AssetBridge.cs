@@ -15,8 +15,7 @@ using Object = UnityEngine.Object;
 
 [LuauAPI]
 [Preserve]
-public class AssetBridge : IAssetBridge
-{
+public class AssetBridge : IAssetBridge {
 	public static string GamesPath = Path.Join("bundles", "games");
 	public static string PackagesPath = Path.Join("bundles", "packages");
 
@@ -27,8 +26,7 @@ public class AssetBridge : IAssetBridge
 
 	[CanBeNull] private static GameConfig gameConfig;
 
-	public AssetBundle GetAssetBundle(string name)
-	{
+	public AssetBundle GetAssetBundle(string name) {
 		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].assetBundle;
 		return retValue;
 	}
@@ -46,12 +44,10 @@ public class AssetBridge : IAssetBridge
 		return gameConfig;
 	}
 
-	private Type GetTypeFromPath(string path)
-	{
+	private Type GetTypeFromPath(string path) {
 		var extension = Path.GetExtension(path);
 		Type type = null;
-		switch (extension)
-		{
+		switch (extension) {
 			case ".asset":
 				type = typeof(ScriptableObject);
 				break;
@@ -94,13 +90,118 @@ public class AssetBridge : IAssetBridge
 		return LoadAssetInternal<Object>(path, false);
 	}
 
-	public T LoadAssetIfExistsInternal<T>(string path) where T : Object
-	{
+	public T LoadAssetIfExistsInternal<T>(string path) where T : Object {
 		return LoadAssetInternal<T>(path, false);
 	}
 
-	public bool IsLoaded()
-	{
+	public string[] GetAssetPathsInDirectory(string directory, bool deep) {
+		var path = directory.ToLowerInvariant();
+
+		if (path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
+			path = path.Substring(7);
+		}
+		
+		if (path.StartsWith("@", StringComparison.OrdinalIgnoreCase)) {
+			path = "airshippackages/" + path;
+		}
+
+		// Add trailing slash:
+		if (!path.EndsWith('/')) {
+			path += '/';
+		}
+		
+		string importedPackageName; // ex: "@Easy/Core" or "" for game package.
+		bool isImportedPackage;
+		string assetBundleFile;
+		if (path.StartsWith("airshippackages/@", StringComparison.OrdinalIgnoreCase)) {
+			var split = path.Split("/");
+			if (split.Length < 3) {
+				return Array.Empty<string>();
+			}
+			
+			// split should be of form [AirshipPackages, @Easy, Core, ...]
+			importedPackageName = split[1] + "/" + split[2];
+			isImportedPackage = true;
+			assetBundleFile = "shared/resources";
+		} else {
+			importedPackageName = "";
+			isImportedPackage = false;
+			assetBundleFile = "shared/resources";
+		}
+
+		var root = SystemRoot.Instance;
+
+		foreach (var bundleValue in root.loadedAssetBundles) {
+			LoadedAssetBundle loadedBundle = bundleValue.Value;
+			if (loadedBundle.assetBundle == null) {
+				continue;
+			}
+
+			bool thisBundle = false;
+			if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Game) {
+				if (!isImportedPackage && loadedBundle.assetBundleFile.ToLowerInvariant() == assetBundleFile) {
+					thisBundle = true;
+				}
+			} else if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Package) {
+				if (isImportedPackage && loadedBundle.bundleId.ToLowerInvariant() == importedPackageName &&
+				    loadedBundle.assetBundleFile.ToLowerInvariant() == assetBundleFile) {
+					thisBundle = true;
+				}
+			}
+
+			if (!thisBundle) {
+				continue;
+			}
+			
+			var assetNames = loadedBundle.assetBundle.GetAllAssetNames();
+			var filteredAssetNames = new List<string>();
+			foreach (var assetName in assetNames) {
+				if (assetName.StartsWith(path, StringComparison.OrdinalIgnoreCase)) {
+					if (deep || assetName.LastIndexOf('/') < path.Length) {
+						filteredAssetNames.Add(assetName);
+					}
+				}
+			}
+
+			if (filteredAssetNames.Count == 0) {
+				return Array.Empty<string>();
+			}
+
+			return filteredAssetNames.ToArray();
+		}
+		
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
+		//Check the resource system
+		var fixedPath = $"assets/{path.ToLowerInvariant()}";
+		fixedPath = fixedPath.Replace(".lua", ".ts");
+
+		if (!(fixedPath.StartsWith("assets/resources", StringComparison.OrdinalIgnoreCase) || fixedPath.StartsWith("assets/airshippackages", StringComparison.OrdinalIgnoreCase))) {
+			if (path != "gameconfig.asset") {
+				return Array.Empty<string>();
+			}
+		}
+
+		var allPaths = AssetDatabase.GetAllAssetPaths();
+		var filteredPaths = new List<string>();
+		foreach (var assetName in allPaths) {
+			if (assetName.StartsWith(fixedPath, StringComparison.OrdinalIgnoreCase)) {
+				if (deep || assetName.LastIndexOf('/') < fixedPath.Length) {
+					filteredPaths.Add(assetName);
+				}
+			}
+		}
+
+		if (filteredPaths.Count == 0) {
+			return Array.Empty<string>();
+		}
+		
+		return filteredPaths.ToArray();
+#else
+		return Array.Empty<string>();
+#endif
+	}
+
+	public bool IsLoaded() {
 		return SystemRoot.Instance != null;
 	}
 
@@ -128,8 +229,7 @@ public class AssetBridge : IAssetBridge
 		return null;
 	}
 
-	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
-	{
+	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object {
 		/*
 		 * Expected formats. There will always be an extension.
 		 *
@@ -276,33 +376,28 @@ public class AssetBridge : IAssetBridge
 		return null;
 	}
 
-	public string[] GetAllBundlePaths()
-	{ 
+	public string[] GetAllBundlePaths() {
         //Get a list of directories in Assets
         string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
         
 		//Get a list of bundles in each game
         List<string> bundles = new List<string>();
-        foreach (string directory in directories)
-        {
+        foreach (string directory in directories) {
             string combinedPath = Path.Combine(directory, "AirshipPackages");
             bundles.AddRange(Directory.GetDirectories(combinedPath, "*", SearchOption.TopDirectoryOnly));
         }
 		return bundles.ToArray();	
     }
 
-    public string[] GetAllGameRootPaths()
-    {
+    public string[] GetAllGameRootPaths() {
         //Get a list of directories in Assets
         string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
         return directories;
     }
 
-    public string[] GetAllAssets()
-	{
+    public string[] GetAllAssets() {
 		List<string> results = new();
-		foreach (var bundle in SystemRoot.Instance.loadedAssetBundles)
-		{
+		foreach (var bundle in SystemRoot.Instance.loadedAssetBundles) {
 			results.AddRange(bundle.Value.assetBundle.GetAllAssetNames());
 		}
 
