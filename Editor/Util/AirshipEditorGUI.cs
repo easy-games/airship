@@ -330,32 +330,40 @@ public static partial class AirshipEditorGUI {
     public static AnimationCurve AnimationCurveProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
         DoAnimationCurveField(rect, label, property);
 
-    public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
-        var currentValue = property.objectReferenceValue;
-        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.objectType, true, false);
-        
-        if (currentValue != nextValue) {
-            property.serializedObjectValue.objectReferenceValue = nextValue;
-            property.serializedModified.boolValue = true;
-        }
-        
-        DoPropertyEvents(null, property);
-        return nextValue;
+    public static Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
+        var rect = EditorGUILayout.GetControlRect();
+        return ObjectProperty(rect, label, property);
     }
     
-    public static UnityEngine.Object ObjectProperty(Rect rect, GUIContent label, AirshipSerializedValue property) {
+    public static Object ObjectProperty(Rect rect, GUIContent label, AirshipSerializedValue property) {
         if (!property.isObject) return null;
         
-        var currentValue = property.serializedObjectValue.objectReferenceValue;
-        var nextValue = ObjectField(rect, label, currentValue, property.objectType, true, false);
+        var id = GUIUtility.GetControlID(FocusType.Passive, rect);
+        var value = AirshipObjectGUIInternal.DoObjectField(
+            rect, rect,  label, id, property.objectReferenceValue, 
+            property.objectReferenceValue, property.objectType, null, 
+            true, nonClippingObjectField,
+            AirshipObjectGUIInternal.objectFieldButtonStyle, OnObjectSelectorClosed, OnObjectSelectedUpdated
+            );
 
-        if (currentValue != nextValue) {
-            property.serializedObjectValue.objectReferenceValue = nextValue;
-            property.serializedModified.boolValue = true;
+        if (value != property.objectReferenceValue) {
+            property.objectReferenceValue = value;
+            property.serializedObject.ApplyModifiedProperties();
+            property.isModified = true;
         }
         
         DoPropertyEvents(rect, property);
-        return nextValue;
+        return property.objectReferenceValue;
+        
+        void OnObjectSelectedUpdated(Object obj) {
+            property.objectReferenceValue = obj;
+            property.serializedObject.ApplyModifiedProperties();
+        }
+        
+        void OnObjectSelectorClosed(Object obj) {
+            property.objectReferenceValue = obj;
+            property.serializedObject.ApplyModifiedProperties();
+        }
     }
 
     public static int LayerMaskProperty(Rect rect, GUIContent label, AirshipSerializedValue value) => DoLayerMaskField(rect, label, value);
