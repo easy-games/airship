@@ -402,32 +402,43 @@ public static partial class AirshipEditorGUI {
 
                     foreach (var draggedObject in refs) {
                         var objRef = draggedObject;
-                        
+
+
                         if (property.array.elementType == AirshipSerializedType.AirshipBehaviour) {
-                            var buildInfo = AirshipBuildInfo.Instance;
-                            var scriptPath = buildInfo.GetScriptPathByTypeName(property.array.elementObjectTypeString);
+                            var expectedType = property.array.elementAirshipType;
 
                             switch (draggedObject) {
-                                case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
+                                case AirshipComponent component
+                                    when component.GetAirshipType().IsAssignableFrom(expectedType):
                                     objRef = component;
                                     consume = true;
                                     break;
                                 case AirshipComponent:
                                     continue;
                                 case GameObject go: {
-                                    var firstMatchingComponent = go.GetComponents<AirshipComponent>()
-                                        .FirstOrDefault(f => buildInfo.Inherits(f.script, scriptPath));
-                                    if (firstMatchingComponent != null) {
-                                        objRef = firstMatchingComponent;
+                                    var firstMatching = go.GetAirshipComponents(expectedType).FirstOrDefault();
+                                    if (firstMatching != null) {
+                                        objRef = firstMatching;
                                         consume = true;
                                     }
+
                                     break;
                                 }
                                 default:
                                     objRef = null;
                                     break;
                             }
+                        } else if (property.array.elementType == AirshipSerializedType.AirshipScriptableObject) {
+                            var expectedType = property.array.elementAirshipType;
 
+                            switch (draggedObject) {
+                                case AirshipScriptableObject scriptableObject when scriptableObject.GetAirshipType().IsAssignableFrom(expectedType):
+                                    objRef = scriptableObject;
+                                    consume = true;
+                                    break;
+                                case AirshipScriptableObject:
+                                    continue;
+                            }
                         } else if (property.array.elementType == AirshipSerializedType.Object) {
                             var objType = property.array.elementObjectType;
                             if (objType == null) break;
@@ -454,7 +465,9 @@ public static partial class AirshipEditorGUI {
                         }
                         
                         if (objRef != null && consume && currentEvent.type == EventType.DragPerform) {
-                            property.array.InsertLastElement(objRef);
+                            var lastElement = property.array.PushElement();
+                            lastElement.objectReferenceValue = objRef;
+                            property.serializedObject.ApplyModifiedProperties(); // ensure it's added as a new property
                         }
                     }
 

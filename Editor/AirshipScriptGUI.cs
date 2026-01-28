@@ -344,7 +344,7 @@ namespace Code.Luau {
 
                     var scriptInfo = airshipComponent && airshipComponent.script ? airshipComponent.script : type.Script;
                     
-                    var displayName = scriptInfo.m_metadata != null && !string.IsNullOrEmpty(scriptInfo.m_metadata.displayName)
+                    var displayName = scriptInfo?.m_metadata != null && !string.IsNullOrEmpty(scriptInfo.m_metadata.displayName)
                         ? scriptInfo.m_metadata.displayName
                         : type.NicifyName();
                     
