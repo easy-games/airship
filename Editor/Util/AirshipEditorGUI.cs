@@ -330,32 +330,40 @@ public static partial class AirshipEditorGUI {
     public static AnimationCurve AnimationCurveProperty(Rect rect, GUIContent label, AirshipSerializedValue property) =>
         DoAnimationCurveField(rect, label, property);
 
-    public static UnityEngine.Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
-        var currentValue = property.objectReferenceValue;
-        var nextValue = ObjectFieldLayout(label, property.objectReferenceValue, property.objectType, true, false);
-        
-        if (currentValue != nextValue) {
-            property.serializedObjectValue.objectReferenceValue = nextValue;
-            property.serializedModified.boolValue = true;
-        }
-        
-        DoPropertyEvents(null, property);
-        return nextValue;
+    public static Object ObjectProperty(GUIContent label, AirshipSerializedValue property) {
+        var rect = EditorGUILayout.GetControlRect();
+        return ObjectProperty(rect, label, property);
     }
     
-    public static UnityEngine.Object ObjectProperty(Rect rect, GUIContent label, AirshipSerializedValue property) {
+    public static Object ObjectProperty(Rect rect, GUIContent label, AirshipSerializedValue property) {
         if (!property.isObject) return null;
         
-        var currentValue = property.serializedObjectValue.objectReferenceValue;
-        var nextValue = ObjectField(rect, label, currentValue, property.objectType, true, false);
+        var id = GUIUtility.GetControlID(FocusType.Passive, rect);
+        var value = AirshipObjectGUIInternal.DoObjectField(
+            rect, rect,  label, id, property.objectReferenceValue, 
+            property.objectReferenceValue, property.objectType, null, 
+            true, nonClippingObjectField,
+            AirshipObjectGUIInternal.objectFieldButtonStyle, OnObjectSelectorClosed, OnObjectSelectedUpdated
+            );
 
-        if (currentValue != nextValue) {
-            property.serializedObjectValue.objectReferenceValue = nextValue;
-            property.serializedModified.boolValue = true;
+        if (value != property.objectReferenceValue) {
+            property.objectReferenceValue = value;
+            property.serializedObject.ApplyModifiedProperties();
+            property.isModified = true;
         }
         
         DoPropertyEvents(rect, property);
-        return nextValue;
+        return property.objectReferenceValue;
+        
+        void OnObjectSelectedUpdated(Object obj) {
+            property.objectReferenceValue = obj;
+            property.serializedObject.ApplyModifiedProperties();
+        }
+        
+        void OnObjectSelectorClosed(Object obj) {
+            property.objectReferenceValue = obj;
+            property.serializedObject.ApplyModifiedProperties();
+        }
     }
 
     public static int LayerMaskProperty(Rect rect, GUIContent label, AirshipSerializedValue value) => DoLayerMaskField(rect, label, value);
@@ -402,32 +410,43 @@ public static partial class AirshipEditorGUI {
 
                     foreach (var draggedObject in refs) {
                         var objRef = draggedObject;
-                        
+
+
                         if (property.array.elementType == AirshipSerializedType.AirshipBehaviour) {
-                            var buildInfo = AirshipBuildInfo.Instance;
-                            var scriptPath = buildInfo.GetScriptPathByTypeName(property.array.elementObjectTypeString);
+                            var expectedType = property.array.elementAirshipType;
 
                             switch (draggedObject) {
-                                case AirshipComponent component when scriptPath != null && buildInfo.Inherits(component.script, scriptPath):
+                                case AirshipComponent component
+                                    when component.GetAirshipType().IsAssignableFrom(expectedType):
                                     objRef = component;
                                     consume = true;
                                     break;
                                 case AirshipComponent:
                                     continue;
                                 case GameObject go: {
-                                    var firstMatchingComponent = go.GetComponents<AirshipComponent>()
-                                        .FirstOrDefault(f => buildInfo.Inherits(f.script, scriptPath));
-                                    if (firstMatchingComponent != null) {
-                                        objRef = firstMatchingComponent;
+                                    var firstMatching = go.GetAirshipComponents(expectedType).FirstOrDefault();
+                                    if (firstMatching != null) {
+                                        objRef = firstMatching;
                                         consume = true;
                                     }
+
                                     break;
                                 }
                                 default:
                                     objRef = null;
                                     break;
                             }
+                        } else if (property.array.elementType == AirshipSerializedType.AirshipScriptableObject) {
+                            var expectedType = property.array.elementAirshipType;
 
+                            switch (draggedObject) {
+                                case AirshipScriptableObject scriptableObject when scriptableObject.GetAirshipType().IsAssignableFrom(expectedType):
+                                    objRef = scriptableObject;
+                                    consume = true;
+                                    break;
+                                case AirshipScriptableObject:
+                                    continue;
+                            }
                         } else if (property.array.elementType == AirshipSerializedType.Object) {
                             var objType = property.array.elementObjectType;
                             if (objType == null) break;
@@ -454,7 +473,9 @@ public static partial class AirshipEditorGUI {
                         }
                         
                         if (objRef != null && consume && currentEvent.type == EventType.DragPerform) {
-                            property.array.InsertLastElement(objRef);
+                            var lastElement = property.array.PushElement();
+                            lastElement.objectReferenceValue = objRef;
+                            property.serializedObject.ApplyModifiedProperties(); // ensure it's added as a new property
                         }
                     }
 

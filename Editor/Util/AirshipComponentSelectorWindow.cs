@@ -37,10 +37,10 @@ internal class AirshipComponentSelectorWindow : EditorWindow {
 
     static IEnumerable<ComponentItemInfo> FetchInSceneByType([CanBeNull] AirshipType filterType) {
         var stage = StageUtility.GetCurrentStage(); // the current "stage" is the current scene thingy
-        var components = stage.FindComponentsOfType<AirshipComponent>();
-        foreach (var component in components) {
-            if (filterType != null && !component.GetAirshipType().IsAssignableFrom(filterType)) continue;
 
+        var components = stage.FindAirshipComponentsOfType(filterType);
+        foreach (var component in components )
+        {
             yield return new ComponentItemInfo() {
                 instanceId = component.GetInstanceID(),
                 component = component,

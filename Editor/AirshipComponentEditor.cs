@@ -946,7 +946,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 var value = objectRefs.GetArrayElementAtIndex(index);
                 
                 var objOld = objectRefs.arraySize > index ? value.objectReferenceValue as AirshipComponent : null;
-                var objNew = AirshipScriptGUI.AirshipBehaviourField(rect, new GUIContent(label), arraySerializedProperty.serializedObject.targetObject, script, objOld, value);
+                var objNew = AirshipScriptGUI.AirshipBehaviourField(rect, new GUIContent(label), arraySerializedProperty.serializedObject.targetObject, script.GetComponentType(), objOld, null);
                 if (objOld != objNew) {
                     value.objectReferenceValue = objNew;
                     arrayModified.boolValue = true;
@@ -1361,7 +1361,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             return;
         }
         
-        var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, obj.serializedObject.targetObject, script, obj);
+        var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, obj.serializedObject.targetObject, script.GetComponentType(), null);
         
         
         if (binding != null && target is AirshipComponent parentBinding && binding == parentBinding) {

@@ -43,10 +43,21 @@ public class AirshipBuildInfoEditor : UnityEditor.Editor {
                     EditorGUILayout.LabelField("Runtime Path", type.RuntimePath.ToLowerInvariant());
                     EditorGUILayout.ObjectField("Script", type.Script, typeof(AirshipScript));
                     
-                    if (airshipBehaviourMeta.extends.Count > 0) {
+                    // if (airshipBehaviourMeta.extends.Count > 0) {
+                    //     AirshipEditorGUI.Heading(new GUIContent("Inherits"));
+                    //     foreach (var inheritance in airshipBehaviourMeta.extends) {
+                    //         EditorGUILayout.LabelField(inheritance);
+                    //     }
+                    // }
+
+                    if (type.BaseTypes == null) {
+                        EditorGUILayout.HelpBox("Missing BaseTypes field", MessageType.Error);
+                    }
+                    
+                    if (type.BaseTypes != null && type.BaseTypes.Length > 0) {
                         AirshipEditorGUI.Heading(new GUIContent("Inherits"));
-                        foreach (var inheritance in airshipBehaviourMeta.extends) {
-                            EditorGUILayout.LabelField(inheritance);
+                        foreach (var inheritance in type.BaseTypes) {
+                            EditorGUILayout.LabelField(inheritance.Name);
                         }
                     }
                     GUI.enabled = true;

@@ -485,8 +485,8 @@ public static partial class AirshipEditorGUI {
         }
 
         if (propertyValidator == null) propertyValidator = DefaultValidator;
-        var binding = rect.HasValue ? AirshipScriptGUI.AirshipBehaviourField(rect.Value, label, property.serializedObject.targetObject, script, currentValue) : 
-            AirshipScriptGUI.AirshipBehaviourField(label, property.serializedObject.targetObject, script, currentValue);
+        var binding = rect.HasValue ? AirshipScriptGUI.AirshipBehaviourField(rect.Value, label, property.serializedObject.targetObject, property.airshipType, currentValue, property) : 
+            AirshipScriptGUI.AirshipBehaviourField(label, property.serializedObject.targetObject, property.airshipType, currentValue, property);
 
         if (!propertyValidator(binding, property)) {
             return binding;
