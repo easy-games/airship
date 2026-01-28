@@ -412,6 +412,7 @@ namespace Airship {
                     if (isClient && !finalMaterials[i].shader.isSupported) {
                         finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
                     }
+
                     // finalMaterials[i].shader = 1(finalMaterials[i].shader.name);
                     // finalMaterials[i].name = finalMaterials[i].name + " (Modified)";
                 }

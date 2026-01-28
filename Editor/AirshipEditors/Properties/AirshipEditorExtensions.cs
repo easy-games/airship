@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Airship.Editor;
 using JetBrains.Annotations;
 using Luau;
 using Mono.WebBrowser;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public static class AirshipEditorExtensions {
@@ -142,6 +144,18 @@ public static class AirshipEditorExtensions {
         }
 
         return null;
+    }
+
+    public static AirshipComponent[] FindAirshipComponentsOfType(this Stage stage, AirshipType type) {
+        var matchingComponents = new List<AirshipComponent>();
+        
+        var components = stage.FindComponentsOfType<AirshipComponent>();
+        foreach (var component in components) {
+            if (!component.GetAirshipType().IsAssignableFrom(type)) continue;
+            matchingComponents.Add(component);
+        }
+
+        return matchingComponents.ToArray();
     }
     
     /// <summary>

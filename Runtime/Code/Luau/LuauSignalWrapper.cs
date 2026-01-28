@@ -224,8 +224,10 @@ namespace Luau {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.PinThread(thread);
-            
+                LuauPluginRaw.PushThread(thread);
+                var threadRef = LuauPluginRaw.Ref(thread, -1);
+                LuauPluginRaw.Pop(thread, 1);
+                
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_0);
                 signalWrapper.RequestDisconnect += () => {
@@ -235,7 +237,7 @@ namespace Luau {
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.DestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.UnpinThread(thread);
+                        LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
                     InstanceIds.Remove(objectReference);
@@ -251,7 +253,9 @@ namespace Luau {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.PinThread(thread);
+                LuauPluginRaw.PushThread(thread);
+                var threadRef = LuauPluginRaw.Ref(thread, -1);
+                LuauPluginRaw.Pop(thread, 1);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_1);
@@ -262,7 +266,7 @@ namespace Luau {
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.DestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.UnpinThread(thread);
+                        LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_1);
                     InstanceIds.Remove(objectReference);
@@ -278,7 +282,9 @@ namespace Luau {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.PinThread(thread);
+                LuauPluginRaw.PushThread(thread);
+                var threadRef = LuauPluginRaw.Ref(thread, -1);
+                LuauPluginRaw.Pop(thread, 1);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_2);
@@ -289,7 +295,7 @@ namespace Luau {
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.DestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.UnpinThread(thread);
+                        LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_2);
                     InstanceIds.Remove(objectReference);
@@ -305,7 +311,9 @@ namespace Luau {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.PinThread(thread);
+                LuauPluginRaw.PushThread(thread);
+                var threadRef = LuauPluginRaw.Ref(thread, -1);
+                LuauPluginRaw.Pop(thread, 1);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_3);
@@ -316,7 +324,7 @@ namespace Luau {
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.DestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.UnpinThread(thread);
+                        LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_3);
                     InstanceIds.Remove(objectReference);
@@ -332,7 +340,9 @@ namespace Luau {
                 var go = GetGameObjectFromObject(objectReference);
                 if (go == null) return 0;
             
-                LuauPlugin.PinThread(thread);
+                LuauPluginRaw.PushThread(thread);
+                var threadRef = LuauPluginRaw.Ref(thread, -1);
+                LuauPluginRaw.Pop(thread, 1);
             
                 var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
                 unityEvent.AddListener(signalWrapper.HandleEvent_4);
@@ -343,7 +353,7 @@ namespace Luau {
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
                     if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.DestroySignals(context, thread, signalInstanceId);
-                        LuauPlugin.UnpinThread(thread);
+                        LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_4);
                     InstanceIds.Remove(objectReference);
