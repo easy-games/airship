@@ -122,7 +122,7 @@ namespace Code.Player.Accessories {
 
 
         public AccessorySlot accessorySlot = AccessorySlot.RightHand;
-        public VisibilityMode visibilityMode = VisibilityMode.Both;
+        public VisibilityMode visibilityMode = VisibilityMode.ThirdPerson;
         public bool skinnedToCharacter = false;
 
         [SerializeField]
