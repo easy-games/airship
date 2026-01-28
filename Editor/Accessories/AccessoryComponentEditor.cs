@@ -14,6 +14,11 @@ using Debug = UnityEngine.Debug;
 public class AccessoryComponentEditor : UnityEditor.Editor {
 
     private bool foldout = false; // Variable to handle foldout state
+    private readonly AccessorySlot[] firstPersonAccessorySlots = new []{
+        AccessorySlot.RightHand, AccessorySlot.LeftHand, AccessorySlot.Hands,
+        AccessorySlot.Torso, AccessorySlot.LeftArmLower,AccessorySlot.LeftArmUpper,
+        AccessorySlot.RightArmLower,AccessorySlot.RightArmUpper
+    };
 
     private void OnEnable() {
         var accessoryComponent = (AccessoryComponent)target;
@@ -196,12 +201,7 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         //Visibility Mode
         myTarget.visibilityMode = (AccessoryComponent.VisibilityMode)EditorGUILayout.EnumPopup("Visibility", myTarget.visibilityMode);
 
-        if (myTarget.visibilityMode != AccessoryComponent.VisibilityMode.ThirdPerson && myTarget.accessorySlot != AccessorySlot.RightHand && myTarget.accessorySlot != AccessorySlot.LeftHand &&
-            myTarget.accessorySlot != AccessorySlot.Hands &&
-            myTarget.accessorySlot != AccessorySlot.Torso && myTarget.accessorySlot != AccessorySlot.LeftArmLower &&
-            myTarget.accessorySlot != AccessorySlot.LeftArmUpper &&
-            myTarget.accessorySlot != AccessorySlot.RightArmUpper &&
-            myTarget.accessorySlot != AccessorySlot.RightArmUpper) {
+        if (myTarget.visibilityMode != AccessoryComponent.VisibilityMode.ThirdPerson && !firstPersonAccessorySlots.Contains(myTarget.accessorySlot)) {
             EditorGUILayout.HelpBox("Are you sure you want this item visible in first person?", MessageType.Warning);
         }
 
