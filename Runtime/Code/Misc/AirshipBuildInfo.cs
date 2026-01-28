@@ -282,6 +282,7 @@ namespace Luau {
                 foreach (var typeInfo in data.typeInfos) {
                     var type = new AirshipType(typeInfo);
                     _types.Add(typeInfo.id, type);
+                    _types.TryAdd(typeInfo.name, type);
                     _typesByName.TryAdd(typeInfo.name, type);
                 }
                     

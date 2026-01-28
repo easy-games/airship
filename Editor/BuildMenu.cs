@@ -498,7 +498,9 @@ namespace Editor {
             if (!validatedOptions.TryGetValue("projectPath", out string _))
             {
                 Console.WriteLine("Missing argument -projectPath");
+#if GAME_CI
                 EditorApplication.Exit(110);
+#endif
             }
 
             if (validatedOptions.TryGetValue("buildTarget", out var buildTarget))
@@ -506,19 +508,25 @@ namespace Editor {
                 if (!Enum.IsDefined(typeof(BuildTarget), buildTarget ?? string.Empty))
                 {
                     Console.WriteLine($"{buildTarget} is not a defined {nameof(BuildTarget)}");
+#if GAME_CI
                     EditorApplication.Exit(121);
+#endif
                 }
             }
             else if (!validatedOptions.TryGetValue("activeBuildProfile", out string _))
             {
                 Console.WriteLine("Missing argument -buildTarget or -activeBuildProfile");
+#if GAME_CI
                 EditorApplication.Exit(120);
+#endif
             }
 
             if (!validatedOptions.TryGetValue("customBuildPath", out string _))
             {
                 Console.WriteLine("Missing argument -customBuildPath");
+#if GAME_CI
                 EditorApplication.Exit(130);
+#endif
             }
 
             return validatedOptions;
