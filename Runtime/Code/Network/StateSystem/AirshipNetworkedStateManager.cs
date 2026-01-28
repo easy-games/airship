@@ -598,11 +598,10 @@ namespace Code.Network.StateSystem
                 this.serverLastProcessedCommandNumber = this.serverCommandBuffer.Values[0].commandNumber - 1;
                 this.serverCommandBufferWait = false;
             }
-            
-            var commandsProcessed = 0;
-            do {
-                commandsProcessed++;
 
+            var hasTicked = false; // We can only tick once per fixed update, but sometimes we process more than one command.
+            var additionalCommandsConsumed = 0; // Tracks buffer consumption when ticking for command catchup
+            do {
                 // Attempt to get a new command out of the buffer.
                 var canPredictCommand = this.serverPredictedCommandCount < Math.Ceiling(
                     this.maxServerCommandPrediction *
@@ -617,27 +616,28 @@ namespace Code.Network.StateSystem
                     // Get the command to process
                     command = this.serverCommandBuffer.Values[0];
                     this.serverCommandBuffer.RemoveAt(0);
-                    
+                    if (hasTicked) additionalCommandsConsumed++;
+
                     this.serverPredictedCommandCount = 0;
                     this.lastProcessedCommand = command;
-                    this.serverLastProcessedCommandNumber = command.commandNumber; 
-                // We have an out of order command
+                    this.serverLastProcessedCommandNumber = command.commandNumber;
+                    // We have an out of order command
                 } else if ((command != null && command.commandNumber != expectedNextCommandNumber)) {
                     this.serverLastProcessedCommandNumber = expectedNextCommandNumber;
                     command = null; // Default to processing no command if we can't predict
-                    
+
                     // If we can predict the next command in order, do so
                     if (this.lastProcessedCommand != null && canPredictCommand) {
                         command = this.lastProcessedCommand;
                         command.commandNumber = expectedNextCommandNumber;
                         this.serverPredictedCommandCount++;
                     }
-                    
+
                     // Command gaps are never improved by a larger target buffer size except in cases where jitter
                     // is larger than the min buffer size (which is basically never). Instead of varying the target
                     // buffer size unnecessarily, we'll just leave it as is. (no serverCommandBufferMisses++ or 
                     // serverCommandBufferTargetSize increase)
-                    
+
                     // print($"Reprocessing last command to fill gap. New buffer {serverCommandBufferTargetSize}");
                 }
                 // We don't have any more commands in the command buffer. We've completely run out of inputs and we should wait for more.
@@ -650,7 +650,7 @@ namespace Code.Network.StateSystem
                         Math.Min(serverCommandBufferTargetSize + 1, serverCommandBufferMaxSize);
                     // print($"No command available for ticking. New buffer {serverCommandBufferTargetSize}");
                 }
-                
+
                 // tick command
                 // Ensure that we always tick the system even if there's no command to process.
                 if (command != null) {
@@ -661,27 +661,26 @@ namespace Code.Network.StateSystem
                 // is required to apply the calculated velocities and move the character. We could work around this by pausing all other
                 // characters and then simulating forward once, but it would add a lot of complexity/processing power requirements.
                 // Instead we just drop the command and don't process it at all.
-                if (commandsProcessed == 1) {
+                if (!hasTicked) {
+                    hasTicked = true;
                     if (this.connectionToClient != null && command != null) {
                         // Difference between the most recently arrived cmd# and the cmd# you're processing (assuming constant tick time and no loss)
                         // gives you the amount of time that you buffered the command you're about to process.
                         var mostRecentCmd = serverCommandBuffer.Count > 0 ? serverCommandBuffer.Values[^1] : command;
-                        var commandDelay = (mostRecentCmd.commandNumber + serverTicksSinceCommandArrival) - command.commandNumber;
-                        this.serverCommandDelayAvg.Add(commandDelay); // Delay can vary with jitter, we smooth over that with a simple avg
-                        this.connectionToClient.inputBufferTime = serverCommandDelayAvg.Value * Time.fixedUnscaledDeltaTime;
+                        var commandDelay = (mostRecentCmd.commandNumber + serverTicksSinceCommandArrival) -
+                                           command.commandNumber;
+                        this.serverCommandDelayAvg
+                            .Add(commandDelay); // Delay can vary with jitter, we smooth over that with a simple avg
+                        this.connectionToClient.inputBufferTime =
+                            serverCommandDelayAvg.Value * Time.fixedUnscaledDeltaTime;
                     }
+
                     this.stateSystem.Tick(command, tick, time, false);
                 }
-
-                // if (commandsProcessed > 1) {
-                //     print($"[{Time.frameCount}] Processed additional command #{serverLastProcessedCommandNumber} for catchup. {serverCommandCatchUpRequired - (commandsProcessed - 1)} more required.");
-                // }
-                
-            } while (commandsProcessed < 1 + serverCommandCatchUpRequired);
+            } while (this.serverCommandBuffer.Count > 0 && serverCommandCatchUpRequired != 0 &&
+                     additionalCommandsConsumed < serverCommandCatchUpRequired + 1);
+            // ^ Process one additional command for additional buffer room.
             serverCommandCatchUpRequired = 0;
-            
-            
-            // if (this.connectionToClient != null) this.connectionToClient.inputBufferTime = this.serverCommandBufferAvgSize.Value * Time.fixedUnscaledDeltaTime;
         }
 
         public void AuthServerCaptureSnapshot(int tick, double time, bool replay)
@@ -811,10 +810,10 @@ namespace Code.Network.StateSystem
             
             // Process the buffer of states that we've gotten from the authoritative client
             State latestState = null;
-            var statesProcessed = 0;
+            var hasTicked = false;
+            var additionalStatesProcessed = 0;
             do
             {
-                statesProcessed++;
                 // if (statesProcessed > 1)
                 // {
                 //     Debug.Log($"Processing additional client auth state for {this.name}. The server needs to catch up.");
@@ -833,17 +832,17 @@ namespace Code.Network.StateSystem
                     // state retrieved during this loop later.
                     this.serverLastProcessedCommandNumber = latestState.lastProcessedCommand;
                     this.serverReceivedStateBuffer.RemoveAt(0);
+                    if (hasTicked) additionalStatesProcessed++;
                     // print("using new valid state");
                 } else if (latestState != null && latestState.lastProcessedCommand != expectedNextCommandNumber) {
                     serverLastProcessedCommandNumber = expectedNextCommandNumber;
                     // TODO: We could be a little more clever with gaps in received state. We could interpolate between last and next if one exists
                     latestState = null;
                     
-                    if (serverCommandBufferTargetSize <= serverCommandBufferMinSize) {
-                        serverCommandBufferMisses++;
-                        this.serverCommandBufferTargetSize =
-                            Math.Min(serverCommandBufferTargetSize + 1, serverCommandBufferMaxSize);
-                    }
+                    // State gaps are never improved by a larger target buffer size except in cases where jitter
+                    // is larger than the min buffer size (which is basically never). Instead of varying the target
+                    // buffer size unnecessarily, we'll just leave it as is. (no serverCommandBufferMisses++ or 
+                    // serverCommandBufferTargetSize increase)
                     
                     // print($"[{Time.frameCount}] Gap in state {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
                 } else {
@@ -856,8 +855,9 @@ namespace Code.Network.StateSystem
 
                 // If we don't have a new state to process, that's ok. It just means that the client hasn't sent us
                 // their updated state yet.
-            } while (statesProcessed < 1 + serverCommandCatchUpRequired);
-            
+                hasTicked = true; // Flag that we have iterated at least once. Any additional state consumption will be marked as catchup.
+            } while (this.serverReceivedStateBuffer.Count > 0 && serverCommandCatchUpRequired != 0 && additionalStatesProcessed < serverCommandCatchUpRequired + 1);
+            // ^ Process one additional state for extra buffer room.
             serverCommandCatchUpRequired = 0;
 
             // Commit the last processed snapshot to our state history
@@ -1348,6 +1348,13 @@ namespace Code.Network.StateSystem
                 Debug.LogWarning("Dropping state " + snapshot.lastProcessedCommand +
                                  " due to exceeding state buffer size.");
                 return;
+            }
+            
+            // If the packet would have been missed if our buffer size was smaller, count it as a buffer save, so that
+            // we don't reduce our buffer further.
+            var saveWindow = this.serverLastProcessedCommandNumber + serverCommandBufferMinSize;
+            if (snapshot.lastProcessedCommand <= saveWindow) {
+                serverCommandBufferSaves++;
             }
             
             // If this is a new state value, update the ticks since last cmd arrival.
