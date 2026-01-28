@@ -207,13 +207,13 @@ namespace Luau {
             return threadData.m_callbacks.Remove(callback);
         }
 
-        public static LuauSignalWrapper RegisterSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong signalNameHash) {
-            var threadData = GetOrCreateThreadData(context, thread, "RegisterSignalWrapper");
-            var wrapper = new LuauSignalWrapper(context, thread, instanceId, signalNameHash);
-            threadData.m_signalWrappers.Add(wrapper);
-            
-            return wrapper;
-        }
+        // public static LuauSignalWrapper RegisterSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong signalNameHash) {
+        //     var threadData = GetOrCreateThreadData(context, thread, "RegisterSignalWrapper");
+        //     var wrapper = new LuauSignalWrapper(context, thread, instanceId, signalNameHash);
+        //     threadData.m_signalWrappers.Add(wrapper);
+        //     
+        //     return wrapper;
+        // }
         
         public static void Error(IntPtr thread) {
             ThreadData threadData = GetThreadData(thread);

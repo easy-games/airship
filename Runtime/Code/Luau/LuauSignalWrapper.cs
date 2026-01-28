@@ -39,6 +39,7 @@ namespace Luau {
 
         private static int _instanceIdGen = 0;
         private static readonly Dictionary<System.Object, int> InstanceIds = new();
+        private static readonly Dictionary<int, Dictionary<LuauContext, Dictionary<ulong, LuauSignalWrapper>>> SignalWrappers = new();
 
         private static int GetOrCreateId(object obj) {
             var idFound = InstanceIds.TryGetValue(obj, out var id);
@@ -55,6 +56,7 @@ namespace Luau {
         private readonly IntPtr _thread;
         private readonly int _instanceId;
         private readonly ulong _propNameHash;
+        private readonly GameObject _go;
         
 #if UNITY_EDITOR
         private static List<LuauSignalWrapper> _staticSignalWrappers = new();
@@ -66,6 +68,7 @@ namespace Luau {
             _staticSignalWrappers = new List<LuauSignalWrapper>();
             _instanceIdGen = 0;
             InstanceIds.Clear();
+            SignalWrappers.Clear();
         }
 #endif
         
@@ -77,11 +80,12 @@ namespace Luau {
             }
         }
         
-        public LuauSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong propNameHash) {
+        public LuauSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong propNameHash, GameObject go) {
             _context = context;
             _thread = thread;
             _instanceId = instanceId;
             _propNameHash = propNameHash;
+            _go = go;
         }
         
         public void HandleEvent_0() {
@@ -102,6 +106,45 @@ namespace Luau {
         
         public void HandleEvent_4<T0, T1, T2, T3>(T0 p0, T1 p1, T2 p2, T3 p3) {
             HandleEvent(p0, p1, p2, p3);
+        }
+
+        private static LuauSignalWrapper NewWrapper(LuauContext context, IntPtr thread, int signalInstanceId, ulong propNameHash, GameObject go) {
+            var wrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash, go);
+            if (SignalWrappers.TryGetValue(signalInstanceId, out var wrappersPerCtx)) {
+                if (wrappersPerCtx.TryGetValue(context, out var wrappers)) {
+                    wrappers[propNameHash] = wrapper;
+                } else {
+                    wrappersPerCtx[context] = new Dictionary<ulong, LuauSignalWrapper> {
+                        [propNameHash] = wrapper,
+                    };
+                }
+            } else {
+                SignalWrappers[signalInstanceId] = new Dictionary<LuauContext, Dictionary<ulong, LuauSignalWrapper>> {
+                    [context] = new Dictionary<ulong, LuauSignalWrapper> {
+                        [propNameHash] = wrapper,
+                    },
+                };
+            }
+            return wrapper;
+        }
+
+        private static void RemoveWrapper(LuauSignalWrapper wrapper) {
+            if (SignalWrappers.TryGetValue(wrapper._instanceId, out var wrappersPerCtx)) {
+                if (wrappersPerCtx.TryGetValue(wrapper._context, out var wrappersPerProp)) {
+                    wrappersPerProp.Remove(wrapper._propNameHash);
+                    
+                    if (wrappersPerProp.Count == 0) {
+                        wrappersPerCtx.Remove(wrapper._context);
+                        if (wrapper._go != null) {
+                            RemoveSignalDestroyWatcherByContext(wrapper._go, wrapper._context);
+                        }
+                    }
+                }
+                
+                if (wrappersPerCtx.Count == 0) {
+                    SignalWrappers.Remove(wrapper._instanceId);
+                }
+            }
         }
 
         private void HandleEvent(params object[] p) {
@@ -129,6 +172,25 @@ namespace Luau {
 
         public void Destroy() {
             RequestDisconnect?.Invoke();
+        }
+
+        public static void HandleDestroyedLuauSignal(LuauContext context, int signalInstanceId, ulong propNameHash) {
+            if (SignalWrappers.TryGetValue(signalInstanceId, out var wrappersPerCtx)) {
+                if (wrappersPerCtx.TryGetValue(context, out var wrapperPerProp)) {
+                    if (wrapperPerProp.TryGetValue(propNameHash, out var wrapper)) {
+                        wrapper.Destroy();
+                    }
+                }
+            }
+        }
+
+        private static void RemoveSignalDestroyWatcherByContext(GameObject go, LuauContext context) {
+            foreach (var destroyWatcher in go.GetComponents<LuauSignalDestroyWatcher>()) {
+                if (destroyWatcher.Context == context) {
+                    UnityEngine.Object.Destroy(destroyWatcher);
+                    break;
+                }
+            }
         }
 
         private static LuauSignalDestroyWatcher GetSignalDestroyWatcherByContext(GameObject go, LuauContext context) {
@@ -166,9 +228,11 @@ namespace Luau {
                     if (go == null) return 0;
                 }
             
-                LuauPlugin.PinThread(thread);
+                LuauPluginRaw.PushThread(thread);
+                var threadRef = LuauPluginRaw.Ref(thread, -1);
+                LuauPluginRaw.Pop(thread, 1);
                 
-                var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
+                var signalWrapper = NewWrapper(context, thread, signalInstanceId, propNameHash, go);
 
                 var eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
 
@@ -187,6 +251,7 @@ namespace Luau {
                 
                 signalWrapper.RequestDisconnect += () => {
                     eventInfo.RemoveEventHandler(objectReference, eventDelegate);
+                    RemoveWrapper(signalWrapper);
                 };
 
                 if (!staticClass) {
@@ -194,9 +259,10 @@ namespace Luau {
                     AddSignalDestroyWatcher(go, context, (contextReset) => {
                         if (!contextReset && LuauState.IsContextActive(context)) {
                             LuauPlugin.DestroySignals(context, thread, signalInstanceId);
-                            LuauPlugin.UnpinThread(thread);
+                            LuauPluginRaw.Unref(thread, threadRef);
                         }
                         eventInfo.RemoveEventHandler(objectReference, eventDelegate);
+                        RemoveWrapper(signalWrapper);
                         InstanceIds.Remove(objectReference);
                     });
                 } else {
@@ -206,6 +272,7 @@ namespace Luau {
                         if (ctx != context) return;
                         LuauCore.onResetInstance -= reset;
                         eventInfo.RemoveEventHandler(objectReference, eventDelegate);
+                        RemoveWrapper(signalWrapper);
                     };
                     LuauCore.onResetInstance += reset;
 #if UNITY_EDITOR
@@ -228,10 +295,11 @@ namespace Luau {
                 var threadRef = LuauPluginRaw.Ref(thread, -1);
                 LuauPluginRaw.Pop(thread, 1);
                 
-                var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
+                var signalWrapper = NewWrapper(context, thread, signalInstanceId, propNameHash, go);
                 unityEvent.AddListener(signalWrapper.HandleEvent_0);
                 signalWrapper.RequestDisconnect += () => {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
+                    RemoveWrapper(signalWrapper);
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
@@ -240,6 +308,7 @@ namespace Luau {
                         LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
+                    RemoveWrapper(signalWrapper);
                     InstanceIds.Remove(objectReference);
                 });
             }
@@ -257,10 +326,11 @@ namespace Luau {
                 var threadRef = LuauPluginRaw.Ref(thread, -1);
                 LuauPluginRaw.Pop(thread, 1);
             
-                var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
+                var signalWrapper = NewWrapper(context, thread, signalInstanceId, propNameHash, go);
                 unityEvent.AddListener(signalWrapper.HandleEvent_1);
                 signalWrapper.RequestDisconnect += () => {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_1);
+                    RemoveWrapper(signalWrapper);
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
@@ -269,6 +339,7 @@ namespace Luau {
                         LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_1);
+                    RemoveWrapper(signalWrapper);
                     InstanceIds.Remove(objectReference);
                 });
             }
@@ -286,10 +357,11 @@ namespace Luau {
                 var threadRef = LuauPluginRaw.Ref(thread, -1);
                 LuauPluginRaw.Pop(thread, 1);
             
-                var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
+                var signalWrapper = NewWrapper(context, thread, signalInstanceId, propNameHash, go);
                 unityEvent.AddListener(signalWrapper.HandleEvent_2);
                 signalWrapper.RequestDisconnect += () => {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_2);
+                    RemoveWrapper(signalWrapper);
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
@@ -298,6 +370,7 @@ namespace Luau {
                         LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_2);
+                    RemoveWrapper(signalWrapper);
                     InstanceIds.Remove(objectReference);
                 });
             }
@@ -315,10 +388,11 @@ namespace Luau {
                 var threadRef = LuauPluginRaw.Ref(thread, -1);
                 LuauPluginRaw.Pop(thread, 1);
             
-                var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
+                var signalWrapper = NewWrapper(context, thread, signalInstanceId, propNameHash, go);
                 unityEvent.AddListener(signalWrapper.HandleEvent_3);
                 signalWrapper.RequestDisconnect += () => {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_3);
+                    RemoveWrapper(signalWrapper);
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
@@ -327,6 +401,7 @@ namespace Luau {
                         LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_3);
+                    RemoveWrapper(signalWrapper);
                     InstanceIds.Remove(objectReference);
                 });
             }
@@ -344,10 +419,11 @@ namespace Luau {
                 var threadRef = LuauPluginRaw.Ref(thread, -1);
                 LuauPluginRaw.Pop(thread, 1);
             
-                var signalWrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash);
+                var signalWrapper = NewWrapper(context, thread, signalInstanceId, propNameHash, go);
                 unityEvent.AddListener(signalWrapper.HandleEvent_4);
                 signalWrapper.RequestDisconnect += () => {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_4);
+                    RemoveWrapper(signalWrapper);
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
@@ -356,6 +432,7 @@ namespace Luau {
                         LuauPluginRaw.Unref(thread, threadRef);
                     }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_4);
+                    RemoveWrapper(signalWrapper);
                     InstanceIds.Remove(objectReference);
                 });
             }
