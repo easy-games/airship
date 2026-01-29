@@ -108,6 +108,33 @@ namespace Luau {
             HandleEvent(p0, p1, p2, p3);
         }
 
+        private void HandleEvent(params object[] p) {
+            if (!LuauState.IsContextActive(_context)) {
+                // Debug.LogWarning("Attempted to fire MonoSignal, but context was not active; event cancelled");
+                return;
+            }
+            
+            Profiler.BeginSample("HandleCSToLuauSignalEvent");
+            
+            // var threadData = ThreadDataManager.GetThreadDataByPointer(_thread);
+            // if (threadData != null && !threadData.m_error) {
+                foreach (var param in p) {
+                    WritePropertyToThread(_thread, param);
+                }
+
+                var alive = LuauPlugin.EmitSignal(_context, _thread, _instanceId, _propNameHash, p.Length);
+                if (!alive) {
+                    RequestDisconnect?.Invoke();
+                }
+            // }
+            
+            Profiler.EndSample();
+        }
+
+        public void Destroy() {
+            RequestDisconnect?.Invoke();
+        }
+
         private static LuauSignalWrapper NewWrapper(LuauContext context, IntPtr thread, int signalInstanceId, ulong propNameHash, GameObject go) {
             var wrapper = new LuauSignalWrapper(context, thread, signalInstanceId, propNameHash, go);
             if (SignalWrappers.TryGetValue(signalInstanceId, out var wrappersPerCtx)) {
@@ -145,33 +172,6 @@ namespace Luau {
                     SignalWrappers.Remove(wrapper._instanceId);
                 }
             }
-        }
-
-        private void HandleEvent(params object[] p) {
-            if (!LuauState.IsContextActive(_context)) {
-                // Debug.LogWarning("Attempted to fire MonoSignal, but context was not active; event cancelled");
-                return;
-            }
-            
-            Profiler.BeginSample("HandleCSToLuauSignalEvent");
-            
-            // var threadData = ThreadDataManager.GetThreadDataByPointer(_thread);
-            // if (threadData != null && !threadData.m_error) {
-                foreach (var param in p) {
-                    WritePropertyToThread(_thread, param);
-                }
-
-                var alive = LuauPlugin.EmitSignal(_context, _thread, _instanceId, _propNameHash, p.Length);
-                if (!alive) {
-                    RequestDisconnect?.Invoke();
-                }
-            // }
-            
-            Profiler.EndSample();
-        }
-
-        public void Destroy() {
-            RequestDisconnect?.Invoke();
         }
 
         public static void HandleDestroyedLuauSignal(LuauContext context, int signalInstanceId, ulong propNameHash) {
