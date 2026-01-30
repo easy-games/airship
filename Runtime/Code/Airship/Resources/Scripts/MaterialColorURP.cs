@@ -195,8 +195,12 @@ public class MaterialColorURP : MonoBehaviour {
 
     private int forcedVariableCount = 0;
     [HideFromTS]
-    public void SetVariableCount(int maxCount) {
+    public void ForceVariableCount(int maxCount) {
         forcedVariableCount = maxCount;
+        SetVariableCount(maxCount);
+    }
+    
+    private void SetVariableCount(int maxCount) {
         // If we have more colors than needed
         if (colorSettings.Count > maxCount) {
             colorSettings.RemoveRange(maxCount, colorSettings.Count - maxCount);

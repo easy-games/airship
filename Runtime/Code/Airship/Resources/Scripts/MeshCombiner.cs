@@ -408,7 +408,7 @@ namespace Airship {
                 
                 // MaterialColorURP
                 var matColor = this.outputCombinedMeshMatColors[lodLevel];
-                matColor.SetVariableCount(finalSkinnedMeshCopy.subMeshes.Count);
+                matColor.ForceVariableCount(finalSkinnedMeshCopy.subMeshes.Count);
                 
                 // Copy the materials to the renderer
                 Material[] finalMaterials = new Material[finalSkinnedMeshCopy.subMeshes.Count];
