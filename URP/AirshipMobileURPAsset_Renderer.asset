@@ -132,14 +132,14 @@ MonoBehaviour:
     probeSamplingDebugTexture: {fileID: 2800000, guid: 24ec0e140fb444a44ab96ee80844e18e, type: 3}
     probeVolumeBlendStatesCS: {fileID: 0}
   m_RendererFeatures:
-  - {fileID: 7807577358473915454}
   - {fileID: -1785112278215371326}
   - {fileID: 6588304970068813492}
   - {fileID: 7557044006775780010}
   - {fileID: 1638106660970555761}
   - {fileID: -1513890852522452910}
   - {fileID: -3691461188290722037}
-  m_RendererFeatureMap: 3e6c38c03d165a6cc2d5c844d7013ae7b466e4c4765c6e5baa72dd377c03e06871e9593f54b9bb165298af624a94fdea0b47ca819b4bc5cc
+  - {fileID: 7807577358473915454}
+  m_RendererFeatureMap: c2d5c844d7013ae7b466e4c4765c6e5baa72dd377c03e06871e9593f54b9bb165298af624a94fdea0b47ca819b4bc5cc3e6c38c03d165a6c
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 0}
@@ -303,11 +303,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1614fc811f8f184697d9bee70ab9fe5, type: 3}
   m_Name: DecalRendererFeature
   m_EditorClassIdentifier: 
-  m_Active: 0
+  m_Active: 1
   m_Settings:
     technique: 0
-    maxDrawDistance: 1000
-    decalLayers: 0
+    maxDrawDistance: 500
+    decalLayers: 1
     dBufferSettings:
       surfaceData: 2
     screenSpaceSettings:
