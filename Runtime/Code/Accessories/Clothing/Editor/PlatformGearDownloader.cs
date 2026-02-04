@@ -4,16 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Code.Platform.Shared;
 using Code.Player.Accessories;
-using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
 namespace Code.Accessories.Clothing.Editor {
     public class PlatformGearDownloader : EditorWindow {
         private string classId = "";
-        private string outfitData = "";
         private string path = "Assets/AirshipGear";
         private bool isDownloading = false;
         private float progress = 0f;
@@ -31,26 +28,12 @@ namespace Code.Accessories.Clothing.Editor {
             GUILayout.Space(10);
 
             using (new EditorGUI.DisabledScope(isDownloading)) {
-                EditorGUILayout.LabelField("Enter Comma Seperated Gear Class ID's", EditorStyles.boldLabel);
-                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.LabelField("Enter Gear Class ID", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("You can find this by right clicking clothing in the Avatar Editor.");
-                EditorGUI.EndDisabledGroup();
+                EditorGUILayout.LabelField("Separate ID's with commas to download multiple items at once");
+                EditorGUILayout.Space(2);
                 classId = EditorGUILayout.TextField("Class ID:", classId);
                 EditorGUILayout.Space(2);
-                // if (!string.IsNullOrEmpty(classId)) {
-                //     outfitData = "";
-                // }
-                
-                EditorGUILayout.LabelField("Enter the Outfit Data");
-                EditorGUI.BeginDisabledGroup(true);
-                EditorGUILayout.LabelField("You can find this by right clicking the outfit in the Avatar Editor.");
-                EditorGUI.EndDisabledGroup();
-                outfitData = EditorGUILayout.TextField("Outfit Data:", outfitData);
-                EditorGUILayout.Space(2);
-                // if (!string.IsNullOrEmpty(outfitData)) {
-                //     classId = "";
-                // }
-                // Using the focused folder in the project window. Felt to easy to mess up
                 // var selected = Selection.GetFiltered(typeof(UnityEngine.Object), SelectionMode.TopLevel);
                 // path = selected.Length == 0 ? "Assets/AirshipGear" : AssetDatabase.GetAssetPath(selected[0]);
                 // if (Path.HasExtension(path)) {
@@ -65,6 +48,8 @@ namespace Code.Accessories.Clothing.Editor {
 
             GUILayout.Space(6);
             
+            
+
             // Progress + status
             // var rect = GUILayoutUtility.GetRect(18, 20);
             // EditorGUILayout.BeginHorizontal();
@@ -80,26 +65,9 @@ namespace Code.Accessories.Clothing.Editor {
             using (new EditorGUILayout.HorizontalScope()) {
                 GUILayout.FlexibleSpace();
 
-                using (new EditorGUI.DisabledScope(isDownloading || (string.IsNullOrWhiteSpace(classId) && string.IsNullOrWhiteSpace(outfitData)))) {
+                using (new EditorGUI.DisabledScope(isDownloading || string.IsNullOrWhiteSpace(classId))) {
                     if (GUILayout.Button("Download", GUILayout.Width(110), GUILayout.Height(24))) {
-                        if (!string.IsNullOrEmpty(classId)) {
-                            StartDownloadAsync(classId.Split(','));
-                        }
-
-                        if (!string.IsNullOrEmpty(outfitData)) {
-                            var outfit = JsonConvert.DeserializeObject<OutfitDto>(outfitData);
-                            if (outfit != null) {
-                                var classIds = new string[outfit.gear.Length];
-                                var i = 0;
-                                foreach (var gear in outfit.gear) {
-                                    classIds[i] = gear.@class.classId;
-                                    i++;
-                                }
-                                StartDownloadAsync(classIds);
-                            } else {
-                                Debug.LogError("Unable to parse outfit json. Right click an outfit in the avatar editor to copy and outfits json data.");
-                            }
-                        }
+                        StartDownloadAsync(classId.Split(','));
                     }
                 }
 
@@ -189,30 +157,10 @@ namespace Code.Accessories.Clothing.Editor {
                 if (acc.skinnedToCharacter) {
                     var skinnedMeshRenderers = acc.gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
                     foreach (var smr in skinnedMeshRenderers) {
-                        // Save the mesh into the asset folder
-                        var projectMesh = SaveMeshAsset(smr.sharedMesh, meshFolderPath, smr.sharedMesh.name);
-                        if (projectMesh) {
-                            // Swap the saved mesh into the renderer
-                            smr.sharedMesh = projectMesh;
-                        }
-                        
-                        // Save materials into the asset folder
-                        var i = 0;
                         foreach (var mat in smr.sharedMaterials) {
                             if (!mat.shader.isSupported) {
                                 mat.shader = Shader.Find("Universal Render Pipeline/Lit");
                             }
-
-                            var projectMat = await SaveMaterialAsset(mat, materialsFolderPath, texturePath, mat.name);
-                            if (projectMat) {
-                                var mats = smr.sharedMaterials;
-                                mats[i] = projectMat;
-                                smr.sharedMaterials = mats;
-                            } else {
-                                Debug.LogWarning("Unable to assign new material");
-                            }
-
-                            i++;
                         }
                     }
                 } else {
