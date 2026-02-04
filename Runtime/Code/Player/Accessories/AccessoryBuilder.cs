@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Airship;
+using Code.Platform.Server;
+using Code.Platform.Shared;
 using Code.Player.Accessories;
+using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Profiling;
-
-[Serializable]
-public class AccessoryVisualizer {
-    public AccessoryOutfit currentOutfit;
-    [HideInInspector]
-    public string currentUserId;
-    [HideInInspector]
-    public string currentUserName;
-}
 
 [LuauAPI]
 [ExecuteInEditMode]
@@ -28,8 +24,15 @@ public class AccessoryBuilder : MonoBehaviour {
 
     [HideFromTS]
     public int lodCount = 3;
-    
-    public AccessoryVisualizer visualizer = new ();
+
+    [HideInInspector]
+    public AccessoryOutfit currentOutfit;
+
+    [HideInInspector]
+    public string currentUserId;
+
+    [HideInInspector]
+    public string currentUserName;
 
     private readonly Dictionary<AccessorySlot, ActiveAccessory> activeAccessories = new();
 
@@ -70,6 +73,17 @@ public class AccessoryBuilder : MonoBehaviour {
             Debug.LogError(
                 "Unable to find rig references. Assing the rig in the prefab");
         }
+    }
+
+    private void Start() {
+        //Have to do it here instead of OnEnable so everything gets initialized
+        // if (currentOutfit){
+        //     // print("Loading avatar current outfit: " + this.gameObject.name);
+        //     var pendingOutfit = currentOutfit;
+        //     //Apply outfit skin if provided
+        //     RemoveClothingAccessories(false);
+        //     EquipAccessoryOutfit(pendingOutfit, true);
+        // }
     }
 
     private void OnEnable() {
@@ -213,6 +227,8 @@ public class AccessoryBuilder : MonoBehaviour {
             activeAccessories.Remove(slot);
         }
 
+        currentOutfit = null;
+
         // Fire event with removed elements
         OnAccessoryRemoved?.Invoke(toDelete.ToArray());
     }
@@ -265,9 +281,9 @@ public class AccessoryBuilder : MonoBehaviour {
 
     [HideFromTS]
     public ActiveAccessory[] LoadOutfit(AccessoryOutfit outfit) {
-        if (outfit.forceSkinColor) {
-            SetSkinColor(outfit.skinColor);
-        }
+        currentOutfit = outfit;
+
+        SetSkinColor(outfit.skinColor);
 
         if (outfit.faceDecal && outfit.faceDecal.decalTexture) {
             SetFaceTexture(outfit.faceDecal.decalTexture);
