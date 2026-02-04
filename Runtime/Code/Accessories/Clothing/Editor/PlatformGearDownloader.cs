@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Code.Player.Accessories;
+using Unity.Android.Gradle;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace Code.Accessories.Clothing.Editor {
     public class PlatformGearDownloader : EditorWindow {
@@ -101,7 +102,7 @@ namespace Code.Accessories.Clothing.Editor {
                         EditorUtility.DisplayDialog("Download Error", "Clothing was null.", "OK");
                     } else {
                         Debug.Log("Spawning gear: " + classId);
-                        await SpawnClothing(gear);
+                        this.SpawnClothing(gear);
                         status = "Complete";
                         progress += Mathf.Clamp01(1.0f/classIds.Length);
                         Repaint();
@@ -109,7 +110,6 @@ namespace Code.Accessories.Clothing.Editor {
                     }
                     PlatformGear.UnloadAssetBundle(gear.classId);
                 }
-                AssetDatabase.Refresh();
             } catch (Exception ex) {
                 status = "Error";
                 progress = 0f;
@@ -150,7 +150,7 @@ namespace Code.Accessories.Clothing.Editor {
                 var acc = Instantiate(accessory);
                 spawned.Add(acc.gameObject);
                 
-                //AssetDatabase.StartAssetEditing();
+                AssetDatabase.StartAssetEditing();
 
                 var meshFolderPath = Path.Combine(rootGearPath, "Meshes");
                 var materialsFolderPath = Path.Combine(rootGearPath, "Materials");
@@ -184,12 +184,10 @@ namespace Code.Accessories.Clothing.Editor {
                                 mat.shader = Shader.Find("Universal Render Pipeline/Lit");
                             }
 
-                            var projectMat = await SaveMaterialAsset(mat, materialsFolderPath, texturePath, mat.name);
+                            var projectMat = SaveMaterialAsset(mat, materialsFolderPath, texturePath, mat.name);
                             if (projectMat) {
                                 Debug.Log("Assigned new material to renderer: " + meshRenderer.gameObject.name);
-                                var mats = meshRenderer.sharedMaterials;
-                                mats[i] = projectMat;
-                                meshRenderer.sharedMaterials = mats;
+                                meshRenderer.sharedMaterials[i] = projectMat;
                             } else {
                                 Debug.LogWarning("Unable to assign new material");
                             }
@@ -198,12 +196,10 @@ namespace Code.Accessories.Clothing.Editor {
                         }
                     }
                 }
-                //AssetDatabase.StopAssetEditing();
+                AssetDatabase.StopAssetEditing();
 
                 // Save the prefab into the asset folder
-                acc = RetargetAccessoryComponent(acc);
                 SaveAsPrefab(acc.gameObject, rootGearPath, "AirshipAcc_" + accessory.name);
-                await Awaitable.NextFrameAsync();
             }
             Selection.objects = spawned.ToArray();
             SceneView.lastActiveSceneView?.FrameSelected(); // zooms to them
@@ -247,12 +243,14 @@ namespace Code.Accessories.Clothing.Editor {
                 );
             
             PrefabUtility.ApplyPrefabInstance(go, InteractionMode.AutomatedAction);
+
             AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
 
             return prefab;
         }
         
-        private static Mesh SaveMeshAsset(Mesh source, string folderPath, string assetName){
+        public static Mesh SaveMeshAsset(Mesh source, string folderPath, string assetName){
             if (source == null) {
                 return null;
             }
@@ -280,20 +278,18 @@ namespace Code.Accessories.Clothing.Editor {
             return meshCopy;
         }
         
-        private static async Task<Material> SaveMaterialAsset(
+        public static Material SaveMaterialAsset(
             Material source,
             string folderPath,
             string imageFolderPath,
             string assetName)
         {
             if (source == null) {
-                Debug.LogWarning("Trying to save null material");
                 return null;
             }
             
             if (!folderPath.StartsWith("Assets")) {
-                Debug.LogError("Path must start with Assets/");
-                return null;
+                throw new Exception("Path must start with Assets/");
             }
 
             // Ensure folder exists
@@ -328,8 +324,6 @@ namespace Code.Accessories.Clothing.Editor {
                     var texturePath = SaveTextureAsset((Texture2D)texture, imageFolderPath);
                     if (!string.IsNullOrEmpty(assetPath)) {
                         matCopy.SetTexture(textureId, AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath));
-                    } else {
-                        Debug.LogError("Unable to get texture path");
                     }
                 }
             }
@@ -387,8 +381,6 @@ namespace Code.Accessories.Clothing.Editor {
             Debug.Log("Saving texture: " + sourceCopy.name + " to path: " + assetPath);
             File.WriteAllBytes(assetPath, pngData);
             
-            AssetDatabase.ImportAsset(assetPath);
-            
             TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
             if (!importer) {
                 Debug.LogWarning("Unable to find texture importer of asset: " + sourceCopy.name);
@@ -397,6 +389,7 @@ namespace Code.Accessories.Clothing.Editor {
             importer.textureType = isNormalMap ? TextureImporterType.NormalMap : TextureImporterType.Default;
             importer.alphaIsTransparency = isNormalMap ? false : true;
             
+            AssetDatabase.ImportAsset(assetPath);
 
             return assetPath;
         }
@@ -453,9 +446,10 @@ namespace Code.Accessories.Clothing.Editor {
                 }
                 current = next;
             }
+            AssetDatabase.SaveAssets();
         }
         
-        private static Color UnpackNormalDXT5nm(Color packedColor) {
+        static Color  UnpackNormalDXT5nm(Color packedColor) {
             // In DXT5nm: 
             // Red channel is moved to Alpha
             // Green channel stays in Green
@@ -467,21 +461,6 @@ namespace Code.Accessories.Clothing.Editor {
     
             // Convert back to 0-1 range for saving to PNG
             return new Color(x * 0.5f + 0.5f, y * 0.5f + 0.5f, z * 0.5f + 0.5f, 1.0f);
-        }
-        
-        private static AccessoryComponent RetargetAccessoryComponent(AccessoryComponent existing) {
-            if (existing == null)
-                return null;
-
-            // Add correct component
-            var replacement = existing.gameObject.AddComponent<AccessoryComponent>();
-
-            // Copy values you care about
-            replacement.Copy(existing);
-
-            // Remove the bundle component
-            DestroyImmediate(existing, true);
-            return replacement;
         }
     }
 }
