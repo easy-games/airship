@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using ElRaccoone.Tweens;
@@ -21,6 +21,7 @@ using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
 using UnityEngine.Tilemaps;
 using UnityEngine.VFX;
+using UnityEngine.Video;
 using Slider = UnityEngine.UI.Slider;
 
 #if UNITY_EDITOR
@@ -136,6 +137,7 @@ namespace Luau {
             [typeof(GridLayoutGroup)] = LuauContextAll,
             [typeof(LayoutRebuilder)] = LuauContextAll,
             [typeof(UnityEngine.UI.Button)] = LuauContextAll,
+            [typeof(ColorBlock)] = LuauContextAll,
             [typeof(ToggleGroup)] = LuauContextAll,
             [typeof(Dropdown)] = LuauContextAll,
             [typeof(TMP_Dropdown)] = LuauContextAll,
@@ -163,6 +165,7 @@ namespace Luau {
             [typeof(Text)] = LuauContextAll,
             [typeof(RectMask2D)] = LuauContextAll,
             [typeof(WheelFrictionCurve)] = LuauContextAll,
+            [typeof(VideoPlayer)] = LuauContextAll,
 
             // Particles
             [typeof(ParticleSystem)] = LuauContextAll,
@@ -230,6 +233,7 @@ namespace Luau {
             [typeof(VolumeProfile)] = LuauContextAll,
             [typeof(DepthOfField)] = LuauContextAll,
             [typeof(GraphicRaycaster)] = LuauContextAll,
+            [typeof(Guid)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -362,12 +366,14 @@ namespace Luau {
             
             var t = Type.GetType(typeStr);
             if (t != null) {
+                TypeReflection._shortTypeNames.TryAdd(typeStr, t);
                 return t;
             }
             
             foreach (var (assembly, namespaces) in _assemblyNamespacesUsed) {
                 var type = assembly.GetType(typeStr);
                 if (type != null) {
+                    TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                     return type;
                 }
                 
@@ -375,6 +381,7 @@ namespace Luau {
                     if (SkipNamespaces.Contains(ns)) continue;
                     type = assembly.GetType(ns + "." + typeStr);
                     if (type != null) {
+                        TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                         return type;
                     }
                 }
@@ -388,6 +395,7 @@ namespace Luau {
                 var type = assembly.GetType(typeStr);
                 if (type != null) {
                     _assemblyNamespacesUsed.Add(assembly, namespaces);
+                    TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                     return type;
                 }
                 
@@ -396,6 +404,7 @@ namespace Luau {
                     type = assembly.GetType(ns + "." + typeStr);
                     if (type != null) {
                         _assemblyNamespacesUsed.Add(assembly, namespaces);
+                        TypeReflection._shortTypeNames.TryAdd(typeStr, type);
                         return type;
                     }
                 }

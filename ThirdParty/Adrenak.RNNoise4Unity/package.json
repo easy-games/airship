@@ -1,0 +1,22 @@
+{
+    "name": "com.adrenak.rnnoise4unity",
+    "version": "1.0.0",
+    "displayName": "Adrenak.RNNoise4Unity",
+    "description": "RNNoise for Unity",
+    "unity": "2021.3",
+    "author": {
+        "name": "Vatsal Ambastha",
+        "email": "ambastha.vatsal@gmail.com",
+        "url": "http://www.vatsalambastha.com"
+    },
+    "license": "BSD 3-Clause License",
+    "keywords": [
+        "Audio",
+        "Noise",
+        "Denoising",
+        "RNNoise",
+        "voip",
+        "voice",
+        "speech"
+    ]
+}

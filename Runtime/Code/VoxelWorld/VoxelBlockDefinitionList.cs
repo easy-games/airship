@@ -9,6 +9,7 @@ using System.IO;
 using UnityEditor;
 #endif
 
+[LuauAPI]
 [CreateAssetMenu(fileName = "VoxelBlockDefinitionList", menuName = "Airship/VoxelWorld/VoxelBlockDefinitionList", order = 2)]
 public class VoxelBlockDefinitionList : ScriptableObject {
 

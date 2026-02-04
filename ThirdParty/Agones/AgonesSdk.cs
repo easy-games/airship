@@ -75,9 +75,8 @@ namespace Agones
         }
 
         // EASYMOD: Changed to OnDestroy from OnApplicationQuit. No tasks should run after destruction of the SDK.
-        private void OnDestroy()
-        {
-            Debug.Log($"[Agones] Application exit. Disposing cancellation token.");
+        private void OnDestroy() {
+            // Debug.Log($"[Agones] Application exit. Disposing cancellation token.");
             cancellationTokenSource.Dispose();
         }
         #endregion

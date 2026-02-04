@@ -10,6 +10,7 @@ using Mirror.SimpleWeb;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Airship.Editor {
     internal enum ReconcileStatus {
@@ -52,8 +53,11 @@ namespace Airship.Editor {
         [InitializeOnLoadMethod]
         internal static void OnLoad() {
             AirshipComponent.Reconcile += OnComponentReconcile;
+            AirshipScriptableObject.Reconcile += OnScriptableObjectReconcile;
         }
- 
+
+
+
         internal static void StartScriptUpdates() {}
 
         internal static void StopScriptUpdates() {
@@ -95,33 +99,17 @@ namespace Airship.Editor {
                 component.ReconcileMetadata(ReconcileSource.ForceReconcile, script.m_metadata);
             }
         }
-        
-        /// <summary>
-        /// Reconcile the component
-        /// </summary>
-        /// <param name="component"></param>
-        internal static bool ReconcileComponent(AirshipComponent component) {
+
+        internal static bool ReconcileMetadata(LuauMetadata componentMetadata, LuauMetadata scriptMetadata) { 
+            if (scriptMetadata == null) return false;
+            componentMetadata.name = scriptMetadata.name;
+            componentMetadata.decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
+            
 #if AIRSHIP_DEBUG
             var additions = new HashSet<string>();
             var deletions = new HashSet<string>();
             var modifications = new HashSet<string>();
 #endif
-            if (component.script == null) {
-                Debug.LogWarning("no script");
-                return false;
-            }
-            if (component.script.m_metadata == null) {
-                Debug.LogWarning("no metadata");
-                return false;
-            }
-            
-            
-            var scriptMetadata = component.script.m_metadata;
-            var componentMetadata = component.metadata;
-
-            if (scriptMetadata == null) return false;
-            componentMetadata.name = scriptMetadata.name;
-            componentMetadata.decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
             
             // Add missing properties
             foreach (var scriptProperty in scriptMetadata.properties) {
@@ -137,7 +125,6 @@ namespace Airship.Editor {
                 else {
                     if (!componentProperty.HasSameTypesAs(scriptProperty)) {
                         componentProperty.ReconcileTypesWith(scriptProperty);
-                        // componentProperty.ReconcileItemsWith(scriptProperty);
 #if AIRSHIP_DEBUG
                         modifications.Add(componentProperty.name);
 #endif
@@ -150,6 +137,9 @@ namespace Airship.Editor {
                 
                 componentProperty.fileRef = scriptProperty.fileRef;
                 componentProperty.refPath = scriptProperty.refPath;
+                componentProperty.defaultValue = scriptProperty.defaultValue;
+                
+                componentProperty.ReconcileDecorators(scriptProperty);
             }
             
             List<LuauMetadataProperty> propertiesToRemove = null;
@@ -172,6 +162,15 @@ namespace Airship.Editor {
 #if AIRSHIP_DEBUG
                     deletions.Add(componentProperty.name);
 #endif
+                    
+#if AIRSHIPEX_CLASS_OBJECT
+                    if (componentProperty.serializedObject is AirshipSerializableClassObject serializedLuauObject) {
+                        if (AssetDatabase.IsSubAsset(serializedLuauObject)) {
+                            AssetDatabase.RemoveObjectFromAsset(serializedLuauObject);
+                        }
+                    }
+#endif
+                    
                     componentMetadata.properties.Remove(componentProperty);
                 }
             }
@@ -179,7 +178,7 @@ namespace Airship.Editor {
 
 #if AIRSHIP_DEBUG
             if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
-                Debug.Log($"<color=#b878f7>[Reconcile] ReconcileComponent(com) for '{component.name}'#{component.script.m_metadata?.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
+                // Debug.Log($"<color=#b878f7>[Reconcile] ReconcileComponent(com) for '{component.name}'#{component.script.m_metadata?.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
 
                 foreach (var addition in additions) {
                     Debug.Log($"\t<color=#78f798>+ {ObjectNames.NicifyVariableName(addition)}</color>");
@@ -194,6 +193,49 @@ namespace Airship.Editor {
                 }
             }
 #endif
+            return true;
+        }
+
+        internal static bool ReconcileScriptableObject(AirshipScriptableObject scriptableObject) {
+            if (scriptableObject.script == null) {
+                scriptableObject.metadata = default;
+                return false;
+            }
+
+            if (scriptableObject.script.scriptType != AirshipScriptType.ScriptableObject) {
+                scriptableObject.metadata = default;
+                return false;
+            }
+            
+            if (scriptableObject.script.m_metadata == null) {
+                return false;
+            }
+            
+            var scriptMetadata = scriptableObject.script.m_metadata;
+            var componentMetadata = scriptableObject.metadata;
+
+            return ReconcileMetadata(componentMetadata, scriptMetadata);
+        }
+        
+        /// <summary>
+        /// Reconcile the component
+        /// </summary>
+        /// <param name="component"></param>
+        internal static bool ReconcileComponent(AirshipComponent component) {
+            if (component.script == null) {
+                Debug.LogWarning("no script");
+                return false;
+            }
+            if (component.script.m_metadata == null) {
+                Debug.LogWarning("no metadata");
+                return false;
+            }
+            
+            
+            var scriptMetadata = component.script.m_metadata;
+            var componentMetadata = component.metadata;
+            
+            ReconcileMetadata(componentMetadata, scriptMetadata);
             
             // Add required components
             var requireComponents = scriptMetadata.FindClassDecorators("RequireComponent");
@@ -411,15 +453,20 @@ namespace Airship.Editor {
             return true;
         }
 
-        private static IEnumerator OnDeferComponentReconcile(AirshipReconcileEventData eventData) {
+        private static IEnumerator OnDeferComponentReconcile(AirshipComponentReconcileEventData eventData) {
             yield return new WaitForEndOfFrame();
             OnComponentReconcile(eventData);
+        }
+        
+        
+        private static void OnScriptableObjectReconcile(AirshipScriptableObjectReconcileEventData data) {
+            ReconcileScriptableObject(data.ScriptableObject);
         }
         
         /// <summary>
         /// Callback for when a component is requesting reconciliation
         /// </summary>
-        private static void OnComponentReconcile(AirshipReconcileEventData eventData) {
+        private static void OnComponentReconcile(AirshipComponentReconcileEventData eventData) {
             // Components must have guids
             if (string.IsNullOrEmpty(eventData.Component.guid)) eventData.Component.guid = Guid.NewGuid().ToString();
 

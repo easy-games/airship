@@ -65,6 +65,9 @@ namespace Editor.Search {
                     var goName = go.name;
                     var acs = go.GetComponents<AirshipComponent>();
                     foreach (var ac in acs) {
+                        // Safeguard against missing script ACs
+                        if (ac.script == null) continue;
+                        
                         if (ac.script.name.Equals(airshipComponentSearch, StringComparison.InvariantCultureIgnoreCase)) {
                             // We have the AC! Now, does it match the query name?
                             var containsAll = nameContains.All((contains) =>

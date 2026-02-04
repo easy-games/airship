@@ -131,7 +131,7 @@ namespace Editor.Packages {
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
 
-                bool isCoreMaterials = package.id.ToLower() == "@easy/corematerials";
+                bool isCoreMaterials = package.id.ToLowerInvariant() == "@easy/corematerials";
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(package.id.Split("/")[1], new GUIStyle(GUI.skin.label) { fixedWidth = 150, fontStyle = FontStyle.Bold});
@@ -169,7 +169,7 @@ namespace Editor.Packages {
                         });
 
                         // Remove button is disabled for core packages
-                        if (package.id.ToLower().StartsWith("@easy/core")) {
+                        if (package.id.ToLowerInvariant().StartsWith("@easy/core")) {
                             menu.AddDisabledItem(new GUIContent("Remove"));
                         } else {
                             menu.AddItem(new GUIContent("Remove"), false, () => { RemovePackage(package.id); });
@@ -352,7 +352,7 @@ namespace Editor.Packages {
                 using var req = UnityWebRequest.Post(
                     $"{deployUrl}/package-versions/create-deployment", JsonUtility.ToJson(
                         new CreatePackageDeploymentDto() {
-                            packageSlug = packageDoc.id.ToLower(),
+                            packageSlug = packageDoc.id.ToLowerInvariant(),
                             deployCode = true,
                             deployAssets = includeAssets
                         }), "application/json");
@@ -704,6 +704,8 @@ namespace Editor.Packages {
                                 "Windows_shared_resources",
                                 "iOS_shared_resources",
                                 "Android_shared_resources",
+                                "source",
+                                "code",
 
                                 // "Linux_shared_scenes",
                                 // "Mac_shared_scenes",

@@ -621,7 +621,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region FLYING
 
-            //Flying movement
+            // Flying movement
             if (currentMoveSnapshot.isFlying) {
                 if (command.jump) {
                     newVelocity.y += movementSettings.verticalFlySpeed;
@@ -1392,14 +1392,16 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public override void InterpolateReachedState(CharacterSnapshotData snapshot) {
+            var leftGroundWhileHoldingJump = currentMoveSnapshot.isGrounded && !snapshot.isGrounded && snapshot.alreadyJumped;
+            
             var newState = new CharacterAnimationSyncData() {
                 state = snapshot.state,
-                grounded = snapshot.isGrounded,
+                grounded = snapshot.isGrounded && !snapshot.alreadyJumped,
                 sprinting = snapshot.isSprinting,
                 crouching = snapshot.isCrouching,
                 localVelocity = graphicTransform.InverseTransformDirection(snapshot.velocity),
                 lookVector = snapshot.lookVector,
-                jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount
+                jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount || leftGroundWhileHoldingJump
             };
             var changed = newState.state != currentAnimState.state;
 
@@ -1743,15 +1745,6 @@ namespace Code.Player.Character.MovementSystems.Character {
 
         public void SetMovementEnabled(bool isEnabled) {
             disableInput = !isEnabled;
-        }
-
-        public void SetDebugFlying(bool flying) {
-            if (!movementSettings.allowDebugFlying) {
-                // Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
-                return;
-            }
-
-            SetFlying(flying);
         }
 
         public void SetFlying(bool flyModeEnabled) {

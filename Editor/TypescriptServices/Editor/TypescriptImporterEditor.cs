@@ -38,18 +38,18 @@ namespace Airship.Editor {
             importer = null;
         }
 
-        public override void OnInspectorGUI() {
-            var iconProperty = serializedObject.FindProperty("icon");
-            EditorGUILayout.PropertyField(iconProperty);
-            
-            if (GUI.changed) {
-                serializedObject.ApplyModifiedProperties();
-            }
-            
-            this.ApplyRevertGUI();
-        }
+        // public override void OnInspectorGUI() {
+        //     var iconProperty = serializedObject.FindProperty("icon");
+        //     EditorGUILayout.PropertyField(iconProperty);
+        //     
+        //     if (GUI.changed) {
+        //         serializedObject.ApplyModifiedProperties();
+        //     }
+        //     
+        //     this.ApplyRevertGUI();
+        // }
 
-        protected override bool needsApplyRevert => false;
+        protected override bool needsApplyRevert => true;
 
         protected override void OnHeaderGUI() {
             var rect = EditorGUILayout.GetControlRect(false, 50, "IN BigTitle");

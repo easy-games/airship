@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Airship.Editor;
 using JetBrains.Annotations;
 using Luau;
 using Mono.WebBrowser;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public static class AirshipEditorExtensions {
@@ -16,7 +18,7 @@ public static class AirshipEditorExtensions {
     public static T GetObject<T>(this AirshipSerializedValue value) where T : UnityEngine.Object {
         return (T) GetObject(value);
     }
-
+    
     /// <summary>
     /// Grab the type of the given AirshipComponent
     /// </summary>
@@ -26,6 +28,42 @@ public static class AirshipEditorExtensions {
         if (component.script == null) return null;
         if (component.script.m_metadata == null) return null;
         return AirshipBuildInfo.Instance.GetTypeByName(component.script.m_metadata.name);
+    }
+
+    public static bool IsA(this AirshipComponent component, AirshipType airshipType) {
+        return component != null && component.GetAirshipType().IsAssignableFrom(airshipType);
+    }
+    
+    public static bool IsA(this AirshipScriptableObject scriptableObject, AirshipType airshipType) {
+        return scriptableObject != null && scriptableObject.GetAirshipType().IsAssignableFrom(airshipType);
+    }
+
+#if AIRSHIPEX_CLASS_OBJECT
+    public static AirshipType GetAirshipType(this AirshipSerializableClassObject luauObject) {
+        if (luauObject.metadata == null) return null;
+        return AirshipBuildInfo.Instance.GetTypeByName(luauObject.metadata.name);
+    }
+#endif
+
+    public static LuauMetadata GetMetadataForType(this AirshipType type) {
+        var script = type.Script;
+        if (script == null) return null;
+        if (script.m_metadata != null && script.m_metadata.name == type.Name) return script.m_metadata;
+        if (script.m_serializables != null) {
+            foreach (var serializable in script.m_serializables) {
+                if (serializable.name == type.Name) {
+                    return serializable;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static AirshipType GetAirshipType(this AirshipScriptableObject scriptableObject) {
+        if (scriptableObject.script == null) return null;
+        if (scriptableObject.script.m_metadata == null) return null;
+        return AirshipBuildInfo.Instance.GetTypeByName(scriptableObject.script.m_metadata.name);
     }
 
     private static IEnumerable<string> GetPathParts(Transform transform) {
@@ -55,8 +93,8 @@ public static class AirshipEditorExtensions {
     [CanBeNull]
     public static AirshipType GetComponentType(this AirshipScript script) {
         // TODO: Get types by path
-        if (script.m_metadata != null) {
-            return AirshipBuildInfo.Instance.GetTypeByPathAndName(script.assetPath, script.m_metadata.name);
+        if (script.m_metadata?.name != null) {
+            return AirshipBuildInfo.Instance.GetTypeByPathAndName(script.assetPath, script.m_metadata.name) ?? AirshipBuildInfo.Instance.GetTypeByName(script.m_metadata.name);
         }
         
         return null;
@@ -106,6 +144,18 @@ public static class AirshipEditorExtensions {
         }
 
         return null;
+    }
+
+    public static AirshipComponent[] FindAirshipComponentsOfType(this Stage stage, AirshipType type) {
+        var matchingComponents = new List<AirshipComponent>();
+        
+        var components = stage.FindComponentsOfType<AirshipComponent>();
+        foreach (var component in components) {
+            if (!component.GetAirshipType().IsAssignableFrom(type)) continue;
+            matchingComponents.Add(component);
+        }
+
+        return matchingComponents.ToArray();
     }
     
     /// <summary>

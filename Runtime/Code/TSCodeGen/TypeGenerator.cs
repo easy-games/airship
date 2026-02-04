@@ -22,7 +22,6 @@ using Code.Network;
 using Code.Network.Simulation;
 using Code.Player;
 using Code.RemoteConsole;
-using Code.VoiceChat;
 using ElRaccoone.Tweens;
 using ElRaccoone.Tweens.Core;
 using LeTai.TrueShadow;
@@ -52,9 +51,11 @@ using UnityEngine.VFX;
 using Code.Player.Accessories;
 using Code.Player.Character.MovementSystems.Character;
 using Code.Player.Character.NetworkedMovement;
+using Code.Voice;
 using Unity.Mathematics;
 using UnityEngine.InputSystem;
 using UnityEngine.Splines;
+using UnityEngine.Video;
 using TouchPhase = UnityEngine.TouchPhase;
 
 public class TypeGenerator : MonoBehaviour
@@ -208,7 +209,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(TerrainCollider),
             typeof(NavMeshHit),
             typeof(Graphics),
-            typeof(AirshipUniVoiceNetwork),
             typeof(StandaloneFileBrowser),
             typeof(MaterialColorURP),
             typeof(UnityWebRequestTexture),
@@ -232,6 +232,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(UniversalRenderPipelineAsset),
             typeof(WheelFrictionCurve),
             typeof(WheelHit),
+            typeof(VideoPlayer),
+            typeof(RenderTexture),
 
             // Mirror
             typeof(NetworkServer),
@@ -294,6 +296,7 @@ public class TypeGenerator : MonoBehaviour
             
             typeof(VibrationManager),
             typeof(VibrationFeedbackType),
+            typeof(AirshipUniVoice),
 
 
             
@@ -302,6 +305,7 @@ public class TypeGenerator : MonoBehaviour
             
             // Editor stuff
             typeof(EditorPrefs),
+            typeof(Guid),
         };
 
         // TwoBoneIKConstraint ik;

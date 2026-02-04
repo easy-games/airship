@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public enum AirshipSerializedType {
     Unknown,
@@ -24,7 +25,9 @@ public enum AirshipSerializedType {
     Vector3,
     Vector4,
     Matrix4x4,
-    Rect
+    Rect,
+    SerializedClass,
+    AirshipScriptableObject
 }
 
 public abstract class AirshipSerializedValue {
@@ -47,6 +50,8 @@ public abstract class AirshipSerializedValue {
             "Vector4" => AirshipSerializedType.Vector4,
             "Matrix4x4" => AirshipSerializedType.Matrix4x4,
             "Rect" => AirshipSerializedType.Rect,
+            "AirshipSerializableObject" => AirshipSerializedType.SerializedClass,
+            "AirshipScriptableObject" => AirshipSerializedType.AirshipScriptableObject,
             _ => AirshipSerializedType.Unknown,
         };
     }
@@ -85,7 +90,7 @@ public abstract class AirshipSerializedValue {
         }
     }
     
-    public bool isAirshipType => serializedType.stringValue == "AirshipBehaviour";
+    public bool isAirshipType => serializedType.stringValue is "AirshipBehaviour" or "AirshipSerializableObject" or "AirshipScriptableObject";
     public bool isEnum => serializedType.stringValue is "IntEnum" or "StringEnum" or "FlagEnum";
     public bool isObject => serializedType.stringValue == "object";
     public AirshipSerializedType type => GetTypeFromTypeString(serializedType.stringValue);
@@ -100,6 +105,24 @@ public abstract class AirshipSerializedValue {
     public AirshipComponentPropertyType propertyType =>
         LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(serializedType.stringValue, false);
 
+    public AirshipSerializedProperty FindAirshipPropertyRelative(string targetPropertyName) {
+        if (!isObject) return null;
+        
+#if AIRSHIPEX_CLASS_OBJECT
+        if (serializedObjectValue.objectReferenceValue is AirshipSerializableClassObject serializedLuauObject) {
+            var obj = new AirshipSerializedObject(serializedLuauObject);
+            return obj.FindAirshipProperty(targetPropertyName);
+        } 
+#endif
+        
+        if (serializedObjectValue.objectReferenceValue is AirshipComponent component) {
+            var obj = new AirshipSerializedObject(component);
+            return obj.FindAirshipProperty(targetPropertyName);
+        }
+        
+        return null;
+    }
+    
     public UnityEngine.Object objectReferenceValue {
         get => isObject || isAirshipType ? serializedObjectValue.objectReferenceValue : null;
         set {
@@ -293,5 +316,50 @@ public abstract class AirshipSerializedValue {
         }
 
         return false;
+    }
+
+    public bool TryGetAsScriptableObject(out AirshipScriptableObject scriptableObject) {
+        if (objectReferenceValue is AirshipScriptableObject scriptableObjectRef) {
+            scriptableObject = scriptableObjectRef;
+            return true;
+        }
+        
+        scriptableObject = default;
+        return false;
+    }
+
+    public bool TryGetAsComponent(out AirshipComponent component) {
+        if (objectReferenceValue is AirshipComponent componentRef) {
+            component = componentRef;
+            return true;
+        }
+        
+        component = default;
+        return false;
+    }
+
+    public bool TryGetAsObject<T>(out T obj) where T : Object {
+        if (objectReferenceValue is T objRef) {
+            obj = objRef;
+            return true;
+        }
+        
+        obj = default;
+        return false;
+    }
+
+    public bool IsA(AirshipType targetAirshipType) {
+        if (!isAirshipType) return false;
+        return this.airshipType.IsAssignableFrom(targetAirshipType);
+    }
+
+    public bool IsA(Type targetType) {
+        if (!isObject) return false;
+        return objectType.IsAssignableFrom(targetType);
+    }
+    
+    public bool IsA<T>() where T : Object {
+        if (!isObject) return false;
+        return objectType.IsAssignableFrom(typeof(T));
     }
 }

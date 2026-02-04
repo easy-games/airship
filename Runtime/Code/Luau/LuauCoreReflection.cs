@@ -306,6 +306,10 @@ public partial class LuauCore : MonoBehaviour
                 var ptr = parameterDataPtrs[j];
                 var componentRef = Marshal.PtrToStructure<AirshipComponentRef>(ptr);
                 UnrolledPodObjects[j] = componentRef.AsUnityComponent();
+            } else if (parameterDataPODTypes[j] == (int)PODTYPE.POD_AIRSHIP_SCRIPTABLE_OBJECT) {
+                var ptr = parameterDataPtrs[j];
+                var componentRef = Marshal.PtrToStructure<AirshipScriptableObjectRef>(ptr);
+                UnrolledPodObjects[j] = AirshipScriptableObjectRoot.GetScriptableObjectFromId(componentRef.unityInstanceId);
             } else {
                 UnrolledPodObjects[j] = null;
             }
@@ -527,22 +531,9 @@ public partial class LuauCore : MonoBehaviour
 
     public static unsafe void WritePropertyToThreadMatrix4x4(IntPtr thread, Matrix4x4 mat) {
         var matData = stackalloc float[16];
-        matData[0] = mat.m00;
-        matData[1] = mat.m01;
-        matData[2] = mat.m02;
-        matData[3] = mat.m03;
-        matData[4] = mat.m10;
-        matData[5] = mat.m11;
-        matData[6] = mat.m12;
-        matData[7] = mat.m13;
-        matData[8] = mat.m20;
-        matData[9] = mat.m21;
-        matData[10] = mat.m22;
-        matData[11] = mat.m23;
-        matData[12] = mat.m30;
-        matData[13] = mat.m31;
-        matData[14] = mat.m32;
-        matData[15] = mat.m33;
+        for (var i = 0; i < 16; i++) {
+            matData[i] = mat[i];
+        }
 
         LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_MATRIX, new IntPtr(matData), 0); // 0, because we know how big an intPtr is
     }
@@ -586,6 +577,17 @@ public partial class LuauCore : MonoBehaviour
     public static void WritePropertyToThreadObject(IntPtr thread, object value) {
         if (value == null) {
             LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+            return;
+        }
+
+        if (value is AirshipScriptableObject scriptableObject) {
+            if (scriptableObject.script == null) {
+                LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+                return;
+            }
+            
+            if (!scriptableObject.initialized) scriptableObject.Init();
+            LuauPlugin.PushScriptableObject(LuauContext.Game, thread, scriptableObject.instanceId);
             return;
         }
         
@@ -1047,6 +1049,11 @@ public partial class LuauCore : MonoBehaviour
                     parsedData[paramIndex] = objectRef;
                     continue;
                 }
+                case PODTYPE.POD_AIRSHIP_SCRIPTABLE_OBJECT: {
+                    var objectRef = podObjects[paramIndex] as AirshipScriptableObject;
+                    parsedData[paramIndex] = objectRef;
+                    continue;
+                }
                 case PODTYPE.POD_DOUBLE: {
                     var doubleValue = NewDoubleFromPointer(intPtrs[i]);
                     if (sourceParamType.IsAssignableFrom(doubleType)) {
@@ -1455,6 +1462,7 @@ public partial class LuauCore : MonoBehaviour
             switch (paramType) {
                 case PODTYPE.POD_NULL:
                     continue;
+                case PODTYPE.POD_AIRSHIP_SCRIPTABLE_OBJECT:
                 case PODTYPE.POD_AIRSHIP_COMPONENT:
                     if (sourceParamType.IsAssignableFrom(componentType)) {
                         continue;

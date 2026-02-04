@@ -2,6 +2,7 @@ using Luau;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -709,7 +710,10 @@ public partial class LuauCore : MonoBehaviour {
     private static unsafe T GetFieldValue<T>(object instance, FieldInfo fieldInfo) where T : unmanaged {
         var addr = UnsafeUtility.PinGCObjectAndGetAddress(instance, out ulong handle);
         try {
-            var offset = UnsafeUtility.GetFieldOffset(fieldInfo);
+            // Objects start with 2 IntPtrs, see layout:
+            // https://devblogs.microsoft.com/premier-developer/managed-object-internals-part-1-layout/
+            var headerSize = 2 * IntPtr.Size;
+            var offset = headerSize + UnsafeUtility.GetFieldOffset(fieldInfo);
             return *(T*)((byte*)addr + offset);
         } finally {
             UnsafeUtility.ReleaseGCObject(handle);
@@ -1250,7 +1254,7 @@ public partial class LuauCore : MonoBehaviour {
             if (!fileNameStr.Contains("/")) {
                 // Get a stripped name
                 fileNameStr = GetTidyPathNameForLuaFile(originalScriptPath);
-            } else if (fileNameStr.StartsWith("./")) {
+            } else if (fileNameStr.StartsWith("./", StringComparison.Ordinal)) {
                 // Get a stripped name
                 var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
@@ -1260,7 +1264,7 @@ public partial class LuauCore : MonoBehaviour {
                 var bindingPath = Path.Combine(bits.ToArray());
                 
                 fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
-            } else if (fileNameStr.StartsWith("../")) {
+            } else if (fileNameStr.StartsWith("../", StringComparison.Ordinal)) {
                 var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
                 //Remove two bits of this filename off the end
@@ -1506,14 +1510,20 @@ public partial class LuauCore : MonoBehaviour {
         // Check for IsA call:
         if (methodName == "IsA") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
-            
-            var t = ReflectionList.AttemptGetTypeFromString(typeName);
 
-            if (t == null) {
-                return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
+            // First: quick check if type name matches object type name directly
+            var isA = typeName == type.Name;
+            if (!isA) {
+                // Second: if not a direct match get the type by name and check if assignable from
+                var t = ReflectionList.AttemptGetTypeFromString(typeName);
+
+                if (t == null) {
+                    return LuauError(thread, $"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
+                }
+
+                isA = t.IsAssignableFrom(type);
             }
 
-            var isA = t.IsAssignableFrom(type);
             WritePropertyToThread(thread, isA, typeof(bool));
 
             return 1;

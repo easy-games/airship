@@ -573,7 +573,7 @@ public class SelectionZoneEditor : UnityEditor.Editor
 
                                 if (ignoreAir)
                                 {
-                                    var newBlockId = VoxelWorld.VoxelDataToBlockId(newData);
+                                    var newBlockId = VoxelWorld.GetVoxelDataId(newData);
                                     if (newBlockId == 0)
                                     {
                                         continue;

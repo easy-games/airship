@@ -80,7 +80,7 @@ public static class VoxelEditManager {
         }
 
         foreach (var pos in positionSet) {
-            world.ColorVoxelAt(pos, col, false);
+            world.WriteVoxelColorAt(pos, col, false);
         }
 
         return positionSet;
@@ -224,7 +224,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     private Vector3 placementRotationVector;
 
     [NonSerialized]
-    private VoxelWorld.Flips placementFlip = VoxelWorld.Flips.Flip_0Deg;
+    private VoxelWorld.VoxelFlip placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_0Deg;
 
     [NonSerialized]
     private bool placementVertical = false;
@@ -292,8 +292,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Undo.RegisterCreatedObjectUndo(voxelWorldGo, "Create " + voxelWorldGo.name);
         Undo.CollapseUndoOperations(undoId);
 
-        voxelWorld.GenerateWorld(false);
-        voxelWorld.CreateSingleStarterBlock();
+        voxelWorld.GenerateWorld();
+        voxelWorld.CreateSingleStarterVoxel();
 
         Selection.activeObject = voxelWorldGo;
     }
@@ -583,17 +583,17 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
 
             if (placementRotationVector.x > 0.01) {
-                placementFlip = VoxelWorld.Flips.Flip_180Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_180Deg;
             } else if (placementRotationVector.x < -0.01) {
-                placementFlip = VoxelWorld.Flips.Flip_0Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_0Deg;
             } else if (placementRotationVector.z < -0.01) {
-                placementFlip = VoxelWorld.Flips.Flip_270Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_270Deg;
             } else {
-                placementFlip = VoxelWorld.Flips.Flip_90Deg;
+                placementVoxelFlip = VoxelWorld.VoxelFlip.Flip_90Deg;
             }
 
             if (placementVertical) {
-                placementFlip += 4;
+                placementVoxelFlip += 4;
             }
         } else {
             validPosition = false;
@@ -753,7 +753,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         }
                     } else if (currentEvent.alt) {
                         var voxel = world.GetVoxelAt(lastPos);
-                        world.selectedBlockIndex = VoxelWorld.VoxelDataToBlockId(voxel);
+                        world.selectedBlockIndex = VoxelWorld.GetVoxelDataId(voxel);
                     } else {
                         // Add voxel
                         var voxelPos = lastNormalPos;
@@ -764,7 +764,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                         var def = world.voxelBlocks.GetBlock(newValue);
 
                         if (def.definition.rotatedPlacement) {
-                            newValue = (ushort)VoxelWorld.SetVoxelFlippedBits(newValue, (int)placementFlip);
+                            newValue = (ushort)VoxelWorld.GetVoxelDataWithFlippedBits(newValue, (int)placementVoxelFlip);
                         }
 
                         VoxelEditManager.AddEdit(world, voxelPos, oldValue, newValue,
@@ -818,7 +818,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     var voxelPos = lastPos;
                     var oldValue =
                         world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
-                    var oldBlockId = VoxelWorld.VoxelDataToBlockId(oldValue);
+                    var oldBlockId = VoxelWorld.GetVoxelDataId(oldValue);
                     if (oldBlockId > 0) {
                         var edits = new List<EditInfo>();
                         PaintBucket(world, edits, lastPos, oldValue, (ushort)world.selectedBlockIndex,
@@ -844,11 +844,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     var oldVoxel = world.GetVoxelAt(lastPos); // Assuming you have a method to get the voxel value
 
                     //Step the rotation to the next enum value
-                    var flipBits = VoxelWorld.GetVoxelFlippedBits(oldVoxel);
+                    var flipBits = VoxelWorld.GetVoxelDataFlippedBits(oldVoxel);
                     var newBits = (flipBits + 1) % 8;
                     // Debug.Log("Old rotation: " +
                     //           ((VoxelWorld.Flips)flipBits + " new rotation: " + (VoxelWorld.Flips)newBits));
-                    var newVoxel = (ushort)VoxelWorld.SetVoxelFlippedBits(oldVoxel, newBits);
+                    var newVoxel = (ushort)VoxelWorld.GetVoxelDataWithFlippedBits(oldVoxel, newBits);
 
                     var def = world.voxelBlocks.GetBlock(newVoxel);
 
@@ -886,7 +886,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
             if (currentEvent.keyCode == KeyCode.I) {
                 //Eye dropper tool
-                var blockIndex = VoxelWorld.VoxelDataToBlockId(world.GetVoxelAt(lastPos));
+                var blockIndex = VoxelWorld.GetVoxelDataId(world.GetVoxelAt(lastPos));
                 world.selectedBlockIndex = blockIndex;
             }
         }
@@ -895,32 +895,33 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     public void PaintBucket(
         VoxelWorld world,
         List<EditInfo> edits,
-        Vector3 pos,
+        Vector3 startPosition,
         ushort from,
         ushort target,
         HashSet<Vector3> visited) {
-        visited.Add(pos);
+        
+        Queue<Vector3> toVisit = new Queue<Vector3>();
+        toVisit.Enqueue(startPosition);
 
-        var voxelAtPos = world.GetVoxelAt(pos);
-        // Debug.Log("Voxel at pos: " + VoxelWorld.VoxelDataToBlockId(voxelAtPos) + " where from=" + from);
-        if (VoxelWorld.VoxelDataToBlockId(voxelAtPos) != VoxelWorld.VoxelDataToBlockId(from)) {
-            return;
-        }
+        while (toVisit.Count > 0) {
+            var pos = toVisit.Dequeue();
+            if (visited.Contains(pos)) continue;
+            
+            var voxelData = world.GetVoxelAt(pos);
+            visited.Add(pos);
+            if (VoxelWorld.GetVoxelDataId(voxelData) != VoxelWorld.GetVoxelDataId(from)) continue;
+            
+            edits.Add(new EditInfo(VoxelWorld.FloorInt(pos), from, target));
+            
+            // Enqueue all neighbors
+            for (var axis = 0; axis < 3; axis++) {
+                for (var sign = -1; sign <= 1; sign += 2) {
+                    var newPos = pos;
+                    newPos[axis] += sign; // Cool Vector3 accessor!
 
-        edits.Add(new EditInfo(VoxelWorld.FloorInt(pos), from, target));
-
-        for (var axis = 0; axis < 3; axis++) {
-            for (var sign = -1; sign <= 1; sign += 2) {
-                var newPos = pos;
-                newPos[axis] += sign; // Cool Vector3 accessor!
-                // Debug.Log("Check out pos: " + newPos);
-
-                if (visited.Contains(newPos)) {
-                    continue;
+                    toVisit.Enqueue(newPos);
                 }
-
-                PaintBucket(world, edits, newPos, from, target, visited);
-            }
+            }   
         }
     }
 

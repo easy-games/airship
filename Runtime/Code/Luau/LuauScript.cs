@@ -4,6 +4,7 @@ using Luau;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -33,7 +34,7 @@ public class LuauScript : MonoBehaviour {
 		QueuedAwakeData = null;
 	}
 	
-	private static string CleanupFilePath(string path) {
+	public static string CleanupFilePath(string path) {
 		var extension = Path.GetExtension(path);
 		if (extension == string.Empty) {
 			path += ".lua";
@@ -114,7 +115,7 @@ public class LuauScript : MonoBehaviour {
 	/// Creates a new Luau thread from the given script. The thread is not yet executed. Returns a nullptr if the Luau
 	/// fails to create the new thread.
 	/// </summary>
-	public static IntPtr LoadScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script) {
+	public static IntPtr LoadScript(Object obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script) {
 		if (ReferenceEquals(script, null)) {
 			throw new Exception("[LuauScript]: Script reference is null");
 		}
@@ -124,13 +125,12 @@ public class LuauScript : MonoBehaviour {
 		}
 		
 		var cleanPath = CleanupFilePath(script.m_path);
-		var id = ThreadDataManager.GetOrCreateObjectId(obj);
-		var nativeCodegen = script.HasDirective("native");
+		var id = obj != null ? ThreadDataManager.GetOrCreateObjectId(obj) : -1;
 		
 		// Tell Luau to load the bytecode onto a new Luau thread:
 		switch (cacheMode) {
 			case LuauScriptCacheMode.NotCached:
-				return LuauPlugin.CreateThread(context, script.m_bytes, cleanPath, id, nativeCodegen);
+				return LuauPlugin.CreateThread(context, script.m_bytes, cleanPath, id);
 			case LuauScriptCacheMode.Cached:
 				var requirePath = LuauCore.GetRequirePath(script.m_path, cleanPath);
 				return LuauPlugin.CreateThreadWithCachedModule(context, requirePath, id);
@@ -153,7 +153,7 @@ public class LuauScript : MonoBehaviour {
 	/// Loads and executes the given script. The executed Luau thread is returned. If the thread is a nullptr, then
 	/// that indicates that Luau failed to load the script.
 	/// </summary>
-	public static IntPtr LoadAndExecuteScript(GameObject obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script, out int status) {
+	public static IntPtr LoadAndExecuteScript(Object obj, LuauContext context, LuauScriptCacheMode cacheMode, AirshipScript script, out int status) {
 		Profiler.BeginSample("LoadAndExecuteScript");
 		status = -1;
 		

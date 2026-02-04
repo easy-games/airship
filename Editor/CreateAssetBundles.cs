@@ -187,7 +187,7 @@ public static class CreateAssetBundles {
 			var orgName = Path.GetFileName(orgDir);
 			foreach (var packageDir in packageDirs) {
 				var packageName = Path.GetFileName(packageDir);
-				var assetBundleName = $"{orgName}/{packageName}_shared/resources".ToLower();
+				var assetBundleName = $"{orgName}/{packageName}_shared/resources".ToLowerInvariant();
 				Debug.Log("asset bundle name: " + assetBundleName);
 				var assetGuids = AssetDatabase.FindAssets("*", new string[] { packageDir }).ToList();
 
@@ -220,7 +220,7 @@ public static class CreateAssetBundles {
 					.Where((p) => !p.EndsWith(".d.ts"))
 					.Where((p) => !p.Contains("Packages/com.unity.render-pipelines.universal/Editor"))
 					.ToArray();
-				var addressableNames = assetPaths.Select((p) => p.ToLower())
+				var addressableNames = assetPaths.Select((p) => p.ToLowerInvariant())
 					.ToArray();
 
 				var build = new AssetBundleBuild() {
@@ -317,7 +317,7 @@ public static class CreateAssetBundles {
 		// }
 
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
-			var assetBundleName = assetBundleFile.ToLower();
+			var assetBundleName = assetBundleFile.ToLowerInvariant();
 			if (assetBundleName == "shared/scenes") {
 				var assetGuids = gameConfig.gameScenes
 					.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s)).ToHashSet();
@@ -337,7 +337,7 @@ public static class CreateAssetBundles {
 					Debug.Log("  - " + p);
 				}
 
-				var addressableNames = assetPaths.Select((p) => p.ToLower())
+				var addressableNames = assetPaths.Select((p) => p.ToLowerInvariant())
 					.ToArray();
 				var build = new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
@@ -367,7 +367,7 @@ public static class CreateAssetBundles {
 				var assetPaths = assetGuids
 					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
 					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
-					.Where((path) => !path.ToLower().Contains("editor/"))
+					.Where((path) => !path.ToLowerInvariant().Contains("editor/"))
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
 				// Debug.Log("Resources:");
@@ -375,7 +375,7 @@ public static class CreateAssetBundles {
 				// 	Debug.Log("  - " + path);
 				// }
 				var addressableNames = assetPaths
-					.Select((p) => p.ToLower())
+					.Select((p) => p.ToLowerInvariant())
 					.ToArray();
 				builds.Add(new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
@@ -640,7 +640,7 @@ public static class CreateAssetBundles {
 		List<EditorBuildSettingsScene> list = new();
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true));
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true));
-		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true));
+		list.Add(new EditorBuildSettingsScene("Assets/Scenes/Login.unity", true));
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/Disconnected.unity", true));
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/AirshipUpdateApp.unity", true));
 

@@ -32,10 +32,13 @@ namespace Code.Network
 
                 try
                 {
+                    udpClient.Connect(endpoint);
                     var receiveTask = udpClient.ReceiveAsync();
-                    await udpClient.SendAsync(uniqueId, uniqueId.Length, endpoint);
-                    
+
                     stopwatch.Start();
+
+                    await udpClient.SendAsync(uniqueId, uniqueId.Length);
+
                     if (await Task.WhenAny(receiveTask, Task.Delay(timeoutMilliseconds)) == receiveTask)
                     {
                         var response = receiveTask.Result;

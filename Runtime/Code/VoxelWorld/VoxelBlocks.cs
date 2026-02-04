@@ -201,6 +201,7 @@ public class VoxelBlocks : MonoBehaviour {
         QuarterBlockTypes.DM,  //UN
     };
 
+    [LuauAPI]
     public class LodSet {
         public VoxelMeshCopy lod0;
         public VoxelMeshCopy lod1;
@@ -208,6 +209,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     //The runtime version of VoxelBlockDefinition, after everything is loaded in
+    [LuauAPI]
     public class BlockDefinition {
         /// <summary>
         /// The generated world id for this block
@@ -325,6 +327,7 @@ public class VoxelBlocks : MonoBehaviour {
 
     [NonSerialized] private Dictionary<string, BlockId> blockIdLookup = new();
     [NonSerialized] public List<BlockDefinition> loadedBlocks = new();
+    [NonSerialized] public List<BlockDefinition> alphabeticalBlocks = new();
 
     [NonSerialized] public string rootAssetPath;
     [NonSerialized] public List<string> m_bundlePaths = null;
@@ -343,7 +346,7 @@ public class VoxelBlocks : MonoBehaviour {
     private TaskCompletionSource<bool> loadedTask = new TaskCompletionSource<bool>(false);
 
     public BlockDefinition GetBlock(BlockId index) {
-        var ix = VoxelWorld.VoxelDataToBlockId(index); //safety
+        var ix = VoxelWorld.GetVoxelDataId(index); //safety
         if (ix >= loadedBlocks.Count) {
             throw new ArgumentOutOfRangeException($"[Airship VW] Could not find block index {ix}. Number of loaded blocks is {loadedBlocks.Count}. VoxelBlocks loaded={loadedTask.Task.IsCompleted}.");
         }
@@ -370,7 +373,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     public BlockDefinition GetBlockDefinitionFromBlockId(int index) {
-        index = VoxelWorld.VoxelDataToBlockId(index);
+        index = VoxelWorld.GetVoxelDataId(index);
         return GetBlock((ushort)index);
     }
 
@@ -417,7 +420,7 @@ public class VoxelBlocks : MonoBehaviour {
     /// <returns>The string id of this voxel block</returns>
     public string GetStringIdFromBlockId(BlockId blockVoxelId) {
 
-        blockVoxelId = VoxelWorld.VoxelDataToBlockId(blockVoxelId); //anti foot gun
+        blockVoxelId = VoxelWorld.GetVoxelDataId(blockVoxelId); //anti foot gun
         
         var block = TryGetBlock(blockVoxelId, out var blockDefinition);
         if (block) {
@@ -439,6 +442,7 @@ public class VoxelBlocks : MonoBehaviour {
 
         blockIdLookup = new();
         loadedBlocks = new();
+        alphabeticalBlocks = new();
     }
 
     private LodSet BuildLodSet(VoxelBlockDefinition.MeshSet meshSet) {
@@ -705,6 +709,9 @@ public class VoxelBlocks : MonoBehaviour {
             }
         }
         
+        // Creates a new sorted list, leaves the original 'fruits' list unchanged
+        alphabeticalBlocks = loadedBlocks.OrderBy(block => block.definition.blockName, StringComparer.OrdinalIgnoreCase).ToList();
+        
 #if !UNITY_SERVER
         SetupAtlas();
 #endif
@@ -787,7 +794,7 @@ public class VoxelBlocks : MonoBehaviour {
 
     //Fix a voxel value up with its solid mask bit
     public VoxelData AddSolidMaskToVoxelValue(VoxelData voxelValue) {
-        BlockId blockid = VoxelWorld.VoxelDataToBlockId(voxelValue);
+        BlockId blockid = VoxelWorld.GetVoxelDataId(voxelValue);
         BlockDefinition block = GetBlock(blockid);
 
         if (block == null) {
@@ -815,7 +822,7 @@ public class VoxelBlocks : MonoBehaviour {
 
             string rootPath = Application.dataPath;
             string assetsFolder = "/Assets";
-            if (rootPath.EndsWith(assetsFolder)) {
+            if (rootPath.EndsWith(assetsFolder, StringComparison.OrdinalIgnoreCase)) {
                 rootPath = rootPath.Substring(0, rootPath.Length - assetsFolder.Length);
             }
 
