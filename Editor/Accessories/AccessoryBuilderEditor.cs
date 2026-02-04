@@ -18,13 +18,13 @@ namespace Editor.Accessories {
 
             EditorGUILayout.LabelField("Editor Tools", EditorStyles.boldLabel);
 
-            builder.currentOutfit = (AccessoryOutfit)EditorGUILayout.ObjectField("Outfit", builder.currentOutfit, typeof(AccessoryOutfit), true);
+            builder.visualizer.currentOutfit = (AccessoryOutfit)EditorGUILayout.ObjectField("Outfit", builder.visualizer.currentOutfit, typeof(AccessoryOutfit), true);
 
             GUI.enabled = !downloading;
             if (GUILayout.Button("Equip Referenced Outfit")) {
-                if(builder.currentOutfit != null){
-                    Debug.Log("Equipping outfit " + builder.currentOutfit.name);
-                    builder.LoadOutfit(builder.currentOutfit);
+                if(builder.visualizer.currentOutfit != null){
+                    Debug.Log("Equipping outfit " + builder.visualizer.currentOutfit.name);
+                    builder.LoadOutfit(builder.visualizer.currentOutfit);
                     builder.UpdateCombinedMesh();
                 }
             }
