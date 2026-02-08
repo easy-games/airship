@@ -225,7 +225,6 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
             serializedObject.ApplyModifiedProperties();
             EditorGUI.indentLevel--;
 
-            EditorGUI.indentLevel--;
         }
 
         // Add the Open Editor button:

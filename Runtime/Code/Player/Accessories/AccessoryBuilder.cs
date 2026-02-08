@@ -446,6 +446,24 @@ public class AccessoryBuilder : MonoBehaviour {
         rig.faceMesh.gameObject.SetActive(true);
         rig.faceMesh.enabled = true;
     }
+    
+    private bool HasMaskFlag(AccessoryComponent.BodyMask mask, AccessoryComponent.BodyMask flag) {
+        return (mask & flag) != 0;
+    }
+    
+    private void HideMaskAccessory(int bodyMask, AccessoryComponent.BodyMask mask, AccessorySlot slot) {
+        var isMasked = HasMaskFlag((AccessoryComponent.BodyMask)bodyMask, mask);
+        if (slot == AccessorySlot.Face) {
+            rig.faceMesh.gameObject.SetActive(!isMasked);
+        } else {
+            var acc = GetActiveAccessoryBySlot(slot);
+            if (acc != null) {
+                foreach (var ren in acc.renderers) {
+                    ren.gameObject.SetActive(!isMasked);
+                }
+            }
+        }
+    }
 
     public void UpdateCombinedMesh() {
         // Debug.Log("UpdateCombinedMesh (" + this.gameObject.name + ")");
@@ -467,10 +485,11 @@ public class AccessoryBuilder : MonoBehaviour {
 
             // Accessories
             var isCombined = false;
-
+            int bodyMask = 0;
             foreach (var pair in activeAccessories) {
                 var activeAccessory = pair.Value;
                 var accessoryComponent = pair.Value.AccessoryComponent;
+                bodyMask |= activeAccessory.AccessoryComponent.bodyMask;
 
                 if (!accessoryComponent.skinnedToCharacter)
                     //Debug.Log("Skipping: " + acc.name);
@@ -536,15 +555,23 @@ public class AccessoryBuilder : MonoBehaviour {
                         ren.gameObject.SetActive(false);
                     }
                 }
+                
             }
 
             // print("AccessoryBuilder MeshCombine: " + this.gameObject.name);
             meshCombiner.CombineMeshes(skinColor);
+            
+            // Handle body masks that are outside of the combined mesh
+            HideMaskAccessory(bodyMask, AccessoryComponent.BodyMask.FACE, AccessorySlot.Face);
+            HideMaskAccessory(bodyMask, AccessoryComponent.BodyMask.HAIR, AccessorySlot.Hair);
+            
+            
         } else {
             // print("AccessoryBuilder Manual Rig Mapping: " + this.gameObject.name);
             MapAccessoriesToRig();
             OnCombineComplete(false);
         }
+        
 
         Profiler.EndSample();
     }
