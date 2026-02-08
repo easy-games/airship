@@ -40,7 +40,8 @@ namespace Airship {
 
         [SerializeField] public List<SkinnedMeshRenderer> outputSkinnedMeshRenderers;
 
-        [FormerlySerializedAs("baseMeshMatColors")] [SerializeField] public MaterialColorURP[] outputBaseMeshMatColors;
+        [FormerlySerializedAs("outputBaseMeshMatColors")]
+        [FormerlySerializedAs("baseMeshMatColors")] [SerializeField] public MaterialColorURP[] outputCombinedMeshMatColors;
 
         private static Dictionary<string, MeshCombinerCache> meshCache = new();
 
@@ -133,12 +134,12 @@ namespace Airship {
             foreach (var lodSourceRef in this.sourceReferences) {
                 lodSourceRef.Clear();
 
-                if(lodLevel >= this.outputBaseMeshMatColors.Length){
+                if(lodLevel >= this.outputCombinedMeshMatColors.Length){
                     break;
                 }
 
                 // add base meshes
-                var matColor = this.outputBaseMeshMatColors[lodLevel];
+                var matColor = this.outputCombinedMeshMatColors[lodLevel];
                 lodSourceRef.Add(new MeshCopyReference(this.rig.headMeshLOD[lodLevel], matColor));
                 lodSourceRef.Add(new MeshCopyReference(this.rig.bodyMeshLOD[lodLevel], matColor));
                 lodSourceRef.Add(new MeshCopyReference(this.rig.armsMeshLOD[lodLevel], matColor));
@@ -404,6 +405,11 @@ namespace Airship {
 
                 var isClient = RunCore.IsClient();
                 
+                
+                // MaterialColorURP
+                var matColor = this.outputCombinedMeshMatColors[lodLevel];
+                matColor.ForceVariableCount(finalSkinnedMeshCopy.subMeshes.Count);
+                
                 // Copy the materials to the renderer
                 Material[] finalMaterials = new Material[finalSkinnedMeshCopy.subMeshes.Count];
                 for (int i = 0; i < finalSkinnedMeshCopy.subMeshes.Count; i++) {
@@ -412,10 +418,17 @@ namespace Airship {
                     if (isClient && !finalMaterials[i].shader.isSupported) {
                         finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
                     }
-
-                    // finalMaterials[i].shader = 1(finalMaterials[i].shader.name);
-                    // finalMaterials[i].name = finalMaterials[i].name + " (Modified)";
+                    
+                    //assign colors to material color setter
+                    if (i == 0) {
+                        matColor.SetColor(0, this.skinColor);
+                    } else {
+                        if (finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData?.color != null) {
+                            matColor.SetColor(i, finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData.color);
+                        }
+                    }
                 }
+                matColor.DoUpdate();
 
                 var outputSkinnedMeshRenderer = this.outputSkinnedMeshRenderers[lodLevel];
                 outputSkinnedMeshRenderer.sharedMaterials = finalMaterials;
@@ -425,31 +438,9 @@ namespace Airship {
                 outputSkinnedMeshRenderer.rootBone = finalSkinnedMeshCopy.rootBone;
                 outputSkinnedMeshRenderer.localBounds = this.skinnedMeshBounds;
 
-                // {
-                //     // Skin color
-                //     var matColorSt = Stopwatch.StartNew();
-                //     this.materialColorURP.RefreshVariables();
-                //     for (int i = 0; i < finalSkinnedMeshCopy.subMeshes.Count; i++) {
-                //         if (finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData != null) {
-                //             MaterialColorURP.ColorSetting setting = this.materialColorURP.colorSettings[i];
-                //             if (setting != null) {
-                //                 setting.baseColor = finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData.color;
-                //             }
-                //         }
-                //     }
-                //     this.materialColorURP.DoUpdate();
-                //     if (debugText) {
-                //         Debug.Log($"MaterialColorURP update: {matColorSt.Elapsed.TotalMilliseconds} ms.");
-                //     }
-                // }
-
-                if (lodLevel >= this.outputBaseMeshMatColors.Length){
+                if (lodLevel >= this.outputCombinedMeshMatColors.Length){
                     continue;
                 }
-                var matColor = this.outputBaseMeshMatColors[lodLevel];
-                matColor.RefreshVariables();
-                matColor.colorSettings[0].baseColor = this.skinColor;
-                matColor.DoUpdate();
 
                 // Default other LODs to disabled.
                 // if (lodLevel > 0) {
