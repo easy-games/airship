@@ -650,12 +650,9 @@ namespace Code.Airship.Resources.Scripts {
                 Debug.LogError("Incoming source does not have correct array sizes");
             }
 
-            bool isFirstMesh = true;
-            if (vertices.Count > 0) {
-                isFirstMesh = false;
-            }
+            bool isFirstMesh = vertices.Count <= 0;
 
-            if (isFirstMesh == true) {
+            if (isFirstMesh) {
                 this.rootBone = source.rootBone;
                 this.sourceTransform = source.sourceTransform;
                 this.localToWorld = source.localToWorld;
@@ -815,6 +812,7 @@ namespace Code.Airship.Resources.Scripts {
                             break;
                         }
                     }
+
                 }
 
                 if (targetMesh == null) {
@@ -825,8 +823,7 @@ namespace Code.Airship.Resources.Scripts {
                     targetMesh.material = sourceMesh.material;// = //new Material(sourceMesh.material);
 
                     subMeshes.Add(targetMesh);
-                }
-
+                } 
                 //Add all the triangle indices to the target, but increment them by the current vertex count
                 //
                 //This is because we are merging two meshes, and the triangle indices in the source mesh
@@ -913,9 +910,12 @@ namespace Code.Airship.Resources.Scripts {
                 foreach (var meshRenderer in activeAccessory.meshRenderers) {
                     MeshCopy meshCopy = new MeshCopy(activeAccessory.meshFilters[i].sharedMesh, meshRenderer.sharedMaterials, meshRenderer.transform);
 
-                    // if (meshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
-                    //     meshCopy.ExtractMaterialColor(matColor);
-                    // }
+                    // Grab base color from materials
+                    if (meshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
+                        meshCopy.ExtractMaterialColor(matColor);
+                    } else {
+                        meshCopy.ExtractMaterialColor(meshRenderer.materials);
+                    }
 
                     results.Add(meshCopy);
                     i++;
@@ -925,9 +925,12 @@ namespace Code.Airship.Resources.Scripts {
                     //See if theres a MaterialColor on this gameObject
                     MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinnedMeshRenderer.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
 
-                    // if (skinnedMeshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
-                    //     meshCopy.ExtractMaterialColor(matColor);
-                    // }
+                    // Grab base color from materials
+                    if (skinnedMeshRenderer.TryGetComponent<MaterialColorURP>(out var matColor)) {
+                        meshCopy.ExtractMaterialColor(matColor);
+                    } else {
+                        meshCopy.ExtractMaterialColor(skinnedMeshRenderer.materials);
+                    }
 
                     //Grab their bone masks
                     meshCopy.bodyMask = activeAccessory.AccessoryComponent.bodyMask;
@@ -1005,14 +1008,20 @@ namespace Code.Airship.Resources.Scripts {
 
         public void ExtractMaterialColor(MaterialColorURP matColor) {
             //Apply the material color
-            // for (int i = 0; i < subMeshes.Count; i++) {
-            //     var colorData = matColor.colorSettings[i];
-            //     if (colorData != null) {
-            //         SubMesh subMesh = subMeshes[i];
-            //         subMesh.batchableMaterialData = new BatchableMaterialData(colorData.baseColor);
-            //         Debug.Log("Extracted color " + colorData.baseColor + ". name: " + this.sourceTransform.gameObject.name, this.sourceTransform.gameObject);
-            //     }
-            // }
+            for (int i = 0; i < subMeshes.Count; i++) {
+                if (matColor.colorSettings.Count > i) {
+                    var colorData = matColor.colorSettings[i];
+                    subMeshes[i].batchableMaterialData = new BatchableMaterialData(colorData.baseColor);
+                }
+            }
+        }
+
+        public void ExtractMaterialColor(Material[] materials) {
+            for (int i = 0; i < subMeshes.Count; i++) {
+                if (materials.Length > i && materials[i].HasColor("_BaseColor")) {
+                    subMeshes[i].batchableMaterialData = new BatchableMaterialData(materials[i].color);
+                }
+            }
         }
 
 

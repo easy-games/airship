@@ -18,11 +18,11 @@ namespace Code.Player.Accessories {
             //Row 0
             NONE = 0,
             HAIR = 1 << 0,
-            FACE = 1 << 1,
+            HEAD = 1 << 1,
             R_ARM_UPPER = 1 << 2,
             L_ARM_UPPER = 1 << 3,
             EARS = 1 << 4,
-            UNUSED1 = 1 << 5,
+            FACE = 1 << 5,
             UNUSED2 = 1 << 6,
             //Row 1
             L_ARM_LOWER = 1 << 7,
@@ -47,8 +47,8 @@ namespace Code.Player.Accessories {
             L_FOOT = 1 << 24,
             R_FOOT = 1 << 25,
             R_LEG_LOWER = 1 << 26,
-            UNUSED11 = 1 << 27,
-            UNUSED12 = 1 << 28,
+            ABS = 1 << 27,
+            NECK = 1 << 28,
             UNUSED13 = 1 << 29,
             UNUSED14 = 1 << 30,
         }
@@ -84,11 +84,14 @@ namespace Code.Player.Accessories {
 
         [HideInInspector]
         public static BodyMaskInspectorData[] BodyMaskInspectorDatas = new BodyMaskInspectorData[] {
-            new(BodyMask.HIPS, "Hips"),
-            new(BodyMask.TORSO, "Torso"),
-            new(BodyMask.FACE, "Face"),
             new(BodyMask.HAIR, "Hair"),
+            new(BodyMask.HEAD, "Head"),
+            new(BodyMask.FACE, "Face"),
             new(BodyMask.EARS, "Ears"),
+            new(BodyMask.NECK, "Neck"),
+            new(BodyMask.TORSO, "Torso"),
+            new(BodyMask.ABS, "Abs"),
+            new(BodyMask.HIPS, "Hips"),
             new(BodyMask.L_ARM_UPPER, "Left Arm Upper"),
             new(BodyMask.L_ARM_JOINTS, "Left Arm Joints"),
             new(BodyMask.L_ARM_LOWER, "Left Arm Lower"),

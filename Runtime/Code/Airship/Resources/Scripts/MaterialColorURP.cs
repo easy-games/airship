@@ -88,20 +88,18 @@ public class MaterialColorURP : MonoBehaviour {
         }
 
         //Destroy all the property blocks
-        foreach (var colorSetting in colorSettings) {
-            for (int i = 0; i < ren.sharedMaterials.Length; i++) {
-                ren.SetPropertyBlock(null, i);
-            }
+        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+            ren.SetPropertyBlock(null, i);
         }
-
     }
     
-    public void SetColor(int indx, Color newColor) {
-        colorSettings[indx].baseColor = newColor;
+    public void SetColor(int index, Color newColor) {
+        colorSettings[index].baseColor = newColor;
         DoUpdate();
     }
 
     public void CopyFrom(MaterialColorURP other) {
+        this.forcedVariableCount = other.forcedVariableCount;
         this.RefreshVariables();
         for (int i = 0; i < other.colorSettings.Count; i++) {
             this.colorSettings[i].baseColor = other.colorSettings[i].baseColor;
@@ -174,13 +172,12 @@ public class MaterialColorURP : MonoBehaviour {
             }
 
             ColorSetting setting = colorSettings[i];
-
 #if UNITY_EDITOR
             if (setting.reference == null || setting.reference == "") {
                 setting.reference = mat.name;
             }
 #endif             
-
+            
             MaterialPropertyBlock block = cachedBlocks[i];
             ren.GetPropertyBlock(block, i);
 
@@ -193,15 +190,30 @@ public class MaterialColorURP : MonoBehaviour {
 
     [HideFromTS]
     public void RefreshVariables() {
-        // Loop through each material assigned to the renderer on this gameObject
-        // match the colorSettings to materials
-        if (colorSettings.Count < ren.sharedMaterials.Length) {
-            for (int i = colorSettings.Count; i < ren.sharedMaterials.Length; i++) {
+        SetVariableCount(Mathf.Max(forcedVariableCount, ren.sharedMaterials.Length));
+    }
+
+    private int forcedVariableCount = 0;
+    [HideFromTS]
+    public void ForceVariableCount(int maxCount) {
+        forcedVariableCount = maxCount;
+        SetVariableCount(maxCount);
+    }
+    
+    private void SetVariableCount(int maxCount) {
+        // If we have more colors than needed
+        if (colorSettings.Count > maxCount) {
+            colorSettings.RemoveRange(maxCount, colorSettings.Count - maxCount);
+            return;
+        }
+        
+        // If we have less colors than needed
+        if (colorSettings.Count < maxCount) {
+            // Loop through each material assigned to the renderer on this gameObject
+            // match the colorSettings to materials
+            for (int i = colorSettings.Count; i < maxCount; i++) {
                 colorSettings.Add(new ColorSetting(Color.white));
             }
-        }
-        if (colorSettings.Count > ren.sharedMaterials.Length) {
-            colorSettings.RemoveRange(ren.sharedMaterials.Length, colorSettings.Count - ren.sharedMaterials.Length);
         }
     }
 
@@ -246,10 +258,9 @@ public class MaterialColorURPEditor : UnityEditor.Editor {
             int i = 0;
             foreach (MaterialColorURP.ColorSetting setting in ((MaterialColorURP)targetObj).colorSettings) {
                 EditorGUILayout.LabelField("Material Element " + i + " (" + setting.reference + ")");
-
+                
                 //Gamma Color Picker
                 setting.baseColor = EditorGUILayout.ColorField(new GUIContent("Base Color"), setting.baseColor);
-
 
                 //dividing line
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
