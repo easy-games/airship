@@ -1,5 +1,7 @@
 using System;
+using Unity.Mathematics;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class AccessoryFaceComponent : MonoBehaviour {
     public enum FaceRenderMode {
@@ -30,15 +32,28 @@ public class AccessoryFaceComponent : MonoBehaviour {
         Smirk
     }
     
+    [Header("References")]
     public Renderer faceRenderer;
-    public float volumeDBThreshold = 1;
-    public Material faceMat;
-
+    
+    [Header("Variables")]
+    public float volumeDBMin = .1f;
+    public float volumeDBYell = .2f;
+    public float pitchVariationMax = .5f;
+    
+    [Header("Debugging")]
+    public bool logValues = false;
+    
+    public Material faceMat { get; set; }
     private int setFaceIndex = -1;
     private FaceRenderMode setFaceMode;
     private float currentVolume = 0;
-    private float currentPitch = 0;
+    private float currentPitchVariation = 0;
     private int currentTalkingIndex = 0;
+    private float lastFaceChangeTime = 0;
+    private float currentFaceChangeDuration = 0;
+    private float minTalkHoldTime = 0;
+    private float timeTalking = 0;
+    private bool currentlyTalking = false;
 
     private void Awake() {
         if (!faceRenderer) {
@@ -49,10 +64,26 @@ public class AccessoryFaceComponent : MonoBehaviour {
             }
         }
 #if UNITY_EDITOR
-        faceMat = faceRenderer.sharedMaterial;
+        faceMat = Application.isPlaying ? faceRenderer.material : faceRenderer.sharedMaterial;
 #else
         faceMat = faceRenderer.material;
 #endif
+    }
+
+    private void Update() {
+        if (logValues) {
+            Debug.Log("Volume: " + currentVolume + " Pitch Variation: " + currentPitchVariation);
+        }
+        // Based on pitch changes, should we change mouth shapes?
+        // The longest hold on a face will be 1 and the shortest is .1
+        currentFaceChangeDuration = Mathf.Lerp(1, .1f, currentPitchVariation / pitchVariationMax);
+        
+        if (Time.time > lastFaceChangeTime + currentFaceChangeDuration) {
+            lastFaceChangeTime = Time.time;
+            // Change talking face
+            currentTalkingIndex = Random.Range(0, 2);
+            Refresh();
+        }
     }
 
     public void SetFace(AirshipFaceDecal faceType, FaceRenderMode faceMode) {
@@ -68,16 +99,25 @@ public class AccessoryFaceComponent : MonoBehaviour {
     }
     
 
-    public void SetTalking(float volume, float pitch) {
-        Debug.Log("Volume: " + volume + " pitch: " + pitch);
+    public void SetTalkingAudioLevels(float volume, float variation) {
+        currentVolume = volume;
+        currentPitchVariation = variation;
         Refresh();
     }
 
     private void Refresh() {
-        if (setFaceMode != FaceRenderMode.OverwriteVoice && setFaceMode != FaceRenderMode.OverwriteAll && currentVolume > volumeDBThreshold) {
+        var canTalk = setFaceMode != FaceRenderMode.OverwriteVoice && setFaceMode != FaceRenderMode.OverwriteAll;
+        currentlyTalking = currentVolume > volumeDBMin || Time.time < minTalkHoldTime;
+        
+        if (currentlyTalking && canTalk) {
             // Talking
+            if (currentVolume > volumeDBMin) {
+                //If we started to talk, don't swap it off too quick
+                minTalkHoldTime = Time.time + .15f;
+            }
+
             faceMat.SetFloat("_MouthStrength", 1);
-            faceMat.SetFloat("_MouthIndex", currentTalkingIndex);
+            faceMat.SetFloat("_MouthIndex", currentVolume >= volumeDBYell ? 2 : currentTalkingIndex);
         } else {
             // Default face
             if (setFaceIndex >= 0) {
