@@ -45,6 +45,7 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPluginNative.ToStringCallback toStringCallback_holder;
     private LuauPluginNative.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
     private LuauPluginNative.GetUnityObjectName getUnityObjectNameCallback_holder;
+    private LuauPluginNative.ReportDestroyedSignalCallback reportDestroyedSignalCallback_holder;
 
     private struct AwaitingTask {
 #if UNITY_EDITOR
@@ -151,6 +152,7 @@ public partial class LuauCore : MonoBehaviour {
         componentSetEnabledCallback_holder = SetComponentEnabledCallback;
         isObjectDestroyedCallback_holder = IsObjectDestroyedCallback;
         getUnityObjectNameCallback_holder = GetUnityObjectNameCallback;
+        reportDestroyedSignalCallback_holder = ReportDestroyedSignalCallback;
     }
 
     public static int LuauError(IntPtr thread, string err) {
@@ -247,6 +249,11 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         len = 0;
+    }
+
+    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.ReportDestroyedSignalCallback))]
+    private static void ReportDestroyedSignalCallback(LuauContext context, int signalInstanceId, ulong propNameHash) {
+        LuauSignalWrapper.HandleDestroyedLuauSignal(context, signalInstanceId, propNameHash);
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
