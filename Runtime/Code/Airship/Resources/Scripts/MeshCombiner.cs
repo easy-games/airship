@@ -339,7 +339,8 @@ namespace Airship {
         }
 
         private void UpdateMeshMainThread() {
-            if (newMeshReadyToUse == false) {
+            // Only gets set after ThreadedUpdateMesh() finishes
+            if (!newMeshReadyToUse) {
                 return;
             }
             newMeshReadyToUse = false;
@@ -407,8 +408,14 @@ namespace Airship {
                 
                 
                 // MaterialColorURP
-                var matColor = this.outputCombinedMeshMatColors[lodLevel];
-                matColor.ForceVariableCount(finalSkinnedMeshCopy.subMeshes.Count);
+                MaterialColorURP matColor = null;
+                if (lodLevel < outputCombinedMeshMatColors.Length) {
+                    matColor = outputCombinedMeshMatColors[lodLevel];
+                }
+
+                if (matColor != null) {
+                    matColor.ForceVariableCount(finalSkinnedMeshCopy.subMeshes.Count);
+                }
                 
                 // Copy the materials to the renderer
                 Material[] finalMaterials = new Material[finalSkinnedMeshCopy.subMeshes.Count];
@@ -420,15 +427,20 @@ namespace Airship {
                     }
                     
                     //assign colors to material color setter
-                    if (i == 0) {
-                        matColor.SetColor(0, this.skinColor);
-                    } else {
-                        if (finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData?.color != null) {
-                            matColor.SetColor(i, finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData.color);
+                    if (matColor != null) {
+                        if (i == 0) {
+                            matColor.SetColor(0, this.skinColor);
+                        } else {
+                            if (finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData?.color != null) {
+                                matColor.SetColor(i, finalSkinnedMeshCopy.subMeshes[i].batchableMaterialData.color);
+                            }
                         }
                     }
                 }
-                matColor.DoUpdate();
+
+                if (matColor != null) {
+                    matColor.DoUpdate();
+                }
 
                 var outputSkinnedMeshRenderer = this.outputSkinnedMeshRenderers[lodLevel];
                 outputSkinnedMeshRenderer.sharedMaterials = finalMaterials;
@@ -438,9 +450,9 @@ namespace Airship {
                 outputSkinnedMeshRenderer.rootBone = finalSkinnedMeshCopy.rootBone;
                 outputSkinnedMeshRenderer.localBounds = this.skinnedMeshBounds;
 
-                if (lodLevel >= this.outputCombinedMeshMatColors.Length){
-                    continue;
-                }
+                // if (lodLevel >= this.outputCombinedMeshMatColors.Length){
+                //     continue;
+                // }
 
                 // Default other LODs to disabled.
                 // if (lodLevel > 0) {
