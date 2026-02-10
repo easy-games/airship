@@ -1251,10 +1251,10 @@ public partial class LuauCore : MonoBehaviour {
     public static string GetRequirePath(string originalScriptPath, string fileNameStr) {
         Profiler.BeginSample("GetRequirePath");
         if (!string.IsNullOrEmpty(originalScriptPath)) {
-            if (!fileNameStr.Contains("/")) {
+            if (!fileNameStr.Contains("/", StringComparison.Ordinal)) {
                 // Get a stripped name
                 fileNameStr = GetTidyPathNameForLuaFile(originalScriptPath);
-            } else if (fileNameStr.StartsWith("./", StringComparison.Ordinal)) {
+            } else if (FastStartsWith(fileNameStr, "./")) {
                 // Get a stripped name
                 var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
@@ -1264,7 +1264,7 @@ public partial class LuauCore : MonoBehaviour {
                 var bindingPath = Path.Combine(bits.ToArray());
                 
                 fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
-            } else if (fileNameStr.StartsWith("../", StringComparison.Ordinal)) {
+            } else if (FastStartsWith(fileNameStr, "../")) {
                 var fName = GetTidyPathNameForLuaFile(originalScriptPath);
 
                 //Remove two bits of this filename off the end
@@ -1294,6 +1294,7 @@ public partial class LuauCore : MonoBehaviour {
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
     [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.RequireCallback))]
     private static void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen) {
+        Profiler.BeginSample("RequirePathCallback");
         LuauProtection.CurrentContext = context;
         
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameLen);
@@ -1304,6 +1305,7 @@ public partial class LuauCore : MonoBehaviour {
         
         // LuauCore.WritePropertyToThread(thread, fileRequirePath, typeof(string));
         LuauPluginRaw.PushString(thread, fileRequirePath);
+        Profiler.EndSample();
     }
     
     [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.RequireCallback))]
