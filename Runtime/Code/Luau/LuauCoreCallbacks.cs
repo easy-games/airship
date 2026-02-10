@@ -1250,41 +1250,41 @@ public partial class LuauCore : MonoBehaviour {
     
     public static string GetRequirePath(string originalScriptPath, string fileNameStr) {
         Profiler.BeginSample("GetRequirePath");
+        var calledTidy = false;
+        
         if (!string.IsNullOrEmpty(originalScriptPath)) {
             if (!fileNameStr.Contains("/", StringComparison.Ordinal)) {
                 // Get a stripped name
                 fileNameStr = GetTidyPathNameForLuaFile(originalScriptPath);
+                calledTidy = true;
             } else if (FastStartsWith(fileNameStr, "./")) {
                 // Get a stripped name
-                var fName = GetTidyPathNameForLuaFile(originalScriptPath);
+                var fName = new StringSlice(GetTidyPathNameForLuaFile(originalScriptPath));
+                calledTidy = true;
 
-                //Remove just this filename off the end
-                var bits = new List<string>(fName.Split("/"));
-                bits.RemoveAt(bits.Count - 1);
-                var bindingPath = Path.Combine(bits.ToArray());
+                var lastSlashIdx = fName.LastIndexOf('/');
+                Debug.Assert(lastSlashIdx != -1);
                 
-                fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
+                fileNameStr = fName.Substring(0, lastSlashIdx) + "/" + fileNameStr.Substring(2);
             } else if (FastStartsWith(fileNameStr, "../")) {
-                var fName = GetTidyPathNameForLuaFile(originalScriptPath);
+                var fName = new StringSlice(GetTidyPathNameForLuaFile(originalScriptPath));
+                calledTidy = true;
+                
+                // Remove last two slash components (or one if only one is found):
+                var lastSlashIdx = fName.LastIndexOf('/');
+                Debug.Assert(lastSlashIdx != -1);
 
-                //Remove two bits of this filename off the end
-                var bits = new List<string>(fName.Split("/"));
-                if (bits.Count > 0) {
-                    bits.RemoveAt(bits.Count - 1);
-                }
-
-                if (bits.Count > 0) {
-                    bits.RemoveAt(bits.Count - 1);
-                }
-
-                var bindingPath = Path.Combine(bits.ToArray());
-
-                fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
+                var secondLastSlashIdx = fName.LastIndexOf('/', lastSlashIdx - 1);
+                var idx = secondLastSlashIdx != -1 ? secondLastSlashIdx : lastSlashIdx;
+                
+                fileNameStr = fName.Substring(0, idx) + "/" + fileNameStr.Substring(2);
             }
         }
         
-        //Fully qualify it
-        fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
+        // Fully qualify it
+        if (!calledTidy) {
+            fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
+        }
 
         Profiler.EndSample();
         return fileNameStr;

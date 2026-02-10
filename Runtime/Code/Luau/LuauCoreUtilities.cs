@@ -24,28 +24,50 @@ public partial class LuauCore : MonoBehaviour {
     /// pointing at the same file will result in the same output.
     /// </summary>
     private static string GetTidyPathNameForLuaFile(string fileNameStr) {
-        // Make sure assets is properly capitalized for GetRelativePath call
-        if (FastStartsWithIgnoreCase(fileNameStr, "assets")) {
-            fileNameStr = fileNameStr.Substring("assets".Length);
-        }
-        
         // Add .lua to the end
         if (!FastEndsWithIgnoreCase(fileNameStr, ".lua")) {
             fileNameStr += ".lua";
         }
 
+        var fileNameStrSlice = new StringSlice(fileNameStr);
+
+        // Make sure assets is properly capitalized for GetRelativePath call
+        if (fileNameStrSlice.StartsWithIgnoreCase("assets")) {
+            fileNameStrSlice = fileNameStrSlice.Substring(6);
+        }
+        
         // Remove the ../ off the front
-        while (FastStartsWith(fileNameStr, "..\\") || FastStartsWith(fileNameStr, "../")) {
-            fileNameStr = fileNameStr.Substring(3);
+        while (fileNameStrSlice.StartsWith("..\\") || fileNameStrSlice.StartsWith("../")) {
+            fileNameStrSlice = fileNameStrSlice.Substring(3);
         }
         // Remove all /'s
-        while (FastStartsWith(fileNameStr, "/")) {
-            fileNameStr = fileNameStr.Substring(1);
+        while (fileNameStrSlice.Length > 0 && fileNameStrSlice[0] == '/') {
+            fileNameStrSlice = fileNameStrSlice.Substring(1);
         }
+        
+        // Make sure assets is properly capitalized for GetRelativePath call
+        // if (FastStartsWithIgnoreCase(fileNameStr, "assets")) {
+        //     fileNameStr = fileNameStr.Substring(6);
+        // }
+
+        // Remove the ../ off the front
+        // while (FastStartsWith(fileNameStr, "..\\") || FastStartsWith(fileNameStr, "../")) {
+        //     fileNameStr = fileNameStr.Substring(3);
+        // }
+        // Remove all /'s
+        // while (fileNameStr.Length > 0 && fileNameStr[0] == '/') {
+        //     // while (FastStartsWith(fileNameStr, "/")) {
+        //     fileNameStr = fileNameStr.Substring(1);
+        // }
 
         // Replace backslashes
-        fileNameStr = fileNameStr.Replace("\\", "/");
-        return fileNameStr.ToLower();
+        fileNameStr = fileNameStrSlice.ToString().ToLowerInvariant();
+
+        if (fileNameStr.Contains('\\')) {
+            fileNameStr = fileNameStr.Replace('\\', '/');
+        }
+
+        return fileNameStr;
     }
 
     // Source: https://docs.unity3d.com/2022.3/Documentation/Manual/UnderstandingPerformanceStringsAndText.html
