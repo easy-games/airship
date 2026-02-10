@@ -44,21 +44,6 @@ public partial class LuauCore : MonoBehaviour {
         while (fileNameStrSlice.Length > 0 && fileNameStrSlice[0] == '/') {
             fileNameStrSlice = fileNameStrSlice.Substring(1);
         }
-        
-        // Make sure assets is properly capitalized for GetRelativePath call
-        // if (FastStartsWithIgnoreCase(fileNameStr, "assets")) {
-        //     fileNameStr = fileNameStr.Substring(6);
-        // }
-
-        // Remove the ../ off the front
-        // while (FastStartsWith(fileNameStr, "..\\") || FastStartsWith(fileNameStr, "../")) {
-        //     fileNameStr = fileNameStr.Substring(3);
-        // }
-        // Remove all /'s
-        // while (fileNameStr.Length > 0 && fileNameStr[0] == '/') {
-        //     // while (FastStartsWith(fileNameStr, "/")) {
-        //     fileNameStr = fileNameStr.Substring(1);
-        // }
 
         // Replace backslashes
         fileNameStr = fileNameStrSlice.ToString().ToLowerInvariant();
