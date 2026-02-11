@@ -45,7 +45,7 @@ namespace Code.Bootstrap {
                     } else {
                         // Compress the byte array
                         Profiler.BeginSample("Luau Compress");
-                        var maxCompressionSize = Zstd.Zstd.GetCompressionBound(file.bytes);
+                        var maxCompressionSize = Zstd.Zstd.GetCompressionBound(file.bytes.AsSpan());
                         byte[] compressedBytes = new byte[maxCompressionSize];
                         var compressedSize = zstd.Value.Compress(file.bytes, compressedBytes);
                         writer.WriteInt(compressedSize);
@@ -80,8 +80,11 @@ namespace Code.Bootstrap {
                     reader.ReadBytes(compressedBytes, compressedBytesLen);
 
                     // Decompress the bytes
-                    script.bytes = new byte[Zstd.Zstd.GetDecompressionBound(compressedBytes)];
-                    zstd.Value.Decompress(new ReadOnlySpan<byte>(compressedBytes, 0, compressedBytesLen), script.bytes);
+                    var compressedSlice = new ReadOnlySpan<byte>(compressedBytes, 0, compressedBytesLen);
+                    var decompressedLength = Zstd.Zstd.GetDecompressionBound(compressedSlice);
+                    script.bytes = new byte[decompressedLength];
+                    zstd.Value.Decompress(compressedSlice, script.bytes);
+                    ArrayPool<byte>.Shared.Return(compressedBytes);
 
                     script.airshipBehaviour = reader.ReadBool();
 

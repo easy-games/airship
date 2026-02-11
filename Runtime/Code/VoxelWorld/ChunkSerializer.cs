@@ -30,9 +30,10 @@ public static class ChunkSerializer {
         // Compress the byte array
         Profiler.BeginSample("WriteChunk.Compress");
 
-        var maxCompressionSize = Zstd.GetCompressionBound(voxelByteAndColorArray);
+        var uncompressedLength = voxelDataLengthBytes + colDataLengthBytes;
+        var maxCompressionSize = Zstd.GetCompressionBound(new ReadOnlySpan<byte>(voxelByteAndColorArray, 0, uncompressedLength));
         var compressionBuffer = ArrayPool<byte>.Shared.Rent(maxCompressionSize);
-        var voxelDataCompressedSize = zstd.Compress(voxelByteAndColorArray, compressionBuffer);
+        var voxelDataCompressedSize = zstd.Compress(new ReadOnlySpan<byte>(voxelByteAndColorArray, 0, uncompressedLength), compressionBuffer);
         writer.WriteInt(voxelDataCompressedSize);
         writer.WriteBytes(compressionBuffer, 0, voxelDataCompressedSize);
         
@@ -56,7 +57,8 @@ public static class ChunkSerializer {
         byte[] voxelByteAndColorArray = ArrayPool<byte>.Shared.Rent(compressedBytesLen);
         
         reader.ReadBytes(voxelByteAndColorArray, compressedBytesLen);
-        var decompressedData = ArrayPool<byte>.Shared.Rent(Zstd.GetDecompressionBound(voxelByteAndColorArray));
+        var expectedLength = voxelDataLength + colorDataLength;
+        var decompressedData = ArrayPool<byte>.Shared.Rent(expectedLength);
         zstd.Decompress(new ReadOnlySpan<byte>(voxelByteAndColorArray, 0, compressedBytesLen), decompressedData);
         
         Buffer.BlockCopy(decompressedData, 0, chunk.readWriteVoxel, 0, voxelDataLength);
