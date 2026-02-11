@@ -150,6 +150,7 @@ public partial class LuauCore : MonoBehaviour {
                 toStringCallback = toStringCallback_holder,
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
                 getUnityObjectNameCallback = getUnityObjectNameCallback_holder,
+                resolveRequirePathCallback = null,
                 staticList = stringAddresses.AddrOfPinnedObject(),
                 staticListStrLen = stringLengthsHandle.AddrOfPinnedObject(),
                 staticCount = stringCount,

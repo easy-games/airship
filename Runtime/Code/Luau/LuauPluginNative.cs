@@ -19,6 +19,7 @@ public static class LuauPluginNative {
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
 	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
+	public delegate ulong ResolveRequirePathCallback(IntPtr scriptPath, ulong scriptPathLen, IntPtr filename, ulong filenameLen, out IntPtr resolved, ulong resolvedSize);
 
 #if UNITY_EDITOR
 	private const string BasePluginsPath = "/Packages/gg.easy.airship/Runtime/Plugins";
@@ -926,6 +927,7 @@ public static class LuauPluginNative {
 		public ToStringCallback toStringCallback;
 		public IsObjectDestroyedCallback isObjectDestroyedCallback;
 		public GetUnityObjectName getUnityObjectNameCallback;
+		public ResolveRequirePathCallback resolveRequirePathCallback;
 		
 		public IntPtr staticList;
 		public IntPtr staticListStrLen;
