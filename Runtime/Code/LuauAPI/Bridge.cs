@@ -374,7 +374,12 @@ public static class Bridge {
         var devices = Microphone.devices;
         if (i < 0 || i >= devices.Length)
             throw new ArgumentOutOfRangeException($"Microphone index {i} is out of range (devices.Length = {devices.Length})");
-        currentDevice = Mic.AvailableDevices.Find((d) => d.Name == Microphone.devices[i]);
+        var requestedDeviceName = devices[i];
+        currentDevice = ResolveMicDeviceByName(requestedDeviceName) ?? ResolveFirstMicDevice();
+
+        if (currentDevice == null) {
+            Debug.LogWarning($"[Bridge] Unable to resolve microphone device '{requestedDeviceName}'.");
+        }
     }
 
     [LuauAPI(LuauContext.Protected)]
@@ -384,7 +389,42 @@ public static class Bridge {
 
     [LuauAPI(LuauContext.Protected)]
     public static void StartMicRecording() {
+        if (currentDevice == null || Array.IndexOf(Microphone.devices, currentDevice.Name) < 0) {
+            currentDevice = ResolveFirstMicDevice();
+            if (currentDevice == null) {
+                Debug.LogWarning("[Bridge] StartMicRecording called but no valid microphone devices are available.");
+                return;
+            }
+        }
         AirshipUniVoice.StartRecording(currentDevice);
+    }
+
+    private static Mic.Device ResolveMicDeviceByName(string micName) {
+        foreach (var device in Mic.AvailableDevices) {
+            if (string.Equals(device.Name, micName, StringComparison.Ordinal)) {
+                return device;
+            }
+        }
+
+        foreach (var device in Mic.AvailableDevices) {
+            if (string.Equals(device.Name, micName, StringComparison.OrdinalIgnoreCase)) {
+                return device;
+            }
+        }
+
+        return null;
+    }
+
+    private static Mic.Device ResolveFirstMicDevice() {
+        var deviceNames = Microphone.devices;
+        for (var i = 0; i < deviceNames.Length; i++) {
+            var device = ResolveMicDeviceByName(deviceNames[i]);
+            if (device != null) {
+                return device;
+            }
+        }
+
+        return null;
     }
 
     [LuauAPI(LuauContext.Protected)]
