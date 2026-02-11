@@ -180,9 +180,11 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				var remoteBundleFile = bundleFilesToDownload[i];
 				bool success = false;
 				
-				// Test error
-				// Debug.LogError("Forcing download fail.");
-				// onComplete?.Invoke(false);
+				// Manual timeout simulation for QA:
+				// Uncomment this block to verify timeout UX end-to-end without real network issues.
+				// var forcedTimeoutError = BuildTimeoutErrorMessage(TryGetHost(remoteBundleFile.Url));
+				// Debug.LogWarning("[BundleDownloader] Forcing timeout error for manual QA.");
+				// onComplete?.Invoke(false, forcedTimeoutError);
 				// return false;
 
 				if (request.webRequest.result != UnityWebRequest.Result.Success) {
@@ -372,7 +374,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		var statusCode = webRequest.responseCode;
 
 		if (IsTimeoutLikeError(rawError)) {
-			return $"Connection to the Airship content server timed out ({host}). Check your internet connection and firewall or VPN settings, then press Retry.";
+			return BuildTimeoutErrorMessage(host);
 		}
 
 		if (statusCode == 0) {
@@ -384,6 +386,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		}
 
 		return rawError;
+	}
+
+	private static string BuildTimeoutErrorMessage(string host) {
+		return $"Connection to the Airship content server timed out ({host}). Check your internet connection and firewall or VPN settings, then press Retry.";
 	}
 
 	private static bool IsTimeoutLikeError(string error) {
