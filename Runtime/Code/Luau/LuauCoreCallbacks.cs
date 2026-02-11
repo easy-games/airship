@@ -41,7 +41,6 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPluginNative.ObjectGCCallback objectGCCallback_holder;
     private LuauPluginNative.RequireCallback requireCallback_holder;
     private LuauPluginNative.ConstructorCallback constructorCallback_holder;
-    private LuauPluginNative.RequirePathCallback requirePathCallback_holder;
     private LuauPluginNative.ToStringCallback toStringCallback_holder;
     private LuauPluginNative.IsObjectDestroyedCallback isObjectDestroyedCallback_holder;
     private LuauPluginNative.GetUnityObjectName getUnityObjectNameCallback_holder;
@@ -146,7 +145,6 @@ public partial class LuauCore : MonoBehaviour {
         objectGCCallback_holder = ObjectGcCallback;
         requireCallback_holder = RequireCallback;
         constructorCallback_holder = ConstructorCallback;
-        requirePathCallback_holder = RequirePathCallback;
         toStringCallback_holder = ToStringCallback;
         componentSetEnabledCallback_holder = SetComponentEnabledCallback;
         isObjectDestroyedCallback_holder = IsObjectDestroyedCallback;
@@ -1248,66 +1246,6 @@ public partial class LuauCore : MonoBehaviour {
         return type == ofType;
     }
     
-    public static string GetRequirePath(string originalScriptPath, string fileNameStr) {
-        Profiler.BeginSample("GetRequirePath");
-        var calledTidy = false;
-        
-        if (!string.IsNullOrEmpty(originalScriptPath)) {
-            if (!fileNameStr.Contains("/", StringComparison.Ordinal)) {
-                // Get a stripped name
-                fileNameStr = GetTidyPathNameForLuaFile(originalScriptPath);
-                calledTidy = true;
-            } else if (FastStartsWith(fileNameStr, "./")) {
-                // Get a stripped name
-                var fName = new StringSlice(GetTidyPathNameForLuaFile(originalScriptPath));
-                calledTidy = true;
-
-                var lastSlashIdx = fName.LastIndexOf('/');
-                Debug.Assert(lastSlashIdx != -1);
-                
-                fileNameStr = fName.Substring(0, lastSlashIdx) + "/" + fileNameStr.Substring(2);
-            } else if (FastStartsWith(fileNameStr, "../")) {
-                var fName = new StringSlice(GetTidyPathNameForLuaFile(originalScriptPath));
-                calledTidy = true;
-                
-                // Remove last two slash components (or one if only one is found):
-                var lastSlashIdx = fName.LastIndexOf('/');
-                Debug.Assert(lastSlashIdx != -1);
-
-                var secondLastSlashIdx = fName.LastIndexOf('/', lastSlashIdx - 1);
-                var idx = secondLastSlashIdx != -1 ? secondLastSlashIdx : lastSlashIdx;
-                
-                fileNameStr = fName.Substring(0, idx) + "/" + fileNameStr.Substring(2);
-            }
-        }
-        
-        // Fully qualify it
-        if (!calledTidy) {
-            fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
-        }
-
-        Profiler.EndSample();
-        return fileNameStr;
-    }
-
-    //Take a random path name from a require and transform it into its path relative to /assets/.
-    //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
-    [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.RequireCallback))]
-    private static void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen) {
-        Profiler.BeginSample("RequirePathCallback");
-        LuauProtection.CurrentContext = context;
-        
-        var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameLen);
-        var scriptNameStr = LuauCore.PtrToStringUTF8(scriptName, scriptNameLen);
-        
-        // LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-        var fileRequirePath = GetRequirePath(scriptNameStr, fileNameStr);
-        
-        // LuauCore.WritePropertyToThread(thread, fileRequirePath, typeof(string));
-        LuauPluginRaw.PushString(thread, fileRequirePath);
-        Profiler.EndSample();
-    }
-    
     [AOT.MonoPInvokeCallback(typeof(LuauPluginNative.RequireCallback))]
     private static IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
         LuauProtection.CurrentContext = context;
@@ -1316,31 +1254,6 @@ public partial class LuauCore : MonoBehaviour {
 
         var obj = new GameObject($"require({fileNameStr})");
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        // var obj = LuauState.FromContext(context).GetRequireGameObject();
-        
-        // var newBinding = obj.AddComponent<AirshipComponent>();
-        //
-        // if (newBinding.CreateThreadFromPath(fileNameStr, context) == false) {
-        //     ThreadDataManager.Error(thread);
-        //     Debug.LogError("Error require(" + fileNameStr + ") not found.");
-        //     GetLuauDebugTrace(thread);
-        //     return IntPtr.Zero;
-        // }
-        //
-        // if (newBinding.m_error == true) {
-        //     ThreadDataManager.Error(thread);
-        //     Debug.LogError("Error trying to execute module script during require for " + fileNameStr + ". Context=" + LuauCore.CurrentContext);
-        //     GetLuauDebugTrace(thread);
-        //     return IntPtr.Zero;
-        // }
-        // if (newBinding.m_canResume == true) {
-        //     ThreadDataManager.Error(thread);
-        //     Debug.LogError("Require() yielded; did not return with a table for " + fileNameStr);
-        //     GetLuauDebugTrace(thread);
-        //     return IntPtr.Zero;
-        // }
-        //
-        // return newBinding.m_thread;
 
         try {
             var newScript = LuauScript.Create(obj, fileNameStr, context, false);

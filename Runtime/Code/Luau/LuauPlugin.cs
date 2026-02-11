@@ -16,6 +16,8 @@ using Debug = UnityEngine.Debug;
 public static class LuauPlugin {
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
+	private static readonly Dictionary<string, string> ResolvedPaths = new();
+	
 	public enum CurrentCaller {
 		None,
 		RunThread,
@@ -151,6 +153,8 @@ public static class LuauPlugin {
 #if !UNITY_EDITOR // The SubsystemRegistration call is done automatically within LuauPluginNative at editor time
 		ThreadSafetyCheck();
 		LuauPluginNative.SubsystemRegistration();
+#else
+		ResolvedPaths.Clear();
 #endif
 	}
 	
@@ -206,6 +210,28 @@ public static class LuauPlugin {
 	public static void Shutdown() {
 		ThreadSafetyCheck();
 		LuauPluginNative.Shutdown();
+	}
+
+	public static string ResolveRequirePath(string originalScriptPath, string filename) {
+		var key = originalScriptPath + "!" + filename;
+		if (ResolvedPaths.TryGetValue(key, out var cachedResolvedPath)) {
+			return cachedResolvedPath;
+		}
+		
+		var originalScriptPathPtr = Marshal.StringToCoTaskMemUTF8(originalScriptPath);
+		var originalScriptPathLen = Encoding.UTF8.GetByteCount(originalScriptPath);
+		var filenamePtr = Marshal.StringToCoTaskMemUTF8(filename);
+		var filenameLen = Encoding.UTF8.GetByteCount(filename);
+		
+		var resolvedLen = LuauPluginNative.ResolveRequirePath(originalScriptPathPtr, originalScriptPathLen, filenamePtr, filenameLen, out var resolved);
+		
+		Marshal.FreeCoTaskMem(originalScriptPathPtr);
+		Marshal.FreeCoTaskMem(filenamePtr);
+
+		var resolvedPath = Marshal.PtrToStringUTF8(resolved, resolvedLen);
+		ResolvedPaths[key] = resolvedPath;
+		
+		return resolvedPath;
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -146,7 +146,6 @@ public partial class LuauCore : MonoBehaviour {
                 callMethodCallback = callMethodCallback_holder,
                 objectGcCallback = objectGCCallback_holder,
                 requireCallback = requireCallback_holder,
-                requirePathCallback = requirePathCallback_holder,
                 constructorCallback = constructorCallback_holder,
                 toStringCallback = toStringCallback_holder,
                 isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
