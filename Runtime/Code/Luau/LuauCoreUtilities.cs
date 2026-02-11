@@ -15,39 +15,4 @@ public partial class LuauCore : MonoBehaviour {
             LuauPlugin.ErrorThread(thread, new IntPtr(ptr), str.Length);
         }
     }
-
-    /// <summary>
-    /// Returns a file path relative to Assets/. Example output:
-    /// <code>airshippackages/@easy/core/server/protectedservices/airship/platforminventory/platforminventoryservice.lua</code>
-    ///
-    /// Will add ".lua" to the end and lowercase the result. Intention is that two different paths
-    /// pointing at the same file will result in the same output.
-    /// </summary>
-    private static string GetTidyPathNameForLuaFile(string fileNameStr) {
-        var init = fileNameStr;
-        // Make sure assets is properly capitalized for GetRelativePath call
-        if (fileNameStr.StartsWith("assets", StringComparison.OrdinalIgnoreCase)) {
-            fileNameStr = fileNameStr.Substring("assets".Length);
-        }
-        
-        // Add .lua to the end
-        if (!fileNameStr.EndsWith(".lua", StringComparison.OrdinalIgnoreCase)) {
-            fileNameStr += ".lua";
-        }
-
-        //Remove the ../ off the front
-        while (fileNameStr.StartsWith("..\\") || fileNameStr.StartsWith("../"))
-        {
-            fileNameStr = fileNameStr.Substring(3);
-        }
-        // Remove all /'s
-        while (fileNameStr.StartsWith("/")) {
-            fileNameStr = fileNameStr.Substring(1);
-        }
-
-        //Replace backslashes
-        fileNameStr = fileNameStr.Replace("\\", "/");
-        return fileNameStr.ToLower();
-    }
-
 }
