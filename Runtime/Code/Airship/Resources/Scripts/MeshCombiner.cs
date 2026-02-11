@@ -92,6 +92,7 @@ namespace Airship {
         private void Awake() {
             // If serialization broke on this or a prefab override removed them grab any existing material color setters
             if (outputCombinedMeshMatColors == null || outputCombinedMeshMatColors.Length <= 0) {
+                Debug.LogWarning("Missing Material Color references on MeshCombiner. You may need to assign the MaterialColorURP assets on your Character Variant's MeshCombiner.");
                 outputCombinedMeshMatColors = gameObject.GetComponentsInChildren<MaterialColorURP>();
             }
             for (int i = 0; i < this.lodCount; i++) {
