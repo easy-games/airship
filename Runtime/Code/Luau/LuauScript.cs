@@ -132,7 +132,7 @@ public class LuauScript : MonoBehaviour {
 			case LuauScriptCacheMode.NotCached:
 				return LuauPlugin.CreateThread(context, script.m_bytes, cleanPath, id);
 			case LuauScriptCacheMode.Cached:
-				var requirePath = LuauCore.GetRequirePath(script.m_path, cleanPath);
+				var requirePath = LuauPlugin.ResolveRequirePath(script.m_path, cleanPath);
 				return LuauPlugin.CreateThreadWithCachedModule(context, requirePath, id);
 			default:
 				throw new Exception($"[LuauScript]: Unhandled mode: {cacheMode}");
@@ -179,7 +179,7 @@ public class LuauScript : MonoBehaviour {
 		}
 
 		if (shouldCacheValue && status == 0) {
-			var requirePath = LuauCore.GetRequirePath(script.m_path, CleanupFilePath(script.m_path));
+			var requirePath = LuauPlugin.ResolveRequirePath(script.m_path, CleanupFilePath(script.m_path));
 			LuauPlugin.CacheModuleOnThread(thread, requirePath);
 		}
 

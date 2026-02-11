@@ -15,11 +15,11 @@ public static class LuauPluginNative {
 	public delegate int ConstructorCallback(LuauContext context, IntPtr thread, IntPtr className, int classNameSize, int classNameAtom, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr firstParameterIsTable);
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
 	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
-	public delegate void RequirePathCallback(LuauContext context, IntPtr thread, IntPtr scriptName, int scriptNameLen, IntPtr fileName, int fileNameLen);
 	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
 	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
+	public delegate ulong ResolveRequirePathCallback(IntPtr scriptPath, ulong scriptPathLen, IntPtr filename, ulong filenameLen, out IntPtr resolved, ulong resolvedSize);
 
 #if UNITY_EDITOR
 	private const string BasePluginsPath = "/Packages/gg.easy.airship/Runtime/Plugins";
@@ -73,6 +73,9 @@ public static class LuauPluginNative {
 	
 	internal delegate void ShutdownDelegate();
 	[NativeDelegate] internal static ShutdownDelegate Shutdown;
+
+	internal delegate int ResolveRequirePathDelegate(IntPtr scriptPath, int scriptPathLen, IntPtr filename, int filenameLen, out IntPtr resolved);
+	[NativeDelegate] internal static ResolveRequirePathDelegate ResolveRequirePath;
 	
 	internal unsafe delegate IntPtr InitializeAirshipComponentDelegate(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto* props, int nProps);
 	[NativeDelegate] internal static InitializeAirshipComponentDelegate InitializeAirshipComponent;
@@ -371,6 +374,13 @@ public static class LuauPluginNative {
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
     internal static extern IntPtr RunEndFrameLogic();
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+    internal static extern IntPtr ResolveRequirePath(IntPtr scriptPath, int scriptPathLen, IntPtr filename, int filenameLen, out IntPtr resolved);
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -913,11 +923,11 @@ public static class LuauPluginNative {
 		public CallMethodCallback callMethodCallback;
 		public ObjectGCCallback objectGcCallback;
 		public RequireCallback requireCallback;
-		public RequirePathCallback requirePathCallback;
 		public ConstructorCallback constructorCallback;
 		public ToStringCallback toStringCallback;
 		public IsObjectDestroyedCallback isObjectDestroyedCallback;
 		public GetUnityObjectName getUnityObjectNameCallback;
+		public ResolveRequirePathCallback resolveRequirePathCallback;
 		
 		public IntPtr staticList;
 		public IntPtr staticListStrLen;
