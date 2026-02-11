@@ -16,7 +16,7 @@ using Debug = UnityEngine.Debug;
 public static class LuauPlugin {
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
-	private static readonly Dictionary<string, string> ResolvedPaths = new();
+	private static readonly Dictionary<(string, string), string> ResolvedPaths = new();
 	
 	public enum CurrentCaller {
 		None,
@@ -213,7 +213,7 @@ public static class LuauPlugin {
 	}
 
 	public static string ResolveRequirePath(string originalScriptPath, string filename) {
-		var key = originalScriptPath + "!" + filename;
+		var key = (originalScriptPath, filename);
 		if (ResolvedPaths.TryGetValue(key, out var cachedResolvedPath)) {
 			return cachedResolvedPath;
 		}
