@@ -204,12 +204,14 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 						Debug.LogError(
 							$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
 						Debug.LogError(request.webRequest.error);
-						onComplete?.Invoke(false, request.webRequest.error);
+						var friendlyError = GetFriendlyDownloadError(request.webRequest, remoteBundleFile.Url);
+						onComplete?.Invoke(false, friendlyError);
 						return false;
 					}
 				} else if (!string.IsNullOrEmpty(request.webRequest.downloadHandler.error)) {
 					Debug.LogError($"File download handler failed on bundle file {remoteBundleFile.fileName}. Error: {request.webRequest.downloadHandler.error}");
-					onComplete?.Invoke(false, request.webRequest.downloadHandler.error);
+					var friendlyError = GetFriendlyDownloadError(request.webRequest, remoteBundleFile.Url);
+					onComplete?.Invoke(false, friendlyError);
 					return false;
 				}  else {
 					var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
@@ -362,5 +364,44 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 	public bool IsDownloading() {
 		return isDownloading;
+	}
+
+	private static string GetFriendlyDownloadError(UnityWebRequest webRequest, string requestUrl) {
+		var host = TryGetHost(requestUrl);
+		var rawError = webRequest.error ?? string.Empty;
+		var statusCode = webRequest.responseCode;
+
+		if (IsTimeoutLikeError(rawError)) {
+			return $"Connection to the Airship content server timed out ({host}). Check your internet connection and firewall or VPN settings, then press Retry.";
+		}
+
+		if (statusCode == 0) {
+			return $"Could not reach the Airship content server ({host}). Check your internet connection and firewall or VPN settings, then press Retry.";
+		}
+
+		if (string.IsNullOrWhiteSpace(rawError)) {
+			return $"Failed to download game content from {host}. Please press Retry.";
+		}
+
+		return rawError;
+	}
+
+	private static bool IsTimeoutLikeError(string error) {
+		if (string.IsNullOrWhiteSpace(error)) {
+			return false;
+		}
+
+		return
+			error.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
+			error.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+			error.Contains("curl error 28", StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static string TryGetHost(string requestUrl) {
+		if (Uri.TryCreate(requestUrl, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host)) {
+			return uri.Host;
+		}
+
+		return "the content server";
 	}
 }

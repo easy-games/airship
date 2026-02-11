@@ -405,7 +405,11 @@ namespace Code.Bootstrap {
                     (success, errorMsg) => {
                         finishedDownload = true;
                         if (!success) {
-                            loadingScreen.SetError("Failed to download game content. An error has occurred: " + errorMsg);
+                            if (string.IsNullOrEmpty(errorMsg)) {
+                                loadingScreen.SetError("Failed to download game content. Please check your connection and press Retry.");
+                            } else {
+                                loadingScreen.SetError(errorMsg);
+                            }
                         }
                     }
                 );
