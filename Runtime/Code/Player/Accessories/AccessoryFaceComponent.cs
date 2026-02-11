@@ -1,8 +1,12 @@
 using System;
+using System.Collections;
+using Code.Player;
+using Mirror;
 using Unity.Mathematics;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
+[LuauAPI]
 public class AccessoryFaceComponent : MonoBehaviour {
     public enum FaceRenderMode {
         None = -1,
@@ -31,14 +35,15 @@ public class AccessoryFaceComponent : MonoBehaviour {
         Frown,
         Smirk
     }
-    
+
     [Header("References")]
     public Renderer faceRenderer;
-    
+
     [Header("Variables")]
-    public float volumeDBMin = .1f;
-    public float volumeDBYell = .2f;
-    public float pitchVariationMax = .5f;
+    public bool reactToVoice = true;
+    public float volumeDBYell = .15f;
+    public float volumeDBScream = .3f;
+    public float pitchVariationMax = .35f;
     
     [Header("Debugging")]
     public bool logValues = false;
@@ -54,15 +59,14 @@ public class AccessoryFaceComponent : MonoBehaviour {
     private float minTalkHoldTime = 0;
     private float timeTalking = 0;
     private bool currentlyTalking = false;
+    private AccessoryFaceAudioReader audioReader;
 
     private void Awake() {
         if (!faceRenderer) {
-            faceRenderer = gameObject.GetComponent<Renderer>();
-            if (!faceRenderer) {
-                Debug.LogError("Face Component requires a renderer");
-                return;
-            }
+            Debug.LogError("Face Component requires a renderer");
+            return;
         }
+        
 #if UNITY_EDITOR
         faceMat = Application.isPlaying ? faceRenderer.material : faceRenderer.sharedMaterial;
 #else
@@ -70,13 +74,19 @@ public class AccessoryFaceComponent : MonoBehaviour {
 #endif
     }
 
+    private void OnDestroy() {
+        if (audioReader) {
+            audioReader.face = null;
+        }
+    }
+
     private void Update() {
         if (logValues) {
             Debug.Log("Volume: " + currentVolume + " Pitch Variation: " + currentPitchVariation);
         }
         // Based on pitch changes, should we change mouth shapes?
-        // The longest hold on a face will be 1 and the shortest is .1
-        currentFaceChangeDuration = Mathf.Lerp(1, .1f, currentPitchVariation / pitchVariationMax);
+        // The longest hold on a face will be 2 and the shortest is .08
+        currentFaceChangeDuration = Mathf.Lerp(2, .08f, currentPitchVariation / pitchVariationMax);
         
         if (Time.time > lastFaceChangeTime + currentFaceChangeDuration) {
             lastFaceChangeTime = Time.time;
@@ -107,17 +117,23 @@ public class AccessoryFaceComponent : MonoBehaviour {
 
     private void Refresh() {
         var canTalk = setFaceMode != FaceRenderMode.OverwriteVoice && setFaceMode != FaceRenderMode.OverwriteAll;
-        currentlyTalking = currentVolume > volumeDBMin || Time.time < minTalkHoldTime;
+        currentlyTalking = currentVolume > 0 || Time.time < minTalkHoldTime;
         
         if (currentlyTalking && canTalk) {
             // Talking
-            if (currentVolume > volumeDBMin) {
-                //If we started to talk, don't swap it off too quick
+            if (currentVolume > .01f) {
+                //Don't swap off talking too quick
                 minTalkHoldTime = Time.time + .15f;
             }
 
             faceMat.SetFloat("_MouthStrength", 1);
-            faceMat.SetFloat("_MouthIndex", currentVolume >= volumeDBYell ? 2 : currentTalkingIndex);
+            var mouthIndex = currentTalkingIndex;
+            if (currentVolume >= volumeDBScream) {
+                mouthIndex = 6;
+            } else if (currentVolume >= volumeDBYell) {
+                mouthIndex = 2;
+            }
+            faceMat.SetFloat("_MouthIndex", mouthIndex);
         } else {
             // Default face
             if (setFaceIndex >= 0) {

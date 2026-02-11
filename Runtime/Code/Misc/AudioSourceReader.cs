@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+[LuauAPI]
 [RequireComponent(typeof(AudioSource))]
 public class AudioSourceReader : MonoBehaviour {
     [Header("Microphone")]
@@ -12,9 +13,7 @@ public class AudioSourceReader : MonoBehaviour {
     public float maxHz = 4000f;
 
     [Header("Thresholds")]
-    public float rmsThreshold = 0.01f;
-    public float fluxEnterThreshold = 0.02f;
-    public float fluxExitThreshold = 0.01f;
+    public float rmsThreshold = 0.005f;
 
     [Header("Smoothing")]
     [Range(0f, 1f)]
@@ -23,7 +22,7 @@ public class AudioSourceReader : MonoBehaviour {
     [Header("Debug")]
     public float audioStartTime = 0;
 
-    public bool IsSpeaking { get; private set; }
+    public bool isSpeaking { get; private set; }
     public float RMS { get; private set; }
     public float Flux { get; private set; }
 
@@ -88,14 +87,7 @@ public class AudioSourceReader : MonoBehaviour {
     }
 
     protected void Classify() {
-        if (!IsSpeaking) {
-            if (RMS > rmsThreshold && Flux > fluxEnterThreshold)
-                IsSpeaking = true;
-        }
-        else {
-            if (Flux < fluxExitThreshold || RMS < rmsThreshold)
-                IsSpeaking = false;
-        }
+        isSpeaking = RMS >= rmsThreshold;
     }
 
     protected void OnAudioFilterRead(float[] data, int channels) {

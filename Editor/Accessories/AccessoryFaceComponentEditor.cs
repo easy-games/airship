@@ -4,7 +4,7 @@ using UnityEditor;
 [CustomEditor(typeof(AccessoryFaceComponent))]
 public class AccessoryFaceComponentEditor : UnityEditor.Editor {
 
-    private AccessoryFaceComponent.AirshipFaceDecal tempFace;
+    private AccessoryFaceComponent.AirshipFaceDecal tempFace = AccessoryFaceComponent.AirshipFaceDecal.None;
     private bool failed = false;
         
     public override void OnInspectorGUI() {

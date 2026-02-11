@@ -10,6 +10,7 @@ namespace Code.Voice {
         const string TAG = "[StreamedAudioSourceOutput]";
 
         public StreamedAudioSource Stream { get; private set; }
+        public AccessoryFaceAudioReader Reader { get; private set; }
         public GameObject AudioSourceGameObject;
 
         [System.Obsolete("Cannot use new keyword to create an instance. Use the .New() method instead")]
@@ -33,6 +34,7 @@ namespace Code.Voice {
                     
                     var go = playerInfo.Result.voiceChatAudioSource.gameObject;
                     cted.Stream = go.GetComponent<StreamedAudioSource>() ?? go.AddComponent<StreamedAudioSource>();
+                    cted.Reader = go.GetComponent<AccessoryFaceAudioReader>() ?? go.AddComponent<AccessoryFaceAudioReader>();
                 }, TaskScheduler.FromCurrentSynchronizationContext());
             return cted;
         }
