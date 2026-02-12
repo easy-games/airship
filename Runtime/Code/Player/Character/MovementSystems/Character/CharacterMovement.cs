@@ -299,12 +299,11 @@ namespace Code.Player.Character.MovementSystems.Character {
                     = airshipTransform
                         .position; // save the last transform position so that we calculate the difference from where the player sees themselves
             } else {
-                correctionTime = 0;
                 var goalPosition = rb.position;
                 var difference
                     = correctionLastSimulatedPosition -
                       goalPosition; // inverted so that when we apply the difference, we move the airshipTransform back to the original pos
-                correctionOffset = difference.magnitude > correctionMaxMagnitude ? Vector3.zero : difference;
+                StartVisualCorrection(difference);
             }
         }
 
@@ -1005,7 +1004,12 @@ namespace Code.Player.Character.MovementSystems.Character {
                     didStepUp = hitStepUp;
                     var oldPos = rootPosition;
                     if (pointOnRamp.y > oldPos.y) {
+                        var stepUpHeight = pointOnRamp.y - oldPos.y;
                         SnapToY(pointOnRamp.y);
+                        if (stepUpHeight > 0) {
+                            // Match correction interpolation so step-up visuals ease upward instead of snapping.
+                            StartVisualCorrection(Vector3.down * stepUpHeight);
+                        }
                     }
 
                     //print("STEPPED UP. Vel before: " + newVelocity);
@@ -1534,6 +1538,15 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
 #region Helpers
+
+        private void StartVisualCorrection(Vector3 additionalOffset) {
+            var currentOffset = correctionTime < 1
+                ? Vector3.Lerp(correctionOffset, Vector3.zero, correctionTime)
+                : Vector3.zero;
+            correctionTime = 0;
+            var nextOffset = currentOffset + additionalOffset;
+            correctionOffset = nextOffset.magnitude > correctionMaxMagnitude ? Vector3.zero : nextOffset;
+        }
 
         private void SnapToY(float newY) {
             //print("Snapping to Y: " + newY);

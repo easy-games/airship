@@ -300,6 +300,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(VibrationFeedbackType),
             typeof(AirshipUniVoice),
 
+            
+            typeof(NavMeshQueryFilter),
 
             
             // Steam

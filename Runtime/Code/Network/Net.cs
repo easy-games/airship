@@ -76,8 +76,16 @@ namespace Assets.Luau.Network {
 
 	    private void OnBroadcastFromClient(NetworkConnectionToClient conn, NetBroadcast msg) {
 		    // Runs on the server, when the client broadcasts a message
+		    ulong messageSizeBytes;
 		    try {
-			    if ((ulong)msg.Blob.DecompressedDataSize >= MaxBytesAtOnce) {
+			    var decompressedSize = msg.Blob.DecompressedDataSize;
+			    if (decompressedSize < 0) {
+				    Debug.LogWarning(
+					    $"Dropping message from client connection {conn.connectionId} due to invalid payload size.");
+				    return;
+			    }
+			    messageSizeBytes = (ulong)decompressedSize;
+			    if (messageSizeBytes >= MaxBytesAtOnce) {
 				    Debug.LogWarning(
 					    $"Dropping message from client connection {conn.connectionId} due to exceeding max data size.");
 				    return;
@@ -97,7 +105,7 @@ namespace Assets.Luau.Network {
 			    throttle.nextClear = now + ThrottleResetPeriod;
 		    }
 
-		    throttle.dataAmount += (ulong)msg.Blob.DecompressedDataSize;
+		    throttle.dataAmount += messageSizeBytes;
 		    if (throttle.dataAmount >= MaxBytesPerPeriod) {
 			    Debug.LogWarning(
 				    $"Disconnecting connection {conn.connectionId} because it's sending too much data. Data total {throttle.dataAmount} > {MaxBytesPerPeriod}");

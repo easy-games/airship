@@ -116,20 +116,4 @@ public class LuauHelper : Singleton<LuauHelper> {
             }
         }
     }
-
-    // Source: https://docs.unity3d.com/Manual/UnderstandingPerformanceStringsAndText.html
-    private static bool FastStartsWith(string a, string b) {
-        var aLen = a.Length;
-        var bLen = b.Length;
-
-        var ap = 0;
-        var bp = 0;
-
-        while (ap < aLen && bp < bLen && a[ap] == b[bp]) {
-            ap++;
-            bp++;
-        }
-
-        return bp == bLen;
-    }
 }
