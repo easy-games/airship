@@ -280,6 +280,7 @@ namespace Code.Bootstrap {
 
         public void CleanupClient() {
             NetworkClient.UnregisterHandler<LuauBytesMessage>();
+            NetworkClient.UnregisterHandler<InitializeGameMessage>();
         }
         
 
