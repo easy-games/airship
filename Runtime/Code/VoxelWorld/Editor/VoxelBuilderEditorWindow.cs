@@ -1,4 +1,6 @@
 #if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,6 +20,10 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
         // The current mode
         private Mode currentMode;
         public static bool active = true;
+        private string blockSearchText = string.Empty;
+        private bool sortBlocksAlphabetically = false;
+        private readonly List<ushort> filteredBlockIds = new List<ushort>();
+        private readonly Dictionary<string, int> blockLabelCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         [MenuItem("Airship/Misc/VoxelEditor")]
         private static void Init() {
@@ -67,8 +73,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
 
         private void ShowSelectionGui() {
-            //Label 
-            GUILayout.Label("Select VoxelWorld", EditorStyles.boldLabel);
+            GUILayout.Label("Select Voxel World", EditorStyles.boldLabel);
 
             //Shows a list of all the VoxelWorld objects in the scene as clickable buttons
             var voxelWorlds = FindObjectsOfType<VoxelWorld>();
@@ -98,6 +103,14 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
 
         private void OnGUI() {
+            var sectionStyle = new GUIStyle(EditorStyles.helpBox) {
+                padding = new RectOffset(8, 8, 8, 8),
+                margin = new RectOffset(8, 8, 6, 6)
+            };
+            var headerStyle = new GUIStyle(EditorStyles.boldLabel) {
+                fontSize = 12
+            };
+
             //Create an active toggle as a button that toggles on and off
             active = GUILayout.Toggle(active, "Voxel Editor Active");
 
@@ -105,7 +118,10 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 GUI.enabled = false;
             }
 
+            GUILayout.BeginVertical(sectionStyle);
+            GUILayout.Label("Scene", headerStyle);
             ShowSelectionGui();
+            GUILayout.EndVertical();
 
             var world = GetVoxelWorld();
             SelectionZone selection = null;
@@ -148,10 +164,12 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 }
             }
 
-            //Show a foldable help box
+            GUILayout.BeginVertical(sectionStyle);
+            GUILayout.Label("Controls", headerStyle);
             EditorGUILayout.HelpBox(
                 "Left click to add\nShift+click to delete\nCtrl+click for repeat placement\nAlt+click or I to select highlighted block type\nG to rotate highlighted block",
                 MessageType.Info);
+            GUILayout.EndVertical();
 
             //active = EditorGUILayout.Toggle("Active", active);
 
@@ -166,9 +184,11 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             var blockDef = world.voxelBlocks.GetBlock(blockData);
 
-            GUILayout.Label("Highlighted Block");
+            GUILayout.BeginVertical(sectionStyle);
+            GUILayout.Label("Highlighted Block", headerStyle);
 
-            if (VoxelWorld.GetVoxelDataId(blockData) == 0) {
+            var highlightedId = VoxelWorld.GetVoxelDataId(blockData);
+            if (highlightedId == 0) {
                 GUI.enabled = false;
             }
 
@@ -195,11 +215,44 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 GUILayout.Label("Prefab: " + prefab.name);
             }
 
-            GUILayout.Label("Blocks", EditorStyles.boldLabel);
+            GUILayout.BeginHorizontal();
+            GUI.enabled = highlightedId != 0 && highlightedId < world.voxelBlocks.loadedBlocks.Count;
+            if (GUILayout.Button("Use Highlighted Type (I)")) {
+                world.selectedBlockIndex = highlightedId;
+            }
+            GUI.enabled = world.selectedBlockIndex < world.voxelBlocks.loadedBlocks.Count;
+            if (GUILayout.Button("Jump To Selected")) {
+                var selectedIndex = FindFilteredIndex(world.selectedBlockIndex);
+                if (selectedIndex >= 0) {
+                    scrollPos.y = selectedIndex * 22f;
+                }
+            }
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+
+            GUILayout.BeginVertical(sectionStyle);
+            GUILayout.Label("Block Palette", headerStyle);
+            GUILayout.BeginHorizontal();
+            blockSearchText = EditorGUILayout.TextField("Search", blockSearchText ?? string.Empty);
+            if (GUILayout.Button("Clear", GUILayout.Width(52))) {
+                blockSearchText = string.Empty;
+                GUI.FocusControl(null);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            sortBlocksAlphabetically = EditorGUILayout.ToggleLeft("Sort A-Z", sortBlocksAlphabetically, GUILayout.Width(96));
+            GUILayout.EndHorizontal();
+
+            RebuildFilteredBlocks(world);
+            EditorGUILayout.LabelField($"Showing {filteredBlockIds.Count} / {world.voxelBlocks.loadedBlocks.Count} blocks", EditorStyles.miniLabel);
 
             scrollPos = GUILayout.BeginScrollView(scrollPos);
             if (world.voxelBlocks.loadedBlocks.Count == 0) {
                 GUILayout.Label("If no blocks are visible, re-load the Voxel World.");
+            } else if (filteredBlockIds.Count == 0) {
+                GUILayout.Label("No blocks match the current filters.");
             }
 
             var selectedStyle = new GUIStyle(GUI.skin.button);
@@ -207,12 +260,9 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             selectedStyle.hover.textColor = Color.green;
 
             var loadedBlocks = world.voxelBlocks.loadedBlocks;
-            for (ushort id = 0; id < loadedBlocks.Count; id++) {
-                var block = loadedBlocks[id];
-                var name = block.definition.name;
-                if (name == "") {
-                    name = "Air";
-                }
+            for (var i = 0; i < filteredBlockIds.Count; i++) {
+                var id = filteredBlockIds[i];
+                var name = GetUniqueBlockDisplayName(world, id);
 
                 if (id == world.selectedBlockIndex) {
                     GUILayout.Button(name, selectedStyle);
@@ -224,6 +274,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             }
 
             GUILayout.EndScrollView();
+            GUILayout.EndVertical();
             GUI.enabled = true;
         }
 
@@ -236,6 +287,64 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
         private void OnDisable() {
             SceneView.duringSceneGui -= onSceneGUIDelegate;
+        }
+
+        private string GetBlockDisplayName(VoxelWorld world, ushort id) {
+            var definition = world.voxelBlocks.loadedBlocks[id].definition;
+            if (!string.IsNullOrEmpty(definition.name)) {
+                return definition.name;
+            }
+
+            if (!string.IsNullOrEmpty(definition.blockName)) {
+                return definition.blockName;
+            }
+
+            return "Air";
+        }
+
+        private void RebuildFilteredBlocks(VoxelWorld world) {
+            filteredBlockIds.Clear();
+            blockLabelCounts.Clear();
+
+            for (ushort id = 0; id < world.voxelBlocks.loadedBlocks.Count; id++) {
+                var name = GetBlockDisplayName(world, id);
+                if (!string.IsNullOrWhiteSpace(blockSearchText) &&
+                    name.IndexOf(blockSearchText, StringComparison.OrdinalIgnoreCase) < 0) {
+                    continue;
+                }
+
+                filteredBlockIds.Add(id);
+
+                if (blockLabelCounts.TryGetValue(name, out var count)) {
+                    blockLabelCounts[name] = count + 1;
+                } else {
+                    blockLabelCounts[name] = 1;
+                }
+            }
+
+            if (sortBlocksAlphabetically) {
+                filteredBlockIds.Sort((a, b) => string.Compare(
+                    GetBlockDisplayName(world, a),
+                    GetBlockDisplayName(world, b),
+                    StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        private string GetUniqueBlockDisplayName(VoxelWorld world, ushort id) {
+            var name = GetBlockDisplayName(world, id);
+            if (blockLabelCounts.TryGetValue(name, out var count) && count > 1) {
+                return $"{name}  (#{id})";
+            }
+            return name;
+        }
+
+        private int FindFilteredIndex(int id) {
+            for (var i = 0; i < filteredBlockIds.Count; i++) {
+                if (filteredBlockIds[i] == id) {
+                    return i;
+                }
+            }
+            return -1;
         }
     }
 }
