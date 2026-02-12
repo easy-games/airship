@@ -990,6 +990,22 @@ public partial class LuauCore : MonoBehaviour
 
                 return true;
             }
+            case PODTYPE.POD_STRING: {
+                LuauPlugin.CopyTableToArray<IntPtr>(thread, PODTYPE.POD_STRING, size, idx, out var arr, false);
+                
+                IList<string> strings = arrayAsList ? new List<string>(size) : new string[size];
+                for (var i = 0; i < size; i++) {
+                    var item = Marshal.PtrToStringUTF8(arr[i]);
+                    if (arrayAsList) {
+                        strings.Add(item);
+                    } else {
+                        strings[i] = item;
+                    }
+                }
+                value = strings;
+                
+                return true;
+            }
             case PODTYPE.POD_OBJECT: {
                 LuauPlugin.CopyTableToArray<int>(thread, PODTYPE.POD_OBJECT, size, idx, out var arr, false);
 
