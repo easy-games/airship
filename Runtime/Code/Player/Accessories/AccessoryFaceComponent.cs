@@ -7,6 +7,7 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 
 [LuauAPI]
+[ExecuteAlways]
 public class AccessoryFaceComponent : MonoBehaviour {
     public enum FaceRenderMode {
         None = -1,
@@ -18,22 +19,22 @@ public class AccessoryFaceComponent : MonoBehaviour {
 
     public enum AirshipFaceDecal {
         None = -1,
-        Open = 0,
-        OpenO,
-        OpenM,
-        OpenE,
+        OpenSmall = 0,
+        OpenBig,
         Yell,
-        Surprise,
+        Scream,
+        Frown,
         Grimace,
+        Surprise,
         Smile,
         Pucker,
         Grit,
         Meow,
         Grin,
         Woozy,
-        TongueOut,
-        Frown,
-        Smirk
+        Smirk,
+        Scowl,
+        TongueOut
     }
 
     [Header("References")]
@@ -44,6 +45,8 @@ public class AccessoryFaceComponent : MonoBehaviour {
     public float volumeDBYell = .15f;
     public float volumeDBScream = .3f;
     public float pitchVariationMax = .35f;
+    public AirshipFaceDecal initialFace = AirshipFaceDecal.None;
+    public FaceRenderMode initialRenderMode = FaceRenderMode.OverwriteDefault;
     
     [Header("Debugging")]
     public bool logValues = false;
@@ -59,8 +62,10 @@ public class AccessoryFaceComponent : MonoBehaviour {
     private float minTalkHoldTime = 0;
     private float timeTalking = 0;
     private bool currentlyTalking = false;
-    private AccessoryFaceAudioReader audioReader;
 
+#if UNITY_EDITOR
+    private AirshipFaceDecal lastInitialFace;
+#endif
     private void Awake() {
         if (!faceRenderer) {
             Debug.LogError("Face Component requires a renderer");
@@ -72,15 +77,16 @@ public class AccessoryFaceComponent : MonoBehaviour {
 #else
         faceMat = faceRenderer.material;
 #endif
-    }
-
-    private void OnDestroy() {
-        if (audioReader) {
-            audioReader.face = null;
-        }
+        SetFace(initialFace, initialRenderMode);
     }
 
     private void Update() {
+#if UNITY_EDITOR
+        if(!Application.isPlaying && lastInitialFace != initialFace) {
+            lastInitialFace = initialFace;
+            SetFace(initialFace, initialRenderMode);
+        }
+#endif
         if (logValues) {
             Debug.Log("Volume: " + currentVolume + " Pitch Variation: " + currentPitchVariation);
         }
@@ -104,7 +110,6 @@ public class AccessoryFaceComponent : MonoBehaviour {
         } else {
             setFaceMode = faceMode;
         }
-
         Refresh();
     }
     
@@ -116,7 +121,7 @@ public class AccessoryFaceComponent : MonoBehaviour {
     }
 
     private void Refresh() {
-        var canTalk = setFaceMode != FaceRenderMode.OverwriteVoice && setFaceMode != FaceRenderMode.OverwriteAll;
+        var canTalk = reactToVoice && setFaceMode != FaceRenderMode.OverwriteVoice && setFaceMode != FaceRenderMode.OverwriteAll;
         currentlyTalking = currentVolume > 0 || Time.time < minTalkHoldTime;
         
         if (currentlyTalking && canTalk) {

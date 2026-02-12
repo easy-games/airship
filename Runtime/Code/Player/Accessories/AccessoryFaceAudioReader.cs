@@ -4,6 +4,8 @@ using UnityEngine;
 [LuauAPI]
 [RequireComponent(typeof(AudioSource))]
 public class AccessoryFaceAudioReader : AudioSourceReader {
+    public static bool DetectVoices = true;
+    
     public AccessoryFaceComponent face;
     public VisualGraphComponent visualizer;
 
@@ -27,7 +29,7 @@ public class AccessoryFaceAudioReader : AudioSourceReader {
     }
 
     protected void Update() {
-        if (!face) {
+        if (!DetectVoices || !face) {
             return;
         }
         base.Update();
