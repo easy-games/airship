@@ -483,12 +483,6 @@ namespace Airship {
 
         //update in editor
         private void Update() {
-            // Most frames have no pending mesh work. Early-out to avoid per-frame
-            // method overhead across many characters.
-            if (!pendingUpdate && !runningUpdate && !newMeshReadyToUse) {
-                return;
-            }
-
             StartMeshUpdate();
             UpdateMeshMainThread();
         }
