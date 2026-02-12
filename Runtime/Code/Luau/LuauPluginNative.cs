@@ -19,7 +19,7 @@ public static class LuauPluginNative {
 	public delegate void ComponentSetEnabledCallback(IntPtr thread, int instanceId, int componentId, int enabled);
 	public delegate int IsObjectDestroyedCallback(int instanceId);
 	public delegate void GetUnityObjectName(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
-	public delegate ulong ResolveRequirePathCallback(IntPtr scriptPath, ulong scriptPathLen, IntPtr filename, ulong filenameLen, out IntPtr resolved, ulong resolvedSize);
+	public delegate int ResolveRequirePathCallback(IntPtr scriptPath, int scriptPathLen, IntPtr filename, int filenameLen, out IntPtr resolved, int resolvedSize);
 
 #if UNITY_EDITOR
 	private const string BasePluginsPath = "/Packages/gg.easy.airship/Runtime/Plugins";
@@ -380,7 +380,7 @@ public static class LuauPluginNative {
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    internal static extern IntPtr ResolveRequirePath(IntPtr scriptPath, int scriptPathLen, IntPtr filename, int filenameLen, out IntPtr resolved);
+    internal static extern int ResolveRequirePath(IntPtr scriptPath, int scriptPathLen, IntPtr filename, int filenameLen, out IntPtr resolved);
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
