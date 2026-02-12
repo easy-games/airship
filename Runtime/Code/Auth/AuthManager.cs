@@ -105,11 +105,11 @@ public class AuthManager {
    
 	public static async Task<(bool success, string error)> AuthWithGoogle() {
 #if AIRSHIP_STAGING
-        string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
-        string clientSecret = "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";
+        string clientId = "987279961241-h6oaa4rf9gsb8mf6ibs54mhtmsol9ptv.apps.googleusercontent.com";
+        string clientSecret = "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";
 #else
-		string clientId = "457451560440-fvhufuvt3skas9m046jqin0l10h8uaph.apps.googleusercontent.com";
-		string clientSecret = "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";
+		string clientId = "457451560440-36788k4o8jmnce49c9fv8otkqv1kqhu9.apps.googleusercontent.com";
+		string clientSecret = "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";
 #endif
         string redirectUri = "http://localhost:8080";
 
