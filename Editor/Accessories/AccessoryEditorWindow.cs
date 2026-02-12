@@ -33,12 +33,18 @@ namespace Editor.Accessories {
         private PrefabStage _prefabStage;
         private AccessoryPrefabEditor prefabEditor;
         private GameObject characterGO;
-        List<AccessoryComponent> allAccessories = new List<AccessoryComponent>();
+        private readonly List<AccessoryComponent> allAccessories = new List<AccessoryComponent>();
+        private readonly List<AccessoryComponent> filteredAccessories = new List<AccessoryComponent>();
         private AccessoryComponent editingAccessoryComponent;
         private AccessoryComponent referenceAccessoryComponent;
         private ListView _listPane;
 
         private Label _selectedItemLabel;
+        private Label _resultsLabel;
+        private ToolbarSearchField _searchField;
+        private Button _saveBtn;
+        private Button _resetBtn;
+        private string _searchText = string.Empty;
         private List<string> backdropOptions = new List<string>();
         private List<string> poseOptions = new List<string>();
         private int currentBackdropIndex = 0;
@@ -106,7 +112,7 @@ namespace Editor.Accessories {
             Log("Creating GUI");
             titleContent = new GUIContent("Accessory Editor");
 
-            var split = new TwoPaneSplitView(0, 50, TwoPaneSplitViewOrientation.Vertical);
+            var split = new TwoPaneSplitView(0, 98, TwoPaneSplitViewOrientation.Vertical);
             rootVisualElement.Add(split);
             
             var editPane = new VisualElement();
@@ -116,32 +122,57 @@ namespace Editor.Accessories {
             editPane.style.paddingLeft = new StyleLength(new Length(5, LengthUnit.Pixel));
             split.Add(editPane);
 
-            _selectedItemLabel = new Label();
-            _selectedItemLabel.text = "No selected item";
+            var selectedHeader = new Label("Selected Accessory");
+            selectedHeader.style.unityFontStyleAndWeight = FontStyle.Bold;
+            selectedHeader.style.marginBottom = new StyleLength(new Length(2, LengthUnit.Pixel));
+            editPane.Add(selectedHeader);
+
+            _selectedItemLabel = new Label("No accessory selected");
+            _selectedItemLabel.style.marginBottom = new StyleLength(new Length(4, LengthUnit.Pixel));
             editPane.Add(_selectedItemLabel);
             
             var buttonPanel = new VisualElement();
-            buttonPanel.style.paddingTop = new StyleLength(new Length(5, LengthUnit.Pixel));
+            buttonPanel.style.paddingTop = new StyleLength(new Length(4, LengthUnit.Pixel));
+            buttonPanel.style.paddingBottom = new StyleLength(new Length(4, LengthUnit.Pixel));
             buttonPanel.style.flexDirection = FlexDirection.Row;
             editPane.Add(buttonPanel);
             
             // Save button:
-            var saveBtn = new Button();
-            saveBtn.text = "Save";
-            buttonPanel.Add(saveBtn);
-            saveBtn.clickable.clicked += () => {
+            _saveBtn = new Button();
+            _saveBtn.text = "Save";
+            buttonPanel.Add(_saveBtn);
+            _saveBtn.clickable.clicked += () => {
                 if (editingAccessoryComponent == null || referenceAccessoryComponent == null) return;
                 SaveCurrentAccessory();
             };
 
             // Reset button:
-            var resetBtn = new Button();
-            resetBtn.text = "Reset";
-            buttonPanel.Add(resetBtn);
-            resetBtn.clickable.clicked += () => {
+            _resetBtn = new Button();
+            _resetBtn.text = "Reset";
+            buttonPanel.Add(_resetBtn);
+            _resetBtn.clickable.clicked += () => {
                 if (editingAccessoryComponent == null || referenceAccessoryComponent == null) return;
                 ResetCurrentAccessory();
             };
+
+            var searchRow = new VisualElement();
+            searchRow.style.flexDirection = FlexDirection.Row;
+            searchRow.style.alignItems = Align.Center;
+            editPane.Add(searchRow);
+
+            _searchField = new ToolbarSearchField();
+            _searchField.style.flexGrow = 1;
+            _searchField.value = _searchText;
+            _searchField.RegisterValueChangedCallback(evt => {
+                _searchText = evt.newValue ?? string.Empty;
+                ApplyFilter(true);
+            });
+            searchRow.Add(_searchField);
+
+            _resultsLabel = new Label();
+            _resultsLabel.style.marginLeft = new StyleLength(new Length(8, LengthUnit.Pixel));
+            _resultsLabel.style.minWidth = new StyleLength(new Length(70, LengthUnit.Pixel));
+            searchRow.Add(_resultsLabel);
 
             // Backdrop
             // backdropOptions.Clear();
@@ -182,7 +213,7 @@ namespace Editor.Accessories {
             // buttonPanel.Add(poseEnum);
 
             
-            _listPane = new ListView(allAccessories, 32);
+            _listPane = new ListView(filteredAccessories, 28);
             split.Add(_listPane);
 
             // Set up the left list view to show accessories:
@@ -197,12 +228,14 @@ namespace Editor.Accessories {
                 return label;
             };
             _listPane.bindItem = (item, index) => {
-                var accessory = allAccessories[index];
+                var accessory = filteredAccessories[index];
                 ((Label) item).text = accessory.gameObject.name;
             };
-            _listPane.itemsSource = allAccessories;
+            _listPane.itemsSource = filteredAccessories;
             _listPane.selectionChanged += OnAccessorySelectionChanged;
-            //_listPane.Sort((a, b) => string.Compare(((Label)a).text, ((Label)b).text, StringComparison.OrdinalIgnoreCase));
+            UpdateResultLabel();
+            UpdateActionButtons();
+            ApplyFilter(false, referenceAccessoryComponent);
         }
 
         private void OnAccessorySelectionChanged(IEnumerable<object> selectedItems) {
@@ -212,7 +245,7 @@ namespace Editor.Accessories {
                 ClearCurrentAccessory();
             } else {
                 var selection = selectionList[0];
-                _selectedItemLabel.text = selection.ToString();
+                _selectedItemLabel.text = selection.gameObject.name;
                 BuildScene(selection);
             }
         }
@@ -225,8 +258,9 @@ namespace Editor.Accessories {
             }
 
             if (_selectedItemLabel != null) {
-                _selectedItemLabel.text = "No selected item";
+                _selectedItemLabel.text = "No accessory selected";
             }
+            UpdateActionButtons();
         }
 
 
@@ -272,11 +306,23 @@ namespace Editor.Accessories {
                             skinnedMeshRenderer.bones = rig.bodyMesh.bones;
                         }
                     }
+                    UpdateActionButtons();
                 }
             }
         }
 
         public void SetSelected(AccessoryComponent accessoryComponent) {
+            if (accessoryComponent == null || _listPane == null) return;
+
+            if (!string.IsNullOrWhiteSpace(_searchText) &&
+                accessoryComponent.gameObject.name.IndexOf(_searchText, StringComparison.OrdinalIgnoreCase) < 0) {
+                _searchText = string.Empty;
+                if (_searchField != null) {
+                    _searchField.value = _searchText;
+                }
+                ApplyFilter(false);
+            }
+
             var index = _listPane.itemsSource.IndexOf(accessoryComponent);
             if (index == -1) return;
             
@@ -336,6 +382,8 @@ namespace Editor.Accessories {
 
         private void OnFocus() {
             Log("OnFocus");
+            var previousSelection = referenceAccessoryComponent;
+
             // Find and collect all accessories
             allAccessories.Clear();
             var allAccessoryGuids = AssetDatabase.FindAssets("t:Prefab");
@@ -358,11 +406,7 @@ namespace Editor.Accessories {
                 return a.gameObject.name.CompareTo(b.gameObject.name);
             });
 
-            if (_listPane != null) {
-                OnAccessorySelectionChanged(_listPane.selectedItems);
-            }
-
-            //BuildScene(_referenceAccessoryComponent);
+            ApplyFilter(false, previousSelection);
         }
 
         private void OnLostFocus() {
@@ -403,6 +447,57 @@ namespace Editor.Accessories {
 
         private void SetPose(PoseType poseType){
             Log("Setting Pose: " + poseType);
+        }
+
+        private void ApplyFilter(bool clearSelectionWhenEmpty, AccessoryComponent preferredSelection = null) {
+            if (_listPane == null) {
+                return;
+            }
+
+            if (preferredSelection == null && _listPane.selectedIndex >= 0 && _listPane.selectedIndex < filteredAccessories.Count) {
+                preferredSelection = filteredAccessories[_listPane.selectedIndex];
+            }
+
+            filteredAccessories.Clear();
+            foreach (var accessory in allAccessories) {
+                if (string.IsNullOrWhiteSpace(_searchText) ||
+                    accessory.gameObject.name.IndexOf(_searchText, StringComparison.OrdinalIgnoreCase) >= 0) {
+                    filteredAccessories.Add(accessory);
+                }
+            }
+
+            _listPane.Rebuild();
+            UpdateResultLabel();
+
+            if (preferredSelection != null) {
+                var preferredIndex = filteredAccessories.IndexOf(preferredSelection);
+                if (preferredIndex >= 0) {
+                    _listPane.SetSelection(preferredIndex);
+                    return;
+                }
+            }
+
+            if (clearSelectionWhenEmpty) {
+                _listPane.ClearSelection();
+                ClearCurrentAccessory();
+            } else if (filteredAccessories.Count > 0) {
+                _listPane.SetSelection(0);
+            } else {
+                _listPane.ClearSelection();
+                ClearCurrentAccessory();
+            }
+        }
+
+        private void UpdateResultLabel() {
+            if (_resultsLabel != null) {
+                _resultsLabel.text = $"{filteredAccessories.Count} items";
+            }
+        }
+
+        private void UpdateActionButtons() {
+            var hasSelection = editingAccessoryComponent != null && referenceAccessoryComponent != null;
+            _saveBtn?.SetEnabled(hasSelection);
+            _resetBtn?.SetEnabled(hasSelection);
         }
     }
 }
