@@ -10,6 +10,7 @@ using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.Audio;
 using UnityEngine.EventSystems;
+using UnityEngine.Experimental.AI;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -64,6 +65,7 @@ namespace Luau {
             [typeof(NavMeshHit)] = LuauContextAll,
             [typeof(NavMeshObstacle)] = LuauContextAll,
             [typeof(NavMeshPath)] = LuauContextAll,
+            [typeof(NavMeshQueryFilter)] = LuauContextAll,
             [typeof(NavMeshLinkData)] = LuauContextAll,
             [typeof(NavMeshLinkInstance)] = LuauContextAll,
             [typeof(OffMeshLinkData)] = LuauContextAll,
