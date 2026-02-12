@@ -123,8 +123,6 @@ namespace VoxelWorldStuff {
         /// </summary>
         private TaskCompletionSource<bool> loadedTask = new(false);
 
-        public Camera currentCamera = null;
-
         private Vector3Int _chunkKey;
 
         public Vector3Int chunkKey {

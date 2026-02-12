@@ -1413,21 +1413,14 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public void FullWorldUpdate() {
-        Camera cam = null;
 #if UNITY_EDITOR
         if (SceneView.currentDrawingSceneView != null) {
-            cam = SceneView.currentDrawingSceneView.camera;
+            this.currentCamera = SceneView.currentDrawingSceneView.camera;
         }
 #endif
-        if (cam == null) {
-            cam = FindFirstObjectByType<Camera>();
+        if (this.currentCamera == null) {
+            this.currentCamera = Camera.main;
         }
-
-        foreach (var c in chunks) {
-            c.Value.currentCamera = cam;
-        }
-
-        currentCamera = cam;
 
         Profiler.BeginSample("RegenerateMissingChunkGeometry");
         RegenerateMissingChunkGeometry();
