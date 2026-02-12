@@ -66,6 +66,8 @@ public class ServerBootstrap : MonoBehaviour
     private GameServer gameServer;
 
     [NonSerialized] public bool isServerReady = false;
+	[NonSerialized] public bool hasStartupSceneFailure = false;
+	[NonSerialized] public string startupSceneFailureReason = "";
     /// <summary>
     /// Can be fired multiple times.
     /// </summary>
@@ -496,18 +498,16 @@ public class ServerBootstrap : MonoBehaviour
 		// clientBundleLoader.LoadAllClients(startupConfig);
 
         var st = Stopwatch.StartNew();
-
-        var scenePath = AirshipNetworkManager.GetAssetBundleScenePathFromName(startupConfig.StartingSceneName);
-        AirshipNetworkManager.singleton.ServerChangeScene(scenePath);
-        // SceneManager.LoadScene(scenePath, LoadSceneMode.Additive);
-        yield return null;
-        // if (!Application.isEditor) {
-	       //  print("Loaded scenes:");
-	       //  for (int i = 0; i < SceneManager.sceneCount; i++) {
-		      //   print("  - " + SceneManager.GetSceneAt(i).name);
-	       //  }
-        // }
-        // SceneManager.SetActiveScene(SceneManager.GetSceneByName(startupConfig.StartingSceneName));
+        if (!TryResolveStartupScenePath(out var scenePath)) {
+	        hasStartupSceneFailure = true;
+	        startupSceneFailureReason =
+		        $"Server failed to load starting scene \"{startupConfig.StartingSceneName}\" because it was not found in the published game scenes. This usually means the requested transfer scene is not in GameConfig.";
+	        Debug.LogError(startupSceneFailureReason);
+        } else {
+	        AirshipNetworkManager.singleton.ServerChangeScene(scenePath);
+	        // SceneManager.LoadScene(scenePath, LoadSceneMode.Additive);
+	        yield return null;
+        }
 
         if (st.ElapsedMilliseconds > 100) {
 	        Debug.Log("[Airship]: Finished loading server scene in " + st.ElapsedMilliseconds + "ms.");
@@ -515,6 +515,30 @@ public class ServerBootstrap : MonoBehaviour
 
         isServerReady = true;
         OnServerReady?.Invoke();
+	}
+
+	private bool TryResolveStartupScenePath(out string scenePath) {
+		var configuredSceneName = startupConfig.StartingSceneName;
+		if (string.IsNullOrWhiteSpace(configuredSceneName)) {
+			scenePath = "";
+			return false;
+		}
+		scenePath = AirshipNetworkManager.GetAssetBundleScenePathFromName(configuredSceneName);
+
+		if (Application.CanStreamedLevelBeLoaded(scenePath)) {
+			return true;
+		}
+
+		// Fallback path resolution from currently loaded bundle scenes.
+		foreach (var loadedAssetBundle in AssetBundle.GetAllLoadedAssetBundles()) {
+			foreach (var loadedScenePath in loadedAssetBundle.GetAllScenePaths()) {
+				if (!loadedScenePath.EndsWith(configuredSceneName + ".unity", StringComparison.OrdinalIgnoreCase)) continue;
+				scenePath = loadedScenePath;
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private void ShutdownDueToAssetFailure(int exitCode = 1) {
