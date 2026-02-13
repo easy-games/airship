@@ -5,11 +5,10 @@ using UnityEngine;
 [RequireComponent(typeof(AudioSource))]
 public class AudioSourceReader : MonoBehaviour {
     [Header("Microphone")]
-    public int sampleRate = 48000;
     public int fftSize = 1024;
 
     [Header("Speech Frequency Range (Hz)")]
-    public float minHz = 300f;
+    public float minHz = 180f;
     public float maxHz = 4000f;
 
     [Header("Thresholds")]
@@ -47,9 +46,12 @@ public class AudioSourceReader : MonoBehaviour {
     }
 
     protected void AnalyzeSpectrum() {
+        if (source.clip == null) return;
+        
         // Load spectrum from audio source (index = frequency range, value = magnitude of that frequency)
         source.GetSpectrumData(spectrum, 0, FFTWindow.BlackmanHarris);
 
+        var sampleRate = source.clip.frequency;
         // Determine the constant used to find the frequency from the spectrum index 
         float binWidth = (sampleRate * 0.5f) / spectrum.Length;
 

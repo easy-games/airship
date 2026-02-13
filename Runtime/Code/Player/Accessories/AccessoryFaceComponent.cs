@@ -42,9 +42,6 @@ public class AccessoryFaceComponent : MonoBehaviour {
 
     [Header("Variables")]
     public bool reactToVoice = true;
-    public float volumeDBYell = .15f;
-    public float volumeDBScream = .3f;
-    public float pitchVariationMax = .35f;
     public AirshipFaceDecal initialFace = AirshipFaceDecal.None;
     public FaceRenderMode initialRenderMode = FaceRenderMode.OverwriteDefault;
     
@@ -62,6 +59,13 @@ public class AccessoryFaceComponent : MonoBehaviour {
     private float minTalkHoldTime = 0;
     private float timeTalking = 0;
     private bool currentlyTalking = false;
+    
+    // MouthMovementAnim Stuff
+    private int _mouth;                 // current mouth index
+    private float _attackTimer = 0f;    // accumulates while wanting to go up
+    private float _releaseTimer = 0f;   // accumulates while wanting to go down
+    private float attackTime = 0.01f;
+    private float releaseTime = 0.05f;
 
 #if UNITY_EDITOR
     private AirshipFaceDecal lastInitialFace;
@@ -87,19 +91,6 @@ public class AccessoryFaceComponent : MonoBehaviour {
             SetFace(initialFace, initialRenderMode);
         }
 #endif
-        if (logValues) {
-            Debug.Log("Volume: " + currentVolume + " Pitch Variation: " + currentPitchVariation);
-        }
-        // Based on pitch changes, should we change mouth shapes?
-        // The longest hold on a face will be 2 and the shortest is .08
-        currentFaceChangeDuration = Mathf.Lerp(2, .08f, currentPitchVariation / pitchVariationMax);
-        
-        if (Time.time > lastFaceChangeTime + currentFaceChangeDuration) {
-            lastFaceChangeTime = Time.time;
-            // Change talking face
-            currentTalkingIndex = Random.Range(0, 2);
-            Refresh();
-        }
     }
 
     public void SetFace(AirshipFaceDecal faceType, FaceRenderMode faceMode) {
@@ -122,24 +113,76 @@ public class AccessoryFaceComponent : MonoBehaviour {
 
     private void Refresh() {
         var canTalk = reactToVoice && setFaceMode != FaceRenderMode.OverwriteVoice && setFaceMode != FaceRenderMode.OverwriteAll;
-        currentlyTalking = currentVolume > 0 || Time.time < minTalkHoldTime;
-        
+        currentlyTalking = currentVolume > 0;
+        // currentlyTalking = currentVolume > 0 || Time.time < minTalkHoldTime;
+
+        // if (currentlyTalking && canTalk) {
+        //     // Talking
+        //     if (currentVolume > .01f) {
+        //         //Don't swap off talking too quick
+        //         minTalkHoldTime = Time.time + .15f;
+        //     }
+        //
+        //     faceMat.SetFloat("_MouthStrength", 1);
+        //     var mouthIndex = currentTalkingIndex;
+        //     if (currentVolume >= volumeDBScream) {
+        //         mouthIndex = 6;
+        //     } else if (currentVolume >= volumeDBYell) {
+        //         mouthIndex = 2;
+        //     }
+        //     faceMat.SetFloat("_MouthIndex", mouthIndex);
+        // } else {
+        //     // Default face
+        //     if (setFaceIndex >= 0) {
+        //         faceMat.SetFloat("_MouthIndex", setFaceIndex);
+        //         faceMat.SetFloat("_MouthStrength", 1);
+        //     } else {
+        //         faceMat.SetFloat("_MouthStrength", 0);
+        //     }
+        // }
+
         if (currentlyTalking && canTalk) {
-            // Talking
-            if (currentVolume > .01f) {
-                //Don't swap off talking too quick
-                minTalkHoldTime = Time.time + .15f;
+            int desired = QuantizeMouth(currentVolume);
+            if (desired > _mouth)
+            {
+                // Going UP: attack behavior (fast transition)
+                _releaseTimer = 0f;                 // cancel any release hold
+                _attackTimer += Time.deltaTime;
+
+                if (_attackTimer >= attackTime)
+                {
+                    _mouth = desired;               // or step by step if you want
+                    _attackTimer = 0f;
+                }
+            }
+            else if (desired < _mouth)
+            {
+                // Going DOWN: release behavior (hold current mouth)
+                _attackTimer = 0f;                  // cancel any attack
+                _releaseTimer +=  Time.deltaTime;
+
+                if (_releaseTimer >= releaseTime)
+                {
+                    _mouth = desired;               // or step by step
+                    _releaseTimer = 0f;
+                }
+            } else {
+                // Same mouth target: reset timers
+                _attackTimer = 0f;
+                _releaseTimer = 0f;
             }
 
-            faceMat.SetFloat("_MouthStrength", 1);
-            var mouthIndex = currentTalkingIndex;
-            if (currentVolume >= volumeDBScream) {
-                mouthIndex = 6;
-            } else if (currentVolume >= volumeDBYell) {
-                mouthIndex = 2;
+            if (currentPitchVariation > 0) {
+                
             }
-            faceMat.SetFloat("_MouthIndex", mouthIndex);
+
+            faceMat.SetFloat("_MouthIndex", _mouth);
+            faceMat.SetFloat("_MouthStrength", 1);
         } else {
+            _mouth = 0;
+            _attackTimer = 0f;
+            _releaseTimer = 0f;
+            
             // Default face
             if (setFaceIndex >= 0) {
                 faceMat.SetFloat("_MouthIndex", setFaceIndex);
@@ -149,4 +192,14 @@ public class AccessoryFaceComponent : MonoBehaviour {
             }
         }
     }
+    
+    int QuantizeMouth(float v)
+    {
+        if (v < 0.05f) return 0;
+        if (v < 0.1f) return 1;
+        if (v < 0.25f) return 2;
+        return 3; // v < 0.12f and above
+    }
+
+
 }
