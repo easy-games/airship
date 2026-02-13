@@ -64,7 +64,7 @@ public class AccessoryFaceComponent : MonoBehaviour {
     private int _mouth;                 // current mouth index
     private float _attackTimer = 0f;    // accumulates while wanting to go up
     private float _releaseTimer = 0f;   // accumulates while wanting to go down
-    private float attackTime = 0.01f;
+    private float attackTime = 0.03f;
     private float releaseTime = 0.05f;
 
 #if UNITY_EDITOR
@@ -159,7 +159,7 @@ public class AccessoryFaceComponent : MonoBehaviour {
             {
                 // Going DOWN: release behavior (hold current mouth)
                 _attackTimer = 0f;                  // cancel any attack
-                _releaseTimer +=  Time.deltaTime;
+                _releaseTimer += Time.deltaTime;
 
                 if (_releaseTimer >= releaseTime)
                 {
@@ -170,10 +170,6 @@ public class AccessoryFaceComponent : MonoBehaviour {
                 // Same mouth target: reset timers
                 _attackTimer = 0f;
                 _releaseTimer = 0f;
-            }
-
-            if (currentPitchVariation > 0) {
-                
             }
 
             faceMat.SetFloat("_MouthIndex", _mouth);
@@ -195,10 +191,10 @@ public class AccessoryFaceComponent : MonoBehaviour {
     
     int QuantizeMouth(float v)
     {
-        if (v < 0.05f) return 0;
-        if (v < 0.1f) return 1;
-        if (v < 0.25f) return 2;
-        return 3; // v < 0.12f and above
+        if (v < 0.1f) return 0;
+        if (v < 0.2f) return 1;
+        if (v < 0.3f) return 2;
+        return 3;
     }
 
 

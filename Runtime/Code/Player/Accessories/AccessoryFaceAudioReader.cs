@@ -37,9 +37,7 @@ public class AccessoryFaceAudioReader : AudioSourceReader {
         face.SetTalkingAudioLevels(isSpeaking ? RMS : 0 , isSpeaking ? Flux : 0);
         
         if (visualizer) {
-            visualizer.AddValues(new Vector3(RMS / .2f, Flux,0));
-        
-            Debug.Log("Energy: " + RMS + " flux: " + Flux);
+            visualizer.AddValues(new Vector3( RMS, Flux, 0));
         }
     }
 }
