@@ -50,10 +50,9 @@ public class AudioSourceReader : MonoBehaviour {
         
         // Load spectrum from audio source (index = frequency range, value = magnitude of that frequency)
         source.GetSpectrumData(spectrum, 0, FFTWindow.BlackmanHarris);
-
-        var sampleRate = source.clip.frequency;
+        
         // Determine the constant used to find the frequency from the spectrum index 
-        float binWidth = (sampleRate * 0.5f) / spectrum.Length;
+        float binWidth = (AudioSettings.outputSampleRate * 0.5f) / spectrum.Length;
 
         float flux = 0f;
         float energy = 0f;
