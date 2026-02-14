@@ -96,7 +96,6 @@ namespace Mirror
             // never trust the client: estimate client time instead.
             // https://developer.valvesoftware.com/wiki/Source_Multiplayer_Networking
             // the estimation is very good. the error is as low as ~6ms for the demo.
-            // note that passing 'rtt' is fine: EstimateTime halves it to latency.
             double estimatedTime = LagCompensation.EstimateTime(NetworkTime.localTime, viewer.rtt, NetworkClient.bufferTime);
 
             // sample the history to get the nearest snapshots around 'timestamp'

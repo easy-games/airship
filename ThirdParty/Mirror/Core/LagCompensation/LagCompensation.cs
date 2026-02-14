@@ -126,10 +126,7 @@ namespace Mirror
         // => lag compensation demo estimation is off by only ~6ms
         public static double EstimateTime(double serverTime, double rtt, double bufferTime)
         {
-            // packet latency is one trip from client to server, so rtt / 2
-            // client view interpolation is the snapshot interpolation buffer time
-            double latency = rtt / 2;
-            return serverTime - latency - bufferTime;
+            return serverTime - rtt - bufferTime;
         }
 
         // convenience function to draw all history gizmos.
