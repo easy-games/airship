@@ -233,14 +233,6 @@ public class AccessoryBuilder : MonoBehaviour {
                 case AccessorySlot.RightFoot: 
                     RemoveBySlot(AccessorySlot.Feet, false);
                     break;
-                case AccessorySlot.Hands: 
-                    RemoveBySlot(AccessorySlot.LeftHand, false);
-                    RemoveBySlot(AccessorySlot.RightHand, false);
-                    break;
-                case AccessorySlot.LeftHand: 
-                case AccessorySlot.RightHand: 
-                    RemoveBySlot(AccessorySlot.Hands, false);
-                    break;
             }
         }
         if (activeAccessories.TryGetValue(slot, out var activeAccessory)) {
