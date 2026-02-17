@@ -34,7 +34,7 @@ namespace Airship.Editor {
     public static class FileExtensions {
         public const string TypescriptDeclaration = "d.ts";
         public const string Lua = "lua";
-        public const string AirshipComponentMeta = "lua.json~";
+        public const string AirshipComponentMeta = "meta.json~";
         public const string Typescript = "ts";
         public const string TypescriptJsx = "tsx";
 

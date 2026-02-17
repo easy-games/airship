@@ -25,6 +25,15 @@ public enum EditorInspectorMode {
     UseNewInspector,
 }
 
+public enum ImmediateLuauCompilationMode {
+    [InspectorName("Default")]
+    Default,
+    [InspectorName("Disabled")]
+    UseLegacyAutoImport,
+    [InspectorName("Enabled")]
+    UseImmediateCompileSignal,
+}
+
 
 [FilePath("Assets/Editor/EditorIntegrationsConfigData.confg", FilePathAttribute.Location.ProjectFolder)]
 public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsConfig>
@@ -51,6 +60,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool safeguardBundleModification = true;
 
     [SerializeField] internal bool useProjectReconcileOption = false;
+    [SerializeField] internal ImmediateLuauCompilationMode useImmediateLuauCompiler = ImmediateLuauCompilationMode.Default;
     [FormerlySerializedAs("reconcilerVersion")] [SerializeField] internal ReconcilerVersion projectReconcilerVersion = ReconcilerVersion.Default;
     
     #region LUAU OPTIONS

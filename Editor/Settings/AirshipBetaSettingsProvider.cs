@@ -39,6 +39,13 @@ namespace Editor.Settings {
             
             
             if (this.tab == 0) {
+                BetaCategoryBegin(new GUIContent("Immediate Luau Compilation"), new GUIContent("Immediately compile Luau files to assets when the typescript compiler has successfully compiled them rather than reimporting the files."));
+                {
+                    EditorIntegrationsConfig.instance.useImmediateLuauCompiler = (ImmediateLuauCompilationMode) EditorGUILayout.EnumPopup(
+                        "Immediate Luau Compilation", EditorIntegrationsConfig.instance.useImmediateLuauCompiler);
+                }
+                BetaCategoryEnd();
+                
                 BetaCategoryBegin(
                     new GUIContent("Airship Component Inspector Rework & Custom Inspectors"), 
                     new GUIContent("Changes how AirshipComponent properties are displayed in the editor, as well if custom editors are supported"));

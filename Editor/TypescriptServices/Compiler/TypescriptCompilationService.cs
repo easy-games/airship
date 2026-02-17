@@ -234,20 +234,37 @@ using Object = UnityEngine.Object;
                 }
 
                 var modifiedDatabase = false;
-                
-                try {
-                    AssetDatabase.StartAssetEditing();
-                    var compileFileList = CompiledFileQueue.ToArray();
-                    
-                    foreach (var file in compileFileList) {
-                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+
+                var postCompilationMode = EditorIntegrationsConfig.instance.useImmediateLuauCompiler;
+                switch (postCompilationMode) {
+                    case ImmediateLuauCompilationMode.Default:
+                    case ImmediateLuauCompilationMode.UseImmediateCompileSignal: {
+                        var compileFileList = CompiledFileQueue.ToArray();
+                        foreach (var file in compileFileList) {
+                            var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                            AirshipScriptCompiler.CompileAirshipScript(asset);
+                            Debug.Log("Immediately compiling " + file, asset);
+                        }
+                        
+                        break;
                     }
+                    case ImmediateLuauCompilationMode.UseLegacyAutoImport: {
+                        try {
+                            AssetDatabase.StartAssetEditing();
+                            var compileFileList = CompiledFileQueue.ToArray();
                     
-                    AssetDatabase.Refresh();
-                } catch (Exception ex) {
-                    Debug.LogException(ex);
-                } finally {
-                    AssetDatabase.StopAssetEditing();
+                            foreach (var file in compileFileList) {
+                                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                            }
+                    
+                            AssetDatabase.Refresh();
+                        } catch (Exception ex) {
+                            Debug.LogException(ex);
+                        } finally {
+                            AssetDatabase.StopAssetEditing();
+                        }
+                        break;
+                    }
                 }
                 
                 EditorApplication.update -= ReimportCompiledFiles;
