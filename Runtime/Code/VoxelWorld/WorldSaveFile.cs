@@ -27,7 +27,7 @@ public class WorldSaveFile : ScriptableObject {
 
     private static void Log(string message) {
 #if UNITY_EDITOR
-        Debug.Log("WorldSerialization: " + message);
+        //Debug.Log("WorldSerialization: " + message);
 #endif
     }
 
