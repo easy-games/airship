@@ -6,7 +6,11 @@ using Airship.Editor;
 using Editor.Packages;
 using Newtonsoft.Json;
 using ParrelSync;
+#if UNITY_6000_3_OR_NEWER
+using Unity.Multiplayer.PlayMode;
+#else
 using Unity.Multiplayer.Playmode;
+#endif
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;

@@ -7,9 +7,15 @@ namespace Editor {
     public static class BinaryFileDragDrop {
         [InitializeOnLoadMethod]
         private static void OnLoad() {
+#if UNITY_6000_3_OR_NEWER
+            DragAndDrop.AddDropHandlerV2(OnInspectorDrop);
+            DragAndDrop.AddDropHandler(OnHierarchyDrop);
+            DragAndDrop.AddDropHandlerV2(OnSceneDrop);
+#else
             DragAndDrop.AddDropHandler(OnInspectorDrop);
             DragAndDrop.AddDropHandler(OnHierarchyDrop);
             DragAndDrop.AddDropHandler(OnSceneDrop);
+#endif
         }
 
         private static bool IsDraggingBinaryFile() {

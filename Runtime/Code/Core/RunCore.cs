@@ -5,7 +5,11 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 using ParrelSync;
+#if UNITY_6000_3_OR_NEWER
+using Unity.Multiplayer.PlayMode;
+#else
 using Unity.Multiplayer.Playmode;
+#endif
 #endif
 [LuauAPI]
 public class RunCore {

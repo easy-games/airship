@@ -9,7 +9,11 @@ using Editor.EditorInternal;
 using Editor.Packages;
 using ParrelSync;
 using Unity.EditorCoroutines.Editor;
+#if UNITY_6000_3_OR_NEWER
+using Unity.Multiplayer.PlayMode;
+#else
 using Unity.Multiplayer.Playmode;
+#endif
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;

@@ -2,10 +2,15 @@ using System;
 using System.Collections;
 using kcp2k;
 using Mirror;
+#if UNITY_6000_3_OR_NEWER
+using Unity.Multiplayer.PlayMode;
+#else
+using Unity.Multiplayer.Playmode;
+#endif
 
 #if UNITY_EDITOR
 using ParrelSync;
-using Unity.Multiplayer.Playmode;
+
 #endif 
 using UnityEngine;
 using UnityEngine.SceneManagement;
