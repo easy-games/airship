@@ -263,13 +263,28 @@ public static class CreateAssetBundles {
 		return gameConfig;
 	}
 
-	public static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
+	public static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true, Action<string, float> onProgress = null) {
+		var ownsProgressUi = onProgress == null;
+		void ReportProgress(string status, float progress) {
+			var clamped = Mathf.Clamp01(progress);
+			if (onProgress != null) {
+				onProgress(status, clamped);
+				return;
+			}
+
+			EditorUtility.DisplayProgressBar("Building game asset bundles", $"{platform}: {status}", clamped);
+		}
+
+		try {
+		ReportProgress("Preparing scenes...", 0.02f);
 		ResetScenes();
 
+		ReportProgress("Running pre-publish checks...", 0.06f);
 		if (!PrePublishChecks()) {
 			return false;
 		}
 
+		ReportProgress("Tagging bundle names...", 0.1f);
 		if (!FixBundleNames()) {
 			Debug.LogError("Failed to tag asset bundles.");
 			return false;
@@ -277,7 +292,7 @@ public static class CreateAssetBundles {
 
 		var sw = Stopwatch.StartNew();
 		var gameConfig = GameConfig.Load();
-		if(!gameConfig){
+		if (!gameConfig){
 			return false;
 		}
 
@@ -287,6 +302,7 @@ public static class CreateAssetBundles {
 		}
 		Debug.Log($"[Editor]: Building {platform} asset bundles...");
 		Debug.Log("[Editor]: Build path: " + buildPath);
+		ReportProgress("Configuring quality settings...", 0.14f);
 
 		if (platform == AirshipPlatform.iOS || platform == AirshipPlatform.Android) {
 			SwapToQualityLevel("Low");
@@ -297,6 +313,7 @@ public static class CreateAssetBundles {
 		// Act as if we are building all asset bundles (including CoreMaterials).
 		// This is so our current build target will have references to those asset bundles.
 		// This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
+		ReportProgress("Collecting asset bundle inputs...", 0.2f);
 		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds(gameConfig.compileURPShaders);
 
 		// Make a fake asset bundle with all package content. This makes the build have the correct dependency data.
@@ -387,6 +404,7 @@ public static class CreateAssetBundles {
 
 		// var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
 		var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
+		ReportProgress($"Switching build target to {buildTarget}...", 0.42f);
 
 		if (platform == AirshipPlatform.Android) {
 			PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
@@ -422,9 +440,11 @@ public static class CreateAssetBundles {
 		AirshipPackagesWindow.buildingPackageId = "game";
 		buildingBundles = true;
 		AirshipScriptableBuildPipelineConfig.buildingGameBundles = true;
+		ReportProgress("Preparing pre-build hooks...", 0.5f);
 		// Allow other logic to hook into pre build game bundles (used for setting up scriptable shader
 		// scripting based on target).
 		BuildAirshipGameBundleProcessor.InvokePreBuildGameBundle(buildTarget);
+		ReportProgress("Building asset bundles (this can take a few minutes)...", 0.62f);
 		ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
 		buildingBundles = false;
 		AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
@@ -432,6 +452,7 @@ public static class CreateAssetBundles {
 			Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
 			return false;
 		}
+		ReportProgress("Finalizing output...", 0.95f);
 
 		// Debug.Log("----------------------");
 		// Debug.Log("Airship Build Report");
@@ -475,8 +496,14 @@ public static class CreateAssetBundles {
 		// }
 
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
+		ReportProgress("Done.", 1f);
 
 		return true;
+		} finally {
+			if (ownsProgressUi) {
+				EditorUtility.ClearProgressBar();
+			}
+		}
 	}
 
 #if UNITY_EDITOR
@@ -611,8 +638,36 @@ public static class CreateAssetBundles {
 		BuildPlatforms(AirshipPlatformUtil.livePlatforms);
 	}
 
-	public static bool BuildPlatforms(AirshipPlatform[] platforms, bool useCache = true) {
+	public static bool BuildPlatforms(AirshipPlatform[] platforms, bool useCache = true, bool useLocalBuildAgent = false) {
 		var sw = Stopwatch.StartNew();
+		if (useLocalBuildAgent && LocalShadowBuildAgentClient.ShouldUseAgent(platforms)) {
+			var allowFallback = Environment.GetEnvironmentVariable("AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK") == "1";
+			var agentReady = LocalShadowBuildAgentClient.TryEnsureAgentReady(out var preflightFailureReason);
+
+			// Early preflight so we fail before any local/legacy platform build attempts.
+			if (!agentReady) {
+				if (!allowFallback) {
+					Debug.LogError("[Editor] Local shadow build agent preflight failed. Aborting publish before any in-editor platform build begins.\n" + preflightFailureReason + "\nSet AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK=1 to allow legacy in-editor fallback.");
+					return false;
+				}
+
+				Debug.LogWarning("[Editor] Local shadow build agent preflight failed. Falling back to in-editor platform switching build loop because AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK=1.\n" + preflightFailureReason);
+			} else {
+				if (LocalShadowBuildAgentClient.TryBuildPlatforms(platforms, useCache, out var failureReason)) {
+					Debug.Log($"Built game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds:0.0}s via local shadow build agent");
+					AddAllGameBundleScenes();
+					return true;
+				}
+
+				if (!allowFallback) {
+					Debug.LogError("[Editor] Local shadow build agent failed. Aborting publish to avoid active build target switching in this editor session.\n" + failureReason + "\nSet AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK=1 to allow legacy in-editor fallback.");
+					return false;
+				}
+
+				Debug.LogWarning("[Editor] Local shadow build agent failed. Falling back to in-editor platform switching build loop because AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK=1.\n" + failureReason);
+			}
+		}
+
 		try {
 			foreach (var platform in platforms) {
 				var res = BuildGameAssetBundles(platform, useCache);

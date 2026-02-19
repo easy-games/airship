@@ -45,13 +45,11 @@ public class Deploy {
 
 	public static void PublishGame()
 	{
-		// Make sure we generate and write all `NetworkPrefabCollection`s before we
-		// build the game.
-		// NetworkPrefabManager.WriteAllCollections();
-		// Sort the current platform first to speed up build time
-		List<AirshipPlatform> platforms = new();
+		EditorCoroutines.Execute(BuildAndDeploy(useAsyncShadowBuild: false));
+	}
 
-		EditorCoroutines.Execute(BuildAndDeploy());
+	public static void PublishGameAsync() {
+		EditorCoroutines.Execute(BuildAndDeploy(useAsyncShadowBuild: true));
 	}
 
 	[MenuItem("Airship/Misc/Build Game Asset Bundle")]
@@ -71,7 +69,7 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(Array.Empty<AirshipPlatform>(), true, true)));
 	}
 
-	[MenuItem("Airship/Publish Game (No Cache)", priority = 51)]
+	[MenuItem("Airship/Publish Game (No Cache)", priority = 52)]
 	public static void PublishWithoutCache() {
 		EditorCoroutines.Execute(BuildAndDeploy(false, false));
 	}
@@ -92,7 +90,7 @@ public class Deploy {
 	/// BuildAndDeploy with the target platforms defined in GameConfig. Should only be used in asset deployments
 	/// (not code only).
 	/// </summary>
-	private static IEnumerator BuildAndDeploy(bool skipBuild = false, bool useCache = true, bool dontUpload = false) {
+	private static IEnumerator BuildAndDeploy(bool skipBuild = false, bool useCache = true, bool dontUpload = false, bool useAsyncShadowBuild = false) {
 		var platforms = new List<AirshipPlatform>();
 #if UNITY_EDITOR_OSX
 		platforms.Add(AirshipPlatform.Windows);
@@ -107,10 +105,10 @@ public class Deploy {
 			platforms.Add(AirshipPlatform.iOS);
 			platforms.Add(AirshipPlatform.Android);
 		}
-		return BuildAndDeploy(platforms.ToArray(), skipBuild, useCache, dontUpload);
+		return BuildAndDeploy(platforms.ToArray(), skipBuild, useCache, dontUpload, useAsyncShadowBuild);
 	}
 
-	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true, bool dontUpload = false) {
+	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true, bool dontUpload = false, bool useAsyncShadowBuild = false) {
 		var possibleKeys = new List<string> { GetDeployKey(DeployAuthType.DeployKey), GetDeployKey(DeployAuthType.EditorAuthToken) };
 		possibleKeys.RemoveAll(string.IsNullOrEmpty);
 		if (possibleKeys.Count == 0) {
@@ -346,7 +344,46 @@ public class Deploy {
 
 		// Build the game
 		if (!skipBuild) {
-			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
+			var success = false;
+			if (useAsyncShadowBuild && LocalShadowBuildAgentClient.ShouldUseAgent(platforms)) {
+				var agentSuccess = false;
+				var agentFailureReason = string.Empty;
+				LocalBuildProgressWindow.ShowWindow("Publishing game");
+				yield return LocalShadowBuildAgentClient.TryBuildPlatformsNonBlocking(
+					platforms,
+					useCache,
+					(ok, reason) => {
+						agentSuccess = ok;
+						agentFailureReason = reason;
+					},
+					progress => {
+						LocalBuildProgressWindow.UpdateProgress(progress);
+					},
+					() => LocalBuildProgressWindow.IsCancelRequested());
+				LocalBuildProgressWindow.CloseWindowIfOpen();
+
+				if (agentSuccess) {
+					success = true;
+				} else if (agentFailureReason == "Local shadow build canceled.") {
+					Debug.Log("Cancelled publish.");
+					EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
+					yield break;
+				} else {
+					var allowFallback = Environment.GetEnvironmentVariable("AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK") == "1";
+					if (!allowFallback) {
+						Debug.LogError("[Editor] Local shadow build agent failed. Aborting publish to avoid active build target switching in this editor session.\n" + agentFailureReason + "\nSet AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK=1 to allow legacy in-editor fallback.");
+						Debug.Log("Cancelled publish.");
+						EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
+						yield break;
+					}
+
+					Debug.LogWarning("[Editor] Local shadow build agent failed. Falling back to legacy in-editor build loop because AIRSHIP_BUILD_AGENT_ALLOW_FALLBACK=1.\n" + agentFailureReason);
+					success = CreateAssetBundles.BuildPlatforms(platforms, useCache, useLocalBuildAgent: false);
+				}
+			} else {
+				success = CreateAssetBundles.BuildPlatforms(platforms, useCache, useLocalBuildAgent: false);
+			}
+
 			if (!success) {
 				Debug.Log("Cancelled publish.");
 				
@@ -695,13 +732,23 @@ public class Deploy {
 	public static void PromptPublish() {
 		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 		if (gameConfig != null) {
-			DisplayPublishDialogue(gameConfig);
+			DisplayPublishDialogue(gameConfig, false);
+		} else {
+			Debug.LogError("Couldn't find GameConfig (at Assets/GameConfig.asset)");
+		}
+	}
+
+	[MenuItem("Airship/Publish Game (Async)", priority = 51)]
+	public static void PromptPublishAsync() {
+		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+		if (gameConfig != null) {
+			DisplayPublishDialogue(gameConfig, true);
 		} else {
 			Debug.LogError("Couldn't find GameConfig (at Assets/GameConfig.asset)");
 		}
 	}
 	
-	private static async void DisplayPublishDialogue(GameConfig gameConfig) {
+	private static async void DisplayPublishDialogue(GameConfig gameConfig, bool useAsyncShadowBuild) {
 		var gameInfo = await GameConfigEditor.TryFetchFirstGame();
 		if (!gameInfo.HasValue) {
 			gameInfo = gameConfig.gameId.Length == 0
@@ -730,10 +777,14 @@ public class Deploy {
             "Cancel",
             "Change target");
 
-        switch (option) {
-            case 0: // Publish
-                Deploy.PublishGame();
-                break;
+	        switch (option) {
+	            case 0: // Publish
+	                if (useAsyncShadowBuild) {
+	                	Deploy.PublishGameAsync();
+	                } else {
+	                	Deploy.PublishGame();
+	                }
+	                break;
             case 1: // Cancel
                 break;
             case 2: // Change target
