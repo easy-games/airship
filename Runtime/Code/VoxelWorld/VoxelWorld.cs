@@ -995,7 +995,6 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.BeginSample("RegenerateAllMeshes");
 
         loadingStatus = LoadingStatus.Loading;
-        DeleteChildGameObjects(gameObject);
 
         // Force a mesh update
         foreach (var (_, chunk) in chunks) {
