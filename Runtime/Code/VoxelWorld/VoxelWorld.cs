@@ -995,6 +995,7 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.BeginSample("RegenerateAllMeshes");
 
         loadingStatus = LoadingStatus.Loading;
+        DeleteChildGameObjects(gameObject);
 
         // Force a mesh update
         foreach (var (_, chunk) in chunks) {
@@ -1611,7 +1612,6 @@ public partial class VoxelWorld : MonoBehaviour {
         saveFile.chunksCompressedV2 = true;
         
         // Clear and prepare the world for new chunks and meshes 
-        DeleteChildGameObjects(gameObject);
         PrepareVoxelWorldGameObject();
         loadingStatus = LoadingStatus.Loading;
         ClearProcessingMeshChunks();
@@ -1649,6 +1649,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
 public static class VoxelWorldSerialization {
     public static void WriteChunk(this NetworkWriter writer, Chunk chunk) {
+        writer.WriteVector3Int(chunk.chunkKey);
         writer.WriteArray(chunk.readWriteVoxel);
         writer.WriteArray(chunk.color);
         // Custom Data
@@ -1668,6 +1669,7 @@ public static class VoxelWorldSerialization {
 
     public static Chunk ReadChunk(this NetworkReader reader) {
         var chunk = new Chunk();
+        chunk.chunkKey = reader.ReadVector3Int();
         chunk.readWriteVoxel = reader.ReadArray<ushort>();
         chunk.color = reader.ReadArray<uint>();
         

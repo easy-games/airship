@@ -1,4 +1,5 @@
 using Mirror;
+using UnityEngine;
 using VoxelWorldStuff;
 
 
@@ -10,8 +11,7 @@ public static class VoxelWorldSerializer
 
         writer.Write(world.chunks.Count);
 
-        foreach (var chunkKV in world.chunks)
-        {
+        foreach (var chunkKV in world.chunks) {
             ChunkSerializer.WriteChunk(writer, chunkKV.Value);
         }
                
@@ -23,9 +23,7 @@ public static class VoxelWorldSerializer
         world.chunks.Clear();
 
         int count = reader.Read<int>();
-
-        for (int j = 0; j < count; j++)
-        {
+        for (int i = 0; i < count; i++) {
             Chunk chunk = ChunkSerializer.ReadChunk(reader);
             chunk.SetWorld(world);
             world.AddChunk(chunk.chunkKey, chunk);

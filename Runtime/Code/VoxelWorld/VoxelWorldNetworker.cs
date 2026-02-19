@@ -54,7 +54,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         RpcFinishedSendingWorld(connection);
     }
 
-    private IEnumerator SlowlySendChunks(NetworkConnection conn, List<Vector3Int> skipChunks) {
+    private IEnumerator SlowlySendChunks(NetworkConnection connection, List<Vector3Int> skipChunks) {
         var keys = world.chunks.Keys.ToArray();
         HashSet<Vector3Int> sentPositions = new();
         List<Vector3Int> packetPositions = new();
@@ -71,12 +71,13 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             sentPositions.Add(pos);
 
             if (i % chunksPerFrame == 0) {
-                RpcWriteChunks(conn, packetPositions.ToArray(), packetChunks.ToArray());
+                RpcWriteChunks(connection, packetPositions.ToArray(), packetChunks.ToArray());
                 packetPositions.Clear();
                 packetChunks.Clear();
                 yield return null;
             }
         }
+        RpcFinishedSendingWorld(connection);
     }
 
     public override void OnStartClient() {
