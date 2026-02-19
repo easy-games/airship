@@ -124,10 +124,10 @@ public static class CreateAssetBundles {
 			.ThenBy((s) => s.shaderPath, StringComparer.OrdinalIgnoreCase)
 			.ToList();
 		var coreMaterialsShaders = allShaders
-			.Where((s) => IsCoreMaterialsShaderPath(s.shaderPath))
+			.Where(IsCoreMaterialsAttributedShader)
 			.ToList();
 		var nonCoreMaterialsShaders = allShaders
-			.Where((s) => !IsCoreMaterialsShaderPath(s.shaderPath))
+			.Where((s) => !IsCoreMaterialsAttributedShader(s))
 			.ToList();
 
 		var sb = new StringBuilder();
@@ -143,8 +143,26 @@ public static class CreateAssetBundles {
 		Debug.Log(sb.ToString());
 	}
 
-	private static bool IsCoreMaterialsShaderPath(string shaderPath) {
-		return shaderPath.StartsWith("Assets/AirshipPackages/@Easy/CoreMaterials/", StringComparison.OrdinalIgnoreCase);
+	private static bool IsCoreMaterialsAttributedShader(ShaderUsageInfo shader) {
+		if (shader == null) {
+			return false;
+		}
+
+		// CoreMaterials-owned shader assets.
+		if (shader.shaderPath.StartsWith("Assets/AirshipPackages/@Easy/CoreMaterials/", StringComparison.OrdinalIgnoreCase)) {
+			return true;
+		}
+
+		// URP shaders should be attributed to CoreMaterials because CoreMaterials carries the URP shader payload.
+		if (shader.shaderPath.StartsWith("Packages/com.unity.render-pipelines.universal/", StringComparison.OrdinalIgnoreCase)) {
+			return true;
+		}
+
+		if (shader.shaderName.StartsWith("Universal Render Pipeline/", StringComparison.Ordinal)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private static void AppendShaderUsageSection(StringBuilder sb, string sectionName, List<ShaderUsageInfo> shaders) {
